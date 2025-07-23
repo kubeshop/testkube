@@ -88,7 +88,7 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 		return err
 	}
 
-	size := -1
+	var size int
 	if streamL, ok := stream.(withLength); ok {
 		size = streamL.Len()
 	} else {

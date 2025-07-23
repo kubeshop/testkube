@@ -31,6 +31,9 @@ func main() {
 	}
 
 	// Run the init process
-	exitCode := runner.RunInit(int(groupIndex))
+	exitCode, err := runner.RunInit(int(groupIndex))
+	if err != nil {
+		output.ExitErrorf(uint8(exitCode), "%s", err.Error())
+	}
 	os.Exit(exitCode)
 }

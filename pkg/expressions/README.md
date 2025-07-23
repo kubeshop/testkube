@@ -1,298 +1,237 @@
-# Expressions Package
+# Testkube Expression Engine
 
-This document describes the expressions package, which provides a flexible and extensible expression evaluation system for Testkube.
+JavaScript-like expression language for dynamic configuration and test workflow orchestration. Supports partial resolution when not all variables are available.
 
-> **User documentation:**<br>
-> This is developer documentation for the Test Workflows expressions.<br>
-> To read more about high-level usage, you can reach our [**official documentation**](https://docs.testkube.io/articles/test-workflows-expressions).
+## Key Concepts
 
-## Table of Contents
+- **Expression**: A compiled piece of code that can be evaluated (e.g., `"name + ' is ' + string(age)"`)
+- **StaticValue**: A concrete value that expressions resolve to (string, number, boolean, array, object)
+- **Machine**: Execution context that provides variables and functions to expressions
+- **Partial Resolution**: Ability to partially evaluate expressions when some variables are missing
 
-- [Why not existing language](#why-not-existing-language)
-  - [Okay, but could it be done with known language?](#okay-but-could-it-be-done-with-known-language)
-- [How expressions work](#how-expressions-work)
-- [Expression Machines](#expression-machines)
-  - [Creating a Machine](#creating-a-machine)
-- [Adding new Expression functions](#adding-new-expression-functions)
-  - [Example: Adding a custom function](#example-adding-a-custom-function)
-  - [Example: Using RegisterFunctionExt for dynamic values](#example-using-registerfunctionext-for-dynamic-values)
-  - [Adding to Standard Library](#adding-to-standard-library)
-- [Simplify and Finalize](#simplify-and-finalize)
-  - [Struct tags](#struct-tags)
-  - [Simplify](#simplify)
-  - [Finalize](#finalize)
-  - [Force Variants](#force-variants)
-- [Expression Types](#expression-types)
+## Basic Syntax
 
-## Why not existing language
-
-There are languages like [**cel-go**](https://github.com/google/cel-go) or [**tengo**](https://github.com/d5/tengo), or even sandboxed [**LUA**](https://github.com/Shopify/go-lua) or [**JS**](https://github.com/dop251/goja). Of course, they have advantage of external maintenance, but they are more complex than we need (inconvenient, but not a blocker) and **don't support partial resolution (blocker)**.
-
-The partial resolution is needed, because part of the expression may need to be resolved before the TestWorkflow execution, but another part during the execution.
-
-As an example, imagine a case:
-
-```yaml
-steps:
-  - condition: "passed && config.enabled"
-    shell: "npm test"
+### Data Types
+```
+"string" 'string'        // Strings (single or double quotes)
+123 123.45              // Numbers (int64, float64)
+true false              // Booleans
+[1, 2, 3]              // Arrays
+{"a": 1, "b": 2}       // Objects
 ```
 
-Now, while the `config.enabled` is available before the execution, the `passed` is a dynamic value that's not known until the step is executed.
+### Operators (by precedence)
+```
+!expr -expr             // Logical NOT, negation
+* /                     // Multiply, divide
++ -                     // Add, subtract  
+== != < <= > >=         // Comparison
+&&                      // Logical AND
+||                      // Logical OR  
+expr ? true : false     // Ternary conditional
+(expr)                  // Grouping
+```
 
-With partial resolution, we will i.e. receive `condition: "passed"` when the `config.enabled=true` for the step, so the step itself doesn't need to know anything more than the actual dynamic context (`passed`).
+### Variable Access
+```
+variable                // Simple variable lookup
+env.HOME               // Nested property access
+config["key"]          // Bracket notation
+array[0]               // Array indexing
+```
 
-### Okay, but could it be done with known language?
+### Templates
+Embed expressions in strings using `{{}}` syntax:
+```
+"Hello {{name}}, status: {{passed ? 'OK' : 'FAIL'}}"
+"Found {{length(items)}} item{{length(items) != 1 ? 's' : ''}}"
+```
 
-When using languages like CEL, we would need to prepare an optimization pipeline, that would:
-* Parse CEL code to AST
-* Find the nodes that could be replaced with their equivalent
-* Conditionally try to extract them out of context and execute to replace
-* Compile back to CEL
+## Standard Library
 
-It would be basically kind of ahead of time compiling ([**AOT**](https://en.wikipedia.org/wiki/Ahead-of-time_compilation)), which would be just harder to implement and maintain, especially given that we would anyway need to have our own CEL interpreter (for AOT purpose).
+### Type Conversion
+| Function        | Description                                |
+|-----------------|--------------------------------------------|
+| `string(value)` | Convert any value to string                |
+| `int(value)`    | Convert to integer                         |
+| `float(value)`  | Convert to float                           |
+| `bool(value)`   | Convert to boolean (JavaScript truthiness) |
 
-Instead, we have a simple expressions language, built on top of JSON, that is built with partial resolution (instead of AOT) in mind, making it simple to work on.
+### String Operations
+| Function              | Description                                      |
+|-----------------------|--------------------------------------------------|
+| `trim(str)`           | Remove leading/trailing whitespace               |
+| `split(str, sep?)`    | Split string into array (default separator: ",") |
+| `join(array, sep?)`   | Join array into string (default separator: ",")  |
+| `shellquote(args...)` | Quote arguments for shell safety                 |
+| `shellparse(str)`     | Parse shell command into array                   |
 
-> **Note:**
->
-> Currently, given how extended this mechanism become, maybe it could be better to use CEL and write the layers above it.<br>
-> It would still have both drawbacks and advantages over this mechanism, but at least the effort would be similar.
->
-> At the point this was happening, it was faster to deliver own simple language instead of reusing existing one.
-> It may happen, that in the future it will be just worth rewriting it to CEL under some feature flag.
+### Collections
+| Function                   | Description                         |
+|----------------------------|-------------------------------------|
+| `list(items...)`           | Create array from arguments         |
+| `len(collection)`          | Get length of string, array, or map |
+| `at(collection, index)`    | Get element at index/key            |
+| `slice(array, start, end)` | Extract sub-array                   |
+| `chunk(array, size)`       | Split array into chunks             |
+| `range(start, end?)`       | Generate number range               |
+| `filter(array, expr)`      | Filter elements by expression       |
+| `map(array, expr)`         | Transform elements with expression  |
+| `entries(map)`             | Convert map to [{key, value}] array |
 
-## How expressions work
+### Math
+| Function     | Description              |
+|--------------|--------------------------|
+| `floor(num)` | Round down to integer    |
+| `ceil(num)`  | Round up to integer      |
+| `round(num)` | Round to nearest integer |
 
-Expressions in Testkube are strings that can be evaluated to produce values. They support various operations, including:
+### Data Formats
+| Function          | Description            |
+|-------------------|------------------------|
+| `tojson(value)`   | Convert to JSON string |
+| `json(str)`       | Parse JSON string      |
+| `toyaml(value)`   | Convert to YAML string |
+| `yaml(str)`       | Parse YAML string      |
+| `jq(data, query)` | Apply jq query to data |
 
-- Variable access (e.g., `foo.bar`)
-- Function calls (e.g., `string(123)`)
-- Template strings (e.g., `"Hello, ${name}"`)
+### Path Operations
+| Function                  | Description       |
+|---------------------------|-------------------|
+| `abspath(path, base?)`    | Get absolute path |
+| `relpath(dest, source?)`  | Get relative path |
+| `makepath(parent, child)` | Join paths safely |
 
-The expression system follows these steps:
+### Utility
+| Function         | Description                                 |
+|------------------|---------------------------------------------|
+| `date(format?)`  | Current date (default: RFC3339 with millis) |
+| `eval(expr)`     | Evaluate expression string                  |
+| `any(values...)` | Return first non-null value                 |
 
-1. **Parsing**: Expressions are parsed into an abstract syntax tree (AST)
-2. **Resolution**: Expressions are resolved using one or more machines that provide context
-3. **Evaluation**: The resolved expression produces a final value
+### Filesystem (via libs.NewFsMachine)
+| Function            | Description                 |
+|---------------------|-----------------------------|
+| `file(path)`        | Read file contents          |
+| `glob(patterns...)` | Find files by glob patterns |
 
-Expressions can be used in various parts of Testkube, such as in test workflows, to dynamically compute values based on context.
+## Machine System
 
-## Expression Machines
+Machines provide the execution context for expressions by supplying variables and functions.
 
-Expression machines are the execution context for expressions. They provide:
-
-1. **Variable Access**: Machines can provide values for variables used in expressions
-2. **Function Execution**: Machines can execute functions called in expressions
-
-The `Machine` interface defines two main methods:
-- `Get(name string)`: Retrieves a variable by name
-- `Call(name string, args []CallArgument)`: Calls a function with arguments
-
-Machines can be chained together, allowing expressions to access variables and functions from multiple sources.
-
-### Creating a Machine
-
+### Creating Machines
 ```go
-// Create a new machine
+// Basic machine
 machine := expressions.NewMachine()
 
-// Register a simple value
+// Register simple variable
 machine.Register("name", "John")
 
-// Register a map of values
-machine.RegisterMap("user", map[string]interface{}{
-    "id": 123,
-    "email": "john@example.com",
+// Register nested data
+machine.Register("config", map[string]interface{}{
+    "timeout": 30,
+    "enabled": true,
 })
 
-// Register a function
-machine.RegisterFunction("greet", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-    name, _ := values[0].StringValue()
-    return "Hello, " + name, true, nil
-})
-
-// Register a function that operate on non-resolved expression arguments, like `fn(unknown_variable)`
-machine.RegisterFunctionExt("greet", func(args []expressions.CallArgument) (interface{}, bool, error) {
-    name, _ := args[0].Expression.Template()
-    return "Hello, " + name, true, nil
-})
-```
-
-## Adding new Expression functions
-
-To add a new expression function:
-
-1. Create a handler function that processes arguments and returns a result
-2. Register the function with a machine
-
-### Example: Adding a custom function
-
-```go
-// Define a function handler for static values
-func customFunction(values ...expressions.StaticValue) (interface{}, bool, error) {
-    if len(values) != 2 {
-        return nil, true, fmt.Errorf("function expects 2 arguments, %d provided", len(values))
+// Register dynamic accessor (e.g., for env.* variables)
+machine.RegisterAccessor(func(name string) (interface{}, bool) {
+    if strings.HasPrefix(name, "env.") {
+        return os.Getenv(name[4:]), true
     }
+    return nil, false
+})
 
-    arg1, _ := values[0].StringValue()
-    arg2, _ := values[1].StringValue()
-
-    return arg1 + "-" + arg2, true, nil
-}
-
-// Register the function with a machine
-machine := expressions.NewMachine()
-machine.RegisterFunction("customFunc", customFunction)
-```
-
-### Example: Using RegisterFunctionExt for dynamic values
-
-The `RegisterFunctionExt` function allows you to work with expressions that might not be fully resolved yet. This is useful for:
-
-1. Creating functions that need to inspect the raw expression structure
-2. Implementing lazy evaluation or conditional resolution
-3. Working with expressions that reference variables that might not exist yet
-
-```go
-// Register the function with a machine
-machine := expressions.NewMachine()
-machine.RegisterFunctionExt("dynamicFunc", dynamicFunction)
-
-// Example usage with a conditional evaluator
-machine.RegisterFunctionExt("ifResolved", func(args []expressions.CallArgument) (interface{}, bool, error) {
-    if len(args) != 2 {
-        return nil, true, fmt.Errorf("ifResolved expects 2 arguments, got %d", len(args))
+// Register custom function
+machine.RegisterFunction("double", func(values ...expressions.StaticValue) (interface{}, bool, error) {
+    if len(values) != 1 {
+        return nil, false, errors.New("double requires 1 argument")
     }
-
-    // If first argument is resolved, return it, otherwise return second argument
-    if args[0].Expression.Static() != nil {
-        return args[0].Expression, true, nil
-    }
-
-    return args[1].Expression, true, nil
+    n, _ := values[0].IntValue()
+    return n * 2, true, nil
 })
 ```
 
-### Adding to Standard Library
-
-To add a function to the standard library, add it to the `stdFunctions` map in [**`stdlib.go`**](./stdlib.go):
-
+### Combining Machines
 ```go
-stdFunctions["newFunction"] = StdFunction{
-    ReturnType: TypeString,
-    Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
-        // Function implementation
-        return NewValue(result), nil
-    }),
-}
+// Layer machines (right takes precedence)
+combined := expressions.CombinedMachines(globalMachine, userMachine, requestMachine)
 ```
 
-You can also use the extended syntax, like:
-
+### Filesystem Machine
 ```go
-stdFunctions["any"] = StdFunction{
-    Handler: func(args []CallArgument) (Expression, bool, error) {
-        resolved := true
-        // Iterate over all arguments provided
-        for i := range args {
-            value := args[i].Static()
-
-            // If it's not resolved - ignore
-			if value == nil {
-                resolved = false
-                continue
-			}
-
-            // If it's resolved and not uses spread (...["a", "b"]), return it
-            if !args[i].Spread {
-                return value, true, nil
-            }
-
-            // If it's resolved and uses spread, find all array entries from this value
-            items, err := value.SliceValue()
-            if err != nil {
-				return nil, true, fmt.Errorf("spread operator (...) used against non-list parameter: %s", value)
-            }
-
-            // Return the first item from this argument list
-            if len(items) > 0 {
-                return NewValue(items[0]), true, nil
-            }
-        }
-
-        // If there is no values, like "any()" or "any(...[])", return None
-        if resolved {
-            return None, true, nil
-        }
-        // Otherwise, if there are some values, but none resolved, ignore it yet
-		return nil, false, nil
-    },
-}
+// Adds file() and glob() functions
+fsMachine := libs.NewFsMachine(os.DirFS("/"), "/workspace")
 ```
 
-## Simplify and Finalize
+## Expression Compilation & Resolution
 
-The [**`generic.go`**](./generic.go) file provides functionality to process expressions embedded in Go structs using struct tags.
-
-### Struct tags
-
-Fields in structs can be tagged with `expr` to indicate they contain expressions:
-
+### Basic Usage
 ```go
-type Config struct {
-    Name string `expr:"template"`  // String with template expressions
-    Command string `expr:"expression"`  // Full expression
-    Data map[string]string `expr:"template,template"` // Map with template expressions in template keys
-}
-```
-
-### Simplify
-
-The `Simplify` function processes expressions in a struct but keeps them as expressions:
-
-```go
-config := &Config{
-    Name: "Hello, ${user.name}",
-    Command: "string(123)",
+// Compile expression
+expr, err := expressions.Compile("name + ' is ' + string(age)")
+if err != nil {
+    // Handle syntax error
 }
 
-// Process expressions but keep them as expressions
-err := expressions.Simplify(config, machine)
+// Resolve with machine
+result, err := expr.Resolve(machine)
+if err != nil {
+    // Handle runtime error
+}
+
+// Get final value
+value := result.Value()
 ```
 
-After `Simplify`:
-- Expressions are parsed and validated
-- Variables are resolved if possible
-- The structure of expressions is preserved
+### Template Compilation
+```go
+template, err := expressions.CompileTemplate("Hello {{name}}!")
+result, err := template.Resolve(machine)
+```
 
-### Finalize
+### Partial Resolution
+When not all variables are available:
+```go
+// Returns partially resolved expression instead of error
+partial, changed, err := expr.SafeResolve(machine)
+if changed {
+    // Some variables were resolved
+}
+// Later, with more variables
+final, err := partial.Resolve(fullMachine)
+```
 
-The `Finalize` function fully resolves expressions to their final values:
+## Error Handling
 
 ```go
-// Fully resolve expressions to their final values
-err := expressions.Finalize(config, machine)
+// Compile-time syntax errors
+expr, err := expressions.Compile("invalid ++ syntax")
+
+// Runtime resolution errors
+result, err := expr.Resolve(machine)
+
+// Safe resolution (no error for missing variables)
+partial, changed, err := expr.SafeResolve(machine)
 ```
 
-After `Finalize`:
-- Expressions are fully resolved to their final values
-- The result contains only concrete values, not expressions
+## Common Patterns
 
-### Force Variants
+```go
+// Default values
+"value || 'default'"
 
-Both functions have "Force" variants that process all string fields regardless of tags:
+// Nil-safe access
+"user && user.email || 'no-email'"
 
-- `SimplifyForce`: Processes all fields as if they had the `include/template` tag (if not specified otherwise in tags)
-- `FinalizeForce`: Fully resolves all fields as if they had the `expr` tag (if not specified otherwise in tags)
+// Conditional formatting
+"status == 'passed' ? '✓' : '✗'"
 
-## Expression Types
+// Environment variables with defaults
+"env('PORT', '8080')"
 
-Expressions can produce different types of values:
+// String interpolation
+"'User ' + name + ' has ' + string(count) + ' items'"
 
-- `TypeString`: String values
-- `TypeBool`: Boolean values
-- `TypeInt64`: Integer values
-- `TypeFloat64`: Floating-point values
-
-The type system helps ensure type safety when evaluating expressions. It's quite loose though (similarly to i.e. JS), to make it more user-friendly.
+// Conditional pluralization
+"string(count) + ' item' + (count != 1 ? 's' : '')"
+```

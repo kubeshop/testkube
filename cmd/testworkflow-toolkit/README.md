@@ -1,159 +1,96 @@
 # TestWorkflow Toolkit
 
-The TestWorkflow Toolkit is a helper binary that runs inside test containers to provide advanced functionality like artifact collection, service management, and test execution coordination.
+The TestWorkflow Toolkit provides helper utilities for test workflows. It's injected into test containers and communicates with the init process to coordinate test execution, artifact collection, and service management.
 
 ## Overview
 
-The toolkit is injected into every test container and provides commands that can be called during test execution. It communicates with the TestWorkflow Init process to coordinate test execution across multiple containers and steps.
+The toolkit works with the TestWorkflow Init process to provide comprehensive test orchestration:
 
-## Architecture
+- **Init Process**: Orchestrates test execution (entrypoint, retry logic, state management)
+- **Toolkit**: Provides utilities for tests (artifacts, git operations, services, parallel execution)
 
-```
-┌─────────────────────────────────────────────────┐
-│                 Test Pod                        │
-├─────────────────────────────────────────────────┤
-│  Init Container 0                               │
-│  └── testworkflow-init (orchestrator)           │
-├─────────────────────────────────────────────────┤
-│  Init Container 1                               │
-│  ├── testworkflow-toolkit                       │
-│  └── Your test code                             │
-├─────────────────────────────────────────────────┤
-│  Test Container 1                               │
-│  ├── testworkflow-toolkit                       │
-│  └── Your test code                             │
-└─────────────────────────────────────────────────┘
-```
+## Environment Configuration
 
-## Environment Variables
+The toolkit receives configuration via environment variables:
 
-The toolkit reads configuration from these environment variables:
+| Variable | Purpose                     | Source              |
+|----------|-----------------------------|---------------------|
+| `TK_REF` | Current step reference ID   | Set by init process |
+| `TK_CFG` | JSON workflow configuration | Set by init process |
+| `DEBUG`  | Enable debug logging        | Optional            |
 
-### Required Variables
+### TK_CFG Structure
 
-- **`TK_REF`**: Unique reference ID for the current step/container. Used to identify which part of the workflow is executing.
-  - Maps to state file: `.c` (current reference)
-  - Example: `"step-1"`, `"run-tests"`
-
-- **`TK_CFG`**: JSON-encoded internal configuration containing workflow metadata, execution details, and worker configuration.
-  - Maps to state file: `.C` (internal config)
-  - Contains the full configuration object (see below)
-
-### Optional Variables
-
-- **`TK_IP`**: IP address for network operations
-- **`TK_FF_JUNIT_REPORT`**: Enable JUnit report parsing (default: false)
-- **`DEBUG`**: Enable debug logging (set to "1")
-
-### Internal Configuration (TK_CFG)
-
-The `TK_CFG` environment variable contains a JSON object with:
-
+Contains workflow metadata and execution details:
 ```json
 {
-  "workflow": {
-    "name": "test-workflow-name"
-  },
-  "execution": {
-    "id": "execution-id",
-    "name": "execution-name", 
-    "number": 1,
-    "scheduledAt": "2024-01-01T00:00:00Z",
-    "disableWebhooks": false,
-    "debug": false,
-    "tags": {"env": "prod"}
-  },
-  "worker": {
-    "namespace": "testkube"
-  }
+  "workflow": {"name": "test-workflow"},
+  "execution": {"id": "exec-123", "namespace": "testkube"},
+  "worker": {"namespace": "testkube"}
 }
 ```
 
 ## Commands
 
-The toolkit provides several commands accessible via CLI:
+### Open Source Commands
 
-### Core Commands (Open Source)
+#### `artifacts <paths...>`
+Collect test artifacts with optional compression and cloud upload.
 
-### 1. Artifacts Command
 ```bash
-testworkflow-toolkit artifacts [flags] <paths...>
-```
-Collects files and directories as test artifacts. Supports glob patterns.
-
-Flags:
-- `--id`: Custom artifact ID
-- `--compress`: Compression type (tar.gz, tgz, none)
-- `--compress-cache`: Cache path for compression
-- `--unpack`: Auto-extract archives in cloud storage
-- `--mount`: Additional mount paths to check
-
-Example:
-```bash
-# Collect all test reports
+# Basic usage
 testworkflow-toolkit artifacts "reports/*.xml" "logs/*.log"
 
-# Collect with compression
+# With compression  
 testworkflow-toolkit artifacts --compress=tar.gz "test-results/"
+
+# Custom artifact ID
+testworkflow-toolkit artifacts --id=custom-id "output/"
 ```
 
-### 2. Clone Command
-```bash
-testworkflow-toolkit clone <repository> [flags]
-```
-Clones git repositories with authentication support.
+**Flags**:
+- `--compress`: Compression type (`tar.gz`, `tgz`, `none`)
+- `--id`: Custom artifact identifier
+- `--unpack`: Auto-extract archives in cloud storage
+- `--mount`: Additional mount paths
 
-Flags:
-- `--branch`: Specific branch/tag/commit to checkout
-- `--paths`: Sparse checkout paths (comma-separated)
-- `--auth-type`: Authentication type (header, token, username-password, ssh-key)
-- `--token`: Authentication token
-- `--username`: Git username
-- `--password`: Git password  
-- `--ssh-key`: SSH private key path
+#### `clone <repository>`
+Clone git repositories with authentication support.
 
-Example:
 ```bash
-# Clone with authentication
+# Basic clone
+testworkflow-toolkit clone https://github.com/user/repo.git
+
+# With authentication and branch
 testworkflow-toolkit clone https://github.com/private/repo.git \
-  --token $GITHUB_TOKEN \
-  --branch main
+  --token $GITHUB_TOKEN --branch main
+
+# Sparse checkout
+testworkflow-toolkit clone https://github.com/user/repo.git \
+  --paths "src/,tests/" --branch develop
 ```
 
-### 3. Tarball Command
-```bash
-testworkflow-toolkit tarball <operation> [args...]
-```
-Creates or extracts tarball archives.
+**Authentication Types**:
+- `--token`: Token-based (GitHub, GitLab)
+- `--username`/`--password`: Basic auth
+- `--ssh-key`: SSH key path
 
-Operations:
-- `create <archive> <paths...>`: Create a tarball
-- `extract <archive> [destination]`: Extract a tarball
+#### `tarball <operation> [args...]`
+Create or extract tarball archives.
 
-Flags:
-- `--compress`: Enable gzip compression (for create)
-- `--mount`: Additional mount paths to check
-
-Example:
 ```bash
 # Create compressed tarball
 testworkflow-toolkit tarball create --compress archive.tar.gz src/ tests/
 
 # Extract tarball
-testworkflow-toolkit tarball extract archive.tar.gz /tmp/extracted/
+testworkflow-toolkit tarball extract archive.tar.gz /destination/
 ```
 
-### 4. Transfer Command
-```bash
-testworkflow-toolkit transfer <source:patterns=url> [...]
-```
-Transfers files between locations using pattern matching.
+#### `transfer <source:patterns=url>`
+Transfer files using pattern matching.
 
-Format: `source_path:pattern1,pattern2=destination_url`
-
-Example:
 ```bash
-# Transfer specific file types
+# Single transfer
 testworkflow-toolkit transfer "/data:*.txt,*.log=http://storage/upload"
 
 # Multiple transfers
@@ -162,181 +99,91 @@ testworkflow-toolkit transfer \
   "/logs:**/*.log=http://storage/logs"
 ```
 
-### Pro Commands (Licensed)
+### Pro Commands (Testkube Pro License Required)
 
-These commands require a Testkube Pro license:
+#### `execute`
+Execute other tests or workflows from within a workflow.
 
-### 1. Execute Command (Pro)
 ```bash
-testworkflow-toolkit execute <command> [args...]
-```
-Runs a command and captures its output, exit code, and execution metadata.
+# Execute tests with matrix/sharding support
+testworkflow-toolkit execute --test='{"name":"api-test","count":3}' \
+  --workflow='{"name":"e2e-suite","matrix":{"browser":["chrome","firefox"]}}'
 
-### 2. Services Command (Pro)
+# Parallel execution with custom parallelism
+testworkflow-toolkit execute --parallelism=5 --async \
+  --test='{"name":"load-test"}' --workflow='{"name":"integration-suite"}'
+```
+
+**Features**:
+- Matrix and sharding support for scaling tests
+- Parallel execution with configurable parallelism
+- Async mode for fire-and-forget execution
+- Transfer server for file sharing between executions
+
+#### `services <ref>`
+Manage accompanying services (databases, APIs, etc.) alongside tests.
+
 ```bash
-testworkflow-toolkit services <action> [service-name]
+# Start services for a group
+testworkflow-toolkit services --group=test-group \
+  "db=<service-spec>" "api=<service-spec>"
 ```
-Manages test services (start, stop, check status).
 
-Actions:
-- `start <name>`: Start a service
-- `stop <name>`: Stop a service  
-- `status <name>`: Check service status
+**Service Management**:
+- Automatic readiness probing
+- Resource management and cleanup
+- IP assignment and networking
+- Parallel service startup with configurable policies
 
-### 3. Parallel Command (Pro)
+#### `parallel <spec>`
+Execute multiple operations in parallel with advanced orchestration.
+
 ```bash
-testworkflow-toolkit parallel [flags]
+# Run parallel workflows with matrix
+testworkflow-toolkit parallel '<parallel-spec-json>'
 ```
-Executes multiple operations in parallel.
 
-### 4. Kill Command (Pro)
+**Features**:
+- Matrix and sharding support
+- Configurable parallelism
+- Transfer server integration
+- Log collection with conditional saving
+- Automatic resource cleanup
+- Resume/pause orchestration
+
+#### `kill <ref>`
+Terminate and clean up services or parallel operations.
+
 ```bash
-testworkflow-toolkit kill [flags]
+# Kill services with log collection
+testworkflow-toolkit kill service-group --logs="db=failed" --logs="api=always"
 ```
-Terminates processes or services.
+
+**Cleanup Features**:
+- Selective log collection based on conditions
+- Graceful resource cleanup
+- Error reporting and status tracking
 
 ## Integration with Init Process
 
-The toolkit communicates with the init process through:
+The toolkit integrates with the init process through:
 
-1. **State File**: Located at `/.tktw/state` by default (read-only access)
-2. **Environment Variables**: Configuration passed via TK_CFG and TK_REF
-3. **Process Coordination**: Synchronization between containers
+1. **Environment Variables**: Configuration passed via `TK_CFG` and `TK_REF`
+2. **Shared Filesystem**: Access to volumes for artifacts and state
+3. **State Coordination**: Synchronization through the state file at `/.tktw/state`
 
-### State File Structure
-
-The state file uses short JSON keys to minimize size. Here's what each key means:
-
-```json
-{
-  "a": [[]],                    // Actions groups (array of arrays)
-  "C": {},                      // Internal configuration (from TK_CFG)
-  "g": 0,                       // Current group index (which group is running)
-  "c": "step-1",               // Current reference (TK_REF value)
-  "s": "passed",               // Current status expression
-  "o": {                       // Outputs (key-value pairs)
-    "result": "\"success\"",
-    "score": "42"
-  },
-  "S": {                       // Steps data (execution details)
-    "step-1": {
-      "_": "step-1",          // Step reference
-      "s": "passed",          // Status
-      "e": 0,                 // Exit code
-      "S": "2024-01-01T00:00:00Z", // Start time
-      "c": "passed",          // Condition
-      "p": []                 // Parent step references
-    }
-  },
-  "R": {                       // Resource configuration
-    "requests": {"cpu": "100m", "memory": "128Mi"},
-    "limits": {"cpu": "1000m", "memory": "1Gi"}
-  },
-  "G": [{...}]                // Signature configs (service definitions)
-}
-```
-
-## Usage Examples
-
-### Running Tests with Artifact Collection
-
-```yaml
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: example-test
-spec:
-  container:
-    image: node:18
-  steps:
-  - name: run-tests
-    run:
-      shell: |
-        npm test
-        
-        # Collect test results
-        testworkflow-toolkit artifacts "test-results/*.xml"
-```
-
-### Managing Services (Pro)
-
-```yaml
-steps:
-- name: start-database
-  run:
-    shell: |
-      # Start PostgreSQL service (Pro feature)
-      testworkflow-toolkit services start postgres
-      
-      # Wait for service to be ready
-      testworkflow-toolkit services wait postgres
-      
-- name: run-tests
-  run:
-    shell: |
-      npm test
-      
-- name: cleanup
-  run:
-    shell: |
-      # Stop service
-      testworkflow-toolkit services stop postgres
-```
-
-### Cloning Private Repositories
-
-```bash
-# Clone with authentication
-testworkflow-toolkit clone https://github.com/private/repo.git \
-  --token $GITHUB_TOKEN \
-  --branch main \
-  --depth 1
-```
-
-## Error Handling
-
-The toolkit uses exit codes to indicate different types of failures:
+## Exit Codes
 
 - **0**: Success
-- **1**: General error
-- **2**: Configuration error
-- **15**: Internal error
-- **16**: Input validation error
-
-## Debugging
-
-Enable debug mode for verbose logging:
-
-```bash
-export DEBUG=1
-testworkflow-toolkit execute echo "test"
-```
-
-This will show:
-- Configuration loading
-- Command execution details
-- File operations
-- Network requests
-
-## Best Practices
-
-1. **Always collect artifacts** for important test outputs
-2. **Use meaningful step references** (TK_REF) for debugging
-3. **Handle service lifecycle properly** - always stop services you start
-4. **Check exit codes** when executing commands
-5. **Use glob patterns** for flexible artifact collection
+- **1**: General error 
+- **137**: Terminated by signal (SIGINT/SIGTERM)
 
 ## Internal Paths
 
-The toolkit uses these internal paths:
+The toolkit uses these paths for coordination:
 
-- `/.tktw/`: Root directory for TestWorkflow files
-- `/.tktw/state`: State file for coordination
-- `/.tktw/bin/`: Binary tools
-- `/.tktw/transfer/`: Temporary transfer directory
-- `/dev/termination-log`: Kubernetes termination log
-
-These can be overridden with environment variables:
-- `TESTKUBE_TW_INTERNAL_PATH`
-- `TESTKUBE_TW_STATE_PATH`
-- `TESTKUBE_TW_TERMINATION_LOG_PATH`
+| Path               | Purpose                                  |
+|--------------------|------------------------------------------|
+| `/.tktw/`          | Root directory for TestWorkflow files    |
+| `/.tktw/state`     | State file for init process coordination |
+| `/.tktw/transfer/` | Temporary directory for file transfers   |

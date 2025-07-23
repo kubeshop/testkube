@@ -317,7 +317,11 @@ func (f *InitTestFramework) runWithGroup(ctx context.Context, groupIndex int) er
 			}
 		}()
 
-		exitCode := runner.RunInit(groupIndex)
+		exitCode, err := runner.RunInitWithContext(ctx, groupIndex)
+		if err != nil {
+			// Store the error but continue to set the exit code
+			panicErr = err
+		}
 		f.ctx.ProcessCapture.ExitCode = exitCode
 	}()
 
