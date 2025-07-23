@@ -353,10 +353,10 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	// Flatten target replicas
 	// ScheduleExecution has a `targets` parameter which determines __where__ to execute (i.e. which runner).
 	// - Each target has a selector `match` and anti-selector `not`.
-	//   - e.g. `target.match.name: ["a", "b"]` can by default be interpreted as executing on a runner with name "a" OR "b".
+	//   - e.g. `target.match.name: ["a", "b"]` can by default be interpreted as executing on _one_ runner with name "a" or "b".
 	// - Each target has a `replicate` flag which changes behaviour from "OR" to "AND":
-	//   - e.g. `target.match.name: ["a", "b"]` with `replica: ["name"]` can by default be interpreted as executing on runners with name "a" AND "b".
-	//   - `replicate: ["name", "service"]` will do TO_BE_DETERMINED?
+	//   - e.g. `target.match.name: ["a", "b"]` with `replica: ["name"]` can by default be interpreted as executing on _every_ runner with name "a" or "b".
+	//   - `replicate: ["name", "service"]` will fan out across both dimensions.
 	// - You can have multiple targets which each cause One or Multiple (replicate) executions
 	//
 	// Input:
