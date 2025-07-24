@@ -13,4 +13,4 @@ spec:
       workflows:
       - name: artillery-workflow-smoke
       - name: artillery-workflow-smoke-template
-      - name: distributed-artillery-workflow-smoke-artifacts
+      - name: distributed-artillery-workflow-smoke

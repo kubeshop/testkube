@@ -13,6 +13,7 @@ spec:
       paths:
       - contrib/executor/maven/examples/hello-maven
   container:
+    image: maven:3.9.6-eclipse-temurin-11-focal
     resources:
       requests:
         cpu: 256m
@@ -23,10 +24,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: maven:3.9.6-eclipse-temurin-11-focal
-      command:
-      - "mvn"
-      - "test"
+      shell: mvn test
       env:
       - name: TESTKUBE_MAVEN
         value: "true"

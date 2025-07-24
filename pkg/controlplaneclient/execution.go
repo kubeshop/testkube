@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 type ExecutionClient interface {
@@ -69,6 +70,7 @@ func (c *client) legacyGetExecution(ctx context.Context, environmentId, executio
 }
 
 func (c *client) SaveExecutionLogsGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName string) (string, error) {
+	log.DefaultLogger.Debugw("grpc.SaveExecutionLogsGetPresignedURL", "id", executionId)
 	if c.IsLegacy() {
 		return c.legacySaveExecutionLogsGetPresignedURL(ctx, environmentId, executionId, legacyWorkflowName)
 	}
@@ -107,6 +109,7 @@ func (c *client) legacySaveExecutionLogsGetPresignedURL(ctx context.Context, env
 }
 
 func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, executionId, legacyWorkflowName string, reader io.Reader) error {
+	log.DefaultLogger.Debugw("grpc.SaveExecutionLogs", "id", executionId)
 	// TODO: consider how to choose the temp dir
 	buffer, err := bufferedstream.NewBufferedStream("", "log", reader)
 	if err != nil {
@@ -163,6 +166,7 @@ func (c *client) UpdateExecutionOutput(ctx context.Context, environmentId, execu
 }
 
 func (c *client) UpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error {
+	log.DefaultLogger.Debugw("grpc.UpdateExecutionResult", "id", executionId, "result", result.Status)
 	if c.IsLegacy() {
 		return c.legacyUpdateExecutionResult(ctx, environmentId, executionId, result)
 	}
@@ -200,6 +204,7 @@ func (c *client) legacyUpdateExecutionResult(ctx context.Context, environmentId,
 }
 
 func (c *client) FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error {
+	log.DefaultLogger.Debugw("grpc.FinishExecutionResult", "id", executionId)
 	if c.IsLegacy() {
 		return c.legacyUpdateExecutionResult(ctx, environmentId, executionId, result)
 	}
@@ -216,6 +221,7 @@ func (c *client) FinishExecutionResult(ctx context.Context, environmentId, execu
 }
 
 func (c *client) InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error {
+	log.DefaultLogger.Debugw("grpc.InitExecution", "id", executionId)
 	if c.IsLegacy() {
 		return c.legacyInitExecution(ctx, environmentId, executionId, signature, namespace)
 	}

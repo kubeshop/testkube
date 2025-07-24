@@ -15,7 +15,8 @@ import (
 func NewAbortCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:         "abort <resourceName>",
-		Short:       "Abort tests or test suites",
+		Deprecated:  "use \"cancel\" instead",
+		Short:       "Abort tests, test suites, or testworkflows",
 		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()

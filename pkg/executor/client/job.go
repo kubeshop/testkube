@@ -459,7 +459,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 	c.streamLog(ctx, execution.Id, logEvent.WithContent("stopping execution"))
 	defer c.streamLog(ctx, execution.Id, logEvent.WithContent("execution stopped"))
 
-	if savedExecution.IsCanceled() || savedExecution.IsTimeout() {
+	if savedExecution.IsAborted() || savedExecution.IsCanceled() || savedExecution.IsTimeout() {
 		c.streamLog(ctx, execution.Id, logEvent.WithContent("execution is cancelled"))
 		return nil
 	}

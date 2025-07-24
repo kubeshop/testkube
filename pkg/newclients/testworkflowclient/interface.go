@@ -40,6 +40,7 @@ type TestWorkflowClient interface {
 	List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflow, error)
 	ListLabels(ctx context.Context, environmentId string) (map[string][]string, error)
 	Update(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error
+	UpdateStatus(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error
 	Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error
 	Delete(ctx context.Context, environmentId string, name string) error
 	DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error)

@@ -49,6 +49,12 @@ func (c *cloudTestWorkflowClient) Update(ctx context.Context, environmentId stri
 	return c.client.UpdateTestWorkflow(ctx, environmentId, workflow)
 }
 
+func (c *cloudTestWorkflowClient) UpdateStatus(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
+	// For cloud storage (MongoDB), we can safely update the entire workflow document
+	// since status fields are not protected like in Kubernetes custom resources
+	return c.client.UpdateTestWorkflow(ctx, environmentId, workflow)
+}
+
 func (c *cloudTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
 	return c.client.CreateTestWorkflow(ctx, environmentId, workflow)
 }

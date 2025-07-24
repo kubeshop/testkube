@@ -10,12 +10,14 @@ func StatusPtr(status ExecutionStatus) *ExecutionStatus {
 }
 
 var (
-	ExecutionStatusFailed  = StatusPtr(FAILED_ExecutionStatus)
-	ExecutionStatusPassed  = StatusPtr(PASSED_ExecutionStatus)
-	ExecutionStatusQueued  = StatusPtr(QUEUED_ExecutionStatus)
-	ExecutionStatusRunning = StatusPtr(RUNNING_ExecutionStatus)
-	ExecutionStatusAborted = StatusPtr(ABORTED_ExecutionStatus)
-	ExecutionStatusTimeout = StatusPtr(TIMEOUT_ExecutionStatus)
+	ExecutionStatusFailed   = StatusPtr(FAILED_ExecutionStatus)
+	ExecutionStatusPassed   = StatusPtr(PASSED_ExecutionStatus)
+	ExecutionStatusQueued   = StatusPtr(QUEUED_ExecutionStatus)
+	ExecutionStatusRunning  = StatusPtr(RUNNING_ExecutionStatus)
+	ExecutionStatusAborted  = StatusPtr(ABORTED_ExecutionStatus)
+	ExecutionStatusTimeout  = StatusPtr(TIMEOUT_ExecutionStatus)
+	ExecutionStatusSkipped  = StatusPtr(SKIPPED_ExecutionStatus)
+	ExecutionStatusCanceled = StatusPtr(CANCELED_ExecutionStatus)
 )
 
 // ExecutionStatuses is an array of ExecutionStatus
@@ -34,12 +36,14 @@ func (statuses ExecutionStatuses) ToMap() map[ExecutionStatus]struct{} {
 // ParseExecutionStatusList parse a list of execution statuses from string
 func ParseExecutionStatusList(source, separator string) (statusList ExecutionStatuses, err error) {
 	statusMap := map[ExecutionStatus]struct{}{
-		FAILED_ExecutionStatus:  {},
-		PASSED_ExecutionStatus:  {},
-		QUEUED_ExecutionStatus:  {},
-		RUNNING_ExecutionStatus: {},
-		ABORTED_ExecutionStatus: {},
-		TIMEOUT_ExecutionStatus: {},
+		FAILED_ExecutionStatus:   {},
+		PASSED_ExecutionStatus:   {},
+		QUEUED_ExecutionStatus:   {},
+		RUNNING_ExecutionStatus:  {},
+		ABORTED_ExecutionStatus:  {},
+		TIMEOUT_ExecutionStatus:  {},
+		SKIPPED_ExecutionStatus:  {},
+		CANCELED_ExecutionStatus: {},
 	}
 
 	if source == "" {

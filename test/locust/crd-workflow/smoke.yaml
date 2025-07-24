@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: locust
+    artifacts: "true"
 spec:
   content:
     git:
@@ -14,12 +15,84 @@ spec:
       - test/locust/locust-project
   container:
     workingDir: /data/repo/test/locust/locust-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:
   - name: Run test
     run:
       image: locustio/locust:2.32.3
+      shell: |
+        mkdir /data/artifacts
+        locust -f locust_test.py --host https://testkube-test-page-lipsum.pages.dev/ --headless --users 6 --spawn-rate 3 --run-time 10s --html=/data/artifacts/report.html
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: locust-workflow-smoke-master-image
+  labels:
+    core-tests: workflows
+    tool: locust
+    artifacts: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/locust/locust-project
+  container:
+    workingDir: /data/repo/test/locust/locust-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: locustio/locust:master
+      shell: |
+        mkdir /data/artifacts
+        locust -f locust_test.py --host https://testkube-test-page-lipsum.pages.dev/ --headless --users 6 --spawn-rate 3 --run-time 10s --html=/data/artifacts/report.html
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: locust-workflow-smoke-latest-image
+  labels:
+    core-tests: workflows
+    tool: locust
+    artifacts: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/locust/locust-project
+  container:
+    workingDir: /data/repo/test/locust/locust-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: locustio/locust:latest
       shell: |
         mkdir /data/artifacts
         locust -f locust_test.py --host https://testkube-test-page-lipsum.pages.dev/ --headless --users 6 --spawn-rate 3 --run-time 10s --html=/data/artifacts/report.html
@@ -43,6 +116,11 @@ spec:
       revision: main
       paths:
       - test/locust/locust-project
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   services:
     master:
       transfer:
@@ -60,6 +138,10 @@ spec:
         tcpSocket:
           port: 5557
         periodSeconds: 1
+      resources:
+        requests:
+          cpu: 512m
+          memory: 256Mi
   job:
     activeDeadlineSeconds: 600
   steps:

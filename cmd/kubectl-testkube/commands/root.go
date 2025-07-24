@@ -40,6 +40,7 @@ func init() {
 	RootCmd.AddCommand(NewRunCmd())
 	RootCmd.AddCommand(NewDeleteCmd())
 	RootCmd.AddCommand(NewAbortCmd())
+	RootCmd.AddCommand(NewCancelCmd())
 
 	RootCmd.AddCommand(NewEnableCmd())
 	RootCmd.AddCommand(NewDisableCmd())

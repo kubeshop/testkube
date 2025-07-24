@@ -1304,6 +1304,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		Updated:     updateTime,
 		Description: w.Description,
 		Spec:        common.Ptr(MapSpecKubeToAPI(w.Spec)),
+		Status:      MapTestWorkflowStatusSummaryKubeToAPI(w.Status),
 	}
 }
 
@@ -1488,5 +1489,27 @@ func MapTestWorkflowExecutionResourceAggregationsKubeToAPI(
 		Max:    v.Max,
 		Avg:    v.Avg,
 		StdDev: v.StdDev,
+	}
+}
+
+func MapTestWorkflowExecutionHealthKubeToAPI(h *testworkflowsv1.TestWorkflowExecutionHealth) *testkube.TestWorkflowExecutionHealth {
+	if h == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionHealth{
+		PassRate:      h.PassRate,
+		FlipRate:      h.FlipRate,
+		OverallHealth: h.OverallHealth,
+	}
+}
+
+func MapTestWorkflowStatusSummaryKubeToAPI(v testworkflowsv1.TestWorkflowStatusSummary) *testkube.TestWorkflowStatusSummary {
+	// Check if status has any meaningful content
+	if v.Health == nil {
+		return nil
+	}
+
+	return &testkube.TestWorkflowStatusSummary{
+		Health: MapTestWorkflowExecutionHealthKubeToAPI(v.Health),
 	}
 }

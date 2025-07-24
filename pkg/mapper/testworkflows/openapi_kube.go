@@ -1390,7 +1390,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 }
 
 func MapTestWorkflowAPIToKube(w testkube.TestWorkflow) testworkflowsv1.TestWorkflow {
-	return testworkflowsv1.TestWorkflow{
+	result := testworkflowsv1.TestWorkflow{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TestWorkflow",
 			APIVersion: testworkflowsv1.GroupVersion.Group + "/" + testworkflowsv1.GroupVersion.Version,
@@ -1404,7 +1404,10 @@ func MapTestWorkflowAPIToKube(w testkube.TestWorkflow) testworkflowsv1.TestWorkf
 		},
 		Description: w.Description,
 		Spec:        common.ResolvePtr(common.MapPtr(w.Spec, MapSpecAPIToKube), testworkflowsv1.TestWorkflowSpec{}),
+		Status:      common.ResolvePtr(common.MapPtr(w.Status, MapTestWorkflowStatusSummaryAPIToKube), testworkflowsv1.TestWorkflowStatusSummary{}),
 	}
+
+	return result
 }
 
 func MapTestWorkflowTemplateAPIToKube(w testkube.TestWorkflowTemplate) testworkflowsv1.TestWorkflowTemplate {
@@ -1572,23 +1575,6 @@ func MapTestWorkflowExecutionStatusAPIToKube(v *testkube.TestWorkflowExecution, 
 	}
 }
 
-func MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(v *testkube.TestWorkflowExecution) testworkflowsv1.TestWorkflowStatusSummary {
-	return testworkflowsv1.TestWorkflowStatusSummary{
-		LatestExecution: &testworkflowsv1.TestWorkflowExecutionSummary{
-			Id:          v.Id,
-			Name:        v.Name,
-			Number:      v.Number,
-			ScheduledAt: metav1.NewTime(v.ScheduledAt),
-			StatusAt:    metav1.NewTime(v.StatusAt),
-			Result:      common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
-			Workflow:    common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
-			Tags:        v.Tags,
-			// Pro edition only (tcl protected code)
-			RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
-		},
-	}
-}
-
 func MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary(v testkube.TestWorkflowResult) testworkflowsv1.TestWorkflowResultSummary {
 	return testworkflowsv1.TestWorkflowResultSummary{
 		Status:          (*testworkflowsv1.TestWorkflowStatus)(v.Status),
@@ -1739,5 +1725,22 @@ func MapTestWorkflowExecutionResourceAggregationsAPIToKube(v *testkube.TestWorkf
 		Max:    v.Max,
 		Avg:    v.Avg,
 		StdDev: v.StdDev,
+	}
+}
+
+func MapTestWorkflowExecutionHealthAPIToKube(h *testkube.TestWorkflowExecutionHealth) *testworkflowsv1.TestWorkflowExecutionHealth {
+	if h == nil {
+		return nil
+	}
+	return &testworkflowsv1.TestWorkflowExecutionHealth{
+		PassRate:      h.PassRate,
+		FlipRate:      h.FlipRate,
+		OverallHealth: h.OverallHealth,
+	}
+}
+
+func MapTestWorkflowStatusSummaryAPIToKube(v testkube.TestWorkflowStatusSummary) testworkflowsv1.TestWorkflowStatusSummary {
+	return testworkflowsv1.TestWorkflowStatusSummary{
+		Health: MapTestWorkflowExecutionHealthAPIToKube(v.Health),
 	}
 }

@@ -12,4 +12,4 @@ spec:
       - name: tw-suite-small-smoke
   events:
   - cronjob:
-      cron: "0,20,40 * * * *" # every 20 minutes
+      cron: "5 */2 * * *" # every 2 hours (+ triggered on every .dev deployment)

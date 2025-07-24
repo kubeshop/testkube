@@ -3,10 +3,12 @@ kind: TestWorkflow
 metadata:
   name: edge-cases-expected-failure-suite
   labels:
-    core-tests: expected-fail
+    core-tests: expected-fail-suite
+    type: suite
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: expected-fail-cypress-incorrect-repo-path
       - name: expected-fail-cypress-incorrect-repo-path-cone-mode
@@ -20,4 +22,12 @@ spec:
       - name: expected-fail-private-registry-auth
       - name: expected-fail-private-repo-auth
       - name: expected-fail-missing-git-secret
-      - name: expected-fail-missing-env-secret
+      - name: expected-fail-missing-template
+      - name: expected-fail-service-exit-code
+      - name: expected-fail-step-retry
+      - name: expected-fail-negative-step
+      - name: expected-fail-volume-not-mounted
+      - name: expected-fail-template-missing-config-options
+      - name: expected-fail-template-not-defined-config-options
+      - name: expected-fail-service-readiness-probe
+      - name: expected-fail-conditional-step-failed

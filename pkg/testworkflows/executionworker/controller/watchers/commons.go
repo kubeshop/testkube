@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -300,10 +302,26 @@ func GetJobError(job *batchv1.Job) string {
 			}
 		}
 	}
+	var msg string
 	if job.DeletionTimestamp != nil {
-		return "Job has been aborted"
+		msg = "Job has been aborted"
 	}
-	return ""
+	if job.ObjectMeta.Annotations != nil {
+		if terminationReason, ok := job.ObjectMeta.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
+			msg = terminationReason
+		}
+	}
+	return msg
+}
+
+func GetTerminationCode(job *batchv1.Job) string {
+	if job == nil || job.ObjectMeta.Annotations == nil {
+		return string(testkube.ABORTED_TestWorkflowStatus)
+	}
+	if terminationCode, ok := job.ObjectMeta.Annotations[constants2.AnnotationTerminationCode]; ok && terminationCode != "" {
+		return terminationCode
+	}
+	return string(testkube.ABORTED_TestWorkflowStatus)
 }
 
 func GetContainerStateDebug(state corev1.ContainerState) string {

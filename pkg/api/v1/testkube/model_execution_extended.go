@@ -183,7 +183,7 @@ func (e Execution) IsCanceled() bool {
 		return true
 	}
 
-	return *e.ExecutionResult.Status == ABORTED_ExecutionStatus
+	return *e.ExecutionResult.Status == CANCELED_ExecutionStatus
 }
 
 func (e Execution) IsTimeout() bool {

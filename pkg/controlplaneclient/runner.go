@@ -127,7 +127,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 		}()
 
 		// Receive timeout should be longer than heartbeat interval in cloud.
-		t := time.NewTimer(c.opts.RecvTimeout)
+		t := time.NewTimer(c.opts.SendTimeout)
 		select {
 		case err := <-errChan:
 			t.Stop()
@@ -144,12 +144,14 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	}
 	go func() {
 		defer func() {
+			c.logger.Errorw("shutting down watch runner requests", "error", err)
 			cancel(err)
 			watcher.Close(err)
 		}()
 		for {
 			// Ignore if it's not implemented in the Control Plane
 			if getGrpcErrorCode(err) == codes.Unimplemented {
+				c.logger.Errorw("error watching runner requests", "error", err)
 				return
 			}
 
@@ -160,6 +162,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 
 			// Handle the error
 			if err != nil {
+				c.logger.Errorw("error watching runner requests", "error", err)
 				return
 			}
 
@@ -182,7 +185,8 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 				req = result.req
 				err = result.err
 				if err != nil {
-					continue
+					c.logger.Errorw("failed to receive runner request", "error", err)
+					return
 				}
 			case <-ctx.Done():
 				err = ctx.Err()
@@ -195,6 +199,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 			if req.Type == cloud.RunnerRequestType_PING {
 				err = send(&cloud.RunnerResponse{Type: cloud.RunnerRequestType_PING})
 				if err != nil {
+					c.logger.Errorw("failed to send ping response", "error", err)
 					return
 				}
 				continue
@@ -216,6 +221,8 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 		buildCloudError,
 		process,
 		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
 	)
 }
 
@@ -229,6 +236,8 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 		buildParallelStepCloudError,
 		process,
 		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
 	)
 }
 
@@ -242,5 +251,7 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 		buildServiceCloudError,
 		process,
 		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
 	)
 }

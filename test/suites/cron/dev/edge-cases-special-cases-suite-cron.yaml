@@ -1,0 +1,15 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: edge-cases-special-cases-suite-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: suite-trigger
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: edge-cases-special-cases-suite
+  events:
+  - cronjob:
+      cron: "05 */4 * * *" # every 4 hours

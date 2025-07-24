@@ -1,0 +1,17 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: expected-random-random-oomkilled
+  labels:
+    core-tests: expected-random
+description: "Expected random result"
+spec:
+  container:
+    image: python:3.11-slim
+    resources:
+      limits:
+        memory: 50Mi
+  steps:
+  - name: Run test - random OOMKilled
+    shell: bash -c '[ $(( RANDOM % 2 )) -eq 0 ] && echo "Random - OOMKilled" && python3
+      -c "a = '\'' '\'' * 10**9" || echo "Random - OK"'

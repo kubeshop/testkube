@@ -90,6 +90,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 		go func(environmentId string, executionId string) {
 			err := s.runner.Monitor(context.Background(), s.proContext.OrgID, environmentId, executionId)
 			if err == nil {
+				s.logger.Infow("Reattached execution", "executionId", executionId)
 				return
 			}
 			if !errors.Is(err, registry.ErrResourceNotFound) && !errors.Is(err, controller.ErrJobAborted) {
@@ -125,7 +126,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			}
 
 			// Finalize and save the result
-			execution.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
 			execution.Result.HealTimestamps(sigSequence, execution.ScheduledAt, time.Time{}, time.Time{}, true)
 			execution.Result.HealDuration(execution.ScheduledAt)
 			execution.Result.HealMissingPauseStatuses()
@@ -133,7 +134,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			if err = s.client.FinishExecutionResult(ctx, environmentId, executionId, execution.Result); err != nil {
 				s.logger.Errorw("failed to recover execution: saving execution", "id", executionId, "error", err)
 			} else {
-				s.logger.Infow("recovered execution", "id", executionId, "status", "error", err)
+				s.logger.Infow("recovered execution", "id", executionId, "error", err)
 			}
 		}(exec.EnvironmentId, exec.Id)
 	}
