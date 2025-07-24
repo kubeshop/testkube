@@ -265,10 +265,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 			return
 		}),
 		cloudtestworkflow.CmdTestWorkflowExecutionGetLatestByWorkflow: controlplane.Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionGetLatestByWorkflowRequest) (r cloudtestworkflow.ExecutionGetLatestByWorkflowResponse, err error) {
-			sortBy := testworkflow.LatestSortByStatusAt
-			if data.SortBy == "number" {
-				sortBy = testworkflow.LatestSortByNumber
-			}
+			sortBy := testworkflow.ParseLatestSortBy(data.SortBy)
 			r.WorkflowExecution, err = testWorkflowResultsRepository.GetLatestByTestWorkflow(ctx, data.WorkflowName, sortBy)
 			return
 		}),

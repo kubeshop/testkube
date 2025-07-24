@@ -29,6 +29,20 @@ const (
 	LatestSortByNumber LatestSortBy = "number"
 )
 
+// ParseLatestSortBy converts a string to LatestSortBy with validation and default behavior
+func ParseLatestSortBy(s string) LatestSortBy {
+	switch s {
+	case string(LatestSortByNumber):
+		return LatestSortByNumber
+	case string(LatestSortByStatusAt):
+		return LatestSortByStatusAt
+	case "": // default case for empty string
+		return LatestSortByStatusAt
+	default: // invalid values default to statusat for backward compatibility
+		return LatestSortByStatusAt
+	}
+}
+
 type InitData struct {
 	RunnerID   string
 	Namespace  string
