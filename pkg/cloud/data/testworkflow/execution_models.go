@@ -64,6 +64,14 @@ type ExecutionGetExecutionTotalsResponse struct {
 	Totals testkube.ExecutionsTotals `json:"totals"`
 }
 
+type ExecutionCountRequest struct {
+	Filter *testworkflow.FilterImpl `json:"filter"`
+}
+
+type ExecutionCountResponse struct {
+	Count int64 `json:"count"`
+}
+
 type ExecutionGetExecutionsRequest struct {
 	Filter *testworkflow.FilterImpl `json:"filter"`
 }
