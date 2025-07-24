@@ -410,7 +410,6 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 			&i.WorkflowSpec,
 			&i.WorkflowReadOnly,
 			&i.WorkflowStatus,
-			&i.WorkflowHealth,
 			&i.ResolvedWorkflowName,
 			&i.ResolvedWorkflowNamespace,
 			&i.ResolvedWorkflowDescription,
@@ -548,7 +547,6 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 		&i.WorkflowSpec,
 		&i.WorkflowReadOnly,
 		&i.WorkflowStatus,
-		&i.WorkflowHealth,
 		&i.ResolvedWorkflowName,
 		&i.ResolvedWorkflowNamespace,
 		&i.ResolvedWorkflowDescription,
@@ -684,7 +682,6 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 			&i.WorkflowSpec,
 			&i.WorkflowReadOnly,
 			&i.WorkflowStatus,
-			&i.WorkflowHealth,
 			&i.ResolvedWorkflowName,
 			&i.ResolvedWorkflowNamespace,
 			&i.ResolvedWorkflowDescription,
@@ -851,7 +848,6 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRu
 			&i.WorkflowSpec,
 			&i.WorkflowReadOnly,
 			&i.WorkflowStatus,
-			&i.WorkflowHealth,
 			&i.ResolvedWorkflowName,
 			&i.ResolvedWorkflowNamespace,
 			&i.ResolvedWorkflowDescription,
@@ -982,7 +978,6 @@ type GetTestWorkflowExecutionRow struct {
 	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
 	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
 	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
-	WorkflowHealth              []byte             `db:"workflow_health" json:"workflow_health"`
 	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
 	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
 	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
@@ -1045,7 +1040,6 @@ func (q *Queries) GetTestWorkflowExecution(ctx context.Context, id string) (GetT
 		&i.WorkflowSpec,
 		&i.WorkflowReadOnly,
 		&i.WorkflowStatus,
-		&i.WorkflowHealth,
 		&i.ResolvedWorkflowName,
 		&i.ResolvedWorkflowNamespace,
 		&i.ResolvedWorkflowDescription,
@@ -1179,7 +1173,6 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 		&i.WorkflowSpec,
 		&i.WorkflowReadOnly,
 		&i.WorkflowStatus,
-		&i.WorkflowHealth,
 		&i.ResolvedWorkflowName,
 		&i.ResolvedWorkflowNamespace,
 		&i.ResolvedWorkflowDescription,
@@ -1490,7 +1483,6 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 			&i.WorkflowSpec,
 			&i.WorkflowReadOnly,
 			&i.WorkflowStatus,
-			&i.WorkflowHealth,
 			&i.ResolvedWorkflowName,
 			&i.ResolvedWorkflowNamespace,
 			&i.ResolvedWorkflowDescription,
@@ -1738,7 +1730,6 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 			&i.WorkflowSpec,
 			&i.WorkflowReadOnly,
 			&i.WorkflowStatus,
-			&i.WorkflowHealth,
 			&i.ResolvedWorkflowName,
 			&i.ResolvedWorkflowNamespace,
 			&i.ResolvedWorkflowDescription,
@@ -2085,7 +2076,6 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]Ge
 			&i.WorkflowSpec,
 			&i.WorkflowReadOnly,
 			&i.WorkflowStatus,
-			&i.WorkflowHealth,
 			&i.ResolvedWorkflowName,
 			&i.ResolvedWorkflowNamespace,
 			&i.ResolvedWorkflowDescription,
