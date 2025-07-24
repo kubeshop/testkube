@@ -288,7 +288,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	// - The target found directly on the scheduled request.
 	// - The target found on the Workflow Custom Resource.
 	// - The target found on any of the workflow's used templates. Throws an error if multiple define targets.
-	for i, _ := range intermediateSelectors {
+	for i := range intermediateSelectors {
 		exec := intermediateSelectors[i]
 		targets := exec.Targets
 
