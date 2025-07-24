@@ -19,6 +19,16 @@ type LabelSelector struct {
 	Or []Label
 }
 
+// LatestSortBy defines the sorting criteria for getting the latest execution
+type LatestSortBy string
+
+const (
+	// LatestSortByStatusAt sorts by status update time (when execution finished) - default behavior
+	LatestSortByStatusAt LatestSortBy = "statusat"
+	// LatestSortByNumber sorts by execution number (start order)
+	LatestSortByNumber LatestSortBy = "number"
+)
+
 type InitData struct {
 	RunnerID   string
 	Namespace  string
@@ -69,8 +79,9 @@ type Repository interface {
 	Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error)
 	// GetByNameAndTestWorkflow gets execution result by name
 	GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error)
-	// GetLatestByTestWorkflow gets latest execution result by workflow
-	GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error)
+	// GetLatestByTestWorkflow gets latest execution result by workflow.
+	// sortBy determines the sorting criteria: LatestSortByStatusAt (status change time) or LatestSortByNumber (start order).
+	GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy LatestSortBy) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
 	// GetFinished get list of executions that are either passed or failed
