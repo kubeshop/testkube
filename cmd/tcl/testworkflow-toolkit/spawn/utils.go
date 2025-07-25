@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
@@ -52,6 +54,7 @@ var (
 	executionWorkerMu sync.Mutex
 )
 
+// ExecutionWorker returns an execution worker using the global configuration.
 func ExecutionWorker() executionworkertypes.Worker {
 	executionWorkerMu.Lock()
 	defer executionWorkerMu.Unlock()
@@ -154,7 +157,296 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 	return result, nil
 }
 
-func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParallelFetch, machines ...expressions.Machine) (*testworkflowsv1.Step, error) {
+// GetResourceId generates a resource ID using the global configuration.
+func GetResourceId(prefix string, index int64) string {
+	return fmt.Sprintf("%s-%s%d", config.Config().Resource.Id, prefix, index)
+}
+
+// CreateResourceConfig creates a resource configuration using the global configuration.
+func CreateResourceConfig(prefix string, index int64) testworkflowconfig.ResourceConfig {
+	cfg := config.Config()
+	id := GetResourceId(prefix, index)
+	fsPrefix := fmt.Sprintf("%s/%s%d", config.Ref(), prefix, index+1)
+	if cfg.Resource.FsPrefix != "" {
+		fsPrefix = fmt.Sprintf("%s/%s", cfg.Resource.FsPrefix, fsPrefix)
+	}
+	return testworkflowconfig.ResourceConfig{
+		Id:       id,
+		RootId:   cfg.Resource.RootId,
+		FsPrefix: fsPrefix,
+	}
+}
+
+func GetServiceByResourceId(jobName string) (string, int64) {
+	regex := regexp.MustCompile(`-(.+?)-(\d+)$`)
+	v := regex.FindSubmatch([]byte(jobName))
+	if v == nil {
+		return "", 0
+	}
+	index, err := strconv.ParseInt(string(v[2]), 10, 64)
+	if err != nil {
+		return "", 0
+	}
+	return string(v[1]), index
+}
+
+func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
+	var wg sync.WaitGroup
+	wg.Add(len(items))
+	ch := make(chan struct{}, parallelism)
+	success := atomic.Int64{}
+
+	// Execute all operations
+	for index := range items {
+		ch <- struct{}{}
+		go func(index int) {
+			if run(int64(index), namespaces[index], &items[index]) {
+				success.Add(1)
+			}
+			<-ch
+			wg.Done()
+		}(index)
+	}
+	wg.Wait()
+	return int64(len(items)) - success.Load()
+}
+
+// SaveLogs saves execution logs to the artifact storage.
+func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
+
+	var err error
+	for i := 0; i < LogsRetryMaxAttempts; i++ {
+		ctx, ctxCancel := context.WithCancel(parentCtx)
+		reader := ExecutionWorker().Logs(ctx, id, executionworkertypes.LogsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace: namespace,
+			},
+			NoFollow: true,
+		})
+		err = reader.Err()
+		if err == nil {
+			err = storage.SaveStream(filePath, reader)
+		}
+		ctxCancel()
+		if err == nil {
+			break
+		}
+		time.Sleep(LogsRetryOnFailureDelay)
+	}
+
+	return filePath, err
+}
+
+// CreateLogger creates a logger function that prefixes output with instance information.
+func CreateLogger(name, description string, index, count int64) func(...string) {
+	label := commontcl.InstanceLabel(name, index, count)
+	if description != "" {
+		label += " (" + description + ")"
+	}
+	return func(s ...string) {
+		fmt.Printf("%s: %s\n", label, strings.Join(s, ": "))
+	}
+}
+
+// CreateBaseMachine creates a base expression machine with all available context.
+func CreateBaseMachine() expressions.Machine {
+	cfg := config.Config()
+	orgSlug := cfg.Execution.OrganizationSlug
+	if orgSlug == "" {
+		orgSlug = cfg.Execution.OrganizationId
+	}
+	envSlug := cfg.Execution.EnvironmentSlug
+	if envSlug == "" {
+		envSlug = cfg.Execution.EnvironmentId
+	}
+	return expressions.CombinedMachines(
+		data.GetBaseTestWorkflowMachine(),
+		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
+		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
+		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
+		credentials.NewCredentialMachine(data.Credentials()),
+	)
+}
+
+// CreateBaseMachineWithoutEnv creates a base expression machine without environment resolution.
+func CreateBaseMachineWithoutEnv() expressions.Machine {
+	cfg := config.Config()
+	orgSlug := cfg.Execution.OrganizationSlug
+	if orgSlug == "" {
+		orgSlug = cfg.Execution.OrganizationId
+	}
+	envSlug := cfg.Execution.EnvironmentSlug
+	if envSlug == "" {
+		envSlug = cfg.Execution.EnvironmentId
+	}
+	return expressions.CombinedMachines(
+		data.GetBaseTestWorkflowMachine(),
+		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
+		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
+		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
+		credentials.NewCredentialMachine(data.Credentials()),
+	)
+}
+
+// createBaseMachineWithoutEnv creates a base machine without environment resolution.
+// This is used during the parallel command's initial expression resolution phase
+// where we need to preserve env.* expressions for later evaluation by workers.
+// Additional machines can be provided to extend the base machine.
+func createBaseMachineWithoutEnv(
+	cfg *testworkflowconfig.InternalConfig,
+	additionalMachines ...expressions.Machine,
+) expressions.Machine {
+	orgSlug := cfg.Execution.OrganizationSlug
+	if orgSlug == "" {
+		orgSlug = cfg.Execution.OrganizationId
+	}
+	envSlug := cfg.Execution.EnvironmentSlug
+	if envSlug == "" {
+		envSlug = cfg.Execution.EnvironmentId
+	}
+
+	// Get the base machine components without EnvMachine
+	var wd, err = os.Getwd()
+	if err != nil {
+		wd = "/"
+	}
+	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
+
+	// Create base machines list
+	machines := []expressions.Machine{
+		fileMachine, // File system access
+		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
+		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
+		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
+	}
+
+	// Append any additional machines provided
+	machines = append(machines, additionalMachines...)
+
+	return expressions.CombinedMachines(machines...)
+}
+
+func CreateResultMachine(result testkube.TestWorkflowResult) expressions.Machine {
+	status := "queued"
+	if result.Status != nil {
+		if *result.Status == testkube.PASSED_TestWorkflowStatus {
+			status = ""
+		} else {
+			status = string(*result.Status)
+		}
+	}
+	return expressions.NewMachine().
+		Register("status", status).
+		Register("always", true).
+		Register("never", false).
+		Register("failed", status != "").
+		Register("error", status != "").
+		Register("passed", status == "").
+		Register("success", status == "")
+}
+
+func EvalLogCondition(condition string, result testkube.TestWorkflowResult, machines ...expressions.Machine) (bool, error) {
+	expr, err := expressions.EvalExpression(condition, append([]expressions.Machine{CreateResultMachine(result)}, machines...)...)
+	if err != nil {
+		return false, errors.Wrapf(err, "invalid expression for logs condition: %s", condition)
+	}
+	return expr.BoolValue()
+}
+
+var (
+	parallelExecutionWorkerMap   = make(map[*config.ConfigV2]executionworkertypes.Worker)
+	parallelExecutionWorkerMutex sync.Mutex
+)
+
+// ParallelExecutionWorker returns an execution worker using the provided configuration
+func ParallelExecutionWorker(cfg *config.ConfigV2) executionworkertypes.Worker {
+	parallelExecutionWorkerMutex.Lock()
+	defer parallelExecutionWorkerMutex.Unlock()
+
+	// Check if we already have a worker for this config
+	if worker, exists := parallelExecutionWorkerMap[cfg]; exists {
+		return worker
+	}
+
+	// Create new worker
+	internalCfg := cfg.Internal()
+	worker := executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
+		Cluster: kubernetesworker.ClusterConfig{
+			Id:               internalCfg.Worker.ClusterID,
+			DefaultNamespace: internalCfg.Worker.Namespace,
+			DefaultRegistry:  internalCfg.Worker.DefaultRegistry,
+			Namespaces: map[string]kubernetesworker.NamespaceConfig{
+				internalCfg.Worker.Namespace: {DefaultServiceAccountName: internalCfg.Worker.DefaultServiceAccount},
+			},
+		},
+		ImageInspector: kubernetesworker.ImageInspectorConfig{
+			CacheEnabled: internalCfg.Worker.ImageInspectorPersistenceEnabled,
+			CacheKey:     internalCfg.Worker.ImageInspectorPersistenceCacheKey,
+			CacheTTL:     internalCfg.Worker.ImageInspectorPersistenceCacheTTL,
+		},
+		Connection:             internalCfg.Worker.Connection,
+		FeatureFlags:           internalCfg.Worker.FeatureFlags,
+		RunnerId:               internalCfg.Worker.RunnerID,
+		CommonEnvVariables:     internalCfg.Worker.CommonEnvVariables,
+		LogAbortedDetails:      cfg.Debug(),
+		AllowLowSecurityFields: internalCfg.Worker.AllowLowSecurityFields,
+	})
+
+	// Cache the worker
+	parallelExecutionWorkerMap[cfg] = worker
+	return worker
+}
+
+// ParallelGetResourceId generates a resource ID using the provided configuration
+func ParallelGetResourceId(cfg *config.ConfigV2, prefix string, index int64) string {
+	return fmt.Sprintf("%s-%s%d", cfg.Internal().Resource.Id, prefix, index)
+}
+
+// ParallelCreateResourceConfig creates a resource configuration using the provided config
+func ParallelCreateResourceConfig(cfg *config.ConfigV2, prefix string, index int64) testworkflowconfig.ResourceConfig {
+	internalCfg := cfg.Internal()
+	id := ParallelGetResourceId(cfg, prefix, index)
+	fsPrefix := fmt.Sprintf("%s/%s%d", cfg.Ref(), prefix, index+1)
+	if internalCfg.Resource.FsPrefix != "" {
+		fsPrefix = fmt.Sprintf("%s/%s", internalCfg.Resource.FsPrefix, fsPrefix)
+	}
+	return testworkflowconfig.ResourceConfig{
+		Id:       id,
+		RootId:   internalCfg.Resource.RootId,
+		FsPrefix: fsPrefix,
+	}
+}
+
+// ParallelSaveLogs saves logs for a worker using the provided configuration
+func ParallelSaveLogs(cfg *config.ConfigV2, parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
+
+	var err error
+	for i := 0; i < LogsRetryMaxAttempts; i++ {
+		ctx, ctxCancel := context.WithCancel(parentCtx)
+		reader := ParallelExecutionWorker(cfg).Logs(ctx, id, executionworkertypes.LogsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace: namespace,
+			},
+			NoFollow: true,
+		})
+		err = reader.Err()
+		if err == nil {
+			err = storage.SaveStream(filePath, reader)
+		}
+		ctxCancel()
+		if err == nil {
+			break
+		}
+		time.Sleep(LogsRetryOnFailureDelay)
+	}
+
+	return filePath, err
+}
+
+// ParallelProcessFetch processes fetch operations using the provided configuration
+func ParallelProcessFetch(cfg *config.ConfigV2, transferSrv transfer.Server, fetch []testworkflowsv1.StepParallelFetch, machines ...expressions.Machine) (*testworkflowsv1.Step, error) {
 	if len(fetch) == 0 {
 		return nil, nil
 	}
@@ -215,12 +507,12 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 		StepOperations: testworkflowsv1.StepOperations{
 			Run: &testworkflowsv1.StepRun{
 				ContainerConfig: testworkflowsv1.ContainerConfig{
-					Image:           config.Config().Worker.ToolkitImage,
+					Image:           cfg.Internal().Worker.ToolkitImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
 					Env: []testworkflowsv1.EnvVar{
-						{EnvVar: corev1.EnvVar{Name: "TK_NS", Value: config.Namespace()}},
-						{EnvVar: corev1.EnvVar{Name: "TK_REF", Value: config.Ref()}},
+						{EnvVar: corev1.EnvVar{Name: "TK_NS", Value: cfg.Namespace()}},
+						{EnvVar: corev1.EnvVar{Name: "TK_REF", Value: cfg.Ref()}},
 						stage.BypassToolkitCheck,
 						stage.BypassPure,
 					},
@@ -231,85 +523,8 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	}, nil
 }
 
-func GetResourceId(prefix string, index int64) string {
-	return fmt.Sprintf("%s-%s%d", config.Config().Resource.Id, prefix, index)
-}
-
-func CreateResourceConfig(prefix string, index int64) testworkflowconfig.ResourceConfig {
-	cfg := config.Config()
-	id := GetResourceId(prefix, index)
-	fsPrefix := fmt.Sprintf("%s/%s%d", config.Ref(), prefix, index+1)
-	if cfg.Resource.FsPrefix != "" {
-		fsPrefix = fmt.Sprintf("%s/%s", cfg.Resource.FsPrefix, fsPrefix)
-	}
-	return testworkflowconfig.ResourceConfig{
-		Id:       id,
-		RootId:   cfg.Resource.RootId,
-		FsPrefix: fsPrefix,
-	}
-}
-
-func GetServiceByResourceId(jobName string) (string, int64) {
-	regex := regexp.MustCompile(`-(.+?)-(\d+)$`)
-	v := regex.FindSubmatch([]byte(jobName))
-	if v == nil {
-		return "", 0
-	}
-	index, err := strconv.ParseInt(string(v[2]), 10, 64)
-	if err != nil {
-		return "", 0
-	}
-	return string(v[1]), index
-}
-
-func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
-	var wg sync.WaitGroup
-	wg.Add(len(items))
-	ch := make(chan struct{}, parallelism)
-	success := atomic.Int64{}
-
-	// Execute all operations
-	for index := range items {
-		ch <- struct{}{}
-		go func(index int) {
-			if run(int64(index), namespaces[index], &items[index]) {
-				success.Add(1)
-			}
-			<-ch
-			wg.Done()
-		}(index)
-	}
-	wg.Wait()
-	return int64(len(items)) - success.Load()
-}
-
-func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
-	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
-
-	var err error
-	for i := 0; i < LogsRetryMaxAttempts; i++ {
-		ctx, ctxCancel := context.WithCancel(parentCtx)
-		reader := ExecutionWorker().Logs(ctx, id, executionworkertypes.LogsOptions{
-			Hints: executionworkertypes.Hints{
-				Namespace: namespace,
-			},
-			NoFollow: true,
-		})
-		err = reader.Err()
-		if err == nil {
-			err = storage.SaveStream(filePath, reader)
-		}
-		ctxCancel()
-		if err == nil {
-			break
-		}
-		time.Sleep(LogsRetryOnFailureDelay)
-	}
-
-	return filePath, err
-}
-
-func CreateLogger(name, description string, index, count int64) func(...string) {
+// ParallelCreateLogger creates a logger function
+func ParallelCreateLogger(name, description string, index, count int64) func(...string) {
 	label := commontcl.InstanceLabel(name, index, count)
 	if description != "" {
 		label += " (" + description + ")"
@@ -319,48 +534,13 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 	}
 }
 
-func CreateBaseMachine() expressions.Machine {
-	cfg := config.Config()
-	orgSlug := cfg.Execution.OrganizationSlug
-	if orgSlug == "" {
-		orgSlug = cfg.Execution.OrganizationId
-	}
-	envSlug := cfg.Execution.EnvironmentSlug
-	if envSlug == "" {
-		envSlug = cfg.Execution.EnvironmentId
-	}
-	return expressions.CombinedMachines(
-		data.GetBaseTestWorkflowMachine(),
-		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
-		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
-		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
-		credentials.NewCredentialMachine(data.Credentials()),
-	)
+// ParallelCreateBaseMachine creates a base expression machine using the provided configuration
+func ParallelCreateBaseMachine(cfg *config.ConfigV2, additionalMachines ...expressions.Machine) expressions.Machine {
+	return createBaseMachineWithoutEnv(cfg.Internal(), additionalMachines...)
 }
 
-func CreateResultMachine(result testkube.TestWorkflowResult) expressions.Machine {
-	status := "queued"
-	if result.Status != nil {
-		if *result.Status == testkube.PASSED_TestWorkflowStatus {
-			status = ""
-		} else {
-			status = string(*result.Status)
-		}
-	}
-	return expressions.NewMachine().
-		Register("status", status).
-		Register("always", true).
-		Register("never", false).
-		Register("failed", status != "").
-		Register("error", status != "").
-		Register("passed", status == "").
-		Register("success", status == "")
-}
-
-func EvalLogCondition(condition string, result testkube.TestWorkflowResult, machines ...expressions.Machine) (bool, error) {
-	expr, err := expressions.EvalExpression(condition, append([]expressions.Machine{CreateResultMachine(result)}, machines...)...)
-	if err != nil {
-		return false, errors.Wrapf(err, "invalid expression for logs condition: %s", condition)
-	}
-	return expr.BoolValue()
+// ParallelCreateBaseMachineWithoutEnv creates a base machine without environment resolution.
+// This preserves env.* expressions for later evaluation by workers.
+func ParallelCreateBaseMachineWithoutEnv(cfg *config.ConfigV2, additionalMachines ...expressions.Machine) expressions.Machine {
+	return createBaseMachineWithoutEnv(cfg.Internal(), additionalMachines...)
 }

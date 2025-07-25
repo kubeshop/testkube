@@ -11,7 +11,6 @@ package testworkflowprocessor
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -19,7 +18,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -50,28 +49,47 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 		SetCommand(constants.DefaultToolkitPath, "execute").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
-	args := make([]string, 0)
+	// Marshal all data for base64 encoding
+	type ExecuteData struct {
+		Tests       []json.RawMessage `json:"tests,omitempty"`
+		Workflows   []json.RawMessage `json:"workflows,omitempty"`
+		Async       bool              `json:"async,omitempty"`
+		Parallelism int               `json:"parallelism,omitempty"`
+	}
+
+	executeData := ExecuteData{
+		Async: step.Execute.Async,
+	}
+	if step.Execute.Parallelism > 0 {
+		executeData.Parallelism = int(step.Execute.Parallelism)
+	}
+
+	// Marshal tests
 	for _, t := range step.Execute.Tests {
 		b, err := json.Marshal(t)
 		if err != nil {
 			return nil, errors.Wrap(err, "execute: serializing Test")
 		}
-		args = append(args, "-t", expressions.NewStringValue(string(b)).Template())
+		executeData.Tests = append(executeData.Tests, json.RawMessage(b))
 	}
+
+	// Marshal workflows
 	for _, w := range step.Execute.Workflows {
 		b, err := json.Marshal(w)
 		if err != nil {
 			return nil, errors.Wrap(err, "execute: serializing TestWorkflow")
 		}
-		args = append(args, "-w", expressions.NewStringValue(string(b)).Template())
+		executeData.Workflows = append(executeData.Workflows, json.RawMessage(b))
 	}
-	if step.Execute.Async {
-		args = append(args, "--async")
+
+	// Base64 encode to prevent testworkflow-init from prematurely resolving expressions.
+	// Execute workflows can contain expressions like {{ index + 1 }} and {{ count }} that
+	// need to be evaluated when the workflows are distributed to workers, not in the init context.
+	encoded, err := expressionstcl.EncodeBase64JSON(executeData)
+	if err != nil {
+		return nil, errors.Wrap(err, "execute: encoding error")
 	}
-	if step.Execute.Parallelism > 0 {
-		args = append(args, "-p", strconv.Itoa(int(step.Execute.Parallelism)))
-	}
-	container.SetArgs(args...)
+	container.SetArgs("--base64", encoded)
 
 	// Add default label
 	types := make([]string, 0)
@@ -121,12 +139,14 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 		parallel.Pod.ImagePullSecrets = append(parallel.Pod.ImagePullSecrets, pod.ImagePullSecrets...)
 	}
 
-	// Build arguments
-	v, err := json.Marshal(step.Parallel)
+	// Base64 encode to prevent testworkflow-init from prematurely resolving expressions.
+	// The parallel spec can contain expressions that need matrix/shard/count variables
+	// which are only available during parallel execution, not in the init context.
+	encoded, err := expressionstcl.EncodeBase64JSON(step.Parallel)
 	if err != nil {
-		return nil, errors.Wrap(err, "parallel: marshalling error")
+		return nil, errors.Wrap(err, "parallel: encoding error")
 	}
-	stage.Container().SetArgs(expressions.NewStringValue(string(v)).Template())
+	stage.Container().SetArgs("--base64", encoded)
 
 	return stage, nil
 }
@@ -170,15 +190,24 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 	}
 
 	// Build arguments
-	args := make([]string, 0, len(services))
-	for name := range services {
-		v, err := json.Marshal(services[name])
+	servicesMap := make(map[string]json.RawMessage)
+	for name, svc := range services {
+		v, err := json.Marshal(svc)
 		if err != nil {
 			return nil, errors.Wrapf(err, "services[%s]: marshalling error", name)
 		}
-		args = append(args, fmt.Sprintf("%s=%s", name, expressions.NewStringValue(string(v)).Template()))
+		servicesMap[name] = json.RawMessage(v)
 	}
-	stage.Container().SetArgs(args...)
+
+	// Base64 encode to prevent testworkflow-init from prematurely resolving expressions.
+	// Services can contain expressions like {{ matrix.browser.driver }} that need
+	// to be evaluated in the services command context where matrix variables are available,
+	// not in the init context where they would fail with "unknown variable" errors.
+	encoded, err := expressionstcl.EncodeBase64JSON(servicesMap)
+	if err != nil {
+		return nil, errors.Wrap(err, "services: encoding error")
+	}
+	stage.Container().SetArgs("--base64", encoded)
 
 	return stage, nil
 }

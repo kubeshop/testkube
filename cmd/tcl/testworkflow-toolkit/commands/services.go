@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -82,13 +83,14 @@ func (s ServiceInfo) AsMap() (v map[string]interface{}) {
 
 func NewServicesCmd() *cobra.Command {
 	var (
-		groupRef string
+		groupRef      string
+		base64Encoded bool
 	)
 	cmd := &cobra.Command{
 		Use:   "services <ref>",
 		Short: "Start accompanying service(s)",
 
-		Run: func(cmd *cobra.Command, pairs []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			// Initialize basic adapters
 			baseMachine := spawn.CreateBaseMachine()
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
@@ -99,18 +101,40 @@ func NewServicesCmd() *cobra.Command {
 			}
 
 			// Read the services to start
-			services := make(map[string]testworkflowsv1.ServiceSpec, len(pairs))
-			for i := range pairs {
-				name, v, found := strings.Cut(pairs[i], "=")
-				if !found {
-					ui.Fail(fmt.Errorf("invalid service declaration: %s", pairs[i]))
-				}
-				var svc *testworkflowsv1.ServiceSpec
-				err := json.Unmarshal([]byte(v), &svc)
-				ui.ExitOnError("parsing service spec", err)
-				services[name] = *svc
+			services := make(map[string]testworkflowsv1.ServiceSpec)
 
-				// Apply default service account
+			if base64Encoded && len(args) > 0 {
+				// Decode base64 input. The processor base64-encodes service specs to prevent
+				// testworkflow-init from prematurely resolving expressions like {{ matrix.browser.driver }}.
+				// We decode here where we have the proper context to evaluate these expressions.
+				// Decode the services map
+				var servicesMap map[string]json.RawMessage
+				err := expressionstcl.DecodeBase64JSON(args[0], &servicesMap)
+				ui.ExitOnError("decoding services", err)
+
+				// Parse each service spec
+				for name, raw := range servicesMap {
+					var svc testworkflowsv1.ServiceSpec
+					err := json.Unmarshal(raw, &svc)
+					ui.ExitOnError(fmt.Sprintf("parsing service spec for %s", name), err)
+					services[name] = svc
+				}
+			} else {
+				// Legacy format: name=spec pairs (kept for backward compatibility)
+				for i := range args {
+					name, v, found := strings.Cut(args[i], "=")
+					if !found {
+						ui.Fail(fmt.Errorf("invalid service declaration: %s", args[i]))
+					}
+					var svc *testworkflowsv1.ServiceSpec
+					err := json.Unmarshal([]byte(v), &svc)
+					ui.ExitOnError("parsing service spec", err)
+					services[name] = *svc
+				}
+			}
+
+			// Apply default service account and initialize details for each service
+			for name := range services {
 				if services[name].Pod == nil {
 					svc := services[name]
 					svc.Pod = &testworkflowsv1.PodConfig{}
@@ -408,6 +432,7 @@ func NewServicesCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&groupRef, "group", "g", "", "services group reference")
+	cmd.Flags().BoolVar(&base64Encoded, "base64", false, "input is base64 encoded")
 
 	return cmd
 }

@@ -158,11 +158,11 @@ func (p *ParamsSpec) String(parallelism int64) string {
 				infos = append(infos, "run sequentially")
 			}
 		} else if parallelism >= p.Count {
-			infos = append(infos, fmt.Sprintf("all in parallel"))
+			infos = append(infos, "all in parallel")
 		}
 	}
 	if p.Count == 1 {
-		return fmt.Sprintf("1 instance requested")
+		return "1 instance requested"
 	}
 	return fmt.Sprintf("%d instances requested: %s", p.Count, strings.Join(infos, ", "))
 }
