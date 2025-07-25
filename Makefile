@@ -591,3 +591,4 @@ video: ## Generate project activity video using gource
 		--output-framerate 30
 	@ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
 	@rm stream.out
+

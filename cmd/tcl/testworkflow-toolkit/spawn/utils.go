@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
@@ -336,6 +338,52 @@ func CreateBaseMachine() expressions.Machine {
 		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
 		credentials.NewCredentialMachine(data.Credentials()),
 	)
+}
+
+// CreateBaseMachineWithoutEnv creates a base machine without environment resolution
+// This is used for parallel steps to preserve env.* expressions for later evaluation
+func CreateBaseMachineWithoutEnv() expressions.Machine {
+	cfg := config.Config()
+	return createBaseMachineWithoutEnv(cfg)
+}
+
+// createBaseMachineWithoutEnv creates a base machine without environment resolution using the provided config
+// This allows for easier unit testing without requiring environment variables
+func createBaseMachineWithoutEnv(cfg *testworkflowconfig.InternalConfig) expressions.Machine {
+	orgSlug := cfg.Execution.OrganizationSlug
+	if orgSlug == "" {
+		orgSlug = cfg.Execution.OrganizationId
+	}
+	envSlug := cfg.Execution.EnvironmentSlug
+	if envSlug == "" {
+		envSlug = cfg.Execution.EnvironmentId
+	}
+
+	// Get the base machine components without EnvMachine
+	var wd, err = os.Getwd()
+	if err != nil {
+		wd = "/"
+	}
+	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
+
+	// Create machines list
+	machines := []expressions.Machine{
+		fileMachine, // File system access
+		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
+		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
+		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
+	}
+
+	// Only add state and credential machines if they are available (not in unit tests)
+	if os.Getenv("TK_CFG") != "" {
+		data.GetState() // load state
+		machines = append(machines,
+			data.StateMachine, // State machine for status, output, etc
+			credentials.NewCredentialMachine(data.Credentials()),
+		)
+	}
+
+	return expressions.CombinedMachines(machines...)
 }
 
 func CreateResultMachine(result testkube.TestWorkflowResult) expressions.Machine {
