@@ -106,6 +106,8 @@ type Repository interface {
 	GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
+	// Count gets total count of executions using a filter, optimized for pagination
+	Count(ctx context.Context, filter Filter) (count int64, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestWorkflowExecution, error)
 	// GetExecutionsSummary gets executions summary using a filter, use filter with no data for all

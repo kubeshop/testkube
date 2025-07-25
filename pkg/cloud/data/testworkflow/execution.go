@@ -85,6 +85,14 @@ func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	return pass(r.executor, ctx, req, process)
 }
 
+func (r *CloudRepository) Count(ctx context.Context, filter testworkflow2.Filter) (count int64, err error) {
+	req := ExecutionCountRequest{Filter: filter.(*testworkflow2.FilterImpl)}
+	process := func(v ExecutionCountResponse) int64 {
+		return v.Count
+	}
+	return pass(r.executor, ctx, req, process)
+}
+
 func (r *CloudRepository) GetExecutions(ctx context.Context, filter testworkflow2.Filter) (result []testkube.TestWorkflowExecution, err error) {
 	req := ExecutionGetExecutionsRequest{Filter: filter.(*testworkflow2.FilterImpl)}
 	process := func(v ExecutionGetExecutionsResponse) []testkube.TestWorkflowExecution {

@@ -66,6 +66,21 @@ func (mr *MockRepositoryMockRecorder) Assign(arg0, arg1, arg2, arg3, arg4 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockRepository)(nil).Assign), arg0, arg1, arg2, arg3, arg4)
 }
 
+// Count mocks base method.
+func (m *MockRepository) Count(arg0 context.Context, arg1 Filter) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Count", arg0, arg1)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Count indicates an expected call of Count.
+func (mr *MockRepositoryMockRecorder) Count(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockRepository)(nil).Count), arg0, arg1)
+}
+
 // DeleteAll mocks base method.
 func (m *MockRepository) DeleteAll(arg0 context.Context) error {
 	m.ctrl.T.Helper()

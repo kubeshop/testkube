@@ -307,6 +307,11 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	return
 }
 
+func (r *MongoRepository) Count(ctx context.Context, filter Filter) (count int64, err error) {
+	query, _ := composeQueryAndOpts(filter)
+	return r.Coll.CountDocuments(ctx, query)
+}
+
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
