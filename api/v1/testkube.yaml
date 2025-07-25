@@ -9211,10 +9211,15 @@ components:
       type: string
       enum:
         - queued
+        - assigned
+        - starting
         - running
+        - pausing
         - paused
+        - resuming
         - passed
         - failed
+        - stopping
         - aborted
         - canceled
 

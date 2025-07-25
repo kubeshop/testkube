@@ -204,13 +204,12 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Find(ctx, bson.M{
-		"$or": bson.A{
-			bson.M{"result.status": testkube.PAUSED_TestWorkflowStatus},
-			bson.M{"result.status": testkube.RUNNING_TestWorkflowStatus},
-			bson.M{"result.status": testkube.QUEUED_TestWorkflowStatus},
-		},
-	}, opts)
+	statuses := bson.A{}
+	for _, status := range testkube.TestWorkflowExecutingStatus {
+		statuses = append(statuses, status)
+	}
+
+	cursor, err := r.Coll.Find(ctx, bson.M{"result.status": bson.M{"$in": statuses}}, opts)
 	if err != nil {
 		return result, err
 	}
@@ -292,13 +291,13 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	for _, o := range result {
 		sum += int32(o.Count)
 		switch testkube.TestWorkflowStatus(o.Status) {
-		case testkube.QUEUED_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus:
 			totals.Queued = int32(o.Count)
-		case testkube.RUNNING_TestWorkflowStatus:
+		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = int32(o.Count)
 		case testkube.PASSED_TestWorkflowStatus:
 			totals.Passed = int32(o.Count)
-		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus:
+		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus, testkube.CANCELED_TestWorkflowStatus:
 			totals.Failed = int32(o.Count)
 		}
 	}
@@ -854,11 +853,15 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 }
 
 func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool, err error) {
+	statuses := bson.A{}
+	for _, status := range testkube.TestWorkflowStoppableStatus {
+		statuses = append(statuses, status)
+	}
 	ts := time.Now()
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
-			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"result.status": bson.M{"$in": statuses}},
 			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{

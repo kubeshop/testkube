@@ -165,7 +165,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 				index := int(findex)
 				if status == string(testkube.RUNNING_TestWorkflowStatus) {
 					parallel[SubRef{GroupId: n.Output.Ref, Index: index}] = struct{}{}
-				} else if status == string(testkube.PASSED_TestWorkflowStatus) || status == string(testkube.FAILED_TestWorkflowStatus) || status == string(testkube.ABORTED_TestWorkflowStatus) {
+				} else if testkube.TestWorkflowStatus(status).Finished() {
 					delete(parallel, SubRef{GroupId: n.Output.Ref, Index: index})
 				}
 			}

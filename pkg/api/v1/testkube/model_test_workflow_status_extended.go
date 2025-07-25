@@ -2,6 +2,7 @@ package testkube
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -21,12 +22,17 @@ func (statuses TestWorkflowStatuses) ToMap() map[TestWorkflowStatus]struct{} {
 // ParseTestWorkflowStatusList parse a list of workflow execution statuses from string
 func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkflowStatuses, err error) {
 	statusMap := map[TestWorkflowStatus]struct{}{
-		ABORTED_TestWorkflowStatus:  {},
-		FAILED_TestWorkflowStatus:   {},
-		PASSED_TestWorkflowStatus:   {},
 		QUEUED_TestWorkflowStatus:   {},
+		ASSIGNED_TestWorkflowStatus: {},
+		STARTING_TestWorkflowStatus: {},
 		RUNNING_TestWorkflowStatus:  {},
+		PAUSING_TestWorkflowStatus:  {},
 		PAUSED_TestWorkflowStatus:   {},
+		RESUMING_TestWorkflowStatus: {},
+		PASSED_TestWorkflowStatus:   {},
+		FAILED_TestWorkflowStatus:   {},
+		STOPPING_TestWorkflowStatus: {},
+		ABORTED_TestWorkflowStatus:  {},
 		CANCELED_TestWorkflowStatus: {},
 	}
 
@@ -51,6 +57,37 @@ func TestWorkflowStatusString(ptr *TestWorkflowStatus) string {
 	return string(*ptr)
 }
 
+// TestWorkflowExecutingStatus defines all statuses that may be applied to an in-flight execution.
+// This is logically the inverse of TestWorkflowTerminalStatus
+var TestWorkflowExecutingStatus = []TestWorkflowStatus{
+	QUEUED_TestWorkflowStatus,
+	ASSIGNED_TestWorkflowStatus,
+	STARTING_TestWorkflowStatus,
+	RUNNING_TestWorkflowStatus,
+	PAUSING_TestWorkflowStatus,
+	PAUSED_TestWorkflowStatus,
+	RESUMING_TestWorkflowStatus,
+}
+
+// TestWorkflowStoppableStatus defines statuses from which it is permitted to
+// transition an Execution to a STOPPING, ABORTED, or CANCELLED state.
+var TestWorkflowStoppableStatus = []TestWorkflowStatus{
+	QUEUED_TestWorkflowStatus,
+	ASSIGNED_TestWorkflowStatus,
+	STARTING_TestWorkflowStatus,
+	RUNNING_TestWorkflowStatus,
+	PAUSED_TestWorkflowStatus,
+	RESUMING_TestWorkflowStatus,
+}
+
+// TestWorkflowTerminalStatus defines all terminal (final state) statuses for a Test Workflow.
+var TestWorkflowTerminalStatus = []TestWorkflowStatus{
+	PASSED_TestWorkflowStatus,
+	FAILED_TestWorkflowStatus,
+	ABORTED_TestWorkflowStatus,
+	CANCELED_TestWorkflowStatus,
+}
+
 func (s TestWorkflowStatus) Finished() bool {
-	return s != "" && s != QUEUED_TestWorkflowStatus && s != PAUSED_TestWorkflowStatus && s != RUNNING_TestWorkflowStatus
+	return s != "" && slices.Contains(TestWorkflowTerminalStatus, s)
 }
