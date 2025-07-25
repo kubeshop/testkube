@@ -65,7 +65,10 @@ func NewParallelCmd() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 			// Initialize internal machine
-			baseMachine := spawn.CreateBaseMachine()
+			// Use machine without env resolution to preserve env.* expressions for parallel workers
+			baseMachine := spawn.CreateBaseMachineWithoutEnv()
+			// Keep full machine for non-parallel operations
+			fullBaseMachine := spawn.CreateBaseMachine()
 
 			// Read the template
 			var parallel *testworkflowsv1.StepParallel
@@ -213,7 +216,7 @@ func NewParallelCmd() *cobra.Command {
 				machine := expressions.CombinedMachines(
 					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
 					testworkflowconfig.CreateWorkerMachine(&cfg.Worker),
-					baseMachine,
+					fullBaseMachine, // Use full machine with env resolution in the worker
 					testworkflowconfig.CreatePvcMachine(cfg.Execution.PvcNames),
 					params.MachineAt(index),
 				)
@@ -247,7 +250,7 @@ func NewParallelCmd() *cobra.Command {
 				defer func() {
 					shouldSaveLogs := logConditions[index] == nil
 					if !shouldSaveLogs {
-						shouldSaveLogs, _ = spawn.EvalLogCondition(*logConditions[index], lastResult, machine, baseMachine, params.MachineAt(index))
+						shouldSaveLogs, _ = spawn.EvalLogCondition(*logConditions[index], lastResult, machine, fullBaseMachine, params.MachineAt(index))
 						if err != nil {
 							log("warning", "log condition", err.Error())
 						}

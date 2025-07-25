@@ -19,7 +19,6 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -56,14 +55,14 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 		if err != nil {
 			return nil, errors.Wrap(err, "execute: serializing Test")
 		}
-		args = append(args, "-t", expressions.NewStringValue(string(b)).Template())
+		args = append(args, "-t", string(b))
 	}
 	for _, w := range step.Execute.Workflows {
 		b, err := json.Marshal(w)
 		if err != nil {
 			return nil, errors.Wrap(err, "execute: serializing TestWorkflow")
 		}
-		args = append(args, "-w", expressions.NewStringValue(string(b)).Template())
+		args = append(args, "-w", string(b))
 	}
 	if step.Execute.Async {
 		args = append(args, "--async")
@@ -126,7 +125,7 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 	if err != nil {
 		return nil, errors.Wrap(err, "parallel: marshalling error")
 	}
-	stage.Container().SetArgs(expressions.NewStringValue(string(v)).Template())
+	stage.Container().SetArgs(string(v))
 
 	return stage, nil
 }
@@ -176,7 +175,7 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 		if err != nil {
 			return nil, errors.Wrapf(err, "services[%s]: marshalling error", name)
 		}
-		args = append(args, fmt.Sprintf("%s=%s", name, expressions.NewStringValue(string(v)).Template()))
+		args = append(args, fmt.Sprintf("%s=%s", name, string(v)))
 	}
 	stage.Container().SetArgs(args...)
 
