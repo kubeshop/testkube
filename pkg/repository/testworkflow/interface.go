@@ -67,6 +67,8 @@ type Filter interface {
 	StatusesDefined() bool
 	Page() int
 	PageSize() int
+	Skip() int
+	SkipDefined() bool
 	TextSearchDefined() bool
 	TextSearch() string
 	Selector() string
