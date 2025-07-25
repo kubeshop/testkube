@@ -590,7 +590,11 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		}}
 	}
 
-	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
+	if filter.SkipDefined() {
+		opts.SetSkip(int64(filter.Skip()))
+	} else {
+		opts.SetSkip(int64(filter.Page() * filter.PageSize()))
+	}
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})
 
