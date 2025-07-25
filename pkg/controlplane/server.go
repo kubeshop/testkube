@@ -63,6 +63,12 @@ type Config struct {
 	FeatureTestWorkflowsCloudStorage bool
 }
 
+type CommandNotImplementedError string
+
+func (e CommandNotImplementedError) Error() string {
+	return fmt.Sprintf("command not implemented: %s", string(e))
+}
+
 // TODO: Check if runner works fine
 func New(
 	cfg Config,
@@ -345,7 +351,7 @@ func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*clou
 	if cmd, ok := s.commands[cloudexecutor.Command(request.Command)]; ok {
 		return cmd(ctx, request)
 	}
-	return nil, errors.Errorf("command not implemented: %s", request.Command)
+	return nil, CommandNotImplementedError(request.Command)
 }
 
 func (s *Server) Start(ctx context.Context) error {
