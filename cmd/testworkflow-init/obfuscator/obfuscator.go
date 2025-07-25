@@ -99,7 +99,6 @@ func (s *obfuscator) Write(p []byte) (n int, err error) {
 			if end != -1 {
 				end -= currentPosition
 			}
-			currentPosition = 0
 		}
 
 		// Adjust the current end character

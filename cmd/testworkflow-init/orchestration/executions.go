@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -49,6 +50,21 @@ func (e *executionGroup) Create(cmd string, args []string) *execution {
 	// Instantiate the execution
 	ex := &execution{group: e}
 	ex.cmd = exec.Command(cmd, args...)
+	ex.cmd.Stdout = e.outStream
+	ex.cmd.Stderr = e.errStream
+
+	// Append to the list TODO: delete that after finish
+	e.executionsMu.Lock()
+	e.executions = append(e.executions, ex)
+	e.executionsMu.Unlock()
+
+	return ex
+}
+
+func (e *executionGroup) CreateWithContext(ctx context.Context, cmd string, args []string) *execution {
+	// Instantiate the execution
+	ex := &execution{group: e}
+	ex.cmd = exec.CommandContext(ctx, cmd, args...)
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 
@@ -118,6 +134,11 @@ func (e *executionGroup) Kill() (err error) {
 	// Lock the executions state
 	e.executionsMu.Lock()
 	defer e.executionsMu.Unlock()
+
+	// Skip if there are no executions to kill
+	if len(e.executions) == 0 {
+		return nil
+	}
 
 	// Retrieve all started processes
 	ps, totalFailure, err := processes()
@@ -189,7 +210,7 @@ func (e *execution) Run() (*executionResult, error) {
 			// Handle edge case, when i.e. EPIPE happened
 			if !aborted {
 				aborted = true
-				e.cmd.Stderr.Write([]byte(fmt.Sprintf("\nThe process has been corrupted: %s.\n", exitDetails)))
+				fmt.Fprintf(e.cmd.Stderr, "\nThe process has been corrupted: %s.\n", exitDetails)
 			}
 		}
 	} else {
@@ -227,8 +248,8 @@ func getProcessStatus(err error) (bool, string, int) {
 	}
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
-			details := e.ProcessState.String()
-			return details == "signal: killed", details, e.ProcessState.ExitCode()
+			details := e.String()
+			return details == "signal: killed", details, e.ExitCode()
 		}
 		return false, "", 1
 	}
