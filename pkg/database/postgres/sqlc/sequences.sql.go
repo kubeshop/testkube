@@ -28,7 +28,7 @@ func (q *Queries) DeleteExecutionSequence(ctx context.Context, name string) erro
 }
 
 const deleteExecutionSequences = `-- name: DeleteExecutionSequences :exec
-DELETE FROM execution_sequences WHERE name = ANY($1)
+DELETE FROM execution_sequences WHERE name = ANY($1::text[])
 `
 
 func (q *Queries) DeleteExecutionSequences(ctx context.Context, names []string) error {

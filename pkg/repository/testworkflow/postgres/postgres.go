@@ -433,7 +433,7 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 	// Get complete execution data with all related data in a single query
 	row, err := r.queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 		Name:         name,
-		WorkflowName: toPgText(workflowName),
+		WorkflowName: workflowName,
 	})
 	if err != nil {
 		return testkube.TestWorkflowExecution{}, err
@@ -536,16 +536,16 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 
 // GetExecutionsTotals returns execution totals with filter
 func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (testkube.ExecutionsTotals, error) {
-	var params sqlc.GetTestWorkflowExecutionsParams
+	var params sqlc.GetTestWorkflowExecutionsTotalsParams
 	var err error
 	if len(filter) > 0 {
-		params, err = r.buildTestWorkflowExecutionParams(filter[0])
+		params, err = r.buildTestWorkflowExecutionTotalParams(filter[0])
 		if err != nil {
 			return testkube.ExecutionsTotals{}, err
 		}
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsTotals(ctx, sqlc.GetTestWorkflowExecutionsTotalsParams(params))
+	rows, err := r.queries.GetTestWorkflowExecutionsTotals(ctx, params)
 	if err != nil {
 		return testkube.ExecutionsTotals{}, err
 	}
@@ -1246,8 +1246,8 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 	}
 
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
-		WorkflowName: toPgText(name),
-		LastNDays:    toPgInt4(la),
+		WorkflowName: name,
+		LastNDays:    la,
 		Lmt:          int32(li),
 	})
 	if err != nil {
@@ -1279,7 +1279,7 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 // GetPreviousFinishedState gets previous finished state
 func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
 	status, err := r.queries.GetPreviousFinishedState(ctx, sqlc.GetPreviousFinishedStateParams{
-		WorkflowName: toPgText(testWorkflowName),
+		WorkflowName: testWorkflowName,
 		Date:         toPgTimestamp(date),
 	})
 	if err != nil {
@@ -1329,8 +1329,8 @@ func (r *PostgresRepository) Assign(ctx context.Context, id string, prevRunnerId
 
 	resultId, err := r.queries.AssignTestWorkflowExecution(ctx, sqlc.AssignTestWorkflowExecutionParams{
 		ID:           id,
-		PrevRunnerID: toPgText(prevRunnerId),
-		NewRunnerID:  toPgText(newRunnerId),
+		PrevRunnerID: prevRunnerId,
+		NewRunnerID:  newRunnerId,
 		AssignedAt:   assignedAtPg,
 	})
 	if err != nil {
@@ -1420,20 +1420,15 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 
 	// Basic filters
 	if filter.NameDefined() {
-		params.WorkflowName = toPgText(filter.Name())
+		params.WorkflowName = filter.Name()
 	}
 
 	if filter.NamesDefined() {
-		names := filter.Names()
-		pgNames := []pgtype.Text{}
-		for _, name := range names {
-			pgNames = append(pgNames, toPgText(name))
-		}
-		params.WorkflowNames = pgNames
+		params.WorkflowNames = filter.Names()
 	}
 
 	if filter.TextSearchDefined() {
-		params.TextSearch = toPgText(filter.TextSearch())
+		params.TextSearch = filter.TextSearch()
 	}
 
 	// Date filters
@@ -1446,43 +1441,45 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	}
 
 	if filter.LastNDaysDefined() {
-		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
+		params.LastNDays = int32(filter.LastNDays())
 	}
 
 	// Status filters
 	if filter.StatusesDefined() {
 		statuses := filter.Statuses()
-		pgStatuses := []pgtype.Text{}
+		pgStatuses := []string{}
 		for _, status := range statuses {
-			pgStatuses = append(pgStatuses, toPgText(string(status)))
+			pgStatuses = append(pgStatuses, string(status))
 		}
 		params.Statuses = pgStatuses
 	}
 
 	// Runner filters
 	if filter.RunnerIDDefined() {
-		params.RunnerID = toPgText(filter.RunnerID())
+		params.RunnerID = filter.RunnerID()
 	}
 
+	params.Assigned = pgtype.Bool{}
 	if filter.AssignedDefined() {
 		params.Assigned = toPgBool(filter.Assigned())
 	}
 
 	// Actor filters
 	if filter.ActorNameDefined() {
-		params.ActorName = toPgText(filter.ActorName())
+		params.ActorName = filter.ActorName()
 	}
 
 	if filter.ActorTypeDefined() {
-		params.ActorType = toPgText(string(filter.ActorType()))
+		params.ActorType = string(filter.ActorType())
 	}
 
 	// Group filter
 	if filter.GroupIDDefined() {
-		params.GroupID = toPgText(filter.GroupID())
+		params.GroupID = filter.GroupID()
 	}
 
 	// Initialization filter
+	params.Initialized = pgtype.Bool{}
 	if filter.InitializedDefined() {
 		params.Initialized = toPgBool(filter.Initialized())
 	}
@@ -1628,6 +1625,118 @@ func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyConditio
 	}
 
 	return keys, conditions
+}
+
+func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testworkflow.Filter) (sqlc.GetTestWorkflowExecutionsTotalsParams, error) {
+	var err error
+	params := sqlc.GetTestWorkflowExecutionsTotalsParams{}
+
+	// Basic filters
+	if filter.NameDefined() {
+		params.WorkflowName = filter.Name()
+	}
+
+	if filter.NamesDefined() {
+		params.WorkflowNames = filter.Names()
+	}
+
+	if filter.TextSearchDefined() {
+		params.TextSearch = filter.TextSearch()
+	}
+
+	// Date filters
+	if filter.StartDateDefined() {
+		params.StartDate = toPgTimestamp(filter.StartDate())
+	}
+
+	if filter.EndDateDefined() {
+		params.EndDate = toPgTimestamp(filter.EndDate())
+	}
+
+	if filter.LastNDaysDefined() {
+		params.LastNDays = int32(filter.LastNDays())
+	}
+
+	// Status filters
+	if filter.StatusesDefined() {
+		statuses := filter.Statuses()
+		pgStatuses := []string{}
+		for _, status := range statuses {
+			pgStatuses = append(pgStatuses, string(status))
+		}
+		params.Statuses = pgStatuses
+	}
+
+	// Runner filters
+	if filter.RunnerIDDefined() {
+		params.RunnerID = filter.RunnerID()
+	}
+
+	params.Assigned = pgtype.Bool{}
+	if filter.AssignedDefined() {
+		params.Assigned = toPgBool(filter.Assigned())
+	}
+
+	// Actor filters
+	if filter.ActorNameDefined() {
+		params.ActorName = filter.ActorName()
+	}
+
+	if filter.ActorTypeDefined() {
+		params.ActorType = string(filter.ActorType())
+	}
+
+	// Group filter
+	if filter.GroupIDDefined() {
+		params.GroupID = filter.GroupID()
+	}
+
+	// Initialization filter
+	params.Initialized = pgtype.Bool{}
+	if filter.InitializedDefined() {
+		params.Initialized = toPgBool(filter.Initialized())
+	}
+
+	if filter.Selector() != "" {
+		keys, conditions := r.parseSelector(filter.Selector())
+		params.SelectorKeys, err = json.Marshal(keys)
+		if err != nil {
+			return params, err
+		}
+
+		params.SelectorConditions, err = json.Marshal(conditions)
+		if err != nil {
+			return params, err
+		}
+	}
+
+	if filter.LabelSelector() != nil {
+		keys, conditions := r.parseLabelSelector(filter.LabelSelector())
+		params.LabelKeys, err = json.Marshal(keys)
+		if err != nil {
+			return params, err
+		}
+
+		params.LabelConditions, err = json.Marshal(conditions)
+		if err != nil {
+			return params, err
+		}
+	}
+
+	if filter.TagSelector() != "" {
+		keys, conditions := r.parseTagSelector(filter.TagSelector())
+		params.TagKeys, err = json.Marshal(keys)
+		if err != nil {
+			return params, err
+		}
+
+		params.TagConditions, err = json.Marshal(conditions)
+		if err != nil {
+			return params, err
+		}
+	}
+
+	return params, nil
 }
 
 // Helper methods for building complex objects
