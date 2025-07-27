@@ -49,7 +49,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	            \) ORDER BY s\.id
 	        \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
 	        '\[\]'::json
-	    \) as signatures_json,
+	    \)::json as signatures_json,
 	    COALESCE\(
 	        \(SELECT json_agg\(
 	            json_build_object\(
@@ -60,7 +60,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	            \) ORDER BY o\.id
 	        \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
 	        '\[\]'::json
-	    \) as outputs_json,
+	    \)::json as outputs_json,
 	    COALESCE\(
 	        \(SELECT json_agg\(
 	            json_build_object\(
@@ -72,7 +72,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	            \) ORDER BY rep\.id
 	        \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
 	        '\[\]'::json
-	    \) as reports_json,
+	    \)::json as reports_json,
 	    ra\.global as resource_aggregations_global,
 	    ra\.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -156,7 +156,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
             \) ORDER BY s\.id
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
-    \) as signatures_json,
+    \)::json as signatures_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -167,7 +167,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
             \) ORDER BY o\.id
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
-    \) as outputs_json,
+    \)::json as outputs_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -179,7 +179,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
             \) ORDER BY rep\.id
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
-    \) as reports_json,
+    \)::json as reports_json,
     ra\.global as resource_aggregations_global,
     ra\.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -215,12 +215,12 @@ WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2`
 		[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs("test-execution", pgtype.Text{String: "test-workflow", Valid: true}).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("test-execution", "test-workflow").WillReturnRows(rows)
 
 	// Execute query
 	params := GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 		Name:         "test-execution",
-		WorkflowName: pgtype.Text{String: "test-workflow", Valid: true},
+		WorkflowName: "test-workflow",
 	}
 	result, err := queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, params)
 
@@ -266,7 +266,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionByTestWo
             \) ORDER BY s\.id
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
-    \) as signatures_json,
+    \)::json as signatures_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -277,7 +277,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionByTestWo
             \) ORDER BY o\.id
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
-    \) as outputs_json,
+    \)::json as outputs_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -289,7 +289,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionByTestWo
             \) ORDER BY rep\.id
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
-    \) as reports_json,
+    \)::json as reports_json,
     ra\.global as resource_aggregations_global,
     ra\.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -297,7 +297,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE w\.name = \$1 
+WHERE w\.name = \$1::text
 ORDER BY e\.status_at DESC 
 LIMIT 1`
 
@@ -374,7 +374,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
             \) ORDER BY s\.id
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
-    \) as signatures_json,
+    \)::json as signatures_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -385,7 +385,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
             \) ORDER BY o\.id
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
-    \) as outputs_json,
+    \)::json as outputs_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -397,7 +397,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
             \) ORDER BY rep\.id
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
-    \) as reports_json,
+    \)::json as reports_json,
     ra\.global as resource_aggregations_global,
     ra\.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -405,7 +405,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE w\.name = ANY\(\$1\)
+WHERE w\.name = ANY\(\$1::text\[\]\)
 ORDER BY w\.name, e\.status_at DESC`
 
 	rows := mock.NewRows([]string{
@@ -482,7 +482,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
             \) ORDER BY s\.id
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
-    \) as signatures_json,
+    \)::json as signatures_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -493,7 +493,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
             \) ORDER BY o\.id
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
-    \) as outputs_json,
+    \)::json as outputs_json,
     COALESCE\(
         \(SELECT json_agg\(
             json_build_object\(
@@ -505,7 +505,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
             \) ORDER BY rep\.id
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
-    \) as reports_json,
+    \)::json as reports_json,
     ra\.global as resource_aggregations_global,
     ra\.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -577,13 +577,13 @@ WHERE 1=1
     AND \(COALESCE\(\$6::integer, 0\) = 0 OR e.scheduled_at >= NOW\(\) - \(COALESCE\(\$6::integer, 0\) \|\| ' days'\)::interval\)
     AND \(COALESCE\(\$7::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR r.status = ANY\(\$7::text\[\]\)\)
     AND \(COALESCE\(\$8::text, ''\) = '' OR e.runner_id = \$8::text\)
-    AND \(COALESCE\(\$9::boolean, NULL\) IS NULL OR 
+    AND \(COALESCE\(\$9, NULL\) IS NULL OR 
          \(\$9::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != ''\) OR 
          \(\$9::boolean = false AND \(e.runner_id IS NULL OR e.runner_id = ''\)\)\)
     AND \(COALESCE\(\$10::text, ''\) = '' OR e.running_context->'actor'->>'name' = \$10::text\)
     AND \(COALESCE\(\$11::text, ''\) = '' OR e.running_context->'actor'->>'type_' = \$11::text\)
     AND \(COALESCE\(\$12::text, ''\) = '' OR e.id = \$12::text OR e.group_id = \$12::text\)
-    AND \(COALESCE\(\$13::boolean, NULL\) IS NULL OR 
+    AND \(COALESCE\(\$13, NULL\) IS NULL OR 
          \(\$13::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
          \(\$13::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
     AND \(     
@@ -657,18 +657,18 @@ GROUP BY r\.status`
 
 	// Create parameters struct with all required fields
 	params := GetTestWorkflowExecutionsTotalsParams{
-		WorkflowName:       pgtype.Text{Valid: false},
-		WorkflowNames:      []pgtype.Text{},
-		TextSearch:         pgtype.Text{Valid: false},
+		WorkflowName:       "",
+		WorkflowNames:      []string{},
+		TextSearch:         "",
 		StartDate:          pgtype.Timestamptz{Valid: false},
 		EndDate:            pgtype.Timestamptz{Valid: false},
-		LastNDays:          pgtype.Int4{Valid: false},
-		Statuses:           []pgtype.Text{},
-		RunnerID:           pgtype.Text{Valid: false},
+		LastNDays:          0,
+		Statuses:           []string{},
+		RunnerID:           "",
 		Assigned:           pgtype.Bool{Valid: false},
-		ActorName:          pgtype.Text{Valid: false},
-		ActorType:          pgtype.Text{Valid: false},
-		GroupID:            pgtype.Text{Valid: false},
+		ActorName:          "",
+		ActorType:          "",
+		GroupID:            "",
 		Initialized:        pgtype.Bool{Valid: false},
 		TagKeys:            []byte{},
 		TagConditions:      []byte{},
@@ -896,22 +896,22 @@ func TestSQLCTestWorkflowExecutionQueries_AssignTestWorkflowExecution(t *testing
 
 	expectedQuery := `UPDATE test_workflow_executions 
 SET 
-    runner_id = \$1,
+    runner_id = \$1::text,
     assigned_at = \$2
 FROM test_workflow_results r
 WHERE test_workflow_executions\.id = \$3
     AND test_workflow_executions\.id = r\.execution_id
     AND r\.status = 'queued'
     AND \(\(test_workflow_executions\.runner_id IS NULL OR test_workflow_executions\.runner_id = ''\)
-         OR \(test_workflow_executions\.runner_id = \$1 AND assigned_at < \$2\)
-         OR \(test_workflow_executions\.runner_id = \$4 AND assigned_at < NOW\(\) - INTERVAL '1 minute' AND assigned_at < \$2\)\)
+         OR \(test_workflow_executions\.runner_id = \$1::text AND assigned_at < \$2\)
+         OR \(test_workflow_executions\.runner_id = \$4::text AND assigned_at < NOW\(\) - INTERVAL '1 minute' AND assigned_at < \$2\)\)
 RETURNING test_workflow_executions\.id`
 
 	params := AssignTestWorkflowExecutionParams{
-		NewRunnerID:  pgtype.Text{String: "new-runner", Valid: true},
+		NewRunnerID:  "new-runner",
 		AssignedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		ID:           "test-id",
-		PrevRunnerID: pgtype.Text{String: "old-runner", Valid: true},
+		PrevRunnerID: "old-runner",
 	}
 
 	rows := mock.NewRows([]string{"id"}).AddRow("test-id")
@@ -1015,14 +1015,14 @@ func TestSQLCTestWorkflowExecutionQueries_GetPreviousFinishedState(t *testing.T)
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE w\.name = \$1
+WHERE w\.name = \$1::text
     AND r\.finished_at < \$2
     AND r\.status IN \('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout'\)
 ORDER BY r\.finished_at DESC
 LIMIT 1`
 
 	params := GetPreviousFinishedStateParams{
-		WorkflowName: pgtype.Text{String: "test-workflow", Valid: true},
+		WorkflowName: "test-workflow",
 		Date:         pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	}
 
@@ -1060,8 +1060,8 @@ SELECT
         AND jsonb_typeof\(e.tags\) = 'object'
 \)
 SELECT 
-    tag_key,
-    array_agg\(DISTINCT tag_value ORDER BY tag_value\) as values
+    tag_key::text,
+    array_agg\(DISTINCT tag_value ORDER BY tag_value\)::text\[\] as values
 FROM tag_extracts
 WHERE \(COALESCE\(\$1::text, ''\) = '' OR workflow_name = \$1::text\)
 GROUP BY tag_key
@@ -1103,14 +1103,14 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowMetrics(t *testing.T) {
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE w\.name = \$1
-    AND \(\$2 = 0 OR e\.scheduled_at >= NOW\(\) - \(\$2 \|\| ' days'\)::interval\)
+WHERE w\.name = \$1::text
+    AND \(\$2::integer = 0 OR e\.scheduled_at >= NOW\(\) - \(\$2::integer \|\| ' days'\)::interval\)
 ORDER BY e\.scheduled_at DESC
 LIMIT \$3`
 
 	params := GetTestWorkflowMetricsParams{
-		WorkflowName: pgtype.Text{String: "test-workflow", Valid: true},
-		LastNDays:    pgtype.Int4{Int32: 7, Valid: true},
+		WorkflowName: "test-workflow",
+		LastNDays:    7,
 		Lmt:          10,
 	}
 

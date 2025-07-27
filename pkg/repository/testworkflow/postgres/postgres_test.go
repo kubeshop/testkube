@@ -601,7 +601,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 		row := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow(createTestRow())
 		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 			Name:         name,
-			WorkflowName: toPgText(workflowName),
+			WorkflowName: workflowName,
 		}
 
 		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(row, nil)
@@ -621,7 +621,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 
 		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 			Name:         name,
-			WorkflowName: toPgText(workflowName),
+			WorkflowName: workflowName,
 		}
 
 		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow{}, pgx.ErrNoRows)
@@ -950,8 +950,8 @@ func TestPostgresRepository_GetTestWorkflowMetrics(t *testing.T) {
 		}
 
 		params := sqlc.GetTestWorkflowMetricsParams{
-			WorkflowName: toPgText(name),
-			LastNDays:    toPgInt4(int32(last)),
+			WorkflowName: name,
+			LastNDays:    int32(last),
 			Lmt:          int32(limit),
 		}
 
@@ -1014,8 +1014,8 @@ func TestPostgresRepository_Assign(t *testing.T) {
 
 		params := sqlc.AssignTestWorkflowExecutionParams{
 			ID:           id,
-			PrevRunnerID: toPgText(prevRunnerID),
-			NewRunnerID:  toPgText(newRunnerID),
+			PrevRunnerID: prevRunnerID,
+			NewRunnerID:  newRunnerID,
 			AssignedAt:   toPgTimestamp(assignedAt),
 		}
 
@@ -1037,8 +1037,8 @@ func TestPostgresRepository_Assign(t *testing.T) {
 
 		params := sqlc.AssignTestWorkflowExecutionParams{
 			ID:           id,
-			PrevRunnerID: toPgText(prevRunnerID),
-			NewRunnerID:  toPgText(newRunnerID),
+			PrevRunnerID: prevRunnerID,
+			NewRunnerID:  newRunnerID,
 			AssignedAt:   toPgTimestamp(assignedAt),
 		}
 
@@ -1170,8 +1170,7 @@ func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 	params, err := repo.buildTestWorkflowExecutionParams(filter)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "test-workflow", params.WorkflowName.String)
-	assert.True(t, params.WorkflowName.Valid)
+	assert.Equal(t, "test-workflow", params.WorkflowName)
 }
 
 func TestPopulateConfigParams(t *testing.T) {

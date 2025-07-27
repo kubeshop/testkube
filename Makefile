@@ -268,17 +268,6 @@ run-proxy:
 
 generate-sql-package:
 	sqlc generate
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetFinishedTestWorkflowExecutionsParams struct {$$/,/^}$$/c\type GetFinishedTestWorkflowExecutionsParams GetTestWorkflowExecutionsParams' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetFinishedTestWorkflowExecutionsRow struct {$$/,/^}$$/c\type GetFinishedTestWorkflowExecutionsRow GetTestWorkflowExecutionRow' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {$$/,/^}$$/c\type GetLatestTestWorkflowExecutionByTestWorkflowRow GetTestWorkflowExecutionRow' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {$$/,/^}$$/c\type GetLatestTestWorkflowExecutionsByTestWorkflowsRow GetTestWorkflowExecutionRow' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetTestWorkflowExecutionByNameAndTestWorkflowRow struct {$$/,/^}$$/c\type GetTestWorkflowExecutionByNameAndTestWorkflowRow GetTestWorkflowExecutionRow' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetTestWorkflowExecutionsSummaryParams struct {$$/,/^}$$/c\type GetTestWorkflowExecutionsSummaryParams GetTestWorkflowExecutionsParams' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetTestWorkflowExecutionsSummaryRow struct {$$/,/^}$$/c\type GetTestWorkflowExecutionsSummaryRow GetTestWorkflowExecutionRow' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetRunningTestWorkflowExecutionsRow struct {$$/,/^}$$/c\type GetRunningTestWorkflowExecutionsRow GetTestWorkflowExecutionRow' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetTestWorkflowExecutionsTotalsParams struct {$$/,/^}$$/c\type GetTestWorkflowExecutionsTotalsParams GetTestWorkflowExecutionsParams' {} \;
-	find ./pkg/database/postgres/sqlc -name "executions.sql.go" -exec sed -i '/^type GetUnassignedTestWorkflowExecutionsRow struct {$$/,/^}$$/c\type GetUnassignedTestWorkflowExecutionsRow GetTestWorkflowExecutionRow' {} \;
-	go fmt pkg/database/postgres/sqlc/*.go
 
 define install-protoc
 @[ -f "${PROTOC}" ] || { \
