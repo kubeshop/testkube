@@ -64,6 +64,12 @@ spec:
       artifacts:
         paths:
           - '/data/artifacts/**/*'
+    - name: Limits - workflow suite
+      negative: true
+      shell: testkube run tw junit-workflow-suite -f --namespace {{ config.namespace }}
+    - name: Limits - parallel
+      negative: true
+      shell: testkube run tw distributed-k6-workflow-smoke -f --namespace {{ config.namespace }}
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -71,9 +77,10 @@ metadata:
   name: oss-tests-mongo
   namespace: testkube-agent
   labels:
-    core-tests: oss
+    core-tests: workflows
+    tool: testkube-oss
     environment-specific: dev
-description: OSS tests (standard installation - Mongo)
+description: Testkube OSS tests (standard installation - Mongo)
 spec:
   use:
     - name: oss-tests-setup-template
@@ -93,9 +100,10 @@ metadata:
   name: oss-tests-postgres
   namespace: testkube-agent
   labels:
-    core-tests: oss
+    core-tests: workflows
+    tool: testkube-oss
     environment-specific: dev
-description: OSS tests (PostgreSQL)
+description: Testkube OSS tests (PostgreSQL)
 spec:
   use:
     - name: oss-tests-setup-template
@@ -104,7 +112,7 @@ spec:
     template:
       name: oss-tests-steps-template
       config:
-        namespace: "oss-postgres"
+        namespace: "oss-postgresql"
     artifacts:
       paths:
       - '/data/artifacts/**/*'
