@@ -6,7 +6,7 @@ metadata:
     core-tests: installation-template
 spec:
   container:
-    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:530.0.0 # Docker has been removed from this image starting with 531.0.0 (Jun 04, 2025)
     env:
     - name: KUBECONFIG
       value: /.kube/config
