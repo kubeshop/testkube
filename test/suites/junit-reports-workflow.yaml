@@ -14,13 +14,14 @@ spec:
       workflows:
       - name: cypress-workflow-smoke-junit-report
       - name: cypress-workflow-smoke-matrix-junit
+      - name: distributed-playwright-workflow-smoke
+      - name: junit5-workflow-smoke
       - name: nunit-workflow-smoke-junit-report
       - name: playwright-workflow-smoke-junit
-      - name: distributed-playwright-workflow-smoke
       - name: postman-workflow-smoke-junit
-      - name: pytest-workflow-smoke-junit-success-only
       - name: pytest-workflow-smoke-junit-mixed-failures
+      - name: pytest-workflow-smoke-junit-success-only
       - name: xunit-workflow-smoke
       - name: junit-report-high-level-failure
-      - name: junit-report-high-level-without-testcases
       - name: junit-report-high-level-testcase-both-error-and-failure
+      - name: junit-report-high-level-without-testcases
