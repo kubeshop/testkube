@@ -306,6 +306,10 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 		sigs := flattenSignatures(execution.Signature)
 
 		printRawLogLines(logs, sigs, execution, options...)
+		if execution.Result.IsAnyError() {
+			return 1
+		}
+
 		return 0
 	}
 
