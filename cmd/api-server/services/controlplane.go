@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/client-go/kubernetes"
@@ -27,13 +29,17 @@ import (
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -74,13 +80,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Connect to storages
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 	storageClient := commons.MustGetMinioClient(cfg)
-
-	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-	commons.ExitOnError("Creating test workflow client", err)
-	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-	commons.ExitOnError("Creating test workflow templates client", err)
 
 	var logGrpcClient logsclient.StreamGetter
 	if !cfg.DisableDeprecatedTests && features.LogsV2 {
@@ -88,13 +88,28 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		commons.ExitOnError("Creating logs streaming client", err)
 	}
 
+	var factory repository.RepositoryFactory
+	if cfg.APIMongoDSN != "" {
+		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient, features)
+	}
+	if cfg.APIPostgresDSN != "" {
+		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
+		factory, err = CreatePostgresFactory(postgresDb)
+	}
+	commons.ExitOnError("Creating factory for database", err)
+
+	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow client", err)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow templates client", err)
+
 	// Build repositories
-	sequenceRepository := sequence.NewMongoRepository(db)
-	testWorkflowResultsRepository := testworkflow.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
-		testworkflow.WithMongoRepositorySequence(sequenceRepository))
-	testWorkflowOutputRepository := testworkflow.NewMinioOutputRepository(storageClient, db.Collection(testworkflow.CollectionName), cfg.LogsBucket)
+	repoManager := repository.NewRepositoryManager(factory)
+	testWorkflowResultsRepository := repoManager.TestWorkflow()
+	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(repoManager)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
 
 	// Set up "Config" commands
 	configCommands := controlplane.CommandHandlers{
@@ -430,5 +445,46 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
+	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
+}
+
+func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
+	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) (repository.RepositoryFactory, error) {
+	var outputRepository *minioresult.MinioRepository
+	// Init logs storage
+	if cfg.LogsStorage == "minio" {
+		if cfg.LogsBucket == "" {
+			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
+			log.DefaultLogger.Info("setting minio as logs storage")
+			outputRepository = minioresult.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
+		} else {
+			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+		}
+	}
+
+	factory, err := repository.NewFactoryBuilder().WithMongoDB(repository.MongoDBFactoryConfig{
+		Database:         db,
+		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
+		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
+		LogGrpcClient:    logGrpcClient,
+		OutputRepository: outputRepository,
+	}).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return factory, nil
+}
+
+func CreatePostgresFactory(db *pgxpool.Pool) (repository.RepositoryFactory, error) {
+	factory, err := repository.NewFactoryBuilder().WithPostgreSQL(repository.PostgreSQLFactoryConfig{
+		Database: db,
+	}).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return factory, nil
 }

@@ -1,0 +1,17 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "pkg/database/postgres/queries/*.sql"
+    schema: "pkg/database/postgres/migrations"
+    gen:
+      go:
+        package: "sqlc"
+        out: "pkg/database/postgres/sqlc"
+        emit_db_tags: true
+        emit_json_tags: true
+        sql_package: "pgx/v5"
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"

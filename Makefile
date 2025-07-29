@@ -146,6 +146,7 @@ PROTOC_GEN_GO ?= $(LOCALBIN_TOOLING)/protoc-gen-go
 PROTOC_GEN_GO_GRPC ?= $(LOCALBIN_TOOLING)/protoc-gen-go-grpc
 # swagger-codegen is installed globally via brew/package manager
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
+SQLC = sqlc
 
 # ==================== Environment Configuration ====================
 DASHBOARD_URI ?= https://demo.testkube.io
@@ -380,7 +381,7 @@ lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
 ##@ Code Generation
 
 .PHONY: generate
-generate: generate-protobuf generate-openapi generate-mocks ## Generate all code
+generate: generate-protobuf generate-openapi generate-mocks generate-sqlc ## Generate all code
 
 .PHONY: generate-protobuf
 generate-protobuf: install-protobuf ## Generate protobuf code
@@ -402,6 +403,11 @@ generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, 
 	@echo "Generating mock files..."
 	@grep -rl '//go:generate mockgen' ./cmd ./internal ./pkg \
 	| xargs -I {} sh -c 'echo "Generating mocks for {}" && PATH=$(LOCALBIN_TOOLING):$$PATH $(GO) generate {}'
+
+.PHONY: generate-sqlc
+generate-sqlc: ## Generate sqlc package with sql queries
+	@echo "Generating sqlc queries..."
+	@$(SQLC) generate
 
 # ==================== Docker ====================
 ##@ Docker

@@ -29,6 +29,7 @@ import (
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -52,6 +53,7 @@ type Server struct {
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
+	repositoryManager           repository.DatabaseRepository
 }
 
 type Config struct {
@@ -78,6 +80,7 @@ func New(
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	resultsRepository testworkflow.Repository,
 	outputRepository testworkflow.OutputRepository,
+	repositoryManager repository.DatabaseRepository,
 	commandGroups ...CommandHandlers,
 ) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
@@ -95,6 +98,7 @@ func New(
 		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
 		resultsRepository:           resultsRepository,
 		outputRepository:            outputRepository,
+		repositoryManager:           repositoryManager,
 	}
 }
 
@@ -696,4 +700,8 @@ func (s *Server) SaveExecutionArtifactPresigned(ctx context.Context, req *cloud.
 		return nil, err
 	}
 	return &cloud.SaveExecutionArtifactPresignedResponse{Url: url}, nil
+}
+
+func (s *Server) GetRepositoryManager() repository.DatabaseRepository {
+	return s.repositoryManager
 }

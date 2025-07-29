@@ -2,8 +2,10 @@ package triggers
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -85,7 +87,7 @@ func (s *Service) checkForRunningTestWorkflowExecutions(ctx context.Context, sta
 	for _, id := range testWorkflowExecutionIDs {
 		// Pro edition only (tcl protected code)
 		execution, err := s.testWorkflowResultsRepository.Get(ctx, id)
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Warnf("trigger service: execution scraper component: no testworkflow execution found for id %s", id)
 			status.removeTestWorkflowExecutionID(id)
 			continue
@@ -173,7 +175,7 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 	for _, id := range testWorkflowExecutionIDs {
 		// Pro edition only (tcl protected code)
 		execution, err := s.testWorkflowResultsRepository.Get(ctx, id)
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Warnf("trigger service: execution scraper component: no testworkflow execution found for id %s", id)
 			status.removeTestWorkflowExecutionID(id)
 			continue
