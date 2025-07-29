@@ -60,7 +60,7 @@ There are several ways to get started with Testkube:
 - The [Helm Chart Installation](https://docs.testkube.io/articles/install/install-with-helm) gives you more control over the installed components.
 
 Check out the [Installation Overview](https://docs.testkube.io/articles/install/overview) to learn
-more about different ways to deploy and run Testkube
+more about different ways to deploy and run Testkube.
 
 ### Documentation
 
