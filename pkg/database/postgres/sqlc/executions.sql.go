@@ -17,7 +17,7 @@ SET status_at = $1
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = $2
     AND test_workflow_executions.id = r.execution_id
-    AND r.status IN ('queued', 'running', 'paused')
+    AND r.status IN ('queued', 'assigned', 'starting', 'running', 'paused', 'resuming')
     AND (test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
 RETURNING test_workflow_executions.id
 `
