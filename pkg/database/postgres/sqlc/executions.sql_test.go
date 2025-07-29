@@ -297,8 +297,13 @@ LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'wo
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
 WHERE w\.name = \$1::text
-ORDER BY e\.status_at DESC 
-LIMIT 1`
+ORDER BY
+    CASE
+        WHEN \$2::boolean = true THEN e\.number
+        WHEN \$2::boolean = false THEN e\.status_at
+    END DESC
+LIMIT 1
+`
 
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
@@ -326,10 +331,13 @@ LIMIT 1`
 		[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow").WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow", true).WillReturnRows(rows)
 
 	// Execute query
-	result, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, "test-workflow")
+	result, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		WorkflowName: "test-workflow",
+		SortByNumber: true,
+	})
 
 	// Assertions
 	assert.NoError(t, err)

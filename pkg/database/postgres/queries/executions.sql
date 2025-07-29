@@ -180,7 +180,11 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = @workflow_name::text
-ORDER BY e.status_at DESC 
+ORDER BY
+    CASE
+        WHEN @sort_by_number::boolean = true THEN e.number
+        WHEN @sort_by_number::boolean = false THEN e.status_at
+    END DESC
 LIMIT 1;
 
 -- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many

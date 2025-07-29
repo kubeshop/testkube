@@ -449,7 +449,10 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 // GetLatestByTestWorkflow returns latest execution for a workflow
 func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
-	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
+	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		WorkflowName: workflowName,
+		SortByNumber: sortBy == testworkflow.LatestSortByNumber,
+	})
 	if err != nil {
 		return nil, err
 	}

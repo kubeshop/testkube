@@ -39,8 +39,8 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionByNa
 	return args.Get(0).(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName string) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
-	args := m.Called(ctx, workflowName)
+func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
+	args := m.Called(ctx, arg)
 	return args.Get(0).(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow), args.Error(1)
 }
 
@@ -653,11 +653,17 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		ctx := context.Background()
 		workflowName := "test-workflow"
+		sortByNumber := true
+
+		params := sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+			WorkflowName: workflowName,
+			SortByNumber: sortByNumber,
+		}
 
 		row := sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow(createTestRow())
-		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, workflowName).Return(row, nil)
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, params).Return(row, nil)
 
-		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByStatusAt)
+		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByNumber)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -668,8 +674,14 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 	t.Run("NotFound", func(t *testing.T) {
 		ctx := context.Background()
 		workflowName := "not-found"
+		sortByNumber := true
 
-		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, workflowName).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
+		params := sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+			WorkflowName: workflowName,
+			SortByNumber: sortByNumber,
+		}
+
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, params).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
 
 		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByNumber)
 

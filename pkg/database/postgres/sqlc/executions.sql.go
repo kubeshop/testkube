@@ -720,9 +720,18 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = $1::text
-ORDER BY e.status_at DESC 
+ORDER BY
+    CASE
+        WHEN $2::boolean = true THEN e.number
+        WHEN $2::boolean = false THEN e.status_at
+    END DESC
 LIMIT 1
 `
+
+type GetLatestTestWorkflowExecutionByTestWorkflowParams struct {
+	WorkflowName string `db:"workflow_name" json:"workflow_name"`
+	SortByNumber bool   `db:"sort_by_number" json:"sort_by_number"`
+}
 
 type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 	ID                          string             `db:"id" json:"id"`
@@ -783,8 +792,8 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
-func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName string) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
-	row := q.db.QueryRow(ctx, getLatestTestWorkflowExecutionByTestWorkflow, workflowName)
+func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg GetLatestTestWorkflowExecutionByTestWorkflowParams) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
+	row := q.db.QueryRow(ctx, getLatestTestWorkflowExecutionByTestWorkflow, arg.WorkflowName, arg.SortByNumber)
 	var i GetLatestTestWorkflowExecutionByTestWorkflowRow
 	err := row.Scan(
 		&i.ID,
