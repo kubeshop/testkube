@@ -300,7 +300,7 @@ WHERE w\.name = \$1::text
 ORDER BY
     CASE
         WHEN \$2::boolean = true THEN e\.number
-        WHEN \$2::boolean = false THEN e\.status_at
+        WHEN \$2::boolean = false THEN EXTRACT\(EPOCH FROM e\.status_at\)::integer
     END DESC
 LIMIT 1
 `
