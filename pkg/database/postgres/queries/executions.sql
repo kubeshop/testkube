@@ -183,7 +183,7 @@ WHERE w.name = @workflow_name::text
 ORDER BY
     CASE
         WHEN @sort_by_number::boolean = true THEN e.number
-        WHEN @sort_by_number::boolean = false THEN e.status_at
+        WHEN @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
     END DESC
 LIMIT 1;
 
