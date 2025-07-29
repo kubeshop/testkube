@@ -125,6 +125,9 @@ INIT_BIN := $(LOCALBIN_APP)/testworkflow-init
 DOCKER := docker
 DOCKER_REGISTRY ?= docker.io/kubeshop
 
+# ==================== Development ====================
+# Namespace in which to deploy the sandboxed agent for development (see 'make devbox' target)
+DEVBOX_NAMESPACE ?= devbox
 
 # ==================== External Tool Versions ====================
 PROTOC_VERSION := 3.19.4
@@ -330,9 +333,9 @@ login-local: $(CLI_BIN) ## Login to local Control Plane instance for CLI operati
 	@$(CLI_BIN) login --api-uri-override=http://localhost:8099 --agent-uri-override=http://testkube-enterprise-api.tk-dev.svc.cluster.local:8089 --auth-uri-override=http://localhost:5556 --custom-auth
 
 .PHONY: devbox
-devbox: ## Start development environment using devbox (Control Plane needs to be running and also you need to be logged in via CLI)
-	@echo "Starting development environment with devbox..."
-	@$(CLI_BIN) devbox --namespace devbox
+devbox: $(CLI_BIN) ## Start development environment using devbox (Control Plane needs to be running and also you need to be logged in via CLI, see 'make login-local' target)
+	@echo "Starting development agent with in $${DEVBOX_NAMESPACE} namespace..."
+	@$(CLI_BIN) devbox --namespace $${DEVBOX_NAMESPACE}
 
 .PHONY: dev
 dev: run-mongo run-nats run-api ## Start development environment
@@ -350,9 +353,10 @@ unit-tests: gotestsum ## Run unit tests with coverage
 		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
 
 .PHONY: integration-tests
-integration-tests: gotestsum ## Run integration tests (only tests ending with _Integration)
+integration-tests: gotestsum build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
 	@echo "Running integration tests (only tests ending with _Integration)..."
 	@INTEGRATION="true" \
+		TESTKUBE_PROJECT_ROOT="$(PWD)" \
 		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
 		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
 		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \

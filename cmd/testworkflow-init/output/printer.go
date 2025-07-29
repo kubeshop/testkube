@@ -10,7 +10,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 )
 
-type FlushWriter interface {
+type flushWriter interface {
 	io.Writer
 	Flush()
 }

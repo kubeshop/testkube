@@ -1,127 +1,189 @@
 # TestWorkflow Toolkit
 
-The TestWorkflow Toolkit is a CLI tool that runs inside Kubernetes containers to orchestrate TestWorkflow execution. It's the runtime component that makes TestWorkflows actually work.
+The TestWorkflow Toolkit provides helper utilities for test workflows. It's injected into test containers and communicates with the init process to coordinate test execution, artifact collection, and service management.
 
 ## What is it?
 
-The toolkit is a binary that gets injected into test containers to provide:
-- **Parallel execution** - Run multiple test instances with matrix/sharding support
-- **Artifact management** - Handle test outputs and logs
-- **Service orchestration** - Manage sidecar services and dependencies
-- **File transfers** - Share files between workflow steps
-- **Execution control** - Pause, resume, and coordinate test execution
+The toolkit works with the TestWorkflow Init process to provide comprehensive test orchestration:
 
-## Architecture
+- **Init Process**: Orchestrates test execution (entrypoint, retry logic, state management)
+- **Toolkit**: Provides utilities for tests (artifacts, git operations, services, parallel execution)
 
-```
-TestWorkflow Definition (YAML)
-        ↓
-TestWorkflow Controller (compiles to Job)
-        ↓
-Toolkit (runs inside Pod Container)
-        ↓
-Test Execution
-```
+## Environment Configuration
 
-The toolkit acts as the bridge between Kubernetes orchestration and actual test execution. It handles the complexity of distributed execution while presenting a simple interface to tests.
+The toolkit receives configuration via environment variables:
 
-## Key Design Principles
+| Variable | Purpose                     | Source              |
+|----------|-----------------------------|---------------------|
+| `TK_REF` | Current step reference ID   | Set by init process |
+| `TK_CFG` | JSON workflow configuration | Set by init process |
+| `DEBUG`  | Enable debug logging        | Optional            |
 
-1. **Ephemeral by design** - Runs in short-lived containers, not long-running services
-2. **Expression-based configuration** - Uses template expressions (`{{index}}`, `{{env.VAR}}`) for dynamic configuration
-3. **Two-stage resolution** - Structural expressions resolved at scheduling, environment expressions in workers
-4. **Non-blocking operations** - Prevents deadlocks in distributed scenarios
-5. **Graceful degradation** - Continues execution even if some workers fail
+### TK_CFG Structure
 
-## Core Commands
-
-### parallel
-Orchestrates parallel test execution with support for:
-- Matrix testing (test combinations like OS × Browser × Version)
-- Sharding (distribute test files across workers)
-- Simple replication (run N copies)
-
-### transfer
-Manages file sharing between workflow steps using an internal HTTP server.
-
-### execute
-Runs individual test commands with proper environment setup.
-
-### artifacts
-Handles test output collection and storage.
-
-## How Parallel Execution Works
-
-1. **Spec parsing** - Parses the parallel configuration (matrix, shards, count)
-2. **Worker generation** - Creates individual worker specifications
-3. **Resource allocation** - Spawns Kubernetes jobs for each worker
-4. **Execution monitoring** - Tracks worker status and collects outputs
-5. **Synchronization** - Coordinates paused workers for synchronized resume
-6. **Cleanup** - Collects logs and removes Kubernetes resources
-
-### Key Interfaces
-
-The toolkit uses interface-based design for testability:
-- `WorkerRegistry` - Tracks worker lifecycle
-- `ExecutionWorker` - Kubernetes job management
-- `ArtifactStorage` - Output persistence
-
-## Common Patterns
-
-### Expression Resolution
-```go
-// Preserve environment expressions for worker context
-machine := spawn.CreateBaseMachineWithoutEnv()
-
-// Resolve in worker
-{{env.DATABASE_URL}} → resolved with worker's environment
-```
-
-### Base64 Argument Encoding Pattern
-
-The toolkit uses base64 encoding for complex arguments to prevent premature expression resolution by testworkflow-init.
-
-**Problem**: testworkflow-init resolves ALL expressions in command arguments before execution. This fails for expressions that need context only available in the toolkit command (like `{{ matrix.browser }}` or `{{ index + 1 }}`).
-
-**Solution**: Base64 encode arguments containing expressions:
-
-```go
-// In processor (operations.go):
-encoded := base64.StdEncoding.EncodeToString(jsonData)
-stage.Container().SetArgs("--base64", encoded)
-
-// In toolkit command:
-if base64Encoded {
-    decoded, _ := base64.StdEncoding.DecodeString(args[0])
-    // Now expressions can be resolved with proper context
+Contains workflow metadata and execution details:
+```json
+{
+  "workflow": {"name": "test-workflow"},
+  "execution": {"id": "exec-123", "namespace": "testkube"},
+  "worker": {"namespace": "testkube"}
 }
 ```
 
-**Commands using this pattern**:
-- `parallel` - for matrix/shard/index expressions
-- `services` - for service matrix expressions  
-- `execute` - for workflow index/count expressions
+## Commands
 
-This is not a workaround but an architectural boundary between:
-- **testworkflow-init**: Basic container lifecycle and expression resolution
-- **toolkit commands**: Domain-specific logic with specialized expression contexts
+### Open Source Commands
 
-### Non-blocking Updates
-```go
-// Prevent deadlocks during status updates
-select {
-case updates <- status:
-    // sent successfully
-default:
-    // channel full, skip non-critical update
-}
+#### `artifacts <paths...>`
+Collect test artifacts with optional compression and cloud upload.
+
+```bash
+# Basic usage
+testworkflow-toolkit artifacts "reports/*.xml" "logs/*.log"
+
+# With compression  
+testworkflow-toolkit artifacts --compress=tar.gz "test-results/"
+
+# Custom artifact ID
+testworkflow-toolkit artifacts --id=custom-id "output/"
 ```
 
-### Resource Cleanup
-```go
-defer func() {
-    // Always cleanup, even on panic
-    worker.Destroy()
-    logs.Save()
-}()
+**Flags**:
+- `--compress`: Compression type (`tar.gz`, `tgz`, `none`)
+- `--id`: Custom artifact identifier
+- `--unpack`: Auto-extract archives in cloud storage
+- `--mount`: Additional mount paths
+
+#### `clone <repository>`
+Clone git repositories with authentication support.
+
+```bash
+# Basic clone
+testworkflow-toolkit clone https://github.com/user/repo.git
+
+# With authentication and branch
+testworkflow-toolkit clone https://github.com/private/repo.git \
+  --token $GITHUB_TOKEN --branch main
+
+# Sparse checkout
+testworkflow-toolkit clone https://github.com/user/repo.git \
+  --paths "src/,tests/" --branch develop
 ```
+
+**Authentication Types**:
+- `--token`: Token-based (GitHub, GitLab)
+- `--username`/`--password`: Basic auth
+- `--ssh-key`: SSH key path
+
+#### `tarball <operation> [args...]`
+Create or extract tarball archives.
+
+```bash
+# Create compressed tarball
+testworkflow-toolkit tarball create --compress archive.tar.gz src/ tests/
+
+# Extract tarball
+testworkflow-toolkit tarball extract archive.tar.gz /destination/
+```
+
+#### `transfer <source:patterns=url>`
+Transfer files using pattern matching.
+
+```bash
+# Single transfer
+testworkflow-toolkit transfer "/data:*.txt,*.log=http://storage/upload"
+
+# Multiple transfers
+testworkflow-toolkit transfer \
+  "/results:*.xml=http://storage/results" \
+  "/logs:**/*.log=http://storage/logs"
+```
+
+### Pro Commands (Testkube Pro License Required)
+
+#### `execute`
+Execute other tests or workflows from within a workflow.
+
+```bash
+# Execute tests with matrix/sharding support
+testworkflow-toolkit execute --test api-test --workflow e2e-suite \
+  --parallelism 5 --async
+
+# With base64-encoded configuration (used by processor)
+testworkflow-toolkit execute --base64 <encoded-spec>
+```
+
+**Features**:
+- Matrix and sharding support for scaling tests
+- Parallel execution with configurable parallelism
+- Async mode for fire-and-forget execution
+- Transfer server for file sharing between executions
+
+#### `services <ref>`
+Manage accompanying services (databases, APIs, etc.) alongside tests.
+
+```bash
+# Start services for a group (typically called by processor)
+testworkflow-toolkit services ref --group=test-group --base64 <encoded-services>
+```
+
+**Service Management**:
+- Automatic readiness probing
+- Resource management and cleanup
+- IP assignment and networking
+- Matrix support for service variations
+
+#### `parallel <spec>`
+Execute multiple operations in parallel with advanced orchestration.
+
+```bash
+# Run parallel workflows (typically with base64-encoded spec)
+testworkflow-toolkit parallel --base64 <encoded-parallel-spec>
+```
+
+**Features**:
+- Matrix and sharding support
+- Synchronized pause/resume across workers
+- Conditional log collection
+- Automatic resource cleanup
+
+#### `kill <ref>`
+Terminate and clean up services or parallel operations.
+
+```bash
+# Kill services with log collection
+testworkflow-toolkit kill service-group --logs="db=failed" --logs="api=always"
+```
+
+## Integration with Init Process
+
+The toolkit integrates with the init process through:
+
+1. **Environment Variables**: Configuration passed via `TK_CFG` and `TK_REF`
+2. **Shared Filesystem**: Access to volumes for artifacts and state
+3. **State Coordination**: Synchronization through the state file at `/.tktw/state`
+
+## Expression Resolution
+
+The toolkit handles expressions differently than testworkflow-init:
+
+- **testworkflow-init**: Resolves all expressions before execution
+- **toolkit commands**: Use base64 encoding to preserve expressions for runtime evaluation
+
+This allows toolkit commands to access context-specific values like `{{ matrix.browser }}` or `{{ index }}` that aren't available during initial processing.
+
+## Exit Codes
+
+- **0**: Success
+- **1**: General error
+- **2**: Configuration error
+- **15**: Internal error
+- **16**: Input validation error
+
+## Internal Paths
+
+| Path               | Purpose                                  |
+|--------------------|------------------------------------------|
+| `/.tktw/`          | Root directory for TestWorkflow files    |
+| `/.tktw/state`     | State file for init process coordination |
+| `/.tktw/transfer/` | Temporary directory for file transfers   |
