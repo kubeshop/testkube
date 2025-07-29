@@ -34,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -345,18 +346,54 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 
 func NewExecuteCmd() *cobra.Command {
 	var (
-		tests       []string
-		workflows   []string
-		parallelism int
-		async       bool
+		tests         []string
+		workflows     []string
+		parallelism   int
+		async         bool
+		base64Encoded bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "execute",
 		Short: "Execute other resources",
-		Args:  cobra.ExactArgs(0),
+		Args:  cobra.MaximumNArgs(1),
 
-		Run: func(cmd *cobra.Command, _ []string) {
+		Run: func(cmd *cobra.Command, args []string) {
+			// Parse input based on encoding
+			if base64Encoded && len(args) > 0 {
+				// Decode base64 input. The processor base64-encodes execute specs to prevent
+				// testworkflow-init from prematurely resolving expressions like {{ index + 1 }}.
+				// We decode here where we have the proper context to evaluate these expressions.
+				// Unmarshal the execute data
+				type ExecuteData struct {
+					Tests       []json.RawMessage `json:"tests,omitempty"`
+					Workflows   []json.RawMessage `json:"workflows,omitempty"`
+					Async       bool              `json:"async,omitempty"`
+					Parallelism int               `json:"parallelism,omitempty"`
+				}
+				var executeData ExecuteData
+				err := expressionstcl.DecodeBase64JSON(args[0], &executeData)
+				if err != nil {
+					ui.Fail(errors.Wrap(err, "parsing execute data"))
+				}
+
+				// Extract individual test/workflow specs from the decoded data
+				tests = make([]string, len(executeData.Tests))
+				for i, raw := range executeData.Tests {
+					tests[i] = string(raw)
+				}
+				workflows = make([]string, len(executeData.Workflows))
+				for i, raw := range executeData.Workflows {
+					workflows[i] = string(raw)
+				}
+				if executeData.Async {
+					async = true
+				}
+				if executeData.Parallelism > 0 {
+					parallelism = executeData.Parallelism
+				}
+			}
+
 			// Initialize internal machine
 			credMachine := credentials.NewCredentialMachine(data.Credentials())
 			baseMachine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), credMachine)
@@ -537,6 +574,7 @@ func NewExecuteCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&workflows, "workflow", "w", nil, "workflows to run")
 	cmd.Flags().IntVarP(&parallelism, "parallelism", "p", 0, "how many items could be executed at once")
 	cmd.Flags().BoolVar(&async, "async", false, "should it wait for results")
+	cmd.Flags().BoolVar(&base64Encoded, "base64", false, "input is base64 encoded")
 
 	return cmd
 }

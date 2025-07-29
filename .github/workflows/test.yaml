@@ -131,6 +131,9 @@ jobs:
           echo "Test tool location:"
           ls -la bin/tooling/ || echo "No tools cached yet"
 
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1
+
       - name: Integration Tests
         env:
           STORAGE_ACCESSKEYID: minio99
