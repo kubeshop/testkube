@@ -484,9 +484,9 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		for _, item := range items {
 			elements := strings.Split(item, "=")
 			if len(elements) == 2 {
-				query["workflow.labels."+elements[0]] = elements[1]
+				query["workflow.labels."+utils.EscapeDots(elements[0])] = elements[1]
 			} else if len(elements) == 1 {
-				query["workflow.labels."+elements[0]] = bson.M{"$exists": true}
+				query["workflow.labels."+utils.EscapeDots(elements[0])] = bson.M{"$exists": true}
 			}
 		}
 	}
