@@ -83,8 +83,24 @@ func init() {
 }
 
 func main() {
+	startTime := time.Now()
+	log.DefaultLogger.Info("starting Testkube API Server")
+	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
+
 	cfg := commons.MustGetConfig()
 	features := commons.MustGetFeatureFlags()
+
+	log.DefaultLogger.Infow("configuration loaded",
+		"mode", func() string {
+			if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
+				return "agent"
+			}
+			return "standalone"
+		}(),
+		"namespace", cfg.TestkubeNamespace,
+		"apiServerPort", cfg.APIServerPort,
+		"grpcPort", cfg.GRPCServerPort,
+	)
 
 	// Determine the running mode
 	mode := common.ModeStandalone
@@ -106,15 +122,20 @@ func main() {
 	commons.MustFreePort(cfg.GraphqlPort)
 	commons.MustFreePort(cfg.GRPCServerPort)
 
+	log.DefaultLogger.Info("initializing...")
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
+	log.DefaultLogger.Info("ConfigMap configuration loaded successfully")
 
 	// k8s
+	log.DefaultLogger.Info("connecting to Kubernetes cluster...")
 	kubeClient, err := kubeclient.GetClient()
-	commons.ExitOnError("Getting kubernetes client", err)
+	commons.ExitOnError("getting Kubernetes client", err)
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
-	commons.ExitOnError("Getting kubernetes config", err)
+	commons.ExitOnError("getting Kubernetes config", err)
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	commons.ExitOnError("Creating k8s clientset", err)
+	commons.ExitOnError("creating k8s clientset", err)
+
+	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
 	lazyEmitter := event.Lazy(&eventsEmitter)
@@ -139,12 +160,23 @@ func main() {
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
+		log.DefaultLogger.Info("starting embedded Control Plane service...")
 		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Start(ctx)
 		})
+
+		// Wait a bit for the control plane to start
+		time.Sleep(2 * time.Second)
+
+		log.DefaultLogger.Info("connecting to embedded Control Plane...")
+		var err error
 		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
+		commons.ExitOnError("connecting to embedded Control Plane", err)
+		log.DefaultLogger.Infow("connected to embedded control plane successfully", "port", cfg.GRPCServerPort)
 	} else {
+		log.DefaultLogger.Infow("connecting to remote control plane...", "url", cfg.TestkubeProURL)
+		var err error
 		grpcConn, err = agentclient.NewGRPCConnection(
 			ctx,
 			cfg.TestkubeProTLSInsecure,
@@ -155,8 +187,9 @@ func main() {
 			cfg.TestkubeProCAFile, //nolint
 			log.DefaultLogger,
 		)
+		commons.ExitOnError("connecting to remote Control Plane", err)
+		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
 	}
-	commons.ExitOnError("error creating gRPC connection", err)
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
@@ -226,7 +259,10 @@ func main() {
 
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 
+	log.DefaultLogger.Info("connecting to NATS...")
 	nc := commons.MustCreateNATSConnection(cfg)
+	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
+
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
 		eventBus.TraceEvents()
@@ -250,9 +286,9 @@ func main() {
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
 	} else {
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		commons.ExitOnError("Creating test workflow client", err)
+		commons.ExitOnError("creating test workflow client", err)
 		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		commons.ExitOnError("Creating test workflow templates client", err)
+		commons.ExitOnError("creating test workflow templates client", err)
 	}
 
 	defaultExecutionNamespace := cfg.TestkubeNamespace
@@ -265,7 +301,7 @@ func main() {
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
 		if mode != common.ModeAgent {
-			commons.ExitOnError("Execution namespaces", common.ErrNotSupported)
+			commons.ExitOnError("execution namespaces", common.ErrNotSupported)
 		}
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
@@ -273,6 +309,8 @@ func main() {
 
 	var deprecatedSystem *services.DeprecatedSystem
 	if !cfg.DisableDeprecatedTests {
+		log.DefaultLogger.Info("initializing deprecated test system...")
+		log.DefaultLogger.Info("  - connecting to MongoDB and other storage backends...")
 		deprecatedSystem = services.CreateDeprecatedSystem(
 			ctx,
 			mode,
@@ -288,6 +326,9 @@ func main() {
 			inspector,
 			&proContext,
 		)
+		log.DefaultLogger.Info("deprecated test system initialized successfully")
+	} else {
+		log.DefaultLogger.Info("deprecated test system is disabled")
 	}
 
 	// Transfer common environment variables
@@ -513,11 +554,13 @@ func main() {
 		}
 	}
 
+	log.DefaultLogger.Info("starting event system...")
 	eventsEmitter.Listen(ctx)
 	g.Go(func() error {
 		eventsEmitter.Reconcile(ctx)
 		return nil
 	})
+	log.DefaultLogger.Info("event system started successfully")
 
 	// Create Kubernetes Operators/Controllers
 	if cfg.EnableK8sControllers {
@@ -527,13 +570,13 @@ func main() {
 		// Configure a scheme to include the required resource definitions.
 		scheme := runtime.NewScheme()
 		err = testworkflowsv1.AddToScheme(scheme)
-		commons.ExitOnError("Add TestWorkflows to kubernetes runtime scheme", err)
+		commons.ExitOnError("add TestWorkflows to kubernetes runtime scheme", err)
 
 		// Legacy schemes
 		err = testexecutionv1.AddToScheme(scheme)
-		commons.ExitOnError("Add TestExecution to kubernetes runtime scheme", err)
+		commons.ExitOnError("add TestExecution to kubernetes runtime scheme", err)
 		err = testsuiteexecutionv1.AddToScheme(scheme)
-		commons.ExitOnError("Add TestSuiteExecution to kubernetes runtime scheme", err)
+		commons.ExitOnError("add TestSuiteExecution to kubernetes runtime scheme", err)
 
 		// Configure the manager to use the defined scheme and to operate in the current namespace.
 		mgr, err := manager.New(kubeConfig, manager.Options{
@@ -544,19 +587,19 @@ func main() {
 				},
 			},
 		})
-		commons.ExitOnError("Creating kubernetes controller manager", err)
+		commons.ExitOnError("creating kubernetes controller manager", err)
 
 		// Initialise controllers
 		err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
-		commons.ExitOnError("Creating TestWorkflowExecution controller", err)
+		commons.ExitOnError("creating TestWorkflowExecution controller", err)
 
 		// Legacy controllers
 		testExecutor := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](scheduler.DefaultConcurrencyLevel)
 		err = controller.NewTestExecutionExecutorController(mgr, testExecutor, deprecatedSystem)
-		commons.ExitOnError("Creating TestExecution controller", err)
+		commons.ExitOnError("creating TestExecution controller", err)
 		testSuiteExecutor := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](scheduler.DefaultConcurrencyLevel)
 		err = controller.NewTestSuiteExecutionExecutorController(mgr, testSuiteExecutor, deprecatedSystem)
-		commons.ExitOnError("Creating TestSuiteExecution controller", err)
+		commons.ExitOnError("creating TestSuiteExecution controller", err)
 
 		// Finally start the manager.
 		g.Go(func() error {
@@ -565,6 +608,7 @@ func main() {
 	}
 
 	// Create HTTP server
+	log.DefaultLogger.Infow("creating HTTP server...", "port", cfg.APIServerPort)
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
 	httpServer.Routes.Use(cors.New())
 
@@ -621,10 +665,10 @@ func main() {
 			cfg.TestkubeDockerImageVersion,
 			eventsEmitter,
 		)
-		commons.ExitOnError("Starting agent", err)
+		commons.ExitOnError("starting agent", err)
 		g.Go(func() error {
 			err = agentHandle.Run(ctx)
-			commons.ExitOnError("Running agent", err)
+			commons.ExitOnError("running agent", err)
 			return nil
 		})
 		eventsEmitter.Loader.Register(agentHandle)
@@ -632,9 +676,9 @@ func main() {
 
 	if !cfg.DisableTestTriggers && controlPlane != nil {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
-		commons.ExitOnError("Getting k8s client config", err)
+		commons.ExitOnError("getting k8s client config", err)
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
-		commons.ExitOnError("Creating TestKube Clientset", err)
+		commons.ExitOnError("creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 		leaseBackend := controlPlane.GetRepositoryManager().LeaseBackend()
@@ -673,12 +717,18 @@ func main() {
 	})
 
 	log.DefaultLogger.Infow(
-		"starting Testkube API server",
+		"testkube API Server started successfully",
 		"telemetryEnabled", telemetryEnabled,
 		"clusterId", clusterId,
 		"namespace", cfg.TestkubeNamespace,
 		"executionNamespace", cfg.DefaultExecutionNamespace,
 		"version", version.Version,
+		"startupTime", time.Since(startTime),
+	)
+	log.DefaultLogger.Infow("api endpoints ready",
+		"httpPort", cfg.APIServerPort,
+		"grpcPort", cfg.GRPCServerPort,
+		"graphqlPort", cfg.GraphqlPort,
 	)
 
 	if cfg.EnableDebugServer {
@@ -716,7 +766,7 @@ func main() {
 		for _, resource := range resources {
 			reqs, err := labels.ParseToRequirements("testkube=" + resource)
 			if err != nil {
-				log.DefaultLogger.Errorw("Unable to parse label selector", "error", err, "label", "testkube="+resource)
+				log.DefaultLogger.Errorw("unable to parse label selector", "error", err, "label", "testkube="+resource)
 				continue
 			}
 
@@ -729,7 +779,7 @@ func main() {
 				k8sctrlclient.InNamespace(cfg.TestkubeNamespace),
 				k8sctrlclient.MatchingLabelsSelector{Selector: labels.NewSelector().Add(reqs...)},
 			); err != nil {
-				log.DefaultLogger.Errorw("Unable to delete legacy cronjobs", "error", err, "label", "testkube="+resource, "namespace", cfg.TestkubeNamespace)
+				log.DefaultLogger.Errorw("unable to delete legacy cronjobs", "error", err, "label", "testkube="+resource, "namespace", cfg.TestkubeNamespace)
 				continue
 			}
 		}
@@ -742,6 +792,7 @@ func main() {
 	}
 
 	g.Go(func() error {
+		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
 		return httpServer.Run(ctx)
 	})
 

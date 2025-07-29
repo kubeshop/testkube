@@ -65,6 +65,12 @@ type Config struct {
 	FeatureTestWorkflowsCloudStorage bool
 }
 
+type CommandNotImplementedError string
+
+func (e CommandNotImplementedError) Error() string {
+	return fmt.Sprintf("command not implemented: %s", string(e))
+}
+
 // TODO: Check if runner works fine
 func New(
 	cfg Config,
@@ -349,7 +355,7 @@ func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*clou
 	if cmd, ok := s.commands[cloudexecutor.Command(request.Command)]; ok {
 		return cmd(ctx, request)
 	}
-	return nil, errors.Errorf("command not implemented: %s", request.Command)
+	return nil, CommandNotImplementedError(request.Command)
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -640,7 +646,7 @@ func (s *Server) GetExecution(ctx context.Context, req *cloud.GetExecutionReques
 
 func (s *Server) GetUnfinishedExecutions(_ *emptypb.Empty, srv cloud.TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
 	executions, err := s.resultsRepository.GetExecutions(srv.Context(), testworkflow.FilterImpl{
-		FStatuses: []testkube.TestWorkflowStatus{testkube.PAUSED_TestWorkflowStatus, testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus},
+		FStatuses: testkube.TestWorkflowExecutingStatus,
 		FPageSize: math.MaxInt32,
 	})
 	if err != nil {

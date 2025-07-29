@@ -118,10 +118,16 @@ func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
+// GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
+func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
+	sortField := "statusat"
+	if sortBy == testworkflow.LatestSortByNumber {
+		sortField = "number"
+	}
+
 	opts := options.Aggregate()
 	pipeline := []bson.M{
-		{"$sort": bson.M{"statusat": -1}},
+		{"$sort": bson.M{sortField: -1}},
 		{"$match": bson.M{"workflow.name": workflowName}},
 		{"$limit": 1},
 	}
@@ -199,13 +205,12 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Find(ctx, bson.M{
-		"$or": bson.A{
-			bson.M{"result.status": testkube.PAUSED_TestWorkflowStatus},
-			bson.M{"result.status": testkube.RUNNING_TestWorkflowStatus},
-			bson.M{"result.status": testkube.QUEUED_TestWorkflowStatus},
-		},
-	}, opts)
+	statuses := bson.A{}
+	for _, status := range testkube.TestWorkflowExecutingStatus {
+		statuses = append(statuses, status)
+	}
+
+	cursor, err := r.Coll.Find(ctx, bson.M{"result.status": bson.M{"$in": statuses}}, opts)
 	if err != nil {
 		return result, err
 	}
@@ -287,19 +292,24 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	for _, o := range result {
 		sum += int32(o.Count)
 		switch testkube.TestWorkflowStatus(o.Status) {
-		case testkube.QUEUED_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus:
 			totals.Queued = int32(o.Count)
-		case testkube.RUNNING_TestWorkflowStatus:
+		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = int32(o.Count)
 		case testkube.PASSED_TestWorkflowStatus:
 			totals.Passed = int32(o.Count)
-		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus:
+		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus, testkube.CANCELED_TestWorkflowStatus:
 			totals.Failed = int32(o.Count)
 		}
 	}
 	totals.Results = sum
 
 	return
+}
+
+func (r *MongoRepository) Count(ctx context.Context, filter testworkflow.Filter) (count int64, err error) {
+	query, _ := composeQueryAndOpts(filter)
+	return r.Coll.CountDocuments(ctx, query)
 }
 
 func (r *MongoRepository) GetExecutions(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
@@ -467,16 +477,7 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 
 	if filter.StatusesDefined() {
 		statuses := filter.Statuses()
-		if len(statuses) == 1 {
-			query["result.status"] = statuses[0]
-		} else {
-			var conditions bson.A
-			for _, status := range statuses {
-				conditions = append(conditions, bson.M{"result.status": status})
-			}
-
-			query["$or"] = conditions
-		}
+		query["result.status"] = bson.M{"$in": statuses}
 	}
 
 	if filter.Selector() != "" {
@@ -589,7 +590,11 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 		}}
 	}
 
-	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
+	if filter.SkipDefined() {
+		opts.SetSkip(int64(filter.Skip()))
+	} else {
+		opts.SetSkip(int64(filter.Page() * filter.PageSize()))
+	}
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})
 
@@ -849,11 +854,15 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 }
 
 func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool, err error) {
+	statuses := bson.A{}
+	for _, status := range testkube.TestWorkflowStoppableStatus {
+		statuses = append(statuses, status)
+	}
 	ts := time.Now()
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
-			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"result.status": bson.M{"$in": statuses}},
 			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{

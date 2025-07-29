@@ -386,6 +386,14 @@ func (m *MockFilter) PageSize() int {
 	return m.Called().Int(0)
 }
 
+func (m *MockFilter) Skip() int {
+	return m.Called().Int(0)
+}
+
+func (m *MockFilter) SkipDefined() bool {
+	return m.Called().Bool(0)
+}
+
 func (m *MockFilter) TextSearch() string {
 	return m.Called().String(0)
 }
@@ -643,7 +651,7 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 		row := sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow(createTestRow())
 		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, workflowName).Return(row, nil)
 
-		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName)
+		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByStatusAt)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -657,7 +665,7 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 
 		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, workflowName).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
 
-		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName)
+		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByNumber)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

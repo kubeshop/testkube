@@ -26,21 +26,24 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
-func TestCloudAdapter(t *testing.T) {
+func TestCloudAdapter_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("GRPC server receives log data", func(t *testing.T) {
 		// given grpc test server
-		ts := NewTestServer().WithRandomPort()
-		go ts.Run()
+		ts := StartTestServer(t)
 
 		ctx := context.Background()
 		id := "id1"
 
 		// and connection
 		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
-		assert.NoError(t, err)
-		defer grpcConn.Close()
+		if err != nil {
+			t.Fatalf("Failed to create gRPC connection: %v", err)
+		}
+		t.Cleanup(func() {
+			grpcConn.Close()
+		})
 
 		// and log stream client
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
@@ -71,8 +74,7 @@ func TestCloudAdapter(t *testing.T) {
 
 	t.Run("cleaning GRPC connections in adapter on Stop", func(t *testing.T) {
 		// given new test server
-		ts := NewTestServer().WithRandomPort()
-		go ts.Run()
+		ts := StartTestServer(t)
 
 		ctx := context.Background()
 		id1 := "id1"
@@ -81,8 +83,12 @@ func TestCloudAdapter(t *testing.T) {
 
 		// and connection
 		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
-		assert.NoError(t, err)
-		defer grpcConn.Close()
+		if err != nil {
+			t.Fatalf("Failed to create gRPC connection: %v", err)
+		}
+		t.Cleanup(func() {
+			grpcConn.Close()
+		})
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
 		a := NewCloudAdapter(grpcClient, "APIKEY")
 
@@ -122,16 +128,19 @@ func TestCloudAdapter(t *testing.T) {
 
 	t.Run("Send and receive a lot of messages", func(t *testing.T) {
 		// given test server
-		ts := NewTestServer().WithRandomPort()
-		go ts.Run()
+		ts := StartTestServer(t)
 
 		ctx := context.Background()
 		id := "id1M"
 
 		// and grpc connetion to the server
 		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
-		assert.NoError(t, err)
-		defer grpcConn.Close()
+		if err != nil {
+			t.Fatalf("Failed to create gRPC connection: %v", err)
+		}
+		t.Cleanup(func() {
+			grpcConn.Close()
+		})
 
 		// and logs stream client
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
@@ -157,15 +166,18 @@ func TestCloudAdapter(t *testing.T) {
 
 	t.Run("Send to a lot of streams in parallel", func(t *testing.T) {
 		// given test server
-		ts := NewTestServer().WithRandomPort()
-		go ts.Run()
+		ts := StartTestServer(t)
 
 		ctx := context.Background()
 
 		// and grpc connetion to the server
 		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
-		assert.NoError(t, err)
-		defer grpcConn.Close()
+		if err != nil {
+			t.Fatalf("Failed to create gRPC connection: %v", err)
+		}
+		t.Cleanup(func() {
+			grpcConn.Close()
+		})
 
 		// and logs stream client
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
@@ -219,6 +231,9 @@ func assertNoStreams(t *testing.T, a *CloudAdapter) {
 func NewTestServer() *TestServer {
 	return &TestServer{
 		Received: make(map[string][]*pb.Log),
+		ready:    make(chan struct{}),
+		errChan:  make(chan error, 1),
+		shutdown: make(chan struct{}),
 	}
 }
 
@@ -227,6 +242,10 @@ type TestServer struct {
 	pb.UnimplementedCloudLogsServiceServer
 	Received map[string][]*pb.Log
 	lock     sync.Mutex
+	ready    chan struct{}
+	errChan  chan error
+	shutdown chan struct{}
+	server   *grpc.Server
 }
 
 func getVal(ctx context.Context, key string) (string, error) {
@@ -276,16 +295,31 @@ func (s *TestServer) Stream(stream pb.CloudLogsService_StreamServer) error {
 	}
 }
 
-func (s *TestServer) WithRandomPort() *TestServer {
-	port := rand.Intn(1000) + 18000
-	s.Url = fmt.Sprintf("127.0.0.1:%d", port)
-	return s
+func (s *TestServer) WithRandomPort(t *testing.T) *TestServer {
+	t.Helper()
+	// Try up to 10 times to find an available port
+	for i := 0; i < 10; i++ {
+		port := rand.Intn(1000) + 18000
+		s.Url = fmt.Sprintf("127.0.0.1:%d", port)
+
+		// Check if port is available
+		lis, err := net.Listen("tcp", s.Url)
+		if err == nil {
+			lis.Close()
+			return s
+		}
+	}
+	t.Fatal("Could not find available port after 10 attempts")
+	return nil // unreachable, but makes compiler happy
 }
 
-func (s *TestServer) Run() (err error) {
+func (s *TestServer) Run() error {
 	lis, err := net.Listen("tcp", s.Url)
 	if err != nil {
-		return errors.Errorf("net listen: %v", err)
+		err = errors.Wrapf(err, "failed to listen on %s", s.Url)
+		s.errChan <- err
+		close(s.ready) // Signal ready so WaitForReady doesn't block forever
+		return err
 	}
 
 	var opts []grpc.ServerOption
@@ -293,14 +327,28 @@ func (s *TestServer) Run() (err error) {
 	opts = append(opts, grpc.Creds(creds), grpc.MaxRecvMsgSize(math.MaxInt32))
 
 	// register server logs
-	srv := grpc.NewServer(opts...)
-	srv.RegisterService(&pb.CloudLogsService_ServiceDesc, s)
-	srv.Serve(lis)
+	s.server = grpc.NewServer(opts...)
+	s.server.RegisterService(&pb.CloudLogsService_ServiceDesc, s)
 
-	if err != nil {
-		return errors.Wrap(err, "grpc server error")
+	// Signal that server is ready to accept connections
+	close(s.ready)
+
+	// Start serving in a goroutine
+	errChan := make(chan error, 1)
+	go func() {
+		if err := s.server.Serve(lis); err != nil {
+			errChan <- errors.Wrap(err, "grpc server error")
+		}
+	}()
+
+	// Wait for shutdown signal or serve error
+	select {
+	case <-s.shutdown:
+		s.server.GracefulStop()
+		return nil
+	case err := <-errChan:
+		return err
 	}
-	return nil
 }
 
 func (s *TestServer) AssertMessagesProcessed(t *testing.T, id string, messageCount int) {
@@ -318,4 +366,49 @@ func (s *TestServer) AssertMessagesProcessed(t *testing.T, id string, messageCou
 	}
 
 	assert.Equal(t, messageCount, received)
+}
+
+func (s *TestServer) WaitForReady(t *testing.T, timeout time.Duration) {
+	t.Helper()
+	select {
+	case <-s.ready:
+		// Check if there was a startup error
+		select {
+		case err := <-s.errChan:
+			t.Fatalf("Test server failed to start: %v", err)
+		default:
+			// No error, server is ready
+		}
+	case err := <-s.errChan:
+		t.Fatalf("Test server failed to start: %v", err)
+	case <-time.After(timeout):
+		t.Fatal("Test server failed to start within timeout")
+	}
+}
+
+func (s *TestServer) Shutdown() {
+	close(s.shutdown)
+}
+
+// StartTestServer starts a test server and registers cleanup
+func StartTestServer(t *testing.T) *TestServer {
+	t.Helper()
+	ts := NewTestServer().WithRandomPort(t)
+
+	// Start server in background
+	go func() {
+		if err := ts.Run(); err != nil {
+			t.Logf("Test server error: %v", err)
+		}
+	}()
+
+	// Wait for server to be ready
+	ts.WaitForReady(t, 5*time.Second)
+
+	// Register cleanup
+	t.Cleanup(func() {
+		ts.Shutdown()
+	})
+
+	return ts
 }

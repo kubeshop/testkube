@@ -447,7 +447,7 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 }
 
 // GetLatestByTestWorkflow returns latest execution for a workflow
-func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
+func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
 	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
 	if err != nil {
@@ -530,6 +530,10 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 	}
 
 	return result, nil
+}
+
+func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filter) (count int64, err error) {
+	return 0, nil
 }
 
 // GetExecutionsTotals returns execution totals with filter
