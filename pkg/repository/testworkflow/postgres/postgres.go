@@ -564,13 +564,13 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 		}
 
 		switch testkube.TestWorkflowStatus(row.Status.String) {
-		case testkube.QUEUED_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus:
 			totals.Queued = count
-		case testkube.RUNNING_TestWorkflowStatus:
+		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = count
 		case testkube.PASSED_TestWorkflowStatus:
 			totals.Passed = count
-		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus:
+		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus, testkube.CANCELED_TestWorkflowStatus:
 			totals.Failed = count
 		}
 	}
@@ -1519,6 +1519,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		if err != nil {
 			return params, err
 		}
+	}
+
+	if filter.SkipDefined() {
+		params.Fst = int32(filter.Skip())
 	}
 
 	return params, nil
