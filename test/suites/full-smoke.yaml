@@ -25,3 +25,4 @@ spec:
       - name: postman-workflow-suite
       - name: pytest-workflow-suite
       - name: soapui-workflow-suite
+      - name: xunit-workflow-suite

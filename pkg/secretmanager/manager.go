@@ -192,7 +192,7 @@ func (s *secretManager) Create(ctx context.Context, namespace, name string, data
 	maps.Copy(labels, opts.Labels)
 	labels[secretCreatedByLabelName] = secretCreatedByTestkubeValue
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: s.config.Prefix + name, Labels: opts.Labels},
+		ObjectMeta: metav1.ObjectMeta{Name: s.config.Prefix + name, Labels: labels},
 		Type:       corev1.SecretType(opts.Type),
 		StringData: data,
 	}

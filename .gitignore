@@ -25,6 +25,9 @@ vendor/
 
 /gen
 
+# Local binary directories
+bin
+
 ### JetBrains
 .idea
 *.iml
@@ -45,6 +48,9 @@ movie.mp4
 /dist
 .vscode
 
-
+# Local
 build/_local/values.dev.yaml
 depot-build-meta.json
+
+# Environment files
+.env

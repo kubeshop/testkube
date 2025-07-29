@@ -1,0 +1,118 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: oss-tests-setup-template
+spec:
+  system:
+    pureByDefault: true
+  content:
+    files:
+      - path: /root/edge-cluster-sa-key.json
+        contentFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: ENTERPRISE_INSTALLATION_TEST_SA_KEY
+  container:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+  steps:
+    - name: Install Testkube CLI and jq
+      shell: |
+        wget -qO - https://repo.testkube.io/key.pub | apt-key add -
+        echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+        apt-get update && apt-get install -y testkube jq
+        testkube disable telemetry
+    - name: gcloud auth
+      run:
+        env:
+          - name: SA_NAME
+            valueFrom:
+              secretKeyRef:
+                name: testkube-agent-secrets
+                key: ENTERPRISE_INSTALLATION_TEST_SA_NAME
+        shell: |
+          gcloud auth activate-service-account {{ env.SA_NAME }} --key-file=/root/edge-cluster-sa-key.json
+          gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: oss-tests-steps-template
+spec:
+  config:
+    namespace:
+      type: string
+  steps:
+    - name: Run workflow - postman
+      shell: testkube run tw postman-workflow-smoke -f --namespace {{ config.namespace }}
+
+    - name: Run workflow - curl
+      shell: testkube run tw curl-workflow-smoke -f --namespace {{ config.namespace }}
+
+    - name: Run workflow - junit + download artifacts
+      shell: |
+        set -euo pipefail
+        testkube run tw junit5-workflow-smoke -f --namespace {{ config.namespace }}
+
+        exec_name=$(testkube get tw junit5-workflow-smoke --namespace {{ config.namespace }} -o json | awk '/^{/ {i++} i==2' | jq -r '.name')
+
+        mkdir -p /data/artifacts/junit5-workflow-smoke
+
+        for name in $(testkube get artifact "$exec_name" --namespace {{ config.namespace }} | awk -F'|' 'NR > 2 && $2 !~ /NAME/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print $2}'); do
+          echo "→ $name"
+          testkube download artifact "$exec_name" "$name" /data/artifacts/junit5-workflow-smoke --namespace {{ config.namespace }}
+        done
+      artifacts:
+        paths:
+          - '/data/artifacts/**/*'
+    - name: Limits - workflow suite
+      negative: true
+      shell: testkube run tw junit-workflow-suite -f --namespace {{ config.namespace }}
+    - name: Limits - parallel
+      negative: true
+      shell: testkube run tw distributed-k6-workflow-smoke -f --namespace {{ config.namespace }}
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: oss-tests-mongo
+  namespace: testkube-agent
+  labels:
+    core-tests: workflows
+    tool: testkube-oss
+    environment-specific: dev
+description: Testkube OSS tests (standard installation - Mongo)
+spec:
+  use:
+    - name: oss-tests-setup-template
+  steps:
+  - name: Run from template
+    template:
+      name: oss-tests-steps-template
+      config:
+        namespace: "oss-mongodb"
+    artifacts:
+      paths:
+      - '/data/artifacts/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: oss-tests-postgres
+  namespace: testkube-agent
+  labels:
+    core-tests: workflows
+    tool: testkube-oss
+    environment-specific: dev
+description: Testkube OSS tests (PostgreSQL)
+spec:
+  use:
+    - name: oss-tests-setup-template
+  steps:
+  - name: Run from template
+    template:
+      name: oss-tests-steps-template
+      config:
+        namespace: "oss-postgresql"
+    artifacts:
+      paths:
+      - '/data/artifacts/**/*'

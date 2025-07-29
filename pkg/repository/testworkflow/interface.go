@@ -19,6 +19,30 @@ type LabelSelector struct {
 	Or []Label
 }
 
+// LatestSortBy defines the sorting criteria for getting the latest execution
+type LatestSortBy string
+
+const (
+	// LatestSortByStatusAt sorts by status update time (when execution finished) - default behavior
+	LatestSortByStatusAt LatestSortBy = "statusat"
+	// LatestSortByNumber sorts by execution number (start order)
+	LatestSortByNumber LatestSortBy = "number"
+)
+
+// ParseLatestSortBy converts a string to LatestSortBy with validation and default behavior
+func ParseLatestSortBy(s string) LatestSortBy {
+	switch s {
+	case string(LatestSortByNumber):
+		return LatestSortByNumber
+	case string(LatestSortByStatusAt):
+		return LatestSortByStatusAt
+	case "": // default case for empty string
+		return LatestSortByStatusAt
+	default: // invalid values default to statusat for backward compatibility
+		return LatestSortByStatusAt
+	}
+}
+
 type InitData struct {
 	RunnerID   string
 	Namespace  string
@@ -43,6 +67,8 @@ type Filter interface {
 	StatusesDefined() bool
 	Page() int
 	PageSize() int
+	Skip() int
+	SkipDefined() bool
 	TextSearchDefined() bool
 	TextSearch() string
 	Selector() string
@@ -69,8 +95,9 @@ type Repository interface {
 	Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error)
 	// GetByNameAndTestWorkflow gets execution result by name
 	GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error)
-	// GetLatestByTestWorkflow gets latest execution result by workflow
-	GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error)
+	// GetLatestByTestWorkflow gets latest execution result by workflow.
+	// sortBy determines the sorting criteria: LatestSortByStatusAt (status change time) or LatestSortByNumber (start order).
+	GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy LatestSortBy) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
 	// GetFinished get list of executions that are either passed or failed
@@ -81,6 +108,8 @@ type Repository interface {
 	GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
+	// Count gets total count of executions using a filter, optimized for pagination
+	Count(ctx context.Context, filter Filter) (count int64, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestWorkflowExecution, error)
 	// GetExecutionsSummary gets executions summary using a filter, use filter with no data for all

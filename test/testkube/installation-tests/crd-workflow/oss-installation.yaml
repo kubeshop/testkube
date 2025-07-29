@@ -4,6 +4,7 @@ metadata:
   name: oss-standalone-installation-test
   labels:
     core-tests: installation
+    tool: testkube-oss
 spec:
   system:
     pureByDefault: true

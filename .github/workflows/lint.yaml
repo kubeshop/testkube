@@ -8,7 +8,9 @@ on:
       - synchronize
 
 permissions:
+  # allow read access to the content for analysis.
   contents: read
+  # allow read access to pull requests. Use with `only-new-issues` option.
   pull-requests: read
 
 jobs:
@@ -34,22 +36,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: '1.23'
 
       - name: Lint using golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
-          args: --timeout=5m
+          version: v2.3.0
+          args: --timeout=10m
           only-new-issues: true
-          verify: false
+          verify: true

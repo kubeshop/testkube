@@ -306,6 +306,10 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 		sigs := flattenSignatures(execution.Signature)
 
 		printRawLogLines(logs, sigs, execution, options...)
+		if execution.Result.IsAnyError() {
+			return 1
+		}
+
 		return 0
 	}
 
@@ -488,8 +492,7 @@ func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowS
 				return err
 			}
 
-			if result != nil && result.Status != nil &&
-				(*result.Status == testkube.QUEUED_TestWorkflowStatus || *result.Status == testkube.RUNNING_TestWorkflowStatus) {
+			if result != nil && result.Status != nil && !result.Status.Finished() {
 				return fmt.Errorf("test workflow execution is not finished but channel is closed")
 			}
 

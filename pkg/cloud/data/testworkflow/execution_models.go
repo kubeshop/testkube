@@ -26,6 +26,7 @@ type ExecutionGetByNameAndWorkflowResponse struct {
 
 type ExecutionGetLatestByWorkflowRequest struct {
 	WorkflowName string `json:"workflowName"`
+	SortBy       string `json:"sortBy,omitempty"`
 }
 
 type ExecutionGetLatestByWorkflowResponse struct {
@@ -61,6 +62,14 @@ type ExecutionGetExecutionTotalsRequest struct {
 
 type ExecutionGetExecutionTotalsResponse struct {
 	Totals testkube.ExecutionsTotals `json:"totals"`
+}
+
+type ExecutionCountRequest struct {
+	Filter *testworkflow.FilterImpl `json:"filter"`
+}
+
+type ExecutionCountResponse struct {
+	Count int64 `json:"count"`
 }
 
 type ExecutionGetExecutionsRequest struct {

@@ -9,6 +9,7 @@ const (
 	CmdTestWorkflowExecutionGetRunning               executor.Command = "workflow_execution_get_running"
 	CmdTestWorkflowExecutionGetLatestByWorkflows     executor.Command = "workflow_execution_get_latest_by_workflows"
 	CmdTestWorkflowExecutionGetExecutionTotals       executor.Command = "workflow_execution_get_execution_totals"
+	CmdTestWorkflowExecutionCount                    executor.Command = "workflow_execution_count"
 	CmdTestWorkflowExecutionGetExecutions            executor.Command = "workflow_execution_get_executions"
 	CmdTestWorkflowExecutionGetExecutionsSummary     executor.Command = "workflow_execution_get_executions_summary"
 	CmdTestWorkflowExecutionGetPreviousFinishedState executor.Command = "workflow_execution_get_previous_finished_state"
@@ -48,6 +49,8 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowExecutionGetLatestByWorkflows
 	case ExecutionGetExecutionTotalsRequest:
 		return CmdTestWorkflowExecutionGetExecutionTotals
+	case ExecutionCountRequest:
+		return CmdTestWorkflowExecutionCount
 	case ExecutionGetExecutionsRequest:
 		return CmdTestWorkflowExecutionGetExecutions
 	case ExecutionGetExecutionsSummaryRequest:

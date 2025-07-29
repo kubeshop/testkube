@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
@@ -29,7 +30,7 @@ func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name)
+		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name, testworkflow.LatestSortByStatusAt)
 		if err != nil && !apiutils.IsNotFound(err) {
 			return s.ClientError(c, errPrefix, err)
 		}

@@ -15,6 +15,7 @@ type FilterImpl struct {
 	FStatuses      []testkube.TestWorkflowStatus
 	FPage          int
 	FPageSize      int
+	FSkip          *int
 	FTextSearch    string
 	FSelector      string
 	FTagSelector   string
@@ -72,6 +73,11 @@ func (f *FilterImpl) WithPage(page int) *FilterImpl {
 
 func (f *FilterImpl) WithPageSize(pageSize int) *FilterImpl {
 	f.FPageSize = pageSize
+	return f
+}
+
+func (f *FilterImpl) WithSkip(skip int) *FilterImpl {
+	f.FSkip = &skip
 	return f
 }
 
@@ -179,6 +185,17 @@ func (f FilterImpl) Page() int {
 
 func (f FilterImpl) PageSize() int {
 	return f.FPageSize
+}
+
+func (f FilterImpl) Skip() int {
+	if f.FSkip == nil {
+		return 0
+	}
+	return *f.FSkip
+}
+
+func (f FilterImpl) SkipDefined() bool {
+	return f.FSkip != nil
 }
 
 func (f FilterImpl) TextSearchDefined() bool {

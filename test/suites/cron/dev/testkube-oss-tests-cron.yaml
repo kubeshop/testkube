@@ -1,0 +1,16 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: testkube-oss-workflow-suite-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: suite-trigger
+    tool: testkube-oss
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: testkube-oss-workflow-suite
+  events:
+  - cronjob:
+      cron: "55 */4 * * *" # every 4 hours

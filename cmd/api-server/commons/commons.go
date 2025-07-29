@@ -110,13 +110,13 @@ func MustGetConfig() *config.Config {
 func MustGetFeatureFlags() featureflags.FeatureFlags {
 	features, err := featureflags.Get()
 	ExitOnError("error getting application feature flags", err)
-	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
+	log.DefaultLogger.Infow("feature flags configured", "ff", features)
 	return features
 }
 
 func MustFreePort(port int) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	ExitOnError(fmt.Sprintf("Checking if port %d is free", port), err)
+	ExitOnError(fmt.Sprintf("checking if port %d is free", port), err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 }
@@ -126,7 +126,7 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 		name = fmt.Sprintf("testkube-api-server-config-%s", namespace)
 	}
 	configMapConfig, err := configRepo.NewConfigMapConfig(name, namespace)
-	ExitOnError("Getting config map config", err)
+	ExitOnError("getting config map config", err)
 
 	// Load the initial data
 	err = configMapConfig.Load(ctx, defaultTelemetryEnabled)
@@ -167,9 +167,9 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 		return errors.Wrap(err, "failed to plan MongoDB migrations")
 	}
 	if plan.Total == 0 {
-		log.DefaultLogger.Info("No MongoDB migrations to apply.")
+		log.DefaultLogger.Info("no MongoDB migrations to apply.")
 	} else {
-		log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+		log.DefaultLogger.Info(fmt.Sprintf("applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
 	}
 	err = dbMigrator.Apply(ctx)
 	return errors.Wrap(err, "failed to apply MongoDB migrations")
@@ -178,7 +178,7 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 func MustGetMongoDatabase(ctx context.Context, cfg *config.Config, secretClient secret.Interface, migrate bool) *mongo.Database {
 	mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
-	ExitOnError("Getting mongo database", err)
+	ExitOnError("getting mongo database", err)
 	if migrate {
 		if err = runMongoMigrations(ctx, db); err != nil {
 			log.DefaultLogger.Warnf("failed to apply MongoDB migrations: %v", err)
@@ -202,20 +202,20 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 	var keyFile, caFile, pass string
 	var ok bool
 	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
 	}
 	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
 	}
 	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
-	ExitOnError("Could not place mongodb certificate key file", err)
+	ExitOnError("could not place mongodb certificate key file", err)
 
 	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
-	ExitOnError("Could not place mongodb ssl ca file: %s", err)
+	ExitOnError("could not place mongodb ssl ca file: %s", err)
 
 	return &storage.MongoSSLConfig{
 		SSLClientCertificateKeyFile:         clientCertPath,
@@ -460,12 +460,12 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
-		ExitOnError("Creating NATS connection", err)
+		ExitOnError("creating NATS connection", err)
 
-		log.DefaultLogger.Info("Started embedded NATS server")
+		log.DefaultLogger.Info("started embedded NATS server")
 
 		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-		ExitOnError("Creating NATS connection", err)
+		ExitOnError("creating NATS connection", err)
 		return conn
 	}
 
@@ -478,7 +478,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 		NatsCAFile:         cfg.NatsCAFile,
 		NatsConnectTimeout: cfg.NatsConnectTimeout,
 	})
-	ExitOnError("Creating NATS connection", err)
+	ExitOnError("creating NATS connection", err)
 	return conn
 }
 
@@ -518,7 +518,7 @@ func CreateCronJobScheduler(cfg *config.Config,
 			"enable-cron-jobs",
 			"enable cron jobs",
 		)
-		ExitOnError("Creating cron job scheduler config loading", err)
+		ExitOnError("creating cron job scheduler config loading", err)
 	}
 
 	if enableCronJobs == "" {
@@ -526,7 +526,7 @@ func CreateCronJobScheduler(cfg *config.Config,
 	}
 
 	result, err := strconv.ParseBool(enableCronJobs)
-	ExitOnError("Creating cron job scheduler config parsing", err)
+	ExitOnError("creating cron job scheduler config parsing", err)
 
 	if !result {
 		return nil
@@ -540,9 +540,9 @@ func CreateCronJobScheduler(cfg *config.Config,
 		testClient = deprecatedClients.Tests()
 		testSuiteClient = deprecatedClients.TestSuites()
 		testRESTClient, err = testsclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("Creating cron job scheduler test rest client", err)
+		ExitOnError("creating cron job scheduler test rest client", err)
 		testSuiteRESTClient, err = testsuitesclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("Creating cron job scheduler test suite rest client", err)
+		ExitOnError("creating cron job scheduler test suite rest client", err)
 	}
 
 	scheduler := cronjob.New(testWorkflowClient,

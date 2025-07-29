@@ -39,8 +39,14 @@ func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
-	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName}
+// GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
+func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow2.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
+	sortField := "statusat"
+	if sortBy == testworkflow2.LatestSortByNumber {
+		sortField = "number"
+	}
+
+	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName, SortBy: sortField}
 	process := func(v ExecutionGetLatestByWorkflowResponse) *testkube.TestWorkflowExecution {
 		return v.WorkflowExecution
 	}
@@ -75,6 +81,14 @@ func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	req := ExecutionGetExecutionTotalsRequest{Filter: mapFilters(filter)}
 	process := func(v ExecutionGetExecutionTotalsResponse) testkube.ExecutionsTotals {
 		return v.Totals
+	}
+	return pass(r.executor, ctx, req, process)
+}
+
+func (r *CloudRepository) Count(ctx context.Context, filter testworkflow2.Filter) (count int64, err error) {
+	req := ExecutionCountRequest{Filter: filter.(*testworkflow2.FilterImpl)}
+	process := func(v ExecutionCountResponse) int64 {
+		return v.Count
 	}
 	return pass(r.executor, ctx, req, process)
 }
