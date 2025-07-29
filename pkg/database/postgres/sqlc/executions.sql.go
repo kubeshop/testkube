@@ -95,6 +95,151 @@ func (q *Queries) AssignTestWorkflowExecution(ctx context.Context, arg AssignTes
 	return id, err
 }
 
+const countTestWorkflowExecutions = `-- name: CountTestWorkflowExecutions :one
+SELECT COUNT(*)
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE 1=1
+    AND (COALESCE($1::text, '') = '' OR w.name = $1::text)
+    AND (COALESCE($2::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($2::text[]))
+    AND (COALESCE($3::text, '') = '' OR e.name ILIKE '%' || $3::text || '%')
+    AND (COALESCE($4::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= $4::timestamptz)
+    AND (COALESCE($5::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= $5::timestamptz)
+    AND (COALESCE($6::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($6::integer, 0) || ' days')::interval)
+    AND (COALESCE($7::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($7::text[]))
+    AND (COALESCE($8::text, '') = '' OR e.runner_id = $8::text)
+    AND (COALESCE($9, NULL) IS NULL OR 
+         ($9::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         ($9::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (COALESCE($10::text, '') = '' OR e.running_context->'actor'->>'name' = $10::text)
+    AND (COALESCE($11::text, '') = '' OR e.running_context->'actor'->>'type_' = $11::text)
+    AND (COALESCE($12::text, '') = '' OR e.id = $12::text OR e.group_id = $12::text)
+    AND (COALESCE($13, NULL) IS NULL OR 
+         ($13::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($13::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (     
+        (COALESCE($14::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($14::jsonb) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT (e.tags ? (key_condition->>'key'))
+                    ELSE
+                        e.tags ? (key_condition->>'key')
+                END
+            ) = jsonb_array_length($14::jsonb)
+        )
+        AND
+        (COALESCE($15::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($15::jsonb) AS condition
+                WHERE e.tags->>(condition->>'key') = ANY(
+                    SELECT jsonb_array_elements_text(condition->'values')
+                )
+            ) > 0
+        )
+    )
+    AND (
+        (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($16::jsonb) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT (w.labels ? (key_condition->>'key'))
+                    ELSE
+                        w.labels ? (key_condition->>'key')
+                END
+            ) > 0
+        )
+        OR
+        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS condition
+                WHERE w.labels->>(condition->>'key') = ANY(
+                    SELECT jsonb_array_elements_text(condition->'values')
+                )
+            ) > 0
+        )
+    )
+    AND (
+        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT (w.labels ? (key_condition->>'key'))
+                    ELSE
+                        w.labels ? (key_condition->>'key')
+                END
+            ) = jsonb_array_length($18::jsonb)
+        )
+        AND
+        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS condition
+                WHERE w.labels->>(condition->>'key') = ANY(
+                    SELECT jsonb_array_elements_text(condition->'values')
+                )
+            ) = jsonb_array_length($19::jsonb)
+        )
+    )
+ORDER BY e.scheduled_at DESC
+LIMIT $21 OFFSET $20
+`
+
+type CountTestWorkflowExecutionsParams struct {
+	WorkflowName       string             `db:"workflow_name" json:"workflow_name"`
+	WorkflowNames      []string           `db:"workflow_names" json:"workflow_names"`
+	TextSearch         string             `db:"text_search" json:"text_search"`
+	StartDate          pgtype.Timestamptz `db:"start_date" json:"start_date"`
+	EndDate            pgtype.Timestamptz `db:"end_date" json:"end_date"`
+	LastNDays          int32              `db:"last_n_days" json:"last_n_days"`
+	Statuses           []string           `db:"statuses" json:"statuses"`
+	RunnerID           string             `db:"runner_id" json:"runner_id"`
+	Assigned           interface{}        `db:"assigned" json:"assigned"`
+	ActorName          string             `db:"actor_name" json:"actor_name"`
+	ActorType          string             `db:"actor_type" json:"actor_type"`
+	GroupID            string             `db:"group_id" json:"group_id"`
+	Initialized        interface{}        `db:"initialized" json:"initialized"`
+	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
+	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	Fst                int32              `db:"fst" json:"fst"`
+	Lmt                int32              `db:"lmt" json:"lmt"`
+}
+
+func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTestWorkflowExecutions,
+		arg.WorkflowName,
+		arg.WorkflowNames,
+		arg.TextSearch,
+		arg.StartDate,
+		arg.EndDate,
+		arg.LastNDays,
+		arg.Statuses,
+		arg.RunnerID,
+		arg.Assigned,
+		arg.ActorName,
+		arg.ActorType,
+		arg.GroupID,
+		arg.Initialized,
+		arg.TagKeys,
+		arg.TagConditions,
+		arg.LabelKeys,
+		arg.LabelConditions,
+		arg.SelectorKeys,
+		arg.SelectorConditions,
+		arg.Fst,
+		arg.Lmt,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteAllTestWorkflowExecutions = `-- name: DeleteAllTestWorkflowExecutions :exec
 DELETE FROM test_workflow_executions
 `

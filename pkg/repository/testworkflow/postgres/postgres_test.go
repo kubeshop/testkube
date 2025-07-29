@@ -74,6 +74,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsSum
 	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsSummaryRow), args.Error(1)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) CountTestWorkflowExecutions(ctx context.Context, arg sqlc.CountTestWorkflowExecutionsParams) (int64, error) {
+	args := m.Called(ctx, arg)
+	return int64(args.Int(0)), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowExecution(ctx context.Context, arg sqlc.InsertTestWorkflowExecutionParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
@@ -508,6 +513,7 @@ func createTestFilter() *MockFilter {
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))
+	filter.On("SkipDefined").Return(false)
 	return filter
 }
 

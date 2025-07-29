@@ -1154,3 +1154,94 @@ WHERE 1=1
     )
 ORDER BY e.scheduled_at DESC
 LIMIT @lmt OFFSET @fst;
+
+-- name: CountTestWorkflowExecutions :one
+SELECT COUNT(*)
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE 1=1
+    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
+    AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
+    AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
+    AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
+    AND (COALESCE(@assigned, NULL) IS NULL OR 
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
+    AND (COALESCE(@initialized, NULL) IS NULL OR 
+         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (     
+        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT (e.tags ? (key_condition->>'key'))
+                    ELSE
+                        e.tags ? (key_condition->>'key')
+                END
+            ) = jsonb_array_length(@tag_keys::jsonb)
+        )
+        AND
+        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
+                WHERE e.tags->>(condition->>'key') = ANY(
+                    SELECT jsonb_array_elements_text(condition->'values')
+                )
+            ) > 0
+        )
+    )
+    AND (
+        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements(@label_keys::jsonb) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT (w.labels ? (key_condition->>'key'))
+                    ELSE
+                        w.labels ? (key_condition->>'key')
+                END
+            ) > 0
+        )
+        OR
+        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements(@label_conditions::jsonb) AS condition
+                WHERE w.labels->>(condition->>'key') = ANY(
+                    SELECT jsonb_array_elements_text(condition->'values')
+                )
+            ) > 0
+        )
+    )
+    AND (
+        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_keys::jsonb) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT (w.labels ? (key_condition->>'key'))
+                    ELSE
+                        w.labels ? (key_condition->>'key')
+                END
+            ) = jsonb_array_length(@selector_keys::jsonb)
+        )
+        AND
+        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_conditions::jsonb) AS condition
+                WHERE w.labels->>(condition->>'key') = ANY(
+                    SELECT jsonb_array_elements_text(condition->'values')
+                )
+            ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt OFFSET @fst;

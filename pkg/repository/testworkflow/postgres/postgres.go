@@ -532,10 +532,6 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 	return result, nil
 }
 
-func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filter) (count int64, err error) {
-	return 0, nil
-}
-
 // GetExecutionsTotals returns execution totals with filter
 func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (testkube.ExecutionsTotals, error) {
 	var params sqlc.GetTestWorkflowExecutionsTotalsParams
@@ -1404,6 +1400,15 @@ func (r *PostgresRepository) AbortIfQueued(ctx context.Context, id string) (bool
 	}
 
 	return true, nil
+}
+
+func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filter) (count int64, err error) {
+	params, err := r.buildTestWorkflowExecutionParams(filter)
+	if err != nil {
+		return 0, err
+	}
+
+	return r.queries.CountTestWorkflowExecutions(ctx, sqlc.CountTestWorkflowExecutionsParams(params))
 }
 
 // Helper functions for building query parameters and converting rows
