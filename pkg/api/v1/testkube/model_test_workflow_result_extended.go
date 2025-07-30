@@ -17,11 +17,19 @@ func (r *TestWorkflowResult) IsFinished() bool {
 	return r.HasFinishedAt() && r.Status.Finished()
 }
 
-func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
+func (r *TestWorkflowResult) IsStatus(s ...TestWorkflowStatus) bool {
 	if r == nil || r.Status == nil {
-		return s == QUEUED_TestWorkflowStatus
+		return slices.Contains(s, QUEUED_TestWorkflowStatus)
 	}
-	return *r.Status == s
+	return slices.Contains(s, *r.Status)
+}
+
+func (r *TestWorkflowResult) isPredictedStatus(s ...TestWorkflowStatus) bool {
+	if r == nil || r.PredictedStatus == nil {
+		// There is no assumed PredictedStatus so a nil predicted status should never match.
+		return false
+	}
+	return slices.Contains(s, *r.PredictedStatus)
 }
 
 func (r *TestWorkflowResult) LatestTimestamp() time.Time {
@@ -61,7 +69,7 @@ func (r *TestWorkflowResult) approxCurrentTimestamp() time.Time {
 }
 
 func (r *TestWorkflowResult) IsQueued() bool {
-	return r.IsStatus(QUEUED_TestWorkflowStatus)
+	return r.IsStatus(TestWorkflowQueuedStatus...)
 }
 
 func (r *TestWorkflowResult) IsRunning() bool {
@@ -73,11 +81,13 @@ func (r *TestWorkflowResult) IsFailed() bool {
 }
 
 func (r *TestWorkflowResult) IsAborted() bool {
-	return r.IsStatus(ABORTED_TestWorkflowStatus)
+	return r.IsStatus(ABORTED_TestWorkflowStatus) ||
+		(r.IsStatus(STOPPING_TestWorkflowStatus) && r.isPredictedStatus(ABORTED_TestWorkflowStatus))
 }
 
 func (r *TestWorkflowResult) IsCanceled() bool {
-	return r.IsStatus(CANCELED_TestWorkflowStatus)
+	return r.IsStatus(CANCELED_TestWorkflowStatus) ||
+		(r.IsStatus(STOPPING_TestWorkflowStatus) && r.isPredictedStatus(CANCELED_TestWorkflowStatus))
 }
 
 func (r *TestWorkflowResult) IsPassed() bool {

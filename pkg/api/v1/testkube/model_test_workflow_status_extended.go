@@ -57,6 +57,13 @@ func TestWorkflowStatusString(ptr *TestWorkflowStatus) string {
 	return string(*ptr)
 }
 
+// TestWorkflowQueuedStatus defines all statuses that may be applied to an execution that has not yet started executing.
+var TestWorkflowQueuedStatus = []TestWorkflowStatus{
+	QUEUED_TestWorkflowStatus,
+	ASSIGNED_TestWorkflowStatus,
+	STARTING_TestWorkflowStatus,
+}
+
 // TestWorkflowExecutingStatus defines all statuses that may be applied to an in-flight execution.
 // This is logically the inverse of TestWorkflowTerminalStatus
 var TestWorkflowExecutingStatus = []TestWorkflowStatus{
