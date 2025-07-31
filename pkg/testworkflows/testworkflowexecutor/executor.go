@@ -185,18 +185,21 @@ func (e *executor) executeDirect(ctx context.Context, environmentId string, req 
 			e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
 
 			// Finish early if it's immediately known to finish
-			switch {
-			case execution.Result.IsPassed():
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-			case execution.Result.IsAborted():
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			case execution.Result.IsCanceled():
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(execution))
-			default:
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-			}
-			if execution.Result.IsNotPassed() {
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(execution))
+			if execution.Result.IsFinished() {
+				switch {
+				case execution.Result.IsPassed():
+					e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
+				case execution.Result.IsAborted():
+					e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+				case execution.Result.IsCanceled():
+					e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(execution))
+				default:
+					e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
+				}
+				if execution.Result.IsNotPassed() {
+					e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(execution))
+				}
+				continue
 			}
 
 			// Set the runner execution to environment ID as it's a legacy Agent
