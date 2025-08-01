@@ -424,6 +424,27 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result *t
 	return
 }
 
+// UpdateResultStrict is a stricter version of UpdateResult which checks for matching runner id and valid states.
+func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (err error) {
+	if result.IsFinished() {
+		return errors.New("invalid state")
+	}
+
+	_, err = r.Coll.UpdateOne(ctx, bson.M{
+		"id":       id,
+		"runnerid": runnerId,
+		"result.status": bson.M{"$in": bson.A{
+			testkube.ASSIGNED_TestWorkflowStatus,
+			testkube.STARTING_TestWorkflowStatus,
+			testkube.RUNNING_TestWorkflowStatus,
+			testkube.PAUSING_TestWorkflowStatus,
+			testkube.PAUSED_TestWorkflowStatus,
+			testkube.RESUMING_TestWorkflowStatus,
+		}},
+	}, bson.M{"$set": bson.M{"result": result}})
+	return
+}
+
 func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
 	filter := bson.M{"id": id}
 	update := bson.M{"$push": bson.M{"reports": report}}

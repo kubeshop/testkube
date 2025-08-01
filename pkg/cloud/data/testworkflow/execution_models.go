@@ -116,6 +116,12 @@ type ExecutionUpdateResultRequest struct {
 	Result *testkube.TestWorkflowResult `json:"result"`
 }
 
+type ExecutionUpdateResultStrictRequest struct {
+	ID       string                       `json:"id"`
+	RunnerId string                       `json:"runnerId"`
+	Result   *testkube.TestWorkflowResult `json:"result"`
+}
+
 type ExecutionUpdateResultResponse struct {
 }
 

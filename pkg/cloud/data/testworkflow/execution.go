@@ -124,6 +124,11 @@ func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *t
 	return passNoContent(r.executor, ctx, req)
 }
 
+func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (err error) {
+	req := ExecutionUpdateResultStrictRequest{ID: id, Result: result}
+	return passNoContent(r.executor, ctx, req)
+}
+
 func (r *CloudRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
 	req := ExecutionsInsertReportRequest{
 		ID:     id,
