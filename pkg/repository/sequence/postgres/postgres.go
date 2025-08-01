@@ -13,8 +13,10 @@ import (
 )
 
 type PostgresRepository struct {
-	db      sqlc.DatabaseInterface
-	queries sqlc.ExecutionSequenceQueriesInterface
+	db             sqlc.DatabaseInterface
+	queries        sqlc.ExecutionSequenceQueriesInterface
+	organizationID string
+	environmentID  string
 }
 
 type PostgresRepositoryOpt func(*PostgresRepository)
@@ -44,6 +46,20 @@ func WithDatabaseInterface(db sqlc.DatabaseInterface) PostgresRepositoryOpt {
 	}
 }
 
+// WithOrganizationID allows injecting organization id to support control panel
+func WithOrganizationID(organizationID string) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.organizationID = organizationID
+	}
+}
+
+// WithEnvironmentID allows injecting environment id to support control panel
+func WithEnvironmentID(environmentID string) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.environmentID = environmentID
+	}
+}
+
 // PgxPoolWrapper wraps pgxpool.Pool to implement DatabaseInterface
 type PgxPoolWrapper struct {
 	*pgxpool.Pool
@@ -55,7 +71,11 @@ func (w *PgxPoolWrapper) Begin(ctx context.Context) (pgx.Tx, error) {
 
 // GetNextExecutionNumber gets next execution number by name using atomic upsert
 func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string, _ sequence.ExecutionType) (int32, error) {
-	result, err := r.queries.UpsertAndIncrementExecutionSequence(ctx, name)
+	result, err := r.queries.UpsertAndIncrementExecutionSequence(ctx, sqlc.UpsertAndIncrementExecutionSequenceParams{
+		Name:           name,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get next execution number: %w", err)
 	}
@@ -65,7 +85,11 @@ func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name st
 
 // DeleteExecutionNumber deletes execution number by name
 func (r *PostgresRepository) DeleteExecutionNumber(ctx context.Context, name string, _ sequence.ExecutionType) error {
-	err := r.queries.DeleteExecutionSequence(ctx, name)
+	err := r.queries.DeleteExecutionSequence(ctx, sqlc.DeleteExecutionSequenceParams{
+		Name:           name,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to delete execution sequence: %w", err)
 	}
@@ -78,7 +102,11 @@ func (r *PostgresRepository) DeleteExecutionNumbers(ctx context.Context, names [
 		return nil
 	}
 
-	err := r.queries.DeleteExecutionSequences(ctx, names)
+	err := r.queries.DeleteExecutionSequences(ctx, sqlc.DeleteExecutionSequencesParams{
+		Names:          names,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete execution sequences: %w", err)
 	}
@@ -88,7 +116,10 @@ func (r *PostgresRepository) DeleteExecutionNumbers(ctx context.Context, names [
 
 // DeleteAllExecutionNumbers deletes all execution numbers
 func (r *PostgresRepository) DeleteAllExecutionNumbers(ctx context.Context, _ sequence.ExecutionType) error {
-	err := r.queries.DeleteAllExecutionSequences(ctx)
+	err := r.queries.DeleteAllExecutionSequences(ctx, sqlc.DeleteAllExecutionSequencesParams{
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete all execution sequences: %w", err)
 	}

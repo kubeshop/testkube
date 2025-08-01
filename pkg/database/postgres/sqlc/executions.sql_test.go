@@ -79,7 +79,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE e\.id = \$1 OR e\.name = \$1`
+WHERE \(e\.id = \$1 OR e\.name = \$1\) AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)`
 
 	// Mock expected result
 	rows := mock.NewRows([]string{
@@ -108,10 +108,14 @@ WHERE e\.id = \$1 OR e\.name = \$1`
 		[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs("test-id").WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("test-id", "org-id", "env-id").WillReturnRows(rows)
 
 	// Execute query
-	result, err := queries.GetTestWorkflowExecution(ctx, "test-id")
+	result, err := queries.GetTestWorkflowExecution(ctx, GetTestWorkflowExecutionParams{
+		ID:             "test-id",
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
+	})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -186,7 +190,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2`
+WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2::text AND \(e\.organization_id = \$3 AND e\.environment_id = \$4\)`
 
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
@@ -214,12 +218,14 @@ WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2`
 		[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs("test-execution", "test-workflow").WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("test-execution", "test-workflow", "org-id", "env-id").WillReturnRows(rows)
 
 	// Execute query
 	params := GetTestWorkflowExecutionByNameAndTestWorkflowParams{
-		Name:         "test-execution",
-		WorkflowName: "test-workflow",
+		Name:           "test-execution",
+		WorkflowName:   "test-workflow",
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
 	}
 	result, err := queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, params)
 
@@ -296,11 +302,11 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE w\.name = \$1::text
+WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\) 
 ORDER BY
     CASE
-        WHEN \$2::boolean = true THEN e\.number
-        WHEN \$2::boolean = false THEN EXTRACT\(EPOCH FROM e\.status_at\)::integer
+        WHEN \$4::boolean = true THEN e\.number
+        WHEN \$4::boolean = false THEN EXTRACT\(EPOCH FROM e\.status_at\)::integer
     END DESC
 LIMIT 1
 `
@@ -331,12 +337,14 @@ LIMIT 1
 		[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow", true).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow", "org-id", "env-id", true).WillReturnRows(rows)
 
 	// Execute query
 	result, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, GetLatestTestWorkflowExecutionByTestWorkflowParams{
-		WorkflowName: "test-workflow",
-		SortByNumber: true,
+		WorkflowName:   "test-workflow",
+		SortByNumber:   true,
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
 	})
 
 	// Assertions
@@ -412,7 +420,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE w\.name = ANY\(\$1::text\[\]\)
+WHERE w\.name = ANY\(\$1::text\[\]\) AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
 ORDER BY w\.name, e\.status_at DESC`
 
 	rows := mock.NewRows([]string{
@@ -442,10 +450,14 @@ ORDER BY w\.name, e\.status_at DESC`
 	)
 
 	workflowNames := []string{"workflow1", "workflow2"}
-	mock.ExpectQuery(expectedQuery).WithArgs(workflowNames).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs(workflowNames, "org-id", "env-id").WillReturnRows(rows)
 
 	// Execute query
-	result, err := queries.GetLatestTestWorkflowExecutionsByTestWorkflows(ctx, workflowNames)
+	result, err := queries.GetLatestTestWorkflowExecutionsByTestWorkflows(ctx, GetLatestTestWorkflowExecutionsByTestWorkflowsParams{
+		WorkflowNames:  workflowNames,
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
+	})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -520,7 +532,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE r\.status IN \('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming'\)
+WHERE r\.status IN \('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming'\) AND \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
 ORDER BY e\.id DESC`
 
 	rows := mock.NewRows([]string{
@@ -549,10 +561,13 @@ ORDER BY e\.id DESC`
 		[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
-	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("org-id", "env-id").WillReturnRows(rows)
 
 	// Execute query
-	result, err := queries.GetRunningTestWorkflowExecutions(ctx)
+	result, err := queries.GetRunningTestWorkflowExecutions(ctx, GetRunningTestWorkflowExecutionsParams{
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
+	})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -575,27 +590,27 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE 1=1       
-    AND \(COALESCE\(\$1::text, ''\) = '' OR w.name = \$1::text\)
-    AND \(COALESCE\(\$2::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR w.name = ANY\(\$2::text\[\]\)\)
-    AND \(COALESCE\(\$3::text, ''\) = '' OR e.name ILIKE '%' \|\| \$3::text \|\| '%'\)
-    AND \(COALESCE\(\$4::timestamptz, '1900-01-01'::timestamptz\) = '1900-01-01'::timestamptz OR e.scheduled_at >= \$4::timestamptz\)
-    AND \(COALESCE\(\$5::timestamptz, '2100-01-01'::timestamptz\) = '2100-01-01'::timestamptz OR e.scheduled_at <= \$5::timestamptz\)
-    AND \(COALESCE\(\$6::integer, 0\) = 0 OR e.scheduled_at >= NOW\(\) - \(COALESCE\(\$6::integer, 0\) \|\| ' days'\)::interval\)
-    AND \(COALESCE\(\$7::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR r.status = ANY\(\$7::text\[\]\)\)
-    AND \(COALESCE\(\$8::text, ''\) = '' OR e.runner_id = \$8::text\)
-    AND \(COALESCE\(\$9, NULL\) IS NULL OR 
-         \(\$9::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != ''\) OR 
-         \(\$9::boolean = false AND \(e.runner_id IS NULL OR e.runner_id = ''\)\)\)
-    AND \(COALESCE\(\$10::text, ''\) = '' OR e.running_context->'actor'->>'name' = \$10::text\)
-    AND \(COALESCE\(\$11::text, ''\) = '' OR e.running_context->'actor'->>'type_' = \$11::text\)
-    AND \(COALESCE\(\$12::text, ''\) = '' OR e.id = \$12::text OR e.group_id = \$12::text\)
-    AND \(COALESCE\(\$13, NULL\) IS NULL OR 
-         \(\$13::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
-         \(\$13::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
+WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
+    AND \(COALESCE\(\$3::text, ''\) = '' OR w.name = \$3::text\)
+    AND \(COALESCE\(\$4::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR w.name = ANY\(\$4::text\[\]\)\)
+    AND \(COALESCE\(\$5::text, ''\) = '' OR e.name ILIKE '%' \|\| \$5::text \|\| '%'\)
+    AND \(COALESCE\(\$6::timestamptz, '1900-01-01'::timestamptz\) = '1900-01-01'::timestamptz OR e.scheduled_at >= \$6::timestamptz\)
+    AND \(COALESCE\(\$7::timestamptz, '2100-01-01'::timestamptz\) = '2100-01-01'::timestamptz OR e.scheduled_at <= \$7::timestamptz\)
+    AND \(COALESCE\(\$8::integer, 0\) = 0 OR e.scheduled_at >= NOW\(\) - \(COALESCE\(\$8::integer, 0\) \|\| ' days'\)::interval\)
+    AND \(COALESCE\(\$9::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR r.status = ANY\(\$9::text\[\]\)\)
+    AND \(COALESCE\(\$10::text, ''\) = '' OR e.runner_id = \$10::text\)
+    AND \(COALESCE\(\$11, NULL\) IS NULL OR 
+         \(\$11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != ''\) OR 
+         \(\$11::boolean = false AND \(e.runner_id IS NULL OR e.runner_id = ''\)\)\)
+    AND \(COALESCE\(\$12::text, ''\) = '' OR e.running_context->'actor'->>'name' = \$12::text\)
+    AND \(COALESCE\(\$13::text, ''\) = '' OR e.running_context->'actor'->>'type_' = \$13::text\)
+    AND \(COALESCE\(\$14::text, ''\) = '' OR e.id = \$14::text OR e.group_id = \$14::text\)
+    AND \(COALESCE\(\$15, NULL\) IS NULL OR 
+         \(\$15::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
+         \(\$15::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
     AND \(     
-        \(COALESCE\(\$14::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$14::jsonb\) AS key_condition
+        \(COALESCE\(\$16::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$16::jsonb\) AS key_condition
                 WHERE 
                 CASE 
                     WHEN key_condition->>'operator' = 'not_exists' THEN
@@ -603,33 +618,12 @@ WHERE 1=1
                     ELSE
                         e.tags \? \(key_condition->>'key'\)
                 END
-            \) = jsonb_array_length\(\$14::jsonb\)
+            \) = jsonb_array_length\(\$16::jsonb\)
         \)
         AND
-        \(COALESCE\(\$15::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$15::jsonb\) AS condition
-                WHERE e.tags->>\(condition->>'key'\) = ANY\(
-                    SELECT jsonb_array_elements_text\(condition->'values'\)
-                \)
-            \) > 0
-        \)
-    \)
-    AND \(
-        \(COALESCE\(\$16::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$16::jsonb\) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT \(w.labels \? \(key_condition->>'key'\)\)
-                    ELSE
-                        w.labels \? \(key_condition->>'key'\)
-                END
-            \) > 0
-        \)
-        OR
         \(COALESCE\(\$17::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
             \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$17::jsonb\) AS condition
-                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                WHERE e.tags->>\(condition->>'key'\) = ANY\(
                     SELECT jsonb_array_elements_text\(condition->'values'\)
                 \)
             \) > 0
@@ -645,15 +639,36 @@ WHERE 1=1
                     ELSE
                         w.labels \? \(key_condition->>'key'\)
                 END
-            \) = jsonb_array_length\(\$18::jsonb\)
+            \) > 0
         \)
-        AND
+        OR
         \(COALESCE\(\$19::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
             \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$19::jsonb\) AS condition
                 WHERE w.labels->>\(condition->>'key'\) = ANY\(
                     SELECT jsonb_array_elements_text\(condition->'values'\)
                 \)
-            \) = jsonb_array_length\(\$19::jsonb\)
+            \) > 0
+        \)
+    \)
+    AND \(
+        \(COALESCE\(\$20::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$20::jsonb\) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT \(w.labels \? \(key_condition->>'key'\)\)
+                    ELSE
+                        w.labels \? \(key_condition->>'key'\)
+                END
+            \) = jsonb_array_length\(\$20::jsonb\)
+        \)
+        AND
+        \(COALESCE\(\$21::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$21::jsonb\) AS condition
+                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                    SELECT jsonb_array_elements_text\(condition->'values'\)
+                \)
+            \) = jsonb_array_length\(\$21::jsonb\)
         \)
     \)
 GROUP BY r\.status`
@@ -683,9 +698,13 @@ GROUP BY r\.status`
 		LabelConditions:    []byte{},
 		SelectorKeys:       []byte{},
 		SelectorConditions: []byte{},
+		OrganizationID:     "org-id",
+		EnvironmentID:      "env-id",
 	}
 
 	mock.ExpectQuery(expectedQuery).WithArgs(
+		params.OrganizationID,
+		params.EnvironmentID,
 		params.WorkflowName,
 		params.WorkflowNames,
 		params.TextSearch,
@@ -729,11 +748,11 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 	expectedQuery := `INSERT INTO test_workflow_executions \(
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params
+    tags, running_context, config_params, organization_id, environment_id
 \) VALUES \(
     \$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8,
     \$9, \$10, \$11, \$12, \$13,
-    \$14, \$15, \$16
+    \$14, \$15, \$16, \$17, \$18
 \)`
 
 	params := InsertTestWorkflowExecutionParams{
@@ -753,6 +772,8 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 		Tags:                      []byte(`{"env":"test"}`),
 		RunningContext:            []byte(`{}`),
 		ConfigParams:              []byte(`{}`),
+		OrganizationID:            "org-id",
+		EnvironmentID:             "env-id",
 	}
 
 	mock.ExpectExec(expectedQuery).WithArgs(
@@ -772,6 +793,8 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 		params.Tags,
 		params.RunningContext,
 		params.ConfigParams,
+		params.OrganizationID,
+		params.EnvironmentID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	// Execute query
@@ -859,14 +882,18 @@ func TestSQLCTestWorkflowExecutionQueries_DeleteTestWorkflowExecutionsByTestWork
 
 	expectedQuery := `DELETE FROM test_workflow_executions e
 USING test_workflows w
-WHERE e\.id = w\.execution_id 
+WHERE e\.id = w\.execution_id AND \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
   AND w\.workflow_type = 'workflow' 
-  AND w\.name = \$1`
+  AND w\.name = \$3`
 
-	mock.ExpectExec(expectedQuery).WithArgs("test-workflow").WillReturnResult(pgxmock.NewResult("DELETE", 1))
+	mock.ExpectExec(expectedQuery).WithArgs("org-id", "env-id", "test-workflow").WillReturnResult(pgxmock.NewResult("DELETE", 1))
 
 	// Execute query
-	err = queries.DeleteTestWorkflowExecutionsByTestWorkflow(ctx, "test-workflow")
+	err = queries.DeleteTestWorkflowExecutionsByTestWorkflow(ctx, DeleteTestWorkflowExecutionsByTestWorkflowParams{
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
+		WorkflowName:   "test-workflow",
+	})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -881,12 +908,15 @@ func TestSQLCTestWorkflowExecutionQueries_DeleteAllTestWorkflowExecutions(t *tes
 	queries := New(mock)
 	ctx := context.Background()
 
-	expectedQuery := `DELETE FROM test_workflow_executions`
+	expectedQuery := `DELETE FROM test_workflow_executions WHERE organization_id = \$1 AND environment_id = \$2`
 
-	mock.ExpectExec(expectedQuery).WillReturnResult(pgxmock.NewResult("DELETE", 5))
+	mock.ExpectExec(expectedQuery).WithArgs("org-id", "env-id").WillReturnResult(pgxmock.NewResult("DELETE", 5))
 
 	// Execute query
-	err = queries.DeleteAllTestWorkflowExecutions(ctx)
+	err = queries.DeleteAllTestWorkflowExecutions(ctx, DeleteAllTestWorkflowExecutionsParams{
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
+	})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -906,19 +936,21 @@ SET
     runner_id = \$1::text,
     assigned_at = \$2
 FROM test_workflow_results r
-WHERE test_workflow_executions\.id = \$3
+WHERE test_workflow_executions\.id = \$3 AND \(test_workflow_executions\.organization_id = \$4 AND test_workflow_executions\.environment_id = \$5\)
     AND test_workflow_executions\.id = r\.execution_id
     AND r\.status = 'queued'
     AND \(\(test_workflow_executions\.runner_id IS NULL OR test_workflow_executions\.runner_id = ''\)
          OR \(test_workflow_executions\.runner_id = \$1::text AND assigned_at < \$2\)
-         OR \(test_workflow_executions\.runner_id = \$4::text AND assigned_at < NOW\(\) - INTERVAL '1 minute' AND assigned_at < \$2\)\)
+         OR \(test_workflow_executions\.runner_id = \$6::text AND assigned_at < NOW\(\) - INTERVAL '1 minute' AND assigned_at < \$2\)\)
 RETURNING test_workflow_executions\.id`
 
 	params := AssignTestWorkflowExecutionParams{
-		NewRunnerID:  "new-runner",
-		AssignedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
-		ID:           "test-id",
-		PrevRunnerID: "old-runner",
+		NewRunnerID:    "new-runner",
+		AssignedAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		ID:             "test-id",
+		PrevRunnerID:   "old-runner",
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
 	}
 
 	rows := mock.NewRows([]string{"id"}).AddRow("test-id")
@@ -926,6 +958,8 @@ RETURNING test_workflow_executions\.id`
 		params.NewRunnerID,
 		params.AssignedAt,
 		params.ID,
+		params.OrganizationID,
+		params.EnvironmentID,
 		params.PrevRunnerID,
 	).WillReturnRows(rows)
 
@@ -949,19 +983,21 @@ func TestSQLCTestWorkflowExecutionQueries_AbortTestWorkflowExecutionIfQueued(t *
 	expectedQuery := `UPDATE test_workflow_executions 
 SET status_at = \$1
 FROM test_workflow_results r
-WHERE test_workflow_executions\.id = \$2
+WHERE test_workflow_executions\.id = \$2 AND \(test_workflow_executions\.organization_id = \$3 AND test_workflow_executions\.environment_id = \$4\)
     AND test_workflow_executions\.id = r\.execution_id
     AND r\.status IN \('queued', 'assigned', 'starting', 'running', 'paused', 'resuming'\)
     AND \(test_workflow_executions\.runner_id IS NULL OR test_workflow_executions\.runner_id = ''\)
 RETURNING test_workflow_executions\.id`
 
 	params := AbortTestWorkflowExecutionIfQueuedParams{
-		AbortTime: pgtype.Timestamptz{Time: time.Now(), Valid: true},
-		ID:        "test-id",
+		AbortTime:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		ID:             "test-id",
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
 	}
 
 	rows := mock.NewRows([]string{"id"}).AddRow("test-id")
-	mock.ExpectQuery(expectedQuery).WithArgs(params.AbortTime, params.ID).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs(params.AbortTime, params.ID, "org-id", "env-id").WillReturnRows(rows)
 
 	// Execute query
 	result, err := queries.AbortTestWorkflowExecutionIfQueued(ctx, params)
@@ -1022,19 +1058,21 @@ func TestSQLCTestWorkflowExecutionQueries_GetPreviousFinishedState(t *testing.T)
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE w\.name = \$1::text
-    AND r\.finished_at < \$2
+WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
+    AND r\.finished_at < \$4
     AND r\.status IN \('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout'\)
 ORDER BY r\.finished_at DESC
 LIMIT 1`
 
 	params := GetPreviousFinishedStateParams{
-		WorkflowName: "test-workflow",
-		Date:         pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		WorkflowName:   "test-workflow",
+		Date:           pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
 	}
 
 	rows := mock.NewRows([]string{"status"}).AddRow("passed")
-	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.Date).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.OrganizationID, params.EnvironmentID, params.Date).WillReturnRows(rows)
 
 	// Execute query
 	result, err := queries.GetPreviousFinishedState(ctx, params)
@@ -1062,7 +1100,7 @@ SELECT
     FROM test_workflow_executions e
     LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
     CROSS JOIN LATERAL jsonb_each_text\(e.tags\) AS tag_pair\(key, value\)
-    WHERE e.tags IS NOT NULL 
+    WHERE e.tags IS NOT NULL AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
         AND e.tags != '\{\}'::jsonb
         AND jsonb_typeof\(e.tags\) = 'object'
 \)
@@ -1078,10 +1116,14 @@ ORDER BY tag_key`
 		AddRow("env", []string{"test", "prod"}).
 		AddRow("version", []string{"1.0", "2.0"})
 
-	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow").WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow", "org-id", "env-id").WillReturnRows(rows)
 
 	// Execute query
-	result, err := queries.GetTestWorkflowExecutionTags(ctx, "test-workflow")
+	result, err := queries.GetTestWorkflowExecutionTags(ctx, GetTestWorkflowExecutionTagsParams{
+		WorkflowName:   "test-workflow",
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
+	})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -1110,15 +1152,17 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowMetrics(t *testing.T) {
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE w\.name = \$1::text
-    AND \(\$2::integer = 0 OR e\.scheduled_at >= NOW\(\) - \(\$2::integer \|\| ' days'\)::interval\)
+WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
+    AND \(\$4::integer = 0 OR e\.scheduled_at >= NOW\(\) - \(\$4::integer \|\| ' days'\)::interval\)
 ORDER BY e\.scheduled_at DESC
-LIMIT \$3`
+LIMIT \$5`
 
 	params := GetTestWorkflowMetricsParams{
-		WorkflowName: "test-workflow",
-		LastNDays:    7,
-		Lmt:          10,
+		WorkflowName:   "test-workflow",
+		LastNDays:      7,
+		Lmt:            10,
+		OrganizationID: "org-id",
+		EnvironmentID:  "env-id",
 	}
 
 	rows := mock.NewRows([]string{
@@ -1127,7 +1171,7 @@ LIMIT \$3`
 		"exec-1", "group-1", "5m", int64(300000), "passed", "test-execution", time.Now(), "runner-1",
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.LastNDays, params.Lmt).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.OrganizationID, params.EnvironmentID, params.LastNDays, params.Lmt).WillReturnRows(rows)
 
 	// Execute query
 	result, err := queries.GetTestWorkflowMetrics(ctx, params)
@@ -1209,7 +1253,7 @@ SET
     tags = \$13,
     running_context = \$14,
     config_params = \$15
-WHERE id = \$16`
+WHERE id = \$16 AND \(organization_id = \$17 AND environment_id = \$18\)`
 
 	params := UpdateTestWorkflowExecutionParams{
 		GroupID:                   pgtype.Text{String: "group-1", Valid: true},
@@ -1228,6 +1272,8 @@ WHERE id = \$16`
 		RunningContext:            []byte(`{}`),
 		ConfigParams:              []byte(`{}`),
 		ID:                        "test-id",
+		OrganizationID:            "org-id",
+		EnvironmentID:             "env-id",
 	}
 
 	mock.ExpectExec(expectedQuery).WithArgs(
@@ -1247,6 +1293,8 @@ WHERE id = \$16`
 		params.RunningContext,
 		params.ConfigParams,
 		params.ID,
+		params.OrganizationID,
+		params.EnvironmentID,
 	).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	// Execute query

@@ -18,44 +18,24 @@ type MockQueriesInterface struct {
 	mock.Mock
 }
 
-func (m *MockQueriesInterface) GetExecutionSequence(ctx context.Context, name string) (sqlc.ExecutionSequence, error) {
-	args := m.Called(ctx, name)
+func (m *MockQueriesInterface) UpsertAndIncrementExecutionSequence(ctx context.Context, arg sqlc.UpsertAndIncrementExecutionSequenceParams) (sqlc.ExecutionSequence, error) {
+	args := m.Called(ctx, arg)
 	return args.Get(0).(sqlc.ExecutionSequence), args.Error(1)
 }
 
-func (m *MockQueriesInterface) UpsertAndIncrementExecutionSequence(ctx context.Context, name string) (sqlc.ExecutionSequence, error) {
-	args := m.Called(ctx, name)
-	return args.Get(0).(sqlc.ExecutionSequence), args.Error(1)
-}
-
-func (m *MockQueriesInterface) DeleteExecutionSequence(ctx context.Context, name string) error {
-	args := m.Called(ctx, name)
+func (m *MockQueriesInterface) DeleteExecutionSequence(ctx context.Context, arg sqlc.DeleteExecutionSequenceParams) error {
+	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) DeleteExecutionSequences(ctx context.Context, names []string) error {
-	args := m.Called(ctx, names)
+func (m *MockQueriesInterface) DeleteExecutionSequences(ctx context.Context, arg sqlc.DeleteExecutionSequencesParams) error {
+	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) DeleteAllExecutionSequences(ctx context.Context) error {
-	args := m.Called(ctx)
+func (m *MockQueriesInterface) DeleteAllExecutionSequences(ctx context.Context, arg sqlc.DeleteAllExecutionSequencesParams) error {
+	args := m.Called(ctx, arg)
 	return args.Error(0)
-}
-
-func (m *MockQueriesInterface) GetAllExecutionSequences(ctx context.Context) ([]sqlc.ExecutionSequence, error) {
-	args := m.Called(ctx)
-	return args.Get(0).([]sqlc.ExecutionSequence), args.Error(1)
-}
-
-func (m *MockQueriesInterface) GetExecutionSequencesByNames(ctx context.Context, names []string) ([]sqlc.ExecutionSequence, error) {
-	args := m.Called(ctx, names)
-	return args.Get(0).([]sqlc.ExecutionSequence), args.Error(1)
-}
-
-func (m *MockQueriesInterface) CountExecutionSequences(ctx context.Context) (int64, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(int64), args.Error(1)
 }
 
 func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
@@ -63,7 +43,9 @@ func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
@@ -73,7 +55,7 @@ func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
 			Name:   name,
 			Number: 5,
 		}
-		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, name).Return(expectedResult, nil)
+		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, sqlc.UpsertAndIncrementExecutionSequenceParams{Name: name, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(expectedResult, nil)
 
 		// Act
 		result, err := repo.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
@@ -88,13 +70,15 @@ func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 		name := "test-execution"
 
-		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, name).Return(sqlc.ExecutionSequence{}, errors.New("database error"))
+		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, sqlc.UpsertAndIncrementExecutionSequenceParams{Name: name, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(sqlc.ExecutionSequence{}, errors.New("database error"))
 
 		// Act
 		result, err := repo.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
@@ -112,13 +96,15 @@ func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 		name := "test-execution"
 
-		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(nil)
+		mockQueries.On("DeleteExecutionSequence", ctx, sqlc.DeleteExecutionSequenceParams{Name: name, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(nil)
 
 		// Act
 		err := repo.DeleteExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
@@ -132,13 +118,15 @@ func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 		name := "test-execution"
 
-		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(pgx.ErrNoRows)
+		mockQueries.On("DeleteExecutionSequence", ctx, sqlc.DeleteExecutionSequenceParams{Name: name, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(pgx.ErrNoRows)
 
 		// Act
 		err := repo.DeleteExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
@@ -152,13 +140,15 @@ func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 		name := "test-execution"
 
-		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(errors.New("database error"))
+		mockQueries.On("DeleteExecutionSequence", ctx, sqlc.DeleteExecutionSequenceParams{Name: name, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(errors.New("database error"))
 
 		// Act
 		err := repo.DeleteExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
@@ -175,13 +165,15 @@ func TestPostgresRepository_DeleteExecutionNumbers(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 		names := []string{"exec1", "exec2"}
 
-		mockQueries.On("DeleteExecutionSequences", ctx, names).Return(nil)
+		mockQueries.On("DeleteExecutionSequences", ctx, sqlc.DeleteExecutionSequencesParams{Names: names, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(nil)
 
 		// Act
 		err := repo.DeleteExecutionNumbers(ctx, names, sequence.ExecutionTypeTestWorkflow)
@@ -209,13 +201,15 @@ func TestPostgresRepository_DeleteExecutionNumbers(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 		names := []string{"exec1", "exec2"}
 
-		mockQueries.On("DeleteExecutionSequences", ctx, names).Return(errors.New("database error"))
+		mockQueries.On("DeleteExecutionSequences", ctx, sqlc.DeleteExecutionSequencesParams{Names: names, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(errors.New("database error"))
 
 		// Act
 		err := repo.DeleteExecutionNumbers(ctx, names, sequence.ExecutionTypeTestWorkflow)
@@ -232,12 +226,14 @@ func TestPostgresRepository_DeleteAllExecutionNumbers(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 
-		mockQueries.On("DeleteAllExecutionSequences", ctx).Return(nil)
+		mockQueries.On("DeleteAllExecutionSequences", ctx, sqlc.DeleteAllExecutionSequencesParams{OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(nil)
 
 		// Act
 		err := repo.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTestWorkflow)
@@ -251,12 +247,14 @@ func TestPostgresRepository_DeleteAllExecutionNumbers(t *testing.T) {
 		// Arrange
 		mockQueries := &MockQueriesInterface{}
 		repo := &PostgresRepository{
-			queries: mockQueries,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
 		}
 
 		ctx := context.Background()
 
-		mockQueries.On("DeleteAllExecutionSequences", ctx).Return(errors.New("database error"))
+		mockQueries.On("DeleteAllExecutionSequences", ctx, sqlc.DeleteAllExecutionSequencesParams{OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(errors.New("database error"))
 
 		// Act
 		err := repo.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTestWorkflow)
