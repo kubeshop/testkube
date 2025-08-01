@@ -17,6 +17,7 @@ spec:
       - name: special-cases-securitycontext-runasuser-runasgroup
       - name: special-cases-multiple-git-repositories-custommountpath
       - name: special-cases-optional-step-failed
+      - name: special-cases-optional-step-timed-out
       - name: special-cases-optional-step-passed
       - name: special-cases-conditional-step-skipped
       - name: special-cases-conditional-step-passed
