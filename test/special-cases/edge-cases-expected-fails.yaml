@@ -315,6 +315,9 @@ spec:
   - name: Run tests
     timeout: 1s
     shell: "npx playwright test"
+  - name: Run tests
+    condition: always
+    shell: 'echo "this step should be always executed because of condition: always"'
   - name: Save artifacts
     workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
@@ -585,3 +588,97 @@ spec:
   - name: Conditional step (should be executed and fail)
     condition: "true"
     shell: echo "Should fail" && exit 1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-failed
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps failed"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - expected fail" && exit 1 || echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-timed-out
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps timed out"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      timeout: 5s
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - 10s sleep" && exit 1 || sleep 1 && echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-oomkilled
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps oomkilled"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          limits:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: python:3.11-slim
+        shell: |
+          ([ "{{ index }}" = "2" ] && sleep 5 && echo "parallel step - worker 3 - expected oomkilled" && python3 -c "a = ' ' * 10**9") || (sleep 10 && echo "passed")
