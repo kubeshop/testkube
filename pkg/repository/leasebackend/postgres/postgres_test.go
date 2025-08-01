@@ -33,21 +33,6 @@ func (m *MockQueriesInterface) UpdateLease(ctx context.Context, arg sqlc.UpdateL
 	return args.Get(0).(sqlc.Lease), args.Error(1)
 }
 
-func (m *MockQueriesInterface) GetLeaseByClusterId(ctx context.Context, clusterID string) (sqlc.Lease, error) {
-	args := m.Called(ctx, clusterID)
-	return args.Get(0).(sqlc.Lease), args.Error(1)
-}
-
-func (m *MockQueriesInterface) GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]sqlc.Lease, error) {
-	args := m.Called(ctx, expirationTime)
-	return args.Get(0).([]sqlc.Lease), args.Error(1)
-}
-
-func (m *MockQueriesInterface) DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error {
-	args := m.Called(ctx, expirationTime)
-	return args.Error(0)
-}
-
 func createPostgresLeaseBackend(queries sqlc.LeaseBackendQueriesInterface, db sqlc.DatabaseInterface) *PostgresLeaseBackend {
 	return &PostgresLeaseBackend{
 		db:      db,
