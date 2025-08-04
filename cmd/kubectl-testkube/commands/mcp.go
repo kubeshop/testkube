@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -14,7 +13,6 @@ import (
 )
 
 func NewMcpCmd() *cobra.Command {
-	var mcpMode string
 	var mcpBaseURL string
 
 	cmd := &cobra.Command{
@@ -74,28 +72,26 @@ to determine the organization and environment to connect to.`,
 				"Organization": fmt.Sprintf("%s (%s)", cfg.CloudContext.OrganizationName, cfg.CloudContext.OrganizationId),
 				"Environment":  fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
 				"API URL":      cfg.CloudContext.ApiUri,
-				"Mode":         mcpMode,
 			})
 
 			// Start the MCP server
-			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, mcpMode, mcpBaseURL); err != nil {
+			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri); err != nil {
 				ui.Failf("Failed to start MCP server: %v", err)
 				return
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&mcpMode, "mode", "api", "MCP server mode (api or handler)")
 	cmd.Flags().StringVar(&mcpBaseURL, "base-url", "", "Base URL for Testkube API (uses context API URL if not specified)")
 
 	return cmd
 }
 
-func startMCPServer(accessToken, orgID, envID, mode, baseURL string) error {
+func startMCPServer(accessToken, orgID, envID, baseURL string) error {
 	// Create MCP server configuration
 	mcpCfg := mcpconfig.MCPServerConfig{
 		Version:  "1.0.0",
-		Mode:     mode,
+		Mode:     "api",
 		BaseURL:  baseURL,
 		APIToken: accessToken,
 		OrgID:    orgID,
@@ -106,11 +102,6 @@ func startMCPServer(accessToken, orgID, envID, mode, baseURL string) error {
 	if mcpCfg.BaseURL == "" {
 		mcpCfg.BaseURL = "https://api.testkube.io"
 	}
-
-	// Write initial info to stderr so it doesn't interfere with MCP stdio protocol
-	fmt.Fprintf(os.Stderr, "Starting Testkube MCP server...\n")
-	fmt.Fprintf(os.Stderr, "Configuration: Mode=%s, OrgID=%s, EnvID=%s\n", mode, orgID, envID)
-	fmt.Fprintf(os.Stderr, "MCP server is now ready for communication.\n")
 
 	// Start the MCP server - this will block and handle stdio
 	// The MCP server library handles its own signal management
