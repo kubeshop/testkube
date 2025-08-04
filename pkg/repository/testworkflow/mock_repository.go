@@ -338,6 +338,21 @@ func (mr *MockRepositoryMockRecorder) GetUnassigned(arg0 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnassigned", reflect.TypeOf((*MockRepository)(nil).GetUnassigned), arg0)
 }
 
+// GetWithRunner mocks base method.
+func (m *MockRepository) GetWithRunner(arg0 context.Context, arg1, arg2 string) (testkube.TestWorkflowExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWithRunner", arg0, arg1, arg2)
+	ret0, _ := ret[0].(testkube.TestWorkflowExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWithRunner indicates an expected call of GetWithRunner.
+func (mr *MockRepositoryMockRecorder) GetWithRunner(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithRunner", reflect.TypeOf((*MockRepository)(nil).GetWithRunner), arg0, arg1, arg2)
+}
+
 // Init mocks base method.
 func (m *MockRepository) Init(arg0 context.Context, arg1 string, arg2 InitData) error {
 	m.ctrl.T.Helper()

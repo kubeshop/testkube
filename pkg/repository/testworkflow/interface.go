@@ -93,6 +93,8 @@ type Repository interface {
 	Sequences
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error)
+	// GetWithRunner gets execution result by id/name and runner. This adds a safety mechanism so that connections cannot operate on executions which are assigned to other runners.
+	GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error)
 	// GetByNameAndTestWorkflow gets execution result by name
 	GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflow gets latest execution result by workflow.

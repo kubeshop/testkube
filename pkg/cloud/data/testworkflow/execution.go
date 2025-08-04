@@ -31,6 +31,10 @@ func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWork
 	return pass(r.executor, ctx, req, process)
 }
 
+func (r *CloudRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+}
+
 func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
 	req := ExecutionGetByNameAndWorkflowRequest{Name: name, WorkflowName: workflowName}
 	process := func(v ExecutionGetResponse) testkube.TestWorkflowExecution {

@@ -77,6 +77,19 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.T
 	return *result.UnscapeDots(), err
 }
 
+func (r *MongoRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{
+		bson.M{"id": id, "runnerid": runner},
+		bson.M{"name": id, "runnerid": runner},
+	}}).Decode(&result)
+
+	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
+		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
+	}
+
+	return *result.UnscapeDots(), err
+}
+
 func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams map[string]testkube.TestWorkflowExecutionConfigValue) map[string]testkube.TestWorkflowExecutionConfigValue {
 	if configParams == nil {
 		configParams = make(map[string]testkube.TestWorkflowExecutionConfigValue)
