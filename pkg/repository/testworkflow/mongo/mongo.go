@@ -28,6 +28,10 @@ const (
 	configParamSizeLimit = 100
 )
 
+var (
+	ErrUnmodified = errors.New("record was unmodified")
+)
+
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:           db,
@@ -425,13 +429,12 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result *t
 }
 
 // UpdateResultStrict is a stricter version of UpdateResult which checks for matching runner id and valid states.
-func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (err error) {
+func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) error {
 	if result.IsFinished() {
 		return errors.New("invalid state")
 	}
 
-	_, err = r.Coll.UpdateOne(ctx, bson.M{
-		"id":       id,
+	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
 			testkube.ASSIGNED_TestWorkflowStatus,
@@ -442,7 +445,14 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 			testkube.RESUMING_TestWorkflowStatus,
 		}},
 	}, bson.M{"$set": bson.M{"result": result}})
-	return
+
+	if err != nil {
+		return err
+	}
+	if res != nil && res.ModifiedCount == 0 {
+		return ErrUnmodified
+	}
+	return err
 }
 
 func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
