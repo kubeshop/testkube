@@ -447,7 +447,18 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 		return errors.New("invalid state")
 	}
 
-	now := time.Now()
+	// Update must be a pipeline so that we can use a conditional for the status update.
+	update := bson.A{
+		bson.M{"$set": bson.M{
+			"result": result,
+			"statusat": bson.M{"$cond": bson.M{
+				"if":   bson.M{"$ne": bson.A{"$result.status", string(*result.Status)}},
+				"then": time.Now(),
+				"else": "$statusat",
+			}}},
+		},
+	}
+
 	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
@@ -458,14 +469,7 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 			testkube.PAUSED_TestWorkflowStatus,
 			testkube.RESUMING_TestWorkflowStatus,
 		}},
-	}, bson.M{"$set": bson.M{
-		"result": result,
-		"statusat": bson.M{"$cond": bson.M{
-			"if":   bson.M{"$ne": bson.A{"$result.status", string(*result.Status)}},
-			"then": now,
-			"else": "$statusat",
-		}},
-	}})
+	}, update)
 
 	if err != nil {
 		return err
