@@ -438,6 +438,8 @@ github.com/kubepug/kubepug v1.7.1 h1:LKhfSxS8Y5mXs50v+3Lpyec+cogErDLcV7CMUuiaisw
 github.com/kubepug/kubepug v1.7.1/go.mod h1:lv+HxD0oTFL7ZWjj0u6HKhMbbTIId3eG7aWIW0gyF8g=
 github.com/kubeshop/testkube-mcp v0.0.0-20250804183748-09b36100328d h1:fkUeGZ5aMf4R8ezkxZnErr54Hc2YtQHQHeDB6DYWIwc=
 github.com/kubeshop/testkube-mcp v0.0.0-20250804183748-09b36100328d/go.mod h1:+4bgARTci9ve++E+Xw9MQz8Aa7egKtVJnAXKjsSrTzI=
+github.com/kubeshop/testkube-mcp v0.0.0-20250804201317-bd29f521ae6c h1:NsDiwaq1HkdfQOrUqj46ODLEKYXBMflVrg2EScnb+Co=
+github.com/kubeshop/testkube-mcp v0.0.0-20250804201317-bd29f521ae6c/go.mod h1:+4bgARTci9ve++E+Xw9MQz8Aa7egKtVJnAXKjsSrTzI=
 github.com/kubeshop/testkube-operator v1.17.55-0.20250722103917-2216c606837d h1:X4JX/tYUYoDM9aocRcvZoCQMppVK+bdzj6EUrcZP6XE=
 github.com/kubeshop/testkube-operator v1.17.55-0.20250722103917-2216c606837d/go.mod h1:2TNdpUI2xqfYM4EGtYouqOLjXQ8nblO3Nm9ltNP/RCU=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=

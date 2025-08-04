@@ -8,7 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 
-	mcpconfig "github.com/kubeshop/testkube-mcp/config"
+	mcp "github.com/kubeshop/testkube-mcp/core"
 	mcpserver "github.com/kubeshop/testkube-mcp/server"
 )
 
@@ -127,9 +127,8 @@ over stdio. Use --verbose to see detailed output during startup.`,
 
 func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string) error {
 	// Create MCP server configuration
-	mcpCfg := mcpconfig.MCPServerConfig{
+	mcpCfg := mcp.MCPServerConfig{
 		Version:         "1.0.0",
-		Mode:            "api",
 		ControlPlaneUrl: baseURL,
 		DashboardUrl:    dashboardURL,
 		AccessToken:     accessToken,
@@ -144,7 +143,7 @@ func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string) err
 
 	// Start the MCP server - this will block and handle stdio
 	// The MCP server library handles its own signal management
-	if err := mcpserver.StartMCPServerWithStdio(mcpCfg); err != nil {
+	if err := mcpserver.ServeStdioMCP(mcpCfg, nil); err != nil {
 		return fmt.Errorf("MCP server error: %v", err)
 	}
 
