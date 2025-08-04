@@ -1063,6 +1063,10 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	return tx.Commit(ctx)
 }
 
+func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (err error) {
+	return errors.New("not yet implementeed")
+}
+
 // UpdateResult updates only the result
 func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) error {
 	pauses, err := toJSONB(result.Pauses)

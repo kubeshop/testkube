@@ -125,8 +125,7 @@ func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *t
 }
 
 func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (err error) {
-	req := ExecutionUpdateResultStrictRequest{ID: id, Result: result}
-	return passNoContent(r.executor, ctx, req)
+	return errors.New("not yet implemented") // This should only be called within Contorl Plane and thus need no CloudRepository proxy.
 }
 
 func (r *CloudRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {

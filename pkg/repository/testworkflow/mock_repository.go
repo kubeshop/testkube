@@ -435,3 +435,17 @@ func (mr *MockRepositoryMockRecorder) UpdateResult(arg0, arg1, arg2 interface{})
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockRepository)(nil).UpdateResult), arg0, arg1, arg2)
 }
+
+// UpdateResultStrict mocks base method.
+func (m *MockRepository) UpdateResultStrict(arg0 context.Context, arg1, arg2 string, arg3 *testkube.TestWorkflowResult) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateResultStrict", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateResultStrict indicates an expected call of UpdateResultStrict.
+func (mr *MockRepositoryMockRecorder) UpdateResultStrict(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResultStrict", reflect.TypeOf((*MockRepository)(nil).UpdateResultStrict), arg0, arg1, arg2, arg3)
+}
