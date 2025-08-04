@@ -447,6 +447,7 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 		return errors.New("invalid state")
 	}
 
+	now := time.Now()
 	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
@@ -457,7 +458,14 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 			testkube.PAUSED_TestWorkflowStatus,
 			testkube.RESUMING_TestWorkflowStatus,
 		}},
-	}, bson.M{"$set": bson.M{"result": result}})
+	}, bson.M{"$set": bson.M{
+		"result": result,
+		"statusat": bson.M{"$cond": bson.M{
+			"if":   bson.M{"$ne": bson.A{"$result.status", string(*result.Status)}},
+			"then": now,
+			"else": "$statusat",
+		}},
+	}})
 
 	if err != nil {
 		return err
@@ -480,7 +488,10 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 			testkube.STOPPING_TestWorkflowStatus,
 			testkube.RUNNING_TestWorkflowStatus,
 		}},
-	}, bson.M{"$set": bson.M{"result": result}})
+	}, bson.M{"$set": bson.M{
+		"result":   result,
+		"statusat": result.FinishedAt,
+	}})
 
 	if err != nil {
 		return err
