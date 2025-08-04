@@ -17,67 +17,89 @@ func NewMcpCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "mcp",
-		Short: "Start MCP server for Testkube",
+		Short: "Start MCP server for Testkube (silent by default, use --verbose for output)",
 		Long: `Start a Model Context Protocol (MCP) server that exposes Testkube functionality.
 
 The MCP server requires OAuth authentication and will use the current Testkube context
-to determine the organization and environment to connect to.`,
+to determine the organization and environment to connect to.
+
+The server runs silently by default to avoid interfering with JSON-RPC communication
+over stdio. Use --verbose to see detailed output during startup.`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			// OAuth authentication check
 			if !common.IsOAuthAuthenticated() {
-				ui.Failf("OAuth authentication required")
-				ui.Info("Please run 'testkube pro login' to authenticate with OAuth flow")
+				if ui.IsVerbose() {
+					ui.Failf("OAuth authentication required")
+					ui.Info("Please run 'testkube pro login' to authenticate with OAuth flow")
+				}
 				return
 			}
-
-			ui.Success("OAuth authentication validated")
 
 			// Load configuration to get org and env IDs
 			cfg, err := config.Load()
 			if err != nil {
-				ui.Failf("Failed to load configuration: %v", err)
+				if ui.IsVerbose() {
+					ui.Failf("Failed to load configuration: %v", err)
+				}
 				return
 			}
 
 			// Validate we have required context information
 			if cfg.ContextType != config.ContextTypeCloud {
-				ui.Failf("MCP server requires cloud context. Current context: %s", cfg.ContextType)
-				ui.Info("Please run 'testkube set context --help' to configure cloud context")
+				if ui.IsVerbose() {
+					ui.Failf("MCP server requires cloud context. Current context: %s", cfg.ContextType)
+					ui.Info("Please run 'testkube set context --help' to configure cloud context")
+				}
 				return
 			}
 
 			if cfg.CloudContext.OrganizationId == "" {
-				ui.Failf("Organization ID not found in configuration")
-				ui.Info("Please run 'testkube set context' to configure organization")
+				if ui.IsVerbose() {
+					ui.Failf("Organization ID not found in configuration")
+					ui.Info("Please run 'testkube set context' to configure organization")
+				}
 				return
 			}
 
 			if cfg.CloudContext.EnvironmentId == "" {
-				ui.Failf("Environment ID not found in configuration")
-				ui.Info("Please run 'testkube set context' to configure environment")
+				if ui.IsVerbose() {
+					ui.Failf("Environment ID not found in configuration")
+					ui.Info("Please run 'testkube set context' to configure environment")
+				}
 				return
 			}
 
 			// Get the current access token
 			accessToken, err := common.GetOAuthAccessToken()
 			if err != nil {
-				ui.Failf("Failed to get access token: %v", err)
+				if ui.IsVerbose() {
+					ui.Failf("Failed to get access token: %v", err)
+				}
 				return
 			}
 
 			// Display connection information
-			ui.Info("Starting MCP server with configuration:")
-			ui.InfoGrid(map[string]string{
-				"Organization": fmt.Sprintf("%s (%s)", cfg.CloudContext.OrganizationName, cfg.CloudContext.OrganizationId),
-				"Environment":  fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
-				"API URL":      cfg.CloudContext.ApiUri,
-			})
+			if ui.IsVerbose() {
+				ui.Info("Starting MCP server with configuration:")
+				ui.InfoGrid(map[string]string{
+					"Organization": fmt.Sprintf("%s (%s)", cfg.CloudContext.OrganizationName, cfg.CloudContext.OrganizationId),
+					"Environment":  fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
+					"API URL":      cfg.CloudContext.ApiUri,
+				})
+			}
 
 			// Start the MCP server
 			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri); err != nil {
-				ui.Failf("Failed to start MCP server: %v", err)
+				if ui.IsVerbose() {
+					ui.Failf("Failed to start MCP server: %v", err)
+				}
 				return
+			}
+
+			// If we reach here, the server shut down gracefully
+			if ui.IsVerbose() {
+				ui.Info("MCP server shut down gracefully")
 			}
 		},
 	}
