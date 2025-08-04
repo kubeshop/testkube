@@ -13,10 +13,25 @@ import (
 )
 
 func NewMcpCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mcp",
+		Short: "Manage Model Context Protocol (MCP) server for Testkube",
+		Long: `Manage Model Context Protocol (MCP) server that exposes Testkube functionality.
+
+The MCP server requires OAuth authentication and will use the current Testkube context
+to determine the organization and environment to connect to.`,
+	}
+
+	cmd.AddCommand(NewMcpServeCmd())
+
+	return cmd
+}
+
+func NewMcpServeCmd() *cobra.Command {
 	var mcpBaseURL string
 
 	cmd := &cobra.Command{
-		Use:   "mcp",
+		Use:   "serve",
 		Short: "Start MCP server for Testkube (silent by default, use --verbose for output)",
 		Long: `Start a Model Context Protocol (MCP) server that exposes Testkube functionality.
 
@@ -31,7 +46,7 @@ over stdio. Use --verbose to see detailed output during startup.`,
 			if !common.IsOAuthAuthenticated() {
 				if ui.IsVerbose() {
 					ui.Failf("OAuth authentication required")
-					ui.Info("Please run 'testkube pro login' to authenticate with OAuth flow")
+					ui.Info("Please run 'testkube login' to authenticate with OAuth flow")
 				}
 				return
 			}
