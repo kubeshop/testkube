@@ -83,14 +83,15 @@ over stdio. Use --verbose to see detailed output during startup.`,
 			if ui.IsVerbose() {
 				ui.Info("Starting MCP server with configuration:")
 				ui.InfoGrid(map[string]string{
-					"Organization": fmt.Sprintf("%s (%s)", cfg.CloudContext.OrganizationName, cfg.CloudContext.OrganizationId),
-					"Environment":  fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
-					"API URL":      cfg.CloudContext.ApiUri,
+					"Organization":  fmt.Sprintf("%s (%s)", cfg.CloudContext.OrganizationName, cfg.CloudContext.OrganizationId),
+					"Environment":   fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
+					"API URL":       cfg.CloudContext.ApiUri,
+					"Dashboard URL": cfg.CloudContext.UiUri,
 				})
 			}
 
 			// Start the MCP server
-			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri); err != nil {
+			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri); err != nil {
 				if ui.IsVerbose() {
 					ui.Failf("Failed to start MCP server: %v", err)
 				}
@@ -109,20 +110,21 @@ over stdio. Use --verbose to see detailed output during startup.`,
 	return cmd
 }
 
-func startMCPServer(accessToken, orgID, envID, baseURL string) error {
+func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string) error {
 	// Create MCP server configuration
 	mcpCfg := mcpconfig.MCPServerConfig{
-		Version:  "1.0.0",
-		Mode:     "api",
-		BaseURL:  baseURL,
-		APIToken: accessToken,
-		OrgID:    orgID,
-		EnvID:    envID,
+		Version:         "1.0.0",
+		Mode:            "api",
+		ControlPlaneUrl: baseURL,
+		DashboardUrl:    dashboardURL,
+		AccessToken:     accessToken,
+		OrgId:           orgID,
+		EnvId:           envID,
 	}
 
 	// If no base URL is provided, use the default from testkube context
-	if mcpCfg.BaseURL == "" {
-		mcpCfg.BaseURL = "https://api.testkube.io"
+	if mcpCfg.ControlPlaneUrl == "" {
+		mcpCfg.ControlPlaneUrl = "https://api.testkube.io"
 	}
 
 	// Start the MCP server - this will block and handle stdio
