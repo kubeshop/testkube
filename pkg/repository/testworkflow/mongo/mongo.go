@@ -468,6 +468,29 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 	return err
 }
 
+func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (err error) {
+	if !result.IsFinished() {
+		return errors.New("invalid state")
+	}
+
+	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
+		"runnerid": runnerId,
+		"result.status": bson.M{"$in": bson.A{
+			testkube.QUEUED_TestWorkflowStatus,
+			testkube.STOPPING_TestWorkflowStatus,
+			testkube.RUNNING_TestWorkflowStatus,
+		}},
+	}, bson.M{"$set": bson.M{"result": result}})
+
+	if err != nil {
+		return err
+	}
+	if res != nil && res.ModifiedCount == 0 {
+		return ErrUnmodified
+	}
+	return err
+}
+
 func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
 	filter := bson.M{"id": id}
 	update := bson.M{"$push": bson.M{"reports": report}}

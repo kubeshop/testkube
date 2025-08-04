@@ -1068,7 +1068,11 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 }
 
 func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (err error) {
-	return errors.New("not yet implementeed")
+	return errors.New("not yet implemented")
+}
+
+func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (err error) {
+	return errors.New("not yet implemented")
 }
 
 // UpdateResult updates only the result
