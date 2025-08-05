@@ -136,12 +136,12 @@ func LookupExecutionId(getClient GetClientFn) (tool mcp.Tool, handler server.Too
 		}
 
 		if !isValidExecutionName(executionName) {
-			return mcp.NewToolResultError(fmt.Sprintf("Invalid execution name format: \"%s\". Expected format: \"workflow-name-number\".", executionName)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("fnvalid execution name format: \"%s\" expected format: \"workflow-name-number\".", executionName)), nil
 		}
 
 		result, err := client.LookupExecutionID(ctx, executionName)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to lookup execution ID: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("failed to lookup execution ID: %v", err)), nil
 		}
 
 		executionID, err := extractExecutionIdFromResponse(result, executionName)
@@ -173,20 +173,20 @@ func extractExecutionIdFromResponse(responseJSON string, targetExecutionName str
 	}
 
 	if len(executionGroups) == 0 {
-		return "", fmt.Errorf("No execution found with name \"%s\".", targetExecutionName)
+		return "", fmt.Errorf("no execution found with name \"%s\"", targetExecutionName)
 	}
 
 	// Find matching execution
 	matchingExecution := findMatchingExecution(executionGroups, targetExecutionName)
 	if matchingExecution == nil {
-		return "", fmt.Errorf("No execution ID found for \"%s\".", targetExecutionName)
+		return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
 	}
 
 	if executionID, ok := matchingExecution["id"].(string); ok && executionID != "" {
 		return executionID, nil
 	}
 
-	return "", fmt.Errorf("No execution ID found for \"%s\".", targetExecutionName)
+	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
 }
 
 func findMatchingExecution(executionGroups []map[string]any, targetExecutionName string) map[string]any {
