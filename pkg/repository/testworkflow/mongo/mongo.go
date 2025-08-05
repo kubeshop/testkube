@@ -442,9 +442,9 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result *t
 }
 
 // UpdateResultStrict is a stricter version of UpdateResult which checks for matching runner id and valid states.
-func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) error {
+func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
 	if result.IsFinished() {
-		return errors.New("invalid state")
+		return false, errors.New("invalid state")
 	}
 
 	// Update must be a pipeline so that we can use a conditional for the status update.
@@ -472,17 +472,20 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 	}, update)
 
 	if err != nil {
-		return err
+		return false, err
 	}
-	if res != nil && res.ModifiedCount == 0 {
-		return ErrUnmodified
+	if res != nil && res.MatchedCount == 0 {
+		return false, mongo.ErrNoDocuments
 	}
-	return err
+	if res != nil && res.ModifiedCount != 0 {
+		updated = true
+	}
+	return updated, err
 }
 
-func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (err error) {
+func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
 	if !result.IsFinished() {
-		return errors.New("invalid state")
+		return false, errors.New("invalid state")
 	}
 
 	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
@@ -498,12 +501,15 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 	}})
 
 	if err != nil {
-		return err
+		return false, err
 	}
-	if res != nil && res.ModifiedCount == 0 {
-		return ErrUnmodified
+	if res != nil && res.MatchedCount == 0 {
+		return false, mongo.ErrNoDocuments
 	}
-	return err
+	if res != nil && res.ModifiedCount != 0 {
+		updated = true
+	}
+	return updated, err
 }
 
 func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {

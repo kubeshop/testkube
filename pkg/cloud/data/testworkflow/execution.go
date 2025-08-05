@@ -128,12 +128,12 @@ func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *t
 	return passNoContent(r.executor, ctx, req)
 }
 
-func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (err error) {
-	return errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
+func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
 }
 
-func (r *CloudRepository) FinishResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (err error) {
-	return errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
+func (r *CloudRepository) FinishResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
 }
 
 func (r *CloudRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {

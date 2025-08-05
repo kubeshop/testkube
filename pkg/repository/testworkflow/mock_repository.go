@@ -124,11 +124,12 @@ func (mr *MockRepositoryMockRecorder) DeleteByTestWorkflows(arg0, arg1 interface
 }
 
 // FinishResultStrict mocks base method.
-func (m *MockRepository) FinishResultStrict(arg0 context.Context, arg1, arg2 string, arg3 *testkube.TestWorkflowResult) error {
+func (m *MockRepository) FinishResultStrict(arg0 context.Context, arg1, arg2 string, arg3 *testkube.TestWorkflowResult) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FinishResultStrict", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // FinishResultStrict indicates an expected call of FinishResultStrict.
@@ -466,11 +467,12 @@ func (mr *MockRepositoryMockRecorder) UpdateResult(arg0, arg1, arg2 interface{})
 }
 
 // UpdateResultStrict mocks base method.
-func (m *MockRepository) UpdateResultStrict(arg0 context.Context, arg1, arg2 string, arg3 *testkube.TestWorkflowResult) error {
+func (m *MockRepository) UpdateResultStrict(arg0 context.Context, arg1, arg2 string, arg3 *testkube.TestWorkflowResult) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateResultStrict", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // UpdateResultStrict indicates an expected call of UpdateResultStrict.

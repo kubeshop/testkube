@@ -1067,12 +1067,12 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (err error) {
-	return errors.New("not yet implemented")
+func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented")
 }
 
-func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (err error) {
-	return errors.New("not yet implemented")
+func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented")
 }
 
 // UpdateResult updates only the result
