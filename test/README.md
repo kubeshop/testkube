@@ -26,7 +26,7 @@ Some directories (like `junit-pregenerated-reports`) include static test data fo
 │   ├── high-level-testcase-both-error-and-failure.xml
 │   └── high-level-without-testcases.xml
 ...
-├── legacy # Executors, Tests, TestSuites and other legacy things
+├── legacy # Executors, Tests, TestSuites and other [legacy features](https://docs.testkube.io/articles/legacy-features)
 ...
 ├── postman
 │   ├── crd-workflow # workflows
