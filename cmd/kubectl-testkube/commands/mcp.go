@@ -5,11 +5,9 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/mcp"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
-
-	mcp "github.com/kubeshop/testkube-mcp/core"
-	mcpserver "github.com/kubeshop/testkube-mcp/server"
 )
 
 func NewMcpCmd() *cobra.Command {
@@ -143,7 +141,7 @@ func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string) err
 
 	// Start the MCP server - this will block and handle stdio
 	// The MCP server library handles its own signal management
-	if err := mcpserver.ServeStdioMCP(mcpCfg, nil); err != nil {
+	if err := mcp.ServeStdioMCP(mcpCfg, nil); err != nil {
 		return fmt.Errorf("MCP server error: %v", err)
 	}
 
