@@ -8,8 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/kubeshop/testkube/pkg/mcp/tools"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
 // NewMCPServer creates and configures a new Testkube MCP server
