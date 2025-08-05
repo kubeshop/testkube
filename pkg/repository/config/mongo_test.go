@@ -20,6 +20,9 @@ var (
 
 func getRepository(dbName string) (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, dbName, storage.TypeMongoDB, false, nil)
+	if err != nil {
+		return nil, err
+	}
 	repository := NewMongoRepository(db)
 	return repository, err
 }
