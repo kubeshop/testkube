@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/repository/storage"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,12 +20,13 @@ var (
 )
 
 func getRepository(dbName string) (*MongoRepository, error) {
-	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, dbName, storage.TypeMongoDB, false, nil)
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		return nil, err
 	}
-	repository := NewMongoRepository(db)
-	return repository, err
+	db := client.Database(dbName)
+	repo := NewMongoRepository(db)
+	return repo, nil
 }
 
 func TestStorage_Integration(t *testing.T) {
