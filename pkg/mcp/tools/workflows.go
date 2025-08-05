@@ -9,7 +9,21 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func ListWorkflows(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type ListWorkflowsParams struct {
+	ResourceGroup string
+	Selector      string
+	TextSearch    string
+	PageSize      int
+	Page          int
+	Status        string
+	GroupID       string
+}
+
+type WorkflowLister interface {
+	ListWorkflows(ctx context.Context, params ListWorkflowsParams) (string, error)
+}
+
+func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_workflows",
 		mcp.WithDescription("List Testkube workflows with optional filtering by resource group, selector, status, and other criteria. Returns workflow names (which are also the workflow IDs), descriptions, and execution status."),
 		mcp.WithString("resourceGroup", mcp.Description(ResourceGroupDescription)),
@@ -22,11 +36,6 @@ func ListWorkflows(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHan
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		params := ListWorkflowsParams{
 			ResourceGroup: request.GetString("resourceGroup", ""),
 			Selector:      request.GetString("selector", ""),
@@ -57,18 +66,17 @@ func ListWorkflows(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHan
 	return tool, handler
 }
 
-func CreateWorkflow(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type WorkflowCreator interface {
+	CreateWorkflow(ctx context.Context, workflowDefinition string) (string, error)
+}
+
+func CreateWorkflow(client WorkflowCreator) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("create_workflow",
 		mcp.WithDescription("Create a new TestWorkflow directly in Testkube from a YAML definition. Use this tool to deploy workflows to the Testkube platform. The workflow will be immediately available for execution after creation."),
 		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflow to create in Testkube. This should be the full workflow specification including metadata, spec, and all steps.")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		yaml, err := RequiredParam[string](request, "yaml")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -85,18 +93,17 @@ func CreateWorkflow(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHa
 	return tool, handler
 }
 
-func GetWorkflowDefinition(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type WorkflowDefinitionGetter interface {
+	GetWorkflowDefinition(ctx context.Context, workflowName string) (string, error)
+}
+
+func GetWorkflowDefinition(client WorkflowDefinitionGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_definition",
 		mcp.WithDescription("Get the YAML definition of a specific Testkube workflow. Returns the complete workflow specification including all steps, configuration schema, and metadata."),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		workflowName, err := RequiredParam[string](request, "workflowName")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -113,18 +120,17 @@ func GetWorkflowDefinition(getClient GetClientFn) (tool mcp.Tool, handler server
 	return tool, handler
 }
 
-func GetWorkflow(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type WorkflowGetter interface {
+	GetWorkflow(ctx context.Context, workflowName string) (string, error)
+}
+
+func GetWorkflow(client WorkflowGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow",
 		mcp.WithDescription("Retrieve detailed workflow information including execution history, health metrics, and current status. Returns JSON format with comprehensive workflow metadata."),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		workflowName, err := RequiredParam[string](request, "workflowName")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -141,7 +147,17 @@ func GetWorkflow(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandl
 	return tool, handler
 }
 
-func RunWorkflow(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type RunWorkflowParams struct {
+	WorkflowName string
+	Config       map[string]any
+	Target       map[string]any
+}
+
+type WorkflowRunner interface {
+	RunWorkflow(ctx context.Context, params RunWorkflowParams) (string, error)
+}
+
+func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("run_workflow",
 		mcp.WithDescription("Run a TestWorkflow with optional configuration parameters. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available."),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
@@ -152,11 +168,6 @@ func RunWorkflow(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandl
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		workflowName, err := RequiredParam[string](request, "workflowName")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil

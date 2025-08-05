@@ -134,7 +134,7 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 	return string(bodyBytes), nil
 }
 
-func (c *APIClient) ListArtifacts(ctx context.Context, workflowName, executionID string) (string, error) {
+func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflow-executions/{executionId}/artifacts",

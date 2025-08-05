@@ -1,7 +1,6 @@
 package mcp
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,7 +13,7 @@ import (
 )
 
 // NewMCPServer creates and configures a new Testkube MCP server
-func NewMCPServer(cfg MCPServerConfig, customGetClient tools.GetClientFn) (*server.MCPServer, error) {
+func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %v", err)
 	}
@@ -25,55 +24,31 @@ func NewMCPServer(cfg MCPServerConfig, customGetClient tools.GetClientFn) (*serv
 		server.WithToolCapabilities(true),
 	)
 
-	// Use custom client if provided, otherwise fall back to default API client
-	getClient := customGetClient
-	if getClient == nil {
-		getClient = func(ctx context.Context) (tools.TestkubeClient, error) {
-			httpClient := &http.Client{}
-			apiClient := NewAPIClient(&cfg, httpClient)
-			return apiClient, nil
-		}
+	// If no client is provided, use the default API client
+	if client == nil {
+		httpClient := &http.Client{}
+		client = NewAPIClient(&cfg, httpClient)
 	}
 
 	// Dashboard tools
-	urlTool, urlHandler := tools.BuildDashboardUrl(cfg.DashboardUrl, cfg.OrgId, cfg.EnvId)
-	mcpServer.AddTool(urlTool, urlHandler)
+	mcpServer.AddTool(tools.BuildDashboardUrl(cfg.DashboardUrl, cfg.OrgId, cfg.EnvId))
 
 	// Workflow tools
-	listWorkflowsTool, listWorkflowsHandler := tools.ListWorkflows(getClient)
-	mcpServer.AddTool(listWorkflowsTool, listWorkflowsHandler)
-
-	getWorkflowTool, getWorkflowHandler := tools.GetWorkflow(getClient)
-	mcpServer.AddTool(getWorkflowTool, getWorkflowHandler)
-
-	getWorkflowDefinitionTool, getWorkflowDefinitionHandler := tools.GetWorkflowDefinition(getClient)
-	mcpServer.AddTool(getWorkflowDefinitionTool, getWorkflowDefinitionHandler)
-
-	createWorkflowTool, createWorkflowHandler := tools.CreateWorkflow(getClient)
-	mcpServer.AddTool(createWorkflowTool, createWorkflowHandler)
-
-	runWorkflowTool, runWorkflowHandler := tools.RunWorkflow(getClient)
-	mcpServer.AddTool(runWorkflowTool, runWorkflowHandler)
+	mcpServer.AddTool(tools.ListWorkflows(client))
+	mcpServer.AddTool(tools.GetWorkflow(client))
+	mcpServer.AddTool(tools.GetWorkflowDefinition(client))
+	mcpServer.AddTool(tools.CreateWorkflow(client))
+	mcpServer.AddTool(tools.RunWorkflow(client))
 
 	// Execution tools
-	fetchExecutionLogsTool, fetchExecutionLogsHandler := tools.FetchExecutionLogs(getClient)
-	mcpServer.AddTool(fetchExecutionLogsTool, fetchExecutionLogsHandler)
-
-	listExecutionsTool, listExecutionsHandler := tools.ListExecutions(getClient)
-	mcpServer.AddTool(listExecutionsTool, listExecutionsHandler)
-
-	lookupExecutionIdTool, lookupExecutionIdHandler := tools.LookupExecutionId(getClient)
-	mcpServer.AddTool(lookupExecutionIdTool, lookupExecutionIdHandler)
-
-	getExecutionInfoTool, getExecutionInfoHandler := tools.GetExecutionInfo(getClient)
-	mcpServer.AddTool(getExecutionInfoTool, getExecutionInfoHandler)
+	mcpServer.AddTool(tools.FetchExecutionLogs(client))
+	mcpServer.AddTool(tools.ListExecutions(client))
+	mcpServer.AddTool(tools.LookupExecutionId(client))
+	mcpServer.AddTool(tools.GetExecutionInfo(client))
 
 	// Artifact tools
-	listArtifactsTool, listArtifactsHandler := tools.ListArtifacts(getClient)
-	mcpServer.AddTool(listArtifactsTool, listArtifactsHandler)
-
-	readArtifactTool, readArtifactHandler := tools.ReadArtifact(getClient)
-	mcpServer.AddTool(readArtifactTool, readArtifactHandler)
+	mcpServer.AddTool(tools.ListArtifacts(client))
+	mcpServer.AddTool(tools.ReadArtifact(client))
 
 	return mcpServer, nil
 }
@@ -81,8 +56,8 @@ func NewMCPServer(cfg MCPServerConfig, customGetClient tools.GetClientFn) (*serv
 // ServeStdioMCP creates and starts an MCP server with the given configuration,
 // serving over stdio. This is a convenience function that wraps the entire server
 // lifecycle so callers don't need to depend on mcp-go directly.
-func ServeStdioMCP(cfg MCPServerConfig, customGetClient tools.GetClientFn) error {
-	mcpServer, err := NewMCPServer(cfg, customGetClient)
+func ServeStdioMCP(cfg MCPServerConfig, client Client) error {
+	mcpServer, err := NewMCPServer(cfg, client)
 	if err != nil {
 		return fmt.Errorf("failed to create MCP server: %v", err)
 	}

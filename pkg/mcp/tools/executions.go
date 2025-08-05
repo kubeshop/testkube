@@ -12,7 +12,11 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func FetchExecutionLogs(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type ExecutionLogger interface {
+	GetExecutionLogs(ctx context.Context, executionId string) (string, error)
+}
+
+func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("fetch_execution_logs",
 		mcp.WithDescription("Retrieves the full logs of a test workflow execution for debugging and analysis."),
 		mcp.WithString("executionId",
@@ -22,11 +26,6 @@ func FetchExecutionLogs(getClient GetClientFn) (tool mcp.Tool, handler server.To
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		executionID := request.GetString("executionId", "")
 
 		logs, err := client.GetExecutionLogs(ctx, executionID)
@@ -40,7 +39,21 @@ func FetchExecutionLogs(getClient GetClientFn) (tool mcp.Tool, handler server.To
 	return tool, handler
 }
 
-func ListExecutions(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type ListExecutionsParams struct {
+	WorkflowName string
+	Selector     string
+	TextSearch   string
+	PageSize     int
+	Page         int
+	Status       string
+	Since        string
+}
+
+type ExecutionLister interface {
+	ListExecutions(ctx context.Context, params ListExecutionsParams) (string, error)
+}
+
+func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_executions",
 		mcp.WithDescription("List executions for a specific test workflow with filtering and pagination options. Returns execution summaries with status, timing, and results."),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
@@ -51,11 +64,6 @@ func ListExecutions(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHa
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		params := ListExecutionsParams{
 			WorkflowName: request.GetString("workflowName", ""),
 			TextSearch:   request.GetString("textSearch", ""),
@@ -84,7 +92,11 @@ func ListExecutions(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHa
 	return tool, handler
 }
 
-func GetExecutionInfo(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type ExecutionInfoGetter interface {
+	GetExecutionInfo(ctx context.Context, workflowName, executionId string) (string, error)
+}
+
+func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_execution_info",
 		mcp.WithDescription("Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
@@ -92,11 +104,6 @@ func GetExecutionInfo(getClient GetClientFn) (tool mcp.Tool, handler server.Tool
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		workflowName, err := RequiredParam[string](request, "workflowName")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -118,18 +125,17 @@ func GetExecutionInfo(getClient GetClientFn) (tool mcp.Tool, handler server.Tool
 	return tool, handler
 }
 
-func LookupExecutionId(getClient GetClientFn) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+type ExecutionLookup interface {
+	LookupExecutionID(ctx context.Context, executionName string) (string, error)
+}
+
+func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("lookup_execution_id",
 		mcp.WithDescription("Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."),
 		mcp.WithString("executionName", mcp.Required(), mcp.Description(ExecutionNameDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := getClient(ctx)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-
 		executionName, err := RequiredParam[string](request, "executionName")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
