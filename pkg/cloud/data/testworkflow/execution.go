@@ -31,6 +31,10 @@ func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWork
 	return pass(r.executor, ctx, req, process)
 }
 
+func (r *CloudRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+}
+
 func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
 	req := ExecutionGetByNameAndWorkflowRequest{Name: name, WorkflowName: workflowName}
 	process := func(v ExecutionGetResponse) testkube.TestWorkflowExecution {
@@ -122,6 +126,14 @@ func (r *CloudRepository) Update(ctx context.Context, result testkube.TestWorkfl
 func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) (err error) {
 	req := ExecutionUpdateResultRequest{ID: id, Result: result}
 	return passNoContent(r.executor, ctx, req)
+}
+
+func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
+}
+
+func (r *CloudRepository) FinishResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
 }
 
 func (r *CloudRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
