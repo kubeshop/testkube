@@ -2,6 +2,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -155,4 +156,43 @@ func LimitContentToLines(content string, maxLines int) string {
 
 	limitedContent := strings.Join(lines[:maxLines], "\n")
 	return limitedContent
+}
+
+// DebugInfo holds flexible debug information that any client type can provide
+// This allows HTTP clients to provide request/response details, file clients to provide
+// file operations, database clients to provide query info, etc.
+type DebugInfo = map[string]any
+
+// DebugInfoProvider interface for clients that can provide debug information
+type DebugInfoProvider interface {
+	GetLastDebugInfo() DebugInfo
+}
+
+// CreateToolResultWithDebug creates an MCP tool result, optionally including debug information
+// If debugProvider implements DebugInfoProvider, it will include debug info from the last operation.
+// Pass nil or any non-DebugInfoProvider to skip debug information.
+func CreateToolResultWithDebug(result string, debugProvider any) *mcp.CallToolResult {
+	content := []mcp.Content{
+		mcp.TextContent{
+			Type: "text",
+			Text: result,
+		},
+	}
+
+	if debugProvider, ok := debugProvider.(DebugInfoProvider); ok {
+		if debugInfo := debugProvider.GetLastDebugInfo(); debugInfo != nil {
+			debugJSON, marshalErr := json.MarshalIndent(debugInfo, "", "  ")
+			if marshalErr == nil {
+				debugContent := mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("\n--- DEBUG INFO ---\n%s\n--- END DEBUG ---", string(debugJSON)),
+				}
+				content = append(content, debugContent)
+			}
+		}
+	}
+
+	return &mcp.CallToolResult{
+		Content: content,
+	}
 }

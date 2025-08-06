@@ -29,7 +29,7 @@ func ListArtifacts(client ArtifactLister) (tool mcp.Tool, handler server.ToolHan
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list artifacts: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler
@@ -70,7 +70,7 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 
 		// Limit content to max lines
 		limitedContent := LimitContentToLines(content, MaxLines)
-		return mcp.NewToolResultText(limitedContent), nil
+		return CreateToolResultWithDebug(limitedContent, client), nil
 	}
 
 	return tool, handler

@@ -119,7 +119,7 @@ func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get execution info: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler
@@ -155,7 +155,7 @@ func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.To
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		return mcp.NewToolResultText(executionID), nil
+		return CreateToolResultWithDebug(executionID, client), nil
 	}
 
 	return tool, handler

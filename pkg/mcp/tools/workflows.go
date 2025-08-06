@@ -59,8 +59,7 @@ func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHan
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list workflows: %v", err)), nil
 		}
-
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler
@@ -87,7 +86,7 @@ func CreateWorkflow(client WorkflowCreator) (tool mcp.Tool, handler server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create workflow: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler
@@ -113,8 +112,7 @@ func GetWorkflowDefinition(client WorkflowDefinitionGetter) (tool mcp.Tool, hand
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow definition: %v", err)), nil
 		}
-
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler
@@ -140,8 +138,7 @@ func GetWorkflow(client WorkflowGetter) (tool mcp.Tool, handler server.ToolHandl
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow: %v", err)), nil
 		}
-
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler
@@ -198,7 +195,7 @@ func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandl
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to run workflow: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		return CreateToolResultWithDebug(result, client), nil
 	}
 
 	return tool, handler

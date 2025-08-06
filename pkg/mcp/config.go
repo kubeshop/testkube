@@ -25,6 +25,9 @@ type MCPServerConfig struct {
 
 	// EnvId for Testkube environment
 	EnvId string
+
+	// Debug enables debug mode to return HTTP request/response details
+	Debug bool
 }
 
 // LoadConfigFromEnv loads configuration from environment variables

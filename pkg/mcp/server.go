@@ -27,7 +27,11 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	// If no client is provided, use the default API client
 	if client == nil {
 		httpClient := &http.Client{}
-		client = NewAPIClient(&cfg, httpClient)
+		if cfg.Debug {
+			client = NewDebugAPIClient(&cfg, httpClient)
+		} else {
+			client = NewAPIClient(&cfg, httpClient)
+		}
 	}
 
 	// Dashboard tools

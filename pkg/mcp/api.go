@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
@@ -410,4 +411,147 @@ func extractWorkflowNameFromExecutionName(executionName string) (string, int, er
 	}
 
 	return workflowName, executionNumber, nil
+}
+
+// DebugAPIClient wraps an APIClient and captures debug information from the last request
+type DebugAPIClient struct {
+	*APIClient
+	lastDebugInfo tools.DebugInfo
+	transport     *DebugRoundTripper
+}
+
+// DebugRoundTripper is an HTTP RoundTripper that captures debug information
+type DebugRoundTripper struct {
+	base          http.RoundTripper
+	lastDebugInfo *tools.DebugInfo // Pointer so we can update the parent's debug info
+}
+
+// NewDebugRoundTripper creates a new debug-enabled HTTP RoundTripper
+func NewDebugRoundTripper(base http.RoundTripper, debugInfoPtr *tools.DebugInfo) *DebugRoundTripper {
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return &DebugRoundTripper{
+		base:          base,
+		lastDebugInfo: debugInfoPtr,
+	}
+}
+
+// RoundTrip implements the http.RoundTripper interface and captures debug info
+func (d *DebugRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Capture request info using flexible DebugInfo map
+	debugInfo := tools.DebugInfo{
+		"type":             "http",
+		"request_url":      req.URL.String(),
+		"request_method":   req.Method,
+		"request_headers":  make(map[string]string),
+		"response_headers": make(map[string]string),
+	}
+
+	// Capture request headers (excluding sensitive ones)
+	requestHeaders := make(map[string]string)
+	for name, values := range req.Header {
+		if len(values) > 0 {
+			if name == "Authorization" {
+				requestHeaders[name] = "[REDACTED]"
+			} else {
+				requestHeaders[name] = values[0]
+			}
+		}
+	}
+	debugInfo["request_headers"] = requestHeaders
+
+	// Capture request body if present
+	if req.Body != nil {
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err == nil {
+			// Store body info (limit size for debug output)
+			if len(bodyBytes) > 0 {
+				if len(bodyBytes) <= 1024 {
+					debugInfo["request_body"] = string(bodyBytes)
+				} else {
+					debugInfo["request_body_size"] = len(bodyBytes)
+				}
+			}
+			// Restore the request body for the actual request
+			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
+	}
+
+	// Make the actual HTTP request
+	start := time.Now()
+	resp, err := d.base.RoundTrip(req)
+	duration := time.Since(start)
+
+	debugInfo["duration_ms"] = duration.Milliseconds()
+
+	// Capture response info
+	if err != nil {
+		debugInfo["error"] = err.Error()
+	} else {
+		debugInfo["response_status"] = resp.StatusCode
+		debugInfo["response_status_text"] = resp.Status
+
+		// Capture response headers
+		responseHeaders := make(map[string]string)
+		for name, values := range resp.Header {
+			if len(values) > 0 {
+				responseHeaders[name] = values[0]
+			}
+		}
+		debugInfo["response_headers"] = responseHeaders
+
+		// Capture response body (with size limit for debug)
+		if resp.Body != nil {
+			bodyBytes, readErr := io.ReadAll(resp.Body)
+			if readErr == nil {
+				debugInfo["response_body_size"] = len(bodyBytes)
+
+				// Store a preview of the response body (limited size)
+				if len(bodyBytes) <= 512 {
+					debugInfo["response_body_preview"] = string(bodyBytes)
+				} else {
+					debugInfo["response_body_preview"] = string(bodyBytes[:512]) + "... [truncated]"
+				}
+
+				// Restore the response body for the caller
+				resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			}
+		}
+	}
+
+	// Store debug info in the parent DebugAPIClient
+	if d.lastDebugInfo != nil {
+		*d.lastDebugInfo = debugInfo
+	}
+
+	return resp, err
+}
+
+// NewDebugAPIClient creates a new APIClient with debug-enabled HTTP transport
+func NewDebugAPIClient(cfg *MCPServerConfig, baseClient *http.Client) *DebugAPIClient {
+	if baseClient == nil {
+		baseClient = &http.Client{}
+	}
+
+	debugAPIClient := &DebugAPIClient{
+		APIClient: &APIClient{config: cfg},
+	}
+
+	// Create debug transport that can update our debug info
+	debugTransport := NewDebugRoundTripper(baseClient.Transport, &debugAPIClient.lastDebugInfo)
+
+	// Create HTTP client with debug transport
+	debugAPIClient.APIClient.client = &http.Client{
+		Transport: debugTransport,
+		Timeout:   baseClient.Timeout,
+	}
+	debugAPIClient.transport = debugTransport
+
+	return debugAPIClient
+}
+
+// GetLastDebugInfo returns the debug information from the last HTTP request
+func (d *DebugAPIClient) GetLastDebugInfo() tools.DebugInfo {
+	return d.lastDebugInfo
 }
