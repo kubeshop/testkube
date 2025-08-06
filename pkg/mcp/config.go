@@ -25,6 +25,9 @@ type MCPServerConfig struct {
 
 	// EnvId for Testkube environment
 	EnvId string
+
+	// Debug enables debug mode which includes detailed operation information in responses
+	Debug bool
 }
 
 // LoadConfigFromEnv loads configuration from environment variables
@@ -47,6 +50,7 @@ func LoadConfigFromEnv() MCPServerConfig {
 		AccessToken:     os.Getenv("TK_ACCESS_TOKEN"),
 		OrgId:           os.Getenv("TK_ORG_ID"),
 		EnvId:           os.Getenv("TK_ENV_ID"),
+		Debug:           os.Getenv("TK_DEBUG") == "true",
 	}
 }
 

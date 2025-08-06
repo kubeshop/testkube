@@ -49,8 +49,18 @@ func (c *APIClient) buildURL(path string, pathParams map[string]string) string {
 }
 
 func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string, error) {
+	// Check if debug collection is active
+	debugInfo := GetDebugInfo(ctx)
+	if debugInfo != nil {
+		debugInfo.Source = "http"
+		debugInfo.Data["method"] = apiReq.Method
+	}
+
 	// Build the URL
 	fullURL := c.buildURL(apiReq.Path, apiReq.PathParams)
+	if debugInfo != nil {
+		debugInfo.Data["url"] = fullURL
+	}
 
 	// Add query parameters if present
 	if len(apiReq.QueryParams) > 0 {
@@ -122,6 +132,11 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Check status code
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if debugInfo != nil {
+			debugInfo.Data["status"] = resp.StatusCode
+			debugInfo.Data["requestHeaders"] = redactSensitiveHeaders(req.Header)
+			debugInfo.Data["responseHeaders"] = redactSensitiveHeaders(resp.Header)
+		}
 		return "", fmt.Errorf("API returned status %d", resp.StatusCode)
 	}
 
@@ -131,7 +146,40 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	// Populate debug info if active
+	if debugInfo != nil {
+		debugInfo.Data["status"] = resp.StatusCode
+		debugInfo.Data["requestHeaders"] = redactSensitiveHeaders(req.Header)
+		debugInfo.Data["responseHeaders"] = redactSensitiveHeaders(resp.Header)
+	}
+
 	return string(bodyBytes), nil
+}
+
+// redactSensitiveHeaders removes sensitive information from headers
+func redactSensitiveHeaders(headers http.Header) map[string][]string {
+	if headers == nil {
+		return nil
+	}
+
+	redacted := make(map[string][]string)
+	sensitiveHeaders := map[string]bool{
+		"authorization": true,
+		"cookie":        true,
+		"x-api-key":     true,
+		"x-auth-token":  true,
+	}
+
+	for key, values := range headers {
+		lowerKey := strings.ToLower(key)
+		if sensitiveHeaders[lowerKey] {
+			redacted[key] = []string{"[REDACTED]"}
+		} else {
+			redacted[key] = values
+		}
+	}
+
+	return redacted
 }
 
 func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (string, error) {
