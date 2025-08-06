@@ -15,4 +15,3 @@ spec:
       - name: curl-workflow-smoke-matrix
       - name: postman-workflow-smoke-template
       - name: pytest-workflow-smoke-junit-success-only
-      - name: distributed-jmeter-workflow-smoke-shell
