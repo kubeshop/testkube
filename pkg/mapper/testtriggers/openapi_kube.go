@@ -52,6 +52,56 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 	}
 }
 
+// MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta creates a TestTrigger CRD from an upsert request
+// while preserving the existing ObjectMeta (including ResourceVersion) from the original CRD
+func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkube.TestTriggerUpsertRequest, existingMeta metav1.ObjectMeta) testsv1.TestTrigger {
+	var resource testsv1.TestTriggerResource
+	if request.Resource != nil {
+		resource = testsv1.TestTriggerResource(*request.Resource)
+	}
+
+	var action testsv1.TestTriggerAction
+	if request.Action != nil {
+		action = testsv1.TestTriggerAction(*request.Action)
+	}
+
+	var execution testsv1.TestTriggerExecution
+	if request.Execution != nil {
+		execution = testsv1.TestTriggerExecution(*request.Execution)
+	}
+
+	var concurrencyPolicy testsv1.TestTriggerConcurrencyPolicy
+	if request.ConcurrencyPolicy != nil {
+		concurrencyPolicy = testsv1.TestTriggerConcurrencyPolicy(*request.ConcurrencyPolicy)
+	}
+
+	// Preserve existing metadata but update labels and annotations
+	updatedMeta := existingMeta.DeepCopy()
+	if request.Labels != nil {
+		updatedMeta.Labels = request.Labels
+	}
+	if request.Annotations != nil {
+		updatedMeta.Annotations = request.Annotations
+	}
+
+	return testsv1.TestTrigger{
+		ObjectMeta: *updatedMeta,
+		Spec: testsv1.TestTriggerSpec{
+			Resource:          resource,
+			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
+			Event:             testsv1.TestTriggerEvent(request.Event),
+			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
+			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			Action:            action,
+			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
+			Execution:         execution,
+			TestSelector:      mapSelectorToCRD(request.TestSelector),
+			ConcurrencyPolicy: concurrencyPolicy,
+			Disabled:          request.Disabled,
+		},
+	}
+}
+
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
 	var labelSelector *metav1.LabelSelector
 	if selector.LabelSelector != nil {
