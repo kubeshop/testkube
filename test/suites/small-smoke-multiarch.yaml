@@ -1,19 +1,18 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: tw-suite-small-smoke
+  name: tw-suite-small-smoke-multiarch
   labels:
     core-tests: workflows-suite
     type: suite
+description: "Small smoke test suite with only workflows using multiarch images (available for both amd64 and arm64)"
 spec:
   steps:
   - execute:
       parallelism: 2
       workflows:
       - name: k6-workflow-smoke
+      - name: curl-workflow-smoke-matrix
       - name: postman-workflow-smoke-template
-      - name: cypress-workflow-smoke
-      - name: jmeter-workflow-smoke-shell
       - name: pytest-workflow-smoke-junit-success-only
-      - name: gradle-workflow-smoke-jdk11-from-template
-      - name: distributed-playwright-workflow-smoke-junit
+      - name: distributed-jmeter-workflow-smoke-shell
