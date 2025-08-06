@@ -119,7 +119,7 @@ suites
 ```
 
 ### Legacy
-Legacy directory contains tests for Executors, Tests, TestSuites and other [legacy features](https://docs.testkube.io/articles/legacy-features).
+`legacy` directory contains tests for Executors, Tests, TestSuites and other [legacy features](https://docs.testkube.io/articles/legacy-features).
 
 ## Labels
 All of the workflows are labeled to simplify filtering them.
