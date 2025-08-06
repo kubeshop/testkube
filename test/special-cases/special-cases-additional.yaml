@@ -14,3 +14,19 @@ spec:
         echo "Iteration $iteration, sleep (1 second)"
         sleep 1
       done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-90m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 90 minutes"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      for iteration in $(seq 1 5400); do
+        echo "Iteration $iteration, sleep (1 second)"
+        sleep 1
+      done
