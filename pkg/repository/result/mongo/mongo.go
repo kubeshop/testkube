@@ -201,7 +201,9 @@ func (r *MongoRepository) slowGetLatestByTest(ctx context.Context, testName stri
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{
+					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
@@ -260,7 +262,9 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{
+					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
@@ -303,7 +307,9 @@ func (r *MongoRepository) slowGetLatestByTests(ctx context.Context, testNames []
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{
+					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
@@ -370,7 +376,9 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{
+					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
