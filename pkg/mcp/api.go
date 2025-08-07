@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -156,29 +157,27 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 	return string(bodyBytes), nil
 }
 
+var sensitiveHeaders = []string{
+	"authorization",
+	"cookie",
+	"x-api-key",
+	"x-auth-token",
+}
+
 // redactSensitiveHeaders removes sensitive information from headers
 func redactSensitiveHeaders(headers http.Header) map[string][]string {
 	if headers == nil {
 		return nil
 	}
-
 	redacted := make(map[string][]string)
-	sensitiveHeaders := map[string]bool{
-		"authorization": true,
-		"cookie":        true,
-		"x-api-key":     true,
-		"x-auth-token":  true,
-	}
-
 	for key, values := range headers {
 		lowerKey := strings.ToLower(key)
-		if sensitiveHeaders[lowerKey] {
+		if slices.Contains(sensitiveHeaders, lowerKey) {
 			redacted[key] = []string{"[REDACTED]"}
 		} else {
 			redacted[key] = values
 		}
 	}
-
 	return redacted
 }
 
