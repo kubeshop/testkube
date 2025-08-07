@@ -41,6 +41,9 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.CreateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Labels tools
+	mcpServer.AddTool(tools.ListLabels(client))
+
 	// Execution tools
 	mcpServer.AddTool(tools.FetchExecutionLogs(client))
 	mcpServer.AddTool(tools.ListExecutions(client))

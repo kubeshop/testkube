@@ -441,6 +441,13 @@ func (c *APIClient) RunWorkflow(ctx context.Context, params tools.RunWorkflowPar
 	})
 }
 
+func (c *APIClient) ListLabels(ctx context.Context) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/agent/labels",
+	})
+}
+
 // extracts workflow name from execution name e.g., "my-workflow-123" -> ("my-workflow", 123)
 func extractWorkflowNameFromExecutionName(executionName string) (string, int, error) {
 	lastDashIndex := strings.LastIndex(executionName, "-")

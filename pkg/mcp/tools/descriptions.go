@@ -19,7 +19,7 @@ but need the execution ID for other operations.`
 	TextSearchDescription = `Text search filter for names or descriptions. Can use space-separated words 
 to find items containing all terms`
 
-	SelectorDescription = "Kubernetes-style label selector for filtering"
+	SelectorDescription = `Filter by labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'`
 
 	StatusDescription = `Filter by execution status. Available statuses: 'queued', 'running', 'passed', 
 'failed', 'skipped', 'aborted', 'timeout', 'paused'`
