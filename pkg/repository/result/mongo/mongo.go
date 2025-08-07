@@ -202,7 +202,14 @@ func (r *MongoRepository) slowGetLatestByTest(ctx context.Context, testName stri
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
 				{Key: "updatetime", Value: bson.M{"$max": bson.A{
-					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+					bson.M{"$cond": bson.M{
+						"if": bson.M{"$and": bson.A{
+							bson.M{"$ne": bson.A{"$starttime", nil}},
+							bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+						}},
+						"then": "$starttime",
+						"else": "$endtime",
+					}},
 				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
@@ -263,7 +270,14 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
 				{Key: "updatetime", Value: bson.M{"$max": bson.A{
-					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+					bson.M{"$cond": bson.M{
+						"if": bson.M{"$and": bson.A{
+							bson.M{"$ne": bson.A{"$starttime", nil}},
+							bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+						}},
+						"then": "$starttime",
+						"else": "$endtime",
+					}},
 				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
@@ -308,7 +322,14 @@ func (r *MongoRepository) slowGetLatestByTests(ctx context.Context, testNames []
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
 				{Key: "updatetime", Value: bson.M{"$max": bson.A{
-					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+					bson.M{"$cond": bson.M{
+						"if": bson.M{"$and": bson.A{
+							bson.M{"$ne": bson.A{"$starttime", nil}},
+							bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+						}},
+						"then": "$starttime",
+						"else": "$endtime",
+					}},
 				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
@@ -377,7 +398,14 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
 				{Key: "updatetime", Value: bson.M{"$max": bson.A{
-					bson.M{"$ifNull": bson.A{"$starttime", "$endtime"}},
+					bson.M{"$cond": bson.M{
+						"if": bson.M{"$and": bson.A{
+							bson.M{"$ne": bson.A{"$starttime", nil}},
+							bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+						}},
+						"then": "$starttime",
+						"else": "$endtime",
+					}},
 				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
