@@ -6,6 +6,8 @@ This package provides MCP integration for Testkube, enabling AI assistants to in
 
 The MCP server is exposed via the `testkube mcp serve` CLI command, which leverages the existing OAuth authentication flow, for security purposes.
 
+This implementation uses the [mcp-go](https://github.com/mark3labs/mcp-go) library, chosen for its proven usage in other projects like [GitHub's MCP server](https://github.com/github/mcp). The tool design patterns and helper functions draw inspiration from GitHub's implementation while being adapted for Testkube's specific needs.
+
 ## Architecture
 
 ### Tool Design Pattern
