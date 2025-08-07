@@ -83,17 +83,17 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 			iTime := results[i].Workflow.Created
 			if results[i].LatestExecution != nil {
 				iTime = results[i].LatestExecution.Result.StartedAt
-				// Fallback to ScheduledAt if StartedAt is not set (execution hasn't started yet)
+				// Fallback to StatusAt if StartedAt is not set (execution hasn't started yet)
 				if iTime.IsZero() {
-					iTime = results[i].LatestExecution.ScheduledAt
+					iTime = results[i].LatestExecution.StatusAt
 				}
 			}
 			jTime := results[j].Workflow.Created
 			if results[j].LatestExecution != nil {
 				jTime = results[j].LatestExecution.Result.StartedAt
-				// Fallback to ScheduledAt if StartedAt is not set (execution hasn't started yet)
+				// Fallback to StatusAt if StartedAt is not set (execution hasn't started yet)
 				if jTime.IsZero() {
-					jTime = results[j].LatestExecution.ScheduledAt
+					jTime = results[j].LatestExecution.StatusAt
 				}
 			}
 			return iTime.After(jTime)
