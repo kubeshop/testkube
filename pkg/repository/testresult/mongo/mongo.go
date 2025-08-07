@@ -77,7 +77,16 @@ func (r *MongoRepository) slowGetLatestByTestSuite(ctx context.Context, testSuit
 		{"$match": bson.M{"testsuite.name": testSuiteName}},
 
 		{"$addFields": bson.M{
-			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+			"updatetime": bson.M{"$max": bson.A{
+				bson.M{"$cond": bson.M{
+					"if": bson.M{"$and": bson.A{
+						bson.M{"$ne": bson.A{"$starttime", nil}},
+						bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+					}},
+					"then": "$starttime",
+					"else": "$endtime",
+				}},
+			}},
 		}},
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testsuite.name"},
@@ -136,7 +145,16 @@ func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteNam
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testsuite.name"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{
+					bson.M{"$cond": bson.M{
+						"if": bson.M{"$and": bson.A{
+							bson.M{"$ne": bson.A{"$starttime", nil}},
+							bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+						}},
+						"then": "$starttime",
+						"else": "$endtime",
+					}},
+				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
@@ -170,7 +188,16 @@ func (r *MongoRepository) slowGetLatestByTestSuites(ctx context.Context, testSui
 		{"$match": bson.M{"$or": documents}},
 
 		{"$addFields": bson.M{
-			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+			"updatetime": bson.M{"$max": bson.A{
+				bson.M{"$cond": bson.M{
+					"if": bson.M{"$and": bson.A{
+						bson.M{"$ne": bson.A{"$starttime", nil}},
+						bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+					}},
+					"then": "$starttime",
+					"else": "$endtime",
+				}},
+			}},
 		}},
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testsuite.name"},
@@ -246,7 +273,16 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testsuite.name"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{
+					bson.M{"$cond": bson.M{
+						"if": bson.M{"$and": bson.A{
+							bson.M{"$ne": bson.A{"$starttime", nil}},
+							bson.M{"$ne": bson.A{"$starttime", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
+						}},
+						"then": "$starttime",
+						"else": "$endtime",
+					}},
+				}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
