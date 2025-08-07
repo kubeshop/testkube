@@ -290,10 +290,10 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	} else {
 		queryParams["pageSize"] = "10"
 	}
-	if params.Page > 0 {
+	if params.Page >= 0 {
 		queryParams["page"] = strconv.Itoa(params.Page)
 	} else {
-		queryParams["page"] = "1"
+		queryParams["page"] = "0"
 	}
 	if params.Status != "" {
 		queryParams["status"] = params.Status
@@ -361,10 +361,10 @@ func (c *APIClient) ListWorkflows(ctx context.Context, params tools.ListWorkflow
 	} else {
 		queryParams["pageSize"] = "10"
 	}
-	if params.Page > 0 {
+	if params.Page >= 0 {
 		queryParams["page"] = strconv.Itoa(params.Page)
 	} else {
-		queryParams["page"] = "1"
+		queryParams["page"] = "0"
 	}
 	if params.Status != "" {
 		queryParams["status"] = params.Status

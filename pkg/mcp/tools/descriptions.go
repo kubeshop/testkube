@@ -12,7 +12,7 @@ If you only have an execution name, use the lookup_execution_id tool first to ge
 the pattern of workflow name plus a numeric suffix. Use this when you have an execution name 
 but need the execution ID for other operations.`
 
-	PageDescription = "Page number for pagination (default: 1)"
+	PageDescription = "Page number for pagination (default: 0)"
 
 	PageSizeDescription = "Number of items to return per page (default: 10, max: 100)"
 

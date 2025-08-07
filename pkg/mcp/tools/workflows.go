@@ -49,8 +49,8 @@ func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHan
 				params.PageSize = pageSize
 			}
 		}
-		if pageStr := request.GetString("page", "1"); pageStr != "" {
-			if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
+		if pageStr := request.GetString("page", "0"); pageStr != "" {
+			if page, err := strconv.Atoi(pageStr); err == nil && page >= 0 {
 				params.Page = page
 			}
 		}
