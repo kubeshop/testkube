@@ -28,6 +28,10 @@ const (
 	configParamSizeLimit = 100
 )
 
+var (
+	ErrUnmodified = errors.New("record was unmodified")
+)
+
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:           db,
@@ -65,6 +69,19 @@ type MongoRepositoryOpt func(*MongoRepository)
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+
+	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
+		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
+	}
+
+	return *result.UnscapeDots(), err
+}
+
+func (r *MongoRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{
+		bson.M{"id": id, "runnerid": runner},
+		bson.M{"name": id, "runnerid": runner},
+	}}).Decode(&result)
 
 	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
@@ -422,6 +439,77 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result *t
 	}
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": data})
 	return
+}
+
+// UpdateResultStrict is a stricter version of UpdateResult which checks for matching runner id and valid states.
+func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	if result.IsFinished() {
+		return false, errors.New("invalid state")
+	}
+
+	// Update must be a pipeline so that we can use a conditional for the status update.
+	update := bson.A{
+		bson.M{"$set": bson.M{
+			"result": result,
+			"statusat": bson.M{"$cond": bson.M{
+				"if":   bson.M{"$ne": bson.A{"$result.status", string(*result.Status)}},
+				"then": time.Now(),
+				"else": "$statusat",
+			}}},
+		},
+	}
+
+	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
+		"runnerid": runnerId,
+		"result.status": bson.M{"$in": bson.A{
+			testkube.ASSIGNED_TestWorkflowStatus,
+			testkube.STARTING_TestWorkflowStatus,
+			testkube.RUNNING_TestWorkflowStatus,
+			testkube.PAUSING_TestWorkflowStatus,
+			testkube.PAUSED_TestWorkflowStatus,
+			testkube.RESUMING_TestWorkflowStatus,
+		}},
+	}, update)
+
+	if err != nil {
+		return false, err
+	}
+	if res != nil && res.MatchedCount == 0 {
+		return false, mongo.ErrNoDocuments
+	}
+	if res != nil && res.ModifiedCount != 0 {
+		updated = true
+	}
+	return updated, err
+}
+
+func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	if !result.IsFinished() {
+		return false, errors.New("invalid state")
+	}
+
+	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
+		"runnerid": runnerId,
+		"result.status": bson.M{"$in": bson.A{
+			testkube.QUEUED_TestWorkflowStatus,
+			testkube.STOPPING_TestWorkflowStatus,
+			testkube.RUNNING_TestWorkflowStatus,
+		}},
+	}, bson.M{"$set": bson.M{
+		"result":   result,
+		"statusat": result.FinishedAt,
+	}})
+
+	if err != nil {
+		return false, err
+	}
+	if res != nil && res.MatchedCount == 0 {
+		return false, mongo.ErrNoDocuments
+	}
+	if res != nil && res.ModifiedCount != 0 {
+		updated = true
+	}
+	return updated, err
 }
 
 func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {

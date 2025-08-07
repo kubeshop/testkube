@@ -151,6 +151,10 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 	return *execution, nil
 }
 
+func (r *PostgresRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+}
+
 // Helper method to convert complete row to TestWorkflowExecution
 func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
 	var err error
@@ -1061,6 +1065,14 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	return tx.Commit(ctx)
+}
+
+func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented")
+}
+
+func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented")
 }
 
 // UpdateResult updates only the result
