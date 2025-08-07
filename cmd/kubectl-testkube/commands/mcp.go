@@ -28,6 +28,7 @@ to determine the organization and environment to connect to.`,
 
 func NewMcpServeCmd() *cobra.Command {
 	var mcpBaseURL string
+	var debug bool
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -105,7 +106,7 @@ over stdio. Use --verbose to see detailed output during startup.`,
 			}
 
 			// Start the MCP server
-			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri); err != nil {
+			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug); err != nil {
 				if ui.IsVerbose() {
 					ui.Failf("Failed to start MCP server: %v", err)
 				}
@@ -120,11 +121,12 @@ over stdio. Use --verbose to see detailed output during startup.`,
 	}
 
 	cmd.Flags().StringVar(&mcpBaseURL, "base-url", "", "Base URL for Testkube API (uses context API URL if not specified)")
+	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode with detailed operation information")
 
 	return cmd
 }
 
-func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string) error {
+func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool) error {
 	// Create MCP server configuration
 	mcpCfg := mcp.MCPServerConfig{
 		Version:         "1.0.0",
@@ -133,6 +135,7 @@ func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string) err
 		AccessToken:     accessToken,
 		OrgId:           orgID,
 		EnvId:           envID,
+		Debug:           debug,
 	}
 
 	// If no base URL is provided, use the default from testkube context

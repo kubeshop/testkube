@@ -22,6 +22,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		"testkube-mcp",
 		cfg.Version,
 		server.WithToolCapabilities(true),
+		server.WithToolHandlerMiddleware(DebugMiddleware(cfg.Debug)),
 	)
 
 	// If no client is provided, use the default API client

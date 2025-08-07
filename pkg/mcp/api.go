@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -49,8 +50,18 @@ func (c *APIClient) buildURL(path string, pathParams map[string]string) string {
 }
 
 func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string, error) {
+	// Check if debug collection is active
+	debugInfo := GetDebugInfo(ctx)
+	if debugInfo != nil {
+		debugInfo.Source = "http"
+		debugInfo.Data["method"] = apiReq.Method
+	}
+
 	// Build the URL
 	fullURL := c.buildURL(apiReq.Path, apiReq.PathParams)
+	if debugInfo != nil {
+		debugInfo.Data["url"] = fullURL
+	}
 
 	// Add query parameters if present
 	if len(apiReq.QueryParams) > 0 {
@@ -122,6 +133,11 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 
 	// Check status code
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if debugInfo != nil {
+			debugInfo.Data["status"] = resp.StatusCode
+			debugInfo.Data["requestHeaders"] = redactSensitiveHeaders(req.Header)
+			debugInfo.Data["responseHeaders"] = redactSensitiveHeaders(resp.Header)
+		}
 		return "", fmt.Errorf("API returned status %d", resp.StatusCode)
 	}
 
@@ -131,7 +147,38 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	// Populate debug info if active
+	if debugInfo != nil {
+		debugInfo.Data["status"] = resp.StatusCode
+		debugInfo.Data["requestHeaders"] = redactSensitiveHeaders(req.Header)
+		debugInfo.Data["responseHeaders"] = redactSensitiveHeaders(resp.Header)
+	}
+
 	return string(bodyBytes), nil
+}
+
+var sensitiveHeaders = []string{
+	"authorization",
+	"cookie",
+	"x-api-key",
+	"x-auth-token",
+}
+
+// redactSensitiveHeaders removes sensitive information from headers
+func redactSensitiveHeaders(headers http.Header) map[string][]string {
+	if headers == nil {
+		return nil
+	}
+	redacted := make(map[string][]string)
+	for key, values := range headers {
+		lowerKey := strings.ToLower(key)
+		if slices.Contains(sensitiveHeaders, lowerKey) {
+			redacted[key] = []string{"[REDACTED]"}
+		} else {
+			redacted[key] = values
+		}
+	}
+	return redacted
 }
 
 func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (string, error) {
@@ -242,10 +289,10 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	} else {
 		queryParams["pageSize"] = "10"
 	}
-	if params.Page > 0 {
+	if params.Page >= 0 {
 		queryParams["page"] = strconv.Itoa(params.Page)
 	} else {
-		queryParams["page"] = "1"
+		queryParams["page"] = "0"
 	}
 	if params.Status != "" {
 		queryParams["status"] = params.Status
@@ -313,10 +360,10 @@ func (c *APIClient) ListWorkflows(ctx context.Context, params tools.ListWorkflow
 	} else {
 		queryParams["pageSize"] = "10"
 	}
-	if params.Page > 0 {
+	if params.Page >= 0 {
 		queryParams["page"] = strconv.Itoa(params.Page)
 	} else {
-		queryParams["page"] = "1"
+		queryParams["page"] = "0"
 	}
 	if params.Status != "" {
 		queryParams["status"] = params.Status
