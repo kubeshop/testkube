@@ -32,7 +32,6 @@ func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHan
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("status", mcp.Description(StatusDescription)),
-		mcp.WithString("groupId", mcp.Description(GroupIdDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -41,7 +40,6 @@ func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHan
 			Selector:      request.GetString("selector", ""),
 			TextSearch:    request.GetString("textSearch", ""),
 			Status:        request.GetString("status", ""),
-			GroupID:       request.GetString("groupId", ""),
 		}
 
 		if pageSizeStr := request.GetString("pageSize", "10"); pageSizeStr != "" {

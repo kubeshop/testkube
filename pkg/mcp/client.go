@@ -12,6 +12,7 @@ type Client interface {
 	tools.ExecutionLookup
 
 	tools.LabelsLister
+	tools.ResourceGroupsLister
 
 	tools.WorkflowLister
 	tools.WorkflowCreator

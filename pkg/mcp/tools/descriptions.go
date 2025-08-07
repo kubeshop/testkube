@@ -24,9 +24,7 @@ to find items containing all terms`
 	StatusDescription = `Filter by execution status. Available statuses: 'queued', 'running', 'passed', 
 'failed', 'skipped', 'aborted', 'timeout', 'paused'`
 
-	ResourceGroupDescription = "Filter by resource group"
-
-	GroupIdDescription = "Filter by group ID"
+	ResourceGroupDescription = "Filter by resource group using the group slug (e.g., 'demo-resource-group', 'accounting-tests'). Use the list_resource_groups tool to discover available groups"
 
 	SinceDescription = "Filter executions created after this time (ISO 8601 format)"
 

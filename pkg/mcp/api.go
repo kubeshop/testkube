@@ -15,9 +15,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
+type ApiScope int
+
+const (
+	ApiScopeNone ApiScope = iota
+	ApiScopeOrg
+	ApiScopeOrgEnv
+)
+
 type APIRequest struct {
 	Method      string            // "GET", "POST", etc.
 	Path        string            // "/executions/{executionId}/logs"
+	Scope       ApiScope          // API scope level (default: ApiScopeNone)
 	PathParams  map[string]string // {executionId: "123"}
 	QueryParams map[string]string // Optional query parameters
 	Body        any               // Optional request body
@@ -36,7 +45,7 @@ func NewAPIClient(cfg *MCPServerConfig, client *http.Client) *APIClient {
 	}
 }
 
-func (c *APIClient) buildURL(path string, pathParams map[string]string) string {
+func (c *APIClient) buildApiUrl(path string, pathParams map[string]string, scope ApiScope) string {
 	// Replace path parameters in the path
 	finalPath := path
 	for key, value := range pathParams {
@@ -44,9 +53,19 @@ func (c *APIClient) buildURL(path string, pathParams map[string]string) string {
 		finalPath = strings.ReplaceAll(finalPath, placeholder, value)
 	}
 
-	// Build the full URL with org/env context
-	return fmt.Sprintf("%s/organizations/%s/environments/%s%s",
-		c.config.ControlPlaneUrl, c.config.OrgId, c.config.EnvId, finalPath)
+	// Build the full URL based on scope
+	switch scope {
+	case ApiScopeNone:
+		return c.config.ControlPlaneUrl + finalPath
+	case ApiScopeOrg:
+		return fmt.Sprintf("%s/organizations/%s%s",
+			c.config.ControlPlaneUrl, c.config.OrgId, finalPath)
+	case ApiScopeOrgEnv:
+		return fmt.Sprintf("%s/organizations/%s/environments/%s%s",
+			c.config.ControlPlaneUrl, c.config.OrgId, c.config.EnvId, finalPath)
+	default:
+		return c.config.ControlPlaneUrl + finalPath
+	}
 }
 
 func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string, error) {
@@ -58,7 +77,7 @@ func (c *APIClient) makeRequest(ctx context.Context, apiReq APIRequest) (string,
 	}
 
 	// Build the URL
-	fullURL := c.buildURL(apiReq.Path, apiReq.PathParams)
+	fullURL := c.buildApiUrl(apiReq.Path, apiReq.PathParams, apiReq.Scope)
 	if debugInfo != nil {
 		debugInfo.Data["url"] = fullURL
 	}
@@ -185,6 +204,7 @@ func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (stri
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflow-executions/{executionId}/artifacts",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"executionId": executionID,
 		},
@@ -199,6 +219,7 @@ func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename stri
 	response, err := c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflow-executions/{executionId}/artifacts/{filename}",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"executionId": executionID,
 			"filename":    encodedFilename,
@@ -258,6 +279,7 @@ func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string) (s
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflow-executions/{executionId}/logs",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"executionId": executionID,
 		},
@@ -268,6 +290,7 @@ func (c *APIClient) GetExecutionInfo(ctx context.Context, workflowName, executio
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"workflowName": workflowName,
 			"executionId":  executionID,
@@ -307,6 +330,7 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 		return c.makeRequest(ctx, APIRequest{
 			Method: "GET",
 			Path:   path,
+			Scope:  ApiScopeOrgEnv,
 			PathParams: map[string]string{
 				"workflowName": params.WorkflowName,
 			},
@@ -317,6 +341,7 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	return c.makeRequest(ctx, APIRequest{
 		Method:      "GET",
 		Path:        path,
+		Scope:       ApiScopeOrgEnv,
 		QueryParams: queryParams,
 	})
 }
@@ -335,6 +360,7 @@ func (c *APIClient) LookupExecutionID(ctx context.Context, executionName string)
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflows/{workflowName}/executions",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"workflowName": workflowName,
 		},
@@ -375,6 +401,7 @@ func (c *APIClient) ListWorkflows(ctx context.Context, params tools.ListWorkflow
 	return c.makeRequest(ctx, APIRequest{
 		Method:      "GET",
 		Path:        "/agent/test-workflow-with-executions",
+		Scope:       ApiScopeOrgEnv,
 		QueryParams: queryParams,
 	})
 }
@@ -383,6 +410,7 @@ func (c *APIClient) GetWorkflow(ctx context.Context, workflowName string) (strin
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflow-with-executions/{workflowName}",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"workflowName": workflowName,
 		},
@@ -393,6 +421,7 @@ func (c *APIClient) GetWorkflowDefinition(ctx context.Context, workflowName stri
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflows/{workflowName}",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"workflowName": workflowName,
 		},
@@ -407,6 +436,7 @@ func (c *APIClient) CreateWorkflow(ctx context.Context, workflowDefinition strin
 	return c.makeRequest(ctx, APIRequest{
 		Method: "POST",
 		Path:   "/agent/test-workflows",
+		Scope:  ApiScopeOrgEnv,
 		Body:   workflowDefinition,
 		Headers: map[string]string{
 			"Content-Type": "text/yaml",
@@ -434,6 +464,7 @@ func (c *APIClient) RunWorkflow(ctx context.Context, params tools.RunWorkflowPar
 	return c.makeRequest(ctx, APIRequest{
 		Method: "POST",
 		Path:   "/agent/test-workflows/{workflowName}/executions",
+		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"workflowName": params.WorkflowName,
 		},
@@ -445,6 +476,15 @@ func (c *APIClient) ListLabels(ctx context.Context) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/labels",
+		Scope:  ApiScopeOrgEnv,
+	})
+}
+
+func (c *APIClient) ListResourceGroups(ctx context.Context) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/groups",
+		Scope:  ApiScopeOrg,
 	})
 }
 
