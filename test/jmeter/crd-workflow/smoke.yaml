@@ -317,6 +317,16 @@ spec:
       use:
       - name: distribute/evenly
       count: 2
+      pod:
+        tolerations:
+        - key: kubernetes.io/arch
+          operator: Equal
+          value: arm64
+          effect: NoSchedule
+        - key: kubernetes.io/arch
+          operator: Equal
+          value: amd64
+          effect: NoSchedule
       timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
