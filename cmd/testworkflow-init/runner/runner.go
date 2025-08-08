@@ -88,9 +88,17 @@ func RunInitWithContext(ctx context.Context, groupIndex int) (int, error) {
 	if err != nil {
 		return int(constants.CodeInputError), fmt.Errorf("failed to get actions: %w", err)
 	}
+	// Determine if this group contains any executable steps. Only groups that
+	// actually launch processes should propagate a global aborted status as an
+	// exit code. This avoids flaky 137 exits in non-execution groups (e.g., setup)
+	// when no processes were started in this run.
+	hasExecute := false
 	actionPtrs := make([]*lite.LiteAction, len(actions))
 	for i := range actions {
 		actionPtrs[i] = &actions[i]
+		if actions[i].Type() == lite.ActionTypeExecute {
+			hasExecute = true
+		}
 	}
 	execCtx.SetActions(actionPtrs)
 
@@ -122,7 +130,7 @@ func RunInitWithContext(ctx context.Context, groupIndex int) (int, error) {
 	data.SaveState()
 
 	_ = orchestration.Executions.Kill()
-	if orchestration.Executions.IsAborted() {
+	if hasExecute && orchestration.Executions.IsAborted() {
 		return int(constants.CodeAborted), nil
 	} else {
 		return 0, nil
