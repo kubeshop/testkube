@@ -75,7 +75,6 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: oss-tests-mongo
-  namespace: testkube-agent
   labels:
     core-tests: workflows
     tool: testkube-oss
@@ -98,7 +97,6 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: oss-tests-postgres
-  namespace: testkube-agent
   labels:
     core-tests: workflows
     tool: testkube-oss
