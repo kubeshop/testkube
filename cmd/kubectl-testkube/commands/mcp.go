@@ -14,11 +14,22 @@ import (
 func NewMcpCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mcp",
-		Short: "Manage Model Context Protocol (MCP) server for Testkube",
-		Long: `Manage Model Context Protocol (MCP) server that exposes Testkube functionality.
+		Short: "MCP server enables AI assistants to run workflows, analyze results (Preview)",
+		Long: `Model Context Protocol (MCP) server that enables AI assistants to interact with Testkube.
 
-The MCP server requires OAuth authentication and will use the current Testkube context
-to determine the organization and environment to connect to.`,
+PREVIEW VERSION - This feature is under active development. We welcome feedback on Slack: https://bit.ly/testkube-slack
+
+Capabilities:
+• Execute and monitor test workflows
+• Analyze test results, logs, and artifacts  
+• Navigate test execution history
+• Manage test resources and configurations
+
+The MCP server requires OAuth authentication and uses your current Testkube context.
+
+Documentation: https://docs.testkube.io/articles/mcp-overview
+Setup Guide: https://docs.testkube.io/articles/mcp-setup
+Configuration: https://docs.testkube.io/articles/mcp-configuration`,
 	}
 
 	cmd.AddCommand(NewMcpServeCmd())
@@ -32,14 +43,26 @@ func NewMcpServeCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "serve",
-		Short: "Start MCP server for Testkube (silent by default, use --verbose for output)",
-		Long: `Start a Model Context Protocol (MCP) server that exposes Testkube functionality.
+		Short: "Start MCP server for AI assistant integration (runs silently, use --verbose for output)",
+		Long: `Start a Model Context Protocol (MCP) server that enables AI assistants to interact with Testkube.
 
-The MCP server requires OAuth authentication and will use the current Testkube context
-to determine the organization and environment to connect to.
+PREVIEW VERSION - This feature is under active development. We welcome feedback on Slack: https://bit.ly/testkube-slack
+
+The MCP server provides AI assistants with tools to:
+• Execute and monitor test workflows
+• Analyze test results, logs, and artifacts
+• Navigate test execution history  
+• Manage test resources and configurations
+
+Requirements:
+• OAuth authentication (run 'testkube login')
+• Testkube Pro environment with proper context
 
 The server runs silently by default to avoid interfering with JSON-RPC communication
-over stdio. Use --verbose to see detailed output during startup.`,
+over stdio. Use --verbose to see detailed output during startup.
+
+Setup Guide: https://docs.testkube.io/articles/mcp-setup
+Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			// OAuth authentication check
@@ -47,6 +70,7 @@ over stdio. Use --verbose to see detailed output during startup.`,
 				if ui.IsVerbose() {
 					ui.Failf("OAuth authentication required")
 					ui.Info("Please run 'testkube login' to authenticate with OAuth flow")
+					ui.Info("Setup guide: https://docs.testkube.io/articles/mcp-setup")
 				}
 				return
 			}
@@ -65,6 +89,7 @@ over stdio. Use --verbose to see detailed output during startup.`,
 				if ui.IsVerbose() {
 					ui.Failf("MCP server requires cloud context. Current context: %s", cfg.ContextType)
 					ui.Info("Please run 'testkube set context --help' to configure cloud context")
+					ui.Info("Setup guide: https://docs.testkube.io/articles/mcp-setup")
 				}
 				return
 			}
@@ -103,6 +128,8 @@ over stdio. Use --verbose to see detailed output during startup.`,
 					"API URL":       cfg.CloudContext.ApiUri,
 					"Dashboard URL": cfg.CloudContext.UiUri,
 				})
+				ui.Info("Configure AI tools: https://docs.testkube.io/articles/mcp-configuration")
+				ui.Info("Feedback welcome: https://bit.ly/testkube-slack")
 			}
 
 			// Start the MCP server
