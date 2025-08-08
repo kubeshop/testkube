@@ -15,6 +15,12 @@ This implementation uses the [mcp-go](https://github.com/mark3labs/mcp-go) libra
 The MCP tools follow a consistent, interface-based design:
 
 ```go
+// Small focused interface, include strictly methods called by the tool handler
+type ExecutionLogger interface {
+  // Client receive the context and any number of additional parameters methods, must return (string, error)
+	GetExecutionLogs(ctx context.Context, executionId string) (string, error)
+}
+
 func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc)
 ```
 
@@ -38,19 +44,19 @@ This flexibility allows the same MCP tools to work in different deployment scena
 ### Starting the MCP Server
 
 ```bash
-# Build the CLI (if needed)
+# Build the CLI
 make build-kubectl-testkube-cli
 # This also deletes the previously built cli
 make rebuild-kubectl-testkube-cli
 
 # Start the MCP server
-testkube mcp serve
+./bin/app/kubectl-testkube mcp serve
 
 # Start with debug output
-testkube mcp serve --debug
+./bin/app/kubectl-testkube mcp serve --debug
 
 # Use --verbose if you need to check what context is used, but this will log things to stdout
-testkube mcp serve --verbose
+./bin/app/kubectl-testkube mcp serve --verbose
 ```
 
 ### Development and Testing
