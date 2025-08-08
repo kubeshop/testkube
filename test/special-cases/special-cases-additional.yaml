@@ -30,3 +30,16 @@ spec:
         echo "Iteration $iteration, sleep (1 second)"
         sleep 1
       done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-sleep-90m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 90 minutes sleep + echo in the end"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      sleep 5400 && echo "Sleep finished after 90 minutes"
