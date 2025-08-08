@@ -1,0 +1,35 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: selenium-java-workflow-smoke
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: TKC-4043-selenium-initial-cases
+      paths:
+      - test/selenium/selenium-java
+  container:
+    image: maven:3.9.11-eclipse-temurin-17
+    workingDir: /data/repo/test/selenium/selenium-java
+  services:
+    chrome-standalone:
+      image: selenium/standalone-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
+      readinessProbe:
+        httpGet:
+          path: /wd/hub/status
+          port: 4444
+        periodSeconds: 1
+  steps:
+    - name: Run Selenium Java Tests
+      run:
+        env:
+          - name: REMOTE_WEBDRIVER_URL
+            value: 'http://{{ services.chrome-standalone.0.ip }}:4444/wd/hub'
+        shell: |
+          mvn test
+          mvn surefire-report:report
+      artifacts:
+        paths:
+          - target/site/**/*
+          - target/surefire-reports/**/*
