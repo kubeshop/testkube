@@ -156,7 +156,7 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool) error {
 	// Create MCP server configuration
 	mcpCfg := mcp.MCPServerConfig{
-		Version:         "1.0.0",
+		Version:         common.Version,
 		ControlPlaneUrl: baseURL,
 		DashboardUrl:    dashboardURL,
 		AccessToken:     accessToken,
