@@ -2,6 +2,11 @@ kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: selenium-java-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: selenium
+    artifacts: "true"
+    junit: "true"
 description: "Selenium Java + Standalone Chrome"
 spec:
   content:
