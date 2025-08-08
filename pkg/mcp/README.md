@@ -1,12 +1,12 @@
 # Testkube MCP (Model Context Protocol) Integration
 
-This package provides MCP integration for Testkube, enabling AI assistants to interact with Testkube workflows, executions, and artifacts through the Model Context Protocol.
+This package provides MCP integration for Testkube, enabling AI assistants to interact with Testkube workflows, executions, and artifacts through the [Model Context Protocol](https://modelcontextprotocol.io).
 
 ## Overview
 
-The MCP server is exposed via the `testkube mcp serve` CLI command, which leverages the existing OAuth authentication flow, for security purposes.
+The MCP server is exposed via the `testkube mcp serve` CLI command, which leverages the existing OAuth authentication flow for security purposes. The server requires you to be logged in via `testkube login` so it can access your specific Testkube account, permissions, and context (organization and environment). This provides seamless setup since the CLI already has all the necessary configuration after login.
 
-This implementation uses the [mcp-go](https://github.com/mark3labs/mcp-go) library, chosen for its proven usage in other projects like [GitHub's MCP server](https://github.com/github/mcp). The tool design patterns and helper functions draw inspiration from GitHub's implementation while being adapted for Testkube's specific needs.
+This implementation uses the [mcp-go](https://github.com/mark3labs/mcp-go) library, chosen for its proven usage in other projects like [GitHub's MCP server](https://github.com/github/github-mcp-server). The tool design patterns and helper functions draw inspiration from GitHub's implementation while being adapted for Testkube's specific needs.
 
 ## Architecture
 
