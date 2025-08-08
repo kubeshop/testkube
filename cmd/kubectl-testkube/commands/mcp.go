@@ -56,7 +56,7 @@ The MCP server provides AI assistants with tools to:
 
 Requirements:
 • OAuth authentication (run 'testkube login')
-• Testkube Pro environment with proper context
+• Testkube environment with proper context
 
 The server runs silently by default to avoid interfering with JSON-RPC communication
 over stdio. Use --verbose to see detailed output during startup.
