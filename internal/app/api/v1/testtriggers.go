@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/keymap/triggers"
 	triggerskeymapmapper "github.com/kubeshop/testkube/pkg/mapper/keymap/triggers"
 	testtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/testtriggers"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -61,7 +61,10 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
 
-		created, err := s.TestTriggersClient.Create(&testTrigger)
+		// Convert CRD to API object for the new interface
+		apiTrigger := testtriggersmapper.MapCRDToAPI(&testTrigger)
+
+		err := s.TestTriggersClient.Create(c.Context(), s.getEnvironmentId(), apiTrigger)
 
 		s.Metrics.IncCreateTestTrigger(err)
 
@@ -70,7 +73,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		}
 
 		c.Status(http.StatusCreated)
-		return c.JSON(testtriggersmapper.MapCRDToAPI(created))
+		return c.JSON(apiTrigger)
 	}
 }
 
@@ -93,6 +96,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
 			}
+
 		}
 
 		namespace := s.Namespace
@@ -101,29 +105,62 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + request.Name
 
-		// we need to get resource first and load its metadata.ResourceVersion
-		testTrigger, err := s.TestTriggersClient.Get(request.Name, namespace)
+		// we need to get resource first
+		apiTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
 		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
-			}
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
-		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
-		testTrigger.Namespace = namespace
-		testTrigger.Spec = crdTestTrigger.Spec
-		testTrigger.Labels = request.Labels
-		testTrigger.Annotations = request.Annotations
+		// Update the trigger with new values from request
+		apiTrigger.Name = request.Name
+		apiTrigger.Namespace = namespace
+		if request.Labels != nil {
+			apiTrigger.Labels = request.Labels
+		}
+		if request.Annotations != nil {
+			apiTrigger.Annotations = request.Annotations
+		}
 
-		testTrigger, err = s.TestTriggersClient.Update(testTrigger)
+		// Update individual fields from the request
+		if request.Resource != nil {
+			apiTrigger.Resource = request.Resource
+		}
+		if request.ResourceSelector != nil {
+			apiTrigger.ResourceSelector = request.ResourceSelector
+		}
+		if request.Event != "" {
+			apiTrigger.Event = request.Event
+		}
+		if request.ConditionSpec != nil {
+			apiTrigger.ConditionSpec = request.ConditionSpec
+		}
+		if request.ProbeSpec != nil {
+			apiTrigger.ProbeSpec = request.ProbeSpec
+		}
+		if request.Action != nil {
+			apiTrigger.Action = request.Action
+		}
+		if request.ActionParameters != nil {
+			apiTrigger.ActionParameters = request.ActionParameters
+		}
+		if request.Execution != nil {
+			apiTrigger.Execution = request.Execution
+		}
+		if request.TestSelector != nil {
+			apiTrigger.TestSelector = request.TestSelector
+		}
+		if request.ConcurrencyPolicy != nil {
+			apiTrigger.ConcurrencyPolicy = request.ConcurrencyPolicy
+		}
+		apiTrigger.Disabled = request.Disabled
+
+		err = s.TestTriggersClient.Update(c.Context(), s.getEnvironmentId(), *apiTrigger)
 		s.Metrics.IncUpdateTestTrigger(err)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test trigger: %w", errPrefix, err))
 		}
 
-		return c.JSON(testtriggersmapper.MapCRDToAPI(testTrigger))
+		return c.JSON(apiTrigger)
 	}
 }
 
@@ -149,8 +186,8 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 		}
 
 		for namespace := range namespaces {
-			err = s.TestTriggersClient.DeleteAll(namespace)
-			if err != nil && !k8serrors.IsNotFound(err) {
+			_, err = s.TestTriggersClient.DeleteAll(c.Context(), s.getEnvironmentId(), namespace)
+			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error cleaning triggers before reapply", errPrefix))
 			}
 		}
@@ -160,13 +197,16 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 		testTriggers := make([]testkube.TestTrigger, 0, len(request))
 
 		for _, upsertRequest := range request {
-			var testTrigger *testtriggersv1.TestTrigger
 			crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(upsertRequest)
 			// default trigger name if not defined in upsert request
 			if crdTestTrigger.Name == "" {
 				crdTestTrigger.Name = generateTestTriggerName(&crdTestTrigger)
 			}
-			testTrigger, err = s.TestTriggersClient.Create(&crdTestTrigger)
+
+			// Convert CRD to API object for the new interface
+			apiTrigger := testtriggersmapper.MapCRDToAPI(&crdTestTrigger)
+
+			err = s.TestTriggersClient.Create(c.Context(), s.getEnvironmentId(), apiTrigger)
 
 			s.Metrics.IncCreateTestTrigger(err)
 
@@ -174,7 +214,7 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error reapplying triggers after clean", errPrefix))
 			}
 
-			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(testTrigger))
+			testTriggers = append(testTriggers, apiTrigger)
 		}
 
 		s.Metrics.IncBulkUpdateTestTrigger(nil)
@@ -190,21 +230,15 @@ func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test trigger %s", name)
 
-		testTrigger, err := s.TestTriggersClient.Get(name, namespace)
+		apiTestTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), name, namespace)
 		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
-			}
-
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusOK)
 
-		apiTestTrigger := testtriggersmapper.MapCRDToAPI(testTrigger)
-
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
+			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{*apiTestTrigger})
 			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
@@ -219,15 +253,11 @@ func (s *TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test trigger %s", name)
 
-		err := s.TestTriggersClient.Delete(name, namespace)
+		err := s.TestTriggersClient.Delete(c.Context(), s.getEnvironmentId(), name, namespace)
 
 		s.Metrics.IncDeleteTestTrigger(err)
 
 		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
-			}
-
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test trigger: %w", errPrefix, err))
 		}
 
@@ -248,15 +278,11 @@ func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: error validating selector: %w", errPrefix, err))
 			}
 		}
-		err := s.TestTriggersClient.DeleteByLabels(selector, namespace)
+		_, err := s.TestTriggersClient.DeleteByLabels(c.Context(), s.getEnvironmentId(), selector, namespace)
 
 		s.Metrics.IncBulkDeleteTestTrigger(err)
 
 		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
-			}
-
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not bulk delete test triggers: %w", errPrefix, err))
 		}
 
@@ -267,7 +293,7 @@ func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 // ListTestTriggersHandler is a handler for listing all available TestTriggers
 func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		errPrefix := "failed to delete test triggers"
+		errPrefix := "failed to list test triggers"
 
 		namespace := c.Query("namespace", s.Namespace)
 		selector := c.Query("selector")
@@ -277,14 +303,16 @@ func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: error validating selector: %w", errPrefix, err))
 			}
 		}
-		testTriggers, err := s.TestTriggersClient.List(selector, namespace)
+		options := testtriggerclient.ListOptions{
+			Selector: selector,
+		}
+
+		apiTestTriggers, err := s.TestTriggersClient.List(c.Context(), s.getEnvironmentId(), options, namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test triggers: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusOK)
-
-		apiTestTriggers := testtriggersmapper.MapTestTriggerListKubeToAPI(testTriggers)
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, apiTestTriggers)

@@ -59,6 +59,19 @@ service TestKubeCloudAPI {
     rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
     rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
     rpc WatchTestWorkflowTemplateUpdates(WatchTestWorkflowTemplateUpdatesRequest) returns (stream TestWorkflowTemplateUpdate);
+
+    // -- Test Triggers
+    rpc GetTestTrigger(GetTestTriggerRequest) returns (GetTestTriggerResponse);
+    rpc ListTestTriggers(ListTestTriggersRequest) returns (stream TestTriggerListItem);
+    rpc ListTestTriggerLabels(ListTestTriggerLabelsRequest) returns (ListTestTriggerLabelsResponse);
+    rpc CreateTestTrigger(CreateTestTriggerRequest) returns (CreateTestTriggerResponse);
+    rpc UpdateTestTrigger(UpdateTestTriggerRequest) returns (UpdateTestTriggerResponse);
+    rpc DeleteTestTrigger(DeleteTestTriggerRequest) returns (DeleteTestTriggerResponse);
+    rpc DeleteAllTestTriggers(DeleteAllTestTriggersRequest) returns (DeleteAllTestTriggersResponse);
+    rpc DeleteTestTriggersByLabels(DeleteTestTriggersByLabelsRequest) returns (DeleteTestTriggersByLabelsResponse);
+    rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate);
+
+    
 }
 
 enum LogsStreamRequestType {
@@ -621,4 +634,88 @@ message TestWorkflowTemplateUpdate {
   google.protobuf.Timestamp timestamp = 2;
   UpdateType type = 3;
   bytes resource = 4; // TestWorkflowTemplate
+}
+
+// CRD Synchronisation -- Test Triggers
+
+message GetTestTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message ListTestTriggersRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message TestTriggerListItem {
+  bytes trigger = 1; // TestTrigger
+}
+
+message ListTestTriggerLabelsRequest {
+  string namespace = 1;
+}
+
+message ListTestTriggerLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestTriggerRequest {
+  bytes trigger = 1; // TestTrigger
+}
+
+message CreateTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message UpdateTestTriggerRequest {
+  bytes trigger = 1; // TestTrigger
+}
+
+message UpdateTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message DeleteTestTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteTestTriggerResponse {}
+
+message DeleteAllTestTriggersRequest {
+  string namespace = 1;
+}
+
+message DeleteAllTestTriggersResponse {
+  uint32 count = 1;
+}
+
+message DeleteTestTriggersByLabelsRequest {
+  string selector = 1;
+  string namespace = 2;
+}
+
+message DeleteTestTriggersByLabelsResponse {
+  uint32 count = 1;
+}
+
+message WatchTestTriggerUpdatesRequest {
+  bool include_initial_data = 1;
+  string namespace = 2;
+}
+
+message TestTriggerUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestTrigger
 }
