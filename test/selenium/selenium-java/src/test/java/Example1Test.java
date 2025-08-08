@@ -2,7 +2,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class Example2Test extends BaseTest {
+public class Example1Test extends BaseTest {
 
     @Test
     public void example_1_1_Test() {
