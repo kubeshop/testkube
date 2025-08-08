@@ -7,7 +7,7 @@ public class Example2Test extends BaseTest {
     @Test
     public void example_2_1_Test() {
         driver.get("https://testkube-test-page-lipsum.pages.dev/");
-        assertEquals("Testkube test page - Lipsum", driver.getTitle());
+        assertEquals("Testkube test page - Lorem Ipsum", driver.getTitle());
     }
 
     @Test
