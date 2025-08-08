@@ -45,6 +45,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
@@ -244,14 +245,16 @@ func main() {
 	// k8s clients
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	webhookTemplatesClient := executorsclientv1.NewWebhookTemplatesClient(kubeClient, cfg.TestkubeNamespace)
-	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
 
-	var testWorkflowsClient testworkflowclient.TestWorkflowClient
-	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+	var (
+		testWorkflowsClient         testworkflowclient.TestWorkflowClient
+		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+		testTriggersClient          testtriggerclient.TestTriggerClient
+	)
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
@@ -284,11 +287,15 @@ func main() {
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
+		testTriggersClient = testtriggerclient.NewCloudTestTriggerClient(client)
 	} else {
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow client", err)
 		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow templates client", err)
+
+		legacyTestTriggersClientForAPI := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
 	defaultExecutionNamespace := cfg.TestkubeNamespace
