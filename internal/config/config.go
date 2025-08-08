@@ -229,6 +229,18 @@ type Config struct {
 
 	FeatureNewArchitecture bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
 	FeatureCloudStorage    bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+
+	// ListenerAgent enables a minimal mode that only runs Test Triggers logic
+	ListenerAgent bool `envconfig:"LISTENER_AGENT" default:"false"`
+
+	// GitOpsAgent enables a minimal mode that only runs GitOps sync reconciliation
+	GitOpsAgent bool `envconfig:"GITOPS_AGENT" default:"false"`
+
+	// DisableAPIServer disables starting the HTTP API server
+	DisableAPIServer bool `envconfig:"DISABLE_API_SERVER" default:"false"`
+
+	// DisableEventSystem disables event handlers and the event reconcile loop
+	DisableEventSystem bool `envconfig:"DISABLE_EVENT_SYSTEM" default:"false"`
 }
 
 type DeprecatedConfig struct {

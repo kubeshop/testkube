@@ -93,6 +93,12 @@ func main() {
 
 	log.DefaultLogger.Infow("configuration loaded",
 		"mode", func() string {
+			if cfg.ListenerAgent {
+				return "listener-agent"
+			}
+			if cfg.GitOpsAgent {
+				return "gitops-agent"
+			}
 			if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 				return "agent"
 			}
@@ -105,7 +111,31 @@ func main() {
 
 	// Determine the running mode
 	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
+	if cfg.ListenerAgent {
+		mode = common.ModeListenerAgent
+		// tighten components for listener agent to only run trigger logic
+		cfg.DisableDefaultAgent = true
+		cfg.DisableWebhooks = true
+		cfg.DisableDeprecatedTests = true
+		cfg.DisableRunner = true
+		cfg.EnableK8sControllers = false
+		cfg.EnableCronJobs = "false"
+		cfg.DisableAPIServer = true
+		cfg.DisableEventSystem = true
+		cfg.DisableTestTriggers = true
+	} else if cfg.GitOpsAgent {
+		mode = common.ModeGitOpsAgent
+		// tighten components for gitops agent to only run GitOps sync
+		cfg.DisableDefaultAgent = true
+		cfg.DisableWebhooks = true
+		cfg.DisableDeprecatedTests = true
+		cfg.DisableRunner = true
+		cfg.EnableK8sControllers = false
+		cfg.EnableCronJobs = "false"
+		cfg.DisableAPIServer = true
+		cfg.DisableEventSystem = true
+		cfg.DisableTestTriggers = true
+	} else if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 		mode = common.ModeAgent
 	} else {
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
@@ -418,36 +448,38 @@ func main() {
 		deprecatedRepositories = deprecatedSystem.Repositories
 	}
 
-	// Initialize event handlers
+	// Initialize event handlers (skip when disabled)
 	websocketLoader := ws.NewWebsocketLoader()
-	if !cfg.DisableWebhooks {
-		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
-			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
-	}
-	eventsEmitter.Loader.Register(websocketLoader)
-	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
-	if cfg.CDEventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
-		if err == nil {
-			eventsEmitter.Loader.Register(cdeventLoader)
-		} else {
-			log.DefaultLogger.Debugw("cdevents init error", "error", err.Error())
+	if !cfg.DisableEventSystem {
+		if !cfg.DisableWebhooks {
+			secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+			eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
+				testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
 		}
+		eventsEmitter.Loader.Register(websocketLoader)
+		eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
+		if cfg.CDEventsTarget != "" {
+			cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
+			if err == nil {
+				eventsEmitter.Loader.Register(cdeventLoader)
+			} else {
+				log.DefaultLogger.Debugw("cdevents init error", "error", err.Error())
+			}
+		}
+		if cfg.EnableK8sEvents {
+			eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
+		}
+
+		// Update the Prometheus metrics regarding the Test Workflow Execution
+		eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
+
+		// Send the telemetry data regarding the Test Workflow Execution
+		// TODO: Disable it if Control Plane does that
+		eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
+
+		// Update TestWorkflowExecution Kubernetes resource objects on status change
+		eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 	}
-	if cfg.EnableK8sEvents {
-		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
-	}
-
-	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
-
-	// Send the telemetry data regarding the Test Workflow Execution
-	// TODO: Disable it if Control Plane does that
-	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
-
-	// Update TestWorkflowExecution Kubernetes resource objects on status change
-	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
 	// Synchronise Test Workflows with cloud
 	if proContext.CloudStorageSupportedInControlPlane && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
@@ -561,13 +593,15 @@ func main() {
 		}
 	}
 
-	log.DefaultLogger.Info("starting event system...")
-	eventsEmitter.Listen(ctx)
-	g.Go(func() error {
-		eventsEmitter.Reconcile(ctx)
-		return nil
-	})
-	log.DefaultLogger.Info("event system started successfully")
+	if !cfg.DisableEventSystem {
+		log.DefaultLogger.Info("starting event system...")
+		eventsEmitter.Listen(ctx)
+		g.Go(func() error {
+			eventsEmitter.Reconcile(ctx)
+			return nil
+		})
+		log.DefaultLogger.Info("event system started successfully")
+	}
 
 	// Create Kubernetes Operators/Controllers
 	if cfg.EnableK8sControllers {
@@ -614,52 +648,55 @@ func main() {
 		})
 	}
 
-	// Create HTTP server
-	log.DefaultLogger.Infow("creating HTTP server...", "port", cfg.APIServerPort)
-	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
-	httpServer.Routes.Use(cors.New())
+	// Create HTTP server (skip if disabled)
+	var httpServer server.HTTPServer
+	if !cfg.DisableAPIServer {
+		log.DefaultLogger.Infow("creating HTTP server...", "port", cfg.APIServerPort)
+		httpServer = server.NewServer(server.Config{Port: cfg.APIServerPort})
+		httpServer.Routes.Use(cors.New())
 
-	if deprecatedSystem != nil && deprecatedSystem.API != nil {
-		deprecatedSystem.API.Init(httpServer)
+		if deprecatedSystem != nil && deprecatedSystem.API != nil {
+			deprecatedSystem.API.Init(httpServer)
+		}
+
+		api := apiv1.NewTestkubeAPI(
+			deprecatedClients,
+			clusterId,
+			cfg.TestkubeNamespace,
+			testWorkflowResultsRepository,
+			testWorkflowOutputRepository,
+			artifactStorage,
+			webhooksClient,
+			webhookTemplatesClient,
+			testTriggersClient,
+			testWorkflowsClient,
+			testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
+			testWorkflowTemplatesClient,
+			testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace),
+			configMapConfig,
+			secretManager,
+			secretConfig,
+			executionWorker,
+			eventsEmitter,
+			websocketLoader,
+			metrics,
+			&proContext,
+			features,
+			cfg.TestkubeHelmchartVersion,
+			serviceAccountNames,
+			cfg.TestkubeDockerImageVersion,
+			testWorkflowExecutor,
+		)
+		api.Init(httpServer)
 	}
 
-	api := apiv1.NewTestkubeAPI(
-		deprecatedClients,
-		clusterId,
-		cfg.TestkubeNamespace,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		artifactStorage,
-		webhooksClient,
-		webhookTemplatesClient,
-		testTriggersClient,
-		testWorkflowsClient,
-		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
-		testWorkflowTemplatesClient,
-		testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace),
-		configMapConfig,
-		secretManager,
-		secretConfig,
-		executionWorker,
-		eventsEmitter,
-		websocketLoader,
-		metrics,
-		&proContext,
-		features,
-		cfg.TestkubeHelmchartVersion,
-		serviceAccountNames,
-		cfg.TestkubeDockerImageVersion,
-		testWorkflowExecutor,
-	)
-	api.Init(httpServer)
-
-	log.DefaultLogger.Info("starting agent service")
-
-	getDeprecatedLogStream := agent.GetDeprecatedLogStream
-	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
-		getDeprecatedLogStream = deprecatedSystem.StreamLogs
-	}
 	if !cfg.DisableDefaultAgent {
+		log.DefaultLogger.Info("starting agent service")
+
+		getDeprecatedLogStream := agent.GetDeprecatedLogStream
+		if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
+			getDeprecatedLogStream = deprecatedSystem.StreamLogs
+		}
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
@@ -723,20 +760,30 @@ func main() {
 		return nil
 	})
 
-	log.DefaultLogger.Infow(
-		"testkube API Server started successfully",
-		"telemetryEnabled", telemetryEnabled,
-		"clusterId", clusterId,
-		"namespace", cfg.TestkubeNamespace,
-		"executionNamespace", cfg.DefaultExecutionNamespace,
-		"version", version.Version,
-		"startupTime", time.Since(startTime),
-	)
-	log.DefaultLogger.Infow("api endpoints ready",
-		"httpPort", cfg.APIServerPort,
-		"grpcPort", cfg.GRPCServerPort,
-		"graphqlPort", cfg.GraphqlPort,
-	)
+	if !cfg.DisableAPIServer {
+		log.DefaultLogger.Infow(
+			"testkube API Server started successfully",
+			"telemetryEnabled", telemetryEnabled,
+			"clusterId", clusterId,
+			"namespace", cfg.TestkubeNamespace,
+			"executionNamespace", cfg.DefaultExecutionNamespace,
+			"version", version.Version,
+			"startupTime", time.Since(startTime),
+		)
+		log.DefaultLogger.Infow("api endpoints ready",
+			"httpPort", cfg.APIServerPort,
+			"grpcPort", cfg.GRPCServerPort,
+			"graphqlPort", cfg.GraphqlPort,
+		)
+	} else {
+		log.DefaultLogger.Infow(
+			"Testkube "+mode+" started successfully",
+			"clusterId", clusterId,
+			"namespace", cfg.TestkubeNamespace,
+			"version", version.Version,
+			"startupTime", time.Since(startTime),
+		)
+	}
 
 	if cfg.EnableDebugServer {
 		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
@@ -798,10 +845,12 @@ func main() {
 		})
 	}
 
-	g.Go(func() error {
-		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
-		return httpServer.Run(ctx)
-	})
+	if !cfg.DisableAPIServer {
+		g.Go(func() error {
+			log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
+			return httpServer.Run(ctx)
+		})
+	}
 
 	if deprecatedSystem != nil {
 		if deprecatedSystem.Reconciler != nil {
