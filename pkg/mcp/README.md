@@ -40,6 +40,8 @@ This flexibility allows the same MCP tools to work in different deployment scena
 ```bash
 # Build the CLI (if needed)
 make build-kubectl-testkube-cli
+# This also deletes the previously built cli
+make rebuild-kubectl-testkube-cli
 
 # Start the MCP server
 testkube mcp serve
@@ -60,3 +62,17 @@ npx @modelcontextprotocol/inspector ./bin/app/kubectl-testkube mcp serve --debug
 ```
 
 The debug mode enables detailed request/response logging for the API client, making it easier to troubleshoot integration issues.
+
+### Example MCP configuration for VSCode
+
+```
+{
+  "servers": {
+    "testkube": {
+      "command": "/path/to/your/testkube/bin/app/kubectl-testkube",
+      "args": ["mcp", "serve", "--debug"],
+      "type": "stdio"
+    }
+  }
+}
+```
