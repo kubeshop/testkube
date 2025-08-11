@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,8 +22,18 @@ import (
 )
 
 const (
-	initialConnectionTimeout = 10 * time.Second
-	apiKeyMeta               = "api-key"
+	connectionTimeout = 10 * time.Second
+	apiKeyMeta        = "api-key"
+
+	// The backoff values chosen here are copied from an example in the
+	// gRPC documentation and represent a starting point that may be
+	// iterated on as we learn more about the connection issues faced
+	// by customers.
+	// - https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md
+	backoffDelay      = 1 * time.Second
+	backoffMultiplier = 1.6
+	backoffJitter     = 0.2
+	backoffMaxDelay   = 120 * time.Second
 
 	GRPCKeepaliveTime                = 10 * time.Second
 	GRPCKeepaliveTimeout             = GRPCKeepaliveTime / 2
@@ -37,7 +48,7 @@ func NewGRPCConnection(
 	certFile, keyFile, caFile string,
 	logger *zap.SugaredLogger,
 ) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, initialConnectionTimeout)
+	ctx, cancel := context.WithTimeout(ctx, connectionTimeout)
 	defer cancel()
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if skipVerify {
@@ -72,6 +83,15 @@ func NewGRPCConnection(
 		grpc.WithUserAgent(userAgent),
 		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(kacp),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: backoff.Config{
+				BaseDelay:  backoffDelay,
+				Multiplier: backoffMultiplier,
+				Jitter:     backoffJitter,
+				MaxDelay:   backoffMaxDelay,
+			},
+			MinConnectTimeout: connectionTimeout,
+		}),
 	)
 	if err != nil {
 		return client, fmt.Errorf("create new grpc client: %w", err)
