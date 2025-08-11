@@ -361,7 +361,7 @@ message RegisterResponse {
 }
 
 enum RunnerRequestType {
-  PING = 0; // Heartbeat
+  PING = 0 [deprecated = true]; // Heartbeat
   CONSIDER = 1; // Consider a new execution to be run
   START = 2; // Start
   ABORT = 3; // Abort the execution
