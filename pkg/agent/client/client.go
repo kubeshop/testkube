@@ -19,8 +19,12 @@ import (
 )
 
 const (
-	timeout    = 10 * time.Second
-	apiKeyMeta = "api-key"
+	initialConnectionTimeout = 10 * time.Second
+	apiKeyMeta               = "api-key"
+
+	GRPCKeepaliveTime                = 10 * time.Second
+	GRPCKeepaliveTimeout             = GRPCKeepaliveTime / 2
+	GRPCKeepalivePermitWithoutStream = true
 )
 
 func NewGRPCConnection(
@@ -31,7 +35,7 @@ func NewGRPCConnection(
 	certFile, keyFile, caFile string,
 	logger *zap.SugaredLogger,
 ) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, initialConnectionTimeout)
 	defer cancel()
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if skipVerify {
@@ -55,9 +59,9 @@ func NewGRPCConnection(
 	}
 
 	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             5 * time.Second,
-		PermitWithoutStream: true,
+		Time:                GRPCKeepaliveTime,
+		Timeout:             GRPCKeepaliveTimeout,
+		PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
 	}
 
 	userAgent := version.Version + "/" + version.Commit
