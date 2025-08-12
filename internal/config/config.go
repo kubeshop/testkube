@@ -251,7 +251,6 @@ func Get() (*Config, error) {
 	}
 
 	if strings.HasPrefix(c.TestkubeProAgentID, "tkcrun_") {
-		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
 		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true
@@ -260,7 +259,6 @@ func Get() (*Config, error) {
 		c.EnableCronJobs = "false"
 		c.EnableK8sControllers = false
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
-		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
 		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true

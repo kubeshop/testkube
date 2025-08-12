@@ -48,6 +48,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	leasebackend "github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -681,20 +683,28 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	if !cfg.DisableTestTriggers && controlPlane != nil {
+	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		commons.ExitOnError("getting k8s client config", err)
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 		commons.ExitOnError("creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
-		leaseBackend := controlPlane.GetRepositoryManager().LeaseBackend()
+
+		var lb leasebackend.Repository
+		if controlPlane != nil {
+			lb = controlPlane.GetRepositoryManager().LeaseBackend()
+		} else {
+			// Fallback: Kubernetes Lease-based coordination (no external DB required)
+			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
+		}
+
 		triggerService := triggers.NewService(
 			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
-			leaseBackend,
+			lb,
 			log.DefaultLogger,
 			configMapConfig,
 			eventBus,
