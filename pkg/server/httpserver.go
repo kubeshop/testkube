@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net"
+	"net/http"
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 )
 
 // NewServer returns new HTTP server instance, initializes logger and metrics
@@ -45,6 +47,8 @@ func (s *HTTPServer) Init() {
 	})
 
 	s.Mux.Use(pprof.New())
+
+	s.Mux.Use(adaptor.HTTPMiddleware(userAgentMiddleware))
 
 	// server generic endpoints
 	s.Mux.Get("/health", s.HealthEndpoint())
@@ -92,4 +96,17 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		_ = s.Mux.Shutdown()
 	}()
 	return s.Mux.Listener(l)
+}
+
+// userAgentMiddleware idenfies if in request is coming a header "User-Agent" to send events to Segment.IO
+func userAgentMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userAgent := r.Header.Get("User-Agent")
+		// If userAgent is one of the following values: backstage, cli
+		if userAgent == "backstage" || userAgent == "cli" {
+			// Send event with telemetry
+			telemetry.SendUserAgentEvent(userAgent)
+		}
+		next.ServeHTTP(w, r)
+	})
 }

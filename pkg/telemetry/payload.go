@@ -52,6 +52,7 @@ type Params struct {
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
 	Email                      string     `json:"email,omitempty"`
+	UserAgent                  string     `json:"user_agent,omitempty"`
 }
 
 type Event struct {
@@ -320,6 +321,29 @@ func NewRunWorkflowPayload(name, clusterType string, params RunWorkflowParams) P
 					TestWorkflowImage:          params.TestWorkflowImage,
 					TestWorkflowArtifactUsed:   params.TestWorkflowArtifactUsed,
 					TestWorkflowKubeshopGitURI: params.TestWorkflowKubeshopGitURI,
+				},
+			}},
+	}
+}
+
+// NewUserAgentPayload prepares payload for Allowed User Agent connection
+func NewUserAgentPayload(userAgent, clusterType string) Payload {
+	return Payload{
+		ClientID: GetMachineID(),
+		UserID:   GetMachineID(),
+		Events: []Event{
+			{
+				Name: "allowed_user_agent",
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   "api",
+					AppName:         "testkube-api-server",
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+					MachineID:       GetMachineID(),
+					ClusterType:     clusterType,
+					Context:         getAgentContext(),
+					UserAgent:       userAgent,
 				},
 			}},
 	}
