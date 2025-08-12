@@ -375,21 +375,19 @@ func ConvertIndependentServiceToService(svc testworkflowsv1.IndependentServiceSp
 
 func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.IndependentStepParallel) testworkflowsv1.StepParallel {
 	return testworkflowsv1.StepParallel{
-		Parallelism:         step.Parallelism,
-		StepExecuteStrategy: step.StepExecuteStrategy,
-		Description:         step.Description,
-		Logs:                step.Logs,
-		Transfer:            step.Transfer,
-		Fetch:               step.Fetch,
-		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-			TestWorkflowSpecBase: step.TestWorkflowTemplateSpec.TestWorkflowSpecBase,
-			Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
-			Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
-			After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
-			Pvcs:                 step.TestWorkflowTemplateSpec.Pvcs,
-		},
-		StepControl:    step.StepControl,
-		StepOperations: step.StepOperations,
+		Parallelism:          step.Parallelism,
+		StepExecuteStrategy:  step.StepExecuteStrategy,
+		Description:          step.Description,
+		Logs:                 step.Logs,
+		Transfer:             step.Transfer,
+		Fetch:                step.Fetch,
+		TestWorkflowSpecBase: step.TestWorkflowTemplateSpec.TestWorkflowSpecBase,
+		Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
+		Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
+		After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
+		Pvcs:                 step.TestWorkflowTemplateSpec.Pvcs,
+		StepControl:          step.StepControl,
+		StepOperations:       step.StepOperations,
 	}
 }
 
