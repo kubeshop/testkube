@@ -12,6 +12,6 @@ public class Example1Test extends BaseTest {
 
     @Test
     public void example_1_2_Test() throws InterruptedException {
-        Thread.sleep(500);
+        Thread.sleep(5000);
     }
 }

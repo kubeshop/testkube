@@ -13,11 +13,11 @@ public class Example2Test extends BaseTest {
 
     @Test
     public void example_2_2_Test() throws InterruptedException {
-        Thread.sleep(700);
+        Thread.sleep(7000);
     }
 
     @Test
     public void example_2_3_Test() throws InterruptedException {
-        Thread.sleep(1000);
+        Thread.sleep(10000);
     }
 }
