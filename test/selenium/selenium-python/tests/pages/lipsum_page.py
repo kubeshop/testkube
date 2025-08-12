@@ -1,6 +1,5 @@
 class LipsumPage:
     URL = "https://testkube-test-page-lipsum.pages.dev/"
-    EXPECTED_TITLE = "Testkube test page - Lipsum"
 
     def __init__(self, driver):
         self.driver = driver
