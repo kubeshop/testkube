@@ -98,13 +98,13 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	return s.Mux.Listener(l)
 }
 
-// userAgentMiddleware idenfies if in request is coming a header "User-Agent" to send events to Segment.IO
+// userAgentMiddleware identifies if in request is coming a header "User-Agent" to send event
 func userAgentMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userAgent := r.Header.Get("User-Agent")
 		// If userAgent is one of the following values: backstage, cli
 		if userAgent == "backstage" || userAgent == "cli" {
-			// Send event with telemetry
+			// Send event
 			telemetry.SendUserAgentEvent(userAgent)
 		}
 		next.ServeHTTP(w, r)
