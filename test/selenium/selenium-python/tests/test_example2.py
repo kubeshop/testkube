@@ -11,4 +11,4 @@ def test_example_2_2(driver):
     time.sleep(5)
 
 def test_example_2_3(driver):
-    time.sleep(10)
+    time.sleep(5)
