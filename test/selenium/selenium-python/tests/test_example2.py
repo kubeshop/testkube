@@ -8,7 +8,7 @@ def test_example_2_1(driver):
     assert page.get_title() == 'Testkube test page - Lorem Ipsum'
 
 def test_example_2_2(driver):
-    time.sleep(7)
+    time.sleep(5)
 
 def test_example_2_3(driver):
     time.sleep(10)

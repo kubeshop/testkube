@@ -5,6 +5,7 @@ def test_example_1_1(driver):
     page = LipsumPage(driver)
     page.open()
     assert page.get_title() == 'Testkube test page - Lorem Ipsum'
+    time.sleep(5)
 
 def test_example_1_2(driver):
     time.sleep(5)
