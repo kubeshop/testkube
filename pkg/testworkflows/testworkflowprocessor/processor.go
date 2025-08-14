@@ -89,6 +89,7 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 
 	// Add virtual pause step in case no other is there
 	if self.HasPause() && len(self.Children()) == 0 {
+		fmt.Printf("Pausing process due self pause configured: %s , %s", self.Name(), self.Ref())
 		pause := stage.NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
 			SetArgs("-c", "exit 0")).

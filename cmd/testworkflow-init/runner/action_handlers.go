@@ -147,6 +147,7 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 	if len(paused) > 0 {
 		ctx.ClearDelayedPauses()
 		_ = handlePause(*step.StartedAt, step, ctx)
+		fmt.Printf("Pausing step due delay: %s", step.Ref)
 	}
 
 	var hasTimeout, hasOwnTimeout atomic.Bool
