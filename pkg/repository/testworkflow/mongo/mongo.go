@@ -147,26 +147,17 @@ func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowN
 		{{
 			Key: "$addFields",
 			Value: bson.M{
-				"latestExecution": bson.M{"$first": "$execution"},
-			},
-		}},
-		{{
-			Key: "$addFields",
-			Value: bson.M{
-				"updatetime": bson.M{"$max": bson.A{
-					bson.M{
-						"$cond": bson.M{
-							"if": bson.M{
-								"$and": bson.A{
-									bson.M{"$ne": bson.A{"$latestExecution.result.startedat", nil}},
-									bson.M{"$ne": bson.A{"$latestExecution.result.startedat", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
-								},
+				"updatetime": bson.M{"$max": bson.M{
+					"$cond": bson.M{
+						"if": bson.M{
+							"$and": bson.A{
+								bson.M{"$ne": bson.A{"$result.startedat", nil}},
+								bson.M{"$ne": bson.A{"$result.startedat", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
 							},
-							"then": "$latestExecution.result.startedat",
-							"else": "$latestExecution.statusat",
 						},
+						"then": "$result.startedat",
+						"else": "$statusat",
 					},
-					"$created",
 				}},
 			},
 		}},
