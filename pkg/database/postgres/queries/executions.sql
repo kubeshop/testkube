@@ -308,7 +308,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming')
+WHERE r.status IN ('queued', 'pending', 'starting', 'running', 'pausing', 'paused', 'resuming')
 ORDER BY e.id DESC;
 
 -- name: GetFinishedTestWorkflowExecutions :many
@@ -976,7 +976,7 @@ SET status_at = @abort_time
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = @id
     AND test_workflow_executions.id = r.execution_id
-    AND r.status IN ('queued', 'assigned', 'starting', 'running', 'paused', 'resuming')
+    AND r.status IN ('queued', 'pending', 'starting', 'running', 'paused', 'resuming')
     AND (test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
 RETURNING test_workflow_executions.id;
 

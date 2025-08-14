@@ -14,7 +14,7 @@ type TestWorkflowStatus string
 // List of TestWorkflowStatus
 const (
 	QUEUED_TestWorkflowStatus   TestWorkflowStatus = "queued"
-	ASSIGNED_TestWorkflowStatus TestWorkflowStatus = "assigned"
+	PENDING_TestWorkflowStatus  TestWorkflowStatus = "pending"
 	STARTING_TestWorkflowStatus TestWorkflowStatus = "starting"
 	RUNNING_TestWorkflowStatus  TestWorkflowStatus = "running"
 	PAUSING_TestWorkflowStatus  TestWorkflowStatus = "pausing"

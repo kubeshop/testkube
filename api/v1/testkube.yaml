@@ -9211,7 +9211,7 @@ components:
       type: string
       enum:
         - queued
-        - assigned
+        - pending
         - starting
         - running
         - pausing
