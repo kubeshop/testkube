@@ -113,11 +113,8 @@ func (ag *Agent) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 		err := ag.run(ctx)
-
-		ag.logger.Errorw("agent connection failed, reconnecting", "error", err)
-
-		// TODO: some smart back off strategy?
-		time.Sleep(5 * time.Second)
+		ag.logger.Errorw("agent connection failed", "error", err)
+		return err
 	}
 }
 
