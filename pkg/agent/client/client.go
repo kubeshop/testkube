@@ -107,6 +107,7 @@ func NewGRPCConnection(
 	if err := eg.Wait(); err != nil {
 		return client, fmt.Errorf("connection did not go ready: %w", err)
 	}
+	logger.Infow("initiated connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
 	return client, nil
 }
 
