@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -92,6 +93,12 @@ func NewGRPCConnection(
 			},
 			MinConnectTimeout: connectionTimeout,
 		}),
+		grpc.WithChainStreamInterceptor(
+			grpczap.StreamClientInterceptor(logger.Desugar()),
+		),
+		grpc.WithChainUnaryInterceptor(
+			grpczap.UnaryClientInterceptor(logger.Desugar()),
+		),
 	)
 	if err != nil {
 		return client, fmt.Errorf("create new grpc client: %w", err)
