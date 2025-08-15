@@ -166,7 +166,7 @@ func extractCredentialsInParallel(parallel *testworkflowsv1.StepParallel, extern
 	if parallel == nil {
 		return
 	}
-	return extractCredentialsInWorkflowSpec(&parallel.TestWorkflowSpec, externalize)
+	return extractCredentialsInWorkflowSpec(parallel.NewTestWorkflowSpec(), externalize)
 }
 
 func extractCredentialsInIndependentParallel(parallel *testworkflowsv1.IndependentStepParallel, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {

@@ -191,10 +191,8 @@ func TestParallelSpecParsing(t *testing.T) {
 						StepOperations: testworkflowsv1.StepOperations{
 							Shell: `echo "inline"`,
 						},
-						TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-							Steps: []testworkflowsv1.Step{
-								{StepOperations: testworkflowsv1.StepOperations{Shell: `echo "step"`}},
-							},
+						Steps: []testworkflowsv1.Step{
+							{StepOperations: testworkflowsv1.StepOperations{Shell: `echo "step"`}},
 						},
 					}
 				},

@@ -174,10 +174,8 @@ func TestExtract_ParallelContent(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{Parallel: &testworkflowsv1.StepParallel{
-					TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGitCreate("some-username", "some-token", ""),
-						},
+					TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+						Content: testGitCreate("some-username", "some-token", ""),
 					},
 				}},
 			},
@@ -190,10 +188,8 @@ func TestExtract_ParallelContent(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{Parallel: &testworkflowsv1.StepParallel{
-					TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
-						},
+					TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+						Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
 					},
 				}},
 			},

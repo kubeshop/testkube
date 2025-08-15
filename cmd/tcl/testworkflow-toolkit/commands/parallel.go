@@ -423,7 +423,7 @@ func (b *ParallelWorkersBuilder) buildSingleWorkerSpec(parallel *testworkflowsv1
 
 	return WorkerSpec{
 		Index:        index,
-		Spec:         spec.TestWorkflowSpec,
+		Spec:         *spec.NewTestWorkflowSpec(),
 		Namespace:    namespace,
 		Description:  spec.Description,
 		LogCondition: logCondition,

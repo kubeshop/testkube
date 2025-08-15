@@ -200,10 +200,18 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]*testw
 		}
 
 		// Resolve the spec inside of parallel step
-		err := applyTemplatesToSpec(&step.Parallel.TestWorkflowSpec, templates, externalize)
+		testWorkflowSpec := step.Parallel.NewTestWorkflowSpec()
+		err := applyTemplatesToSpec(testWorkflowSpec, templates, externalize)
 		if err != nil {
 			return step, errors.Wrap(err, ".parallel")
 		}
+		step.Parallel.Use = testWorkflowSpec.Use
+		step.Parallel.TestWorkflowSpecBase = testWorkflowSpec.TestWorkflowSpecBase
+		step.Parallel.Services = testWorkflowSpec.Services
+		step.Parallel.Setup = testWorkflowSpec.Setup
+		step.Parallel.Steps = testWorkflowSpec.Steps
+		step.Parallel.After = testWorkflowSpec.After
+		step.Parallel.Pvcs = testWorkflowSpec.Pvcs
 	}
 
 	// Resolve templates in the sub-steps
@@ -336,7 +344,7 @@ func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string
 
 func addGlobalTemplateRefToStep(step *testworkflowsv1.Step, ref testworkflowsv1.TemplateRef) {
 	if step.Parallel != nil {
-		addGlobalTemplateRefToSpec(&step.Parallel.TestWorkflowSpec, ref)
+		addGlobalTemplateRefToSpec(step.Parallel.NewTestWorkflowSpec(), ref)
 	}
 	for i := range step.Setup {
 		addGlobalTemplateRefToStep(&step.Setup[i], ref)

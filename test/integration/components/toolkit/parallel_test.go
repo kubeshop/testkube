@@ -414,58 +414,56 @@ func TestParallelLifecycle_Integration(t *testing.T) {
 	t.Cleanup(cleanupCP)
 
 	spec := &testworkflowsv1.StepParallel{
-		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Container: &testworkflowsv1.ContainerConfig{
-					Env: []testworkflowsv1.EnvVar{
-						{EnvVar: corev1.EnvVar{Name: "WORKER_ID", Value: "worker-{{index}}"}},
-						{EnvVar: corev1.EnvVar{Name: "TOTAL", Value: "{{count}}"}},
+		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+			Container: &testworkflowsv1.ContainerConfig{
+				Env: []testworkflowsv1.EnvVar{
+					{EnvVar: corev1.EnvVar{Name: "WORKER_ID", Value: "worker-{{index}}"}},
+					{EnvVar: corev1.EnvVar{Name: "TOTAL", Value: "{{count}}"}},
+				},
+				Resources: &testworkflowsv1.Resources{
+					Requests: map[corev1.ResourceName]intstr.IntOrString{
+						corev1.ResourceCPU:    intstr.FromString("100m"),
+						corev1.ResourceMemory: intstr.FromString("128Mi"),
 					},
-					Resources: &testworkflowsv1.Resources{
-						Requests: map[corev1.ResourceName]intstr.IntOrString{
-							corev1.ResourceCPU:    intstr.FromString("100m"),
-							corev1.ResourceMemory: intstr.FromString("128Mi"),
-						},
-						Limits: map[corev1.ResourceName]intstr.IntOrString{
-							corev1.ResourceCPU:    intstr.FromString("200m"),
-							corev1.ResourceMemory: intstr.FromString("256Mi"),
-						},
+					Limits: map[corev1.ResourceName]intstr.IntOrString{
+						corev1.ResourceCPU:    intstr.FromString("200m"),
+						corev1.ResourceMemory: intstr.FromString("256Mi"),
 					},
 				},
 			},
-			Setup: []testworkflowsv1.Step{
-				{
-					StepOperations: testworkflowsv1.StepOperations{
-						Shell: `echo "SETUP: Preparing worker {{index}}"`,
-					},
+		},
+		Setup: []testworkflowsv1.Step{
+			{
+				StepOperations: testworkflowsv1.StepOperations{
+					Shell: `echo "SETUP: Preparing worker {{index}}"`,
 				},
 			},
-			Steps: []testworkflowsv1.Step{
-				{
-					StepMeta: testworkflowsv1.StepMeta{
-						Name: "validate-env",
-					},
-					StepOperations: testworkflowsv1.StepOperations{
-						Shell: `test "$WORKER_ID" = "worker-{{index}}" && test "$TOTAL" = "2"`,
-					},
+		},
+		Steps: []testworkflowsv1.Step{
+			{
+				StepMeta: testworkflowsv1.StepMeta{
+					Name: "validate-env",
 				},
-				{
-					StepMeta: testworkflowsv1.StepMeta{
-						Name: "main-work",
-					},
-					StepOperations: testworkflowsv1.StepOperations{
-						Shell: `echo "MAIN: Worker $WORKER_ID doing work"`,
-					},
+				StepOperations: testworkflowsv1.StepOperations{
+					Shell: `test "$WORKER_ID" = "worker-{{index}}" && test "$TOTAL" = "2"`,
 				},
 			},
-			After: []testworkflowsv1.Step{
-				{
-					StepOperations: testworkflowsv1.StepOperations{
-						Shell: `echo "AFTER: Cleanup for worker {{index}}"`,
-					},
-					StepMeta: testworkflowsv1.StepMeta{
-						Condition: "always", // Run even on failure
-					},
+			{
+				StepMeta: testworkflowsv1.StepMeta{
+					Name: "main-work",
+				},
+				StepOperations: testworkflowsv1.StepOperations{
+					Shell: `echo "MAIN: Worker $WORKER_ID doing work"`,
+				},
+			},
+		},
+		After: []testworkflowsv1.Step{
+			{
+				StepOperations: testworkflowsv1.StepOperations{
+					Shell: `echo "AFTER: Cleanup for worker {{index}}"`,
+				},
+				StepMeta: testworkflowsv1.StepMeta{
+					Condition: "always", // Run even on failure
 				},
 			},
 		},
