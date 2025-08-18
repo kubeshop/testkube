@@ -183,7 +183,13 @@ WHERE w.name = @workflow_name::text
 ORDER BY
     CASE
         WHEN @sort_by_number::boolean = true THEN e.number
-        WHEN @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+    ELSE
+        CASE
+            -- Ensure we check for the value being either: NULL, the Postgres zero date, or the Golang zero date.
+            WHEN r.started_at IS NOT NULL AND r.started_at != '1970-01-01 00:00:00+00'::timestamptz AND r.started_at != '0001-01-01 00:00:00+00'::timestamptz THEN EXTRACT(EPOCH FROM r.started_at)::integer
+        ELSE
+            EXTRACT(EPOCH FROM e.status_at)::integer
+        END
     END DESC
 LIMIT 1;
 
