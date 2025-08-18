@@ -91,7 +91,7 @@ var testTriggerBulkDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 var testWorkflowExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testworkflow_executions_count",
 	Help: "The total number of test workflow executions",
-}, []string{"name", "result", "labels", "testworkflow_uri", "triggered-by", "tags"})
+}, []string{"name", "result", "labels", "testworkflow_uri", "triggered_by", "tags"})
 
 var testWorkflowExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name:       "testkube_testworkflow_executions_duration_ms",
