@@ -379,6 +379,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		return proContext
 	}
 
+	log.DefaultLogger.Infow("pro-context fetched from cloud", "proContext", foundProContext)
 	if proContext.EnvID == "" {
 		proContext.EnvID = foundProContext.EnvId
 	}

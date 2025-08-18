@@ -182,6 +182,7 @@ func TestService_Run(t *testing.T) {
 		&mockDeprecatedSystem,
 		fakeClientset,
 		fakeTestkubeClientset,
+		nil,
 		mockTestWorkflowsClient,
 		mockLeaseBackend,
 		testLogger,

@@ -131,6 +131,12 @@ func (e *executor) execute(ctx context.Context, environmentId string, req *cloud
 	ctx = metadata.AppendToOutgoingContext(ctx, "environment-id", environmentId)
 	ctx = metadata.AppendToOutgoingContext(ctx, "organization-id", e.organizationId)
 	ctx = metadata.AppendToOutgoingContext(ctx, "agent-id", e.agentId)
+
+	log2.DefaultLogger.Infow("scheduling TestWorkflow via Control Plane",
+		"environmentId", environmentId,
+		"orgId", e.organizationId,
+		"agentId", e.agentId,
+	)
 	resp, err := e.grpcClient.ScheduleExecution(ctx, req, opts...)
 	resultStream := NewStream(ch)
 	if err != nil {

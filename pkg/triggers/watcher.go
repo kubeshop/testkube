@@ -35,6 +35,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 )
 
 type k8sInformers struct {
@@ -168,7 +170,12 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
 	}
 
-	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	if s.useTestTriggerClientWatch {
+		// Use client watcher for triggers
+		s.startCloudTestTriggerWatch(ctx, stop)
+	} else {
+		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	}
 	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
 	s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
 
@@ -212,8 +219,10 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		go s.informers.configMapInformers[i].Informer().Run(stop)
 	}
 
-	s.logger.Debugf("trigger service: starting test trigger informer")
-	go s.informers.testTriggerInformer.Informer().Run(stop)
+	if !s.useTestTriggerClientWatch {
+		s.logger.Debugf("trigger service: starting test trigger informer")
+		go s.informers.testTriggerInformer.Informer().Run(stop)
+	}
 	s.logger.Debugf("trigger service: starting webhook informer")
 	go s.informers.webhookInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting webhook template informer")
@@ -234,6 +243,51 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.logger.Debugf("trigger service: starting test source informer")
 		go s.informers.deprecated.testSourceInformer.Informer().Run(stop)
 	}
+}
+
+// startCloudTestTriggerWatch subscribes to updates and mirrors them into local handlers
+func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan struct{}) {
+	watcher := s.testTriggersClient.WatchUpdates(ctx, s.getEnvironmentId(), s.testkubeNamespace, true)
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case upd, ok := <-watcher.Channel():
+				if !ok {
+					return
+				}
+				if upd.Resource == nil {
+					continue
+				}
+				// Map API trigger to CRD-like object to reuse existing handlers
+				crd := testtriggers.MapTestTriggerUpsertRequestToTestTriggerCRD(testkube.TestTriggerUpsertRequest{
+					Name:              upd.Resource.Name,
+					Namespace:         upd.Resource.Namespace,
+					Labels:            upd.Resource.Labels,
+					Resource:          upd.Resource.Resource,
+					ResourceSelector:  upd.Resource.ResourceSelector,
+					Event:             upd.Resource.Event,
+					ConditionSpec:     upd.Resource.ConditionSpec,
+					ProbeSpec:         upd.Resource.ProbeSpec,
+					Action:            upd.Resource.Action,
+					ActionParameters:  upd.Resource.ActionParameters,
+					Execution:         upd.Resource.Execution,
+					TestSelector:      upd.Resource.TestSelector,
+					ConcurrencyPolicy: upd.Resource.ConcurrencyPolicy,
+					Disabled:          upd.Resource.Disabled,
+				})
+				switch upd.Type {
+				case testtriggerclient.EventTypeCreate:
+					s.testTriggerEventHandler().AddFunc(&crd)
+				case testtriggerclient.EventTypeUpdate:
+					s.testTriggerEventHandler().UpdateFunc(nil, &crd)
+				case testtriggerclient.EventTypeDelete:
+					s.testTriggerEventHandler().DeleteFunc(&crd)
+				}
+			}
+		}
+	}()
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
