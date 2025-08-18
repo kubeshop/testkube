@@ -703,6 +703,7 @@ func main() {
 			deprecatedSystem,
 			clientset,
 			testkubeClientset,
+			testTriggersClient,
 			testWorkflowsClient,
 			lb,
 			log.DefaultLogger,
@@ -717,6 +718,7 @@ func main() {
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithProContext(&proContext),
+			triggers.WithUseTestTriggerClientWatch(proContext.CloudStorage),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {

@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
@@ -60,7 +61,9 @@ type Service struct {
 	triggerStatus                 map[statusKey]*triggerStatus
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
+	testTriggersClient            testtriggerclient.TestTriggerClient
 	testWorkflowsClient           testworkflowclient.TestWorkflowClient
+	useTestTriggerClientWatch     bool
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
 	httpClient                    http.HttpClient
@@ -82,6 +85,7 @@ func NewService(
 	deprecatedSystem *services.DeprecatedSystem,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
+	testTriggersClient testtriggerclient.TestTriggerClient,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	leaseBackend leasebackend.Repository,
 	logger *zap.SugaredLogger,
@@ -106,6 +110,7 @@ func NewService(
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
+		testTriggersClient:            testTriggersClient,
 		testWorkflowsClient:           testWorkflowsClient,
 		leaseBackend:                  leaseBackend,
 		logger:                        logger,
@@ -204,6 +209,12 @@ func WithDisableSecretCreation(disableSecretCreation bool) Option {
 func WithProContext(proContext *intconfig.ProContext) Option {
 	return func(s *Service) {
 		s.proContext = proContext
+	}
+}
+
+func WithUseTestTriggerClientWatch(use bool) Option {
+	return func(s *Service) {
+		s.useTestTriggerClientWatch = use
 	}
 }
 
