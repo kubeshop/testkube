@@ -130,9 +130,6 @@ DOCKER_REGISTRY ?= docker.io/kubeshop
 DEVBOX_NAMESPACE ?= devbox
 
 # ==================== External Tool Versions ====================
-PROTOC_VERSION := 3.19.4
-PROTOC_GO_VERSION := v1.32.0
-PROTOC_GO_GRPC_VERSION := v1.2
 SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
@@ -144,9 +141,6 @@ GOTESTSUM ?= $(LOCALBIN_TOOLING)/gotestsum
 GORELEASER ?= $(LOCALBIN_TOOLING)/goreleaser
 GOLANGCI_LINT ?= $(LOCALBIN_TOOLING)/golangci-lint
 MOCKGEN ?= $(LOCALBIN_TOOLING)/mockgen
-PROTOC ?= $(LOCALBIN_TOOLING)/protoc/bin/protoc
-PROTOC_GEN_GO ?= $(LOCALBIN_TOOLING)/protoc-gen-go
-PROTOC_GEN_GO_GRPC ?= $(LOCALBIN_TOOLING)/protoc-gen-go-grpc
 # swagger-codegen is installed globally via brew/package manager
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 SQLC = sqlc
@@ -394,11 +388,9 @@ lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
 generate: generate-protobuf generate-openapi generate-mocks generate-sqlc ## Generate all code
 
 .PHONY: generate-protobuf
-generate-protobuf: install-protobuf ## Generate protobuf code
+generate-protobuf: ## Generate protobuf code
 	@echo "Generating protobuf code..."
-	@PATH=$(LOCALBIN_TOOLING):$$PATH $(PROTOC) --go_out=. --go_opt=paths=source_relative \
-		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
-		pkg/logs/pb/logs.proto
+	@go generate ./proto
 
 .PHONY: generate-openapi
 generate-openapi: swagger-codegen-check ## Generate OpenAPI models
@@ -503,7 +495,7 @@ clean-all: clean clean-tools ## Deep clean including Go cache and tools
 ##@ Tools
 
 .PHONY: install-tools
-install-tools: install-protobuf gotestsum golangci-lint mockgen ## Install all required tools
+install-tools: gotestsum golangci-lint mockgen ## Install all required tools
 
 # Tool installation targets
 .PHONY: gotestsum
@@ -525,43 +517,6 @@ $(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary
 $(MOCKGEN): $(LOCALBIN_TOOLING)
 	test -s $(MOCKGEN) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golang/mock/mockgen@$(MOCKGEN_VERSION)
-
-.PHONY: install-protobuf
-install-protobuf: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) ## Install protobuf tools
-
-$(PROTOC): $(LOCALBIN_TOOLING)
-	@echo "Installing protoc compiler..."
-	@$(MAKE) install-protoc-binary
-
-$(PROTOC_GEN_GO): $(LOCALBIN_TOOLING)
-	@echo "Installing protoc-gen-go..."
-	test -s $(PROTOC_GEN_GO) || GOBIN=$(LOCALBIN_TOOLING) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GO_VERSION)
-
-$(PROTOC_GEN_GO_GRPC): $(LOCALBIN_TOOLING)
-	@echo "Installing protoc-gen-go-grpc..."
-	test -s $(PROTOC_GEN_GO_GRPC) || GOBIN=$(LOCALBIN_TOOLING) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GO_GRPC_VERSION)
-
-.PHONY: install-protoc-binary
-install-protoc-binary:
-	@TMP_DIR=$$(mktemp -d); \
-	cd $$TMP_DIR; \
-	PB_REL="https://github.com/protocolbuffers/protobuf/releases"; \
-	VERSION=$(PROTOC_VERSION); \
-	if [ "$(OS)" = "darwin" ]; then \
-		FILENAME=protoc-$${VERSION}-osx-x86_64.zip; \
-	elif [ "$(OS)" = "linux" ]; then \
-		if [ "$(ARCH)" = "arm64" ]; then \
-			FILENAME=protoc-$${VERSION}-linux-aarch_64.zip; \
-		else \
-			FILENAME=protoc-$${VERSION}-linux-x86_64.zip; \
-		fi; \
-	elif [ "$(OS)" = "windows" ]; then \
-		FILENAME=protoc-$${VERSION}-win64.zip; \
-	fi; \
-	echo "Downloading $${FILENAME}..."; \
-	curl -LO $${PB_REL}/download/v$${VERSION}/$${FILENAME}; \
-	unzip -oq $${FILENAME} -d $(LOCALBIN_TOOLING)/protoc; \
-	rm -rf $$TMP_DIR
 
 .PHONY: swagger-codegen-check
 swagger-codegen-check: ## Check if swagger-codegen is installed

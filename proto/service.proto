@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package cloud;
 
-option go_package = "pkg/cloud";
-
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
