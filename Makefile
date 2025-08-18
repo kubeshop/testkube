@@ -394,11 +394,15 @@ lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
 generate: generate-protobuf generate-openapi generate-mocks generate-sqlc ## Generate all code
 
 .PHONY: generate-protobuf
-generate-protobuf: install-protobuf ## Generate protobuf code
+generate-protobuf: generate-legacy-protobuf
 	@echo "Generating protobuf code..."
-	@PATH=$(LOCALBIN_TOOLING):$$PATH $(PROTOC) --go_out=. --go_opt=paths=source_relative \
-		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
-		pkg/logs/pb/logs.proto
+	@go generate ./proto
+
+.PHONY: generate-legacy-protobuf
+generate-legacy-protobuf: install-protobuf
+	@PATH=$(LOCALBIN_TOOLING):$$PATH $(PROTOC) --go_out=. --go-grpc_out=. \
+		proto/legacy/service.proto \
+		proto/legacy/logs.proto
 
 .PHONY: generate-openapi
 generate-openapi: swagger-codegen-check ## Generate OpenAPI models

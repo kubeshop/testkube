@@ -1,0 +1,13 @@
+# For details on buf.yaml configuration, visit https://buf.build/docs/configuration/v2/buf-yaml
+version: v2
+modules:
+  - path: .
+    # Exclude the older proto definitions that build with protoc.
+    excludes:
+      - ./legacy
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE
