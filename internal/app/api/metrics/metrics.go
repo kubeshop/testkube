@@ -410,7 +410,11 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
 		triggeredBy = string(*execution.RunningContext.Actor.Type_)
 		if execution.RunningContext.Actor.Name != "" {
-			triggeredBy = "," + execution.RunningContext.Actor.Name
+			if triggeredBy != "" {
+				triggeredBy += ","
+			}
+
+			triggeredBy += execution.RunningContext.Actor.Name
 		}
 	}
 
