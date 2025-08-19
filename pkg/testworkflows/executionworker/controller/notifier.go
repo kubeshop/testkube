@@ -380,12 +380,12 @@ func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult,
 		initialResult.Steps = make(map[string]testkube.TestWorkflowStepResult)
 	}
 
-	// Once a result has reached this stage it can be considered to be in a RUNNING state,
-	// even if the associated Job and Pod have not yet been scheduled by Kubernetes.
-	// By setting the initial status to RUNNING we can ensure that more executions can be
+	// Once a result has reached this stage it can be considered to be in a SCHEDULING state,
+	// as the associated Job and Pod have not yet been scheduled by Kubernetes.
+	// By setting the initial status to SCHEDULING we can ensure that more executions can be
 	// sent to be processed, even if Kubernetes still has to wait for resources to start
 	// the execution.
-	initialResult.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
+	initialResult.Status = common.Ptr(testkube.SCHEDULING_TestWorkflowStatus)
 
 	if !initialResult.FinishedAt.IsZero() {
 		initialResult.FinishedAt = time.Time{}

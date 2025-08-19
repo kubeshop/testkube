@@ -9213,6 +9213,7 @@ components:
         - queued
         - pending
         - starting
+        - scheduling
         - running
         - pausing
         - paused
