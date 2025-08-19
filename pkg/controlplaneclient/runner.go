@@ -183,6 +183,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 				req = result.req
 				err = result.err
 				if err != nil {
+					c.logger.Debugw("failed to receive runner request", "debug", req, result)
 					c.logger.Errorw("failed to receive runner request", "error", err)
 					return
 				}
