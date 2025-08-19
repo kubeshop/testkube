@@ -97,7 +97,7 @@ var testWorkflowExecutionsDurationMs = promauto.NewSummaryVec(prometheus.Summary
 	Name:       "testkube_testworkflow_executions_duration_ms",
 	Help:       "The duration of test workflow executions",
 	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
-}, []string{"name", "result", "labels", "testworkflow_uri"})
+}, []string{"name", "result", "labels", "testworkflow_uri", "triggered_by", "tags"})
 
 var testWorkflowAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testworkflow_aborts_count",
@@ -440,6 +440,8 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 			"result":           status,
 			"labels":           strings.Join(labels, ","),
 			"testworkflow_uri": fmt.Sprintf("%s/test-workflows/%s", dashboardURI, name),
+			"triggered_by":     triggeredBy,
+			"tags":             strings.Join(tags, ","),
 		}).Observe(float64(execution.Result.DurationMs))
 	}
 }
