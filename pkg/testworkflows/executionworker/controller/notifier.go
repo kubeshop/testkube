@@ -379,14 +379,14 @@ func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult,
 	if initialResult.Steps == nil {
 		initialResult.Steps = make(map[string]testkube.TestWorkflowStepResult)
 	}
-	if initialResult.Status == nil {
-		initialResult.Status = common.Ptr(testkube.QUEUED_TestWorkflowStatus)
-	}
 
-	// Mark initial as non-finished, as the state is not yet marked as ended
-	if initialResult.Status.Finished() {
-		initialResult.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
-	}
+	// Once a result has reached this stage it can be considered to be in a RUNNING state,
+	// even if the associated Job and Pod have not yet been scheduled by Kubernetes.
+	// By setting the initial status to RUNNING we can ensure that more executions can be
+	// sent to be processed, even if Kubernetes still has to wait for resources to start
+	// the execution.
+	initialResult.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
+
 	if !initialResult.FinishedAt.IsZero() {
 		initialResult.FinishedAt = time.Time{}
 	}
