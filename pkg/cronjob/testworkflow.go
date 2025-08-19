@@ -55,11 +55,16 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 					s.removeTestWorkflowCronJobs(obj.Resource.Name)
 				}
 
-				if err == nil {
-					s.logger.Infow("cron job scheduler: reconciler component: scheduled TestWorkflow to cron jobs", "name", obj.Resource.Name)
-				} else {
-					s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflows", "error", err)
+				if err != nil {
+					s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflows",
+						"error", err,
+						"resource", obj.Resource.Name,
+						"event", obj.Type,
+					)
+					continue
 				}
+
+				s.logger.Infow("cron job scheduler: reconciler component: scheduled TestWorkflow to cron jobs", "name", obj.Resource.Name)
 			}
 
 			if watcher.Err() != nil {
@@ -158,7 +163,7 @@ func (s *Scheduler) addTestWorkflowCronJobs(ctx context.Context, testWorkflowNam
 			}
 
 			if err = s.addTestWorkflowCronJob(ctx, testWorkflowName, cronJobName, event.Cronjob); err != nil {
-				return err
+				return fmt.Errorf("adding new cron job %q for workflow %q: %w", cronJobName, testWorkflowName, err)
 			}
 		}
 	}
@@ -184,7 +189,7 @@ func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName
 		entryID, err := s.cronService.AddJob(cronName,
 			cron.FuncJob(func() { s.executeTestWorkflow(ctx, testWorkflowName, cronJob) }))
 		if err != nil {
-			return err
+			return fmt.Errorf("adding cron %q for workflow %q to service: %w", cronJobName, testWorkflowName, err)
 		}
 
 		s.testWorklows[testWorkflowName][cronJobName] = entryID
@@ -217,7 +222,7 @@ func (s *Scheduler) changeTestWorkflowCronJobs(ctx context.Context, testWorkflow
 
 			if !found {
 				if err = s.addTestWorkflowCronJob(ctx, testWorkflowName, cronJobName, event.Cronjob); err != nil {
-					return err
+					return fmt.Errorf("add missing cron job %q for workflow %q: %w", cronJobName, testWorkflowName, err)
 				}
 			}
 
