@@ -91,13 +91,13 @@ var testTriggerBulkDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 var testWorkflowExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testworkflow_executions_count",
 	Help: "The total number of test workflow executions",
-}, []string{"name", "result", "labels", "testworkflow_uri"})
+}, []string{"name", "result", "labels", "testworkflow_uri", "triggered_by", "tags"})
 
 var testWorkflowExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name:       "testkube_testworkflow_executions_duration_ms",
 	Help:       "The duration of test workflow executions",
 	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
-}, []string{"name", "result", "labels", "testworkflow_uri"})
+}, []string{"name", "result", "labels", "testworkflow_uri", "triggered_by", "tags"})
 
 var testWorkflowAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testworkflow_aborts_count",
@@ -406,11 +406,32 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 
 	slices.Sort(labels)
 
+	triggeredBy := ""
+	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
+		triggeredBy = string(*execution.RunningContext.Actor.Type_)
+		if execution.RunningContext.Actor.Name != "" {
+			if triggeredBy != "" {
+				triggeredBy += ","
+			}
+
+			triggeredBy += execution.RunningContext.Actor.Name
+		}
+	}
+
+	var tags []string
+	for key, value := range execution.Tags {
+		tags = append(tags, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	slices.Sort(tags)
+
 	m.TestWorkflowExecutionsCount.With(map[string]string{
 		"name":             name,
 		"result":           status,
 		"labels":           strings.Join(labels, ","),
 		"testworkflow_uri": fmt.Sprintf("%s/test-workflows/%s", dashboardURI, name),
+		"triggered_by":     triggeredBy,
+		"tags":             strings.Join(tags, ","),
 	}).Inc()
 
 	if execution.Result != nil {
@@ -419,6 +440,8 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 			"result":           status,
 			"labels":           strings.Join(labels, ","),
 			"testworkflow_uri": fmt.Sprintf("%s/test-workflows/%s", dashboardURI, name),
+			"triggered_by":     triggeredBy,
+			"tags":             strings.Join(tags, ","),
 		}).Observe(float64(execution.Result.DurationMs))
 	}
 }
