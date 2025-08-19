@@ -22,18 +22,19 @@ func (statuses TestWorkflowStatuses) ToMap() map[TestWorkflowStatus]struct{} {
 // ParseTestWorkflowStatusList parse a list of workflow execution statuses from string
 func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkflowStatuses, err error) {
 	statusMap := map[TestWorkflowStatus]struct{}{
-		QUEUED_TestWorkflowStatus:   {},
-		PENDING_TestWorkflowStatus:  {},
-		STARTING_TestWorkflowStatus: {},
-		RUNNING_TestWorkflowStatus:  {},
-		PAUSING_TestWorkflowStatus:  {},
-		PAUSED_TestWorkflowStatus:   {},
-		RESUMING_TestWorkflowStatus: {},
-		PASSED_TestWorkflowStatus:   {},
-		FAILED_TestWorkflowStatus:   {},
-		STOPPING_TestWorkflowStatus: {},
-		ABORTED_TestWorkflowStatus:  {},
-		CANCELED_TestWorkflowStatus: {},
+		QUEUED_TestWorkflowStatus:     {},
+		PENDING_TestWorkflowStatus:    {},
+		STARTING_TestWorkflowStatus:   {},
+		SCHEDULING_TestWorkflowStatus: {},
+		RUNNING_TestWorkflowStatus:    {},
+		PAUSING_TestWorkflowStatus:    {},
+		PAUSED_TestWorkflowStatus:     {},
+		RESUMING_TestWorkflowStatus:   {},
+		PASSED_TestWorkflowStatus:     {},
+		FAILED_TestWorkflowStatus:     {},
+		STOPPING_TestWorkflowStatus:   {},
+		ABORTED_TestWorkflowStatus:    {},
+		CANCELED_TestWorkflowStatus:   {},
 	}
 
 	if source == "" {
@@ -63,6 +64,7 @@ var TestWorkflowExecutingStatus = []TestWorkflowStatus{
 	QUEUED_TestWorkflowStatus,
 	PENDING_TestWorkflowStatus,
 	STARTING_TestWorkflowStatus,
+	SCHEDULING_TestWorkflowStatus,
 	RUNNING_TestWorkflowStatus,
 	PAUSING_TestWorkflowStatus,
 	PAUSED_TestWorkflowStatus,
@@ -75,6 +77,7 @@ var TestWorkflowStoppableStatus = []TestWorkflowStatus{
 	QUEUED_TestWorkflowStatus,
 	PENDING_TestWorkflowStatus,
 	STARTING_TestWorkflowStatus,
+	SCHEDULING_TestWorkflowStatus,
 	RUNNING_TestWorkflowStatus,
 	PAUSED_TestWorkflowStatus,
 	RESUMING_TestWorkflowStatus,
