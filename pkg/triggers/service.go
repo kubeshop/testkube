@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
@@ -61,6 +62,7 @@ type Service struct {
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
 	testWorkflowsClient           testworkflowclient.TestWorkflowClient
+	testTriggersClient            testtriggerclient.TestTriggerClient
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
 	httpClient                    http.HttpClient
@@ -83,6 +85,7 @@ func NewService(
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
+	testTriggersClient testtriggerclient.TestTriggerClient,
 	leaseBackend leasebackend.Repository,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
@@ -107,6 +110,7 @@ func NewService(
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
 		testWorkflowsClient:           testWorkflowsClient,
+		testTriggersClient:            testTriggersClient,
 		leaseBackend:                  leaseBackend,
 		logger:                        logger,
 		configMap:                     configMap,
@@ -119,6 +123,7 @@ func NewService(
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 		deprecatedSystem:              deprecatedSystem,
+		proContext:                    &intconfig.ProContext{},
 	}
 	if s.triggerExecutor == nil {
 		s.triggerExecutor = s.execute
