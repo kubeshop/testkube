@@ -290,6 +290,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 	// Emit data, if the Control Plane doesn't support informing about status by itself
 	if !r.proContext.NewArchitecture {
+		// Reload latest saved execution to sync data not availabe when monitor was started
 		savedExecution, err := r.client.GetExecution(ctx, environmentId, execution.Id)
 		if err == nil {
 			execution.Signature = savedExecution.Signature
