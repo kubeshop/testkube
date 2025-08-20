@@ -290,6 +290,13 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 	// Emit data, if the Control Plane doesn't support informing about status by itself
 	if !r.proContext.NewArchitecture {
+		savedExecution, err := r.client.GetExecution(ctx, environmentId, execution.Id)
+		if err == nil {
+			execution.Signature = savedExecution.Signature
+		} else {
+			log.DefaultLogger.Errorw("failed to get TestWorkflow execution", "id", execution.Id, "error", err)
+		}
+
 		switch {
 		case lastResult.IsPassed():
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
@@ -466,7 +473,6 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		log.DefaultLogger.Errorw("failed to get execution for monitoring", "id", id, "error", err)
 		return err
 	}
-
 	return r.monitor(ctx, organizationId, environmentId, *execution)
 }
 

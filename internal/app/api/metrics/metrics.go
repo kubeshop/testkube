@@ -457,13 +457,13 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 			for _, step := range steps {
 				var duration time.Duration
 				if result, ok := execution.Result.Steps[step.Ref]; ok {
-					duration = max(result.FinishedAt.Sub(result.QueuedAt).Round(time.Millisecond), 0)
+					duration = max(result.FinishedAt.Sub(result.QueuedAt), 0)
 				}
 
 				m.TestWorkflowExecutionStepsDurationMs.With(map[string]string{
 					"workflow_name": name,
-					"steo_name":     step.Label(),
-				}).Set(float64(duration))
+					"step_name":     step.Label(),
+				}).Set(float64(duration.Milliseconds()))
 			}
 		}
 	}
