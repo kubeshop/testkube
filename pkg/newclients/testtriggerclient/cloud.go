@@ -7,9 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
-	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
 var _ TestTriggerClient = &cloudTestTriggerClient{}
@@ -68,19 +66,4 @@ func (c *cloudTestTriggerClient) DeleteAll(ctx context.Context, environmentId st
 
 func (c *cloudTestTriggerClient) DeleteByLabels(ctx context.Context, environmentId string, selector string, namespace string) (uint32, error) {
 	return c.client.DeleteTestTriggersByLabels(ctx, environmentId, selector, namespace)
-}
-
-func (c *cloudTestTriggerClient) WatchUpdates(ctx context.Context, environmentId string, namespace string, includeInitialData bool) Watcher {
-	return channels.Transform(c.client.WatchTestTriggerUpdates(ctx, environmentId, namespace, includeInitialData), func(t *controlplaneclient.TestTriggerUpdate) (Update, bool) {
-		switch t.Type {
-		case cloud.UpdateType_UPDATE:
-			return Update{Type: EventTypeUpdate, Timestamp: t.Timestamp, Resource: t.Resource}, true
-		case cloud.UpdateType_DELETE:
-			return Update{Type: EventTypeDelete, Timestamp: t.Timestamp, Resource: t.Resource}, true
-		case cloud.UpdateType_CREATE:
-			return Update{Type: EventTypeCreate, Timestamp: t.Timestamp, Resource: t.Resource}, true
-		default:
-			return Update{}, false
-		}
-	})
 }
