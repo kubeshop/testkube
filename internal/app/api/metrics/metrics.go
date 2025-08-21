@@ -157,12 +157,12 @@ var testWorkflowExecutionStepsCount = promauto.NewCounterVec(prometheus.CounterO
 
 var testWorkflowExecutionStepsStartTimeMs = promauto.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "testkube_testworkflow_execution_steps_start_time_ms",
-	Help: "The start time of test workflow execution steps",
+	Help: "The start time of test workflow execution steps.",
 }, []string{"workflow_name", "step_name", "status"})
 
 var testWorkflowExecutionStepsFinishTimeMs = promauto.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "testkube_testworkflow_execution_steps_finish_time_ms",
-	Help: "The finish time of test workflow execution steps",
+	Help: "The finish time of test workflow execution steps.",
 }, []string{"workflow_name", "step_name", "status"})
 
 func NewMetrics() Metrics {
