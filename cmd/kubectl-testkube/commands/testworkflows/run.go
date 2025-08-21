@@ -25,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -303,7 +304,7 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 		logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
 		ui.ExitOnError("getting logs from executor", err)
 
-		sigs := flattenSignatures(execution.Signature)
+		sigs := testworkflows.FlattenSignatures(execution.Signature)
 
 		printRawLogLines(logs, sigs, execution, options...)
 		if execution.Result.IsAnyError() {
@@ -383,18 +384,6 @@ func uiShellWatchExecution(id string) {
 	)
 }
 
-func flattenSignatures(sig []testkube.TestWorkflowSignature) []testkube.TestWorkflowSignature {
-	res := make([]testkube.TestWorkflowSignature, 0)
-	for _, s := range sig {
-		if len(s.Children) == 0 {
-			res = append(res, s)
-		} else {
-			res = append(res, flattenSignatures(s.Children)...)
-		}
-	}
-	return res
-}
-
 func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube.TestWorkflowStepResult, signature testkube.TestWorkflowSignature, index int, steps int, prefix string) bool {
 	r1Status := testkube.QUEUED_TestWorkflowStepStatus
 	r2Status := testkube.QUEUED_TestWorkflowStepStatus
@@ -440,7 +429,7 @@ func getTimestampLength(line string) int {
 }
 
 func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string) (result *testkube.TestWorkflowResult, err error) {
-	steps := flattenSignatures(signature)
+	steps := testworkflows.FlattenSignatures(signature)
 
 	var isLineBeginning = true
 	var isFirstLine = true

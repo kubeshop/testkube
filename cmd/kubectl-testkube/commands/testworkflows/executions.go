@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	tc "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -77,7 +78,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
 				ui.ExitOnError("getting logs from test workflow", err)
 
-				sigs := flattenSignatures(execution.Signature)
+				sigs := testworkflows.FlattenSignatures(execution.Signature)
 
 				printRawLogLines(logs, sigs, execution)
 				if !logsOnly {
