@@ -493,6 +493,7 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
 			testkube.QUEUED_TestWorkflowStatus,
+			testkube.SCHEDULING_TestWorkflowStatus,
 			testkube.STOPPING_TestWorkflowStatus,
 			testkube.RUNNING_TestWorkflowStatus,
 		}},
@@ -867,9 +868,11 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 
 func (r *MongoRepository) Init(ctx context.Context, id string, data testworkflow.InitData) error {
 	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
-		"namespace": data.Namespace,
-		"signature": data.Signature,
-		"runnerid":  data.RunnerID,
+		"namespace":     data.Namespace,
+		"signature":     data.Signature,
+		"runnerid":      data.RunnerID,
+		"result.status": testkube.SCHEDULING_TestWorkflowStatus,
+		"statusat":      time.Now(),
 	}})
 	return err
 }

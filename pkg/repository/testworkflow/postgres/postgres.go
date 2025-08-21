@@ -1322,11 +1322,34 @@ func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowN
 
 // Init initializes execution
 func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkflow.InitData) error {
-	return r.queries.InitTestWorkflowExecution(ctx, sqlc.InitTestWorkflowExecutionParams{
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	if err := qtx.InitTestWorkflowExecution(ctx, sqlc.InitTestWorkflowExecutionParams{
 		ID:        id,
 		Namespace: toPgText(data.Namespace),
 		RunnerID:  toPgText(data.RunnerID),
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to init test workflow execution: %w", err)
+	}
+
+	if err := qtx.UpdateTestWorkflowExecutionResult(ctx, sqlc.UpdateTestWorkflowExecutionResultParams{
+		ExecutionID: id,
+		Status:      toPgText(string(testkube.SCHEDULING_TestWorkflowStatus)),
+	}); err != nil {
+		return fmt.Errorf("failed to update test workflow execution result: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 // Assign assigns execution to runner

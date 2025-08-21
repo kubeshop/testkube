@@ -896,7 +896,8 @@ ORDER BY tag_key;
 UPDATE test_workflow_executions 
 SET 
     namespace = @namespace,
-    runner_id = @runner_id
+    runner_id = @runner_id,
+    status_at = NOW()
 WHERE id = @id;
 
 -- name: AssignTestWorkflowExecution :one

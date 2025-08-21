@@ -2786,7 +2786,8 @@ const initTestWorkflowExecution = `-- name: InitTestWorkflowExecution :exec
 UPDATE test_workflow_executions 
 SET 
     namespace = $1,
-    runner_id = $2
+    runner_id = $2,
+    status_at = NOW()
 WHERE id = $3
 `
 
