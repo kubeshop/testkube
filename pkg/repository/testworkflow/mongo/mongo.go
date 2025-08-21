@@ -493,6 +493,7 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
 			testkube.QUEUED_TestWorkflowStatus,
+			testkube.SCHEDULING_TestWorkflowStatus,
 			testkube.STOPPING_TestWorkflowStatus,
 			testkube.RUNNING_TestWorkflowStatus,
 		}},
