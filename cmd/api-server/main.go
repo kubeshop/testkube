@@ -257,12 +257,12 @@ func main() {
 		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 		testTriggersClient          testtriggerclient.TestTriggerClient
 	)
+	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 
-	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
-	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
-	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
-
-	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
+	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
+	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
+	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, &proContext)
 
 	log.DefaultLogger.Info("connecting to NATS...")
 	nc := commons.MustCreateNATSConnection(cfg)
@@ -273,8 +273,6 @@ func main() {
 		eventBus.TraceEvents()
 	}
 	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
-
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
@@ -704,6 +702,7 @@ func main() {
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
+			testTriggersClient,
 			lb,
 			log.DefaultLogger,
 			configMapConfig,

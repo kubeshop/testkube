@@ -23,9 +23,11 @@ import (
 )
 
 const (
-	connectionTimeout = 10 * time.Second
-	apiKeyMeta        = "api-key"
-
+	connectionTimeout          = 10 * time.Second
+	apiKeyMeta                 = "api-key"
+	organizationIdMetadataName = "organization-id"
+	environmentIdMetadataName  = "environment-id"
+	agentIdMetadataName        = "agent-id"
 	// The backoff values chosen here are copied from an example in the
 	// gRPC documentation and represent a starting point that may be
 	// iterated on as we learn more about the connection issues faced
@@ -148,5 +150,15 @@ func clientCert(tlsConfig *tls.Config, certFile, keyFile string) error {
 
 func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
 	md := metadata.Pairs(apiKeyMeta, apiKey)
+	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func AddMetadata(ctx context.Context, apiKey, orgID, envID, agentID string) context.Context {
+	md := metadata.Pairs(
+		apiKeyMeta, apiKey,
+		organizationIdMetadataName, orgID,
+		environmentIdMetadataName, envID,
+		agentIdMetadataName, agentID,
+	)
 	return metadata.NewOutgoingContext(ctx, md)
 }
