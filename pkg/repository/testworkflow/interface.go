@@ -124,9 +124,9 @@ type Repository interface {
 	Update(ctx context.Context, result testkube.TestWorkflowExecution) error
 	// UpdateResult updates execution result
 	UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) (err error)
-	// UpdateResult updates execution result with strict state and runner checks
+	// UpdateResultStrict updates execution result with strict state and runner checks
 	UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error)
-	// FinishResult updates execution result with strict state and runner checks
+	// FinishResultStrict updates execution result with strict state and runner checks
 	FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error)
 	//UpdateReport appends a report to the execution
 	UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error)
