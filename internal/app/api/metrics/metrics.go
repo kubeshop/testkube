@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -149,7 +148,7 @@ var webhookExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 var testWorkflowExecutionStepsDurationMs = promauto.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "testkube_testworkflow_execution_steps_duration_ms",
 	Help: "The duration of test workflow execution steps",
-}, []string{"workflow_name", "step_name"})
+}, []string{"workflow_name", "step_name", "status"})
 
 var testWorkflowExecutionStepsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testworkflow_execution_steps_count",
@@ -477,39 +476,36 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 		if execution.Result.Steps != nil {
 			steps := testworkflows.FlattenSignatures(execution.Signature)
 			for _, step := range steps {
-				var duration time.Duration
-				var status *testkube.TestWorkflowStepStatus
-				var startTime, finishTime time.Time
 				if result, ok := execution.Result.Steps[step.Ref]; ok {
-					duration = max(result.FinishedAt.Sub(result.QueuedAt), 0)
-					status = result.Status
-					startTime = result.QueuedAt
-					finishTime = result.FinishedAt
-				}
+					duration := max(result.FinishedAt.Sub(result.QueuedAt), 0)
+					status := result.Status
+					startTime := result.QueuedAt
+					finishTime := result.FinishedAt
+					if status != nil {
+						m.TestWorkflowExecutionStepsDurationMs.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Set(float64(duration.Milliseconds()))
 
-				m.TestWorkflowExecutionStepsDurationMs.With(map[string]string{
-					"workflow_name": name,
-					"step_name":     step.Label(),
-				}).Set(float64(duration.Milliseconds()))
+						m.TestWorkflowExecutionStepsCount.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Inc()
 
-				if status != nil {
-					m.TestWorkflowExecutionStepsCount.With(map[string]string{
-						"workflow_name": name,
-						"step_name":     step.Label(),
-						"status":        string(*status),
-					}).Inc()
+						m.TestWorkflowExecutionStepsStartTimeMs.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Set(float64(startTime.UnixMilli()))
 
-					m.TestWorkflowExecutionStepsStartTimeMs.With(map[string]string{
-						"workflow_name": name,
-						"step_name":     step.Label(),
-						"status":        string(*status),
-					}).Set(float64(startTime.UnixMilli()))
-
-					m.TestWorkflowExecutionStepsFinishTimeMs.With(map[string]string{
-						"workflow_name": name,
-						"step_name":     step.Label(),
-						"status":        string(*status),
-					}).Set(float64(finishTime.UnixMilli()))
+						m.TestWorkflowExecutionStepsFinishTimeMs.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Set(float64(finishTime.UnixMilli()))
+					}
 				}
 			}
 		}
