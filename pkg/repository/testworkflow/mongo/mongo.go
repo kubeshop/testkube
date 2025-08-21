@@ -137,42 +137,16 @@ func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 
 // GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "updatetime"
+	sortField := "statusat"
 	if sortBy == testworkflow.LatestSortByNumber {
 		sortField = "number"
 	}
 
 	opts := options.Aggregate()
-	pipeline := []bson.D{
-		{{
-			Key: "$addFields",
-			Value: bson.M{
-				"updatetime": bson.M{"$max": bson.M{
-					"$cond": bson.M{
-						"if": bson.M{
-							"$and": bson.A{
-								bson.M{"$ne": bson.A{"$result.startedat", nil}},
-								bson.M{"$ne": bson.A{"$result.startedat", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
-							},
-						},
-						"then": "$result.startedat",
-						"else": "$statusat",
-					},
-				}},
-			},
-		}},
-		{{
-			Key:   "$sort",
-			Value: bson.M{sortField: -1},
-		}},
-		{{
-			Key:   "$match",
-			Value: bson.M{"workflow.name": workflowName},
-		}},
-		{{
-			Key:   "$limit",
-			Value: 1,
-		}},
+	pipeline := []bson.M{
+		{"$sort": bson.M{sortField: -1}},
+		{"$match": bson.M{"workflow.name": workflowName}},
+		{"$limit": 1},
 	}
 	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {

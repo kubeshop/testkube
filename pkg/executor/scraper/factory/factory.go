@@ -8,6 +8,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
@@ -119,7 +120,12 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	output.PrintLogf("%s Connected to Agent API", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, params.ProAPIKey)
+
+	proContext := &intconfig.ProContext{
+		APIKey: params.ProAPIKey,
+	}
+
+	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, proContext)
 	return cloudscraper.NewCloudUploader(cloudExecutor, params.SkipVerify), nil
 }
 

@@ -8,7 +8,6 @@ import (
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
-	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
 var _ TestTriggerClient = &k8sTestTriggerClient{}
@@ -135,12 +134,4 @@ func (c *k8sTestTriggerClient) DeleteByLabels(ctx context.Context, environmentId
 	// The old client doesn't return count, so we return 0
 	// This could be improved by first listing and counting
 	return 0, nil
-}
-
-func (c *k8sTestTriggerClient) WatchUpdates(ctx context.Context, environmentId string, namespace string, includeInitialData bool) Watcher {
-	// The old client doesn't support watching, so return an empty watcher
-	// This could be implemented using Kubernetes watch APIs
-	watcher := channels.NewWatcher[Update]()
-	watcher.Close(nil)
-	return watcher
 }

@@ -390,6 +390,7 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 	var testWorkflows []testworkflowsv1.TestWorkflow
 	if t.Spec.TestSelector.Name != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv3.TestWorkflow with name %s", t.Spec.TestSelector.Name)
+
 		testWorkflow, err := s.testWorkflowsClient.Get(context.Background(), s.getEnvironmentId(), t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err

@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
@@ -69,6 +70,7 @@ func TestService_Run(t *testing.T) {
 	mockTestWorkflowExecutor := testworkflowexecutor.NewMockTestWorkflowExecutor(mockCtrl)
 	mockTestWorkflowRepository := testworkflow.NewMockRepository(mockCtrl)
 	mockExecutionWorkerClient := executionworkertypes.NewMockWorker(mockCtrl)
+	mockTestTriggersClient := testtriggerclient.NewMockTestTriggerClient(mockCtrl)
 
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Executors().Return(mockExecutorsClient).AnyTimes()
@@ -183,6 +185,7 @@ func TestService_Run(t *testing.T) {
 		fakeClientset,
 		fakeTestkubeClientset,
 		mockTestWorkflowsClient,
+		mockTestTriggersClient,
 		mockLeaseBackend,
 		testLogger,
 		configMapConfig,

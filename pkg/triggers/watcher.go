@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -19,6 +20,8 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
@@ -168,7 +171,11 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
 	}
 
-	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	if s.proContext.CloudStorage {
+		s.startCloudTestTriggerWatch(ctx, stop)
+	} else {
+		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	}
 	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
 	s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
 
@@ -212,8 +219,10 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		go s.informers.configMapInformers[i].Informer().Run(stop)
 	}
 
-	s.logger.Debugf("trigger service: starting test trigger informer")
-	go s.informers.testTriggerInformer.Informer().Run(stop)
+	if !s.proContext.CloudStorage {
+		s.logger.Debugf("trigger service: starting test trigger informer")
+		go s.informers.testTriggerInformer.Informer().Run(stop)
+	}
 	s.logger.Debugf("trigger service: starting webhook informer")
 	go s.informers.webhookInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting webhook template informer")
@@ -234,6 +243,76 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.logger.Debugf("trigger service: starting test source informer")
 		go s.informers.deprecated.testSourceInformer.Informer().Run(stop)
 	}
+}
+
+// startCloudTestTriggerWatch periodically lists triggers and mirrors changes into local handlers
+func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan struct{}) {
+	ticker := time.NewTicker(s.scraperInterval)
+
+	prev := map[string]testkube.TestTrigger{}
+
+	toCRD := func(t testkube.TestTrigger) testtriggersv1.TestTrigger {
+		return testtriggers.MapTestTriggerUpsertRequestToTestTriggerCRD(testkube.TestTriggerUpsertRequest{
+			Name:              t.Name,
+			Namespace:         t.Namespace,
+			Labels:            t.Labels,
+			Resource:          t.Resource,
+			ResourceSelector:  t.ResourceSelector,
+			Event:             t.Event,
+			ConditionSpec:     t.ConditionSpec,
+			ProbeSpec:         t.ProbeSpec,
+			Action:            t.Action,
+			ActionParameters:  t.ActionParameters,
+			Execution:         t.Execution,
+			TestSelector:      t.TestSelector,
+			ConcurrencyPolicy: t.ConcurrencyPolicy,
+			Disabled:          t.Disabled,
+		})
+	}
+
+	syncOnce := func() {
+		list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, s.testkubeNamespace)
+		if err != nil {
+			s.logger.Errorf("trigger service: error listing cloud test triggers: %v", err)
+			return
+		}
+
+		curr := map[string]testkube.TestTrigger{}
+		for _, t := range list {
+			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+			curr[key] = t
+
+			if old, ok := prev[key]; !ok {
+				crd := toCRD(t)
+				s.testTriggerEventHandler().AddFunc(&crd)
+			} else if !cmp.Equal(old, t) {
+				crd := toCRD(t)
+				s.testTriggerEventHandler().UpdateFunc(nil, &crd)
+			}
+		}
+
+		for key, t := range prev {
+			if _, ok := curr[key]; !ok {
+				crd := toCRD(t)
+				s.testTriggerEventHandler().DeleteFunc(&crd)
+			}
+		}
+
+		prev = curr
+	}
+
+	go func() {
+		defer ticker.Stop()
+		syncOnce()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				syncOnce()
+			}
+		}
+	}()
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {

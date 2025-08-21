@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
@@ -22,8 +23,8 @@ type CloudOutputRepository struct {
 	httpClient *http.Client
 }
 
-func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, apiKey string, skipVerify bool) *CloudOutputRepository {
-	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey), httpClient: http.DefaultClient}
+func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, skipVerify bool, proContext *intconfig.ProContext) *CloudOutputRepository {
+	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, proContext), httpClient: http.DefaultClient}
 	if skipVerify {
 		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 		r.httpClient.Transport = transport

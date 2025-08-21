@@ -7,6 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 
 	"github.com/pkg/errors"
@@ -25,7 +26,13 @@ type CloudRepository struct {
 }
 
 func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
+	// Create a minimal proContext for this repository
+	proContext := &intconfig.ProContext{
+		APIKey: apiKey,
+		OrgID:  "",
+		EnvID:  "",
+	}
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, proContext)}
 }
 
 func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
