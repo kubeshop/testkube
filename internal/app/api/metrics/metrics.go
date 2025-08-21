@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 )
 
 var testExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -474,7 +475,7 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 		}).Observe(float64(execution.Result.DurationMs))
 
 		if execution.Result.Steps != nil {
-			steps := flattenSignatures(execution.Signature)
+			steps := testworkflows.FlattenSignatures(execution.Signature)
 			for _, step := range steps {
 				var duration time.Duration
 				var status *testkube.TestWorkflowStepStatus
@@ -604,16 +605,4 @@ func (m Metrics) IncWebhookEventCount(name, eventType, result string) {
 		"eventType": eventType,
 		"result":    result,
 	}).Inc()
-}
-
-func flattenSignatures(sig []testkube.TestWorkflowSignature) []testkube.TestWorkflowSignature {
-	res := make([]testkube.TestWorkflowSignature, 0)
-	for _, s := range sig {
-		if len(s.Children) == 0 {
-			res = append(res, s)
-		} else {
-			res = append(res, flattenSignatures(s.Children)...)
-		}
-	}
-	return res
 }
