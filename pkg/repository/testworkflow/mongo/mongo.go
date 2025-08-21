@@ -492,10 +492,24 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
+			// The expected statuses from which an execution may be finished:
+			// - Queued, before even being assigned to a runner it can be immediately finished.
 			testkube.QUEUED_TestWorkflowStatus,
-			testkube.SCHEDULING_TestWorkflowStatus,
-			testkube.STOPPING_TestWorkflowStatus,
+			// - Pending, once the execution has been assigned to a runner but has not yet been
+			//   communicated to the runner it can be finished immediately.
+			testkube.PENDING_TestWorkflowStatus,
+			// - Running, once the execution is completed it will be finished from this state.
 			testkube.RUNNING_TestWorkflowStatus,
+			// - Stopping, when requested to stop an execution it will transition to a finished state.
+			testkube.STOPPING_TestWorkflowStatus,
+			// Edge-case statuses that may lead to immediate finishing of an execution:
+			// - Starting, a runner may choose to finish an execution before scheduling it with
+			//   kubernetes if there is a fundamental issue with the execution spec.
+			testkube.STARTING_TestWorkflowStatus,
+			// - Scheduling, after an execution has been scheduled with kubernetes it may be
+			//   immediately finished due to the Pod never entering a Running state and the
+			//   runner aborting it.
+			testkube.SCHEDULING_TestWorkflowStatus,
 		}},
 	}, bson.M{"$set": bson.M{
 		"result":   result,
