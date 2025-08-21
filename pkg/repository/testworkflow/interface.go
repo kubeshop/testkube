@@ -98,7 +98,7 @@ type Repository interface {
 	// GetByNameAndTestWorkflow gets execution result by name
 	GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflow gets latest execution result by workflow.
-	// sortBy determines the sorting criteria: LatestSortByStatusAt (result started time if available, falling back to status change time) or LatestSortByNumber (start order).
+	// sortBy determines the sorting criteria: LatestSortByStatusAt (status change time) or LatestSortByNumber (start order).
 	GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy LatestSortBy) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
