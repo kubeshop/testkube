@@ -182,8 +182,10 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = @workflow_name::text
 ORDER BY
     CASE
-        WHEN @sort_by_number::boolean = true THEN e.number
-        WHEN @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+        WHEN @sort_by_number::boolean = true AND @sort_by_status::boolean = false THEN e.number
+        WHEN @sort_by_status::boolean = true AND @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+    ELSE
+        EXTRACT(EPOCH FROM e.scheduled_at)::integer
     END DESC
 LIMIT 1;
 

@@ -23,7 +23,9 @@ type LabelSelector struct {
 type LatestSortBy string
 
 const (
-	// LatestSortByStatusAt sorts by status update time (when execution finished) - default behavior
+	// LatestSortByScheduledAt sorts by status schedule time (when execution first queued) - default behavior
+	LatestSortByScheduledAt LatestSortBy = "scheduledat"
+	// LatestSortByStatusAt sorts by status update time (when execution finished)
 	LatestSortByStatusAt LatestSortBy = "statusat"
 	// LatestSortByNumber sorts by execution number (start order)
 	LatestSortByNumber LatestSortBy = "number"
@@ -36,10 +38,10 @@ func ParseLatestSortBy(s string) LatestSortBy {
 		return LatestSortByNumber
 	case string(LatestSortByStatusAt):
 		return LatestSortByStatusAt
-	case "": // default case for empty string
-		return LatestSortByStatusAt
-	default: // invalid values default to statusat for backward compatibility
-		return LatestSortByStatusAt
+	case string(LatestSortByScheduledAt):
+		return LatestSortByScheduledAt
+	default: // invalid values default to scheduledat
+		return LatestSortByScheduledAt
 	}
 }
 
@@ -98,7 +100,7 @@ type Repository interface {
 	// GetByNameAndTestWorkflow gets execution result by name
 	GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflow gets latest execution result by workflow.
-	// sortBy determines the sorting criteria: LatestSortByStatusAt (status change time) or LatestSortByNumber (start order).
+	// sortBy determines the sorting criteria: LatestSortByScheduledAt (intial queued time), LatestSortByStatusAt (status change time) or LatestSortByNumber (start order).
 	GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy LatestSortBy) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)

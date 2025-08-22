@@ -456,6 +456,7 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
 		WorkflowName: workflowName,
 		SortByNumber: sortBy == testworkflow.LatestSortByNumber,
+		SortByStatus: sortBy == testworkflow.LatestSortByStatusAt,
 	})
 	if err != nil {
 		return nil, err
