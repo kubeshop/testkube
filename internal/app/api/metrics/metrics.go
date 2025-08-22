@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 )
 
 var testExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -144,64 +145,92 @@ var webhookExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of webhook executions",
 }, []string{"name", "eventType", "result"})
 
+var testWorkflowExecutionStepsDurationMs = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "testkube_testworkflow_execution_steps_duration_ms",
+	Help: "The duration of test workflow execution steps",
+}, []string{"workflow_name", "step_name", "status"})
+
+var testWorkflowExecutionStepsCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflow_execution_steps_count",
+	Help: "The total number of test workflow execution steps",
+}, []string{"workflow_name", "step_name", "status"})
+
+var testWorkflowExecutionStepsStartTimeMs = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "testkube_testworkflow_execution_steps_start_time_ms",
+	Help: "The start time of test workflow execution steps",
+}, []string{"workflow_name", "step_name", "status"})
+
+var testWorkflowExecutionStepsFinishTimeMs = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "testkube_testworkflow_execution_steps_finish_time_ms",
+	Help: "The finish time of test workflow execution steps",
+}, []string{"workflow_name", "step_name", "status"})
+
 func NewMetrics() Metrics {
 	return Metrics{
-		TestExecutionsCount:              testExecutionsCount,
-		TestExecutionsDurationMs:         testExecutionsDurationMs,
-		TestAbort:                        testAbortCount,
-		TestSuiteExecutionsCount:         testSuiteExecutionsCount,
-		TestSuiteExecutionsDurationMs:    testSuiteExecutionsDurationMs,
-		TestSuiteAbort:                   testSuiteAbortCount,
-		TestCreations:                    testCreationCount,
-		TestSuiteCreations:               testSuiteCreationCount,
-		TestUpdates:                      testUpdatesCount,
-		TestSuiteUpdates:                 testSuiteUpdatesCount,
-		TestTriggerCreations:             testTriggerCreationCount,
-		TestTriggerUpdates:               testTriggerUpdatesCount,
-		TestTriggerDeletes:               testTriggerDeletesCount,
-		TestTriggerBulkUpdates:           testTriggerBulkUpdatesCount,
-		TestTriggerBulkDeletes:           testTriggerBulkDeletesCount,
-		TestWorkflowExecutionsCount:      testWorkflowExecutionsCount,
-		TestWorkflowExecutionsDurationMs: testWorkflowExecutionsDurationMs,
-		TestWorkflowAbort:                testWorkflowAbortCount,
-		TestWorkflowCreations:            testWorkflowCreationCount,
-		TestWorkflowUpdates:              testWorkflowUpdatesCount,
-		TestWorkflowDeletes:              testWorkflowDeletesCount,
-		TestWorkflowTemplateCreations:    testWorkflowTemplateCreationCount,
-		TestWorkflowTemplateUpdates:      testWorkflowTemplateUpdatesCount,
-		TestWorkflowTemplateDeletes:      testWorkflowTemplateDeletesCount,
-		TestTriggerEventCount:            testTriggerEventCount,
-		WebhookEventCount:                webhookExecutionsCount,
+		TestExecutionsCount:                    testExecutionsCount,
+		TestExecutionsDurationMs:               testExecutionsDurationMs,
+		TestAbort:                              testAbortCount,
+		TestSuiteExecutionsCount:               testSuiteExecutionsCount,
+		TestSuiteExecutionsDurationMs:          testSuiteExecutionsDurationMs,
+		TestSuiteAbort:                         testSuiteAbortCount,
+		TestCreations:                          testCreationCount,
+		TestSuiteCreations:                     testSuiteCreationCount,
+		TestUpdates:                            testUpdatesCount,
+		TestSuiteUpdates:                       testSuiteUpdatesCount,
+		TestTriggerCreations:                   testTriggerCreationCount,
+		TestTriggerUpdates:                     testTriggerUpdatesCount,
+		TestTriggerDeletes:                     testTriggerDeletesCount,
+		TestTriggerBulkUpdates:                 testTriggerBulkUpdatesCount,
+		TestTriggerBulkDeletes:                 testTriggerBulkDeletesCount,
+		TestWorkflowExecutionsCount:            testWorkflowExecutionsCount,
+		TestWorkflowExecutionsDurationMs:       testWorkflowExecutionsDurationMs,
+		TestWorkflowAbort:                      testWorkflowAbortCount,
+		TestWorkflowCreations:                  testWorkflowCreationCount,
+		TestWorkflowUpdates:                    testWorkflowUpdatesCount,
+		TestWorkflowDeletes:                    testWorkflowDeletesCount,
+		TestWorkflowTemplateCreations:          testWorkflowTemplateCreationCount,
+		TestWorkflowTemplateUpdates:            testWorkflowTemplateUpdatesCount,
+		TestWorkflowTemplateDeletes:            testWorkflowTemplateDeletesCount,
+		TestTriggerEventCount:                  testTriggerEventCount,
+		WebhookEventCount:                      webhookExecutionsCount,
+		TestWorkflowExecutionStepsDurationMs:   testWorkflowExecutionStepsDurationMs,
+		TestWorkflowExecutionStepsCount:        testWorkflowExecutionStepsCount,
+		TestWorkflowExecutionStepsStartTimeMs:  testWorkflowExecutionStepsStartTimeMs,
+		TestWorkflowExecutionStepsFinishTimeMs: testWorkflowExecutionStepsFinishTimeMs,
 	}
 }
 
 type Metrics struct {
-	TestExecutionsCount              *prometheus.CounterVec
-	TestExecutionsDurationMs         *prometheus.SummaryVec
-	TestAbort                        *prometheus.CounterVec
-	TestSuiteExecutionsCount         *prometheus.CounterVec
-	TestSuiteExecutionsDurationMs    *prometheus.SummaryVec
-	TestSuiteAbort                   *prometheus.CounterVec
-	TestCreations                    *prometheus.CounterVec
-	TestSuiteCreations               *prometheus.CounterVec
-	TestUpdates                      *prometheus.CounterVec
-	TestSuiteUpdates                 *prometheus.CounterVec
-	TestTriggerCreations             *prometheus.CounterVec
-	TestTriggerUpdates               *prometheus.CounterVec
-	TestTriggerDeletes               *prometheus.CounterVec
-	TestTriggerBulkUpdates           *prometheus.CounterVec
-	TestTriggerBulkDeletes           *prometheus.CounterVec
-	TestWorkflowExecutionsCount      *prometheus.CounterVec
-	TestWorkflowExecutionsDurationMs *prometheus.SummaryVec
-	TestWorkflowAbort                *prometheus.CounterVec
-	TestWorkflowCreations            *prometheus.CounterVec
-	TestWorkflowUpdates              *prometheus.CounterVec
-	TestWorkflowDeletes              *prometheus.CounterVec
-	TestWorkflowTemplateCreations    *prometheus.CounterVec
-	TestWorkflowTemplateUpdates      *prometheus.CounterVec
-	TestWorkflowTemplateDeletes      *prometheus.CounterVec
-	TestTriggerEventCount            *prometheus.CounterVec
-	WebhookEventCount                *prometheus.CounterVec
+	TestExecutionsCount                    *prometheus.CounterVec
+	TestExecutionsDurationMs               *prometheus.SummaryVec
+	TestAbort                              *prometheus.CounterVec
+	TestSuiteExecutionsCount               *prometheus.CounterVec
+	TestSuiteExecutionsDurationMs          *prometheus.SummaryVec
+	TestSuiteAbort                         *prometheus.CounterVec
+	TestCreations                          *prometheus.CounterVec
+	TestSuiteCreations                     *prometheus.CounterVec
+	TestUpdates                            *prometheus.CounterVec
+	TestSuiteUpdates                       *prometheus.CounterVec
+	TestTriggerCreations                   *prometheus.CounterVec
+	TestTriggerUpdates                     *prometheus.CounterVec
+	TestTriggerDeletes                     *prometheus.CounterVec
+	TestTriggerBulkUpdates                 *prometheus.CounterVec
+	TestTriggerBulkDeletes                 *prometheus.CounterVec
+	TestWorkflowExecutionsCount            *prometheus.CounterVec
+	TestWorkflowExecutionsDurationMs       *prometheus.SummaryVec
+	TestWorkflowAbort                      *prometheus.CounterVec
+	TestWorkflowCreations                  *prometheus.CounterVec
+	TestWorkflowUpdates                    *prometheus.CounterVec
+	TestWorkflowDeletes                    *prometheus.CounterVec
+	TestWorkflowTemplateCreations          *prometheus.CounterVec
+	TestWorkflowTemplateUpdates            *prometheus.CounterVec
+	TestWorkflowTemplateDeletes            *prometheus.CounterVec
+	TestTriggerEventCount                  *prometheus.CounterVec
+	WebhookEventCount                      *prometheus.CounterVec
+	TestWorkflowExecutionStepsDurationMs   *prometheus.GaugeVec
+	TestWorkflowExecutionStepsCount        *prometheus.CounterVec
+	TestWorkflowExecutionStepsStartTimeMs  *prometheus.GaugeVec
+	TestWorkflowExecutionStepsFinishTimeMs *prometheus.GaugeVec
 }
 
 func (m Metrics) IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string) {
@@ -443,6 +472,43 @@ func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflo
 			"triggered_by":     triggeredBy,
 			"tags":             strings.Join(tags, ","),
 		}).Observe(float64(execution.Result.DurationMs))
+
+		if execution.Result.Steps != nil {
+			steps := testworkflows.FlattenSignatures(execution.Signature)
+			for _, step := range steps {
+				if result, ok := execution.Result.Steps[step.Ref]; ok {
+					duration := max(result.FinishedAt.Sub(result.QueuedAt), 0)
+					status := result.Status
+					startTime := result.QueuedAt
+					finishTime := result.FinishedAt
+					if status != nil {
+						m.TestWorkflowExecutionStepsDurationMs.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Set(float64(duration.Milliseconds()))
+
+						m.TestWorkflowExecutionStepsCount.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Inc()
+
+						m.TestWorkflowExecutionStepsStartTimeMs.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Set(float64(startTime.UnixMilli()))
+
+						m.TestWorkflowExecutionStepsFinishTimeMs.With(map[string]string{
+							"workflow_name": name,
+							"step_name":     step.Label(),
+							"status":        string(*status),
+						}).Set(float64(finishTime.UnixMilli()))
+					}
+				}
+			}
+		}
 	}
 }
 
