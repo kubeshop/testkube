@@ -137,9 +137,12 @@ func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 
 // GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "statusat"
-	if sortBy == testworkflow.LatestSortByNumber {
+	sortField := "scheduledat"
+	switch sortBy {
+	case testworkflow.LatestSortByNumber:
 		sortField = "number"
+	case testworkflow.LatestSortByStatusAt:
+		sortField = "statusat"
 	}
 
 	opts := options.Aggregate()
@@ -174,7 +177,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 	}
 
 	pipeline := []bson.M{
-		{"$sort": bson.M{"statusat": -1}},
+		{"$sort": bson.M{"scheduledat": -1}},
 		{"$project": bson.M{
 			"_id":                   0,
 			"output":                0,
@@ -278,7 +281,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	hasSkip := len(filter) > 0 && filter[0].Page() > 0
 	hasLimit := len(filter) > 0 && filter[0].PageSize() < math.MaxInt32
 	if hasSkip || hasLimit {
-		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "statusat", Value: -1}}}})
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "scheduledat", Value: -1}}}})
 	}
 	if hasSkip {
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
