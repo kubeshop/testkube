@@ -35,7 +35,7 @@ func NewHelpCmd() *cobra.Command {
 			usage := helpMessageByGroups(RootCmd)
 			ui.Print(usage)
 			ui.Print(ui.LightGray("Flags"))
-			ui.Printf(RootCmd.Flags().FlagUsages())
+			ui.Print(RootCmd.Flags().FlagUsages())
 			ui.NL()
 			ui.Print(ui.LightGray("Use \"kubectl testkube [command] --help\" for more information about a command."))
 			ui.NL()

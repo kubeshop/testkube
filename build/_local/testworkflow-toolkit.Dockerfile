@@ -5,7 +5,7 @@ FROM ${BUSYBOX_IMAGE} AS busybox
 ###################################
 ## Build testworkflow-init
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder-init
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder-init
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -25,7 +25,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Build testworkflow-toolkit
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder-toolkit
+FROM --platform=$BUILDPLATFORM golang:1.25.0-alpine AS builder-toolkit
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -33,7 +33,7 @@ ARG GOMODCACHE="/root/.cache/go-build"
 ARG GOCACHE="/go/pkg"
 ARG SKAFFOLD_GO_GCFLAGS
 
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
 
 WORKDIR /app
 COPY . .
