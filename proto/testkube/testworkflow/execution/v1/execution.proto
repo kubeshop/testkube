@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package testkube.testworkflow.execution.v1;
+
+// GetExecutionUpdatesRequest is currently empty but remains reserved for future usage
+// without breaking backwards proto compatibility.
+// https://buf.build/docs/best-practices/style-guide/#rpc-use-empty
+// Information used to select Execution information to return is expected to be provided
+// using message headers including Organization, Environment, and Agent identifiers and
+// authorization tokens.
+message GetExecutionUpdatesRequest {}
+
+// ExecutionStart contains fields used to initially start an Execution.
+message ExecutionStart {
+  // execution_id is the unique identifier of the execution to be started.
+  string execution_id = 1;
+  // environment_id is the unique identifier of the environment in which the execution should be started.
+  string environment_id = 2;
+  // execution_token is an authentication token that can be used to obtain any required
+  // additional information about an execution from the Control Plane.
+  optional string execution_token = 3;
+}
+
+// ExecutionState is a type used to indicate states of Test Workflow Executions.
+enum ExecutionState {
+  // EXECUTION_STATE_UNSPECIFIED an unknown state is provided, no action should be taken.
+  EXECUTION_STATE_UNSPECIFIED = 0;
+  // EXECUTION_STATE_RUNNING to transition to this state the Execution should be either:
+  // - Started if the Execution is currently Queued, Pending, or has no state set.
+  // - Resumed if the Execution is currently Paused.
+  EXECUTION_STATE_RUNNING = 1;
+  // EXECUTION_STATE_PAUSED, to transition to this state the Execution should be paused.
+  EXECUTION_STATE_PAUSED = 2;
+  // EXECUTION_STATE_CANCELLED, to transition to this state the Execution should be gracefully
+  // stopped and once the stop is complete the Control Plane should be updated
+  // that the Execution has been successfully cancelled.
+  EXECUTION_STATE_CANCELLED = 3;
+  // EXECUTION_STATE_ABORTED, to transition to this state the Execution should be first gracefully
+  // stopped, however if this fails the Execution can be forcefully stopped.
+  // If the state transition is successful, or has failed after forceful stop is attempted
+  // then the Control Plane should be updated that the Execution has been aborted.
+  // It is understood that this process can leave "floating", "orphaned", or "zombie"
+  // Execution related resources.
+  EXECUTION_STATE_ABORTED = 4;
+}
+
+// ExecutionStateTransition contains fields used to transition an execution to a new state.
+message ExecutionStateTransition {
+  // execution_id is the unique identifier of the execution to be transitioned.
+  string execution_id = 1;
+  // transition_to is the state the execution should be transitioned into.
+  ExecutionState transition_to = 2;
+}
+
+// GetExecutionUpdatesResponse is the Control Plane response to a request for execution state
+// transitions that should be performed by the client.
+message GetExecutionUpdatesResponse {
+  // start may or may not be included and indicates an Execution that should be started.
+  // A maximum of one execution to start is expected for each call to the RPC, rapid calls
+  // to the RPC without informing the Control Plane that the Execution is successfully started
+  // are expected to yield the same Execution and so clients SHOULD NOT call the RPC again
+  // until the Execution has been successfully started, or periodically if no Execution was
+  // returned.
+  optional ExecutionStart start = 1;
+  // update lists all Executions understood to be under the control of the client that should
+  // have their state transitioned. Subsequent calls to the RPC will yield duplicate updates
+  // if the Execution state transition successes have not been communicated to the Control
+  // Plane, however new state transition directives may be added in the interim so it is not
+  // expected that a client would wait to successfully transition all Executions before calling
+  // the RPC again, instead clients should interpret duplicate state transitions in a sensible
+  // manner to prevent overloading Execution state transition behaviour.
+  repeated ExecutionStateTransition update = 2;
+}
+
+// TestWorkflowExecutionService contains RPCs related to TestWorkflowExecutions.
+service TestWorkflowExecutionService {
+  // GetExecutionUpdates retrieves state transition imperatives from the Control Plane for
+  // Executions that are understood by the Control Plane to be under the control of the
+  // calling client.
+  rpc GetExecutionUpdates(GetExecutionUpdatesRequest) returns (GetExecutionUpdatesResponse);
+}

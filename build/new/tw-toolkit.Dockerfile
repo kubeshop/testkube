@@ -1,7 +1,7 @@
 ARG BUSYBOX_IMAGE
 ARG ALPINE_IMAGE
 
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app

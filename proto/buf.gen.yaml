@@ -1,0 +1,17 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/kubeshop/testkube/pkg/cloud
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: ../pkg/cloud
+    opt:
+      - paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: ../pkg/cloud
+    opt:
+      - paths=source_relative
+inputs:
+  - directory: .

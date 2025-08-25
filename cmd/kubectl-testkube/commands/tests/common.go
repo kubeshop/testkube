@@ -207,13 +207,13 @@ func watchLogs(id string, silentMode bool, client apiclientv1.Client) error {
 	for l := range logs {
 		switch l.Type_ {
 		case output.TypeError:
+			result = errors.New(l.Content)
 			ui.UseStderr()
-			ui.Errf(l.Content)
+			ui.Err(result)
 			if l.Result != nil {
 				ui.Errf("Error: %s", l.Result.ErrorMessage)
 				ui.Debug("Output: %s", l.Result.Output)
 			}
-			result = errors.New(l.Content)
 		case output.TypeResult:
 			ui.Info("Execution completed", l.Result.Output)
 		default:
@@ -250,9 +250,9 @@ func watchLogsV2(id string, silentMode bool, client apiclientv1.Client) error {
 	var result error
 	for l := range logs {
 		if l.Error_ {
-			ui.UseStderr()
-			ui.Errf(l.Content)
 			result = errors.New(l.Content)
+			ui.UseStderr()
+			ui.Err(result)
 			continue
 		}
 

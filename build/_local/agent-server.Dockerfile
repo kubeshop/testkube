@@ -1,7 +1,7 @@
 ###################################
 ## Build
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.23 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -22,10 +22,10 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.23-alpine AS debug
+FROM golang:1.25.0-alpine AS debug
 
 ENV GOTRACEBACK=all
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
 
 RUN apk --no-cache --update add ca-certificates && (rm -rf /var/cache/apk/* || 0)
 
