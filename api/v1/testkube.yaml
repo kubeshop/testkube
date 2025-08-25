@@ -10489,7 +10489,7 @@ components:
       type: object
       properties:
         global:
-          $ref: "#/components/schemas/BoxedBoolean"
+          type: boolean
         name:
           type: string
         value:
