@@ -117,7 +117,7 @@ func MapDynamicListMapAPIToKube(v map[string]interface{}) map[string]testworkflo
 
 func MapEnvVarAPIToKube(v testkube.EnvVar) testworkflowsv1.EnvVar {
 	return testworkflowsv1.EnvVar{
-		Global:   common.Ptr(v.Global),
+		Global: common.Ptr(v.Global),
 		EnvVar: corev1.EnvVar{
 			Name:      v.Name,
 			Value:     v.Value,
