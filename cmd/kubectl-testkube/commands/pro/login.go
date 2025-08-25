@@ -26,6 +26,7 @@ type CloudConfig struct {
 
 func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
+	var email string
 
 	cmd := &cobra.Command{
 		Use:     "login [apiUrl]",
@@ -126,7 +127,15 @@ func NewLoginCmd() *cobra.Command {
 
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
-			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
+			var token, refreshToken string
+
+			if email != "" {
+				// SSO authentication flow
+				token, refreshToken, err = common.LoginUserSSO(opts.Master.URIs.Api, opts.Master.URIs.Auth, email, opts.Master.CallbackPort)
+			} else {
+				// Traditional OAuth flow (GitHub/GitLab)
+				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
+			}
 			ui.ExitOnError("getting token", err)
 
 			orgID := opts.Master.OrgId
@@ -151,6 +160,7 @@ func NewLoginCmd() *cobra.Command {
 	}
 
 	common.PopulateMasterFlags(cmd, &opts, false)
+	cmd.Flags().StringVar(&email, "email", "", "email address for SSO authentication")
 
 	return cmd
 }
