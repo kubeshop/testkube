@@ -2,8 +2,14 @@ package cloudlogin
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -131,4 +137,154 @@ func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshT
 		return token.AccessToken, token.RefreshToken, nil
 	}
 	return rawIDToken, refreshToken, nil
+}
+
+// CloudLoginSSO handles SSO authentication using OAuth 2.0 with PKCE
+func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID string, port int) (string, chan Tokens, error) {
+	// Generate PKCE parameters
+	codeVerifier, err := generateCodeVerifier()
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate code verifier: %w", err)
+	}
+
+	codeChallenge := generateCodeChallenge(codeVerifier)
+
+	// Build redirect URI
+	redirectURI := fmt.Sprintf(redirectURL, port)
+
+	// Start a local server to handle the callback
+	ch := make(chan string)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code != "" {
+			ch <- code
+			fmt.Fprintln(w, "<script>window.close()</script>")
+			fmt.Fprintln(w, "Your testkube CLI is now successfully authenticated. Go back to the terminal to continue.")
+		} else {
+			fmt.Fprintln(w, "Authorization failed.")
+		}
+	})
+
+	srv := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", port), Handler: mux}
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if strings.Contains(err.Error(), "address already in use") {
+				ui.Fail(errors.Wrap(err, "failed to start callback server, you may try again with `--callback-port 38090`"))
+			} else {
+				ui.Fail(errors.Wrap(err, "failed to start callback server"))
+			}
+		}
+	}()
+
+	// Build authorization URL using AUTH URL (not API URL) like we figured out before
+	if !strings.HasSuffix(authBaseURL, "/") {
+		authBaseURL += "/"
+	}
+
+	authURL, err := url.Parse(authBaseURL + "auth")
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid auth URL: %w", err)
+	}
+
+	// Use proper OAuth2 parameters for CLI (not frontend browser flow)
+	params := url.Values{}
+	params.Set("client_id", clientID)
+	params.Set("connector_id", connectorID)
+	params.Set("response_type", "code")
+	params.Set("scope", "openid profile email offline_access")
+	params.Set("code_challenge", codeChallenge)
+	params.Set("code_challenge_method", "S256")
+	params.Set("redirect_uri", redirectURI)
+	params.Set("state", "testkube-cli-state")
+	authURL.RawQuery = params.Encode()
+
+	respCh := make(chan Tokens)
+
+	go func() {
+		// Close the callback server
+		defer srv.Close()
+
+		// Wait for the user to authorize and retrieve the authorization code
+		code := <-ch
+
+		// Exchange the authorization code for tokens using API URL
+		token, err := exchangeCodeForTokens(apiBaseURL, code, codeVerifier)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to exchange code for tokens: %v\n", err)
+			respCh <- Tokens{}
+			return
+		}
+
+		respCh <- token
+	}()
+
+	return authURL.String(), respCh, nil
+}
+
+// generateCodeVerifier creates a cryptographically random code verifier
+func generateCodeVerifier() (string, error) {
+	bytes := make([]byte, 96) // 96 bytes = 128 base64url chars
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode to base64url without padding
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+// generateCodeChallenge creates SHA256 hash of code verifier
+func generateCodeChallenge(verifier string) string {
+	hash := sha256.Sum256([]byte(verifier))
+	return base64.RawURLEncoding.EncodeToString(hash[:])
+}
+
+// exchangeCodeForTokens exchanges authorization code for access and refresh tokens
+func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string) (Tokens, error) {
+	if !strings.HasSuffix(apiBaseURL, "/") {
+		apiBaseURL += "/"
+	}
+
+	tokenURL := apiBaseURL + "auth/login"
+
+	// Include all required OAuth2 parameters for token exchange
+	requestBody := map[string]string{
+		"grant_type":    "authorization_code",
+		"client_id":     clientID,
+		"code":          code,
+		"code_verifier": codeVerifier,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return Tokens{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post(tokenURL, "application/json", strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return Tokens{}, fmt.Errorf("failed to make token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return Tokens{}, fmt.Errorf("token exchange failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var tokenResponse struct {
+		IDToken      string `json:"idToken"`
+		RefreshToken string `json:"refreshToken"`
+		AccessToken  string `json:"accessToken"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		return Tokens{}, fmt.Errorf("failed to decode token response: %w", err)
+	}
+
+	return Tokens{
+		IDToken:      tokenResponse.IDToken,
+		RefreshToken: tokenResponse.RefreshToken,
+	}, nil
 }
