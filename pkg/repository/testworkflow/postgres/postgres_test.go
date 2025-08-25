@@ -39,6 +39,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionByNa
 	return args.Get(0).(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow), args.Error(1)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg sqlc.GetTestWorkflowExecutionWithRunnerParams) (sqlc.GetTestWorkflowExecutionWithRunnerRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(sqlc.GetTestWorkflowExecutionWithRunnerRow), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow), args.Error(1)
@@ -124,7 +129,17 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionR
 	return args.Error(0)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionResultStrict(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResultStrictParams) (string, error) {
+	args := m.Called(ctx, arg)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAt(ctx context.Context, arg sqlc.UpdateExecutionStatusAtParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAtStrict(ctx context.Context, arg sqlc.UpdateExecutionStatusAtStrictParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }

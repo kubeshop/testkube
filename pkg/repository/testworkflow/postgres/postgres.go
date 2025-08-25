@@ -181,7 +181,28 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 }
 
 func (r *PostgresRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
-	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+	row, err := r.queries.GetTestWorkflowExecutionWithRunner(ctx, sqlc.GetTestWorkflowExecutionWithRunnerParams{
+		ID:             id,
+		RunnerID:       toPgText(runner),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
+	if err != nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+
+	// Convert row to TestWorkflowExecution
+	execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
+	if err != nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+
+	// Populate config params if resolved workflow exists
+	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
+	}
+
+	return *execution.UnscapeDots(), nil
 }
 
 // Helper method to convert complete row to TestWorkflowExecution
@@ -1110,12 +1131,200 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
-	return false, errors.New("not yet implemented")
+func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	if result.IsFinished() {
+		return false, errors.New("invalid state")
+	}
+
+	// Start a transaction for atomic operations
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Get current status for comparison
+	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+		ID:             id,
+		OrganizationID: r.environmentID,
+		EnvironmentID:  r.environmentID,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// Prepare parameters
+	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+		ExecutionID:     id,
+		RunnerID:        toPgText(runnerId),
+		Status:          toPgText(string(*result.Status)),
+		QueuedAt:        toPgTimestamp(result.QueuedAt),
+		StartedAt:       toPgTimestamp(result.StartedAt),
+		FinishedAt:      toPgTimestamp(result.FinishedAt),
+		Duration:        toPgText(result.Duration),
+		TotalDuration:   toPgText(result.TotalDuration),
+		DurationMs:      pgtype.Int4{Int32: result.DurationMs, Valid: true},
+		PausedMs:        pgtype.Int4{Int32: result.PausedMs, Valid: true},
+		TotalDurationMs: pgtype.Int4{Int32: result.TotalDurationMs, Valid: true},
+	}
+
+	if result.PredictedStatus != nil {
+		params.PredictedStatus = toPgText(string(*result.PredictedStatus))
+	}
+
+	// Marshal JSONB fields
+	if result.Pauses != nil {
+		pausesData, err := json.Marshal(result.Pauses)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal pauses: %w", err)
+		}
+		params.Pauses = pausesData
+	}
+
+	if result.Initialization != nil {
+		initData, err := json.Marshal(result.Initialization)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal initialization: %w", err)
+		}
+		params.Initialization = initData
+	}
+
+	if result.Steps != nil {
+		stepsData, err := json.Marshal(result.Steps)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal steps: %w", err)
+		}
+		params.Steps = stepsData
+	}
+
+	// Update the result
+	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	if err != nil {
+		return false, err
+	}
+
+	// Update status_at if status changed
+	currentStatus := fromPgText(currentExecution.Status)
+	newStatus := string(*result.Status)
+	if currentStatus != newStatus {
+		err = qtx.UpdateExecutionStatusAtStrict(ctx, sqlc.UpdateExecutionStatusAtStrictParams{
+			ExecutionID:    updatedID,
+			NewStatus:      newStatus,
+			OldStatus:      currentStatus,
+			StatusAt:       toPgTimestamp(time.Now()),
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+		})
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
-	return false, errors.New("not yet implemented")
+func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	if result.IsFinished() {
+		return false, errors.New("invalid state")
+	}
+
+	// Start a transaction for atomic operations
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Get current status for comparison
+	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+		ID:             id,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// Prepare parameters
+	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+		ExecutionID:     id,
+		RunnerID:        toPgText(runnerId),
+		Status:          toPgText(string(*result.Status)),
+		QueuedAt:        toPgTimestamp(result.QueuedAt),
+		StartedAt:       toPgTimestamp(result.StartedAt),
+		FinishedAt:      toPgTimestamp(result.FinishedAt),
+		Duration:        toPgText(result.Duration),
+		TotalDuration:   toPgText(result.TotalDuration),
+		DurationMs:      pgtype.Int4{Int32: result.DurationMs, Valid: true},
+		PausedMs:        pgtype.Int4{Int32: result.PausedMs, Valid: true},
+		TotalDurationMs: pgtype.Int4{Int32: result.TotalDurationMs, Valid: true},
+	}
+
+	if result.PredictedStatus != nil {
+		params.PredictedStatus = toPgText(string(*result.PredictedStatus))
+	}
+
+	// Marshal JSONB fields
+	if result.Pauses != nil {
+		pausesData, err := json.Marshal(result.Pauses)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal pauses: %w", err)
+		}
+		params.Pauses = pausesData
+	}
+
+	if result.Initialization != nil {
+		initData, err := json.Marshal(result.Initialization)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal initialization: %w", err)
+		}
+		params.Initialization = initData
+	}
+
+	if result.Steps != nil {
+		stepsData, err := json.Marshal(result.Steps)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal steps: %w", err)
+		}
+		params.Steps = stepsData
+	}
+
+	// Update the result
+	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	if err != nil {
+		return false, err
+	}
+
+	// Update status_at if status changed
+	currentStatus := fromPgText(currentExecution.Status)
+	newStatus := string(*result.Status)
+	if currentStatus != newStatus {
+		err = qtx.UpdateExecutionStatusAtStrict(ctx, sqlc.UpdateExecutionStatusAtStrictParams{
+			ExecutionID:    updatedID,
+			NewStatus:      newStatus,
+			OldStatus:      currentStatus,
+			StatusAt:       toPgTimestamp(time.Now()),
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+		})
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // UpdateResult updates only the result

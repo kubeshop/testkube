@@ -25,6 +25,7 @@ type TestWorkflowExecutionQueriesInterface interface {
 	GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error)
 	GetUnassignedTestWorkflowExecutions(ctx context.Context, arg GetUnassignedTestWorkflowExecutionsParams) ([]GetUnassignedTestWorkflowExecutionsRow, error)
 	CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error)
+	GetTestWorkflowExecutionWithRunner(ctx context.Context, arg GetTestWorkflowExecutionWithRunnerParams) (GetTestWorkflowExecutionWithRunnerRow, error)
 
 	// Insert operations
 	InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error
@@ -41,6 +42,8 @@ type TestWorkflowExecutionQueriesInterface interface {
 	UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecutionStatusAtParams) error
 	UpdateTestWorkflowExecutionReport(ctx context.Context, arg UpdateTestWorkflowExecutionReportParams) error
 	UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error
+	UpdateExecutionStatusAtStrict(ctx context.Context, arg UpdateExecutionStatusAtStrictParams) error
+	UpdateTestWorkflowExecutionResultStrict(ctx context.Context, arg UpdateTestWorkflowExecutionResultStrictParams) (string, error)
 
 	// Delete operations
 	DeleteTestWorkflowSignatures(ctx context.Context, executionID string) error
