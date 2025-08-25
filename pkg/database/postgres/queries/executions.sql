@@ -182,8 +182,10 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
 ORDER BY
     CASE
-        WHEN @sort_by_number::boolean = true THEN e.number
-        WHEN @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+        WHEN @sort_by_number::boolean = true AND @sort_by_status::boolean = false THEN e.number
+        WHEN @sort_by_status::boolean = true AND @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+    ELSE
+        EXTRACT(EPOCH FROM e.scheduled_at)::integer
     END DESC
 LIMIT 1;
 
@@ -308,7 +310,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE r.status IN ('queued', 'pending', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
 ORDER BY e.id DESC;
 
 -- name: GetFinishedTestWorkflowExecutions :many
@@ -890,7 +892,8 @@ ORDER BY tag_key;
 UPDATE test_workflow_executions 
 SET 
     namespace = @namespace,
-    runner_id = @runner_id
+    runner_id = @runner_id,
+    status_at = NOW()
 WHERE id = @id AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: AssignTestWorkflowExecution :one
@@ -976,7 +979,7 @@ SET status_at = @abort_time
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = @id AND (test_workflow_executions.organization_id = @organization_id AND test_workflow_executions.environment_id = @environment_id)
     AND test_workflow_executions.id = r.execution_id
-    AND r.status IN ('queued', 'assigned', 'starting', 'running', 'paused', 'resuming')
+    AND r.status IN ('queued', 'pending', 'starting', 'running', 'paused', 'resuming')
     AND (test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
 RETURNING test_workflow_executions.id;
 

@@ -264,6 +264,12 @@ $(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
 		cmd/kubectl-testkube/main.go
 	@echo "kubectl-testkube CLI built: $(KUBECTL_TESTKUBE_CLI_BIN)"
 
+.PHONY: rebuild-kubectl-testkube-cli
+rebuild-kubectl-testkube-cli: ## Delete and rebuild kubectl-testkube CLI binary
+	@echo "Removing existing kubectl-testkube CLI binary..."
+	@rm -f $(KUBECTL_TESTKUBE_CLI_BIN)
+	@$(MAKE) build-kubectl-testkube-cli
+
 .PHONY: build-toolkit
 build-toolkit: ## Build testworkflow toolkit
 	@echo "Building testworkflow toolkit..."

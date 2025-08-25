@@ -7,11 +7,12 @@
 package cloud
 
 import (
-	context "context"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	"context"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -70,6 +71,16 @@ type TestKubeCloudAPIClient interface {
 	DeleteTestWorkflowTemplate(ctx context.Context, in *DeleteTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplateResponse, error)
 	DeleteTestWorkflowTemplatesByLabels(ctx context.Context, in *DeleteTestWorkflowTemplatesByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplatesByLabelsResponse, error)
 	WatchTestWorkflowTemplateUpdates(ctx context.Context, in *WatchTestWorkflowTemplateUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient, error)
+	// -- Test Triggers
+	GetTestTrigger(ctx context.Context, in *GetTestTriggerRequest, opts ...grpc.CallOption) (*GetTestTriggerResponse, error)
+	ListTestTriggers(ctx context.Context, in *ListTestTriggersRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestTriggersClient, error)
+	ListTestTriggerLabels(ctx context.Context, in *ListTestTriggerLabelsRequest, opts ...grpc.CallOption) (*ListTestTriggerLabelsResponse, error)
+	CreateTestTrigger(ctx context.Context, in *CreateTestTriggerRequest, opts ...grpc.CallOption) (*CreateTestTriggerResponse, error)
+	UpdateTestTrigger(ctx context.Context, in *UpdateTestTriggerRequest, opts ...grpc.CallOption) (*UpdateTestTriggerResponse, error)
+	DeleteTestTrigger(ctx context.Context, in *DeleteTestTriggerRequest, opts ...grpc.CallOption) (*DeleteTestTriggerResponse, error)
+	DeleteAllTestTriggers(ctx context.Context, in *DeleteAllTestTriggersRequest, opts ...grpc.CallOption) (*DeleteAllTestTriggersResponse, error)
+	DeleteTestTriggersByLabels(ctx context.Context, in *DeleteTestTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestTriggersByLabelsResponse, error)
+	WatchTestTriggerUpdates(ctx context.Context, in *WatchTestTriggerUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestTriggerUpdatesClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -780,6 +791,133 @@ func (x *testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient) Recv() (*TestWo
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetTestTrigger(ctx context.Context, in *GetTestTriggerRequest, opts ...grpc.CallOption) (*GetTestTriggerResponse, error) {
+	out := new(GetTestTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetTestTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) ListTestTriggers(ctx context.Context, in *ListTestTriggersRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestTriggersClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[15], "/cloud.TestKubeCloudAPI/ListTestTriggers", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIListTestTriggersClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ListTestTriggersClient interface {
+	Recv() (*TestTriggerListItem, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIListTestTriggersClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIListTestTriggersClient) Recv() (*TestTriggerListItem, error) {
+	m := new(TestTriggerListItem)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ListTestTriggerLabels(ctx context.Context, in *ListTestTriggerLabelsRequest, opts ...grpc.CallOption) (*ListTestTriggerLabelsResponse, error) {
+	out := new(ListTestTriggerLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListTestTriggerLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) CreateTestTrigger(ctx context.Context, in *CreateTestTriggerRequest, opts ...grpc.CallOption) (*CreateTestTriggerResponse, error) {
+	out := new(CreateTestTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CreateTestTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateTestTrigger(ctx context.Context, in *UpdateTestTriggerRequest, opts ...grpc.CallOption) (*UpdateTestTriggerResponse, error) {
+	out := new(UpdateTestTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateTestTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteTestTrigger(ctx context.Context, in *DeleteTestTriggerRequest, opts ...grpc.CallOption) (*DeleteTestTriggerResponse, error) {
+	out := new(DeleteTestTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteTestTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteAllTestTriggers(ctx context.Context, in *DeleteAllTestTriggersRequest, opts ...grpc.CallOption) (*DeleteAllTestTriggersResponse, error) {
+	out := new(DeleteAllTestTriggersResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteAllTestTriggers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteTestTriggersByLabels(ctx context.Context, in *DeleteTestTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestTriggersByLabelsResponse, error) {
+	out := new(DeleteTestTriggersByLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteTestTriggersByLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) WatchTestTriggerUpdates(ctx context.Context, in *WatchTestTriggerUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestTriggerUpdatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[16], "/cloud.TestKubeCloudAPI/WatchTestTriggerUpdates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIWatchTestTriggerUpdatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_WatchTestTriggerUpdatesClient interface {
+	Recv() (*TestTriggerUpdate, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIWatchTestTriggerUpdatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIWatchTestTriggerUpdatesClient) Recv() (*TestTriggerUpdate, error) {
+	m := new(TestTriggerUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -831,6 +969,16 @@ type TestKubeCloudAPIServer interface {
 	DeleteTestWorkflowTemplate(context.Context, *DeleteTestWorkflowTemplateRequest) (*DeleteTestWorkflowTemplateResponse, error)
 	DeleteTestWorkflowTemplatesByLabels(context.Context, *DeleteTestWorkflowTemplatesByLabelsRequest) (*DeleteTestWorkflowTemplatesByLabelsResponse, error)
 	WatchTestWorkflowTemplateUpdates(*WatchTestWorkflowTemplateUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer) error
+	// -- Test Triggers
+	GetTestTrigger(context.Context, *GetTestTriggerRequest) (*GetTestTriggerResponse, error)
+	ListTestTriggers(*ListTestTriggersRequest, TestKubeCloudAPI_ListTestTriggersServer) error
+	ListTestTriggerLabels(context.Context, *ListTestTriggerLabelsRequest) (*ListTestTriggerLabelsResponse, error)
+	CreateTestTrigger(context.Context, *CreateTestTriggerRequest) (*CreateTestTriggerResponse, error)
+	UpdateTestTrigger(context.Context, *UpdateTestTriggerRequest) (*UpdateTestTriggerResponse, error)
+	DeleteTestTrigger(context.Context, *DeleteTestTriggerRequest) (*DeleteTestTriggerResponse, error)
+	DeleteAllTestTriggers(context.Context, *DeleteAllTestTriggersRequest) (*DeleteAllTestTriggersResponse, error)
+	DeleteTestTriggersByLabels(context.Context, *DeleteTestTriggersByLabelsRequest) (*DeleteTestTriggersByLabelsResponse, error)
+	WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -957,6 +1105,33 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowTemplatesByLabels(c
 }
 func (UnimplementedTestKubeCloudAPIServer) WatchTestWorkflowTemplateUpdates(*WatchTestWorkflowTemplateUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method WatchTestWorkflowTemplateUpdates not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetTestTrigger(context.Context, *GetTestTriggerRequest) (*GetTestTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTestTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListTestTriggers(*ListTestTriggersRequest, TestKubeCloudAPI_ListTestTriggersServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListTestTriggers not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListTestTriggerLabels(context.Context, *ListTestTriggerLabelsRequest) (*ListTestTriggerLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTestTriggerLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) CreateTestTrigger(context.Context, *CreateTestTriggerRequest) (*CreateTestTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTestTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateTestTrigger(context.Context, *UpdateTestTriggerRequest) (*UpdateTestTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTestTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteTestTrigger(context.Context, *DeleteTestTriggerRequest) (*DeleteTestTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteAllTestTriggers(context.Context, *DeleteAllTestTriggersRequest) (*DeleteAllTestTriggersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllTestTriggers not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteTestTriggersByLabels(context.Context, *DeleteTestTriggersByLabelsRequest) (*DeleteTestTriggersByLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestTriggersByLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchTestTriggerUpdates not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -1776,6 +1951,174 @@ func (x *testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer) Send(m *TestWor
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_GetTestTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTestTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetTestTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetTestTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetTestTrigger(ctx, req.(*GetTestTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_ListTestTriggers_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListTestTriggersRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ListTestTriggers(m, &testKubeCloudAPIListTestTriggersServer{stream})
+}
+
+type TestKubeCloudAPI_ListTestTriggersServer interface {
+	Send(*TestTriggerListItem) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIListTestTriggersServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIListTestTriggersServer) Send(m *TestTriggerListItem) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_ListTestTriggerLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTestTriggerLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ListTestTriggerLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ListTestTriggerLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ListTestTriggerLabels(ctx, req.(*ListTestTriggerLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_CreateTestTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTestTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).CreateTestTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/CreateTestTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).CreateTestTrigger(ctx, req.(*CreateTestTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateTestTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTestTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateTestTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateTestTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateTestTrigger(ctx, req.(*UpdateTestTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteTestTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTestTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteTestTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteTestTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteTestTrigger(ctx, req.(*DeleteTestTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteAllTestTriggers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAllTestTriggersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteAllTestTriggers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteAllTestTriggers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteAllTestTriggers(ctx, req.(*DeleteAllTestTriggersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteTestTriggersByLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTestTriggersByLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteTestTriggersByLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteTestTriggersByLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteTestTriggersByLabels(ctx, req.(*DeleteTestTriggersByLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_WatchTestTriggerUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchTestTriggerUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).WatchTestTriggerUpdates(m, &testKubeCloudAPIWatchTestTriggerUpdatesServer{stream})
+}
+
+type TestKubeCloudAPI_WatchTestTriggerUpdatesServer interface {
+	Send(*TestTriggerUpdate) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIWatchTestTriggerUpdatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIWatchTestTriggerUpdatesServer) Send(m *TestTriggerUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1883,6 +2226,34 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteTestWorkflowTemplatesByLabels",
 			Handler:    _TestKubeCloudAPI_DeleteTestWorkflowTemplatesByLabels_Handler,
 		},
+		{
+			MethodName: "GetTestTrigger",
+			Handler:    _TestKubeCloudAPI_GetTestTrigger_Handler,
+		},
+		{
+			MethodName: "ListTestTriggerLabels",
+			Handler:    _TestKubeCloudAPI_ListTestTriggerLabels_Handler,
+		},
+		{
+			MethodName: "CreateTestTrigger",
+			Handler:    _TestKubeCloudAPI_CreateTestTrigger_Handler,
+		},
+		{
+			MethodName: "UpdateTestTrigger",
+			Handler:    _TestKubeCloudAPI_UpdateTestTrigger_Handler,
+		},
+		{
+			MethodName: "DeleteTestTrigger",
+			Handler:    _TestKubeCloudAPI_DeleteTestTrigger_Handler,
+		},
+		{
+			MethodName: "DeleteAllTestTriggers",
+			Handler:    _TestKubeCloudAPI_DeleteAllTestTriggers_Handler,
+		},
+		{
+			MethodName: "DeleteTestTriggersByLabels",
+			Handler:    _TestKubeCloudAPI_DeleteTestTriggersByLabels_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -1965,6 +2336,16 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "WatchTestWorkflowTemplateUpdates",
 			Handler:       _TestKubeCloudAPI_WatchTestWorkflowTemplateUpdates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListTestTriggers",
+			Handler:       _TestKubeCloudAPI_ListTestTriggers_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WatchTestTriggerUpdates",
+			Handler:       _TestKubeCloudAPI_WatchTestTriggerUpdates_Handler,
 			ServerStreams: true,
 		},
 	},

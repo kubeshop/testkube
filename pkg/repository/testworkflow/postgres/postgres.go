@@ -180,6 +180,10 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 	return *execution, nil
 }
 
+func (r *PostgresRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+}
+
 // Helper method to convert complete row to TestWorkflowExecution
 func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
 	var err error
@@ -483,6 +487,7 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
 		WorkflowName:   workflowName,
 		SortByNumber:   sortBy == testworkflow.LatestSortByNumber,
+		SortByStatus:   sortBy == testworkflow.LatestSortByStatusAt,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
@@ -603,7 +608,7 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 		}
 
 		switch testkube.TestWorkflowStatus(row.Status.String) {
-		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.PENDING_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
 			totals.Queued = count
 		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = count
@@ -1105,6 +1110,14 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	return tx.Commit(ctx)
 }
 
+func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented")
+}
+
+func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented")
+}
+
 // UpdateResult updates only the result
 func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) error {
 	pauses, err := toJSONB(result.Pauses)
@@ -1371,13 +1384,36 @@ func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowN
 
 // Init initializes execution
 func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkflow.InitData) error {
-	return r.queries.InitTestWorkflowExecution(ctx, sqlc.InitTestWorkflowExecutionParams{
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	if err := qtx.InitTestWorkflowExecution(ctx, sqlc.InitTestWorkflowExecutionParams{
 		ID:             id,
 		Namespace:      toPgText(data.Namespace),
 		RunnerID:       toPgText(data.RunnerID),
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to init test workflow execution: %w", err)
+	}
+
+	if err := qtx.UpdateTestWorkflowExecutionResult(ctx, sqlc.UpdateTestWorkflowExecutionResultParams{
+		ExecutionID: id,
+		Status:      toPgText(string(testkube.SCHEDULING_TestWorkflowStatus)),
+	}); err != nil {
+		return fmt.Errorf("failed to update test workflow execution result: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 // Assign assigns execution to runner

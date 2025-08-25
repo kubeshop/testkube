@@ -241,6 +241,26 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: special-cases-optional-step-timed-out
+  labels:
+    core-tests: special-cases
+description: "optional step failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Optional step (expected timeout)
+    optional: true
+    timeout: 5s
+    shell: echo "Expected timeout" && sleep 10
+  - name: Second step (expected pass)
+    shell: echo "OK"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: special-cases-optional-step-passed
   labels:
     core-tests: special-cases
@@ -288,7 +308,7 @@ spec:
     activeDeadlineSeconds: 30
   steps:
   - name: Conditional step (should be executed and pass)
-    condition: "true"
+    condition: always # always is alias for "true" - checking both cases
     shell: echo "Should pass"
 ---
 apiVersion: testworkflows.testkube.io/v1
@@ -304,7 +324,7 @@ spec:
   job:
     activeDeadlineSeconds: 30
   steps:
-  - name: Conditional step (should be executed and pass)
+  - name: Conditional step (should fail, shouldn't fail the workflow)
     condition: "true"
     optional: true
     shell: echo "Should fail, but is optional - shouldn't fail workflow" && exit 1

@@ -10,11 +10,10 @@ spec:
   - execute:
       parallelism: 2
       workflows:
-      - name: artillery-workflow-smoke
-      - name: gradle-workflow-smoke-jdk11-from-template
-      - name: jmeter-workflow-smoke-shell
       - name: k6-workflow-smoke
       - name: postman-workflow-smoke-template
-      - name: soapui-workflow-smoke
-      - name: pytest-workflow-smoke-junit-success-only
       - name: cypress-workflow-smoke
+      - name: jmeter-workflow-smoke-shell
+      - name: pytest-workflow-smoke-junit-success-only
+      - name: gradle-workflow-smoke-jdk11-from-template
+      - name: distributed-playwright-workflow-smoke-junit

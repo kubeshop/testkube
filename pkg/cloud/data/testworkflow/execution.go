@@ -8,6 +8,7 @@ import (
 
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -19,8 +20,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudRepository(client cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey)}
+func NewCloudRepository(client cloud.TestKubeCloudAPIClient, proContext *intconfig.ProContext) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, proContext)}
 }
 
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
@@ -29,6 +30,10 @@ func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWork
 		return v.WorkflowExecution
 	}
 	return pass(r.executor, ctx, req, process)
+}
+
+func (r *CloudRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
 }
 
 func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
@@ -41,9 +46,12 @@ func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 
 // GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow2.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "statusat"
-	if sortBy == testworkflow2.LatestSortByNumber {
+	sortField := "scheduledat"
+	switch sortBy {
+	case testworkflow2.LatestSortByNumber:
 		sortField = "number"
+	case testworkflow2.LatestSortByStatusAt:
+		sortField = "statusat"
 	}
 
 	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName, SortBy: sortField}
@@ -122,6 +130,14 @@ func (r *CloudRepository) Update(ctx context.Context, result testkube.TestWorkfl
 func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) (err error) {
 	req := ExecutionUpdateResultRequest{ID: id, Result: result}
 	return passNoContent(r.executor, ctx, req)
+}
+
+func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
+}
+
+func (r *CloudRepository) FinishResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
 }
 
 func (r *CloudRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {

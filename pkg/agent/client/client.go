@@ -8,8 +8,12 @@ import (
 	"os"
 	"time"
 
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
@@ -19,8 +23,24 @@ import (
 )
 
 const (
-	timeout    = 10 * time.Second
-	apiKeyMeta = "api-key"
+	connectionTimeout          = 10 * time.Second
+	apiKeyMeta                 = "api-key"
+	organizationIdMetadataName = "organization-id"
+	environmentIdMetadataName  = "environment-id"
+	agentIdMetadataName        = "agent-id"
+	// The backoff values chosen here are copied from an example in the
+	// gRPC documentation and represent a starting point that may be
+	// iterated on as we learn more about the connection issues faced
+	// by customers.
+	// - https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md
+	backoffDelay      = 1 * time.Second
+	backoffMultiplier = 1.6
+	backoffJitter     = 0.2
+	backoffMaxDelay   = 120 * time.Second
+
+	GRPCKeepaliveTime                = 10 * time.Second
+	GRPCKeepaliveTimeout             = GRPCKeepaliveTime / 2
+	GRPCKeepalivePermitWithoutStream = true
 )
 
 func NewGRPCConnection(
@@ -31,7 +51,7 @@ func NewGRPCConnection(
 	certFile, keyFile, caFile string,
 	logger *zap.SugaredLogger,
 ) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, connectionTimeout)
 	defer cancel()
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if skipVerify {
@@ -55,25 +75,48 @@ func NewGRPCConnection(
 	}
 
 	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             5 * time.Second,
-		PermitWithoutStream: true,
+		Time:                GRPCKeepaliveTime,
+		Timeout:             GRPCKeepaliveTimeout,
+		PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
 	}
 
 	userAgent := version.Version + "/" + version.Commit
 	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
-	// WithBlock, WithReturnConnectionError and FailOnNonTempDialError are recommended not to be used by gRPC go docs
-	// but given that Agent will not work if gRPC connection cannot be established, it is ok to use them and assert issues at dial time
-	return grpc.DialContext(
-		ctx,
-		server,
-		grpc.WithBlock(),
-		grpc.WithReturnConnectionError(),
-		grpc.FailOnNonTempDialError(true),
+	client, err := grpc.NewClient(server,
 		grpc.WithUserAgent(userAgent),
 		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(kacp),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: backoff.Config{
+				BaseDelay:  backoffDelay,
+				Multiplier: backoffMultiplier,
+				Jitter:     backoffJitter,
+				MaxDelay:   backoffMaxDelay,
+			},
+			MinConnectTimeout: connectionTimeout,
+		}),
+		grpc.WithChainStreamInterceptor(
+			grpczap.StreamClientInterceptor(logger.Desugar()),
+		),
+		grpc.WithChainUnaryInterceptor(
+			grpczap.UnaryClientInterceptor(logger.Desugar()),
+		),
 	)
+	if err != nil {
+		return client, fmt.Errorf("create new grpc client: %w", err)
+	}
+	var eg errgroup.Group
+	eg.Go(func() error {
+		if !client.WaitForStateChange(ctx, connectivity.Ready) {
+			return context.DeadlineExceeded
+		}
+		return nil
+	})
+	client.Connect()
+	if err := eg.Wait(); err != nil {
+		return client, fmt.Errorf("connection did not go ready: %w", err)
+	}
+	return client, nil
 }
 
 func rootCAs(tlsConfig *tls.Config, file ...string) error {
@@ -107,5 +150,15 @@ func clientCert(tlsConfig *tls.Config, certFile, keyFile string) error {
 
 func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
 	md := metadata.Pairs(apiKeyMeta, apiKey)
+	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func AddMetadata(ctx context.Context, apiKey, orgID, envID, agentID string) context.Context {
+	md := metadata.Pairs(
+		apiKeyMeta, apiKey,
+		organizationIdMetadataName, orgID,
+		environmentIdMetadataName, envID,
+		agentIdMetadataName, agentID,
+	)
 	return metadata.NewOutgoingContext(ctx, md)
 }

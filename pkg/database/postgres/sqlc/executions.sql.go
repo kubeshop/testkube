@@ -17,7 +17,7 @@ SET status_at = $1
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = $2 AND (test_workflow_executions.organization_id = $3 AND test_workflow_executions.environment_id = $4)
     AND test_workflow_executions.id = r.execution_id
-    AND r.status IN ('queued', 'assigned', 'starting', 'running', 'paused', 'resuming')
+    AND r.status IN ('queued', 'pending', 'starting', 'running', 'paused', 'resuming')
     AND (test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
 RETURNING test_workflow_executions.id
 `
@@ -758,8 +758,10 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
 ORDER BY
     CASE
-        WHEN $4::boolean = true THEN e.number
-        WHEN $4::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+        WHEN $4::boolean = true AND $5::boolean = false THEN e.number
+        WHEN $5::boolean = true AND $4::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+    ELSE
+        EXTRACT(EPOCH FROM e.scheduled_at)::integer
     END DESC
 LIMIT 1
 `
@@ -769,6 +771,7 @@ type GetLatestTestWorkflowExecutionByTestWorkflowParams struct {
 	OrganizationID string `db:"organization_id" json:"organization_id"`
 	EnvironmentID  string `db:"environment_id" json:"environment_id"`
 	SortByNumber   bool   `db:"sort_by_number" json:"sort_by_number"`
+	SortByStatus   bool   `db:"sort_by_status" json:"sort_by_status"`
 }
 
 type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
@@ -836,6 +839,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 		arg.OrganizationID,
 		arg.EnvironmentID,
 		arg.SortByNumber,
+		arg.SortByStatus,
 	)
 	var i GetLatestTestWorkflowExecutionByTestWorkflowRow
 	err := row.Scan(
@@ -1194,7 +1198,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = $1 AND e.environment_id = $2)
+WHERE r.status IN ('queued', 'pending', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = $1 AND e.environment_id = $2)
 ORDER BY e.id DESC
 `
 
@@ -2885,7 +2889,8 @@ const initTestWorkflowExecution = `-- name: InitTestWorkflowExecution :exec
 UPDATE test_workflow_executions 
 SET 
     namespace = $1,
-    runner_id = $2
+    runner_id = $2,
+    status_at = NOW()
 WHERE id = $3 AND (organization_id = $4 AND environment_id = $5)
 `
 
