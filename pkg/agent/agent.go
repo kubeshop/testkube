@@ -108,17 +108,12 @@ func NewAgent(logger *zap.SugaredLogger,
 }
 
 func (ag *Agent) Run(ctx context.Context) error {
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		err := ag.run(ctx)
-
-		ag.logger.Errorw("agent connection failed, reconnecting", "error", err)
-
-		// TODO: some smart back off strategy?
-		time.Sleep(5 * time.Second)
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
+	err := ag.run(ctx)
+	ag.logger.Errorw("agent connection failed", "error", err)
+	return err
 }
 
 func (ag *Agent) run(ctx context.Context) (err error) {
