@@ -210,7 +210,7 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 		code := <-ch
 
 		// Exchange the authorization code for tokens using API URL
-		token, err := exchangeCodeForTokens(apiBaseURL, code, codeVerifier)
+		token, err := exchangeCodeForTokens(apiBaseURL, code, codeVerifier, port)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to exchange code for tokens: %v\n", err)
 			respCh <- Tokens{}
@@ -242,19 +242,20 @@ func generateCodeChallenge(verifier string) string {
 }
 
 // exchangeCodeForTokens exchanges authorization code for access and refresh tokens
-func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string) (Tokens, error) {
+func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int) (Tokens, error) {
 	if !strings.HasSuffix(apiBaseURL, "/") {
 		apiBaseURL += "/"
 	}
 
 	tokenURL := apiBaseURL + "auth/login"
 
-	// Include all required OAuth2 parameters for token exchange
+	redirectURI := fmt.Sprintf(redirectURL, port)
+
 	requestBody := map[string]string{
-		"grant_type":    "authorization_code",
-		"client_id":     clientID,
 		"code":          code,
 		"code_verifier": codeVerifier,
+		"client_id":     clientID,
+		"redirect_uri":  redirectURI,
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
