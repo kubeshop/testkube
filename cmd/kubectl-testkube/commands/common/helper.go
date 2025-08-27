@@ -625,7 +625,7 @@ func LoginUser(authUri string, customConnector bool, port int) (string, string, 
 	return idToken, refreshToken, nil
 }
 
-// extractAndCleanDomain extracts domain from email and cleans it according to Dex connector ID rules
+// extractAndCleanDomain extracts domain from email and removes dots and hyphens for connector ID
 func extractAndCleanDomain(email string) (string, error) {
 	if !strings.Contains(email, "@") || strings.Count(email, "@") != 1 {
 		return "", fmt.Errorf("invalid email format")
@@ -638,9 +638,6 @@ func extractAndCleanDomain(email string) (string, error) {
 
 	domain := parts[1]
 
-	// Clean domain according to Dex connector ID rules:
-	// - Remove all dots and hyphens
-	// - Convert to lowercase
 	cleanedDomain := strings.ToLower(domain)
 	cleanedDomain = strings.ReplaceAll(cleanedDomain, ".", "")
 	cleanedDomain = strings.ReplaceAll(cleanedDomain, "-", "")

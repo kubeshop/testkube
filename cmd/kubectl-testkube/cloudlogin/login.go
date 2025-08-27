@@ -8,22 +8,33 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/coreos/go-oidc"
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
-
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
-	clientID    = "testkube-cloud-cli"
-	redirectURL = "http://127.0.0.1:%d/callback"
+	clientID = "testkube-cloud-cli"
 )
+
+func getRedirectAddress(port int) string {
+	return fmt.Sprintf("http://127.0.0.1:%d/callback", port)
+}
+
+func checkPortAvailable(port int) error {
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("port %d is not available: %w", port, err)
+	}
+	l.Close()
+	return nil
+}
 
 type Tokens struct {
 	IDToken      string
@@ -31,6 +42,10 @@ type Tokens struct {
 }
 
 func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) (string, chan Tokens, error) {
+	if err := checkPortAvailable(port); err != nil {
+		return "", nil, err
+	}
+
 	provider, err := oidc.NewProvider(ctx, providerURL)
 	if err != nil {
 		return "", nil, err
@@ -39,11 +54,10 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 	oauth2Config := oauth2.Config{
 		ClientID:    clientID,
 		Endpoint:    provider.Endpoint(),
-		RedirectURL: fmt.Sprintf(redirectURL, port),
+		RedirectURL: getRedirectAddress(port),
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
 	}
 
-	// Start a local server to handle the callback from the OIDC provider.
 	ch := make(chan string)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -56,19 +70,11 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 			fmt.Fprintln(w, "Authorization failed.")
 		}
 	})
-	srv := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", port), Handler: mux}
+	srv := &http.Server{Addr: getRedirectAddress(port), Handler: mux}
 	go func() {
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			if strings.Contains(err.Error(), "address already in use") {
-				ui.Fail(errors.Wrap(err, "failed to start callback server, you may try again with `--callback-port 38090`"))
-			} else {
-				ui.Fail(errors.Wrap(err, "failed to start callback server"))
-			}
-		}
+		srv.ListenAndServe()
 	}()
 
-	// Redirect the user to the OIDC provider's login page.
 	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
 	if connectorID != "" {
 		opts = append(opts, oauth2.SetAuthURLParam("connector_id", connectorID))
@@ -78,13 +84,10 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 	respCh := make(chan Tokens)
 
 	go func() {
-		// Close the callback server
 		defer srv.Close()
 
-		// Wait for the user to authorize the client and retrieve the authorization code.
 		code := <-ch
 
-		// Exchange the authorization code for an access token and ID token.
 		token, err := oauth2Config.Exchange(ctx, code)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to retrieve token: %v\n", err)
@@ -92,7 +95,6 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 			return
 		}
 
-		// Initialize the OIDC verifier with the provider's public keys.
 		verifier := provider.Verifier(&oidc.Config{ClientID: clientID})
 
 		_, err = verifier.Verify(ctx, token.AccessToken)
@@ -119,7 +121,7 @@ func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshT
 	verifier := provider.Verifier(&oidc.Config{ClientID: clientID})
 	_, err = verifier.Verify(ctx, rawIDToken)
 	if err != nil {
-		// Token is expired. Refresh it.
+		// Attempt to refresh the token if verification fails
 		oauth2Config := oauth2.Config{
 			ClientID: clientID,
 			Endpoint: provider.Endpoint(),
@@ -139,9 +141,11 @@ func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshT
 	return rawIDToken, refreshToken, nil
 }
 
-// CloudLoginSSO handles SSO authentication using OAuth 2.0 with PKCE
 func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID string, port int) (string, chan Tokens, error) {
-	// Generate PKCE parameters
+	if err := checkPortAvailable(port); err != nil {
+		return "", nil, err
+	}
+
 	codeVerifier, err := generateCodeVerifier()
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to generate code verifier: %w", err)
@@ -149,10 +153,8 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 
 	codeChallenge := generateCodeChallenge(codeVerifier)
 
-	// Build redirect URI
-	redirectURI := fmt.Sprintf(redirectURL, port)
+	redirectURI := getRedirectAddress(port)
 
-	// Start a local server to handle the callback
 	ch := make(chan string)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -166,19 +168,11 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 		}
 	})
 
-	srv := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", port), Handler: mux}
+	srv := &http.Server{Addr: getRedirectAddress(port), Handler: mux}
 	go func() {
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			if strings.Contains(err.Error(), "address already in use") {
-				ui.Fail(errors.Wrap(err, "failed to start callback server, you may try again with `--callback-port 38090`"))
-			} else {
-				ui.Fail(errors.Wrap(err, "failed to start callback server"))
-			}
-		}
+		srv.ListenAndServe()
 	}()
 
-	// Build authorization URL using AUTH URL (not API URL) like we figured out before
 	if !strings.HasSuffix(authBaseURL, "/") {
 		authBaseURL += "/"
 	}
@@ -188,7 +182,6 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 		return "", nil, fmt.Errorf("invalid auth URL: %w", err)
 	}
 
-	// Use proper OAuth2 parameters for CLI (not frontend browser flow)
 	params := url.Values{}
 	params.Set("client_id", clientID)
 	params.Set("connector_id", connectorID)
@@ -203,13 +196,10 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 	respCh := make(chan Tokens)
 
 	go func() {
-		// Close the callback server
 		defer srv.Close()
 
-		// Wait for the user to authorize and retrieve the authorization code
 		code := <-ch
 
-		// Exchange the authorization code for tokens using API URL
 		token, err := exchangeCodeForTokens(apiBaseURL, code, codeVerifier, port)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to exchange code for tokens: %v\n", err)
@@ -223,25 +213,21 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 	return authURL.String(), respCh, nil
 }
 
-// generateCodeVerifier creates a cryptographically random code verifier
 func generateCodeVerifier() (string, error) {
-	bytes := make([]byte, 96) // 96 bytes = 128 base64url chars
+	bytes := make([]byte, 96)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", err
 	}
 
-	// Encode to base64url without padding
 	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 
-// generateCodeChallenge creates SHA256 hash of code verifier
 func generateCodeChallenge(verifier string) string {
 	hash := sha256.Sum256([]byte(verifier))
 	return base64.RawURLEncoding.EncodeToString(hash[:])
 }
 
-// exchangeCodeForTokens exchanges authorization code for access and refresh tokens
 func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int) (Tokens, error) {
 	if !strings.HasSuffix(apiBaseURL, "/") {
 		apiBaseURL += "/"
@@ -249,7 +235,7 @@ func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int) (Tok
 
 	tokenURL := apiBaseURL + "auth/login"
 
-	redirectURI := fmt.Sprintf(redirectURL, port)
+	redirectURI := getRedirectAddress(port)
 
 	requestBody := map[string]string{
 		"code":          code,
