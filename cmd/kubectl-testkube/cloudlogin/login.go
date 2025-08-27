@@ -26,6 +26,10 @@ func getRedirectAddress(port int) string {
 	return fmt.Sprintf("http://127.0.0.1:%d/callback", port)
 }
 
+func getServerAddress(port int) string {
+	return fmt.Sprintf("127.0.0.1:%d", port)
+}
+
 func checkPortAvailable(port int) error {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	l, err := net.Listen("tcp", addr)
@@ -70,7 +74,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 			fmt.Fprintln(w, "Authorization failed.")
 		}
 	})
-	srv := &http.Server{Addr: getRedirectAddress(port), Handler: mux}
+	srv := &http.Server{Addr: getServerAddress(port), Handler: mux}
 	go func() {
 		srv.ListenAndServe()
 	}()
@@ -168,7 +172,7 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 		}
 	})
 
-	srv := &http.Server{Addr: getRedirectAddress(port), Handler: mux}
+	srv := &http.Server{Addr: getServerAddress(port), Handler: mux}
 	go func() {
 		srv.ListenAndServe()
 	}()
