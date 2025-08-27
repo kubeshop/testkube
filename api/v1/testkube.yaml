@@ -8365,7 +8365,8 @@ components:
     TestTriggerContentSelector:
       type: object
       properties:
-        git: "#/components/schemas/TestTriggerContentGit"  
+        git:
+          $ref: "#/components/schemas/TestTriggerContentGit"  
 
     TestTriggerContentGit:
       type: object
