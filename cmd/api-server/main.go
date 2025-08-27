@@ -76,6 +76,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/controlplane"
+	"github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -806,6 +807,12 @@ func main() {
 			return nil
 		})
 	}
+
+	// Start the new scheduler.
+	g.Go(func() error {
+		informer.NewInformer(testTriggersClient, nil, cfg.TestkubeNamespace, "").Reconcile(ctx)
+		return nil
+	})
 
 	g.Go(func() error {
 		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
