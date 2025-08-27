@@ -1,8 +1,11 @@
 package testtriggers
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -42,6 +45,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Event:             testsv1.TestTriggerEvent(request.Event),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorCRD(request.ContentSelector),
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
@@ -92,6 +96,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			Event:             testsv1.TestTriggerEvent(request.Event),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorCRD(request.ContentSelector),
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
@@ -195,5 +200,104 @@ func mapActionParametersCRD(actionParameters *testkube.TestTriggerActionParamete
 		Config: actionParameters.Config,
 		Tags:   actionParameters.Tags,
 		Target: common.MapPtr(actionParameters.Target, commonmapper.MapTargetApiToKube),
+	}
+}
+
+func mapConfigMapKeyRefCRD(v *testkube.EnvVarSourceConfigMapKeyRef) *corev1.ConfigMapKeySelector {
+	if v == nil {
+		return nil
+	}
+
+	return &corev1.ConfigMapKeySelector{
+		Key: v.Key,
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: v.Name,
+		},
+		Optional: v.Optional,
+	}
+}
+
+func mapFieldRefCRD(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
+	if v == nil {
+		return nil
+	}
+
+	return &corev1.ObjectFieldSelector{
+		APIVersion: v.ApiVersion,
+		FieldPath:  v.FieldPath,
+	}
+}
+
+func mapResourceFieldRefCRD(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
+	if v == nil {
+		return nil
+	}
+
+	divisor, _ := resource.ParseQuantity(v.Divisor)
+	return &corev1.ResourceFieldSelector{
+		ContainerName: v.ContainerName,
+		Divisor:       divisor,
+		Resource:      v.Resource,
+	}
+}
+
+func mapSecretKeyRefCRD(v *testkube.EnvVarSourceSecretKeyRef) *corev1.SecretKeySelector {
+	if v == nil {
+		return nil
+	}
+
+	return &corev1.SecretKeySelector{
+		Key: v.Key,
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: v.Name,
+		},
+		Optional: v.Optional,
+	}
+}
+
+func mapEnvVarSourceCRD(source *testkube.EnvVarSource) *corev1.EnvVarSource {
+	if source == nil {
+		return nil
+	}
+
+	return &corev1.EnvVarSource{
+		ConfigMapKeyRef:  mapConfigMapKeyRefCRD(source.ConfigMapKeyRef),
+		FieldRef:         mapFieldRefCRD(source.FieldRef),
+		ResourceFieldRef: mapResourceFieldRefCRD(source.ResourceFieldRef),
+		SecretKeyRef:     mapSecretKeyRefCRD(source.SecretKeyRef),
+	}
+}
+
+func mapContentGitCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrggerContentGitSpec {
+	if git == nil {
+		return nil
+	}
+
+	var authType testsv3.GitAuthType
+	if git.AuthType != nil {
+		authType = testsv3.GitAuthType(*git.AuthType)
+	}
+
+	return &testsv1.TestTrggerContentGitSpec{
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: mapEnvVarSourceCRD(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    mapEnvVarSourceCRD(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   mapEnvVarSourceCRD(git.SshKeyFrom),
+		AuthType:     authType,
+		Paths:        git.Paths,
+	}
+}
+
+func mapContentSelectorCRD(selector *testkube.TestTriggerContentSelector) *testsv1.TestTrggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+
+	return &testsv1.TestTrggerContentSelector{
+		Git: mapContentGitCRD(selector.Git),
 	}
 }
