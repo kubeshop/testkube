@@ -681,7 +681,7 @@ func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, erro
 		return "", "", fmt.Errorf("SSO validation failed: %w", err)
 	}
 
-	ui.Debug("Logging into cloud with SSO for domain", domain)
+	ui.Debug("Logging into cloud with SSO for domain ", domain)
 	ssoAuthURL, tokenChan, err := cloudlogin.CloudLoginSSO(context.Background(), apiUrl, authUrl, domain, port)
 	if err != nil {
 		return "", "", fmt.Errorf("SSO login: %w", err)
