@@ -49,7 +49,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
-			TestSelector:      mapSelectorToCRD(request.TestSelector),
+			TestSelector:      *mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
 		},
@@ -100,19 +100,19 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
-			TestSelector:      mapSelectorToCRD(request.TestSelector),
+			TestSelector:      *mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
 		},
 	}
 }
 
-func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
+func mapSelectorToCRD(selector *testkube.TestTriggerSelector) *testsv1.TestTriggerSelector {
 	var labelSelector *metav1.LabelSelector
 	if selector.LabelSelector != nil {
 		labelSelector = mapLabelSelectorToCRD(selector.LabelSelector)
 	}
-	return testsv1.TestTriggerSelector{
+	return &testsv1.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
 		Namespace:      selector.Namespace,

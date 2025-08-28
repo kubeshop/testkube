@@ -55,13 +55,17 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		Action:            action,
 		ActionParameters:  mapActionParametersFromCRD(crd.Spec.ActionParameters),
 		Execution:         execution,
-		TestSelector:      mapSelectorFromCRD(crd.Spec.TestSelector),
+		TestSelector:      mapSelectorFromCRD(&crd.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
 		Disabled:          crd.Spec.Disabled,
 	}
 }
 
-func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
+func mapSelectorFromCRD(selector *testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
+	if selector == nil {
+		return nil
+	}
+
 	var labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector
 	if selector.LabelSelector != nil {
 		labelSelector = mapLabelSelectorFromCRD(selector.LabelSelector)
@@ -160,7 +164,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		Action:            action,
 		ActionParameters:  mapActionParametersFromCRD(request.Spec.ActionParameters),
 		Execution:         execution,
-		TestSelector:      mapSelectorFromCRD(request.Spec.TestSelector),
+		TestSelector:      mapSelectorFromCRD(&request.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
 		Disabled:          request.Spec.Disabled,
 	}

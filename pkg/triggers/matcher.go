@@ -44,14 +44,16 @@ func (s *Service) Match(ctx context.Context, e *WatcherEvent) error {
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
-		if t.Spec.ResourceSelector.Name != "" {
-			if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
+		if t.Spec.ResourceSelector != nil {
+			if !matchSelector(t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
 				continue
 			}
-		} else if t.Spec.ContentSelector == nil {
+		} else if t.Spec.ContentSelector != nil {
 			if e.trigger != t.Name {
 				continue
 			}
+		} else {
+			continue
 		}
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {

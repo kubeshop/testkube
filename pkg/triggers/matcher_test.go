@@ -57,7 +57,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector: &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "modified",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Timeout: timeout,
@@ -137,7 +137,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector: &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "modified",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Timeout: timeout,
@@ -213,7 +213,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:          "deployment",
-			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector:  &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:             "modified",
 			Action:            "run",
 			Execution:         "test",
@@ -283,7 +283,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:          "deployment",
-			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector:  &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:             "modified",
 			Action:            "run",
 			Execution:         "test",
@@ -377,7 +377,7 @@ func TestService_match(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector: &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "modified",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Conditions: []testtriggersv1.TestTriggerCondition{
@@ -459,7 +459,7 @@ func TestService_matchRegex(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:          "deployment",
-			ResourceSelector:  testtriggersv1.TestTriggerSelector{NameRegex: "test.*"},
+			ResourceSelector:  &testtriggersv1.TestTriggerSelector{NameRegex: "test.*"},
 			Event:             "modified",
 			Action:            "run",
 			Execution:         "test",
@@ -509,7 +509,7 @@ func TestService_noMatch(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:          "pod",
-			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			ResourceSelector:  &testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 			Event:             "modified",
 			Action:            "run",
 			Execution:         "test",

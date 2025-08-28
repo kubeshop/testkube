@@ -117,7 +117,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-2"},
 			Spec: testtriggersv1.TestTriggerSpec{
 				Resource:          "pod",
-				ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+				ResourceSelector:  &testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 				Event:             "created",
 				Action:            "run",
 				Execution:         "test",
