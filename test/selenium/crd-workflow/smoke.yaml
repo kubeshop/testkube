@@ -345,3 +345,119 @@ spec:
       artifacts:
         paths:
           - reports/**/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: selenium-js-mocha-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: selenium
+    artifacts: "true"
+    junit: "true"
+description: "Selenium JS (selenium-webdriver) + Mocha + Standalone Chrome"
+spec:
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: TKC-4043-selenium-initial-cases
+      paths:
+        - test/selenium/selenium-js-mocha
+  container:
+    image: node:20-slim
+    workingDir: /data/repo/test/selenium/selenium-js-mocha
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
+  services:
+    chrome:
+      image: docker.io/selenium/standalone-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
+      timeout: 120s
+      logs: "always"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      readinessProbe:
+        httpGet:
+          path: /wd/hub/status
+          port: 4444
+        periodSeconds: 1
+  steps:
+    - name: Install deps  # Pure steps enabled
+      run:
+        shell: npm ci
+    - name: Run tests
+      run:
+        env:
+          - name: REMOTE_WEBDRIVER_URL
+            value: "http://{{ services.chrome.0.ip }}:4444/wd/hub"
+          - name: BROWSER
+            value: "chrome"
+        shell: |
+          mkdir -p reports
+          npx mocha "test/**/*.test.js" --reporter mocha-multi-reporters --reporter-options configFile=.mocha-multi-reporters.json # multi-reporters - junit and spec (stdout)
+      artifacts:
+        paths:
+          - reports/**/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: selenium-js-cucumber-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: selenium
+    artifacts: "true"
+    junit: "true"
+description: "Selenium JS (selenium-webdriver) + Cucumber + Standalone Chrome"
+spec:
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: TKC-4043-selenium-initial-cases
+      paths:
+        - test/selenium/selenium-js-cucumber
+  container:
+    image: node:20-slim
+    workingDir: /data/repo/test/selenium/selenium-js-cucumber
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
+  services:
+    chrome:
+      image: docker.io/selenium/standalone-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
+      timeout: 120s
+      logs: "always"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      readinessProbe:
+        httpGet:
+          path: /wd/hub/status
+          port: 4444
+        periodSeconds: 1
+  steps:
+    - name: Install deps  # Pure steps enabled
+      run:
+        shell: npm ci
+    - name: Run tests
+      run:
+        env:
+          - name: REMOTE_WEBDRIVER_URL
+            value: "http://{{ services.chrome.0.ip }}:4444/wd/hub"
+          - name: BROWSER
+            value: "chrome"
+        shell: |
+          mkdir -p reports
+          npx cucumber-js --format progress --format junit:reports/junit.xml
+      artifacts:
+        paths:
+          - reports/**/*

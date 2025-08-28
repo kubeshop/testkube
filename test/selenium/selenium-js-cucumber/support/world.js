@@ -14,5 +14,12 @@ class World {
 
 setWorldConstructor(World);
 
-Before(async function () { await this.init(); });
-After(async function () { if (this.driver) await this.driver.quit(); });
+Before(async function () {
+  await this.init();
+});
+
+After(async function () {
+  if (this.driver) {
+    await this.driver.quit();
+  }
+});
