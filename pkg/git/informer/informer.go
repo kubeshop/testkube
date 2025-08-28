@@ -2,6 +2,8 @@ package informer
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -19,7 +21,7 @@ import (
 )
 
 const (
-	reconcileInterval = time.Minute
+	reconcileInterval = 2 * time.Minute
 )
 
 // NewInformer returns new informer instance
@@ -76,6 +78,7 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 		}
 
 		directory := "/tmp/" + trigger.Name
+		os.RemoveAll(directory)
 		r, err := git.PlainClone(directory, &git.CloneOptions{
 			URL:           trigger.ContentSelector.Git.Uri,
 			ReferenceName: plumbing.ReferenceName(trigger.ContentSelector.Git.Revision),
@@ -107,23 +110,24 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 			}
 
 			i.commits[trigger.Name][c.Hash.String()] = struct{}{}
-			// ... retrieve the tree from the commit
-			tree, err := c.Tree()
+
+			stats, err := c.Stats()
 			if err != nil {
-				log.DefaultLogger.Errorf("informer service: error getting tree: %v", err)
+				log.DefaultLogger.Errorf("informer service: error getting stats: %v", err)
 				return err
 			}
 
+			fmt.Println("file", stats)
 			// ... get the files iterator and print the file
-			tree.Files().ForEach(func(f *object.File) error {
+		OuterLoop:
+			for _, stat := range stats {
 				for _, path := range trigger.ContentSelector.Git.Paths {
-					if f.Name == path || strings.HasPrefix(f.Name, path+"/") {
+					if stat.Name == path || strings.HasPrefix(stat.Name, path+"/") {
 						matched = true
-						return nil
+						break OuterLoop
 					}
 				}
-				return nil
-			})
+			}
 
 			return nil
 		}); err != nil {
@@ -138,9 +142,9 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 
 // Notify notifies informer
 func (i *Informer) Notify(ctx context.Context, triggerName string) {
-	log.DefaultLogger.Info("informer service: publishing event")
 	event := triggers.NewWatcherEvent(testtrigger.EventModified, &metav1.ObjectMeta{}, nil,
 		testtrigger.ResourceType(testkube.CONTENT_TestTriggerResources), triggers.WithTrigger(triggerName))
+	log.DefaultLogger.Infow("informer service: publishing event", "event", *event)
 	if err := i.matcher.Match(ctx, event); err != nil {
 		log.DefaultLogger.Errorf("informer service: error matching event: %v", err)
 	}
