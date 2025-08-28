@@ -48,6 +48,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	leasebackend "github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
@@ -105,7 +106,19 @@ func main() {
 		"grpcPort", cfg.GRPCServerPort,
 	)
 
+	shutdownTracing, err := observtracing.Init(context.Background(), observtracing.Config{
+		Enabled:       cfg.TracingEnabled,
+		Endpoint:      cfg.OTLPEndpoint,
+		ServiceName:   cfg.OTLPServiceName,
+		SamplingRatio: cfg.TracingSampleRate,
+		Version:       version.Version,
+		Commit:        version.Commit,
+	})
+	commons.ExitOnError("initializing tracing", err)
+	defer func() { _ = shutdownTracing(context.Background()) }()
+
 	// Determine the running mode
+
 	mode := common.ModeStandalone
 	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 		mode = common.ModeAgent
@@ -174,13 +187,13 @@ func main() {
 
 		log.DefaultLogger.Info("connecting to embedded Control Plane...")
 		var err error
-		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
+		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger, cfg.TracingEnabled)
 		commons.ExitOnError("connecting to embedded Control Plane", err)
 		log.DefaultLogger.Infow("connected to embedded control plane successfully", "port", cfg.GRPCServerPort)
 	} else {
 		log.DefaultLogger.Infow("connecting to remote control plane...", "url", cfg.TestkubeProURL)
 		var err error
-		grpcConn, err = agentclient.NewGRPCConnection(
+		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(
 			ctx,
 			cfg.TestkubeProTLSInsecure,
 			cfg.TestkubeProSkipVerify,
@@ -189,6 +202,7 @@ func main() {
 			cfg.TestkubeProKeyFile,
 			cfg.TestkubeProCAFile, //nolint
 			log.DefaultLogger,
+			cfg.TracingEnabled,
 		)
 		commons.ExitOnError("connecting to remote Control Plane", err)
 		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
@@ -616,7 +630,7 @@ func main() {
 
 	// Create HTTP server
 	log.DefaultLogger.Infow("creating HTTP server...", "port", cfg.APIServerPort)
-	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
+	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
 
 	if deprecatedSystem != nil && deprecatedSystem.API != nil {
