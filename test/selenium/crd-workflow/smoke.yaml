@@ -18,15 +18,19 @@ spec:
   container:
     image: maven:3.9.11-eclipse-temurin-17
     workingDir: /data/repo/test/selenium/selenium-java
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
   services:
-    chrome:
+    chrome: #standalone Chrome service
       image: selenium/standalone-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
       timeout: 120s # initialization timeout
       logs: 'always'
       resources:
         requests:
-          cpu: 128m
-          memory: 128Mi
+          cpu: 500m
+          memory: 512Mi
       readinessProbe:
         httpGet:
           path: /wd/hub/status
@@ -47,3 +51,239 @@ spec:
         paths:
           - target/site/**/*
           - target/surefire-reports/**/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: selenium-java-hub-and-nodes-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: selenium
+    artifacts: "true"
+    junit: "true"
+description: "Selenium Java + Hub + Chrome Nodes"
+spec:
+  config:
+    chromeNodes: {type: integer, default: 2}
+    junitParallelism: {type: integer, default: 4}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: TKC-4043-selenium-initial-cases
+      paths:
+        - test/selenium/selenium-java
+  container:
+    image: maven:3.9.11-eclipse-temurin-17
+    workingDir: /data/repo/test/selenium/selenium-java
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
+  services:
+    hub:
+      image: selenium/hub:4.34.0-20250727
+      timeout: 120s
+      logs: always
+      resources:
+        requests:
+          cpu: 300m
+          memory: 256Mi
+      readinessProbe:
+        httpGet:
+          path: /status
+          port: 4444
+        periodSeconds: 1
+  steps:
+    - name: Start node-chrome
+      services:
+        node-chrome:
+          image: selenium/node-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
+          timeout: 120s
+          logs: always
+          count: config.chromeNodes
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 5555
+            periodSeconds: 1
+          env:
+            - name: SE_EVENT_BUS_HOST
+              value: '{{ services.hub.0.ip }}'
+            - name: SE_EVENT_BUS_PUBLISH_PORT
+              value: "4442"
+            - name: SE_EVENT_BUS_SUBSCRIBE_PORT
+              value: "4443"
+      steps:
+      - name: Run test
+        run:
+          env:
+            - name: REMOTE_WEBDRIVER_URL
+              value: 'http://{{ services.hub.0.ip }}:4444/wd/hub'
+            - name: BROWSER
+              value: 'chrome'
+            - name: JUNIT_JUPITER_EXECUTION_PARALLEL_ENABLED
+              value: "true"
+            - name: JUNIT_JUPITER_EXECUTION_PARALLEL_MODE_DEFAULT
+              value: concurrent
+            - name: JUNIT_JUPITER_EXECUTION_PARALLEL_MODE_CLASSES_DEFAULT
+              value: concurrent
+            - name: JUNIT_JUPITER_EXECUTION_PARALLEL_CONFIG_STRATEGY
+              value: fixed
+            - name: JUNIT_JUPITER_EXECUTION_PARALLEL_CONFIG_FIXED_PARALLELISM
+              value: "{{ config.junitParallelism }}"
+          shell: |
+            mvn test
+            mvn surefire-report:report
+        artifacts:
+          paths:
+            - target/site/**/*
+            - target/surefire-reports/**/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: selenium-python-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: selenium
+    artifacts: "true"
+    junit: "true"
+description: "Selenium Python + Standalone Chrome"
+spec:
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: TKC-4043-selenium-initial-cases
+      paths:
+        - test/selenium/selenium-python
+  container:
+    image: python:3.13.6-slim
+    workingDir: /data/repo/test/selenium/selenium-python
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
+  services:
+    chrome:
+      image: docker.io/selenium/standalone-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
+      timeout: 120s
+      logs: "always"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      readinessProbe:
+        httpGet:
+          path: /wd/hub/status
+          port: 4444
+        periodSeconds: 1
+  steps:
+    - name: Install deps # Pure steps enabled
+      run:
+        shell: |
+          pip install -r requirements.txt
+    - name: Run tests
+      run:
+        env:
+          - name: REMOTE_WEBDRIVER_URL
+            value: "http://{{ services.chrome.0.ip }}:4444/wd/hub"
+          - name: BROWSER
+            value: "chrome"
+        shell: |
+          mkdir -p reports
+          pytest --junitxml=reports/junit.xml
+      artifacts:
+        paths:
+          - reports/**/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: selenium-python-hub-and-nodes-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: selenium
+    artifacts: "true"
+    junit: "true"
+description: "Selenium Python + Hub + Chrome Nodes"
+spec:
+  system:
+    pureByDefault: true
+  config:
+    chromeNodes: {type: integer, default: 2}
+    pytestConcurrency: {type: integer, default: 4}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: TKC-4043-selenium-initial-cases
+      paths:
+        - test/selenium/selenium-python
+  container:
+    image: python:3.13.6-slim
+    workingDir: /data/repo/test/selenium/selenium-python
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
+  services:
+    hub:
+      image: selenium/hub:4.34.0-20250727
+      timeout: 120s
+      logs: always
+      resources:
+        requests:
+          cpu: 300m
+          memory: 256Mi
+      readinessProbe:
+        httpGet:
+          path: /status
+          port: 4444
+        periodSeconds: 1
+  steps:
+    - name: Start node-chrome
+      services:
+        node-chrome:
+          image: selenium/node-chrome:112.0-chromedriver-112.0-grid-4.34.0-20250727
+          timeout: 120s
+          logs: always
+          count: config.chromeNodes
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 5555
+            periodSeconds: 1
+          env:
+            - name: SE_EVENT_BUS_HOST
+              value: '{{ services.hub.0.ip }}'
+            - name: SE_EVENT_BUS_PUBLISH_PORT
+              value: "4442"
+            - name: SE_EVENT_BUS_SUBSCRIBE_PORT
+              value: "4443"
+      steps:
+        - name: Install deps # Pure steps enabled
+          run:
+            shell: |
+              pip install -r requirements.txt
+        - name: Run tests
+          run:
+            env:
+              - name: REMOTE_WEBDRIVER_URL
+                value: "http://{{ services.hub.0.ip }}:4444/wd/hub"
+              - name: BROWSER
+                value: "chrome"
+            shell: |
+              mkdir -p reports
+              pytest -n {{ config.pytestConcurrency }} --junitxml=reports/junit.xml
+          artifacts:
+            paths:
+              - reports/**/*
