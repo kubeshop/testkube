@@ -2,14 +2,16 @@ package informer
 
 import (
 	"context"
-	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
@@ -17,16 +19,17 @@ import (
 )
 
 const (
-	reconcileInterval = time.Hour
+	reconcileInterval = time.Minute
 )
 
 // NewInformer returns new informer instance
-func NewInformer(testTriggerClient testtriggerclient.TestTriggerClient, service *triggers.Service,
+func NewInformer(testTriggerClient testtriggerclient.TestTriggerClient, matcher triggers.Matcher,
 	namespace, environmentID string) *Informer {
 	return &Informer{
 		testTriggerClient: testTriggerClient,
-		service:           service,
+		matcher:           matcher,
 		triggers:          make(map[string]testkube.TestTrigger),
+		commits:           make(map[string]map[string]struct{}),
 		namespace:         namespace,
 		environmentID:     environmentID,
 	}
@@ -37,7 +40,8 @@ type Informer struct {
 	mutex             sync.RWMutex
 	testTriggerClient testtriggerclient.TestTriggerClient
 	triggers          map[string]testkube.TestTrigger
-	service           *triggers.Service
+	commits           map[string]map[string]struct{}
+	matcher           triggers.Matcher
 	namespace         string
 	environmentID     string
 }
@@ -57,12 +61,20 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 		if item.Resource != nil && *item.Resource == testkube.TestTriggerResources(testkube.CONTENT_TestTriggerResources) &&
 			item.ContentSelector != nil && item.ContentSelector.Git != nil {
 			i.triggers[item.Name] = item
+			if _, ok := i.commits[item.Name]; !ok {
+				i.commits[item.Name] = make(map[string]struct{})
+			}
 		} else {
 			delete(i.triggers, item.Name)
+			delete(i.commits, item.Name)
 		}
 	}
 
 	for _, trigger := range i.triggers {
+		if trigger.Disabled {
+			continue
+		}
+
 		directory := "/tmp/" + trigger.Name
 		r, err := git.PlainClone(directory, &git.CloneOptions{
 			URL:           trigger.ContentSelector.Git.Uri,
@@ -73,23 +85,28 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 			log.DefaultLogger.Errorf("informer service: error git clonning: %v", err)
 			continue
 		}
-		log.DefaultLogger.Infow("informer service: step 1", "trigger", trigger)
 
 		ref, err := r.Head()
 		if err != nil {
 			log.DefaultLogger.Errorf("informer service: error pointing to head: %v", err)
 			continue
 		}
-		log.DefaultLogger.Infow("informer service: step 2", "trigger", trigger)
+
 		// ... retrieves the commit history
 		cIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
 		if err != nil {
 			log.DefaultLogger.Errorf("informer service: error retrieving commit history: %v", err)
 			continue
 		}
-		log.DefaultLogger.Infow("informer service: step 3", "trigger", trigger)
+
+		matched := false
 		// ... just iterates over the commits, printing it
 		if err = cIter.ForEach(func(c *object.Commit) error {
+			if _, ok := i.commits[trigger.Name][c.Hash.String()]; ok {
+				return nil
+			}
+
+			i.commits[trigger.Name][c.Hash.String()] = struct{}{}
 			// ... retrieve the tree from the commit
 			tree, err := c.Tree()
 			if err != nil {
@@ -99,7 +116,12 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 
 			// ... get the files iterator and print the file
 			tree.Files().ForEach(func(f *object.File) error {
-				fmt.Printf("100644 blob %s    %s\n", f.Hash, f.Name)
+				for _, path := range trigger.ContentSelector.Git.Paths {
+					if f.Name == path || strings.HasPrefix(f.Name, path+"/") {
+						matched = true
+						return nil
+					}
+				}
 				return nil
 			})
 
@@ -107,13 +129,21 @@ func (i *Informer) UpdateRepositories(ctx context.Context) {
 		}); err != nil {
 			log.DefaultLogger.Errorf("informer service: error printing commit: %v", err)
 		}
+
+		if matched {
+			i.Notify(ctx, trigger.Name)
+		}
 	}
 }
 
 // Notify notifies informer
-func (i *Informer) Notify(event testkube.Event) {
-
-	log.DefaultLogger.Debugw("informer service: event published", event.Log()...)
+func (i *Informer) Notify(ctx context.Context, triggerName string) {
+	log.DefaultLogger.Info("informer service: publishing event")
+	event := triggers.NewWatcherEvent(testtrigger.EventModified, &metav1.ObjectMeta{}, nil,
+		testtrigger.ResourceType(testkube.CONTENT_TestTriggerResources), triggers.WithTrigger(triggerName))
+	if err := i.matcher.Match(ctx, event); err != nil {
+		log.DefaultLogger.Errorf("informer service: error matching event: %v", err)
+	}
 }
 
 // Reconcile reloads listeners from all registered reconcilers

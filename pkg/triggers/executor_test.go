@@ -188,7 +188,7 @@ func TestExecute(t *testing.T) {
 	key := newStatusKey(testTrigger.Namespace, testTrigger.Name)
 	assert.Contains(t, s.triggerStatus, key)
 
-	err := s.execute(ctx, &watcherEvent{}, &testTrigger)
+	err := s.execute(ctx, &WatcherEvent{}, &testTrigger)
 	assert.NoError(t, err)
 }
 
@@ -264,6 +264,6 @@ func TestWorkflowExecute(t *testing.T) {
 	key := newStatusKey(testTrigger.Namespace, testTrigger.Name)
 	assert.Contains(t, s.triggerStatus, key)
 
-	err := s.execute(ctx, &watcherEvent{}, &testTrigger)
+	err := s.execute(ctx, &WatcherEvent{}, &testTrigger)
 	assert.NoError(t, err)
 }

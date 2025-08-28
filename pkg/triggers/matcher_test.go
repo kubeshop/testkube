@@ -20,7 +20,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	t.Parallel()
 
 	retry := 0
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -87,7 +87,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -97,7 +97,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err := s.match(context.Background(), e)
+	err := s.Match(context.Background(), e)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, retry)
 }
@@ -105,7 +105,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 func TestService_matchConditionsTimeout(t *testing.T) {
 	t.Parallel()
 
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -167,7 +167,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -177,14 +177,14 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err := s.match(context.Background(), e)
+	err := s.Match(context.Background(), e)
 	assert.ErrorIs(t, err, ErrConditionTimeout)
 }
 
 func TestService_matchProbesMultiple(t *testing.T) {
 	t.Parallel()
 
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -243,7 +243,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		deprecatedSystem:          &services.DeprecatedSystem{},
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -254,14 +254,14 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err = s.match(context.Background(), e)
+	err = s.Match(context.Background(), e)
 	assert.NoError(t, err)
 }
 
 func TestService_matchProbesTimeout(t *testing.T) {
 	t.Parallel()
 
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -313,7 +313,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		deprecatedSystem:          &services.DeprecatedSystem{},
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -324,7 +324,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err = s.match(context.Background(), e)
+	err = s.Match(context.Background(), e)
 	assert.ErrorIs(t, err, ErrProbeTimeout)
 
 }
@@ -332,7 +332,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 func TestService_match(t *testing.T) {
 	t.Parallel()
 
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -422,7 +422,7 @@ func TestService_match(t *testing.T) {
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -433,14 +433,14 @@ func TestService_match(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err = s.match(context.Background(), e)
+	err = s.Match(context.Background(), e)
 	assert.NoError(t, err)
 }
 
 func TestService_matchRegex(t *testing.T) {
 	t.Parallel()
 
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -476,7 +476,7 @@ func TestService_matchRegex(t *testing.T) {
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -487,14 +487,14 @@ func TestService_matchRegex(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err := s.match(context.Background(), e)
+	err := s.Match(context.Background(), e)
 	assert.NoError(t, err)
 }
 
 func TestService_noMatch(t *testing.T) {
 	t.Parallel()
 
-	e := &watcherEvent{
+	e := &WatcherEvent{
 		resource:   "deployment",
 		name:       "test-deployment",
 		namespace:  "testkube",
@@ -520,7 +520,7 @@ func TestService_noMatch(t *testing.T) {
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
-	testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	testExecutorF := func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 		assert.Fail(t, "should not match event")
 		return nil
 	}
@@ -532,6 +532,6 @@ func TestService_noMatch(t *testing.T) {
 		metrics:          metrics.NewMetrics(),
 	}
 
-	err := s.match(context.Background(), e)
+	err := s.Match(context.Background(), e)
 	assert.NoError(t, err)
 }

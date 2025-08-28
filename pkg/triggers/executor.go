@@ -40,9 +40,9 @@ const (
 	JsonPathPrefix        = "jsonpath="
 )
 
-type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
+type ExecutorF func(context.Context, *WatcherEvent, *testtriggersv1.TestTrigger) error
 
-func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger) error {
+func (s *Service) execute(ctx context.Context, e *WatcherEvent, t *testtriggersv1.TestTrigger) error {
 	status := s.getStatusForTrigger(t)
 
 	concurrencyLevel := scheduler.DefaultConcurrencyLevel
@@ -256,7 +256,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 	return nil
 }
 
-func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error) {
+func (s *Service) getJsonPathData(e *WatcherEvent, value string) (string, error) {
 	jp := jsonpath.New("field")
 	err := jp.Parse(value)
 	if err != nil {
@@ -272,7 +272,7 @@ func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error)
 	return buf.String(), nil
 }
 
-func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error) {
+func (s *Service) getTemplateData(e *WatcherEvent, value string) ([]byte, error) {
 	var tmpl *template.Template
 	tmpl, err := utils.NewTemplate("field").Parse(value)
 	if err != nil {

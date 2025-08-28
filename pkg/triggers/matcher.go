@@ -28,7 +28,7 @@ var (
 	ErrProbeTimeout     = errors.New("timed-out waiting for trigger probes")
 )
 
-func (s *Service) match(ctx context.Context, e *watcherEvent) error {
+func (s *Service) Match(ctx context.Context, e *WatcherEvent) error {
 	for _, status := range s.triggerStatus {
 		t := status.testTrigger
 		if t.Spec.Disabled {
@@ -44,8 +44,14 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
-		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
-			continue
+		if t.Spec.ResourceSelector.Name != "" {
+			if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
+				continue
+			}
+		} else if t.Spec.ContentSelector == nil {
+			if e.trigger != t.Name {
+				continue
+			}
 		}
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
@@ -108,7 +114,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	return nil
 }
 
-func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
+func matchEventOrCause(targetEvent string, event *WatcherEvent) bool {
 	if targetEvent == string(event.eventType) {
 		return true
 	}
@@ -120,7 +126,7 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	return false
 }
 
-func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
+func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *WatcherEvent, logger *zap.SugaredLogger) bool {
 	if selector.LabelSelector != nil && len(event.labels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
 		if err != nil {
@@ -171,7 +177,7 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 	return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
 }
 
-func (s *Service) matchConditions(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
+func (s *Service) matchConditions(ctx context.Context, e *WatcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
 	timeout := s.defaultConditionsCheckTimeout
 	if t.Spec.ConditionSpec.Timeout > 0 {
 		timeout = time.Duration(t.Spec.ConditionSpec.Timeout) * time.Second
@@ -301,7 +307,7 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 	return true
 }
 
-func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
+func (s *Service) matchProbes(ctx context.Context, e *WatcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
 	timeout := s.defaultProbesCheckTimeout
 	if t.Spec.ProbeSpec.Timeout > 0 {
 		timeout = time.Duration(t.Spec.ProbeSpec.Timeout) * time.Second

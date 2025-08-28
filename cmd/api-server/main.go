@@ -723,6 +723,12 @@ func main() {
 			triggerService.Run(ctx)
 			return nil
 		})
+
+		// Start the new iformer.
+		g.Go(func() error {
+			informer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID).Reconcile(ctx)
+			return nil
+		})
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
 	}
@@ -807,12 +813,6 @@ func main() {
 			return nil
 		})
 	}
-
-	// Start the new scheduler.
-	g.Go(func() error {
-		informer.NewInformer(testTriggersClient, nil, cfg.TestkubeNamespace, "").Reconcile(ctx)
-		return nil
-	})
 
 	g.Go(func() error {
 		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
