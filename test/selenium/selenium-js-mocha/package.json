@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "chai": "^6.0.1",
+    "mocha": "^11.7.1",
+    "mocha-junit-reporter": "^2.2.1",
+    "selenium-webdriver": "^4.35.0"
+  }
+}
