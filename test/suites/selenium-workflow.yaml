@@ -15,5 +15,5 @@ spec:
       - name: selenium-java-hub-and-nodes-workflow-smoke
       - name: selenium-python-workflow-smoke
       - name: selenium-python-hub-and-nodes-workflow-smoke
+      - name: selenium-js-mocha-workflow-smoke
       - name: selenium-js-cucumber-workflow-smoke
-      - name: selenium-js-cucumber-hub-and-nodes-workflow-smoke
