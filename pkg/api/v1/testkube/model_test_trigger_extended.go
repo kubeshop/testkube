@@ -70,6 +70,12 @@ func (t *TestTrigger) QuoteTextFields() {
 			if t.ConditionSpec.Conditions[i].Type_ != "" {
 				t.ConditionSpec.Conditions[i].Type_ = fmt.Sprintf("%q", t.ConditionSpec.Conditions[i].Type_)
 			}
+			if t.ConditionSpec.Conditions[i].Status != nil {
+				status := t.ConditionSpec.Conditions[i].Status
+				if string(*status) != "" {
+					*status = TestTriggerConditionStatuses(fmt.Sprintf("%q", string(*status)))
+				}
+			}
 			if t.ConditionSpec.Conditions[i].Reason != "" {
 				t.ConditionSpec.Conditions[i].Reason = fmt.Sprintf("%q", t.ConditionSpec.Conditions[i].Reason)
 			}
