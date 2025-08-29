@@ -14,3 +14,32 @@ spec:
         echo "Iteration $iteration, sleep (1 second)"
         sleep 1
       done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-service-name-with-dash  # only . notation is supported (https://linear.app/kubeshop/issue/TKC-4047/)
+  labels:
+    core-tests: special-cases
+description: "Service name with dash"
+spec:
+  container:
+    image: alpine:3.22.0
+  services:
+    service-name-with-dash:
+      image: alpine:3.22.0
+      logs: always
+      count: 1
+      shell: 'echo "started service" && sleep 60'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: |
+        echo "Service IP: {{ at(services, "service-name-with-dash").0.ip }}"
+        echo "Service ENV: $SERVICE_IP"
+        [ -z "$SERVICE_IP" ] && { echo "ERROR: SERVICE_IP empty"; exit 1; } || echo OK
+      env:
+        - name: SERVICE_IP
+          value: '{{ at(services, "service-name-with-dash").0.ip }}'
