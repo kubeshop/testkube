@@ -12,7 +12,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
       - test/selenium/selenium-java
   container:
@@ -69,7 +69,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
         - test/selenium/selenium-java
   container:
@@ -159,7 +159,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
         - test/selenium/selenium-python
   container:
@@ -221,7 +221,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
         - test/selenium/selenium-python
   container:
@@ -304,7 +304,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
         - test/selenium/selenium-js-mocha
   container:
@@ -362,7 +362,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
         - test/selenium/selenium-js-mocha
   container:
@@ -420,7 +420,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4043-selenium-initial-cases
+      revision: main
       paths:
         - test/selenium/selenium-js-cucumber
   container:
