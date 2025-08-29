@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 // ReconcileTestWorklows is watching for test workflow change and schedule test workflow cron jobs
@@ -32,7 +33,7 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 
 				events := obj.Resource.Spec.Events
 				for _, template := range obj.Resource.Spec.Use {
-					testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
+					testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), testworkflowresolver.GetInternalTemplateName(template.Name))
 					if err != nil {
 						s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "name", template.Name, "error", err)
 						continue
@@ -110,7 +111,7 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 
 					found := false
 					for _, template := range testWorkflow.Spec.Use {
-						if template.Name == obj.Resource.Name {
+						if testworkflowresolver.GetInternalTemplateName(template.Name) == obj.Resource.Name {
 							found = true
 							break
 						}
@@ -122,7 +123,7 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 
 					events := testWorkflow.Spec.Events
 					for _, template := range testWorkflow.Spec.Use {
-						testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
+						testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), testworkflowresolver.GetInternalTemplateName(template.Name))
 						if err != nil {
 							s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "name", template.Name, "error", err)
 							continue
