@@ -175,7 +175,7 @@ jobs:
           credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
 
       - name: Configure Docker for GAR
-        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
+        run: gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev -q
 
 #      - name: Get tag
 #        id: tag
