@@ -82,9 +82,9 @@ jobs:
         with:
           files: |
             ./docker-bake.hcl
-            ${{ steps.api-meta-gar.outputs.bake-file }}
-            ${{ steps.tw-toolkit-gar.outputs.bake-file }}
-            ${{ steps.tw-init-gar.outputs.bake-file }}
+            ${{ steps.api-meta.outputs.bake-file }}
+            ${{ steps.tw-toolkit.outputs.bake-file }}
+            ${{ steps.tw-init.outputs.bake-file }}
           targets: api,tw-toolkit,tw-init
           provenance: mode=max
           push: true
