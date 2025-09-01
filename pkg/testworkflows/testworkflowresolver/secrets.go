@@ -145,7 +145,7 @@ func extractCredentialsInServicesMap(services map[string]testworkflowsv1.Service
 		err = extractCredentialsInService(&svc, externalize)
 		services[k] = svc
 		if err != nil {
-			return errors.Wrapf(err, k)
+			return errors.Wrap(err, k)
 		}
 	}
 	return nil
@@ -156,7 +156,7 @@ func extractCredentialsInIndependentServicesMap(services map[string]testworkflow
 		err = extractCredentialsInIndependentService(&svc, externalize)
 		services[k] = svc
 		if err != nil {
-			return errors.Wrapf(err, k)
+			return errors.Wrap(err, k)
 		}
 	}
 	return nil
@@ -166,7 +166,7 @@ func extractCredentialsInParallel(parallel *testworkflowsv1.StepParallel, extern
 	if parallel == nil {
 		return
 	}
-	return extractCredentialsInWorkflowSpec(&parallel.TestWorkflowSpec, externalize)
+	return extractCredentialsInWorkflowSpec(parallel.NewTestWorkflowSpec(), externalize)
 }
 
 func extractCredentialsInIndependentParallel(parallel *testworkflowsv1.IndependentStepParallel, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {

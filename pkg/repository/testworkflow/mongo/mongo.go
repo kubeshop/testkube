@@ -137,42 +137,19 @@ func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 
 // GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "updatetime"
-	if sortBy == testworkflow.LatestSortByNumber {
+	sortField := "scheduledat"
+	switch sortBy {
+	case testworkflow.LatestSortByNumber:
 		sortField = "number"
+	case testworkflow.LatestSortByStatusAt:
+		sortField = "statusat"
 	}
 
 	opts := options.Aggregate()
-	pipeline := []bson.D{
-		{{
-			Key: "$addFields",
-			Value: bson.M{
-				"updatetime": bson.M{"$max": bson.M{
-					"$cond": bson.M{
-						"if": bson.M{
-							"$and": bson.A{
-								bson.M{"$ne": bson.A{"$result.startedat", nil}},
-								bson.M{"$ne": bson.A{"$result.startedat", bson.M{"$dateFromString": bson.M{"dateString": "0001-01-01T00:00:00Z"}}}},
-							},
-						},
-						"then": "$result.startedat",
-						"else": "$statusat",
-					},
-				}},
-			},
-		}},
-		{{
-			Key:   "$sort",
-			Value: bson.M{sortField: -1},
-		}},
-		{{
-			Key:   "$match",
-			Value: bson.M{"workflow.name": workflowName},
-		}},
-		{{
-			Key:   "$limit",
-			Value: 1,
-		}},
+	pipeline := []bson.M{
+		{"$sort": bson.M{sortField: -1}},
+		{"$match": bson.M{"workflow.name": workflowName}},
+		{"$limit": 1},
 	}
 	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
@@ -200,7 +177,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 	}
 
 	pipeline := []bson.M{
-		{"$sort": bson.M{"statusat": -1}},
+		{"$sort": bson.M{"scheduledat": -1}},
 		{"$project": bson.M{
 			"_id":                   0,
 			"output":                0,
@@ -304,7 +281,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	hasSkip := len(filter) > 0 && filter[0].Page() > 0
 	hasLimit := len(filter) > 0 && filter[0].PageSize() < math.MaxInt32
 	if hasSkip || hasLimit {
-		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "statusat", Value: -1}}}})
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "scheduledat", Value: -1}}}})
 	}
 	if hasSkip {
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
@@ -335,7 +312,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	for _, o := range result {
 		sum += int32(o.Count)
 		switch testkube.TestWorkflowStatus(o.Status) {
-		case testkube.QUEUED_TestWorkflowStatus, testkube.PENDING_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.PENDING_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
 			totals.Queued = int32(o.Count)
 		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = int32(o.Count)
@@ -490,6 +467,7 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 		"result.status": bson.M{"$in": bson.A{
 			testkube.PENDING_TestWorkflowStatus,
 			testkube.STARTING_TestWorkflowStatus,
+			testkube.SCHEDULING_TestWorkflowStatus,
 			testkube.RUNNING_TestWorkflowStatus,
 			testkube.PAUSING_TestWorkflowStatus,
 			testkube.PAUSED_TestWorkflowStatus,
@@ -517,9 +495,24 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
+			// The expected statuses from which an execution may be finished:
+			// - Queued, before even being assigned to a runner it can be immediately finished.
 			testkube.QUEUED_TestWorkflowStatus,
-			testkube.STOPPING_TestWorkflowStatus,
+			// - Pending, once the execution has been assigned to a runner but has not yet been
+			//   communicated to the runner it can be finished immediately.
+			testkube.PENDING_TestWorkflowStatus,
+			// - Running, once the execution is completed it will be finished from this state.
 			testkube.RUNNING_TestWorkflowStatus,
+			// - Stopping, when requested to stop an execution it will transition to a finished state.
+			testkube.STOPPING_TestWorkflowStatus,
+			// Edge-case statuses that may lead to immediate finishing of an execution:
+			// - Starting, a runner may choose to finish an execution before scheduling it with
+			//   kubernetes if there is a fundamental issue with the execution spec.
+			testkube.STARTING_TestWorkflowStatus,
+			// - Scheduling, after an execution has been scheduled with kubernetes it may be
+			//   immediately finished due to the Pod never entering a Running state and the
+			//   runner aborting it.
+			testkube.SCHEDULING_TestWorkflowStatus,
 		}},
 	}, bson.M{"$set": bson.M{
 		"result":   result,
@@ -892,9 +885,11 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 
 func (r *MongoRepository) Init(ctx context.Context, id string, data testworkflow.InitData) error {
 	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
-		"namespace": data.Namespace,
-		"signature": data.Signature,
-		"runnerid":  data.RunnerID,
+		"namespace":     data.Namespace,
+		"signature":     data.Signature,
+		"runnerid":      data.RunnerID,
+		"result.status": testkube.SCHEDULING_TestWorkflowStatus,
+		"statusat":      time.Now(),
 	}})
 	return err
 }

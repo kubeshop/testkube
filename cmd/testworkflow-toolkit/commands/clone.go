@@ -91,9 +91,11 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 	}
 
 	// Setup SSH if provided
-	if err := setupSSHKey(opts.SSHKey); err != nil {
+	cleanupSSH, err := setupSSHKey(opts.SSHKey)
+	if err != nil {
 		return fmt.Errorf("setting up SSH key: %w", err)
 	}
+	defer cleanupSSH()
 
 	// Use temporary directory for cloning
 	tmpPath, err := os.MkdirTemp(constants.DefaultTmpDirPath, "clone-*")
@@ -190,10 +192,10 @@ func setupAuthentication(ctx context.Context, uri *url.URL, opts *CloneOptions) 
 	return authArgs, nil
 }
 
-// setupSSHKey configures SSH authentication if an SSH key is provided
-func setupSSHKey(sshKey string) error {
+// setupSSHKey configures SSH authentication if an SSH key is provided and returns a cleanup function
+func setupSSHKey(sshKey string) (func(), error) {
 	if sshKey == "" {
-		return nil
+		return func() {}, nil
 	}
 
 	// Ensure newline at EOF
@@ -202,22 +204,21 @@ func setupSSHKey(sshKey string) error {
 	// Create temp file for SSH key
 	tmpFile, err := os.CreateTemp(constants.DefaultTmpDirPath, "ssh-key-*")
 	if err != nil {
-		return fmt.Errorf("creating temp file for SSH key: %w", err)
+		return nil, fmt.Errorf("creating temp file for SSH key: %w", err)
 	}
 	sshKeyPath := tmpFile.Name()
 	tmpFile.Close() // Close it so we can write to it with proper permissions
 
-	// Ensure cleanup
-	defer os.Remove(sshKeyPath)
 	if err := os.WriteFile(sshKeyPath, []byte(sshKey), 0400); err != nil {
-		return fmt.Errorf("writing SSH key: %w", err)
+		_ = os.Remove(sshKeyPath)
+		return nil, fmt.Errorf("writing SSH key: %w", err)
 	}
 
 	// Configure SSH command
 	sshCmd := shellquote.Join("ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", sshKeyPath)
 	os.Setenv("GIT_SSH_COMMAND", sshCmd)
 
-	return nil
+	return func() { _ = os.Remove(sshKeyPath) }, nil
 }
 
 // cleanPaths prepares paths for sparse checkout

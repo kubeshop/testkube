@@ -483,3 +483,19 @@ spec:
         shell: |
           echo "ConfigMap ENV: '$EXAMPLE_PARAM'"
           [ -z "$EXAMPLE_PARAM" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-no-initial-output
+  labels:
+    core-tests: special-cases
+description: "No output at the beginning (just sleep)"
+spec:
+  steps:
+  - name: Run test 1
+    shell: |
+      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+  - name: Run test 2
+    shell: |
+      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"

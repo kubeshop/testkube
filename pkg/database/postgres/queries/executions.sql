@@ -182,8 +182,10 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = @workflow_name::text
 ORDER BY
     CASE
-        WHEN @sort_by_number::boolean = true THEN e.number
-        WHEN @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+        WHEN @sort_by_number::boolean = true AND @sort_by_status::boolean = false THEN e.number
+        WHEN @sort_by_status::boolean = true AND @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+    ELSE
+        EXTRACT(EPOCH FROM e.scheduled_at)::integer
     END DESC
 LIMIT 1;
 
@@ -890,7 +892,8 @@ ORDER BY tag_key;
 UPDATE test_workflow_executions 
 SET 
     namespace = @namespace,
-    runner_id = @runner_id
+    runner_id = @runner_id,
+    status_at = NOW()
 WHERE id = @id;
 
 -- name: AssignTestWorkflowExecution :one
