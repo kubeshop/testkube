@@ -34,6 +34,10 @@ func NewCreateCmd() *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config", err)
+
+			// Check for legacy resource type and show deprecation warning
+			common.CheckLegacyCommmandName(cmd.Name())
+
 			common.UiContextHeader(cmd, cfg)
 
 			if !crdOnly {

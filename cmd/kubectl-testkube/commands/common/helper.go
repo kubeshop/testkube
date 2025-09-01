@@ -1332,3 +1332,25 @@ func extractJSONObject(input []byte) ([]byte, error) {
 
 	return prettyJSON.Bytes(), nil
 }
+
+// CheckLegacyCommmandName checks if the given resource type is legacy and shows a deprecation warning.
+// This function should be called in PersistentPreRun functions of commands that operate on legacy resources.
+// Legacy resource types include: "test", "testsuite", "executor", "testsource".
+// Usage: common.CheckLegacyCommmandName(cmd.Name())
+func CheckLegacyCommmandName(commandName string) {
+	// Legacy resource types that are about to be deprecated
+	legacyCommandNames := map[string]bool{
+		"test":                true,
+		"testsuite":           true,
+		"executor":            true,
+		"testsource":          true,
+		"execution":           true,
+		"executions":          true,
+		"testsuiteexecution":  true,
+		"testsuiteexecutions": true,
+	}
+
+	if legacyCommandNames[commandName] {
+		ui.Info("This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features")
+	}
+}

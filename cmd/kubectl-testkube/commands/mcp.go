@@ -25,10 +25,9 @@ Capabilities:
 • Navigate test execution history
 • Manage test resources and configurations
 
-The MCP server requires OAuth authentication and uses your current Testkube context.
+The MCP server requires you to be authenticated with the Testkube Control Plane, run 'testkube login' to authenticate.
 
 Documentation: https://docs.testkube.io/articles/mcp-overview
-Setup Guide: https://docs.testkube.io/articles/mcp-setup
 Configuration: https://docs.testkube.io/articles/mcp-configuration`,
 	}
 
