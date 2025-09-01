@@ -94,7 +94,7 @@ func GetDependencyVersion(helmChart HelmChart, dependency string) (string, error
 			}
 		}
 	}
-	return "", fmt.Errorf("version key not found in dependency " + dependency)
+	return "", fmt.Errorf("version key not found in dependency %s", dependency)
 }
 
 // GetVersion returns HelmChart version

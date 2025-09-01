@@ -82,7 +82,7 @@ func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, er
 		}
 		result.Err(errors.New("found result log with no content"))
 	case TypeError, TypeParsingError:
-		result.Err(fmt.Errorf(log.Content))
+		result.Err(errors.New(log.Content))
 	default:
 		result.Err(fmt.Errorf("wrong log type was found as last log: %v", log))
 	}
@@ -118,7 +118,7 @@ func ParseContainerOutput(b []byte) (*testkube.ExecutionResult, string, error) {
 			result = log.Result
 		}
 	case TypeError:
-		result.Err(fmt.Errorf(log.Content))
+		result.Err(errors.New(log.Content))
 	}
 
 	return result, output, nil
