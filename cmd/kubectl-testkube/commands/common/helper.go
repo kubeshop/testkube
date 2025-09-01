@@ -1351,8 +1351,8 @@ func CheckLegacyName(commandName string) {
 	}
 
 	if legacyCommandNames[commandName] {
-		ui.Alert("! ------------------------------------------------------------------------------------------------------------ !")
-		ui.Alert("! This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features !")
-		ui.Alert("! ------------------------------------------------------------------------------------------------------------ !")
+		ui.Alert("⚠️ ------------------------------------------------------------------------------------------------------------ ⚠️")
+		ui.Alert("⚠️ This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features ⚠️")
+		ui.Alert("⚠️ ------------------------------------------------------------------------------------------------------------ ⚠️")
 	}
 }
