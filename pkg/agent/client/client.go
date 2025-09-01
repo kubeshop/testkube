@@ -9,6 +9,7 @@ import (
 	"time"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -43,6 +44,7 @@ const (
 	GRPCKeepalivePermitWithoutStream = true
 )
 
+// NewGRPCConnection keeps backward compatibility, tracing disabled by default.
 func NewGRPCConnection(
 	ctx context.Context,
 	isInsecure bool,
@@ -50,6 +52,19 @@ func NewGRPCConnection(
 	server string,
 	certFile, keyFile, caFile string,
 	logger *zap.SugaredLogger,
+) (*grpc.ClientConn, error) {
+	return NewGRPCConnectionWithTracing(ctx, isInsecure, skipVerify, server, certFile, keyFile, caFile, logger, false)
+}
+
+// NewGRPCConnectionWithTracing creates a gRPC client and optionally instruments it with OpenTelemetry (non-deprecated stats handler).
+func NewGRPCConnectionWithTracing(
+	ctx context.Context,
+	isInsecure bool,
+	skipVerify bool,
+	server string,
+	certFile, keyFile, caFile string,
+	logger *zap.SugaredLogger,
+	enableTracing bool,
 ) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, connectionTimeout)
 	defer cancel()
@@ -82,7 +97,9 @@ func NewGRPCConnection(
 
 	userAgent := version.Version + "/" + version.Commit
 	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
-	client, err := grpc.NewClient(server,
+
+	// Build dial options
+	opts := []grpc.DialOption{
 		grpc.WithUserAgent(userAgent),
 		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(kacp),
@@ -101,7 +118,14 @@ func NewGRPCConnection(
 		grpc.WithChainUnaryInterceptor(
 			grpczap.UnaryClientInterceptor(logger.Desugar()),
 		),
-	)
+	}
+
+	// Conditionally add OpenTelemetry (non-deprecated) stats handler
+	if enableTracing {
+		opts = append(opts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
+	}
+
+	client, err := grpc.NewClient(server, opts...)
 	if err != nil {
 		return client, fmt.Errorf("create new grpc client: %w", err)
 	}
