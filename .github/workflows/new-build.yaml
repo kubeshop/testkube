@@ -78,7 +78,6 @@ jobs:
             type=sha,format=short,prefix=
 
       - name: Build (GAR-only on feat/push-to-gar)
-        if: github.ref == 'refs/heads/feat/push-to-gar'
         uses: depot/bake-action@v1
         with:
           files: |
