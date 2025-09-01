@@ -5,7 +5,6 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
     branches:
       - main
-      - feat/push-to-gar
 env:
   ALPINE_IMAGE: alpine:3.20.6
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -77,7 +76,7 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
 
-      - name: Build (GAR-only on feat/push-to-gar)
+      - name: Build
         uses: depot/bake-action@v1
         with:
           files: |
@@ -90,49 +89,28 @@ jobs:
           push: true
           sbom: true
         env:
-          VERSION: ci-${{ github.sha }}
-          GIT_SHA: ${{ github.sha }}
+          VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}
           SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
           SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
           ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
-#      - name: Build
-#        uses: depot/bake-action@v1
-#        with:
-#          files: |
-#            ./docker-bake.hcl
-#            ${{ steps.api-meta.outputs.bake-file }}
-#            ${{ steps.tw-toolkit.outputs.bake-file }}
-#            ${{ steps.tw-init.outputs.bake-file }}
-#          targets: api,tw-toolkit,tw-init
-#          provenance: mode=max
-#          push: true
-#          sbom: true
-#        env:
-#          VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
-#          GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}
-#          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
-#          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
-#          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-#          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
-#          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
-#          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
-#      - name: Check if it is a release
-#        id: check-tag
-#        run: |
-#          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-#              echo "match=true" >> $GITHUB_OUTPUT
-#          fi
-#
-#      - name: Repository Dispatch
-#        if: steps.check-tag.outputs.match == 'true'
-#        uses: peter-evans/repository-dispatch@v3
-#        with:
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          repository: kubeshop/helm-charts
-#          event-type: release-testkube-api-charts
-#          client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
-#
+      - name: Check if it is a release
+        id: check-tag
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "match=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Repository Dispatch
+        if: steps.check-tag.outputs.match == 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: release-testkube-api-charts
+          client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
+
