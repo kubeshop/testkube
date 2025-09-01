@@ -96,7 +96,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
-          args: release -f ${{ matrix.path }} --skip=publish
+          args: release -f ${{ matrix.path }} --skip=publish --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -172,7 +172,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
 
       - name: Configure Docker for GAR
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
