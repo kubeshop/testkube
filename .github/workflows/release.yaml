@@ -213,8 +213,8 @@ jobs:
           push: true
           sbom: true
           tags: | 
-            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/testkube-agent:${{steps.tag.outputs.tag}}
-            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/testkube-agent:latest
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/agent:${{steps.agenttag.outputs.tag}}
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/agent:latest
 #
 #  release:
 #    name: Create and upload release-artifacts
