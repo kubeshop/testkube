@@ -20,7 +20,6 @@ func NewAbortExecutionCmd() *cobra.Command {
 
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
-			common.CheckLegacyCommmandName(cmd.Name())
 
 			err = client.AbortExecution("test", executionID)
 			ui.ExitOnError(fmt.Sprintf("aborting execution %s", executionID), err)
