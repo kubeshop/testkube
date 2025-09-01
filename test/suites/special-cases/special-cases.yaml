@@ -27,3 +27,4 @@ spec:
       - name: special-cases-custom-shared-volume-steps
       - name: special-cases-missing-env-secret
       - name: special-cases-missing-configmap-key
+      - name: special-cases-no-initial-output
