@@ -210,8 +210,9 @@ func TestSetupSSHKey(t *testing.T) {
 			// Clear environment before test
 			t.Setenv("GIT_SSH_COMMAND", "")
 
-			err := setupSSHKey(tt.sshKey)
+			cleanup, err := setupSSHKey(tt.sshKey)
 			require.NoError(t, err)
+			defer cleanup()
 
 			if tt.shouldSet {
 				assert.NotEmpty(t, os.Getenv("GIT_SSH_COMMAND"))

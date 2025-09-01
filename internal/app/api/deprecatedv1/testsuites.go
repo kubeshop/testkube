@@ -470,17 +470,19 @@ func (s *DeprecatedTestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handl
 		sort.Slice(results, func(i, j int) bool {
 			iTime := results[i].TestSuite.Created
 			if results[i].LatestExecution != nil {
-				iTime = results[i].LatestExecution.EndTime
-				if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
-					iTime = results[i].LatestExecution.StartTime
+				iTime = results[i].LatestExecution.StartTime
+				// Fallback to EndTime if StartTime is not set (execution hasn't started yet)
+				if iTime.IsZero() {
+					iTime = results[i].LatestExecution.EndTime
 				}
 			}
 
 			jTime := results[j].TestSuite.Created
 			if results[j].LatestExecution != nil {
-				jTime = results[j].LatestExecution.EndTime
-				if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
-					jTime = results[j].LatestExecution.StartTime
+				jTime = results[j].LatestExecution.StartTime
+				// Fallback to EndTime if StartTime is not set (execution hasn't started yet)
+				if jTime.IsZero() {
+					jTime = results[j].LatestExecution.EndTime
 				}
 			}
 

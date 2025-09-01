@@ -192,7 +192,7 @@ func CreateDeprecatedSystem(
 	// Use direct MinIO artifact storage for deprecated API for backwards compatibility
 	var deprecatedArtifactStorage storage.ArtifactsStorage
 	if mode == common.ModeAgent {
-		deprecatedArtifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
+		deprecatedArtifactStorage = cloudartifacts.NewCloudArtifactsStorageWithParams(grpcClient, cfg.TestkubeProAPIKey, "", "")
 	} else {
 		deprecatedArtifactStorage = minio.NewMinIOArtifactClient(commons.MustGetMinioClient(cfg))
 	}

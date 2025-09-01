@@ -15,8 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	"github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	tests "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -244,17 +243,19 @@ func (s *DeprecatedTestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 		sort.Slice(results, func(i, j int) bool {
 			iTime := results[i].Test.Created
 			if results[i].LatestExecution != nil {
-				iTime = results[i].LatestExecution.EndTime
-				if results[i].LatestExecution.StartTime.After(results[i].LatestExecution.EndTime) {
-					iTime = results[i].LatestExecution.StartTime
+				iTime = results[i].LatestExecution.StartTime
+				// Fallback to EndTime if StartTime is not set (execution hasn't started yet)
+				if iTime.IsZero() {
+					iTime = results[i].LatestExecution.EndTime
 				}
 			}
 
 			jTime := results[j].Test.Created
 			if results[j].LatestExecution != nil {
-				jTime = results[j].LatestExecution.EndTime
-				if results[j].LatestExecution.StartTime.After(results[j].LatestExecution.EndTime) {
-					jTime = results[j].LatestExecution.StartTime
+				jTime = results[j].LatestExecution.StartTime
+				// Fallback to EndTime if StartTime is not set (execution hasn't started yet)
+				if jTime.IsZero() {
+					jTime = results[j].LatestExecution.EndTime
 				}
 			}
 
@@ -484,7 +485,7 @@ func (s *DeprecatedTestkubeAPI) DeleteTestHandler() fiber.Handler {
 					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
 				}
 
-				if _, ok := err.(*testsclientv3.DeleteDependenciesError); ok {
+				if _, ok := err.(*tests.DeleteDependenciesError); ok {
 					return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("client deleted test %s but deleting test dependencies(secrets) returned errors: %w", name, err))
 				}
 

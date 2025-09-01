@@ -129,6 +129,8 @@ func (e *executor) execute(ctx context.Context, environmentId string, req *cloud
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	ctx = agentclient.AddAPIKeyMeta(ctx, e.apiKey)
 	ctx = metadata.AppendToOutgoingContext(ctx, "environment-id", environmentId)
+	ctx = metadata.AppendToOutgoingContext(ctx, "organization-id", e.organizationId)
+	ctx = metadata.AppendToOutgoingContext(ctx, "agent-id", e.agentId)
 	resp, err := e.grpcClient.ScheduleExecution(ctx, req, opts...)
 	resultStream := NewStream(ch)
 	if err != nil {

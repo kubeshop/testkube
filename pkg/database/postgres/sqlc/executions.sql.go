@@ -17,7 +17,7 @@ SET status_at = $1
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = $2
     AND test_workflow_executions.id = r.execution_id
-    AND r.status IN ('queued', 'assigned', 'starting', 'running', 'paused', 'resuming')
+    AND r.status IN ('queued', 'pending', 'starting', 'running', 'paused', 'resuming')
     AND (test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
 RETURNING test_workflow_executions.id
 `
@@ -722,8 +722,10 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = $1::text
 ORDER BY
     CASE
-        WHEN $2::boolean = true THEN e.number
-        WHEN $2::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+        WHEN $2::boolean = true AND $3::boolean = false THEN e.number
+        WHEN $3::boolean = true AND $2::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
+    ELSE
+        EXTRACT(EPOCH FROM e.scheduled_at)::integer
     END DESC
 LIMIT 1
 `
@@ -731,6 +733,7 @@ LIMIT 1
 type GetLatestTestWorkflowExecutionByTestWorkflowParams struct {
 	WorkflowName string `db:"workflow_name" json:"workflow_name"`
 	SortByNumber bool   `db:"sort_by_number" json:"sort_by_number"`
+	SortByStatus bool   `db:"sort_by_status" json:"sort_by_status"`
 }
 
 type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
@@ -793,7 +796,7 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 }
 
 func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg GetLatestTestWorkflowExecutionByTestWorkflowParams) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
-	row := q.db.QueryRow(ctx, getLatestTestWorkflowExecutionByTestWorkflow, arg.WorkflowName, arg.SortByNumber)
+	row := q.db.QueryRow(ctx, getLatestTestWorkflowExecutionByTestWorkflow, arg.WorkflowName, arg.SortByNumber, arg.SortByStatus)
 	var i GetLatestTestWorkflowExecutionByTestWorkflowRow
 	err := row.Scan(
 		&i.ID,
@@ -1138,7 +1141,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming')
+WHERE r.status IN ('queued', 'pending', 'starting', 'running', 'pausing', 'paused', 'resuming')
 ORDER BY e.id DESC
 `
 
@@ -2780,7 +2783,8 @@ const initTestWorkflowExecution = `-- name: InitTestWorkflowExecution :exec
 UPDATE test_workflow_executions 
 SET 
     namespace = $1,
-    runner_id = $2
+    runner_id = $2,
+    status_at = NOW()
 WHERE id = $3
 `
 

@@ -8,6 +8,7 @@ import (
 
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -19,8 +20,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudRepository(client cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey)}
+func NewCloudRepository(client cloud.TestKubeCloudAPIClient, proContext *intconfig.ProContext) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, proContext)}
 }
 
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
@@ -45,9 +46,12 @@ func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 
 // GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow2.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "statusat"
-	if sortBy == testworkflow2.LatestSortByNumber {
+	sortField := "scheduledat"
+	switch sortBy {
+	case testworkflow2.LatestSortByNumber:
 		sortField = "number"
+	case testworkflow2.LatestSortByStatusAt:
+		sortField = "statusat"
 	}
 
 	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName, SortBy: sortField}

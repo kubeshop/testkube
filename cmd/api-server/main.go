@@ -45,8 +45,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	leasebackend "github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -244,20 +247,22 @@ func main() {
 	// k8s clients
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	webhookTemplatesClient := executorsclientv1.NewWebhookTemplatesClient(kubeClient, cfg.TestkubeNamespace)
-	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
 
-	var testWorkflowsClient testworkflowclient.TestWorkflowClient
-	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+	var (
+		testWorkflowsClient         testworkflowclient.TestWorkflowClient
+		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+		testTriggersClient          testtriggerclient.TestTriggerClient
+	)
+	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 
-	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
-	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
-	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
-
-	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
+	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
+	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
+	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, &proContext)
 
 	log.DefaultLogger.Info("connecting to NATS...")
 	nc := commons.MustCreateNATSConnection(cfg)
@@ -268,8 +273,6 @@ func main() {
 		eventBus.TraceEvents()
 	}
 	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
-
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
@@ -284,11 +287,15 @@ func main() {
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
+		testTriggersClient = testtriggerclient.NewCloudTestTriggerClient(client)
 	} else {
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow client", err)
 		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow templates client", err)
+
+		legacyTestTriggersClientForAPI := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
 	defaultExecutionNamespace := cfg.TestkubeNamespace
@@ -674,20 +681,29 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	if !cfg.DisableTestTriggers && controlPlane != nil {
+	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		commons.ExitOnError("getting k8s client config", err)
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 		commons.ExitOnError("creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
-		leaseBackend := controlPlane.GetRepositoryManager().LeaseBackend()
+
+		var lb leasebackend.Repository
+		if controlPlane != nil {
+			lb = controlPlane.GetRepositoryManager().LeaseBackend()
+		} else {
+			// Fallback: Kubernetes Lease-based coordination (no external DB required)
+			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
+		}
+
 		triggerService := triggers.NewService(
 			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
-			leaseBackend,
+			testTriggersClient,
+			lb,
 			log.DefaultLogger,
 			configMapConfig,
 			eventBus,

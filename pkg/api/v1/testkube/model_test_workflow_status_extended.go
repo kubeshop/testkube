@@ -22,18 +22,19 @@ func (statuses TestWorkflowStatuses) ToMap() map[TestWorkflowStatus]struct{} {
 // ParseTestWorkflowStatusList parse a list of workflow execution statuses from string
 func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkflowStatuses, err error) {
 	statusMap := map[TestWorkflowStatus]struct{}{
-		QUEUED_TestWorkflowStatus:   {},
-		ASSIGNED_TestWorkflowStatus: {},
-		STARTING_TestWorkflowStatus: {},
-		RUNNING_TestWorkflowStatus:  {},
-		PAUSING_TestWorkflowStatus:  {},
-		PAUSED_TestWorkflowStatus:   {},
-		RESUMING_TestWorkflowStatus: {},
-		PASSED_TestWorkflowStatus:   {},
-		FAILED_TestWorkflowStatus:   {},
-		STOPPING_TestWorkflowStatus: {},
-		ABORTED_TestWorkflowStatus:  {},
-		CANCELED_TestWorkflowStatus: {},
+		QUEUED_TestWorkflowStatus:     {},
+		PENDING_TestWorkflowStatus:    {},
+		STARTING_TestWorkflowStatus:   {},
+		SCHEDULING_TestWorkflowStatus: {},
+		RUNNING_TestWorkflowStatus:    {},
+		PAUSING_TestWorkflowStatus:    {},
+		PAUSED_TestWorkflowStatus:     {},
+		RESUMING_TestWorkflowStatus:   {},
+		PASSED_TestWorkflowStatus:     {},
+		FAILED_TestWorkflowStatus:     {},
+		STOPPING_TestWorkflowStatus:   {},
+		ABORTED_TestWorkflowStatus:    {},
+		CANCELED_TestWorkflowStatus:   {},
 	}
 
 	if source == "" {
@@ -61,8 +62,9 @@ func TestWorkflowStatusString(ptr *TestWorkflowStatus) string {
 // This is logically the inverse of TestWorkflowTerminalStatus
 var TestWorkflowExecutingStatus = []TestWorkflowStatus{
 	QUEUED_TestWorkflowStatus,
-	ASSIGNED_TestWorkflowStatus,
+	PENDING_TestWorkflowStatus,
 	STARTING_TestWorkflowStatus,
+	SCHEDULING_TestWorkflowStatus,
 	RUNNING_TestWorkflowStatus,
 	PAUSING_TestWorkflowStatus,
 	PAUSED_TestWorkflowStatus,
@@ -73,8 +75,9 @@ var TestWorkflowExecutingStatus = []TestWorkflowStatus{
 // transition an Execution to a STOPPING, ABORTED, or CANCELLED state.
 var TestWorkflowStoppableStatus = []TestWorkflowStatus{
 	QUEUED_TestWorkflowStatus,
-	ASSIGNED_TestWorkflowStatus,
+	PENDING_TestWorkflowStatus,
 	STARTING_TestWorkflowStatus,
+	SCHEDULING_TestWorkflowStatus,
 	RUNNING_TestWorkflowStatus,
 	PAUSED_TestWorkflowStatus,
 	RESUMING_TestWorkflowStatus,

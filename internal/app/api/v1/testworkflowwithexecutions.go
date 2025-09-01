@@ -30,7 +30,7 @@ func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name, testworkflow.LatestSortByStatusAt)
+		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name, testworkflow.LatestSortByScheduledAt)
 		if err != nil && !apiutils.IsNotFound(err) {
 			return s.ClientError(c, errPrefix, err)
 		}
@@ -82,11 +82,11 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 		sort.Slice(results, func(i, j int) bool {
 			iTime := results[i].Workflow.Created
 			if results[i].LatestExecution != nil {
-				iTime = results[i].LatestExecution.StatusAt
+				iTime = results[i].LatestExecution.ScheduledAt
 			}
 			jTime := results[j].Workflow.Created
 			if results[j].LatestExecution != nil {
-				jTime = results[j].LatestExecution.StatusAt
+				jTime = results[j].LatestExecution.ScheduledAt
 			}
 			return iTime.After(jTime)
 		})

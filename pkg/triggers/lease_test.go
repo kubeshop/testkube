@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
@@ -36,6 +37,8 @@ func TestService_runLeaseChecker(t *testing.T) {
 			leaseBackend:       mockLeaseBackend,
 			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
+			triggerStatus:      make(map[statusKey]*triggerStatus),
+			proContext:         &intconfig.ProContext{},
 		}
 
 		leaseChan := make(chan bool)
@@ -67,6 +70,8 @@ func TestService_runLeaseChecker(t *testing.T) {
 			leaseBackend:       mockLeaseBackend,
 			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
+			triggerStatus:      make(map[statusKey]*triggerStatus),
+			proContext:         &intconfig.ProContext{},
 		}
 
 		leaseChan := make(chan bool)
@@ -93,17 +98,18 @@ func TestService_runLeaseChecker_multipleInstances(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
-		mockLeaseBackend1 := leasebackend.NewMockRepository(mockCtrl)
-		mockLeaseBackend1.EXPECT().TryAcquire(gomock.Any(), "test-host-1", "testkube-api").Return(true, nil)
-		mockLeaseBackend2 := leasebackend.NewMockRepository(mockCtrl)
-		mockLeaseBackend2.EXPECT().TryAcquire(gomock.Any(), "test-host-2", "testkube-api").Return(false, nil)
+		mockLeaseBackend := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), "test-host-1", "testkube-api").Return(true, nil)
+		mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), "test-host-2", "testkube-api").Return(false, nil)
 
 		s1 := &Service{
 			identifier:         "test-host-1",
 			clusterID:          "testkube-api",
-			leaseBackend:       mockLeaseBackend1,
+			leaseBackend:       mockLeaseBackend,
 			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
+			triggerStatus:      make(map[statusKey]*triggerStatus),
+			proContext:         &intconfig.ProContext{},
 		}
 
 		leaseChan1 := make(chan bool)
@@ -112,9 +118,11 @@ func TestService_runLeaseChecker_multipleInstances(t *testing.T) {
 		s2 := &Service{
 			identifier:         "test-host-2",
 			clusterID:          "testkube-api",
-			leaseBackend:       mockLeaseBackend2,
+			leaseBackend:       mockLeaseBackend,
 			leaseCheckInterval: 100 * time.Millisecond,
 			logger:             log.DefaultLogger,
+			triggerStatus:      make(map[statusKey]*triggerStatus),
+			proContext:         &intconfig.ProContext{},
 		}
 
 		leaseChan2 := make(chan bool)

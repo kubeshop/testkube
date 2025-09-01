@@ -4,7 +4,6 @@ import (
 	"go.uber.org/zap"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -15,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
@@ -35,7 +35,7 @@ func NewTestkubeAPI(
 	artifactsStorage storage.ArtifactsStorage,
 	webhookClient executorsclientv1.WebhooksInterface,
 	webhookTemplateClient executorsclientv1.WebhookTemplatesInterface,
-	testTriggersClient testtriggersclientv1.Interface,
+	testTriggersClient testtriggerclient.TestTriggerClient,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowsK8SClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -98,7 +98,7 @@ type TestkubeAPI struct {
 	SecretManager                  secretmanager.SecretManager
 	WebhooksClient                 executorsclientv1.WebhooksInterface
 	WebhookTemplatesClient         executorsclientv1.WebhookTemplatesInterface
-	TestTriggersClient             testtriggersclientv1.Interface
+	TestTriggersClient             testtriggerclient.TestTriggerClient
 	TestWorkflowsClient            testworkflowclient.TestWorkflowClient
 	TestWorkflowTemplatesClient    testworkflowtemplateclient.TestWorkflowTemplateClient
 	TestWorkflowsK8SClient         testworkflowsv1.Interface
