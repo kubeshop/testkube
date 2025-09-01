@@ -8,6 +8,8 @@ metadata:
 spec:
   system:
     pureByDefault: true
+  job:
+    activeDeadlineSeconds: 180
   container:
     image: kubeshop/testkube-cli:latest
     env:
