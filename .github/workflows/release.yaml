@@ -212,8 +212,8 @@ jobs:
           tags: |
             kubeshop/testkube-agent:${{steps.tag.outputs.tag}}
             kubeshop/testkube-agent:latest
-            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:${{steps.tag.outputs.tag}}
-            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:latest
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-agent:${{steps.tag.outputs.tag}}
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-agent:latest
 
   release:
     name: Create and upload release-artifacts
