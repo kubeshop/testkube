@@ -201,7 +201,7 @@ jobs:
             segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}
             ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
             ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
-            docker_image_version=${{steps.agenttag.outputs.tag}}
+            docker_image_version=${{steps.tag.outputs.tag}}
             cloud_url=${{ env.TESTKUBE_CLOUD_URL }}
           context: build/kind
           file: build/kind/kind.Dockerfile
@@ -209,7 +209,9 @@ jobs:
           provenance: mode=max
           push: true
           sbom: true
-          tags: | 
+          tags: |
+            kubeshop/testkube-agent:${{steps.tag.outputs.tag}}
+            kubeshop/testkube-agent:latest
             ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:${{steps.tag.outputs.tag}}
             ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:latest
 
