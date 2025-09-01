@@ -114,7 +114,7 @@ jobs:
       - name: Push Docker images
         if: matrix.name == 'linux'
         run: |
-          GAR_REG='${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}'
+          GAR_REG='${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}'
 
           TAG='${{ steps.testtag.outputs.tag }}'
 
