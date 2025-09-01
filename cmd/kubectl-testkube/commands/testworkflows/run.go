@@ -356,7 +356,7 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 	switch {
 	case result.Initialization.ErrorMessage != "":
 		ui.Warn("test workflow execution failed:\n")
-		ui.Errf(result.Initialization.ErrorMessage)
+		ui.Errf("%s", result.Initialization.ErrorMessage)
 		return 1
 	case result.IsFailed():
 		ui.Warn("test workflow execution failed")

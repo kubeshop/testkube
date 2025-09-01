@@ -67,7 +67,7 @@ func Next(currentVersion, kind string) (string, error) {
 	case Patch:
 		inc = version.IncPatch()
 	default:
-		return "", fmt.Errorf("invalid position" + kind)
+		return "", fmt.Errorf("invalid position %s", kind)
 	}
 
 	return inc.String(), nil
