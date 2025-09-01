@@ -36,7 +36,7 @@ func NewCreateCmd() *cobra.Command {
 			ui.ExitOnError("loading config", err)
 
 			// Check for legacy resource type and show deprecation warning
-			common.CheckLegacyCommmandName(cmd.Name())
+			common.CheckLegacyName(cmd.Name())
 
 			common.UiContextHeader(cmd, cfg)
 

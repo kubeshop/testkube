@@ -164,7 +164,7 @@ func NewDownloadTestSuiteArtifactsCmd() *cobra.Command {
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Check for legacy resource type and show deprecation warning
-			common.CheckLegacyCommmandName(cmd.Name())
+			common.CheckLegacyName(cmd.Name())
 		},
 
 		Run: func(cmd *cobra.Command, args []string) {
