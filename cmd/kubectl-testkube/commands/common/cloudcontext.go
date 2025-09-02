@@ -56,6 +56,9 @@ func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
 		return
 	}
 
+	// Check for legacy resource type and show deprecation warning
+	CheckLegacyName(cmd.Name())
+
 	header := "\n"
 	separator := "   "
 
