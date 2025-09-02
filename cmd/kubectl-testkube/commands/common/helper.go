@@ -1422,18 +1422,19 @@ func extractJSONObject(input []byte) ([]byte, error) {
 // Usage: common.CheckLegacyName(cmd.Name())
 func CheckLegacyName(commandName string) {
 	// Legacy resource types that are about to be deprecated
-	legacyCommandNames := map[string]bool{
+	legacyNames := map[string]bool{
 		"test":                true,
 		"testsuite":           true,
 		"executor":            true,
 		"testsource":          true,
+		"template":            true,
 		"execution":           true,
 		"executions":          true,
 		"testsuiteexecution":  true,
 		"testsuiteexecutions": true,
 	}
 
-	if legacyCommandNames[commandName] {
+	if legacyNames[commandName] {
 		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
 		ui.Alert("! ⚠️ This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features !")
 		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
