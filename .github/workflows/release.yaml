@@ -120,23 +120,23 @@ jobs:
           docker manifest push -p kubeshop/testkube-cli:${{steps.tag.outputs.tag}}
 
           # retag arch images to GAR
-          docker tag kubeshop/testkube-cli:${TAG}-amd64   ${GAR_REG}/testkube-cli:${TAG}-amd64
-          docker tag kubeshop/testkube-cli:${TAG}-arm64v8 ${GAR_REG}/testkube-cli:${TAG}-arm64v8
+          docker tag kubeshop/testkube-cli:${TAG}-amd64   ${GAR_REG}/cli:${TAG}-amd64
+          docker tag kubeshop/testkube-cli:${TAG}-arm64v8 ${GAR_REG}/cli:${TAG}-arm64v8
 
           # push arch images to GAR
-          docker push ${GAR_REG}/testkube-cli:${TAG}-amd64
-          docker push ${GAR_REG}/testkube-cli:${TAG}-arm64v8
+          docker push ${GAR_REG}/cli:${TAG}-amd64
+          docker push ${GAR_REG}/cli:${TAG}-arm64v8
 
           # create & push manifests in GAR
-          docker manifest create ${GAR_REG}/testkube-cli:${TAG} \
-            --amend ${GAR_REG}/testkube-cli:${TAG}-amd64 \
-            --amend ${GAR_REG}/testkube-cli:${TAG}-arm64v8
-          docker manifest push -p ${GAR_REG}/testkube-cli:${TAG}
+          docker manifest create ${GAR_REG}/cli:${TAG} \
+            --amend ${GAR_REG}/cli:${TAG}-amd64 \
+            --amend ${GAR_REG}/cli:${TAG}-arm64v8
+          docker manifest push -p ${GAR_REG}/cli:${TAG}
 
-          docker manifest create ${GAR_REG}/testkube-cli:latest \
-            --amend ${GAR_REG}/testkube-cli:${TAG}-amd64 \
-            --amend ${GAR_REG}/testkube-cli:${TAG}-arm64v8
-          docker manifest push -p ${GAR_REG}/testkube-cli:latest
+          docker manifest create ${GAR_REG}/cli:latest \
+            --amend ${GAR_REG}/cli:${TAG}-amd64 \
+            --amend ${GAR_REG}/cli:${TAG}-arm64v8
+          docker manifest push -p ${GAR_REG}/cli:latest
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
@@ -212,8 +212,8 @@ jobs:
           tags: |
             kubeshop/testkube-agent:${{steps.tag.outputs.tag}}
             kubeshop/testkube-agent:latest
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-agent:${{steps.tag.outputs.tag}}
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-agent:latest
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:${{steps.tag.outputs.tag}}
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:latest
 
   release:
     name: Create and upload release-artifacts

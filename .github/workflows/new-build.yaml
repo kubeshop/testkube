@@ -47,7 +47,7 @@ jobs:
           bake-target: 'api-meta'
           images: |
             kubeshop/testkube-api-server
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-api-server
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/api-server
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
@@ -59,7 +59,7 @@ jobs:
           bake-target: 'tw-init'
           images: |
             kubeshop/testkube-tw-init
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-tw-init
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-init
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
@@ -71,7 +71,7 @@ jobs:
           bake-target: 'tw-toolkit'
           images: |
             kubeshop/testkube-tw-toolkit
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/testkube-tw-toolkit
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-toolkit
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
