@@ -51,13 +51,13 @@ func UiCloudContextValidationError(err error) {
 }
 
 func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
-	// Check for legacy resource type and show deprecation warning
-	CheckLegacyName(cmd.Name())
-
 	// only show header when output is pretty
 	if cmd.Flag("output") != nil && cmd.Flag("output").Value.String() != "pretty" {
 		return
 	}
+
+	// Check for legacy resource type and show deprecation warning
+	CheckLegacyName(cmd.Name())
 
 	header := "\n"
 	separator := "   "
