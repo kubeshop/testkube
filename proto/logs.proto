@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package logs;
 
-option go_package = "pkg/logs/pb";
-
 import "google/protobuf/timestamp.proto";
 
 service LogsService {
