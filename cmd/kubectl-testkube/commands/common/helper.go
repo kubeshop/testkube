@@ -1417,9 +1417,6 @@ func extractJSONObject(input []byte) ([]byte, error) {
 }
 
 // CheckLegacyName checks if the given resource type is legacy and shows a deprecation warning.
-// This function should be called in PersistentPreRun functions of commands that operate on legacy resources.
-// Legacy resource types include: "test", "testsuite", "executor", "testsource".
-// Usage: common.CheckLegacyName(cmd.Name())
 func CheckLegacyName(commandName string) {
 	// Legacy resource types that are about to be deprecated
 	legacyNames := map[string]bool{
