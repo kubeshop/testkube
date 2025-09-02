@@ -1429,6 +1429,7 @@ func CheckLegacyName(commandName string) {
 		"executions":          true,
 		"testsuiteexecution":  true,
 		"testsuiteexecutions": true,
+		"testsuite-artifacts": true,
 	}
 
 	if legacyNames[commandName] {

@@ -162,11 +162,6 @@ func NewDownloadTestSuiteArtifactsCmd() *cobra.Command {
 		Short: "download test suite artifacts",
 		Args:  validator.ExecutionName,
 
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// Check for legacy resource type and show deprecation warning
-			common.CheckLegacyName(cmd.Name())
-		},
-
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 			client, _, err := common.GetClient(cmd)
