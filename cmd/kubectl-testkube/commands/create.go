@@ -34,7 +34,6 @@ func NewCreateCmd() *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config", err)
-
 			common.UiContextHeader(cmd, cfg)
 
 			if !crdOnly {

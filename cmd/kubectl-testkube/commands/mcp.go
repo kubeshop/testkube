@@ -45,13 +45,13 @@ func NewMcpServeCmd() *cobra.Command {
 		Short: "Start MCP server for AI assistant integration (runs silently, use --verbose for output)",
 		Long: `Start a Model Context Protocol (MCP) server that enables AI assistants to interact with Testkube.
 
-PREVIEW VERSION - This feature is under active development. We welcome feedback on Slack: https://bit.ly/testkube-slack
-
 The MCP server provides AI assistants with tools to:
 • Execute and monitor test workflows
 • Analyze test results, logs, and artifacts
 • Navigate test execution history  
 • Manage test resources and configurations
+
+Please get in touch on Slack for questions and feedback: https://bit.ly/testkube-slack
 
 Requirements:
 • OAuth authentication (run 'testkube login')

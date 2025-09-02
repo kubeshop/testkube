@@ -102,7 +102,6 @@ func NewCreateTestsCmd() *cobra.Command {
 		Aliases: []string{"tests", "t"},
 		Short:   "Create new Test",
 		Long:    `Create new Test Custom Resource`,
-
 		Run: func(cmd *cobra.Command, args []string) {
 			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
 			ui.ExitOnError("parsing flag value", err)
