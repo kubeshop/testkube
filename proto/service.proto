@@ -346,11 +346,20 @@ message Event {
   bytes data = 5;
 }
 
+// Capabilities supported by an Agent
+enum AgentCapability {
+  AGENT_CAPABILITY_UNSPECIFIED = 0;
+  AGENT_CAPABILITY_RUNNER = 1;
+  AGENT_CAPABILITY_LISTENER = 2;
+  AGENT_CAPABILITY_GITOPS = 3;
+}
+
 message RegisterRequest {
   string registration_token = 1;
   string runner_name = 2;
   string organization_id = 3;
   bool floating = 4;
+  repeated AgentCapability capabilities = 5;
 }
 
 message RegisterResponse {
