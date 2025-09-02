@@ -217,11 +217,21 @@ func main() {
 			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
 		}
 
+		// Build capabilities based on enabled features
+		capabilities := []cloud.AgentCapability{}
+		if !cfg.DisableRunner {
+			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
+		}
+		if !cfg.DisableTestTriggers {
+			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
+		}
+
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
 			RegistrationToken: cfg.TestkubeProAgentRegToken,
 			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
+			Capabilities:      capabilities,
 		})
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
