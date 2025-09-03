@@ -8083,6 +8083,8 @@ components:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
         probeSpec:
           $ref: "#/components/schemas/TestTriggerProbeSpec"
+        contentSelector:
+          $ref: "#/components/schemas/TestTriggerContentSelector"       
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         actionParameters:
@@ -8163,6 +8165,7 @@ components:
         - ingress
         - event
         - configmap
+        - content
 
     TestTriggerExecutions:
       description: supported test resources for test triggers
@@ -8320,6 +8323,7 @@ components:
               "ingress",
               "event",
               "configmap",
+              "content",
             ]
         actions:
           type: array
@@ -8357,6 +8361,44 @@ components:
             type: string
           description: list of supported values for concurrency policies
           example: ["allow", "forbid", "replace"]
+
+    TestTriggerContentSelector:
+      type: object
+      properties:
+        git:
+          $ref: "#/components/schemas/TestTriggerContentGit"  
+
+    TestTriggerContentGit:
+      type: object
+      properties:
+        uri:
+          type: string
+          description: uri for the Git repository
+        revision:
+          type: string
+          description: branch, commit or a tag name to fetch
+        username:
+          type: string
+          description: plain text username to fetch with
+        usernameFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        token:
+          type: string
+          description: plain text token to fetch with
+        tokenFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        sshKey:
+          type: string
+          description: plain text SSH private key to fetch with
+        sshKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        authType:
+          $ref: "#/components/schemas/ContentGitAuthType"
+        paths:
+          type: array
+          description: paths to fetch for the sparse checkout
+          items:
+            type: string
 
     TestSourceBatchRequest:
       description: Test source batch request

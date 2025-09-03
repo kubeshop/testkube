@@ -76,6 +76,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/controlplane"
+	"github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -721,6 +722,12 @@ func main() {
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {
 			triggerService.Run(ctx)
+			return nil
+		})
+
+		// Start the new iformer.
+		g.Go(func() error {
+			informer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID).Reconcile(ctx)
 			return nil
 		})
 	} else {

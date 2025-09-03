@@ -44,6 +44,10 @@ const (
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
+type Matcher interface {
+	Match(ctx context.Context, e *WatcherEvent) error
+}
+
 type Service struct {
 	informers                     *k8sInformers
 	leaseBackend                  leasebackend.Repository

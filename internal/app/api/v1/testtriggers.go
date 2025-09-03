@@ -137,6 +137,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		if request.ProbeSpec != nil {
 			apiTrigger.ProbeSpec = request.ProbeSpec
 		}
+		if request.ContentSelector != nil {
+			apiTrigger.ContentSelector = request.ContentSelector
+		}
 		if request.Action != nil {
 			apiTrigger.Action = request.Action
 		}

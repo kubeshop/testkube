@@ -84,7 +84,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 		testNamespace := "testkube"
 
 		match := false
-		testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		testExecutorF := func(ctx context.Context, e *WatcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, testNamespace, trigger.Namespace)
 			assert.Equal(t, "test-trigger-2", trigger.Name)
 			match = true
@@ -117,7 +117,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-2"},
 			Spec: testtriggersv1.TestTriggerSpec{
 				Resource:          "pod",
-				ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+				ResourceSelector:  &testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 				Event:             "created",
 				Action:            "run",
 				Execution:         "test",

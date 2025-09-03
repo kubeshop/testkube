@@ -157,7 +157,7 @@ func TestExecute(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector: &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "created",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Conditions: []testtriggersv1.TestTriggerCondition{{
@@ -188,7 +188,7 @@ func TestExecute(t *testing.T) {
 	key := newStatusKey(testTrigger.Namespace, testTrigger.Name)
 	assert.Contains(t, s.triggerStatus, key)
 
-	err := s.execute(ctx, &watcherEvent{}, &testTrigger)
+	err := s.execute(ctx, &WatcherEvent{}, &testTrigger)
 	assert.NoError(t, err)
 }
 
@@ -233,7 +233,7 @@ func TestWorkflowExecute(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
 			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			ResourceSelector: &testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "created",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Conditions: []testtriggersv1.TestTriggerCondition{{
@@ -264,6 +264,6 @@ func TestWorkflowExecute(t *testing.T) {
 	key := newStatusKey(testTrigger.Namespace, testTrigger.Name)
 	assert.Contains(t, s.triggerStatus, key)
 
-	err := s.execute(ctx, &watcherEvent{}, &testTrigger)
+	err := s.execute(ctx, &WatcherEvent{}, &testTrigger)
 	assert.NoError(t, err)
 }

@@ -26,7 +26,7 @@ type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)
 
 type addressGetterFn func(ctx context.Context, delay time.Duration) (string, error)
 
-type watcherEvent struct {
+type WatcherEvent struct {
 	resource         testtrigger.ResourceType
 	name             string
 	namespace        string
@@ -37,44 +37,51 @@ type watcherEvent struct {
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
 	addressGetter    addressGetterFn
+	trigger          string
 }
 
-type watcherOpts func(*watcherEvent)
+type watcherOpts func(*WatcherEvent)
 
 func withCauses(causes []testtrigger.Cause) watcherOpts {
-	return func(w *watcherEvent) {
+	return func(w *WatcherEvent) {
 		w.causes = causes
 	}
 }
 
 func withConditionsGetter(conditionsGetter conditionsGetterFn) watcherOpts {
-	return func(w *watcherEvent) {
+	return func(w *WatcherEvent) {
 		w.conditionsGetter = conditionsGetter
 	}
 }
 
 func withAddressGetter(addressGetter addressGetterFn) watcherOpts {
-	return func(w *watcherEvent) {
+	return func(w *WatcherEvent) {
 		w.addressGetter = addressGetter
 	}
 }
 
 func withNotEmptyName(name string) watcherOpts {
-	return func(w *watcherEvent) {
+	return func(w *WatcherEvent) {
 		if name != "" {
 			w.name = name
 		}
 	}
 }
 
-func newWatcherEvent(
+func WithTrigger(trigger string) watcherOpts {
+	return func(w *WatcherEvent) {
+		w.trigger = trigger
+	}
+}
+
+func NewWatcherEvent(
 	eventType testtrigger.EventType,
 	objectMeta metav1.Object,
 	object any,
 	resource testtrigger.ResourceType,
 	opts ...watcherOpts,
-) *watcherEvent {
-	w := &watcherEvent{
+) *WatcherEvent {
+	w := &WatcherEvent{
 		resource:   resource,
 		name:       objectMeta.GetName(),
 		namespace:  objectMeta.GetNamespace(),
