@@ -206,15 +206,15 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]*testw
 			return step, errors.Wrap(err, ".parallel")
 		}
 		step.Parallel.Use = testWorkflowSpec.Use
-		step.Parallel.Events = testWorkflowSpec.TestWorkflowSpecBase.Events
-		step.Parallel.System = testWorkflowSpec.TestWorkflowSpecBase.System
-		step.Parallel.Config = testWorkflowSpec.TestWorkflowSpecBase.Config
-		step.Parallel.Content = testWorkflowSpec.TestWorkflowSpecBase.Content
-		step.Parallel.Container = testWorkflowSpec.TestWorkflowSpecBase.Container
-		step.Parallel.Job = testWorkflowSpec.TestWorkflowSpecBase.Job
-		step.Parallel.Pod = testWorkflowSpec.TestWorkflowSpecBase.Pod
-		step.Parallel.Notifications = testWorkflowSpec.TestWorkflowSpecBase.Notifications
-		step.Parallel.Execution = testWorkflowSpec.TestWorkflowSpecBase.Execution
+		step.Parallel.Events = testWorkflowSpec.Events
+		step.Parallel.System = testWorkflowSpec.System
+		step.Parallel.Config = testWorkflowSpec.Config
+		step.Parallel.Content = testWorkflowSpec.Content
+		step.Parallel.Container = testWorkflowSpec.Container
+		step.Parallel.Job = testWorkflowSpec.Job
+		step.Parallel.Pod = testWorkflowSpec.Pod
+		step.Parallel.Notifications = testWorkflowSpec.Notifications
+		step.Parallel.Execution = testWorkflowSpec.Execution
 		step.Parallel.Services = testWorkflowSpec.Services
 		step.Parallel.Setup = testWorkflowSpec.Setup
 		step.Parallel.Steps = testWorkflowSpec.Steps
