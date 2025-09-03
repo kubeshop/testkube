@@ -222,7 +222,6 @@ func main() {
 			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
-			Capabilities:      []cloud.AgentCapability{cloud.AgentCapability_AGENT_CAPABILITY_RUNNER},
 		})
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
