@@ -12,10 +12,7 @@ spec:
       parallelism: 2
       workflows:
       - name: playwright-workflow-smoke
-      - name: playwright-workflow-smoke-custom-report-dir
       - name: playwright-workflow-smoke-command-args
-      - name: playwright-workflow-smoke-junit
-      - name: playwright-workflow-smoke-artifacts-double-asterisk
       - name: playwright-workflow-smoke-template
       - name: distributed-playwright-workflow-smoke
       - name: distributed-playwright-workflow-smoke-junit

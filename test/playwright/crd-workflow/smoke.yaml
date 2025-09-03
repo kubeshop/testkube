@@ -6,41 +6,8 @@ metadata:
     core-tests: workflows
     tool: playwright
     artifacts: "true"
-spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/playwright/playwright-project
-  container:
-    image: mcr.microsoft.com/playwright:v1.53.2
-    resources:
-      requests:
-        cpu: 1500m
-        memory: 1500Mi
-    workingDir: /data/repo/test/playwright/playwright-project
-  job:
-    activeDeadlineSeconds:  600
-  steps:
-  - name: Install dependencies
-    shell: "npm ci"
-  - name: Run tests
-    shell: "npx playwright test"
-  - name: Save artifacts
-    workingDir: /data/repo/test/playwright/playwright-project
-    artifacts:
-      paths:
-      - playwright-report/**/*
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: playwright-workflow-smoke-custom-report-dir
-  labels:
-    core-tests: workflows
-    tool: playwright
-    artifacts: "true"
+    junit: "true"
+    playwright-traces: "on"
 spec:
   content:
     git:
@@ -62,14 +29,16 @@ spec:
     shell: "npm ci"
   - name: Run tests
     run:
-      shell: "npx playwright test --output /data/artifacts"
+      shell: "mkdir /data/artifacts && npx playwright test --reporter=list,junit --traces on"
       env:
+      - name: PLAYWRIGHT_JUNIT_OUTPUT_NAME
+        value: "/data/artifacts/junit-report.xml"
       - name: PLAYWRIGHT_HTML_REPORT
         value: /data/artifacts/playwright-report
     steps:
     - name: Save artifacts
-      workingDir: /data/artifacts
       artifacts:
+        workingDir: /data/artifacts/
         paths:
         - '**/*'
 ---
@@ -123,81 +92,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: playwright-workflow-smoke-junit
-  labels:
-    core-tests: workflows
-    tool: playwright
-    artifacts: "true"
-    junit: "true"
-spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/playwright/playwright-project
-  container:
-    image: mcr.microsoft.com/playwright:v1.53.2
-    resources:
-      requests:
-        cpu: 1500m
-        memory: 1500Mi
-    workingDir: /data/repo/test/playwright/playwright-project
-  job:
-    activeDeadlineSeconds:  600
-  steps:
-  - name: Install dependencies
-    shell: "npm ci"
-  - name: Run tests
-    run:
-      shell: "mkdir /data/artifacts && npx playwright test --reporter=list,junit"
-      env:
-      - name: PLAYWRIGHT_JUNIT_OUTPUT_NAME
-        value: "/data/artifacts/junit-report.xml"
-    steps:
-    - name: Save artifacts
-      artifacts:
-        workingDir: /data/artifacts/
-        paths:
-        - '**/*'
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: playwright-workflow-smoke-artifacts-double-asterisk
-  labels:
-    core-tests: workflows
-    tool: playwright
-    artifacts: "true"
-spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/playwright/playwright-project
-  container:
-    image: mcr.microsoft.com/playwright:v1.53.2
-    resources:
-      requests:
-        cpu: 1500m
-        memory: 1500Mi
-    workingDir: /data/repo/test/playwright/playwright-project
-  job:
-    activeDeadlineSeconds:  600
-  steps:
-  - name: Install dependencies
-    shell: "npm ci"
-  - name: Run tests
-    shell: "npx playwright test"
-  - name: Save artifacts
-    artifacts:
-      paths:
-      - /data/repo/**/playwright-report/**/*
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
