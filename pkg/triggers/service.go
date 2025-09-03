@@ -76,6 +76,7 @@ type Service struct {
 	disableSecretCreation         bool
 	deprecatedSystem              *services.DeprecatedSystem
 	proContext                    *intconfig.ProContext
+	testTriggerControlPlane       bool
 }
 
 type Option func(*Service)
@@ -209,6 +210,13 @@ func WithDisableSecretCreation(disableSecretCreation bool) Option {
 func WithProContext(proContext *intconfig.ProContext) Option {
 	return func(s *Service) {
 		s.proContext = proContext
+	}
+}
+
+// WithTestTriggerControlPlane enables Control Plane-backed trigger watching
+func WithTestTriggerControlPlane(enabled bool) Option {
+	return func(s *Service) {
+		s.testTriggerControlPlane = enabled
 	}
 }
 

@@ -171,7 +171,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
 	}
 
-	if s.proContext.CloudStorage {
+	if s.testTriggerControlPlane {
 		s.startCloudTestTriggerWatch(ctx, stop)
 	} else {
 		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
@@ -219,7 +219,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		go s.informers.configMapInformers[i].Informer().Run(stop)
 	}
 
-	if !s.proContext.CloudStorage {
+	if !s.testTriggerControlPlane {
 		s.logger.Debugf("trigger service: starting test trigger informer")
 		go s.informers.testTriggerInformer.Informer().Run(stop)
 	}
