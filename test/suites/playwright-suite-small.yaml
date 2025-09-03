@@ -1,0 +1,17 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-suite-small
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: playwright
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: playwright-workflow-smoke-custom-report-dir
+      - name: playwright-workflow-smoke-command-args
+      - name: playwright-workflow-smoke-artifacts-double-asterisk
+      - name: distributed-playwright-workflow-smoke-junit

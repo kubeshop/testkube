@@ -20,6 +20,8 @@ spec:
         secretKeyRef:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
+  job:
+    activeDeadlineSeconds: 600
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}

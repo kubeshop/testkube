@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-suite
+  name: k6-workflow-suite-small
   labels:
     core-tests: workflows-suite
     type: suite
@@ -13,7 +13,5 @@ spec:
       workflows:
       - name: k6-workflow-smoke
       - name: k6-workflow-smoke-template
-      - name: k6-workflow-smoke-template-without-checkout-step
       - name: k6-workflow-smoke-content-file
-      - name: k6-workflow-smoke-master-image
       - name: distributed-k6-workflow-smoke
