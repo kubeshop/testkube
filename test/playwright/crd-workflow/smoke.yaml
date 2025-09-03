@@ -29,7 +29,7 @@ spec:
     shell: "npm ci"
   - name: Run tests
     run:
-      shell: "mkdir /data/artifacts && npx playwright test --reporter=list,junit --traces on"
+      shell: "mkdir /data/artifacts && npx playwright test --reporter=list,junit --trace on"
       env:
       - name: PLAYWRIGHT_JUNIT_OUTPUT_NAME
         value: "/data/artifacts/junit-report.xml"
