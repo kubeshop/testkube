@@ -34,6 +34,7 @@ type PostgresRepository struct {
 	sequenceRepository sequence.Repository
 	organizationID     string
 	environmentID      string
+	hook               testworkflow.HookFn
 }
 
 type PostgresRepositoryOpt func(*PostgresRepository)
@@ -86,6 +87,13 @@ func WithOrganizationID(organizationID string) PostgresRepositoryOpt {
 func WithEnvironmentID(environmentID string) PostgresRepositoryOpt {
 	return func(r *PostgresRepository) {
 		r.environmentID = environmentID
+	}
+}
+
+// WithHook allows injecting hook to support control panel
+func WithHook(hook testworkflow.HookFn) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.hook = hook
 	}
 }
 
@@ -1498,6 +1506,12 @@ func (r *PostgresRepository) DeleteByTestWorkflows(ctx context.Context, workflow
 func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
 	if r.sequenceRepository == nil {
 		return 0, errors.New("no sequence repository provided")
+	}
+
+	if r.hook != nil {
+		if err := r.hook(ctx, name, sequence.ExecutionTypeTestWorkflow); err != nil {
+			return 0, err
+		}
 	}
 
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
