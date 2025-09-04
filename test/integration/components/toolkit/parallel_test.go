@@ -414,21 +414,19 @@ func TestParallelLifecycle_Integration(t *testing.T) {
 	t.Cleanup(cleanupCP)
 
 	spec := &testworkflowsv1.StepParallel{
-		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-			Container: &testworkflowsv1.ContainerConfig{
-				Env: []testworkflowsv1.EnvVar{
-					{EnvVar: corev1.EnvVar{Name: "WORKER_ID", Value: "worker-{{index}}"}},
-					{EnvVar: corev1.EnvVar{Name: "TOTAL", Value: "{{count}}"}},
+		Container: &testworkflowsv1.ContainerConfig{
+			Env: []testworkflowsv1.EnvVar{
+				{EnvVar: corev1.EnvVar{Name: "WORKER_ID", Value: "worker-{{index}}"}},
+				{EnvVar: corev1.EnvVar{Name: "TOTAL", Value: "{{count}}"}},
+			},
+			Resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]intstr.IntOrString{
+					corev1.ResourceCPU:    intstr.FromString("100m"),
+					corev1.ResourceMemory: intstr.FromString("128Mi"),
 				},
-				Resources: &testworkflowsv1.Resources{
-					Requests: map[corev1.ResourceName]intstr.IntOrString{
-						corev1.ResourceCPU:    intstr.FromString("100m"),
-						corev1.ResourceMemory: intstr.FromString("128Mi"),
-					},
-					Limits: map[corev1.ResourceName]intstr.IntOrString{
-						corev1.ResourceCPU:    intstr.FromString("200m"),
-						corev1.ResourceMemory: intstr.FromString("256Mi"),
-					},
+				Limits: map[corev1.ResourceName]intstr.IntOrString{
+					corev1.ResourceCPU:    intstr.FromString("200m"),
+					corev1.ResourceMemory: intstr.FromString("256Mi"),
 				},
 			},
 		},

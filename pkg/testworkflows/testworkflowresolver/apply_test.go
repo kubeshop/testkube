@@ -516,11 +516,9 @@ func TestApplyTemplatesParallel(t *testing.T) {
 
 	want := *advancedStep.DeepCopy()
 	want.Parallel = &testworkflowsv1.StepParallel{
-		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-			Container: &testworkflowsv1.ContainerConfig{
-				Env: []testworkflowsv1.EnvVar{
-					{EnvVar: corev1.EnvVar{Name: "test", Value: "the"}},
-				},
+		Container: &testworkflowsv1.ContainerConfig{
+			Env: []testworkflowsv1.EnvVar{
+				{EnvVar: corev1.EnvVar{Name: "test", Value: "the"}},
 			},
 		},
 		Setup: []testworkflowsv1.Step{
