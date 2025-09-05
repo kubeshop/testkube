@@ -28,7 +28,6 @@ We welcome feedback on Slack: https://bit.ly/testkube-slack
 The MCP server requires OAuth authentication and uses your current Testkube context.
 
 Documentation: https://docs.testkube.io/articles/mcp-overview
-Setup Guide: https://docs.testkube.io/articles/mcp-setup
 Configuration: https://docs.testkube.io/articles/mcp-configuration`,
 	}
 
@@ -52,7 +51,7 @@ The MCP server provides AI assistants with tools to:
 • Navigate test execution history  
 • Manage test resources and configurations
 
-We welcome feedback on Slack: https://bit.ly/testkube-slack
+Please get in touch on Slack for questions and feedback: https://bit.ly/testkube-slack
 
 Requirements:
 • OAuth authentication (run 'testkube login')

@@ -1415,3 +1415,26 @@ func extractJSONObject(input []byte) ([]byte, error) {
 
 	return prettyJSON.Bytes(), nil
 }
+
+// CheckLegacyName checks if the given resource type is legacy and shows a deprecation warning.
+func CheckLegacyName(commandName string) {
+	// Legacy resource types that are about to be deprecated
+	legacyNames := map[string]bool{
+		"test":                true,
+		"testsuite":           true,
+		"executor":            true,
+		"testsource":          true,
+		"template":            true,
+		"execution":           true,
+		"executions":          true,
+		"testsuiteexecution":  true,
+		"testsuiteexecutions": true,
+		"testsuite-artifacts": true,
+	}
+
+	if legacyNames[commandName] {
+		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
+		ui.Alert("! ⚠️ This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features !")
+		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
+	}
+}

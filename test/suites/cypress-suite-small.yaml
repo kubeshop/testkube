@@ -1,0 +1,18 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-suite-small
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: cypress
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: cypress-workflow-smoke
+      - name: cypress-workflow-smoke-negative
+      - name: cypress-workflow-smoke-template
+      - name: cypress-workflow-smoke-template-checkout-on-step
+      - name: cypress-workflow-smoke-matrix-junit

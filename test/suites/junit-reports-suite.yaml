@@ -17,7 +17,7 @@ spec:
       - name: distributed-playwright-workflow-smoke
       - name: junit5-workflow-smoke
       - name: nunit-workflow-smoke-junit-report
-      - name: playwright-workflow-smoke-junit
+      - name: playwright-workflow-smoke
       - name: postman-workflow-smoke-junit
       - name: pytest-workflow-smoke-junit-mixed-failures
       - name: pytest-workflow-smoke-junit-success-only

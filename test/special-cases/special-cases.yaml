@@ -483,3 +483,49 @@ spec:
         shell: |
           echo "ConfigMap ENV: '$EXAMPLE_PARAM'"
           [ -z "$EXAMPLE_PARAM" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-no-initial-output
+  labels:
+    core-tests: special-cases
+description: "No output at the beginning (just sleep)"
+spec:
+  steps:
+  - name: Run test 1
+    shell: |
+      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+  - name: Run test 2
+    shell: |
+      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-artifact-double-asterisk
+  labels:
+    core-tests: special-cases
+    artifacts: "true"
+    manual: "true"
+description: "Artifacts path with double asterisks (/data/example/directory/aaa/bbb should contain file1.txt and file2.log)"
+spec:
+  container:
+    image: alpine:3.22.0
+    workingDir: /data
+    resources:
+      requests:
+        cpu: 50m
+        memory: 32Mi
+  steps:
+  - name: Run test
+    run:
+      shell: |
+        echo "Creating /data/example/directory/aaa/bbb and its contents"
+        mkdir -p /data/example/directory/aaa/bbb
+        echo "file1" > /data/example/directory/aaa/bbb/file1.txt
+        echo "file2" > /data/example/directory/aaa/bbb/file2.log
+  - name: Save artifacts
+    artifacts:
+      paths:
+        - /data/**/aaa/**/*

@@ -1,0 +1,16 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: selenium-workflow-suite-small
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: selenium
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: selenium-java-workflow-smoke
+      - name: selenium-python-hub-and-nodes-workflow-smoke
+      - name: selenium-js-mocha-workflow-smoke

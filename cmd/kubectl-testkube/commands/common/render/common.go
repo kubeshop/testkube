@@ -106,30 +106,32 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 			PrintLogs(client, info, *execution)
 		}
 
+		err := errors.New(result.ErrorMessage)
 		if logsOnly {
 			ui.Info(result.ErrorMessage)
 		} else {
 			ui.UseStderr()
 			ui.Warn("Test execution failed:\n")
-			ui.Errf(result.ErrorMessage)
+			ui.Err(err)
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
-		return errors.New(result.ErrorMessage)
+		return err
 
 	default:
+		err := errors.New(result.ErrorMessage)
 		if logsOnly {
 			ui.Info(result.ErrorMessage)
 		} else {
 			ui.UseStderr()
 			ui.Warn("Test execution status unknown:\n")
-			ui.Errf(result.ErrorMessage)
+			ui.Err(err)
 		}
 
 		if showLogs {
 			PrintLogs(client, info, *execution)
 		}
-		return errors.New(result.ErrorMessage)
+		return err
 	}
 
 	return nil
