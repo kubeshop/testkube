@@ -1,19 +1,25 @@
 version: v2
+clean: true
 managed:
   enabled: true
   override:
-    - file_option: go_package
-      value: pkg/cloud
-    - file_option: go_package
-      path: logs.proto
-      value: pkg/logs/pb
+    # go_package or go_package_prefix is required, but we want all
+    # code to go into the pkg/proto directory and for generated code
+    # to inherit the structure of the proto definition directories.
+    # WARNING: If you are changing this because you changed the plugin
+    # "out" value, note that the "clean" directive will remove EVERYTHING
+    # that is in the "out" location during generation. Currently this is
+    # desired behaviour in order to "purify" these package locations and
+    # prevent additional code being introduced into those locations.
+    - file_option: go_package_prefix
+      value: .
 plugins:
-  - remote: buf.build/protocolbuffers/go:v1.32.0
-    out: ..
+  - remote: buf.build/protocolbuffers/go:v1.36.8
+    out: ../pkg/proto
     opt:
       - paths=import
-  - remote: buf.build/grpc/go:v1.2.0
-    out: ..
+  - remote: buf.build/grpc/go:v1.5.1
+    out: ../pkg/proto
     opt:
       - paths=import
 inputs:

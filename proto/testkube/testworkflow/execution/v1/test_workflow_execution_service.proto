@@ -1,0 +1,14 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "testkube/testworkflow/execution/v1/get_execution_updates_request.proto";
+import "testkube/testworkflow/execution/v1/get_execution_updates_response.proto";
+
+// TestWorkflowExecutionService contains RPCs related to TestWorkflowExecutions.
+service TestWorkflowExecutionService {
+  // GetExecutionUpdates retrieves state transition imperatives from the Control Plane for
+  // Executions that are understood by the Control Plane to be under the control of the
+  // calling client.
+  rpc GetExecutionUpdates(GetExecutionUpdatesRequest) returns (GetExecutionUpdatesResponse);
+}

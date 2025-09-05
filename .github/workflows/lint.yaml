@@ -26,6 +26,33 @@ jobs:
         with:
           definition-file: api/v1/testkube.yaml
 
+  lint-protobuf:
+    name: Lint Protocol Buffers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run buf checks
+        uses: bufbuild/buf-action@v1
+        with:
+          version: 1.56.0
+          # Prevent buf from attempting to create a PR comment.
+          pr_comment: false
+          # buf config files are in the ./proto directory.
+          input: proto
+          # This is required to avoid the breaking change check
+          # from failing due to the imports from the legacy
+          # proto definitions, it should still allow for valid
+          # breaking change detection of our own new protos.
+          exclude_imports: true
+          # Ignore the legacy protos from formatting, they are
+          # also excluded in the buf.yaml file for breaking and
+          # linting checks.
+          exclude_paths: |
+            proto/logs.proto
+            proto/service.proto
+
   lint-go:
     name: Lint Go
     runs-on: ubuntu-latest
