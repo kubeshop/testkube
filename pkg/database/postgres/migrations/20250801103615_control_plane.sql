@@ -24,10 +24,10 @@ DROP INDEX IF EXISTS idx_execution_sequences_environment_id;
 DROP INDEX IF EXISTS idx_test_workflow_executions_organization_id;
 DROP INDEX IF EXISTS idx_test_workflow_executions_environment_id;
 
-ALTER TABLE execution_sequences DROP COLUMN organization_id;
-ALTER TABLE execution_sequences DROP COLUMN environment_id;
 ALTER TABLE execution_sequences DROP CONSTRAINT execution_sequences_pkey;
 ALTER TABLE execution_sequences ADD PRIMARY KEY (name);
+ALTER TABLE execution_sequences DROP COLUMN organization_id;
+ALTER TABLE execution_sequences DROP COLUMN environment_id;
 
 ALTER TABLE test_workflow_executions DROP COLUMN organization_id;
 ALTER TABLE test_workflow_executions DROP COLUMN environment_id;
