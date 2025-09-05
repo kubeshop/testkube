@@ -1,0 +1,15 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit5-workflow-smoke-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: workflow-trigger
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: junit5-workflow-smoke
+  events:
+  - cronjob:
+      cron: "50 * * * *" # every 1 hour
