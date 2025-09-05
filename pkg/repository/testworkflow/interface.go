@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 type Label struct {
@@ -177,3 +178,5 @@ type OutputRepository interface {
 	// DeleteOutputForTestWorkflows deletes execution output by test workflows
 	DeleteOutputForTestWorkflows(ctx context.Context, workflowNames []string) error
 }
+
+type HookFn func(ctx context.Context, name string, executionType sequence.ExecutionType) error

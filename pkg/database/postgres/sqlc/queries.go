@@ -14,17 +14,18 @@ type TestWorkflowExecutionQueriesInterface interface {
 	WithTx(tx pgx.Tx) TestWorkflowExecutionQueriesInterface
 
 	// TestWorkflowExecution queries
-	GetTestWorkflowExecution(ctx context.Context, id string) (GetTestWorkflowExecutionRow, error)
+	GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkflowExecutionParams) (GetTestWorkflowExecutionRow, error)
 	GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg GetTestWorkflowExecutionByNameAndTestWorkflowParams) (GetTestWorkflowExecutionByNameAndTestWorkflowRow, error)
 	GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg GetLatestTestWorkflowExecutionByTestWorkflowParams) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error)
-	GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error)
-	GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRunningTestWorkflowExecutionsRow, error)
+	GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, arg GetLatestTestWorkflowExecutionsByTestWorkflowsParams) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error)
+	GetRunningTestWorkflowExecutions(ctx context.Context, arg GetRunningTestWorkflowExecutionsParams) ([]GetRunningTestWorkflowExecutionsRow, error)
 	GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTestWorkflowExecutionsTotalsParams) ([]GetTestWorkflowExecutionsTotalsRow, error)
 	GetTestWorkflowExecutions(ctx context.Context, arg GetTestWorkflowExecutionsParams) ([]GetTestWorkflowExecutionsRow, error)
 	GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetTestWorkflowExecutionsSummaryParams) ([]GetTestWorkflowExecutionsSummaryRow, error)
 	GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error)
-	GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]GetUnassignedTestWorkflowExecutionsRow, error)
+	GetUnassignedTestWorkflowExecutions(ctx context.Context, arg GetUnassignedTestWorkflowExecutionsParams) ([]GetUnassignedTestWorkflowExecutionsRow, error)
 	CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error)
+	GetTestWorkflowExecutionWithRunner(ctx context.Context, arg GetTestWorkflowExecutionWithRunnerParams) (GetTestWorkflowExecutionWithRunnerRow, error)
 
 	// Insert operations
 	InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error
@@ -41,6 +42,8 @@ type TestWorkflowExecutionQueriesInterface interface {
 	UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecutionStatusAtParams) error
 	UpdateTestWorkflowExecutionReport(ctx context.Context, arg UpdateTestWorkflowExecutionReportParams) error
 	UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error
+	UpdateExecutionStatusAtStrict(ctx context.Context, arg UpdateExecutionStatusAtStrictParams) error
+	UpdateTestWorkflowExecutionResultStrict(ctx context.Context, arg UpdateTestWorkflowExecutionResultStrictParams) (string, error)
 
 	// Delete operations
 	DeleteTestWorkflowSignatures(ctx context.Context, executionID string) error
@@ -49,14 +52,14 @@ type TestWorkflowExecutionQueriesInterface interface {
 	DeleteTestWorkflowReports(ctx context.Context, executionID string) error
 	DeleteTestWorkflowResourceAggregations(ctx context.Context, executionID string) error
 	DeleteTestWorkflow(ctx context.Context, arg DeleteTestWorkflowParams) error
-	DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowName string) error
-	DeleteAllTestWorkflowExecutions(ctx context.Context) error
-	DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) error
+	DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, arg DeleteTestWorkflowExecutionsByTestWorkflowParams) error
+	DeleteAllTestWorkflowExecutions(ctx context.Context, arg DeleteAllTestWorkflowExecutionsParams) error
+	DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, arg DeleteTestWorkflowExecutionsByTestWorkflowsParams) error
 
 	// Metrics and analytics
 	GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflowMetricsParams) ([]GetTestWorkflowMetricsRow, error)
 	GetPreviousFinishedState(ctx context.Context, arg GetPreviousFinishedStateParams) (pgtype.Text, error)
-	GetTestWorkflowExecutionTags(ctx context.Context, workflowName string) ([]GetTestWorkflowExecutionTagsRow, error)
+	GetTestWorkflowExecutionTags(ctx context.Context, arg GetTestWorkflowExecutionTagsParams) ([]GetTestWorkflowExecutionTagsRow, error)
 
 	// Execution management
 	InitTestWorkflowExecution(ctx context.Context, arg InitTestWorkflowExecutionParams) error
@@ -106,8 +109,8 @@ type LeaseBackendQueriesInterface interface {
 
 // ExecutionSequenceQueriesInterface defines the interface for sqlc generated queries
 type ExecutionSequenceQueriesInterface interface {
-	UpsertAndIncrementExecutionSequence(ctx context.Context, name string) (ExecutionSequence, error)
-	DeleteExecutionSequence(ctx context.Context, name string) error
-	DeleteExecutionSequences(ctx context.Context, names []string) error
-	DeleteAllExecutionSequences(ctx context.Context) error
+	UpsertAndIncrementExecutionSequence(ctx context.Context, arg UpsertAndIncrementExecutionSequenceParams) (ExecutionSequence, error)
+	DeleteExecutionSequence(ctx context.Context, arg DeleteExecutionSequenceParams) error
+	DeleteExecutionSequences(ctx context.Context, arg DeleteExecutionSequencesParams) error
+	DeleteAllExecutionSequences(ctx context.Context, arg DeleteAllExecutionSequencesParams) error
 }
