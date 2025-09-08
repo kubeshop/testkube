@@ -488,6 +488,18 @@ func (c *APIClient) ListResourceGroups(ctx context.Context) (string, error) {
 	})
 }
 
+func (c *APIClient) AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "POST",
+		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}/abort",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": workflowName,
+			"executionId":  executionId,
+		},
+	})
+}
+
 // extracts workflow name from execution name e.g., "my-workflow-123" -> ("my-workflow", 123)
 func extractWorkflowNameFromExecutionName(executionName string) (string, int, error) {
 	lastDashIndex := strings.LastIndex(executionName, "-")

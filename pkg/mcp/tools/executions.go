@@ -223,3 +223,36 @@ func findMatchingExecution(executionGroups []map[string]any, targetExecutionName
 
 	return nil
 }
+
+type WorkflowExecutionAborter interface {
+	AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error)
+}
+
+func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("abort_workflow_execution",
+		mcp.WithDescription("Abort a running test workflow execution. This will stop the execution and mark it as aborted. Use this tool to cancel long-running or stuck workflow executions."),
+		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		workflowName, err := RequiredParam[string](request, "workflowName")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		executionId, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		result, err := client.AbortWorkflowExecution(ctx, workflowName, executionId)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to abort workflow execution: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(result), nil
+	}
+
+	return tool, handler
+}
