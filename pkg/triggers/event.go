@@ -30,7 +30,7 @@ type watcherEvent struct {
 	resource         testtrigger.ResourceType
 	name             string
 	namespace        string
-	labels           map[string]string
+	resourceLabels   map[string]string
 	objectMeta       metav1.Object
 	object           any
 	eventType        testtrigger.EventType
@@ -75,13 +75,13 @@ func newWatcherEvent(
 	opts ...watcherOpts,
 ) *watcherEvent {
 	w := &watcherEvent{
-		resource:   resource,
-		name:       objectMeta.GetName(),
-		namespace:  objectMeta.GetNamespace(),
-		labels:     objectMeta.GetLabels(),
-		objectMeta: objectMeta,
-		object:     object,
-		eventType:  eventType,
+		resource:       resource,
+		name:           objectMeta.GetName(),
+		namespace:      objectMeta.GetNamespace(),
+		resourceLabels: objectMeta.GetLabels(),
+		objectMeta:     objectMeta,
+		object:         object,
+		eventType:      eventType,
 	}
 
 	for _, opt := range opts {

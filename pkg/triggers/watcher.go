@@ -65,7 +65,8 @@ type deprecatedK8sInformers struct {
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
-	testkubeNamespace string, watcherNamespaces []string) *k8sInformers {
+	testkubeNamespace string, watcherNamespaces []string,
+) *k8sInformers {
 	var k8sInformers k8sInformers
 	if len(watcherNamespaces) == 0 {
 		watcherNamespaces = append(watcherNamespaces, metav1.NamespaceAll)

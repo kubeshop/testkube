@@ -44,7 +44,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
-		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
+		if !matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
 			continue
 		}
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
@@ -120,15 +120,15 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	return false
 }
 
-func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
-	if selector.LabelSelector != nil && len(event.labels) > 0 {
+func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
+	if selector.LabelSelector != nil && len(event.resourceLabels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
 		if err != nil {
 			logger.Errorf("error creating k8s selector from label selector: %v", err)
 			return false
 		}
 
-		resourceLabelSet := labels.Set(event.labels)
+		resourceLabelSet := labels.Set(event.resourceLabels)
 		_, err = resourceLabelSet.AsValidatedSelector()
 		if err != nil {
 			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.namespace, event.name, err)
