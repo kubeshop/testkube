@@ -27,9 +27,9 @@ type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)
 type addressGetterFn func(ctx context.Context, delay time.Duration) (string, error)
 
 type watcherEvent struct {
-	resource         testtrigger.ResourceType
 	name             string
 	namespace        string
+	resource         testtrigger.ResourceType
 	resourceLabels   map[string]string
 	objectMeta       metav1.Object
 	object           any
