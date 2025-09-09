@@ -13,7 +13,7 @@ type ResourceGroupsLister interface {
 
 func ListResourceGroups(client ResourceGroupsLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_resource_groups",
-		mcp.WithDescription("Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools."),
+		mcp.WithDescription(ListResourceGroupsDescription),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -17,6 +17,7 @@ type Client interface {
 
 	tools.WorkflowLister
 	tools.WorkflowCreator
+	tools.WorkflowUpdater
 	tools.WorkflowDefinitionGetter
 	tools.WorkflowGetter
 	tools.WorkflowRunner
