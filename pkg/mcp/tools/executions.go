@@ -18,7 +18,7 @@ type ExecutionLogger interface {
 
 func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("fetch_execution_logs",
-		mcp.WithDescription("Retrieves the full logs of a test workflow execution for debugging and analysis."),
+		mcp.WithDescription(FetchExecutionLogsDescription),
 		mcp.WithString("executionId",
 			mcp.Required(),
 			mcp.Description("The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2')."),
@@ -55,7 +55,7 @@ type ExecutionLister interface {
 
 func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_executions",
-		mcp.WithDescription("List executions for a specific test workflow with filtering and pagination options. Returns execution summaries with status, timing, and results."),
+		mcp.WithDescription(ListExecutionsDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
@@ -98,7 +98,7 @@ type ExecutionInfoGetter interface {
 
 func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_execution_info",
-		mcp.WithDescription("Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."),
+		mcp.WithDescription(GetExecutionInfoDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 	)
@@ -131,7 +131,7 @@ type ExecutionLookup interface {
 
 func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("lookup_execution_id",
-		mcp.WithDescription("Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."),
+		mcp.WithDescription(LookupExecutionIdDescription),
 		mcp.WithString("executionName", mcp.Required(), mcp.Description(ExecutionNameDescription)),
 	)
 
@@ -222,4 +222,37 @@ func findMatchingExecution(executionGroups []map[string]any, targetExecutionName
 	}
 
 	return nil
+}
+
+type WorkflowExecutionAborter interface {
+	AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error)
+}
+
+func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("abort_workflow_execution",
+		mcp.WithDescription(AbortWorkflowExecutionDescription),
+		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		workflowName, err := RequiredParam[string](request, "workflowName")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		executionId, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		result, err := client.AbortWorkflowExecution(ctx, workflowName, executionId)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to abort workflow execution: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(result), nil
+	}
+
+	return tool, handler
 }
