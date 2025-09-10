@@ -3,9 +3,11 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +30,7 @@ var (
 	ErrProbeTimeout     = errors.New("timed-out waiting for trigger probes")
 )
 
+// TODO(emil): rewrite this to be more readable it is overly complicated
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
 		t := status.testTrigger
@@ -44,7 +47,11 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
+		if !matchSelector(t.Spec.Selector, e, s.logger) {
+			continue
+		}
 		if !matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
+			s.logger.Infoln("skipped because of resource selector")
 			continue
 		}
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
@@ -71,6 +78,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 		}
 
+		// TODO(emil): why is this needed it this is using the same trigger as above to seemingly get the same status
 		status := s.getStatusForTrigger(t)
 		if t.Spec.ConcurrencyPolicy == testtriggersv1.TestTriggerConcurrencyPolicyForbid {
 			if status.hasActiveTests() {
@@ -120,6 +128,28 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	return false
 }
 
+func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.SugaredLogger) bool {
+	if selector == nil {
+		return true
+	}
+	k8sSelector, err := v1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		logger.Errorf("error creating k8s selector from label selector: %v", err)
+		return false
+	}
+	mergedLabels := make(map[string]string)
+	// TODO(emil): add builtin in labels here
+	maps.Copy(mergedLabels, event.resourceLabels)
+	maps.Copy(mergedLabels, event.listenerLabels)
+	labelsSet := labels.Set(mergedLabels)
+	_, err = labelsSet.AsValidatedSelector()
+	if err != nil {
+		logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.namespace, event.name, err)
+		return false
+	}
+	return k8sSelector.Matches(labelsSet)
+}
+
 func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
 	if selector.LabelSelector != nil && len(event.resourceLabels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
@@ -135,7 +165,17 @@ func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespa
 			return false
 		}
 
+		// TODO(emil): label selector is mutually exlusive with the
+		// name/namespace selectors as implemented
 		return k8sSelector.Matches(resourceLabelSet)
+	}
+
+	if strings.TrimSpace(selector.Name) == "" &&
+		strings.TrimSpace(selector.NameRegex) == "" &&
+		strings.TrimSpace(selector.Namespace) == "" &&
+		strings.TrimSpace(selector.NamespaceRegex) == "" {
+		// If selectors unspecified, match all
+		return true
 	}
 
 	var isSameName, isSameNamespace, isSameTestTriggerNamespace bool

@@ -37,6 +37,7 @@ type watcherEvent struct {
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
 	addressGetter    addressGetterFn
+	listenerLabels   map[string]string
 }
 
 type watcherOpts func(*watcherEvent)
