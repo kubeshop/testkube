@@ -13,7 +13,7 @@ type LabelsLister interface {
 
 func ListLabels(client LabelsLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_labels",
-		mcp.WithDescription("Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."),
+		mcp.WithDescription(ListLabelsDescription),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

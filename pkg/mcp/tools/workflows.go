@@ -25,7 +25,7 @@ type WorkflowLister interface {
 
 func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_workflows",
-		mcp.WithDescription("List Testkube workflows with optional filtering by resource group, selector, status, and other criteria. Returns workflow names (which are also the workflow IDs), descriptions, and execution status."),
+		mcp.WithDescription(ListWorkflowsDescription),
 		mcp.WithString("resourceGroup", mcp.Description(ResourceGroupDescription)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
@@ -70,7 +70,7 @@ type WorkflowCreator interface {
 
 func CreateWorkflow(client WorkflowCreator) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("create_workflow",
-		mcp.WithDescription("Create a new TestWorkflow directly in Testkube from a YAML definition. Use this tool to deploy workflows to the Testkube platform. The workflow will be immediately available for execution after creation."),
+		mcp.WithDescription(CreateWorkflowDescription),
 		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflow to create in Testkube. This should be the full workflow specification including metadata, spec, and all steps.")),
 	)
 
@@ -97,7 +97,7 @@ type WorkflowDefinitionGetter interface {
 
 func GetWorkflowDefinition(client WorkflowDefinitionGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_definition",
-		mcp.WithDescription("Get the YAML definition of a specific Testkube workflow. Returns the complete workflow specification including all steps, configuration schema, and metadata."),
+		mcp.WithDescription(GetWorkflowDefinitionDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
 
@@ -124,7 +124,7 @@ type WorkflowGetter interface {
 
 func GetWorkflow(client WorkflowGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow",
-		mcp.WithDescription("Retrieve detailed workflow information including execution history, health metrics, and current status. Returns JSON format with comprehensive workflow metadata."),
+		mcp.WithDescription(GetWorkflowDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 	)
 
@@ -157,7 +157,7 @@ type WorkflowRunner interface {
 
 func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("run_workflow",
-		mcp.WithDescription("Run a TestWorkflow with optional configuration parameters. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available."),
+		mcp.WithDescription(RunWorkflowDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithObject("config",
 			mcp.Description("Configuration parameters for the workflow. Use get_workflow_definition tool first to examine the spec.config section to see what parameters are available.")),
@@ -194,6 +194,39 @@ func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandl
 		result, err := client.RunWorkflow(ctx, params)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to run workflow: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(result), nil
+	}
+
+	return tool, handler
+}
+
+type WorkflowUpdater interface {
+	UpdateWorkflow(ctx context.Context, workflowName, workflowDefinition string) (string, error)
+}
+
+func UpdateWorkflow(client WorkflowUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("update_workflow",
+		mcp.WithDescription(UpdateWorkflowDescription),
+		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("yaml", mcp.Required(), mcp.Description("Complete YAML definition of the TestWorkflow to update in Testkube. This should be the full workflow specification including metadata, spec, and all steps.")),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		workflowName, err := RequiredParam[string](request, "workflowName")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		yaml, err := RequiredParam[string](request, "yaml")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		result, err := client.UpdateWorkflow(ctx, workflowName, yaml)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update workflow: %v", err)), nil
 		}
 
 		return mcp.NewToolResultText(result), nil

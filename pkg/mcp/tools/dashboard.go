@@ -11,7 +11,7 @@ import (
 
 func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("build_dashboard_url",
-		mcp.WithDescription("Build dashboard URLs for Testkube workflows and executions."),
+		mcp.WithDescription(BuildDashboardUrlDescription),
 		mcp.WithString("resourceType",
 			mcp.Required(),
 			mcp.Description("Type of dashboard resource: 'workflow' or 'execution'"),

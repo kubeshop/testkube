@@ -14,7 +14,7 @@ type ArtifactLister interface {
 
 func ListArtifacts(client ArtifactLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_artifacts",
-		mcp.WithDescription("Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."),
+		mcp.WithDescription(ListArtifactsDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 	)
 
@@ -43,7 +43,7 @@ type ArtifactReader interface {
 
 func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("read_artifact",
-		mcp.WithDescription("Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."),
+		mcp.WithDescription(ReadArtifactDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 		mcp.WithString("fileName", mcp.Required(), mcp.Description(FilenameDescription)),
 	)
