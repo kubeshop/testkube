@@ -3,6 +3,7 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -89,12 +90,13 @@ func (s Service) newWatcherEvent(
 		objectMeta:     objectMeta,
 		object:         object,
 		eventType:      eventType,
-		eventLabels: map[string]string{
-			eventLabelKeyAgentName:         s.agentName,
-			eventLabelKeyAgentNamespace:    s.testkubeNamespace,
-			eventLabelKeyResourceNamespace: objectMeta.GetNamespace(),
-		},
+		eventLabels:    map[string]string{},
 	}
+
+	maps.Copy(w.eventLabels, s.eventLabels)
+	w.eventLabels[eventLabelKeyAgentName] = s.agentName
+	w.eventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
+	w.eventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	for _, opt := range opts {
 		opt(w)

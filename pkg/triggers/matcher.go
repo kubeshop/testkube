@@ -138,7 +138,6 @@ func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.
 		return false
 	}
 	mergedLabels := make(map[string]string)
-	// TODO(emil): add builtin in labels here
 	maps.Copy(mergedLabels, event.resourceLabels)
 	maps.Copy(mergedLabels, event.eventLabels)
 	labelsSet := labels.Set(mergedLabels)

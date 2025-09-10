@@ -697,7 +697,6 @@ func main() {
 			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
 		}
 
-		// TODO(emil): pass custom labels into the trigger service
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
 			deprecatedSystem,
@@ -719,6 +718,7 @@ func main() {
 			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithProContext(&proContext),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
+			triggers.WithEventLabels(cfg.EventLabels),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {

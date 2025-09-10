@@ -167,11 +167,12 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	DefaultExecutionNamespace string `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
-	DisableRunner             bool   `envconfig:"DISABLE_RUNNER" default:"false"`
-	SelfRegistrationSecret    string `envconfig:"SELF_REGISTRATION_SECRET" default:""`
-	RunnerName                string `envconfig:"RUNNER_NAME" default:""`
-	FloatingRunner            bool   `envconfig:"FLOATING_RUNNER" default:"false"`
+	DefaultExecutionNamespace string            `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
+	DisableRunner             bool              `envconfig:"DISABLE_RUNNER" default:"false"`
+	SelfRegistrationSecret    string            `envconfig:"SELF_REGISTRATION_SECRET" default:""`
+	RunnerName                string            `envconfig:"RUNNER_NAME" default:""`
+	FloatingRunner            bool              `envconfig:"FLOATING_RUNNER" default:"false"`
+	EventLabels               map[string]string `envconfig:"EVENT_LABELS" default:""`
 }
 
 type GitOpsSyncConfig struct {

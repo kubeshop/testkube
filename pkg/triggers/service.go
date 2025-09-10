@@ -78,6 +78,7 @@ type Service struct {
 	deprecatedSystem              *services.DeprecatedSystem
 	proContext                    *intconfig.ProContext
 	testTriggerControlPlane       bool
+	eventLabels                   map[string]string
 }
 
 type Option func(*Service)
@@ -220,6 +221,12 @@ func WithProContext(proContext *intconfig.ProContext) Option {
 func WithTestTriggerControlPlane(enabled bool) Option {
 	return func(s *Service) {
 		s.testTriggerControlPlane = enabled
+	}
+}
+
+func WithEventLabels(eventLabels map[string]string) Option {
+	return func(s *Service) {
+		s.eventLabels = eventLabels
 	}
 }
 
