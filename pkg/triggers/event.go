@@ -37,7 +37,7 @@ type watcherEvent struct {
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
 	addressGetter    addressGetterFn
-	listenerLabels   map[string]string
+	eventLabels      map[string]string
 }
 
 type watcherOpts func(*watcherEvent)
@@ -68,7 +68,11 @@ func withNotEmptyName(name string) watcherOpts {
 	}
 }
 
-func newWatcherEvent(
+const (
+	eventLabelKeyAgentName string = "testkube.io/agent-name"
+)
+
+func (s Service) newWatcherEvent(
 	eventType testtrigger.EventType,
 	objectMeta metav1.Object,
 	object any,
@@ -83,6 +87,9 @@ func newWatcherEvent(
 		objectMeta:     objectMeta,
 		object:         object,
 		eventType:      eventType,
+		eventLabels: map[string]string{
+			eventLabelKeyAgentName: s.agentName,
+		},
 	}
 
 	for _, opt := range opts {

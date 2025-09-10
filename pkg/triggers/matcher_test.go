@@ -762,8 +762,8 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		// Listener labels should take precedence over the resource labels
-		listenerLabels: map[string]string{
+		// Event labels should take precedence over the resource labels
+		eventLabels: map[string]string{
 			"label-source": "listener",
 		},
 		resourceLabels: map[string]string{
@@ -800,7 +800,7 @@ func TestService_matchSelector_matchExpression(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		listenerLabels: map[string]string{
+		eventLabels: map[string]string{
 			"label-source": "listener",
 		},
 		resourceLabels: map[string]string{
@@ -841,7 +841,7 @@ func TestService_matchSelector_noMatch(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		listenerLabels: map[string]string{
+		eventLabels: map[string]string{
 			"label-source": "listener",
 		},
 	}

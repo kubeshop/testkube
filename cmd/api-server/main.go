@@ -697,7 +697,9 @@ func main() {
 			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
 		}
 
+		// TODO(emil): pass custom labels into the trigger service
 		triggerService := triggers.NewService(
+			cfg.RunnerName,
 			deprecatedSystem,
 			clientset,
 			testkubeClientset,
