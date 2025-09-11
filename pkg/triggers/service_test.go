@@ -195,6 +195,7 @@ func TestService_Run(t *testing.T) {
 		mockExecutionWorkerClient,
 		mockTestWorkflowExecutor,
 		mockTestWorkflowRepository,
+		nil,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),

@@ -24,10 +24,10 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
@@ -109,10 +109,10 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
@@ -188,10 +188,10 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 	}
@@ -265,10 +265,10 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 	}
@@ -335,10 +335,10 @@ func TestService_match(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
@@ -443,10 +443,10 @@ func TestService_matchRegex(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 	}
@@ -497,10 +497,10 @@ func TestService_noMatch(t *testing.T) {
 	e := &watcherEvent{
 		resource:       "deployment",
 		name:           "test-deployment",
-		namespace:      "testkube",
+		Namespace:      "testkube",
 		resourceLabels: nil,
 		objectMeta:     nil,
-		object:         nil,
+		Object:         nil,
 		eventType:      "modified",
 		causes:         nil,
 	}

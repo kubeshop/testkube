@@ -444,6 +444,21 @@ func (c *APIClient) CreateWorkflow(ctx context.Context, workflowDefinition strin
 	})
 }
 
+func (c *APIClient) UpdateWorkflow(ctx context.Context, workflowName, workflowDefinition string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "PUT",
+		Path:   "/agent/test-workflows/{workflowName}",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": workflowName,
+		},
+		Body: workflowDefinition,
+		Headers: map[string]string{
+			"Content-Type": "text/yaml",
+		},
+	})
+}
+
 func (c *APIClient) RunWorkflow(ctx context.Context, params tools.RunWorkflowParams) (string, error) {
 	body := map[string]any{
 		"config": params.Config,
@@ -485,6 +500,18 @@ func (c *APIClient) ListResourceGroups(ctx context.Context) (string, error) {
 		Method: "GET",
 		Path:   "/groups",
 		Scope:  ApiScopeOrg,
+	})
+}
+
+func (c *APIClient) AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "POST",
+		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}/abort",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": workflowName,
+			"executionId":  executionId,
+		},
 	})
 }
 

@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/jsonpath"
 
+	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
@@ -21,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
-	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -59,7 +59,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		},
 		"WATCHER_EVENT_NAMESPACE": {
 			Name:  "WATCHER_EVENT_NAMESPACE",
-			Value: e.namespace,
+			Value: e.Namespace,
 			Type_: testkube.VariableTypeBasic,
 		},
 		"WATCHER_EVENT_EVENT_TYPE": {
@@ -158,12 +158,6 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 					execution.Config[variable.Name] = variable.Value
 				}
 
-				if t.Spec.ActionParameters != nil && t.Spec.ActionParameters.Target != nil {
-					if target := commonmapper.MapTargetKubeToGrpc(t.Spec.ActionParameters.Target); target != nil {
-						execution.Targets = []*cloud.ExecutionTarget{target}
-					}
-				}
-
 				if t.Spec.ActionParameters != nil {
 					if len(t.Spec.ActionParameters.Tags) > 0 && execution.Tags == nil {
 						execution.Tags = make(map[string]string)
@@ -191,7 +185,9 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 							if strings.HasPrefix(value, JsonPathPrefix) {
 								s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s",
 									t.Namespace, t.Name, key, parameter.name, value)
+
 								data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
+
 								if err != nil {
 									s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s error %v",
 										t.Namespace, t.Name, key, value, parameter.name, err)
@@ -212,6 +208,12 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 								(*parameter.d)[key] = string(data)
 							}
 						}
+					}
+				}
+
+				if t.Spec.ActionParameters != nil && t.Spec.ActionParameters.Target != nil {
+					if target := s.mapTargetKubeToGrpcWithEvent(e, t, t.Spec.ActionParameters.Target); target != nil {
+						execution.Targets = []*cloud.ExecutionTarget{target}
 					}
 				}
 
@@ -264,7 +266,7 @@ func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error)
 	}
 
 	buf := new(bytes.Buffer)
-	err = jp.Execute(buf, e.object)
+	err = jp.Execute(buf, e.Object)
 	if err != nil {
 		return "", err
 	}
@@ -274,17 +276,116 @@ func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error)
 
 func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error) {
 	var tmpl *template.Template
-	tmpl, err := utils.NewTemplate("field").Parse(value)
+	tmpl, err := utils.NewTemplate("field").Funcs(template.FuncMap{
+		"agent": func() watcherAgent { return e.Agent },
+	}).Parse(value)
 	if err != nil {
 		return nil, err
 	}
 
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, "field", e.object); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, "field", e.Object); err != nil {
 		return nil, err
 	}
 
 	return buffer.Bytes(), nil
+}
+
+// getJsonPathDataFromEvent evaluates a JSONPath against the full watcher event structure
+// including agent context.
+func (s *Service) getJsonPathDataFromEvent(e *watcherEvent, value string) (string, error) {
+	jp := jsonpath.New("field")
+	if err := jp.Parse(value); err != nil {
+		return "", err
+	}
+	buf := new(bytes.Buffer)
+	if err := jp.Execute(buf, e); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// mapTargetKubeToGrpcWithEvent converts a K8s Target into a gRPC ExecutionTarget,
+// resolving JSONPath (jsonpath=...) and Go templates using the watcher event object.
+func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *testtriggersv1.TestTrigger, src *commonv1.Target) *cloud.ExecutionTarget {
+	if src == nil {
+		return nil
+	}
+	s.logger.Debugw("Trigger Service: Executor Component: Event", "event", e)
+
+	resolve := func(kind, key string, value string) string {
+		if strings.HasPrefix(value, JsonPathPrefix) {
+			s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s",
+				t.Namespace, t.Name, key, kind, value)
+			data, err := s.getJsonPathDataFromEvent(e, strings.TrimPrefix(value, JsonPathPrefix))
+			if err != nil {
+				s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s error %v",
+					t.Namespace, t.Name, key, value, kind, err)
+				return ""
+			}
+			return data
+		}
+
+		s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s",
+			t.Namespace, t.Name, key, kind, value)
+		data, err := s.getTemplateData(e, value)
+		if err != nil {
+			s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s error %v",
+				t.Namespace, t.Name, key, value, kind, err)
+			return ""
+		}
+		return string(data)
+	}
+
+	target := &cloud.ExecutionTarget{}
+
+	// Replicate
+	if len(src.Replicate) > 0 {
+		resolved := make([]string, 0, len(src.Replicate))
+		for _, v := range src.Replicate {
+			val := resolve("replicate", "", v)
+			if val != "" {
+				resolved = append(resolved, val)
+			}
+		}
+		target.Replicate = resolved
+	}
+
+	// Match
+	if src.Match != nil {
+		target.Match = make(map[string]*cloud.ExecutionTargetLabels)
+		for k, vs := range src.Match {
+			labels := make([]string, 0, len(vs))
+			for _, v := range vs {
+				val := resolve("target.match", k, v)
+				if val != "" {
+					labels = append(labels, val)
+				}
+			}
+			if len(labels) > 0 {
+				target.Match[k] = &cloud.ExecutionTargetLabels{Labels: labels}
+			}
+		}
+	}
+
+	// Not
+	if src.Not != nil {
+		target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+		for k, vs := range src.Not {
+			labels := make([]string, 0, len(vs))
+			for _, v := range vs {
+				val := resolve("target.not", k, v)
+				if val != "" {
+					labels = append(labels, val)
+				}
+			}
+			if len(labels) > 0 {
+				target.Not[k] = &cloud.ExecutionTargetLabels{Labels: labels}
+			}
+		}
+	}
+
+	return target
 }
 
 func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error) {

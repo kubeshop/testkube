@@ -143,7 +143,7 @@ func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.
 	labelsSet := labels.Set(mergedLabels)
 	_, err = labelsSet.AsValidatedSelector()
 	if err != nil {
-		logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.namespace, event.name, err)
+		logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.Namespace, event.name, err)
 		return false
 	}
 	return k8sSelector.Matches(labelsSet)
@@ -160,7 +160,7 @@ func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespa
 		resourceLabelSet := labels.Set(event.resourceLabels)
 		_, err = resourceLabelSet.AsValidatedSelector()
 		if err != nil {
-			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.namespace, event.name, err)
+			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.Namespace, event.name, err)
 			return false
 		}
 
@@ -193,7 +193,7 @@ func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespa
 	}
 
 	if selector.Namespace != "" {
-		isSameNamespace = selector.Namespace == event.namespace
+		isSameNamespace = selector.Namespace == event.Namespace
 	}
 
 	if selector.NamespaceRegex != "" {
@@ -203,10 +203,10 @@ func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespa
 			return false
 		}
 
-		isSameNamespace = re.MatchString(event.namespace)
+		isSameNamespace = re.MatchString(event.Namespace)
 	}
 
-	isSameTestTriggerNamespace = selector.Namespace == "" && selector.NamespaceRegex == "" && namespace == event.namespace
+	isSameTestTriggerNamespace = selector.Namespace == "" && selector.NamespaceRegex == "" && namespace == event.Namespace
 	return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
 }
 
@@ -225,19 +225,19 @@ outer:
 			logger.Errorf(
 				"trigger service: matcher component: error waiting for conditions to match for trigger %s/%s by event %s on resource %s %s/%s"+
 					" because context got canceled by timeout or exit signal",
-				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
+				t.Namespace, t.Name, e.eventType, e.resource, e.Namespace, e.name,
 			)
 			return false, errors.WithStack(ErrConditionTimeout)
 		default:
 			logger.Debugf(
 				"trigger service: matcher component: running conditions check iteration for %s %s/%s",
-				e.resource, e.namespace, e.name,
+				e.resource, e.Namespace, e.name,
 			)
 			conditions, err := e.conditionsGetter()
 			if err != nil {
 				logger.Errorf(
 					"trigger service: matcher component: error getting conditions for %s %s/%s because of %v",
-					e.resource, e.namespace, e.name, err,
+					e.resource, e.Namespace, e.name, err,
 				)
 				return false, err
 			}
@@ -355,7 +355,7 @@ func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtrigg
 		if err != nil {
 			logger.Errorf(
 				"trigger service: matcher component: error getting addess for %s %s/%s because of %v",
-				e.resource, e.namespace, e.name, err,
+				e.resource, e.Namespace, e.name, err,
 			)
 			return false, err
 		}
@@ -380,13 +380,13 @@ outer:
 			logger.Errorf(
 				"trigger service: matcher component: error waiting for probes to match for trigger %s/%s by event %s on resource %s %s/%s"+
 					" because context got canceled by timeout or exit signal",
-				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
+				t.Namespace, t.Name, e.eventType, e.resource, e.Namespace, e.name,
 			)
 			return false, errors.WithStack(ErrProbeTimeout)
 		default:
 			logger.Debugf(
 				"trigger service: matcher component: running probes check iteration for %s %s/%s",
-				e.resource, e.namespace, e.name,
+				e.resource, e.Namespace, e.name,
 			)
 
 			matched := checkProbes(timeoutCtx, s.httpClient, t.Spec.ProbeSpec.Probes, logger)
