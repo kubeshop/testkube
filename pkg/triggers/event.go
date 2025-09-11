@@ -29,14 +29,22 @@ type addressGetterFn func(ctx context.Context, delay time.Duration) (string, err
 type watcherEvent struct {
 	resource         testtrigger.ResourceType
 	name             string
-	namespace        string
+	Namespace        string `json:"namespace"`
 	labels           map[string]string
 	objectMeta       metav1.Object
-	object           any
+	Object           any `json:"object"`
 	eventType        testtrigger.EventType
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
 	addressGetter    addressGetterFn
+	Agent            watcherAgent `json:"agent"`
+}
+
+// watcherAgent represents agent context exposed to templates and JSONPath
+type watcherAgent struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
+	Data   map[string]string `json:"data,omitempty"`
 }
 
 type watcherOpts func(*watcherEvent)
@@ -72,16 +80,18 @@ func newWatcherEvent(
 	objectMeta metav1.Object,
 	object any,
 	resource testtrigger.ResourceType,
+	agent watcherAgent,
 	opts ...watcherOpts,
 ) *watcherEvent {
 	w := &watcherEvent{
 		resource:   resource,
 		name:       objectMeta.GetName(),
-		namespace:  objectMeta.GetNamespace(),
+		Namespace:  objectMeta.GetNamespace(),
 		labels:     objectMeta.GetLabels(),
 		objectMeta: objectMeta,
-		object:     object,
+		Object:     object,
 		eventType:  eventType,
+		Agent:      agent,
 	}
 
 	for _, opt := range opts {

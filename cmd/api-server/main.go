@@ -711,12 +711,13 @@ func main() {
 			executionWorker,
 			testWorkflowExecutor,
 			testWorkflowResultsRepository,
+			&proContext,
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
-			triggers.WithProContext(&proContext),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
+			triggers.WithAgentDataFilePath(cfg.AgentDataFilePath),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {

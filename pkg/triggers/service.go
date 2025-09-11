@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -77,9 +78,63 @@ type Service struct {
 	deprecatedSystem              *services.DeprecatedSystem
 	proContext                    *intconfig.ProContext
 	testTriggerControlPlane       bool
+	Agent                         watcherAgent
 }
 
 type Option func(*Service)
+
+// loadDataFromFile loads key-value pairs from a file into a map[string]string.
+// The file should contain lines in the format "key=value" or "key: value".
+// Lines starting with # are treated as comments and ignored.
+// Empty lines are also ignored.
+// Returns an empty map if the file doesn't exist or can't be read.
+func loadDataFromFile(filePath string) map[string]string {
+	data := make(map[string]string)
+
+	if filePath == "" {
+		return data
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		// File doesn't exist or can't be opened, return empty map
+		return data
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Support both "key=value" and "key: value" formats
+		var key, value string
+		if strings.Contains(line, "=") {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				key = strings.TrimSpace(parts[0])
+				value = strings.TrimSpace(parts[1])
+			}
+		} else if strings.Contains(line, ":") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				key = strings.TrimSpace(parts[0])
+				value = strings.TrimSpace(parts[1])
+			}
+		}
+
+		// Only add non-empty keys
+		if key != "" {
+			data[key] = value
+		}
+	}
+
+	return data
+}
 
 func NewService(
 	deprecatedSystem *services.DeprecatedSystem,
@@ -95,6 +150,7 @@ func NewService(
 	executionWorkerClient executionworkertypes.Worker,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	testWorkflowResultsRepository testworkflow.Repository,
+	proContext *intconfig.ProContext,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
@@ -124,7 +180,7 @@ func NewService(
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 		deprecatedSystem:              deprecatedSystem,
-		proContext:                    &intconfig.ProContext{},
+		proContext:                    proContext,
 	}
 	if s.triggerExecutor == nil {
 		s.triggerExecutor = s.execute
@@ -132,6 +188,13 @@ func NewService(
 
 	for _, opt := range opts {
 		opt(s)
+	}
+
+	// Initialize agent snapshot from proContext if available
+	s.Agent = watcherAgent{}
+	if s.proContext != nil {
+		s.Agent.Name = s.proContext.Agent.Name
+		s.Agent.Labels = s.proContext.Agent.Labels
 	}
 
 	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
@@ -207,16 +270,20 @@ func WithDisableSecretCreation(disableSecretCreation bool) Option {
 	}
 }
 
-func WithProContext(proContext *intconfig.ProContext) Option {
-	return func(s *Service) {
-		s.proContext = proContext
-	}
-}
-
 // WithTestTriggerControlPlane enables Control Plane-backed trigger watching
 func WithTestTriggerControlPlane(enabled bool) Option {
 	return func(s *Service) {
 		s.testTriggerControlPlane = enabled
+	}
+}
+
+// WithAgentDataFilePath sets the file path for loading agent data
+func WithAgentDataFilePath(filePath string) Option {
+	return func(s *Service) {
+		// Load data from file if path is provided
+		if filePath != "" {
+			s.Agent.Data = loadDataFromFile(filePath)
+		}
 	}
 }
 
