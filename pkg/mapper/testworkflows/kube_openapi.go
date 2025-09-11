@@ -461,6 +461,14 @@ func MapTemplateRefKubeToAPI(v testworkflowsv1.TemplateRef) testkube.TestWorkflo
 	}
 }
 
+func MapConcurrencyPolicyKubeToApi(v testworkflowsv1.ConcurrencyPolicy) testkube.TestWorkflowConcurrencyPolicy {
+	return testkube.TestWorkflowConcurrencyPolicy{
+		Group:            v.Group,
+		Max:              int32(v.Max),
+		CancelInProgress: v.CancelInProgress,
+	}
+}
+
 func MapContentGitKubeToAPI(v testworkflowsv1.ContentGit) testkube.TestWorkflowContentGit {
 	return testkube.TestWorkflowContentGit{
 		Uri:          v.Uri,
@@ -1248,38 +1256,40 @@ func MapSystemKubeToAPI(v testworkflowsv1.TestWorkflowSystem) testkube.TestWorkf
 
 func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowSpec {
 	return testkube.TestWorkflowSpec{
-		Use:       common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
-		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
-		System:    common.MapPtr(v.System, MapSystemKubeToAPI),
-		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:  common.MapMap(v.Services, MapServiceSpecKubeToAPI),
-		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
-		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
-		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
-		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
-		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
-		After:     common.MapSlice(v.After, MapStepKubeToAPI),
-		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
-		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
-		Pvcs:      common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
+		Use:         common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
+		Concurrency: common.MapPtr(v.Concurrency, MapConcurrencyPolicyKubeToApi),
+		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:      common.MapPtr(v.System, MapSystemKubeToAPI),
+		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
+		Services:    common.MapMap(v.Services, MapServiceSpecKubeToAPI),
+		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:         common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:       common.MapSlice(v.Setup, MapStepKubeToAPI),
+		Steps:       common.MapSlice(v.Steps, MapStepKubeToAPI),
+		After:       common.MapSlice(v.After, MapStepKubeToAPI),
+		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
 func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testkube.TestWorkflowTemplateSpec {
 	return testkube.TestWorkflowTemplateSpec{
-		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
-		System:    common.MapPtr(v.System, MapSystemKubeToAPI),
-		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:  common.MapMap(v.Services, MapIndependentServiceSpecKubeToAPI),
-		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
-		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
-		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
-		Setup:     common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
-		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
-		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
-		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
-		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
-		Pvcs:      common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
+		Concurrency: common.MapPtr(v.Concurrency, MapConcurrencyPolicyKubeToApi),
+		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:      common.MapPtr(v.System, MapSystemKubeToAPI),
+		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
+		Services:    common.MapMap(v.Services, MapIndependentServiceSpecKubeToAPI),
+		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:         common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:       common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
+		Steps:       common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
+		After:       common.MapSlice(v.After, MapIndependentStepKubeToAPI),
+		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
