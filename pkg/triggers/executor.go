@@ -276,15 +276,28 @@ func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error)
 
 func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error) {
 	var tmpl *template.Template
-	tmpl, err := utils.NewTemplate("field").Funcs(template.FuncMap{
-		"agent": func() watcherAgent { return e.Agent },
-	}).Parse(value)
+	tmpl, err := utils.NewTemplate("field").Parse(value)
 	if err != nil {
 		return nil, err
 	}
 
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "field", e.Object); err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
+}
+
+func (s *Service) getTemplateDataFromEvent(e *watcherEvent, value string) ([]byte, error) {
+	var tmpl *template.Template
+	tmpl, err := utils.NewTemplate("field").Parse(value)
+	if err != nil {
+		return nil, err
+	}
+
+	var buffer bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&buffer, "field", e); err != nil {
 		return nil, err
 	}
 
@@ -328,7 +341,7 @@ func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *testtriggersv
 
 		s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s",
 			t.Namespace, t.Name, key, kind, value)
-		data, err := s.getTemplateData(e, value)
+		data, err := s.getTemplateDataFromEvent(e, value)
 		if err != nil {
 			s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s error %v",
 				t.Namespace, t.Name, key, value, kind, err)

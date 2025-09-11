@@ -717,6 +717,7 @@ func main() {
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
+			triggers.WithAgentDataFile(cfg.AgentDataFile),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {
