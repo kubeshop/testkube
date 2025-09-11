@@ -72,6 +72,7 @@ func withNotEmptyName(name string) watcherOpts {
 const (
 	eventLabelKeyAgentName         string = "testkube.io/agent-name"
 	eventLabelKeyAgentNamespace    string = "testkube.io/agent-namespace"
+	eventLabelKeyResourceName      string = "testkube.io/resource-name"
 	eventLabelKeyResourceNamespace string = "testkube.io/resource-namespace"
 )
 
@@ -96,6 +97,7 @@ func (s Service) newWatcherEvent(
 	maps.Copy(w.eventLabels, s.eventLabels)
 	w.eventLabels[eventLabelKeyAgentName] = s.agentName
 	w.eventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
+	w.eventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
 	w.eventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	for _, opt := range opts {
