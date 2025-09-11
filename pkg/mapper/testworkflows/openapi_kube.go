@@ -250,6 +250,14 @@ func MapImagePullPolicyAPIToKube(v *testkube.ImagePullPolicy) corev1.PullPolicy 
 	return corev1.PullPolicy(*v)
 }
 
+func MapConcurrencyAPIToKube(v testkube.TestWorkflowConcurrencyPolicy) testworkflowsv1.ConcurrencyPolicy {
+	return testworkflowsv1.ConcurrencyPolicy{
+		Group:            v.Group,
+		Max:              int(v.Max),
+		CancelInProgress: v.CancelInProgress,
+	}
+}
+
 func MapParameterSchemaAPIToKube(v testkube.TestWorkflowParameterSchema) testworkflowsv1.ParameterSchema {
 	var example *intstr.IntOrString
 	if v.Example != "" {
@@ -1347,14 +1355,15 @@ func MapSystemAPIToKube(v testkube.TestWorkflowSystem) testworkflowsv1.TestWorkf
 func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowSpec {
 	return testworkflowsv1.TestWorkflowSpec{
 		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-			Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
-			System:    common.MapPtr(v.System, MapSystemAPIToKube),
-			Content:   common.MapPtr(v.Content, MapContentAPIToKube),
-			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
-			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
-			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
-			Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
+			Concurrency: common.MapPtr(v.Concurrency, MapConcurrencyAPIToKube),
+			Config:      common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+			System:      common.MapPtr(v.System, MapSystemAPIToKube),
+			Content:     common.MapPtr(v.Content, MapContentAPIToKube),
+			Container:   common.MapPtr(v.Container, MapContainerConfigAPIToKube),
+			Job:         common.MapPtr(v.Job, MapJobConfigAPIToKube),
+			Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+			Events:      common.MapSlice(v.Events, MapEventAPIToKube),
+			Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
 		},
 		Services: common.MapMap(v.Services, MapServiceSpecAPIToKube),
 		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
@@ -1368,14 +1377,15 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflowsv1.TestWorkflowTemplateSpec {
 	return testworkflowsv1.TestWorkflowTemplateSpec{
 		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-			Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
-			System:    common.MapPtr(v.System, MapSystemAPIToKube),
-			Content:   common.MapPtr(v.Content, MapContentAPIToKube),
-			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
-			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
-			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
-			Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
+			Concurrency: common.MapPtr(v.Concurrency, MapConcurrencyAPIToKube),
+			Config:      common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+			System:      common.MapPtr(v.System, MapSystemAPIToKube),
+			Content:     common.MapPtr(v.Content, MapContentAPIToKube),
+			Container:   common.MapPtr(v.Container, MapContainerConfigAPIToKube),
+			Job:         common.MapPtr(v.Job, MapJobConfigAPIToKube),
+			Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+			Events:      common.MapSlice(v.Events, MapEventAPIToKube),
+			Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
 		},
 		Services: common.MapMap(v.Services, MapIndependentServiceSpecAPIToKube),
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
