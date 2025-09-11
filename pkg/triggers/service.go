@@ -77,6 +77,7 @@ type Service struct {
 	deprecatedSystem              *services.DeprecatedSystem
 	proContext                    *intconfig.ProContext
 	testTriggerControlPlane       bool
+	Agent                         watcherAgent
 }
 
 type Option func(*Service)
@@ -95,6 +96,7 @@ func NewService(
 	executionWorkerClient executionworkertypes.Worker,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	testWorkflowResultsRepository testworkflow.Repository,
+	proContext *intconfig.ProContext,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
@@ -124,7 +126,7 @@ func NewService(
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 		deprecatedSystem:              deprecatedSystem,
-		proContext:                    &intconfig.ProContext{},
+		proContext:                    proContext,
 	}
 	if s.triggerExecutor == nil {
 		s.triggerExecutor = s.execute
@@ -132,6 +134,13 @@ func NewService(
 
 	for _, opt := range opts {
 		opt(s)
+	}
+
+	// Initialize agent snapshot from proContext if available
+	s.Agent = watcherAgent{}
+	if s.proContext != nil {
+		s.Agent.Name = s.proContext.Agent.Name
+		s.Agent.Labels = s.proContext.Agent.Labels
 	}
 
 	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
@@ -204,12 +213,6 @@ func WithWatcherNamespaces(namespaces string) Option {
 func WithDisableSecretCreation(disableSecretCreation bool) Option {
 	return func(s *Service) {
 		s.disableSecretCreation = disableSecretCreation
-	}
-}
-
-func WithProContext(proContext *intconfig.ProContext) Option {
-	return func(s *Service) {
-		s.proContext = proContext
 	}
 }
 
