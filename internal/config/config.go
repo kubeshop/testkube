@@ -226,6 +226,7 @@ type Config struct {
 	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
+	AgentDataFile                   string   `envconfig:"TESTKUBE_AGENT_DATA_FILE" default:""`
 
 	FeatureNewArchitecture  bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
 	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`

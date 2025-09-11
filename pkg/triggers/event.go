@@ -1,8 +1,10 @@
 package triggers
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -44,6 +46,63 @@ type watcherEvent struct {
 type watcherAgent struct {
 	Name   string            `json:"name"`
 	Labels map[string]string `json:"labels"`
+	Data   map[string]string `json:"data,omitempty"`
+}
+
+// loadDataFromFile loads key-value pairs from a file into a map[string]string.
+// The file format supports:
+// - key=value pairs (one per line)
+// - Empty lines are ignored
+// - Leading and trailing whitespace is trimmed
+func loadDataFromFile(filePath string) (map[string]string, error) {
+	if filePath == "" {
+		return nil, nil
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist, return empty map without error
+			return make(map[string]string), nil
+		}
+		return nil, fmt.Errorf("failed to open agent data file %s: %w", filePath, err)
+	}
+	defer file.Close()
+
+	data := make(map[string]string)
+	scanner := bufio.NewScanner(file)
+	lineNum := 0
+
+	for scanner.Scan() {
+		lineNum++
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse key=value pairs
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid format at line %d in %s: expected key=value, got: %s", lineNum, filePath, line)
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		if key == "" {
+			return nil, fmt.Errorf("empty key at line %d in %s", lineNum, filePath)
+		}
+
+		data[key] = value
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading agent data file %s: %w", filePath, err)
+	}
+
+	return data, nil
 }
 
 type watcherOpts func(*watcherEvent)

@@ -223,6 +223,27 @@ func WithTestTriggerControlPlane(enabled bool) Option {
 	}
 }
 
+// WithAgentDataFile sets the path to the agent data file
+func WithAgentDataFile(filePath string) Option {
+	return func(s *Service) {
+		if filePath != "" {
+			data, err := loadDataFromFile(filePath)
+			if err != nil {
+				s.logger.Errorw("failed to load agent data from file", "file", filePath, "error", err)
+				return
+			}
+			if s.Agent.Data == nil {
+				s.Agent.Data = make(map[string]string)
+			}
+			// Merge the loaded data with existing data
+			for k, v := range data {
+				s.Agent.Data[k] = v
+			}
+			s.logger.Debugw("loaded agent data from file", "file", filePath, "keys", len(data))
+		}
+	}
+}
+
 func (s *Service) Run(ctx context.Context) {
 	leaseChan := make(chan bool)
 
