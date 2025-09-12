@@ -21,4 +21,5 @@ type Client interface {
 	tools.WorkflowDefinitionGetter
 	tools.WorkflowGetter
 	tools.WorkflowRunner
+	tools.WorkflowMetricsGetter
 }

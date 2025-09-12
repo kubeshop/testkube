@@ -532,3 +532,14 @@ func extractWorkflowNameFromExecutionName(executionName string) (string, int, er
 
 	return workflowName, executionNumber, nil
 }
+
+func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/agent/test-workflows/{workflowName}/metrics",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": workflowName,
+		},
+	})
+}
