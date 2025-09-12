@@ -698,6 +698,7 @@ func main() {
 		}
 
 		triggerService := triggers.NewService(
+			cfg.RunnerName,
 			deprecatedSystem,
 			clientset,
 			testkubeClientset,
@@ -717,6 +718,7 @@ func main() {
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
+			triggers.WithEventLabels(cfg.EventLabels),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {

@@ -181,6 +181,7 @@ func TestService_Run(t *testing.T) {
 	eventBus := bus.NewEventBusMock()
 	metrics := metrics.NewMetrics()
 	s := NewService(
+		"test",
 		&mockDeprecatedSystem,
 		fakeClientset,
 		fakeTestkubeClientset,

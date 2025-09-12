@@ -49,6 +49,7 @@ type Service struct {
 	leaseBackend                  leasebackend.Repository
 	identifier                    string
 	clusterID                     string
+	agentName                     string
 	triggerExecutor               ExecutorF
 	scraperInterval               time.Duration
 	leaseCheckInterval            time.Duration
@@ -77,12 +78,14 @@ type Service struct {
 	deprecatedSystem              *services.DeprecatedSystem
 	proContext                    *intconfig.ProContext
 	testTriggerControlPlane       bool
+	eventLabels                   map[string]string
 	Agent                         watcherAgent
 }
 
 type Option func(*Service)
 
 func NewService(
+	listenerName string,
 	deprecatedSystem *services.DeprecatedSystem,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
@@ -103,6 +106,7 @@ func NewService(
 	s := &Service{
 		identifier:                    identifier,
 		clusterID:                     defaultClusterID,
+		agentName:                     listenerName,
 		scraperInterval:               defaultScraperInterval,
 		leaseCheckInterval:            defaultLeaseCheckInterval,
 		maxLeaseDuration:              leasebackend.DefaultMaxLeaseDuration,
@@ -220,6 +224,12 @@ func WithDisableSecretCreation(disableSecretCreation bool) Option {
 func WithTestTriggerControlPlane(enabled bool) Option {
 	return func(s *Service) {
 		s.testTriggerControlPlane = enabled
+	}
+}
+
+func WithEventLabels(eventLabels map[string]string) Option {
+	return func(s *Service) {
+		s.eventLabels = eventLabels
 	}
 }
 
