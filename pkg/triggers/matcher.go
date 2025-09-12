@@ -51,7 +51,6 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			continue
 		}
 		if !matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
-			s.logger.Infoln("skipped because of resource selector")
 			continue
 		}
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
