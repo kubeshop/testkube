@@ -1,6 +1,8 @@
 package testworkflows
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -462,6 +464,7 @@ func MapTemplateRefKubeToAPI(v testworkflowsv1.TemplateRef) testkube.TestWorkflo
 }
 
 func MapConcurrencyPolicyKubeToApi(v testworkflowsv1.ConcurrencyPolicy) testkube.TestWorkflowConcurrencyPolicy {
+	fmt.Println("Got me some WITO at concurrency!\n")
 	return testkube.TestWorkflowConcurrencyPolicy{
 		Group:            v.Group,
 		Max:              int32(v.Max),
