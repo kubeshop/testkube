@@ -2,6 +2,7 @@ package testworkflowclient
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"slices"
 	"strings"
@@ -78,6 +79,7 @@ func (c *k8sTestWorkflowClient) get(ctx context.Context, name string) (*testwork
 
 func (c *k8sTestWorkflowClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error) {
 	workflow, err := c.get(ctx, name)
+	fmt.Println("Got me some WITO here\n")
 	if err != nil {
 		return nil, err
 	}

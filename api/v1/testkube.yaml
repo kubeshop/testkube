@@ -9445,6 +9445,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        concurrency:
+          $ref: "#/components/schemas/TestWorkflowConcurrencyPolicy"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
         system:
@@ -9487,6 +9489,8 @@ components:
     TestWorkflowTemplateSpec:
       type: object
       properties:
+        concurrency:
+          $ref: "#/components/schemas/TestWorkflowConcurrencyPolicy"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
         system:
@@ -10266,6 +10270,21 @@ components:
       description: configuration values to pass to the template
       additionalProperties:
         type: string
+
+    TestWorkflowConcurrencyPolicy:
+      type: object
+      description: configuration to control concurrent executions.
+      properties:
+        group:
+          type: string
+          description: Group ongoing executions by this identifier instead of by workflow name. Use the group identifier if you want the control concurrency across workflows.
+        max:
+          type: integer
+          description: The maximum amount of concurrent executions for this workflow or group. The scheduler will check the amount of ongoing executions for this workflow or group and only schedule this workflow when the amount is below its given maximum. When using a group identifier, it is recommended to keep the maximum in sync through a WorkflowTemplate.
+        cancelInProgress:
+          type: boolean
+          description: Whether the oldest in progress execution should be cancelled to be replaced with the latest queued one.
+          default: false
 
     TestWorkflowConfigSchema:
       type: object

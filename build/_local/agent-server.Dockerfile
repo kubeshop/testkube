@@ -25,7 +25,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 FROM golang:1.25.0-alpine AS debug
 
 ENV GOTRACEBACK=all
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.1
 
 RUN apk --no-cache --update add ca-certificates && (rm -rf /var/cache/apk/* || 0)
 
