@@ -50,6 +50,9 @@ to find items containing all terms`
 	ListArtifactsDescription = "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."
 	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."
 
+	// Documentation tool descriptions
+	GetWorkflowDocumentationDescription = "Get references to official TestWorkflow documentation pages. Provides structured access to Testkube documentation with topic-based filtering and learning paths. Use this tool to understand TestWorkflow concepts, find specific documentation pages, and get guidance on workflow construction."
+
 	// Other tool descriptions
 	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions."
 	ListLabelsDescription         = "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."
