@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
@@ -740,7 +739,7 @@ func TestService_matchSelector_emptySelector(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Selector: &v1.LabelSelector{},
+			Selector: &metav1.LabelSelector{},
 		},
 	}
 
@@ -774,7 +773,7 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Selector: &v1.LabelSelector{
+			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"label-source": "listener",
 				},
@@ -811,11 +810,11 @@ func TestService_matchSelector_matchExpression(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Selector: &v1.LabelSelector{
-				MatchExpressions: []v1.LabelSelectorRequirement{
+			Selector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "label-source",
-						Operator: v1.LabelSelectorOpIn,
+						Operator: metav1.LabelSelectorOpIn,
 						Values:   []string{"listener"},
 					},
 				},
@@ -849,11 +848,11 @@ func TestService_matchSelector_noMatch(t *testing.T) {
 	testTrigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Selector: &v1.LabelSelector{
-				MatchExpressions: []v1.LabelSelectorRequirement{
+			Selector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "label-source",
-						Operator: v1.LabelSelectorOpIn,
+						Operator: metav1.LabelSelectorOpIn,
 						Values:   []string{"not-listener"},
 					},
 				},
