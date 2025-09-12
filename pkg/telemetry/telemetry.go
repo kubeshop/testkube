@@ -155,6 +155,12 @@ func SendRunWorkflowEvent(event string, params RunWorkflowParams) (string, error
 	return sendData(senders, payload)
 }
 
+// SendUserAgentEvent will send Allowed User Agent connection to API Server event
+func SendUserAgentEvent(userAgent string) (string, error) {
+	payload := NewUserAgentPayload(userAgent, GetClusterType())
+	return sendData(senders, payload)
+}
+
 // sendData sends data to all telemetry storages  in parallel and syncs sending
 func sendData(senders map[string]Sender, payload Payload) (out string, err error) {
 	var wg sync.WaitGroup
