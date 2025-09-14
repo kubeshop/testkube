@@ -27,7 +27,7 @@ type DocumentationResponse struct {
 func GetWorkflowDocumentation() (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_workflow_documentation",
 		mcp.WithDescription(GetWorkflowDocumentationDescription),
-		mcp.WithString("topic", mcp.Description("Specific topic or concept to find documentation for (e.g., 'parallel', 'services', 'artifacts', 'templates')")),
+		mcp.WithString("topic", mcp.Description("Specific topic or concept to find documentation for. Available topics: structure, steps, parallel, services, artifacts, configuration, templates, events, containers, content, expressions, policies, orchestration, migration. Leave empty for general overview.")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -214,7 +214,6 @@ func getDocumentationPages(topic string) []DocumentationPage {
 
 	return pages
 }
-
 
 // formatDocumentationResponse formats the response as a readable text
 func formatDocumentationResponse(response DocumentationResponse) string {
