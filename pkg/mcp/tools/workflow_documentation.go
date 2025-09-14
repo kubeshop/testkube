@@ -141,13 +141,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				KeyConcepts: []string{"services", "dependencies", "integration", "networking", "probes"},
 				Level:       "beginner",
 			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for services, dependencies, and networking configuration",
-				KeyConcepts: []string{"services", "dependencies", "networking", "probes", "crd"},
-				Level:       "intermediate",
-			},
 		},
 		"artifacts": {
 			{
@@ -156,13 +149,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				Description: "Collecting and managing test artifacts and reports in TestWorkflows",
 				KeyConcepts: []string{"artifacts", "reports", "file collection", "output", "storage"},
 				Level:       "beginner",
-			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for artifacts, reports, and file collection configuration",
-				KeyConcepts: []string{"artifacts", "reports", "file collection", "storage", "crd"},
-				Level:       "intermediate",
 			},
 		},
 		"configuration": {
@@ -173,13 +159,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				KeyConcepts: []string{"config", "parameters", "variables", "environment", "parameterization"},
 				Level:       "beginner",
 			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for configuration, parameters, and environment variables",
-				KeyConcepts: []string{"config", "parameters", "variables", "environment", "crd"},
-				Level:       "intermediate",
-			},
 		},
 		"templates": {
 			{
@@ -188,13 +167,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				Description: "Creating and using reusable workflow templates for common patterns",
 				KeyConcepts: []string{"templates", "reusability", "parameters", "inheritance", "patterns"},
 				Level:       "intermediate",
-			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for workflow templates and reusability patterns",
-				KeyConcepts: []string{"templates", "reusability", "parameters", "inheritance", "crd"},
-				Level:       "advanced",
 			},
 		},
 		"events": {
@@ -205,13 +177,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				KeyConcepts: []string{"events", "triggers", "scheduling", "cron"},
 				Level:       "beginner",
 			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for events, cron jobs, and workflow triggers",
-				KeyConcepts: []string{"events", "cron", "webhooks", "triggers", "scheduling", "crd"},
-				Level:       "intermediate",
-			},
 		},
 		"containers": {
 			{
@@ -220,13 +185,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				Description: "Configuring containers, jobs, and pods for TestWorkflow execution",
 				KeyConcepts: []string{"containers", "jobs", "pods", "images", "resources"},
 				Level:       "beginner",
-			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for container configuration and resource management",
-				KeyConcepts: []string{"containers", "images", "resources", "cpu", "memory", "crd"},
-				Level:       "intermediate",
 			},
 		},
 		"content": {
@@ -237,13 +195,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				KeyConcepts: []string{"content", "git", "files", "repositories", "sources"},
 				Level:       "beginner",
 			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for content management and Git integration",
-				KeyConcepts: []string{"content", "git", "files", "repositories", "branches", "crd"},
-				Level:       "intermediate",
-			},
 		},
 		"expressions": {
 			{
@@ -253,13 +204,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				KeyConcepts: []string{"expressions", "variables", "built-in", "dynamic", "templating"},
 				Level:       "intermediate",
 			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for expressions and variable usage",
-				KeyConcepts: []string{"expressions", "variables", "syntax", "reference"},
-				Level:       "advanced",
-			},
 		},
 		"policies": {
 			{
@@ -267,13 +211,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/enforcing-workflow-policies",
 				Description: "Standardizing TestWorkflows with policy enforcement",
 				KeyConcepts: []string{"policies", "enforcement", "standardization", "governance"},
-				Level:       "advanced",
-			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for policy configuration and enforcement",
-				KeyConcepts: []string{"policies", "configuration", "enforcement", "validation"},
 				Level:       "advanced",
 			},
 		},
@@ -285,13 +222,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				KeyConcepts: []string{"orchestration", "test suites", "workflow coordination", "complex scenarios"},
 				Level:       "intermediate",
 			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for workflow orchestration and test suite management",
-				KeyConcepts: []string{"orchestration", "test suites", "coordination", "crd"},
-				Level:       "advanced",
-			},
 		},
 		"migration": {
 			{
@@ -300,13 +230,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				Description: "Migrating from legacy tests and test suites to TestWorkflows",
 				KeyConcepts: []string{"migration", "legacy tests", "test suites", "upgrade path"},
 				Level:       "intermediate",
-			},
-			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for migration patterns and compatibility",
-				KeyConcepts: []string{"migration", "compatibility", "patterns", "crd"},
-				Level:       "advanced",
 			},
 		},
 	}
