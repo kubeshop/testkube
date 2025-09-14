@@ -51,7 +51,7 @@ to find items containing all terms`
 	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."
 
 	// Documentation tool descriptions
-	GetWorkflowDocumentationDescription = "Get references to official TestWorkflow documentation pages. Provides structured access to Testkube documentation with topic-based filtering and learning paths. Use this tool to understand TestWorkflow concepts, find specific documentation pages, and get guidance on workflow construction."
+	GetWorkflowDocumentationDescription = "Get comprehensive TestWorkflow documentation including patterns, step types, best practices, and examples. Provides structured access to Testkube documentation with topic-based filtering, workflow patterns with YAML examples, step type references with properties, best practices, quick start guides, and common mistakes to avoid. Use this tool to understand TestWorkflow concepts, find specific documentation pages, get concrete examples for workflow construction, and learn best practices for effective workflow development."
 
 	// Other tool descriptions
 	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions."
