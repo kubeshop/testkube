@@ -15,14 +15,12 @@ type DocumentationPage struct {
 	URL         string   `json:"url"`
 	Description string   `json:"description"`
 	KeyConcepts []string `json:"key_concepts"`
-	Level       string   `json:"level"`
 }
 
 // DocumentationResponse represents the response structure
 type DocumentationResponse struct {
-	Topic        string              `json:"topic"`
-	Pages        []DocumentationPage `json:"pages"`
-	LearningPath []string            `json:"learning_path"`
+	Topic string              `json:"topic"`
+	Pages []DocumentationPage `json:"pages"`
 }
 
 // GetWorkflowDocumentation returns references to official TestWorkflow documentation
@@ -30,25 +28,18 @@ func GetWorkflowDocumentation() (tool mcp.Tool, handler server.ToolHandlerFunc) 
 	tool = mcp.NewTool("get_workflow_documentation",
 		mcp.WithDescription(GetWorkflowDocumentationDescription),
 		mcp.WithString("topic", mcp.Description("Specific topic or concept to find documentation for (e.g., 'parallel', 'services', 'artifacts', 'templates')")),
-		mcp.WithString("level", mcp.Description("Documentation level: 'beginner', 'intermediate', 'advanced', or 'all' (default: 'all')")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		topic := strings.ToLower(request.GetString("topic", ""))
-		level := strings.ToLower(request.GetString("level", "all"))
 
 		response := DocumentationResponse{
 			Topic: topic,
 		}
 
-		// Get documentation pages based on topic and level
-		pages := getDocumentationPages(topic, level)
+		// Get documentation pages based on topic
+		pages := getDocumentationPages(topic)
 		response.Pages = pages
-
-		// Add learning path if no specific topic requested
-		if topic == "" {
-			response.LearningPath = getLearningPath(level)
-		}
 
 		// Format response as JSON
 		result := formatDocumentationResponse(response)
@@ -59,8 +50,8 @@ func GetWorkflowDocumentation() (tool mcp.Tool, handler server.ToolHandlerFunc) 
 	return tool, handler
 }
 
-// getDocumentationPages returns relevant documentation pages based on topic and level
-func getDocumentationPages(topic, level string) []DocumentationPage {
+// getDocumentationPages returns relevant documentation pages based on topic
+func getDocumentationPages(topic string) []DocumentationPage {
 	allPages := map[string][]DocumentationPage{
 		"": { // General/overview
 			{
@@ -68,21 +59,18 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows",
 				Description: "Introduction to TestWorkflows and their capabilities",
 				KeyConcepts: []string{"workflows", "steps", "execution", "orchestration"},
-				Level:       "beginner",
 			},
 			{
 				Title:       "TestWorkflows Basic Examples",
 				URL:         "https://docs.testkube.io/articles/test-workflows-examples-basics",
 				Description: "Basic examples to help you get started with TestWorkflows",
 				KeyConcepts: []string{"first workflow", "basic structure", "yaml syntax", "examples"},
-				Level:       "beginner",
 			},
 			{
 				Title:       "TestWorkflows CLI Commands",
 				URL:         "https://docs.testkube.io/articles/test-workflows-creating",
 				Description: "Creating and managing TestWorkflows using CLI commands",
 				KeyConcepts: []string{"cli", "creating", "commands", "management"},
-				Level:       "beginner",
 			},
 		},
 		"structure": {
@@ -91,14 +79,12 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows",
 				Description: "Complete overview of TestWorkflow structure, components, and basic concepts",
 				KeyConcepts: []string{"apiVersion", "kind", "metadata", "spec", "structure", "components"},
-				Level:       "beginner",
 			},
 			{
 				Title:       "TestWorkflow CRD Reference",
 				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
 				Description: "Complete reference for TestWorkflow Custom Resource Definition with all properties",
 				KeyConcepts: []string{"crd", "reference", "properties", "schema", "validation"},
-				Level:       "intermediate",
 			},
 		},
 		"steps": {
@@ -107,14 +93,12 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows",
 				Description: "Overview of TestWorkflow steps, execution patterns, and step types",
 				KeyConcepts: []string{"steps", "execute", "run", "shell", "execution patterns"},
-				Level:       "beginner",
 			},
 			{
 				Title:       "TestWorkflows Examples - Basics",
 				URL:         "https://docs.testkube.io/articles/test-workflows-examples-basics",
 				Description: "Practical examples showing different step types and execution patterns",
 				KeyConcepts: []string{"step examples", "execution patterns", "practical examples"},
-				Level:       "beginner",
 			},
 		},
 		"parallel": {
@@ -123,14 +107,12 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-parallel",
 				Description: "Running multiple steps or workflows in parallel for improved performance",
 				KeyConcepts: []string{"parallelism", "parallel execution", "concurrent", "performance"},
-				Level:       "beginner",
 			},
 			{
 				Title:       "TestWorkflows Sharding & Matrix Params",
 				URL:         "https://docs.testkube.io/articles/test-workflows-matrix-and-sharding",
 				Description: "Advanced parallel execution with matrix parameters and sharding patterns",
 				KeyConcepts: []string{"matrix", "sharding", "parameters", "advanced parallel"},
-				Level:       "intermediate",
 			},
 		},
 		"services": {
@@ -139,7 +121,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-services",
 				Description: "Managing service dependencies and integration patterns in TestWorkflows",
 				KeyConcepts: []string{"services", "dependencies", "integration", "networking", "probes"},
-				Level:       "beginner",
 			},
 		},
 		"artifacts": {
@@ -148,7 +129,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-artifacts",
 				Description: "Collecting and managing test artifacts and reports in TestWorkflows",
 				KeyConcepts: []string{"artifacts", "reports", "file collection", "output", "storage"},
-				Level:       "beginner",
 			},
 		},
 		"configuration": {
@@ -157,7 +137,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-examples-configuration",
 				Description: "Parameterizing workflows with configuration variables and environment settings",
 				KeyConcepts: []string{"config", "parameters", "variables", "environment", "parameterization"},
-				Level:       "beginner",
 			},
 		},
 		"templates": {
@@ -166,7 +145,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflow-templates",
 				Description: "Creating and using reusable workflow templates for common patterns",
 				KeyConcepts: []string{"templates", "reusability", "parameters", "inheritance", "patterns"},
-				Level:       "intermediate",
 			},
 		},
 		"events": {
@@ -175,7 +153,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows",
 				Description: "Overview of events, triggers, and scheduling in TestWorkflows",
 				KeyConcepts: []string{"events", "triggers", "scheduling", "cron"},
-				Level:       "beginner",
 			},
 		},
 		"containers": {
@@ -184,7 +161,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-job-and-pod",
 				Description: "Configuring containers, jobs, and pods for TestWorkflow execution",
 				KeyConcepts: []string{"containers", "jobs", "pods", "images", "resources"},
-				Level:       "beginner",
 			},
 		},
 		"content": {
@@ -193,7 +169,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-content",
 				Description: "Managing content sources, Git repositories, and files in TestWorkflows",
 				KeyConcepts: []string{"content", "git", "files", "repositories", "sources"},
-				Level:       "beginner",
 			},
 		},
 		"expressions": {
@@ -202,7 +177,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-expressions",
 				Description: "Using expressions and built-in variables in TestWorkflows",
 				KeyConcepts: []string{"expressions", "variables", "built-in", "dynamic", "templating"},
-				Level:       "intermediate",
 			},
 		},
 		"policies": {
@@ -211,7 +185,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/enforcing-workflow-policies",
 				Description: "Standardizing TestWorkflows with policy enforcement",
 				KeyConcepts: []string{"policies", "enforcement", "standardization", "governance"},
-				Level:       "advanced",
 			},
 		},
 		"orchestration": {
@@ -220,7 +193,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflows-test-suites",
 				Description: "Orchestrating multiple workflows and test suites for complex testing scenarios",
 				KeyConcepts: []string{"orchestration", "test suites", "workflow coordination", "complex scenarios"},
-				Level:       "intermediate",
 			},
 		},
 		"migration": {
@@ -229,7 +201,6 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/test-workflow-migration",
 				Description: "Migrating from legacy tests and test suites to TestWorkflows",
 				KeyConcepts: []string{"migration", "legacy tests", "test suites", "upgrade path"},
-				Level:       "intermediate",
 			},
 		},
 	}
@@ -241,60 +212,9 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		pages = allPages[""]
 	}
 
-	// Filter by level if specified
-	if level != "all" {
-		var filteredPages []DocumentationPage
-		for _, page := range pages {
-			if page.Level == level {
-				filteredPages = append(filteredPages, page)
-			}
-		}
-		pages = filteredPages
-	}
-
 	return pages
 }
 
-// getLearningPath returns a suggested learning path based on level
-func getLearningPath(level string) []string {
-	paths := map[string][]string{
-		"beginner": {
-			"1. Start with TestWorkflows Overview",
-			"2. Learn Workflow Structure basics",
-			"3. Understand different Step types",
-			"4. Explore Content Management",
-			"5. Practice with simple workflows",
-		},
-		"intermediate": {
-			"1. Master Parallel Execution",
-			"2. Learn about Services and Dependencies",
-			"3. Understand Artifacts and Reports",
-			"4. Explore Configuration options",
-			"5. Set up Events and Triggers",
-		},
-		"advanced": {
-			"1. Master Matrix Execution patterns",
-			"2. Create reusable Templates",
-			"3. Advanced Resource Management",
-			"4. Complex Service Orchestration",
-			"5. Custom Container configurations",
-		},
-		"all": {
-			"1. TestWorkflows Overview → Getting Started",
-			"2. Workflow Structure → Steps → Content Management",
-			"3. Parallel Execution → Services → Artifacts",
-			"4. Configuration → Events → Resource Management",
-			"5. Matrix Execution → Templates → Advanced Patterns",
-		},
-	}
-
-	path, exists := paths[level]
-	if !exists {
-		path = paths["all"]
-	}
-
-	return path
-}
 
 // formatDocumentationResponse formats the response as a readable text
 func formatDocumentationResponse(response DocumentationResponse) string {
@@ -306,21 +226,12 @@ func formatDocumentationResponse(response DocumentationResponse) string {
 		result.WriteString(fmt.Sprintf("## Topic: %s\n\n", strings.Title(response.Topic)))
 	}
 
-	if len(response.LearningPath) > 0 {
-		result.WriteString("## Learning Path\n\n")
-		for _, step := range response.LearningPath {
-			result.WriteString(fmt.Sprintf("%s\n", step))
-		}
-		result.WriteString("\n")
-	}
-
 	if len(response.Pages) > 0 {
 		result.WriteString("## Documentation Pages\n\n")
 		for i, page := range response.Pages {
 			result.WriteString(fmt.Sprintf("### %d. %s\n", i+1, page.Title))
 			result.WriteString(fmt.Sprintf("**URL:** %s\n\n", page.URL))
 			result.WriteString(fmt.Sprintf("**Description:** %s\n\n", page.Description))
-			result.WriteString(fmt.Sprintf("**Level:** %s\n\n", strings.Title(page.Level)))
 			if len(page.KeyConcepts) > 0 {
 				result.WriteString("**Key Concepts:** ")
 				result.WriteString(strings.Join(page.KeyConcepts, ", "))
