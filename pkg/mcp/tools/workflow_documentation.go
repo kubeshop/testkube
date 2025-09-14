@@ -71,18 +71,18 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				Level:       "beginner",
 			},
 			{
-				Title:       "TestWorkflows Examples - Basics",
+				Title:       "TestWorkflows Basic Examples",
 				URL:         "https://docs.testkube.io/articles/test-workflows-examples-basics",
 				Description: "Basic examples to help you get started with TestWorkflows",
 				KeyConcepts: []string{"first workflow", "basic structure", "yaml syntax", "examples"},
 				Level:       "beginner",
 			},
 			{
-				Title:       "TestWorkflows High-Level Architecture",
-				URL:         "https://docs.testkube.io/articles/test-workflows-high-level-architecture",
-				Description: "Understanding the architecture and components of TestWorkflows",
-				KeyConcepts: []string{"architecture", "controller", "job", "pod", "components"},
-				Level:       "intermediate",
+				Title:       "TestWorkflows CLI Commands",
+				URL:         "https://docs.testkube.io/articles/test-workflows-creating",
+				Description: "Creating and managing TestWorkflows using CLI commands",
+				KeyConcepts: []string{"cli", "creating", "commands", "management"},
+				Level:       "beginner",
 			},
 		},
 		"structure": {
@@ -119,26 +119,26 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		},
 		"parallel": {
 			{
-				Title:       "TestWorkflows Overview",
-				URL:         "https://docs.testkube.io/articles/test-workflows",
-				Description: "Overview of parallel execution concepts and patterns in TestWorkflows",
-				KeyConcepts: []string{"parallelism", "parallel execution", "concurrent", "patterns"},
+				Title:       "TestWorkflows Parallelization",
+				URL:         "https://docs.testkube.io/articles/test-workflows-parallel",
+				Description: "Running multiple steps or workflows in parallel for improved performance",
+				KeyConcepts: []string{"parallelism", "parallel execution", "concurrent", "performance"},
 				Level:       "beginner",
 			},
 			{
-				Title:       "TestWorkflow CRD Reference",
-				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
-				Description: "Complete reference for parallel execution, matrix patterns, and advanced execution",
-				KeyConcepts: []string{"parallel", "matrix", "execution", "advanced patterns", "crd"},
+				Title:       "TestWorkflows Sharding & Matrix Params",
+				URL:         "https://docs.testkube.io/articles/test-workflows-matrix-and-sharding",
+				Description: "Advanced parallel execution with matrix parameters and sharding patterns",
+				KeyConcepts: []string{"matrix", "sharding", "parameters", "advanced parallel"},
 				Level:       "intermediate",
 			},
 		},
 		"services": {
 			{
-				Title:       "TestWorkflows Overview",
-				URL:         "https://docs.testkube.io/articles/test-workflows",
-				Description: "Overview of service dependencies and integration patterns in TestWorkflows",
-				KeyConcepts: []string{"services", "dependencies", "integration", "networking"},
+				Title:       "TestWorkflows Services",
+				URL:         "https://docs.testkube.io/articles/test-workflows-services",
+				Description: "Managing service dependencies and integration patterns in TestWorkflows",
+				KeyConcepts: []string{"services", "dependencies", "integration", "networking", "probes"},
 				Level:       "beginner",
 			},
 			{
@@ -151,10 +151,10 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		},
 		"artifacts": {
 			{
-				Title:       "TestWorkflows Overview",
-				URL:         "https://docs.testkube.io/articles/test-workflows",
-				Description: "Overview of artifact collection and reporting in TestWorkflows",
-				KeyConcepts: []string{"artifacts", "reports", "file collection", "output"},
+				Title:       "TestWorkflows Artifacts",
+				URL:         "https://docs.testkube.io/articles/test-workflows-artifacts",
+				Description: "Collecting and managing test artifacts and reports in TestWorkflows",
+				KeyConcepts: []string{"artifacts", "reports", "file collection", "output", "storage"},
 				Level:       "beginner",
 			},
 			{
@@ -167,10 +167,10 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		},
 		"configuration": {
 			{
-				Title:       "TestWorkflows Overview",
-				URL:         "https://docs.testkube.io/articles/test-workflows",
-				Description: "Overview of configuration and environment variables in TestWorkflows",
-				KeyConcepts: []string{"config", "parameters", "variables", "environment"},
+				Title:       "TestWorkflows Parameterization",
+				URL:         "https://docs.testkube.io/articles/test-workflows-examples-configuration",
+				Description: "Parameterizing workflows with configuration variables and environment settings",
+				KeyConcepts: []string{"config", "parameters", "variables", "environment", "parameterization"},
 				Level:       "beginner",
 			},
 			{
@@ -183,18 +183,18 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		},
 		"templates": {
 			{
+				Title:       "TestWorkflow Templates",
+				URL:         "https://docs.testkube.io/articles/test-workflow-templates",
+				Description: "Creating and using reusable workflow templates for common patterns",
+				KeyConcepts: []string{"templates", "reusability", "parameters", "inheritance", "patterns"},
+				Level:       "intermediate",
+			},
+			{
 				Title:       "TestWorkflow CRD Reference",
 				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
 				Description: "Complete reference for workflow templates and reusability patterns",
 				KeyConcepts: []string{"templates", "reusability", "parameters", "inheritance", "crd"},
 				Level:       "advanced",
-			},
-			{
-				Title:       "TestWorkflows Examples - Basics",
-				URL:         "https://docs.testkube.io/articles/test-workflows-examples-basics",
-				Description: "Examples showing template usage and reusability patterns",
-				KeyConcepts: []string{"template examples", "reusability", "customization"},
-				Level:       "intermediate",
 			},
 		},
 		"events": {
@@ -215,10 +215,10 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		},
 		"containers": {
 			{
-				Title:       "TestWorkflows Overview",
-				URL:         "https://docs.testkube.io/articles/test-workflows",
-				Description: "Overview of container configuration and resource management in TestWorkflows",
-				KeyConcepts: []string{"containers", "images", "resources", "configuration"},
+				Title:       "TestWorkflows Job & Pod Configuration",
+				URL:         "https://docs.testkube.io/articles/test-workflows-job-and-pod",
+				Description: "Configuring containers, jobs, and pods for TestWorkflow execution",
+				KeyConcepts: []string{"containers", "jobs", "pods", "images", "resources"},
 				Level:       "beginner",
 			},
 			{
@@ -231,10 +231,10 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 		},
 		"content": {
 			{
-				Title:       "TestWorkflows Overview",
-				URL:         "https://docs.testkube.io/articles/test-workflows",
-				Description: "Overview of content management and Git integration in TestWorkflows",
-				KeyConcepts: []string{"content", "git", "files", "repositories"},
+				Title:       "TestWorkflows Content",
+				URL:         "https://docs.testkube.io/articles/test-workflows-content",
+				Description: "Managing content sources, Git repositories, and files in TestWorkflows",
+				KeyConcepts: []string{"content", "git", "files", "repositories", "sources"},
 				Level:       "beginner",
 			},
 			{
@@ -274,6 +274,38 @@ func getDocumentationPages(topic, level string) []DocumentationPage {
 				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
 				Description: "Complete reference for policy configuration and enforcement",
 				KeyConcepts: []string{"policies", "configuration", "enforcement", "validation"},
+				Level:       "advanced",
+			},
+		},
+		"orchestration": {
+			{
+				Title:       "TestWorkflows Workflow Orchestration",
+				URL:         "https://docs.testkube.io/articles/test-workflows-test-suites",
+				Description: "Orchestrating multiple workflows and test suites for complex testing scenarios",
+				KeyConcepts: []string{"orchestration", "test suites", "workflow coordination", "complex scenarios"},
+				Level:       "intermediate",
+			},
+			{
+				Title:       "TestWorkflow CRD Reference",
+				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
+				Description: "Complete reference for workflow orchestration and test suite management",
+				KeyConcepts: []string{"orchestration", "test suites", "coordination", "crd"},
+				Level:       "advanced",
+			},
+		},
+		"migration": {
+			{
+				Title:       "Tests and Test Suites Migration",
+				URL:         "https://docs.testkube.io/articles/test-workflow-migration",
+				Description: "Migrating from legacy tests and test suites to TestWorkflows",
+				KeyConcepts: []string{"migration", "legacy tests", "test suites", "upgrade path"},
+				Level:       "intermediate",
+			},
+			{
+				Title:       "TestWorkflow CRD Reference",
+				URL:         "https://docs.testkube.io/articles/crds/testworkflows.testkube.io-v1",
+				Description: "Complete reference for migration patterns and compatibility",
+				KeyConcepts: []string{"migration", "compatibility", "patterns", "crd"},
 				Level:       "advanced",
 			},
 		},
