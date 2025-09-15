@@ -234,3 +234,30 @@ func UpdateWorkflow(client WorkflowUpdater) (tool mcp.Tool, handler server.ToolH
 
 	return tool, handler
 }
+
+type WorkflowMetricsGetter interface {
+	GetWorkflowMetrics(ctx context.Context, workflowName string) (string, error)
+}
+
+func GetWorkflowMetrics(client WorkflowMetricsGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("get_workflow_metrics",
+		mcp.WithDescription(GetWorkflowMetricsDescription),
+		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		workflowName := request.GetString("workflowName", "")
+		if workflowName == "" {
+			return mcp.NewToolResultError("workflowName parameter is required"), nil
+		}
+
+		result, err := client.GetWorkflowMetrics(ctx, workflowName)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow metrics: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(result), nil
+	}
+
+	return tool, handler
+}

@@ -9,10 +9,12 @@ import (
 )
 
 type ExecutionSequence struct {
-	Name      string             `db:"name" json:"name"`
-	Number    int32              `db:"number" json:"number"`
-	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Name           string             `db:"name" json:"name"`
+	Number         int32              `db:"number" json:"number"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	OrganizationID string             `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string             `db:"environment_id" json:"environment_id"`
 }
 
 type Lease struct {
@@ -62,6 +64,8 @@ type TestWorkflowExecution struct {
 	ConfigParams              []byte             `db:"config_params" json:"config_params"`
 	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	OrganizationID            string             `db:"organization_id" json:"organization_id"`
+	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
 }
 
 type TestWorkflowOutput struct {

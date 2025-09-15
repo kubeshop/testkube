@@ -35,6 +35,7 @@ to find items containing all terms`
 	CreateWorkflowDescription        = "Create a new TestWorkflow directly in Testkube from a YAML definition. Use this tool to deploy workflows to the Testkube platform. The workflow will be immediately available for execution after creation."
 	GetWorkflowDefinitionDescription = "Get the YAML definition of a specific Testkube workflow. Returns the complete workflow specification including all steps, configuration schema, and metadata."
 	GetWorkflowDescription           = "Retrieve detailed workflow information including execution history, health metrics, and current status. Returns JSON format with comprehensive workflow metadata."
+	GetWorkflowMetricsDescription    = "Get metrics of test workflow executions including execution statistics, health scores, pass rates, and performance data. Returns comprehensive metrics data for analyzing workflow performance and reliability."
 	RunWorkflowDescription           = "Run a TestWorkflow with optional configuration parameters. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available."
 	UpdateWorkflowDescription        = `Update an existing TestWorkflow in Testkube with a new YAML definition. This tool allows you to modify workflow steps, configuration, and metadata. The workflow will be updated immediately and available for execution with the new configuration.`
 
