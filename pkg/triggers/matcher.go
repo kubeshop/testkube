@@ -3,9 +3,11 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +30,7 @@ var (
 	ErrProbeTimeout     = errors.New("timed-out waiting for trigger probes")
 )
 
+// TODO(emil): rewrite this to be more readable it is overly complicated
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
 		t := status.testTrigger
@@ -44,9 +47,30 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
-		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
+
+		// To keep things backward compatible, but also enable the use of
+		// selector and resourceSelector individually so that we can transition to
+		// eventually deprecating the resourceSelector the logic below toggles
+		// the matching based on which selectors are specified in the resource.
+		selectorSpecified := t.Spec.Selector != nil &&
+			(len(t.Spec.Selector.MatchLabels) > 0 || len(t.Spec.Selector.MatchExpressions) > 0)
+		resourceSelectorSpecified := (t.Spec.ResourceSelector.LabelSelector != nil &&
+			(len(t.Spec.ResourceSelector.LabelSelector.MatchLabels) > 0 || len(t.Spec.ResourceSelector.LabelSelector.MatchExpressions) > 0)) ||
+			(strings.TrimSpace(t.Spec.ResourceSelector.Name) != "" &&
+				strings.TrimSpace(t.Spec.ResourceSelector.NameRegex) != "" &&
+				strings.TrimSpace(t.Spec.ResourceSelector.Namespace) != "" &&
+				strings.TrimSpace(t.Spec.ResourceSelector.NamespaceRegex) != "")
+		selectorMatched := matchSelector(t.Spec.Selector, e, s.logger)
+		resourceSelectorMatched := matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger)
+
+		if (selectorSpecified || !resourceSelectorSpecified) && !selectorMatched {
 			continue
 		}
+
+		if (resourceSelectorSpecified || !selectorSpecified) && !resourceSelectorMatched {
+			continue
+		}
+
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
 			matched, err := s.matchConditions(ctx, e, t, s.logger)
@@ -71,6 +95,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 		}
 
+		// TODO(emil): why is this needed it this is using the same trigger as above to seemingly get the same status
 		status := s.getStatusForTrigger(t)
 		if t.Spec.ConcurrencyPolicy == testtriggersv1.TestTriggerConcurrencyPolicyForbid {
 			if status.hasActiveTests() {
@@ -120,21 +145,44 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	return false
 }
 
-func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
-	if selector.LabelSelector != nil && len(event.labels) > 0 {
+func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.SugaredLogger) bool {
+	if selector == nil {
+		return true
+	}
+	k8sSelector, err := v1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		logger.Errorf("error creating k8s selector from label selector: %v", err)
+		return false
+	}
+	mergedLabels := make(map[string]string)
+	maps.Copy(mergedLabels, event.resourceLabels)
+	maps.Copy(mergedLabels, event.EventLabels)
+	labelsSet := labels.Set(mergedLabels)
+	_, err = labelsSet.AsValidatedSelector()
+	if err != nil {
+		logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.Namespace, event.name, err)
+		return false
+	}
+	return k8sSelector.Matches(labelsSet)
+}
+
+func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
+	if selector.LabelSelector != nil && len(event.resourceLabels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
 		if err != nil {
 			logger.Errorf("error creating k8s selector from label selector: %v", err)
 			return false
 		}
 
-		resourceLabelSet := labels.Set(event.labels)
+		resourceLabelSet := labels.Set(event.resourceLabels)
 		_, err = resourceLabelSet.AsValidatedSelector()
 		if err != nil {
 			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.Namespace, event.name, err)
 			return false
 		}
 
+		// TODO(emil): label selector is mutually exlusive with the
+		// name/namespace selectors as implemented
 		return k8sSelector.Matches(resourceLabelSet)
 	}
 

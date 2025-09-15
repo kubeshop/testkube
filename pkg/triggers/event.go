@@ -3,6 +3,7 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -27,17 +28,18 @@ type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)
 type addressGetterFn func(ctx context.Context, delay time.Duration) (string, error)
 
 type watcherEvent struct {
-	resource         testtrigger.ResourceType
 	name             string
 	Namespace        string `json:"namespace"`
-	labels           map[string]string
+	resource         testtrigger.ResourceType
+	resourceLabels   map[string]string
 	objectMeta       metav1.Object
 	Object           any `json:"object"`
 	eventType        testtrigger.EventType
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
 	addressGetter    addressGetterFn
-	Agent            watcherAgent `json:"agent"`
+	EventLabels      map[string]string `json:"eventLabels"`
+	Agent            watcherAgent      `json:"agent"`
 }
 
 // watcherAgent represents agent context exposed to templates and JSONPath
@@ -74,24 +76,37 @@ func withNotEmptyName(name string) watcherOpts {
 	}
 }
 
-func newWatcherEvent(
+const (
+	eventLabelKeyAgentName         string = "testkube.io/agent-name"
+	eventLabelKeyAgentNamespace    string = "testkube.io/agent-namespace"
+	eventLabelKeyResourceName      string = "testkube.io/resource-name"
+	eventLabelKeyResourceNamespace string = "testkube.io/resource-namespace"
+)
+
+func (s Service) newWatcherEvent(
 	eventType testtrigger.EventType,
 	objectMeta metav1.Object,
 	object any,
 	resource testtrigger.ResourceType,
-	agent watcherAgent,
 	opts ...watcherOpts,
 ) *watcherEvent {
 	w := &watcherEvent{
-		resource:   resource,
-		name:       objectMeta.GetName(),
-		Namespace:  objectMeta.GetNamespace(),
-		labels:     objectMeta.GetLabels(),
-		objectMeta: objectMeta,
-		Object:     object,
-		eventType:  eventType,
-		Agent:      agent,
+		resource:       resource,
+		name:           objectMeta.GetName(),
+		Namespace:      objectMeta.GetNamespace(),
+		resourceLabels: objectMeta.GetLabels(),
+		objectMeta:     objectMeta,
+		Object:         object,
+		eventType:      eventType,
+		EventLabels:    map[string]string{},
+		Agent:          s.Agent,
 	}
+
+	maps.Copy(w.EventLabels, s.eventLabels)
+	w.EventLabels[eventLabelKeyAgentName] = s.agentName
+	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
+	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
+	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	for _, opt := range opts {
 		opt(w)

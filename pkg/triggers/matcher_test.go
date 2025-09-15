@@ -21,14 +21,14 @@ func TestService_matchConditionsRetry(t *testing.T) {
 
 	retry := 0
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			retry++
 			status := testtriggersv1.FALSE_TestTriggerConditionStatuses
@@ -106,14 +106,14 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			status := testtriggersv1.FALSE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
@@ -185,14 +185,14 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 	}
 
 	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -262,14 +262,14 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 	}
 
 	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -326,21 +326,20 @@ func TestService_matchProbesTimeout(t *testing.T) {
 
 	err = s.match(context.Background(), e)
 	assert.ErrorIs(t, err, ErrProbeTimeout)
-
 }
 
 func TestService_match(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
@@ -441,14 +440,14 @@ func TestService_matchRegex(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 	}
 
 	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -495,14 +494,14 @@ func TestService_noMatch(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:   "deployment",
-		name:       "test-deployment",
-		Namespace:  "testkube",
-		labels:     nil,
-		objectMeta: nil,
-		Object:     nil,
-		eventType:  "modified",
-		causes:     nil,
+		resource:       "deployment",
+		name:           "test-deployment",
+		Namespace:      "testkube",
+		resourceLabels: nil,
+		objectMeta:     nil,
+		Object:         nil,
+		eventType:      "modified",
+		causes:         nil,
 	}
 
 	testTrigger1 := &testtriggersv1.TestTrigger{
@@ -530,6 +529,418 @@ func TestService_noMatch(t *testing.T) {
 		triggerStatus:    map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:           log.DefaultLogger,
 		metrics:          metrics.NewMetrics(),
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
+func newDefaultTestTriggersService(t *testing.T, trigger *testtriggersv1.TestTrigger) *Service {
+	key := newStatusKey(trigger.Namespace, trigger.Name)
+	status := &triggerStatus{testTrigger: trigger}
+	return &Service{
+		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
+		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
+		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
+		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+			t.Log("default test trigger executor")
+			return nil
+		},
+		triggerStatus: map[statusKey]*triggerStatus{key: status},
+		logger:        log.DefaultLogger,
+		httpClient:    http.DefaultClient,
+		metrics:       metrics.NewMetrics(),
+	}
+}
+
+func TestService_matchResourceSelector_matchLabels(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resourceLabels: map[string]string{
+			"app": "test",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceSelector: testtriggersv1.TestTriggerSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "test",
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	triggerCount := 0
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerCount++
+		assert.Equal(t, "testkube", trigger.Namespace)
+		assert.Equal(t, "test-trigger", trigger.Name)
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, triggerCount)
+}
+
+func TestService_matchResourceSelector_matchLabels_noMatch(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resourceLabels: map[string]string{
+			"app": "test",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceSelector: testtriggersv1.TestTriggerSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "not-test",
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		t.Error("should not trigger")
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
+func TestService_matchResourceSelector_matchExpression(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resourceLabels: map[string]string{
+			"app": "test",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceSelector: testtriggersv1.TestTriggerSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"test", "dev", "staging"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	triggerCount := 0
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerCount++
+		assert.Equal(t, "testkube", trigger.Namespace)
+		assert.Equal(t, "test-trigger", trigger.Name)
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, triggerCount)
+}
+
+func TestService_matchResourceSelector_matchExpression_noMatch(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resourceLabels: map[string]string{
+			"app": "test",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceSelector: testtriggersv1.TestTriggerSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpDoesNotExist,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		t.Error("should not trigger executor")
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
+func TestService_matchSelector_nilSelector(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resourceLabels: map[string]string{
+			"app": "test",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Selector: nil,
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		t.Error("should not match")
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
+func TestService_matchSelector_emptySelector(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resourceLabels: map[string]string{
+			"app": "test",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Selector: &metav1.LabelSelector{},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		t.Error("should not match")
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
+func TestService_matchSelector_matchLabels(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		// Event labels should take precedence over the resource labels
+		EventLabels: map[string]string{
+			"label-source": "listener",
+		},
+		resourceLabels: map[string]string{
+			"label-source": "resource",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"label-source": "listener",
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	triggerCount := 0
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerCount++
+		assert.Equal(t, "testkube", trigger.Namespace)
+		assert.Equal(t, "test-trigger", trigger.Name)
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, triggerCount)
+}
+
+func TestService_matchSelector_matchExpression(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		EventLabels: map[string]string{
+			"label-source": "listener",
+		},
+		resourceLabels: map[string]string{
+			"label-source": "resource",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Selector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "label-source",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"listener"},
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	triggerCount := 0
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerCount++
+		assert.Equal(t, "testkube", trigger.Namespace)
+		assert.Equal(t, "test-trigger", trigger.Name)
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, triggerCount)
+}
+
+func TestService_matchSelector_noMatch(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		EventLabels: map[string]string{
+			"label-source": "listener",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Selector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "label-source",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"not-listener"},
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		t.Error("should not trigger")
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
+func TestService_matchSelector_matchResourceSelector(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resource:  "deployment",
+		name:      "test-deployment",
+		Namespace: "testkube",
+		EventLabels: map[string]string{
+			"label-source": "listener",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Resource: "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{
+				NameRegex: "test-deploy.*",
+			},
+			Selector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "label-source",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"listener"},
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	triggerCount := 0
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerCount++
+		assert.Equal(t, "testkube", trigger.Namespace)
+		assert.Equal(t, "test-trigger", trigger.Name)
+		return nil
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, triggerCount)
+}
+
+func TestService_matchSelector_noMatchResourceSelector(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resource:  "deployment",
+		name:      "test-deployment",
+		Namespace: "testkube",
+		EventLabels: map[string]string{
+			"label-source": "listener",
+		},
+	}
+
+	testTrigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceSelector: testtriggersv1.TestTriggerSelector{
+				Name: "not-test-deployment",
+			},
+			Selector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "label-source",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"listener"},
+					},
+				},
+			},
+		},
+	}
+
+	s := newDefaultTestTriggersService(t, testTrigger)
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		t.Error("should not match")
+		return nil
 	}
 
 	err := s.match(context.Background(), e)
