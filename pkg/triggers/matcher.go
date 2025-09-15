@@ -63,8 +63,11 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		selectorMatched := matchSelector(t.Spec.Selector, e, s.logger)
 		resourceSelectorMatched := matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger)
 
-		if !(((!selectorSpecified && resourceSelectorSpecified) || selectorMatched) &&
-			((!resourceSelectorSpecified && selectorSpecified) || resourceSelectorMatched)) {
+		if (selectorSpecified || !resourceSelectorSpecified) && !selectorMatched {
+			continue
+		}
+
+		if (resourceSelectorSpecified || !selectorSpecified) && !resourceSelectorMatched {
 			continue
 		}
 
