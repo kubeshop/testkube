@@ -47,12 +47,27 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
-		if !matchSelector(t.Spec.Selector, e, s.logger) {
+
+		// To keep things backward compatible, but also enable the use of
+		// selector and resourceSelector individually so that we can transition to
+		// eventually deprecating the resourceSelector the logic below toggles
+		// the matching based on which selectors are specified in the resource.
+		selectorSpecified := t.Spec.Selector != nil &&
+			(len(t.Spec.Selector.MatchLabels) > 0 || len(t.Spec.Selector.MatchExpressions) > 0)
+		resourceSelectorSpecified := (t.Spec.ResourceSelector.LabelSelector != nil &&
+			(len(t.Spec.ResourceSelector.LabelSelector.MatchLabels) > 0 || len(t.Spec.ResourceSelector.LabelSelector.MatchExpressions) > 0)) ||
+			(strings.TrimSpace(t.Spec.ResourceSelector.Name) != "" &&
+				strings.TrimSpace(t.Spec.ResourceSelector.NameRegex) != "" &&
+				strings.TrimSpace(t.Spec.ResourceSelector.Namespace) != "" &&
+				strings.TrimSpace(t.Spec.ResourceSelector.NamespaceRegex) != "")
+		selectorMatched := matchSelector(t.Spec.Selector, e, s.logger)
+		resourceSelectorMatched := matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger)
+
+		if !(((!selectorSpecified && resourceSelectorSpecified) || selectorMatched) &&
+			((!resourceSelectorSpecified && selectorSpecified) || resourceSelectorMatched)) {
 			continue
 		}
-		if !matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
-			continue
-		}
+
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
 			matched, err := s.matchConditions(ctx, e, t, s.logger)
@@ -166,14 +181,6 @@ func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespa
 		// TODO(emil): label selector is mutually exlusive with the
 		// name/namespace selectors as implemented
 		return k8sSelector.Matches(resourceLabelSet)
-	}
-
-	if strings.TrimSpace(selector.Name) == "" &&
-		strings.TrimSpace(selector.NameRegex) == "" &&
-		strings.TrimSpace(selector.Namespace) == "" &&
-		strings.TrimSpace(selector.NamespaceRegex) == "" {
-		// If selectors unspecified, match all
-		return true
 	}
 
 	var isSameName, isSameNamespace, isSameTestTriggerNamespace bool
