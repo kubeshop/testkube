@@ -10,49 +10,74 @@ import (
 )
 
 const deleteAllExecutionSequences = `-- name: DeleteAllExecutionSequences :exec
-DELETE FROM execution_sequences
+DELETE FROM execution_sequences WHERE organization_id = $1 AND environment_id = $2
 `
 
-func (q *Queries) DeleteAllExecutionSequences(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, deleteAllExecutionSequences)
+type DeleteAllExecutionSequencesParams struct {
+	OrganizationID string `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) DeleteAllExecutionSequences(ctx context.Context, arg DeleteAllExecutionSequencesParams) error {
+	_, err := q.db.Exec(ctx, deleteAllExecutionSequences, arg.OrganizationID, arg.EnvironmentID)
 	return err
 }
 
 const deleteExecutionSequence = `-- name: DeleteExecutionSequence :exec
-DELETE FROM execution_sequences WHERE name = $1
+DELETE FROM execution_sequences WHERE name = $1 AND (organization_id = $2 AND environment_id = $3)
 `
 
-func (q *Queries) DeleteExecutionSequence(ctx context.Context, name string) error {
-	_, err := q.db.Exec(ctx, deleteExecutionSequence, name)
+type DeleteExecutionSequenceParams struct {
+	Name           string `db:"name" json:"name"`
+	OrganizationID string `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) DeleteExecutionSequence(ctx context.Context, arg DeleteExecutionSequenceParams) error {
+	_, err := q.db.Exec(ctx, deleteExecutionSequence, arg.Name, arg.OrganizationID, arg.EnvironmentID)
 	return err
 }
 
 const deleteExecutionSequences = `-- name: DeleteExecutionSequences :exec
-DELETE FROM execution_sequences WHERE name = ANY($1::text[])
+DELETE FROM execution_sequences WHERE name = ANY($1::text[]) AND (organization_id = $2 AND environment_id = $3)
 `
 
-func (q *Queries) DeleteExecutionSequences(ctx context.Context, names []string) error {
-	_, err := q.db.Exec(ctx, deleteExecutionSequences, names)
+type DeleteExecutionSequencesParams struct {
+	Names          []string `db:"names" json:"names"`
+	OrganizationID string   `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string   `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) DeleteExecutionSequences(ctx context.Context, arg DeleteExecutionSequencesParams) error {
+	_, err := q.db.Exec(ctx, deleteExecutionSequences, arg.Names, arg.OrganizationID, arg.EnvironmentID)
 	return err
 }
 
 const upsertAndIncrementExecutionSequence = `-- name: UpsertAndIncrementExecutionSequence :one
-INSERT INTO execution_sequences (name, number)
-VALUES ($1, 1)
-ON CONFLICT (name) DO UPDATE SET
+INSERT INTO execution_sequences (name, number, organization_id, environment_id)
+VALUES ($1, 1, $2, $3)
+ON CONFLICT (name, organization_id, environment_id) DO UPDATE SET
     number = execution_sequences.number + 1,
     updated_at = NOW()
-RETURNING name, number, created_at, updated_at
+RETURNING name, number, created_at, updated_at, organization_id, environment_id
 `
 
-func (q *Queries) UpsertAndIncrementExecutionSequence(ctx context.Context, name string) (ExecutionSequence, error) {
-	row := q.db.QueryRow(ctx, upsertAndIncrementExecutionSequence, name)
+type UpsertAndIncrementExecutionSequenceParams struct {
+	Name           string `db:"name" json:"name"`
+	OrganizationID string `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) UpsertAndIncrementExecutionSequence(ctx context.Context, arg UpsertAndIncrementExecutionSequenceParams) (ExecutionSequence, error) {
+	row := q.db.QueryRow(ctx, upsertAndIncrementExecutionSequence, arg.Name, arg.OrganizationID, arg.EnvironmentID)
 	var i ExecutionSequence
 	err := row.Scan(
 		&i.Name,
 		&i.Number,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrganizationID,
+		&i.EnvironmentID,
 	)
 	return i, err
 }

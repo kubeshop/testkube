@@ -32,21 +32,33 @@ type PostgresRepository struct {
 	db                 sqlc.DatabaseInterface
 	queries            sqlc.TestWorkflowExecutionQueriesInterface
 	sequenceRepository sequence.Repository
+	organizationID     string
+	environmentID      string
+	hook               testworkflow.HookFn
 }
 
 type PostgresRepositoryOpt func(*PostgresRepository)
 
 func NewPostgresRepository(db *pgxpool.Pool, opts ...PostgresRepositoryOpt) *PostgresRepository {
 	r := &PostgresRepository{
-		db:                 &sqlc.PgxPoolWrapper{Pool: db},
-		queries:            sqlc.NewSQLCTestWorkflowExecutionQueriesWrapper(sqlc.New(db)),
-		sequenceRepository: sequencepostgres.NewPostgresRepository(db),
+		db:      &sqlc.PgxPoolWrapper{Pool: db},
+		queries: sqlc.NewSQLCTestWorkflowExecutionQueriesWrapper(sqlc.New(db)),
 	}
 
 	for _, opt := range opts {
 		opt(r)
 	}
 
+	var sopts []sequencepostgres.PostgresRepositoryOpt
+	if r.organizationID != "" {
+		sopts = append(sopts, sequencepostgres.WithOrganizationID(r.organizationID))
+	}
+
+	if r.environmentID != "" {
+		sopts = append(sopts, sequencepostgres.WithEnvironmentID(r.environmentID))
+	}
+
+	r.sequenceRepository = sequencepostgres.NewPostgresRepository(db, sopts...)
 	return r
 }
 
@@ -61,6 +73,27 @@ func WithQueriesInterface(queries sqlc.TestWorkflowExecutionQueriesInterface) Po
 func WithDatabaseInterface(db sqlc.DatabaseInterface) PostgresRepositoryOpt {
 	return func(r *PostgresRepository) {
 		r.db = db
+	}
+}
+
+// WithOrganizationID allows injecting organization id to support control panel
+func WithOrganizationID(organizationID string) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.organizationID = organizationID
+	}
+}
+
+// WithEnvironmentID allows injecting environment id to support control panel
+func WithEnvironmentID(environmentID string) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.environmentID = environmentID
+	}
+}
+
+// WithHook allows injecting hook to support control panel
+func WithHook(hook testworkflow.HookFn) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.hook = hook
 	}
 }
 
@@ -137,7 +170,11 @@ func fromJSONB[T any](data []byte) (*T, error) {
 // Get method to use complete data
 func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
-	row, err := r.queries.GetTestWorkflowExecution(ctx, id)
+	row, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+		ID:             id,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return testkube.TestWorkflowExecution{}, err
 	}
@@ -152,7 +189,28 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 }
 
 func (r *PostgresRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
-	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+	row, err := r.queries.GetTestWorkflowExecutionWithRunner(ctx, sqlc.GetTestWorkflowExecutionWithRunnerParams{
+		ID:             id,
+		RunnerID:       toPgText(runner),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
+	if err != nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+
+	// Convert row to TestWorkflowExecution
+	execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
+	if err != nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+
+	// Populate config params if resolved workflow exists
+	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
+	}
+
+	return *execution.UnscapeDots(), nil
 }
 
 // Helper method to convert complete row to TestWorkflowExecution
@@ -434,8 +492,10 @@ func (r *PostgresRepository) workflowToSummary(row *testkube.TestWorkflow) *test
 func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
 	row, err := r.queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
-		Name:         name,
-		WorkflowName: workflowName,
+		Name:           name,
+		WorkflowName:   workflowName,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
 		return testkube.TestWorkflowExecution{}, err
@@ -454,9 +514,11 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
 	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
-		WorkflowName: workflowName,
-		SortByNumber: sortBy == testworkflow.LatestSortByNumber,
-		SortByStatus: sortBy == testworkflow.LatestSortByStatusAt,
+		WorkflowName:   workflowName,
+		SortByNumber:   sortBy == testworkflow.LatestSortByNumber,
+		SortByStatus:   sortBy == testworkflow.LatestSortByStatusAt,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
 		return nil, err
@@ -477,7 +539,11 @@ func (r *PostgresRepository) GetLatestByTestWorkflows(ctx context.Context, workf
 		return nil, nil
 	}
 
-	rows, err := r.queries.GetLatestTestWorkflowExecutionsByTestWorkflows(ctx, workflowNames)
+	rows, err := r.queries.GetLatestTestWorkflowExecutionsByTestWorkflows(ctx, sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsParams{
+		WorkflowNames:  workflowNames,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -497,7 +563,10 @@ func (r *PostgresRepository) GetLatestByTestWorkflows(ctx context.Context, workf
 
 // GetRunning returns running executions
 func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error) {
-	rows, err := r.queries.GetRunningTestWorkflowExecutions(ctx)
+	rows, err := r.queries.GetRunningTestWorkflowExecutions(ctx, sqlc.GetRunningTestWorkflowExecutionsParams{
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -743,6 +812,8 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		Tags:                      tags,
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
+		OrganizationID:            r.organizationID,
+		EnvironmentID:             r.environmentID,
 	})
 }
 
@@ -1068,12 +1139,200 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresRepository) UpdateResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
-	return false, errors.New("not yet implemented")
+func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	if result.IsFinished() {
+		return false, errors.New("invalid state")
+	}
+
+	// Start a transaction for atomic operations
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Get current status for comparison
+	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+		ID:             id,
+		OrganizationID: r.environmentID,
+		EnvironmentID:  r.environmentID,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// Prepare parameters
+	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+		ExecutionID:     id,
+		RunnerID:        toPgText(runnerId),
+		Status:          toPgText(string(*result.Status)),
+		QueuedAt:        toPgTimestamp(result.QueuedAt),
+		StartedAt:       toPgTimestamp(result.StartedAt),
+		FinishedAt:      toPgTimestamp(result.FinishedAt),
+		Duration:        toPgText(result.Duration),
+		TotalDuration:   toPgText(result.TotalDuration),
+		DurationMs:      pgtype.Int4{Int32: result.DurationMs, Valid: true},
+		PausedMs:        pgtype.Int4{Int32: result.PausedMs, Valid: true},
+		TotalDurationMs: pgtype.Int4{Int32: result.TotalDurationMs, Valid: true},
+	}
+
+	if result.PredictedStatus != nil {
+		params.PredictedStatus = toPgText(string(*result.PredictedStatus))
+	}
+
+	// Marshal JSONB fields
+	if result.Pauses != nil {
+		pausesData, err := json.Marshal(result.Pauses)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal pauses: %w", err)
+		}
+		params.Pauses = pausesData
+	}
+
+	if result.Initialization != nil {
+		initData, err := json.Marshal(result.Initialization)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal initialization: %w", err)
+		}
+		params.Initialization = initData
+	}
+
+	if result.Steps != nil {
+		stepsData, err := json.Marshal(result.Steps)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal steps: %w", err)
+		}
+		params.Steps = stepsData
+	}
+
+	// Update the result
+	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	if err != nil {
+		return false, err
+	}
+
+	// Update status_at if status changed
+	currentStatus := fromPgText(currentExecution.Status)
+	newStatus := string(*result.Status)
+	if currentStatus != newStatus {
+		err = qtx.UpdateExecutionStatusAtStrict(ctx, sqlc.UpdateExecutionStatusAtStrictParams{
+			ExecutionID:    updatedID,
+			NewStatus:      newStatus,
+			OldStatus:      currentStatus,
+			StatusAt:       toPgTimestamp(time.Now()),
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+		})
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func (r *PostgresRepository) FinishResultStrict(_ context.Context, _, _ string, _ *testkube.TestWorkflowResult) (updated bool, err error) {
-	return false, errors.New("not yet implemented")
+func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	if result.IsFinished() {
+		return false, errors.New("invalid state")
+	}
+
+	// Start a transaction for atomic operations
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Get current status for comparison
+	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+		ID:             id,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// Prepare parameters
+	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+		ExecutionID:     id,
+		RunnerID:        toPgText(runnerId),
+		Status:          toPgText(string(*result.Status)),
+		QueuedAt:        toPgTimestamp(result.QueuedAt),
+		StartedAt:       toPgTimestamp(result.StartedAt),
+		FinishedAt:      toPgTimestamp(result.FinishedAt),
+		Duration:        toPgText(result.Duration),
+		TotalDuration:   toPgText(result.TotalDuration),
+		DurationMs:      pgtype.Int4{Int32: result.DurationMs, Valid: true},
+		PausedMs:        pgtype.Int4{Int32: result.PausedMs, Valid: true},
+		TotalDurationMs: pgtype.Int4{Int32: result.TotalDurationMs, Valid: true},
+	}
+
+	if result.PredictedStatus != nil {
+		params.PredictedStatus = toPgText(string(*result.PredictedStatus))
+	}
+
+	// Marshal JSONB fields
+	if result.Pauses != nil {
+		pausesData, err := json.Marshal(result.Pauses)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal pauses: %w", err)
+		}
+		params.Pauses = pausesData
+	}
+
+	if result.Initialization != nil {
+		initData, err := json.Marshal(result.Initialization)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal initialization: %w", err)
+		}
+		params.Initialization = initData
+	}
+
+	if result.Steps != nil {
+		stepsData, err := json.Marshal(result.Steps)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal steps: %w", err)
+		}
+		params.Steps = stepsData
+	}
+
+	// Update the result
+	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	if err != nil {
+		return false, err
+	}
+
+	// Update status_at if status changed
+	currentStatus := fromPgText(currentExecution.Status)
+	newStatus := string(*result.Status)
+	if currentStatus != newStatus {
+		err = qtx.UpdateExecutionStatusAtStrict(ctx, sqlc.UpdateExecutionStatusAtStrictParams{
+			ExecutionID:    updatedID,
+			NewStatus:      newStatus,
+			OldStatus:      currentStatus,
+			StatusAt:       toPgTimestamp(time.Now()),
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+		})
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // UpdateResult updates only the result
@@ -1201,7 +1460,11 @@ func (r *PostgresRepository) DeleteByTestWorkflow(ctx context.Context, workflowN
 		}
 	}
 
-	return r.queries.DeleteTestWorkflowExecutionsByTestWorkflow(ctx, workflowName)
+	return r.queries.DeleteTestWorkflowExecutionsByTestWorkflow(ctx, sqlc.DeleteTestWorkflowExecutionsByTestWorkflowParams{
+		WorkflowName:   workflowName,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 }
 
 // DeleteAll deletes all executions
@@ -1213,7 +1476,10 @@ func (r *PostgresRepository) DeleteAll(ctx context.Context) error {
 		}
 	}
 
-	return r.queries.DeleteAllTestWorkflowExecutions(ctx)
+	return r.queries.DeleteAllTestWorkflowExecutions(ctx, sqlc.DeleteAllTestWorkflowExecutionsParams{
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 }
 
 // DeleteByTestWorkflows deletes executions by workflow names
@@ -1229,13 +1495,23 @@ func (r *PostgresRepository) DeleteByTestWorkflows(ctx context.Context, workflow
 		}
 	}
 
-	return r.queries.DeleteTestWorkflowExecutionsByTestWorkflows(ctx, workflowNames)
+	return r.queries.DeleteTestWorkflowExecutionsByTestWorkflows(ctx, sqlc.DeleteTestWorkflowExecutionsByTestWorkflowsParams{
+		WorkflowNames:  workflowNames,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 }
 
 // GetNextExecutionNumber gets next execution number
 func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
 	if r.sequenceRepository == nil {
 		return 0, errors.New("no sequence repository provided")
+	}
+
+	if r.hook != nil {
+		if err := r.hook(ctx, name, sequence.ExecutionTypeTestWorkflow); err != nil {
+			return 0, err
+		}
 	}
 
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
@@ -1260,9 +1536,11 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 	}
 
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
-		WorkflowName: name,
-		LastNDays:    la,
-		Lmt:          int32(li),
+		WorkflowName:   name,
+		LastNDays:      la,
+		Lmt:            int32(li),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
 		return metrics, err
@@ -1293,8 +1571,10 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 // GetPreviousFinishedState gets previous finished state
 func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
 	status, err := r.queries.GetPreviousFinishedState(ctx, sqlc.GetPreviousFinishedStateParams{
-		WorkflowName: testWorkflowName,
-		Date:         toPgTimestamp(date),
+		WorkflowName:   testWorkflowName,
+		Date:           toPgTimestamp(date),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1308,7 +1588,11 @@ func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testW
 
 // GetExecutionTags returns execution tags
 func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error) {
-	rows, err := r.queries.GetTestWorkflowExecutionTags(ctx, testWorkflowName)
+	rows, err := r.queries.GetTestWorkflowExecutionTags(ctx, sqlc.GetTestWorkflowExecutionTagsParams{
+		WorkflowName:   testWorkflowName,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1332,9 +1616,11 @@ func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkf
 	qtx := r.queries.WithTx(tx)
 
 	if err := qtx.InitTestWorkflowExecution(ctx, sqlc.InitTestWorkflowExecutionParams{
-		ID:        id,
-		Namespace: toPgText(data.Namespace),
-		RunnerID:  toPgText(data.RunnerID),
+		ID:             id,
+		Namespace:      toPgText(data.Namespace),
+		RunnerID:       toPgText(data.RunnerID),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	}); err != nil {
 		return fmt.Errorf("failed to init test workflow execution: %w", err)
 	}
@@ -1361,10 +1647,12 @@ func (r *PostgresRepository) Assign(ctx context.Context, id string, prevRunnerId
 	}
 
 	resultId, err := r.queries.AssignTestWorkflowExecution(ctx, sqlc.AssignTestWorkflowExecutionParams{
-		ID:           id,
-		PrevRunnerID: prevRunnerId,
-		NewRunnerID:  newRunnerId,
-		AssignedAt:   assignedAtPg,
+		ID:             id,
+		PrevRunnerID:   prevRunnerId,
+		NewRunnerID:    newRunnerId,
+		AssignedAt:     assignedAtPg,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1378,7 +1666,10 @@ func (r *PostgresRepository) Assign(ctx context.Context, id string, prevRunnerId
 
 // GetUnassigned returns unassigned executions
 func (r *PostgresRepository) GetUnassigned(ctx context.Context) ([]testkube.TestWorkflowExecution, error) {
-	rows, err := r.queries.GetUnassignedTestWorkflowExecutions(ctx)
+	rows, err := r.queries.GetUnassignedTestWorkflowExecutions(ctx, sqlc.GetUnassignedTestWorkflowExecutionsParams{
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1410,8 +1701,10 @@ func (r *PostgresRepository) AbortIfQueued(ctx context.Context, id string) (bool
 
 	// Abort the execution
 	resultId, err := qtx.AbortTestWorkflowExecutionIfQueued(ctx, sqlc.AbortTestWorkflowExecutionIfQueuedParams{
-		ID:        id,
-		AbortTime: toPgTimestamp(ts),
+		ID:             id,
+		AbortTime:      toPgTimestamp(ts),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1456,8 +1749,10 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflow.Filter) (sqlc.GetTestWorkflowExecutionsParams, error) {
 	var err error
 	params := sqlc.GetTestWorkflowExecutionsParams{
-		Fst: int32(filter.Page() * filter.PageSize()),
-		Lmt: int32(filter.PageSize()),
+		Fst:            int32(filter.Page() * filter.PageSize()),
+		Lmt:            int32(filter.PageSize()),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
 	}
 
 	// Basic filters
@@ -1675,7 +1970,10 @@ func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyConditio
 
 func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testworkflow.Filter) (sqlc.GetTestWorkflowExecutionsTotalsParams, error) {
 	var err error
-	params := sqlc.GetTestWorkflowExecutionsTotalsParams{}
+	params := sqlc.GetTestWorkflowExecutionsTotalsParams{
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	}
 
 	// Basic filters
 	if filter.NameDefined() {
@@ -1955,6 +2253,8 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
 		ID:                        execution.Id,
+		OrganizationID:            r.organizationID,
+		EnvironmentID:             r.environmentID,
 	})
 }
 
