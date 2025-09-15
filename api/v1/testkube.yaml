@@ -8040,8 +8040,6 @@ components:
     TestTrigger:
       type: object
       required:
-        - resource
-        - resourceSelector
         - event
         - action
         - execution
@@ -8071,6 +8069,9 @@ components:
           example:
             group: "teamA"
             app: "backend"
+        selector:
+          $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+          description: label selector for events
         resource:
           $ref: "#/components/schemas/TestTriggerResources"
         resourceSelector:
