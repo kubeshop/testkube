@@ -38,8 +38,8 @@ type watcherEvent struct {
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
 	addressGetter    addressGetterFn
-	eventLabels      map[string]string
-	Agent            watcherAgent `json:"agent"`
+	EventLabels      map[string]string `json:"eventLabels"`
+	Agent            watcherAgent      `json:"agent"`
 }
 
 // watcherAgent represents agent context exposed to templates and JSONPath
@@ -98,15 +98,15 @@ func (s Service) newWatcherEvent(
 		objectMeta:     objectMeta,
 		Object:         object,
 		eventType:      eventType,
-		eventLabels:    map[string]string{},
+		EventLabels:    map[string]string{},
 		Agent:          s.Agent,
 	}
 
-	maps.Copy(w.eventLabels, s.eventLabels)
-	w.eventLabels[eventLabelKeyAgentName] = s.agentName
-	w.eventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
-	w.eventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
-	w.eventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
+	maps.Copy(w.EventLabels, s.eventLabels)
+	w.EventLabels[eventLabelKeyAgentName] = s.agentName
+	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
+	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
+	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	for _, opt := range opts {
 		opt(w)
