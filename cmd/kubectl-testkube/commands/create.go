@@ -52,7 +52,6 @@ func NewCreateCmd() *cobra.Command {
 	cmd.AddCommand(testworkflowtemplates.NewCreateTestWorkflowTemplateCmd())
 	cmd.AddCommand(agents.NewCreateAgentCommand())
 	cmd.AddCommand(agents.NewCreateRunnerCommand())
-	cmd.AddCommand(agents.NewCreateGitOpsCommand())
 
 	cmd.PersistentFlags().BoolVar(&crdOnly, "crd-only", false, "generate only crd")
 

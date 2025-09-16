@@ -20,51 +20,7 @@ func NewGetAgentCommand() *cobra.Command {
 		Aliases: []string{"agents", "a"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				UiListAgents(cmd, "")
-			} else {
-				UiGetAgent(cmd, args[0], decryptSecretKey)
-			}
-		},
-	}
-
-	cmd.Flags().BoolVar(&decryptSecretKey, "decrypted-secret", false, "should it fetch decrypted secret key")
-
-	return cmd
-}
-
-func NewGetRunnerCommand() *cobra.Command {
-	var (
-		decryptSecretKey bool
-	)
-	cmd := &cobra.Command{
-		Args:    cobra.MaximumNArgs(1),
-		Use:     "runner [name]",
-		Aliases: []string{"runners"},
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 0 {
-				UiListAgents(cmd, "runner")
-			} else {
-				UiGetAgent(cmd, args[0], decryptSecretKey)
-			}
-		},
-	}
-
-	cmd.Flags().BoolVar(&decryptSecretKey, "decrypted-secret", false, "should it fetch decrypted secret key")
-
-	return cmd
-}
-
-func NewGetGitOpsCommand() *cobra.Command {
-	var (
-		decryptSecretKey bool
-	)
-	cmd := &cobra.Command{
-		Args:    cobra.MaximumNArgs(1),
-		Use:     "gitops [name]",
-		Aliases: []string{},
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 0 {
-				UiListAgents(cmd, "gitops")
+				UiListAgents(cmd)
 			} else {
 				UiGetAgent(cmd, args[0], decryptSecretKey)
 			}
@@ -77,7 +33,7 @@ func NewGetGitOpsCommand() *cobra.Command {
 }
 
 func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
-	registeredAgents, err := GetControlPlaneAgents(cmd, "", true)
+	registeredAgents, err := GetControlPlaneAgents(cmd, true)
 	ui.ExitOnError("getting agents", err)
 
 	namespaces, err := GetKubernetesNamespaces()
@@ -108,10 +64,8 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 	PrintControlPlaneAgent(*agent.Registered)
 }
 
-func UiListAgents(cmd *cobra.Command, agentType string) {
-	agentType, _ = GetInternalAgentType(agentType)
-
-	registeredAgents, err := GetControlPlaneAgents(cmd, "", false)
+func UiListAgents(cmd *cobra.Command) {
+	registeredAgents, err := GetControlPlaneAgents(cmd, false)
 	ui.ExitOnError("getting agents", err)
 
 	agents, err := GetKubernetesAgents([]string{""})
@@ -121,9 +75,6 @@ func UiListAgents(cmd *cobra.Command, agentType string) {
 
 	var recognizedAgents, externalAgents, unknownAgents internalAgents
 	for i := range agents {
-		if agentType != "" && agents[i].Registered != nil && agents[i].Registered.Type != agentType {
-			continue
-		}
 		if agents[i].Registered != nil && agents[i].Pod.Name != "" {
 			recognizedAgents = append(recognizedAgents, agents[i])
 		} else if agents[i].Registered != nil {

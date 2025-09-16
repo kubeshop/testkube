@@ -21,26 +21,77 @@ import (
 func NewInstallAgentCommand() *cobra.Command {
 	var (
 		secretKey string
-		namespace string
-	)
 
+		namespace          string
+		executionNamespace string
+		version            string
+		dryRun             bool
+
+		globalTemplatePath string
+		global             bool
+		group              string
+
+		autoCreate     bool
+		floating       bool
+		labelPairs     []string
+		environmentIds []string
+
+		runner    bool
+		listener  bool
+		agentType string
+	)
 	cmd := &cobra.Command{
 		Use:  "agent <name>",
 		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			UiInstallAgent(cmd, strings.Join(args, ""), "")
+			// Check for deprecated --type flag usage
+			if cmd.Flags().Changed("type") {
+				ui.Warn("⚠️  The --type/-t flag is deprecated.")
+				ui.Info("Please use --runner and/or --listener flags instead:")
+				ui.Info("  --runner    : Enable runner capability")
+				ui.Info("  --listener  : Enable listener capability")
+				ui.Info("  (both flags): Enable both capabilities")
+				ui.NL()
+				return
+			}
+
+			UiInstallAgent(cmd, strings.Join(args, ""))
 		},
 	}
 
-	// Installation
+	// Installation > General
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
+	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
+	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
+
+	// Installation > Runner
+	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
 
 	// Install existing
 	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
 
+	// Create and install
+	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
+	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
+	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
+
+	// Components selection
+	cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
+	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
+
+	// Deprecated flag
+	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use --runner and/or --listener instead")
+	cmd.Flags().MarkDeprecated("type", "use --runner and/or --listener flags instead")
+
 	return cmd
 }
 
+// NewInstallRunnerCommand creates a command equivalent to `install agent --runner`.
+// It intentionally does not expose the --listener flag.
 func NewInstallRunnerCommand() *cobra.Command {
 	var (
 		secretKey string
@@ -58,12 +109,29 @@ func NewInstallRunnerCommand() *cobra.Command {
 		floating       bool
 		labelPairs     []string
 		environmentIds []string
+
+		runner    bool
+		agentType string
 	)
+
 	cmd := &cobra.Command{
 		Use:  "runner <name>",
 		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			UiInstallAgent(cmd, strings.Join(args, ""), "runner")
+			// Check for deprecated --type flag usage
+			if cmd.Flags().Changed("type") {
+				ui.Warn("⚠️  The --type/-t flag is deprecated.")
+				ui.Info("This command installs a runner-only agent by default.")
+				ui.Info("For more flexibility, use 'kubectl testkube install agent' with:")
+				ui.Info("  --runner    : Enable runner capability")
+				ui.Info("  --listener  : Enable listener capability")
+				ui.NL()
+				return
+			}
+
+			// Force runner-only behavior
+			_ = cmd.Flags().Set("runner", "true")
+			UiInstallAgent(cmd, strings.Join(args, ""))
 		},
 	}
 
@@ -75,8 +143,8 @@ func NewInstallRunnerCommand() *cobra.Command {
 
 	// Installation > Runner
 	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
-	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
-	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
 
 	// Install existing
 	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
@@ -85,55 +153,15 @@ func NewInstallRunnerCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
 	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating runner")
+	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
 
-	return cmd
-}
+	// Component selection: only runner; keep flag hidden and force it on
+	cmd.Flags().BoolVar(&runner, "runner", true, "enable runner component")
+	_ = cmd.Flags().MarkHidden("runner")
 
-func NewInstallGitOpsCommand() *cobra.Command {
-	var (
-		secretKey string
-		dryRun    bool
-
-		namespace             string
-		executionNamespace    string
-		fromCloud             bool
-		toCloud               bool
-		cloudNamePattern      string
-		kubernetesNamePattern string
-		version               string
-
-		autoCreate     bool
-		labelPairs     []string
-		environmentIds []string
-	)
-	cmd := &cobra.Command{
-		Use:  "gitops <name>",
-		Args: cobra.MaximumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			UiInstallAgent(cmd, strings.Join(args, ""), "gitops")
-		},
-	}
-
-	// Installation > General
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
-	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
-
-	// Installation > GitOps
-	cmd.Flags().BoolVarP(&fromCloud, "from-cloud", "f", false, "should synchronize data from cloud")
-	cmd.Flags().BoolVarP(&toCloud, "to-cloud", "t", false, "should synchronize data to cloud")
-	cmd.Flags().StringVarP(&cloudNamePattern, "cloud-pattern", "F", "<name>", "pattern for resource names in cloud")
-	cmd.Flags().StringVarP(&kubernetesNamePattern, "kubernetes-pattern", "T", "<name>", "pattern for resource names in kubernetes")
-
-	// Install existing
-	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
-
-	// Create and install
-	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
-	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
-	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
+	// Deprecated flag
+	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - this command installs runner-only agents")
+	cmd.Flags().MarkDeprecated("type", "this command installs runner-only agents by default")
 
 	return cmd
 }
@@ -192,16 +220,27 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 	spinner.Success("CRDs installed")
 }
 
-func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
+func UiInstallAgent(cmd *cobra.Command, name string) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
 	executionNs, _ := cmd.Flags().GetString("execution-namespace")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	floating, _ := cmd.Flags().GetBool("floating")
-	agentType, _ = GetInternalAgentType(agentType)
 	globalTemplatePath, _ := cmd.Flags().GetString("global-template-path")
 	isGlobalRunner, _ := cmd.Flags().GetBool("global")
 	runnerGroup, _ := cmd.Flags().GetString("group")
+	// Component flags
+	runnerChanged := cmd.Flags().Changed("runner")
+	listenerChanged := cmd.Flags().Changed("listener")
+	anyChanged := runnerChanged || listenerChanged
+	enableRunner, _ := cmd.Flags().GetBool("runner")
+	enableListener, _ := cmd.Flags().GetBool("listener")
+	// we default to both capabilities if none flags are set
+	if !anyChanged {
+		enableRunner = true
+		enableListener = true
+	}
+
 	var globalTemplate []byte
 	if globalTemplatePath != "" {
 		var err error
@@ -233,27 +272,16 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 		}
 	}
 
-	// Validate if the CRDs are installed
-	if agentType == "sync" {
-		installed, err := HasCRDsInstalled()
-		ui.ExitOnError("validating CRD installation", err)
-
-		// Install CRDs if not available
-		if !installed {
-			UiInstallCRD(cmd, ns, "testkube-crd", false)
-		}
-	}
-
 	// Create new Agent if it's expected
 	if agent == nil && autoCreate {
 		labels, _ := cmd.Flags().GetStringSlice("label")
 		environmentIds, _ := cmd.Flags().GetStringSlice("env")
-		agent = UiCreateAgent(cmd, agentType, name, labels, environmentIds, isGlobalRunner, runnerGroup, floating)
+		agent = UiCreateAgent(cmd, name, labels, environmentIds, isGlobalRunner, runnerGroup, floating, enableRunner, enableListener)
 	}
 
 	// Load agents from the Control Plane and select one
 	if agent == nil {
-		agents, err := GetControlPlaneAgents(cmd, agentType, false)
+		agents, err := GetControlPlaneAgents(cmd, false)
 		ui.ExitOnError("listing agents", err)
 
 		if name == "" {
@@ -345,53 +373,26 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 		spinner = ui.NewSpinner("Running Helm command...")
 	}
 
-	switch agentType {
-	case "sync":
-		if len(agent.Environments) == 0 {
-			if spinner != nil {
-				spinner.Fail("could not select environment for this GitOps Agent")
-				os.Exit(1)
-			} else {
-				ui.Failf("could not select environment for this GitOps Agent")
-			}
-		}
-
-		fromCloud, _ := cmd.Flags().GetBool("from-cloud")
-		toCloud, _ := cmd.Flags().GetBool("to-cloud")
-		cloudPattern, _ := cmd.Flags().GetString("cloud-pattern")
-		kubernetesPattern, _ := cmd.Flags().GetString("kubernetes-pattern")
-		opts := CreateHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
-			"next.gitops.syncCloudToKubernetes":   fromCloud,
-			"next.gitops.syncKubernetesToCloud":   toCloud,
-			"next.gitops.namePatterns.cloud":      cloudPattern,
-			"next.gitops.namePatterns.kubernetes": kubernetesPattern,
-		})
-		cliErr := common2.HelmUpgradeOrInstallGeneric(opts)
-		if cliErr != nil {
-			cliErr.Print()
-			os.Exit(1)
-		}
-	case "run":
-		opts := CreateRunnerHelmOptions(controlPlane, ns, version, dryRun, nil)
-		if executionNs != "" && executionNs != ns {
-			opts.Values["execution.default.namespace"] = executionNs
-		}
-		if len(globalTemplate) > 0 {
-			opts.Values["globalTemplate.enabled"] = true
-			opts.Values["globalTemplate.spec"] = string(globalTemplate)
-		}
-		cliErr := common2.HelmUpgradeOrInstallGeneric(opts)
-		if cliErr != nil {
-			cliErr.Print()
-			os.Exit(1)
-		}
-	default:
-		if spinner != nil {
-			spinner.Fail(fmt.Sprintf("unknown agent type %s", agentType))
-			os.Exit(1)
-		} else {
-			ui.Failf("unknown agent type %s", agentType)
-		}
+	// Install runner chart
+	helmOpts := CreateRunnerHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
+		"runner.enabled":   enableRunner,
+		"listener.enabled": enableListener,
+	})
+	// When listener capability is enabled, pass the environment ID to the runner
+	if enableListener && controlPlane.EnvironmentID != "" {
+		helmOpts.Values["runner.envId"] = controlPlane.EnvironmentID
+	}
+	if executionNs != "" && executionNs != ns {
+		helmOpts.Values["execution.default.namespace"] = executionNs
+	}
+	if len(globalTemplate) > 0 {
+		helmOpts.Values["globalTemplate.enabled"] = true
+		helmOpts.Values["globalTemplate.spec"] = string(globalTemplate)
+	}
+	cliErr := common2.HelmUpgradeOrInstallGeneric(helmOpts)
+	if cliErr != nil {
+		cliErr.Print()
+		os.Exit(1)
 	}
 
 	if dryRun {

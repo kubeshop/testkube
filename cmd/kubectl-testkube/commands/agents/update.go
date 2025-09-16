@@ -17,9 +17,8 @@ func NewUpdateAgentCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "agent <name>",
-		Aliases: []string{"runner", "gitops"},
-		Args:    cobra.ExactArgs(1),
+		Use:  "agent <name>",
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiUpdateAgent(cmd, strings.Join(args, ""), setLabels, deleteLabels)
 		},
