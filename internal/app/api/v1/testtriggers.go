@@ -235,6 +235,9 @@ func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
+		// TODO(emil): remove for debugging purposes only
+		s.Log.Infof("test trigger pulled by client: %s, %v", apiTestTrigger.Name, apiTestTrigger.Selector)
+
 		c.Status(http.StatusOK)
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
