@@ -14,14 +14,8 @@ readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly TMP_API_DIR="${PROJECT_ROOT}/tmp/api/testkube"
 readonly TARGET_DIR="${PROJECT_ROOT}/pkg/api/v1/testkube"
 
-# Detect OS for platform-specific sed commands
-# Note: We'll use a function instead of a variable to handle sed portability
 sed_inplace() {
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "$@"
-    else
-        sed -i "$@"
-    fi
+    sed -i "$@"
 }
 
 # ==================== Functions ====================
