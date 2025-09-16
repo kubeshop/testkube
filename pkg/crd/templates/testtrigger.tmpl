@@ -10,6 +10,23 @@ metadata:
   {{- end }}
   {{- end }}
 spec:
+  {{- if .Selector }}
+  selector:
+    {{- if .Selector.MatchLabels }}
+    matchLabels:
+        {{- range $key, $value := .Selector.MatchLabels }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+    {{- end }}
+    {{- if .Selector.MatchExpressions }}
+    matchExpressions:
+        {{- range $exp := .Selector.MatchExpressions }}
+      - key: {{ $exp.Key }}
+        operator: {{ $exp.Operator }}
+        values: {{ $exp.Values }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
   {{- if .Resource }}
   resource: {{ .Resource }}
   {{- end }}
@@ -20,7 +37,7 @@ spec:
     {{- end }}
     {{- if .ResourceSelector.NameRegex }}
     nameRegex: {{ .ResourceSelector.NameRegex }}
-    {{- end }}  
+    {{- end }}
     {{- if .ResourceSelector.Namespace }}
     namespace: {{ .ResourceSelector.Namespace }}
     {{- end }}
@@ -52,7 +69,7 @@ spec:
     {{- end }}
     {{- if .ConditionSpec.Delay }}
     delay: {{ .ConditionSpec.Delay }}
-    {{- end }}    
+    {{- end }}
     {{- if ne (len .ConditionSpec.Conditions) 0 }}
     conditions:
     {{- range $exp := .ConditionSpec.Conditions }}
@@ -63,7 +80,7 @@ spec:
       {{- end }}
       {{- if $exp.Ttl }}
       ttl: {{ $exp.Ttl }}
-      {{- end }}    
+      {{- end }}
     {{- end }}
     {{- end }}
   {{- end }}
@@ -74,11 +91,11 @@ spec:
     {{- end }}
     {{- if .ProbeSpec.Delay }}
     delay: {{ .ProbeSpec.Delay }}
-    {{- end }} 
+    {{- end }}
     {{- if ne (len .ProbeSpec.Probes) 0 }}
     probes:
     {{- range $exp := .ProbeSpec.Probes }}
-    - 
+    -
       {{- if $exp.Scheme }}
       scheme: {{ $exp.Scheme }}
       {{- end }}
