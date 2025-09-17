@@ -122,6 +122,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 
 		// Update individual fields from the request
+		if request.Selector != nil {
+			apiTrigger.Selector = request.Selector
+		}
 		if request.Resource != nil {
 			apiTrigger.Resource = request.Resource
 		}
