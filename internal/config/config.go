@@ -200,6 +200,11 @@ type Config struct {
 	ImageInspectorConfig
 	GitOpsSyncConfig
 	CronJobConfig
+	// Tracing
+	TracingEnabled                  bool     `envconfig:"TRACING_ENABLED" default:"false"`
+	OTLPEndpoint                    string   `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
+	OTLPServiceName                 string   `envconfig:"OTLP_SERVICE_NAME" default:"testkube"`
+	TracingSampleRate               float64  `envconfig:"TRACING_SAMPLE_RATE" default:"1.0"`
 	DisableDefaultAgent             bool     `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
 	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
