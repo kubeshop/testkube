@@ -14,7 +14,7 @@
 	"startTime": "2021-11-04T12:14:57.118Z",
 	"endTime": "0001-01-01T00:00:00Z",
 	"executionResult": {
-		"status": "pending"
+		"status": "assigned"
 	},
 	"args": []
 }

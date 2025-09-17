@@ -637,7 +637,7 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 		}
 
 		switch testkube.TestWorkflowStatus(row.Status.String) {
-		case testkube.QUEUED_TestWorkflowStatus, testkube.PENDING_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
 			totals.Queued = count
 		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = count

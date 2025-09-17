@@ -9212,7 +9212,7 @@ components:
       type: string
       enum:
         - queued
-        - pending
+        - assigned
         - starting
         - scheduling
         - running

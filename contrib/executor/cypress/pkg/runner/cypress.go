@@ -314,7 +314,7 @@ func MapStatus(in junit.Status) (out string) {
 	switch string(in) {
 	case "passed":
 		return string(testkube.PASSED_ExecutionStatus)
-	case "pending":
+	case "assigned":
 		return string(testkube.QUEUED_ExecutionStatus)
 	case "skipped":
 		return string(testkube.SKIPPED_ExecutionStatus)
