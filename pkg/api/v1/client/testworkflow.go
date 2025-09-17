@@ -224,7 +224,7 @@ func (c TestWorkflowClient) ResumeTestWorkflowExecution(workflow, id string) err
 
 // AbortTestWorkflowExecution aborts selected execution
 func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string, force bool) error {
-	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort?force=%v", workflow, id, force)
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort?forceAgent=%v", workflow, id, force)
 	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
 }
 
