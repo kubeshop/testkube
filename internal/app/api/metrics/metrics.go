@@ -342,6 +342,10 @@ func (m Metrics) IncCreateTestSuite(err error) {
 }
 
 func (m Metrics) IncCreateTestTrigger(err error) {
+	if m.TestTriggerCreations == nil {
+		return
+	}
+
 	result := "created"
 	if err != nil {
 		result = "error"
@@ -353,6 +357,10 @@ func (m Metrics) IncCreateTestTrigger(err error) {
 }
 
 func (m Metrics) IncUpdateTestTrigger(err error) {
+	if m.TestTriggerUpdates == nil {
+		return
+	}
+
 	result := "updated"
 	if err != nil {
 		result = "error"
@@ -364,6 +372,10 @@ func (m Metrics) IncUpdateTestTrigger(err error) {
 }
 
 func (m Metrics) IncDeleteTestTrigger(err error) {
+	if m.TestTriggerDeletes == nil {
+		return
+	}
+
 	result := "deleted"
 	if err != nil {
 		result = "error"
@@ -375,6 +387,10 @@ func (m Metrics) IncDeleteTestTrigger(err error) {
 }
 
 func (m Metrics) IncBulkUpdateTestTrigger(err error) {
+	if m.TestTriggerBulkUpdates == nil {
+		return
+	}
+
 	result := "bulk_update"
 	if err != nil {
 		result = "error"
@@ -386,6 +402,10 @@ func (m Metrics) IncBulkUpdateTestTrigger(err error) {
 }
 
 func (m Metrics) IncBulkDeleteTestTrigger(err error) {
+	if m.TestTriggerBulkDeletes == nil {
+		return
+	}
+
 	result := "bulk_delete"
 	if err != nil {
 		result = "error"

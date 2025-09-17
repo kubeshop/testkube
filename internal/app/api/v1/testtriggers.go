@@ -96,7 +96,6 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
 			}
-
 		}
 
 		namespace := s.Namespace
@@ -122,6 +121,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 
 		// Update individual fields from the request
+		if request.Selector != nil {
+			apiTrigger.Selector = request.Selector
+		}
 		if request.Resource != nil {
 			apiTrigger.Resource = request.Resource
 		}
