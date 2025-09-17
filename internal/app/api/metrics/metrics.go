@@ -342,6 +342,10 @@ func (m Metrics) IncCreateTestSuite(err error) {
 }
 
 func (m Metrics) IncCreateTestTrigger(err error) {
+	if m.TestTriggerCreations == nil {
+		return
+	}
+
 	result := "created"
 	if err != nil {
 		result = "error"
@@ -390,6 +394,10 @@ func (m Metrics) IncBulkUpdateTestTrigger(err error) {
 }
 
 func (m Metrics) IncBulkDeleteTestTrigger(err error) {
+	if m.TestTriggerBulkDeletes == nil {
+		return
+	}
+
 	result := "bulk_delete"
 	if err != nil {
 		result = "error"
