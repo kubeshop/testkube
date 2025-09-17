@@ -179,7 +179,7 @@ type TestWorkflowAPI interface {
 type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
 	ListTestWorkflowExecutions(id string, limit int, options FilterTestWorkflowExecutionOptions) (executions testkube.TestWorkflowExecutionsResult, err error)
-	AbortTestWorkflowExecution(workflow string, id string) error
+	AbortTestWorkflowExecution(workflow string, id string, force bool) error
 	AbortTestWorkflowExecutions(workflow string) error
 	PauseTestWorkflowExecution(workflow string, id string) error
 	ResumeTestWorkflowExecution(workflow string, id string) error

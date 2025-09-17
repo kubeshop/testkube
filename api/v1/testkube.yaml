@@ -4307,6 +4307,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/ForceCancellation"
       summary: Abort test workflow execution
       description: Abort test workflow execution
       operationId: abortTestWorkflowExecutionByTestWorkflow
@@ -4676,6 +4677,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/ForceCancellation"
       summary: Abort test workflow execution
       description: Abort test workflow execution
       operationId: abortTestWorkflowExecution
@@ -11976,6 +11978,14 @@ components:
       schema:
         type: string
         description: Test workflow running conntext actor type
+    ForceCancellation:
+      in: query
+      name: forceCancellation
+      schema:
+        type: boolean
+        default: false
+      description: force cancellation
+      required: false
 
   requestBodies:
     UploadsBody:

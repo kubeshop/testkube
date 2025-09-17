@@ -27,7 +27,7 @@ func NewAbortTestWorkflowExecutionCmd() *cobra.Command {
 			execution, err := client.GetTestWorkflowExecution(executionID)
 			ui.ExitOnError("get execution failed", err)
 
-			err = client.AbortTestWorkflowExecution(execution.Workflow.Name, execution.Id)
+			err = client.AbortTestWorkflowExecution(execution.Workflow.Name, execution.Id, false)
 			ui.ExitOnError(fmt.Sprintf("aborting testworkflow execution %s", executionID), err)
 
 			ui.SuccessAndExit("Succesfully aborted test workflow execution", executionID)
