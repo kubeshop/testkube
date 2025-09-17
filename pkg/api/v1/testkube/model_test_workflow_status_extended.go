@@ -23,7 +23,7 @@ func (statuses TestWorkflowStatuses) ToMap() map[TestWorkflowStatus]struct{} {
 func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkflowStatuses, err error) {
 	statusMap := map[TestWorkflowStatus]struct{}{
 		QUEUED_TestWorkflowStatus:     {},
-		PENDING_TestWorkflowStatus:    {},
+		ASSIGNED_TestWorkflowStatus:   {},
 		STARTING_TestWorkflowStatus:   {},
 		SCHEDULING_TestWorkflowStatus: {},
 		RUNNING_TestWorkflowStatus:    {},
@@ -62,7 +62,7 @@ func TestWorkflowStatusString(ptr *TestWorkflowStatus) string {
 // This is logically the inverse of TestWorkflowTerminalStatus
 var TestWorkflowExecutingStatus = []TestWorkflowStatus{
 	QUEUED_TestWorkflowStatus,
-	PENDING_TestWorkflowStatus,
+	ASSIGNED_TestWorkflowStatus,
 	STARTING_TestWorkflowStatus,
 	SCHEDULING_TestWorkflowStatus,
 	RUNNING_TestWorkflowStatus,
@@ -75,7 +75,7 @@ var TestWorkflowExecutingStatus = []TestWorkflowStatus{
 // transition an Execution to a STOPPING, ABORTED, or CANCELLED state.
 var TestWorkflowStoppableStatus = []TestWorkflowStatus{
 	QUEUED_TestWorkflowStatus,
-	PENDING_TestWorkflowStatus,
+	ASSIGNED_TestWorkflowStatus,
 	STARTING_TestWorkflowStatus,
 	SCHEDULING_TestWorkflowStatus,
 	RUNNING_TestWorkflowStatus,

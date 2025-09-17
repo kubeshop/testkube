@@ -312,7 +312,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	for _, o := range result {
 		sum += int32(o.Count)
 		switch testkube.TestWorkflowStatus(o.Status) {
-		case testkube.QUEUED_TestWorkflowStatus, testkube.PENDING_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
+		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
 			totals.Queued = int32(o.Count)
 		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
 			totals.Running = int32(o.Count)
@@ -465,7 +465,7 @@ func (r *MongoRepository) UpdateResultStrict(ctx context.Context, id, runnerId s
 	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id,
 		"runnerid": runnerId,
 		"result.status": bson.M{"$in": bson.A{
-			testkube.PENDING_TestWorkflowStatus,
+			testkube.ASSIGNED_TestWorkflowStatus,
 			testkube.STARTING_TestWorkflowStatus,
 			testkube.SCHEDULING_TestWorkflowStatus,
 			testkube.RUNNING_TestWorkflowStatus,
@@ -500,7 +500,7 @@ func (r *MongoRepository) FinishResultStrict(ctx context.Context, id, runnerId s
 			testkube.QUEUED_TestWorkflowStatus,
 			// - Pending, once the execution has been assigned to a runner but has not yet been
 			//   communicated to the runner it can be finished immediately.
-			testkube.PENDING_TestWorkflowStatus,
+			testkube.ASSIGNED_TestWorkflowStatus,
 			// - Running, once the execution is completed it will be finished from this state.
 			testkube.RUNNING_TestWorkflowStatus,
 			// - Stopping, when requested to stop an execution it will transition to a finished state.
