@@ -82,3 +82,41 @@ spec:
         - bash
         - -c
         - 'for iteration in {1..1000}; do sleep 2; printf "\niteration %d\n" "$iteration"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END\n"; done; done' # 1k iterations - about 11MB
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-artifacts-1gb
+  labels:
+    core-tests: large
+description: "Artifacts: 1GB file generated with openssl"
+spec:
+  container:
+    image: alpine/openssl
+  steps:
+  - name: Generate 1GB artifact
+    shell: |
+      mkdir -p /data/artifacts
+      openssl rand -out /data/artifacts/1g.txt -base64 $(( 2**30 * 3/4 ))
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-artifacts-100mb
+  labels:
+    core-tests: large
+description: "Artifacts: 100MB file generated with openssl"
+spec:
+  container:
+    image: alpine/openssl
+  steps:
+  - name: Generate 100MB artifact
+    shell: |
+      mkdir -p /data/artifacts
+      openssl rand -out /data/artifacts/100mb.txt -base64 $(( 100 * 1024 * 1024 * 3/4 ))
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
