@@ -79,7 +79,9 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 // UpdateTestTriggerHandler is a handler for updates an existing TestTrigger CRD based on TestTrigger content
 func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
+	s.Log.Info("called real update handler")
 	return func(c *fiber.Ctx) error {
+		s.Log.Info("UPDATE TESTTRIGGER: called real fiber update handler")
 		errPrefix := "failed to update test trigger"
 		var request testkube.TestTriggerUpsertRequest
 		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
@@ -98,6 +100,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			}
 
 		}
+		s.Log.Infof("UPDATE TESTTRIGGER: request from in file update handler: %v", request.Selector)
 
 		namespace := s.Namespace
 		if request.Namespace != "" {
@@ -162,6 +165,8 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test trigger: %w", errPrefix, err))
 		}
+
+		s.Log.Infof("UPDATE TESTTRIGGER: api trigger: %v", apiTrigger.Selector)
 
 		return c.JSON(apiTrigger)
 	}

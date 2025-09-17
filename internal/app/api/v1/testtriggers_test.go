@@ -223,7 +223,7 @@ func TestUpdateTestTriggerHandler(t *testing.T) {
 
 	mockClient := testtriggerclient.NewMockTestTriggerClient(ctrl)
 
-	testAPI := &TestkubeAPIForTesting{
+	testAPI := &TestkubeAPI{
 		TestTriggersClient: mockClient,
 		Log:                log.DefaultLogger,
 		Namespace:          "default",
@@ -233,12 +233,24 @@ func TestUpdateTestTriggerHandler(t *testing.T) {
 	app := fiber.New()
 	app.Put("/test-triggers", testAPI.UpdateTestTriggerHandler())
 
-	t.Run("should update test trigger successfully", func(t *testing.T) {
+	t.Run("should update test trigger successfully with json", func(t *testing.T) {
 		// given
 		request := testkube.TestTriggerUpsertRequest{
 			Name:      "test-trigger",
 			Namespace: "default",
-			Resource:  resourcePtr("deployment"),
+			Selector: &testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector{
+				MatchLabels: map[string]string{
+					"testkube.io/agent-name": "test-agent",
+				},
+			},
+			Resource: resourcePtr("deployment"),
+			ResourceSelector: &testkube.TestTriggerSelector{
+				LabelSelector: &testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector{
+					MatchLabels: map[string]string{
+						"testkube.io/agent-name": "test-agent",
+					},
+				},
+			},
 			Event:     "updated",
 			Action:    actionPtr("run"),
 			Execution: executionPtr("test"),
@@ -263,7 +275,21 @@ func TestUpdateTestTriggerHandler(t *testing.T) {
 			DoAndReturn(func(ctx context.Context, envId string, trigger testkube.TestTrigger) error {
 				assert.Equal(t, "test-trigger", trigger.Name)
 				assert.Equal(t, "default", trigger.Namespace)
+				assert.NotNil(t, trigger.Selector)
+				if trigger.Selector != nil {
+					assert.Equal(t, map[string]string{
+						"testkube.io/agent-name": "test-agent",
+					}, trigger.Selector.MatchLabels)
+				}
 				assert.Equal(t, testkube.TestTriggerResources("deployment"), *trigger.Resource)
+				assert.NotNil(t, trigger.ResourceSelector)
+				assert.NotNil(t, trigger.ResourceSelector.LabelSelector)
+				if trigger.ResourceSelector != nil &&
+					trigger.ResourceSelector.LabelSelector != nil {
+					assert.Equal(t, map[string]string{
+						"testkube.io/agent-name": "test-agent",
+					}, trigger.ResourceSelector.LabelSelector.MatchLabels)
+				}
 				assert.Equal(t, "updated", trigger.Event)
 				assert.Equal(t, testkube.TestTriggerActions("run"), *trigger.Action)
 				assert.Equal(t, testkube.TestTriggerExecutions("test"), *trigger.Execution)
@@ -272,8 +298,83 @@ func TestUpdateTestTriggerHandler(t *testing.T) {
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
+		t.Log("request body", string(requestBody))
 		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("should update test trigger successfully with yaml", func(t *testing.T) {
+		// given
+		requestBody := `
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: test-trigger
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      testkube.io/agent-name: test-agent
+  resource: deployment
+  resourceSelector:
+    labelSelector:
+      matchLabels:
+        testkube.io/agent-name: test-agent
+  event: updated
+  action: run
+  execution: test
+`
+		existingTrigger := &testkube.TestTrigger{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Resource:  resourcePtr("pod"),
+			Event:     "created",
+			Action:    actionPtr("stop"),
+			Execution: executionPtr("old-test"),
+		}
+
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "test-trigger", "default").
+			Return(existingTrigger, nil).
+			Times(1)
+
+		mockClient.EXPECT().
+			Update(gomock.Any(), "test-env", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, envId string, trigger testkube.TestTrigger) error {
+				assert.Equal(t, "test-trigger", trigger.Name)
+				assert.Equal(t, "default", trigger.Namespace)
+				assert.NotNil(t, trigger.Selector)
+				if trigger.Selector != nil {
+					assert.Equal(t, map[string]string{
+						"testkube.io/agent-name": "test-agent",
+					}, trigger.Selector.MatchLabels)
+				}
+				assert.Equal(t, testkube.TestTriggerResources("deployment"), *trigger.Resource)
+				assert.NotNil(t, trigger.ResourceSelector)
+				assert.NotNil(t, trigger.ResourceSelector.LabelSelector)
+				if trigger.ResourceSelector != nil &&
+					trigger.ResourceSelector.LabelSelector != nil {
+					assert.Equal(t, map[string]string{
+						"testkube.io/agent-name": "test-agent",
+					}, trigger.ResourceSelector.LabelSelector.MatchLabels)
+				}
+				assert.Equal(t, "updated", trigger.Event)
+				assert.Equal(t, testkube.TestTriggerActions("run"), *trigger.Action)
+				assert.Equal(t, testkube.TestTriggerExecutions("test"), *trigger.Execution)
+				return nil
+			}).
+			Times(1)
+
+		t.Log("request body", requestBody)
+		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
+		req.Header.Set("Content-Type", "text/yaml")
 
 		// when
 		resp, err := app.Test(req)
@@ -961,15 +1062,20 @@ func (s *TestkubeAPIForTesting) CreateTestTriggerHandler() fiber.Handler {
 	}
 }
 
+// TODO(emil): why do we have a test version with almost the same logic as the real handler
+// TODO(emil): this is not testing the yaml version of the request
 // UpdateTestTriggerHandler is a simplified version for testing
 func (s *TestkubeAPIForTesting) UpdateTestTriggerHandler() fiber.Handler {
+	s.Log.Info("test update handler called")
 	return func(c *fiber.Ctx) error {
+		s.Log.Info("update fiber handler called")
 		errPrefix := "failed to update test trigger"
 		var request testkube.TestTriggerUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
 		}
+		s.Log.Infof("parsed request body: %v", request.Selector)
 
 		namespace := s.Namespace
 		if request.Namespace != "" {
@@ -994,6 +1100,9 @@ func (s *TestkubeAPIForTesting) UpdateTestTriggerHandler() fiber.Handler {
 		}
 
 		// Update individual fields from the request
+		if request.Selector != nil {
+			apiTrigger.Selector = request.Selector
+		}
 		if request.Resource != nil {
 			apiTrigger.Resource = request.Resource
 		}

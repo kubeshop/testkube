@@ -353,6 +353,10 @@ func (m Metrics) IncCreateTestTrigger(err error) {
 }
 
 func (m Metrics) IncUpdateTestTrigger(err error) {
+	if m.TestTriggerUpdates == nil {
+		return
+	}
+
 	result := "updated"
 	if err != nil {
 		result = "error"
