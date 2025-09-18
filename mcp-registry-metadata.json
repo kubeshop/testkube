@@ -1,0 +1,353 @@
+{
+  "name": "testkube-mcp",
+  "displayName": "Testkube MCP Server",
+  "description": "Model Context Protocol server for Testkube, enabling AI assistants to interact with Testkube workflows, executions, and artifacts. Provides comprehensive tools for managing test workflows, monitoring executions, and accessing test artifacts.",
+  "version": "1.0.0",
+  "author": "Kubeshop",
+  "license": "MIT",
+  "homepage": "https://testkube.io",
+  "repository": "https://github.com/kubeshop/testkube",
+  "documentation": "https://docs.testkube.io",
+  "keywords": [
+    "testkube",
+    "testing",
+    "kubernetes",
+    "test-automation",
+    "workflows",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "tools": [
+    {
+      "name": "list_workflows",
+      "description": "List Testkube workflows with optional filtering by resource group, selector, status, and other criteria. Returns workflow names (which are also the workflow IDs), descriptions, and execution status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string",
+            "description": "Page number for pagination (default: 0)"
+          },
+          "pageSize": {
+            "type": "string", 
+            "description": "Number of items to return per page (default: 10, max: 100)"
+          },
+          "resourceGroup": {
+            "type": "string",
+            "description": "Filter by resource group using the group slug (e.g., 'demo-resource-group', 'accounting-tests'). Use the list_resource_groups tool to discover available groups"
+          },
+          "selector": {
+            "type": "string",
+            "description": "Filter by labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'"
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by execution status. Available statuses: 'queued', 'running', 'passed', 'failed', 'skipped', 'aborted', 'timeout', 'paused'"
+          },
+          "textSearch": {
+            "type": "string",
+            "description": "Text search filter for names or descriptions. Can use space-separated words to find items containing all terms"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_workflow",
+      "description": "Retrieve detailed workflow information including execution history, health metrics, and current status. Returns JSON format with comprehensive workflow metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          }
+        },
+        "required": ["workflowName"]
+      }
+    },
+    {
+      "name": "get_workflow_definition",
+      "description": "Get the YAML definition of a specific Testkube workflow. Returns the complete workflow specification including all steps, configuration schema, and metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          }
+        },
+        "required": ["workflowName"]
+      }
+    },
+    {
+      "name": "get_workflow_metrics",
+      "description": "Get metrics of test workflow executions including execution statistics, health scores, pass rates, and performance data. Returns comprehensive metrics data for analyzing workflow performance and reliability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          }
+        },
+        "required": ["workflowName"]
+      }
+    },
+    {
+      "name": "create_workflow",
+      "description": "Create a new TestWorkflow directly in Testkube from a YAML definition. Use this tool to deploy workflows to the Testkube platform. The workflow will be immediately available for execution after creation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "yaml": {
+            "type": "string",
+            "description": "Complete YAML definition of the TestWorkflow to create in Testkube. This should be the full workflow specification including metadata, spec, and all steps."
+          }
+        },
+        "required": ["yaml"]
+      }
+    },
+    {
+      "name": "update_workflow",
+      "description": "Update an existing TestWorkflow in Testkube with a new YAML definition. This tool allows you to modify workflow steps, configuration, and metadata. The workflow will be updated immediately and available for execution with the new configuration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          },
+          "yaml": {
+            "type": "string",
+            "description": "Complete YAML definition of the TestWorkflow to update in Testkube. This should be the full workflow specification including metadata, spec, and all steps."
+          }
+        },
+        "required": ["workflowName", "yaml"]
+      }
+    },
+    {
+      "name": "run_workflow",
+      "description": "Run a TestWorkflow with optional configuration parameters. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          },
+          "config": {
+            "type": "object",
+            "description": "Configuration parameters for the workflow. Use get_workflow_definition tool first to examine the spec.config section to see what parameters are available."
+          },
+          "target": {
+            "type": "object",
+            "description": "Target specification for multi-agent execution (optional)"
+          }
+        },
+        "required": ["workflowName"]
+      }
+    },
+    {
+      "name": "list_executions",
+      "description": "List executions for a specific test workflow with filtering and pagination options. Returns execution summaries with status, timing, and results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          },
+          "page": {
+            "type": "string",
+            "description": "Page number for pagination (default: 0)"
+          },
+          "pageSize": {
+            "type": "string",
+            "description": "Number of items to return per page (default: 10, max: 100)"
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by execution status. Available statuses: 'queued', 'running', 'passed', 'failed', 'skipped', 'aborted', 'timeout', 'paused'"
+          },
+          "textSearch": {
+            "type": "string",
+            "description": "Text search filter for names or descriptions. Can use space-separated words to find items containing all terms"
+          }
+        },
+        "required": ["workflowName"]
+      }
+    },
+    {
+      "name": "get_execution_info",
+      "description": "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          },
+          "executionId": {
+            "type": "string",
+            "description": "The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2'). This is the internal identifier used by most tools that operate on specific executions. If you only have an execution name, use the lookup_execution_id tool first to get the ID."
+          }
+        },
+        "required": ["workflowName", "executionId"]
+      }
+    },
+    {
+      "name": "fetch_execution_logs",
+      "description": "Retrieves the full logs of a test workflow execution for debugging and analysis.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "description": "The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2')."
+          }
+        },
+        "required": ["executionId"]
+      }
+    },
+    {
+      "name": "lookup_execution_id",
+      "description": "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "executionName": {
+            "type": "string",
+            "description": "The name of the execution (e.g., 'my-workflow-123'). Execution names follow the pattern of workflow name plus a numeric suffix. Use this when you have an execution name but need the execution ID for other operations."
+          }
+        },
+        "required": ["executionName"]
+      }
+    },
+    {
+      "name": "abort_workflow_execution",
+      "description": "Abort a running test workflow execution. This will stop the execution and mark it as aborted. Use this tool to cancel long-running or stuck workflow executions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowName": {
+            "type": "string",
+            "description": "The name of the workflow. Workflow names are lowercase alphanumeric with dashes (e.g., 'my-workflow', 'api-tests'). This uniquely identifies a TestWorkflow within the organization."
+          },
+          "executionId": {
+            "type": "string",
+            "description": "The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2'). This is the internal identifier used by most tools that operate on specific executions. If you only have an execution name, use the lookup_execution_id tool first to get the ID."
+          }
+        },
+        "required": ["workflowName", "executionId"]
+      }
+    },
+    {
+      "name": "list_artifacts",
+      "description": "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "description": "The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2'). This is the internal identifier used by most tools that operate on specific executions. If you only have an execution name, use the lookup_execution_id tool first to get the ID."
+          }
+        },
+        "required": ["executionId"]
+      }
+    },
+    {
+      "name": "read_artifact",
+      "description": "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "description": "The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2'). This is the internal identifier used by most tools that operate on specific executions. If you only have an execution name, use the lookup_execution_id tool first to get the ID."
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The name of the artifact file to retrieve"
+          }
+        },
+        "required": ["executionId", "fileName"]
+      }
+    },
+    {
+      "name": "build_dashboard_url",
+      "description": "Build dashboard URLs for Testkube workflows and executions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "description": "Type of dashboard resource: 'workflow' or 'execution'"
+          },
+          "workflowName": {
+            "type": "string",
+            "description": "Name of the test workflow"
+          },
+          "executionId": {
+            "type": "string",
+            "description": "Execution ID (required for execution URLs)"
+          }
+        },
+        "required": ["resourceType", "workflowName"]
+      }
+    },
+    {
+      "name": "list_labels",
+      "description": "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "random_string": {
+            "type": "string",
+            "description": "Dummy parameter for no-parameter tools"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_resource_groups",
+      "description": "Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "random_string": {
+            "type": "string",
+            "description": "Dummy parameter for no-parameter tools"
+          }
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "required": [
+      "TK_ACCESS_TOKEN",
+      "TK_ORG_ID", 
+      "TK_ENV_ID"
+    ],
+    "optional": [
+      "TK_CONTROL_PLANE_URL",
+      "TK_DASHBOARD_URL",
+      "TK_DEBUG"
+    ],
+    "description": "The MCP server requires Testkube authentication credentials. Set TK_ACCESS_TOKEN, TK_ORG_ID, and TK_ENV_ID environment variables. Optional: TK_CONTROL_PLANE_URL (default: https://api.testkube.io), TK_DASHBOARD_URL (auto-derived from control plane URL), TK_DEBUG (set to 'true' for debug output)."
+  },
+  "docker": {
+    "image": "testkube/mcp-server",
+    "tag": "latest",
+    "platforms": ["linux/amd64", "linux/arm64"],
+    "entrypoint": ["/bin/kubectl-testkube", "mcp", "serve"],
+    "environment": {
+      "TK_CONTROL_PLANE_URL": "https://api.testkube.io",
+      "TK_DEBUG": "false"
+    }
+  }
+}

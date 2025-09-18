@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/mcp"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 func NewMcpCmd() *cobra.Command {
@@ -64,12 +67,53 @@ Setup Guide: https://docs.testkube.io/articles/mcp-setup
 Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 
 		Run: func(cmd *cobra.Command, args []string) {
-			// OAuth authentication check
-			if !common.IsOAuthAuthenticated() {
+
+			// Check for environment variable mode (for Docker deployment)
+			envMode := os.Getenv("TK_MCP_ENV_MODE") == "true"
+
+			if envMode {
+				// Environment variable mode - use env vars directly
+				accessToken := os.Getenv("TK_ACCESS_TOKEN")
+				orgID := os.Getenv("TK_ORG_ID")
+				envID := os.Getenv("TK_ENV_ID")
+				baseURL := os.Getenv("TK_CONTROL_PLANE_URL")
+				dashboardURL := os.Getenv("TK_DASHBOARD_URL")
+
+				if accessToken == "" || orgID == "" || envID == "" {
+					if ui.IsVerbose() {
+						ui.Failf("Environment variable mode requires TK_ACCESS_TOKEN, TK_ORG_ID, and TK_ENV_ID")
+						ui.Info("Set TK_MCP_ENV_MODE=true to enable environment variable mode")
+					}
+					return
+				}
+
+				if baseURL == "" {
+					baseURL = "https://api.testkube.io"
+				}
+				if dashboardURL == "" {
+					dashboardURL = baseURL
+					if strings.HasPrefix(baseURL, "https://api.") {
+						dashboardURL = strings.Replace(baseURL, "https://api.", "https://app.", 1)
+					}
+				}
+
 				if ui.IsVerbose() {
-					ui.Failf("OAuth authentication required")
-					ui.Info("Please run 'testkube login' to authenticate with OAuth flow")
-					ui.Info("Setup guide: https://docs.testkube.io/articles/mcp-setup")
+					ui.Info("Starting MCP server in environment variable mode:")
+					ui.InfoGrid(map[string]string{
+						"Organization":  orgID,
+						"Environment":   envID,
+						"API Key":       text.Obfuscate(accessToken),
+						"API URL":       baseURL,
+						"Dashboard URL": dashboardURL,
+					})
+				}
+
+				// Start the MCP server with environment variables
+				if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug); err != nil {
+					if ui.IsVerbose() {
+						ui.Failf("Failed to start MCP server: %v", err)
+					}
+					return
 				}
 				return
 			}
@@ -79,6 +123,17 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 			if err != nil {
 				if ui.IsVerbose() {
 					ui.Failf("Failed to load configuration: %v", err)
+				}
+				return
+			}
+
+			// OAuth authentication check (default mode)
+			if cfg.CloudContext.ApiKey == "" && !common.IsOAuthAuthenticated() {
+				if ui.IsVerbose() {
+					ui.Failf("API key or OAuth authentication required")
+					ui.Info("Please run 'testkube login' to authenticate with OAuth flow")
+					ui.Info("Or set API key using 'testkube set context'")
+					ui.Info("Setup guide: https://docs.testkube.io/articles/mcp-setup")
 				}
 				return
 			}
@@ -112,10 +167,17 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 			// Get the current access token
 			accessToken, err := common.GetOAuthAccessToken()
 			if err != nil {
-				if ui.IsVerbose() {
-					ui.Failf("Failed to get access token: %v", err)
+
+				accessToken = cfg.CloudContext.ApiKey
+				if accessToken == "" {
+					if ui.IsVerbose() {
+						ui.Failf("Failed to get access token: %v", err)
+					}
+					return
 				}
-				return
+				if ui.IsVerbose() {
+					ui.Info("Using API key for authentication")
+				}
 			}
 
 			// Display connection information
@@ -126,6 +188,7 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 					"Environment":   fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
 					"API URL":       cfg.CloudContext.ApiUri,
 					"Dashboard URL": cfg.CloudContext.UiUri,
+					"API Key":       text.Obfuscate(accessToken),
 				})
 				ui.Info("Configure AI tools: https://docs.testkube.io/articles/mcp-configuration")
 				ui.Info("Feedback welcome: https://bit.ly/testkube-slack")
