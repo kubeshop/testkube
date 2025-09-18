@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-suite
+  name: postman-workflow-suite-small
   labels:
     core-tests: workflows-suite
     type: suite

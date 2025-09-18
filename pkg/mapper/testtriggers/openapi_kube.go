@@ -37,6 +37,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Labels:    request.Labels,
 		},
 		Spec: testsv1.TestTriggerSpec{
+			Selector:          mapLabelSelectorToCRD(request.Selector),
 			Resource:          resource,
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
@@ -87,6 +88,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 	return testsv1.TestTrigger{
 		ObjectMeta: *updatedMeta,
 		Spec: testsv1.TestTriggerSpec{
+			Selector:          mapLabelSelectorToCRD(request.Selector),
 			Resource:          resource,
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
@@ -103,20 +105,19 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
-	var labelSelector *metav1.LabelSelector
-	if selector.LabelSelector != nil {
-		labelSelector = mapLabelSelectorToCRD(selector.LabelSelector)
-	}
 	return testsv1.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
 		Namespace:      selector.Namespace,
 		NamespaceRegex: selector.NamespaceRegex,
-		LabelSelector:  labelSelector,
+		LabelSelector:  mapLabelSelectorToCRD(selector.LabelSelector),
 	}
 }
 
 func mapLabelSelectorToCRD(labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector) *metav1.LabelSelector {
+	if labelSelector == nil {
+		return nil
+	}
 	var matchExpressions []metav1.LabelSelectorRequirement
 	for _, e := range labelSelector.MatchExpressions {
 		expression := metav1.LabelSelectorRequirement{

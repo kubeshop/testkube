@@ -19,6 +19,6 @@ spec:
       - name: locust-workflow-suite
       - name: maven-workflow-suite
       - name: playwright-workflow-suite-small
-      - name: postman-workflow-suite
+      - name: postman-workflow-suite-small
       - name: pytest-workflow-suite
       - name: selenium-workflow-suite-small
