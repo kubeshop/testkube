@@ -73,48 +73,7 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 
 			if envMode {
 				// Environment variable mode - use env vars directly
-				accessToken := os.Getenv("TK_ACCESS_TOKEN")
-				orgID := os.Getenv("TK_ORG_ID")
-				envID := os.Getenv("TK_ENV_ID")
-				baseURL := os.Getenv("TK_CONTROL_PLANE_URL")
-				dashboardURL := os.Getenv("TK_DASHBOARD_URL")
-
-				if accessToken == "" || orgID == "" || envID == "" {
-					if ui.IsVerbose() {
-						ui.Failf("Environment variable mode requires TK_ACCESS_TOKEN, TK_ORG_ID, and TK_ENV_ID")
-						ui.Info("Set TK_MCP_ENV_MODE=true to enable environment variable mode")
-					}
-					return
-				}
-
-				if baseURL == "" {
-					baseURL = "https://api.testkube.io"
-				}
-				if dashboardURL == "" {
-					dashboardURL = baseURL
-					if strings.HasPrefix(baseURL, "https://api.") {
-						dashboardURL = strings.Replace(baseURL, "https://api.", "https://app.", 1)
-					}
-				}
-
-				if ui.IsVerbose() {
-					ui.Info("Starting MCP server in environment variable mode:")
-					ui.InfoGrid(map[string]string{
-						"Organization":  orgID,
-						"Environment":   envID,
-						"API Key":       text.Obfuscate(accessToken),
-						"API URL":       baseURL,
-						"Dashboard URL": dashboardURL,
-					})
-				}
-
-				// Start the MCP server with environment variables
-				if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug); err != nil {
-					if ui.IsVerbose() {
-						ui.Failf("Failed to start MCP server: %v", err)
-					}
-					return
-				}
+				startMCPServerInEnvMode(debug)
 				return
 			}
 
@@ -213,6 +172,49 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode with detailed operation information")
 
 	return cmd
+}
+
+func startMCPServerInEnvMode(debug bool) {
+	accessToken := os.Getenv("TK_ACCESS_TOKEN")
+	orgID := os.Getenv("TK_ORG_ID")
+	envID := os.Getenv("TK_ENV_ID")
+	baseURL := os.Getenv("TK_CONTROL_PLANE_URL")
+	dashboardURL := os.Getenv("TK_DASHBOARD_URL")
+
+	if accessToken == "" || orgID == "" || envID == "" {
+		if ui.IsVerbose() {
+			ui.Failf("Environment variable mode requires TK_ACCESS_TOKEN, TK_ORG_ID, and TK_ENV_ID")
+			ui.Info("Set TK_MCP_ENV_MODE=true to enable environment variable mode")
+		}
+	}
+
+	if baseURL == "" {
+		baseURL = "https://api.testkube.io"
+	}
+	if dashboardURL == "" {
+		dashboardURL = baseURL
+		if strings.HasPrefix(baseURL, "https://api.") {
+			dashboardURL = strings.Replace(baseURL, "https://api.", "https://app.", 1)
+		}
+	}
+
+	if ui.IsVerbose() {
+		ui.Info("Starting MCP server in environment variable mode:")
+		ui.InfoGrid(map[string]string{
+			"Organization":  orgID,
+			"Environment":   envID,
+			"API Key":       text.Obfuscate(accessToken),
+			"API URL":       baseURL,
+			"Dashboard URL": dashboardURL,
+		})
+	}
+
+	// Start the MCP server with environment variables
+	if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug); err != nil {
+		if ui.IsVerbose() {
+			ui.Failf("Failed to start MCP server: %v", err)
+		}
+	}
 }
 
 func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool) error {

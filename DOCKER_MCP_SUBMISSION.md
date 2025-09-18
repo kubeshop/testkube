@@ -10,8 +10,8 @@ The Testkube MCP server provides comprehensive tools for interacting with Testku
 
 1. **`build/mcp-server/Dockerfile`** - Docker container definition
 2. **`mcp-registry-metadata.json`** - Metadata for Docker MCP registry submission
-3. **`build/mcp-server/scripts/build-mcp-server.sh`** - Build script for Docker image
-4. **`build/mcp-server/scripts/build-local-mcp.sh`** - Local build script for testing
+3. **`build/mcp-server/build-mcp-server.sh`** - Build script for Docker image
+4. **`build/mcp-server/build-local-mcp.sh`** - Local build script for testing
 5. **Updated `docker-bake.hcl`** - Added MCP server target
 
 ## Building the Docker Image
@@ -20,10 +20,10 @@ The Testkube MCP server provides comprehensive tools for interacting with Testku
 
 ```bash
 # Build and push to registry
-./build/mcp-server/scripts/build-mcp-server.sh testkube/mcp-server:latest
+./build/mcp-server/build-mcp-server.sh testkube/mcp-server:latest
 
 # Build locally for testing
-./build/mcp-server/scripts/build-local-mcp.sh testkube/mcp-server:local
+./build/mcp-server/build-local-mcp.sh testkube/mcp-server:local
 ```
 
 ### Using Docker Buildx Directly
@@ -51,7 +51,7 @@ docker buildx bake mcp-server
 
 ```bash
 # Build for local platform (ARM64/AMD64)
-./build/mcp-server/scripts/build-local-mcp.sh testkube/mcp-server:local
+./build/mcp-server/build-local-mcp.sh testkube/mcp-server:local
 ```
 
 ## Testing the Container
