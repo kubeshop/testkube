@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
@@ -77,10 +78,14 @@ func withNotEmptyName(name string) watcherOpts {
 }
 
 const (
-	eventLabelKeyAgentName         string = "testkube.io/agent-name"
-	eventLabelKeyAgentNamespace    string = "testkube.io/agent-namespace"
-	eventLabelKeyResourceName      string = "testkube.io/resource-name"
-	eventLabelKeyResourceNamespace string = "testkube.io/resource-namespace"
+	eventLabelKeyAgentName            string = "testkube.io/agent-name"
+	eventLabelKeyAgentNamespace       string = "testkube.io/agent-namespace"
+	eventLabelKeyResourceName         string = "testkube.io/resource-name"
+	eventLabelKeyResourceNamespace    string = "testkube.io/resource-namespace"
+	eventLabelKeyResourceKind         string = "testkube.io/resource-kind"
+	eventLabelKeyResourceGroup        string = "testkube.io/resource-group"
+	eventLabelKeyResourceVersion      string = "testkube.io/resource-version"
+	eventLabelKeyResourceGroupVersion string = "testkube.io/resource-group-version"
 )
 
 func (s Service) newWatcherEvent(
@@ -107,6 +112,14 @@ func (s Service) newWatcherEvent(
 	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
 	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
+
+	if runtimeObject, ok := object.(runtime.Object); ok {
+		gvk := runtimeObject.GetObjectKind().GroupVersionKind()
+		w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
+		w.EventLabels[eventLabelKeyResourceGroup] = gvk.Group
+		w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
+		w.EventLabels[eventLabelKeyResourceGroupVersion] = gvk.Group + "/" + gvk.Version
+	}
 
 	for _, opt := range opts {
 		opt(w)
