@@ -235,13 +235,13 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 // AbortExecution aborts execution by testId and id
 func (c TestClient) AbortExecution(testID, id string) error {
 	uri := c.executionTransport.GetURI("/tests/%s/executions/%s", testID, id)
-	return c.executionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
+	return c.executionTransport.ExecuteMethod(http.MethodPatch, uri, nil, false)
 }
 
 // AbortExecutions aborts all the executions of a test
 func (c TestClient) AbortExecutions(testID string) error {
 	uri := c.executionTransport.GetURI("/tests/%s/abort", testID)
-	return c.executionTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.executionTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // ListExecutions list all executions for given test name

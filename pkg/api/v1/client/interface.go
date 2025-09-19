@@ -351,7 +351,7 @@ type Transport[A All] interface {
 	Execute(method, uri string, body []byte, params map[string]string) (result A, err error)
 	ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error)
 	Delete(uri, selector string, isContentExpected bool) error
-	ExecuteMethod(method, uri, selector string, isContentExpected bool) error
+	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
 	GetLogsV2(uri string, logs chan events.Log) error
