@@ -11,7 +11,9 @@ import (
 )
 
 func NewCancelTestWorkflowExecutionCmd() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	cmd := &cobra.Command{
 		Use:     "testworkflowexecution <executionName>",
 		Aliases: []string{"twe", "testworkflows-execution", "testworkflow-execution"},
 		Short:   "Cancel test workflow execution",
@@ -27,12 +29,15 @@ func NewCancelTestWorkflowExecutionCmd() *cobra.Command {
 			ui.ExitOnError("get execution failed", err)
 
 			// TODO: interface method was never renamed from abort to cancel
-			err = client.AbortTestWorkflowExecution(execution.Workflow.Name, execution.Id)
+			err = client.AbortTestWorkflowExecution(execution.Workflow.Name, execution.Id, force)
 			ui.ExitOnError(fmt.Sprintf("canceling testworkflow execution %s", executionID), err)
 
 			ui.SuccessAndExit("Succesfully canceled test workflow execution", executionID)
 		},
 	}
+
+	cmd.Flags().BoolVar(&force, "force", false, "force cancellation for this execution")
+	return cmd
 }
 
 func NewCancelTestWorkflowExecutionsCmd() *cobra.Command {

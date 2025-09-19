@@ -113,11 +113,11 @@ func (t ProxyClient[A]) ExecuteMultiple(method, uri string, body []byte, params 
 
 // Delete is a method to make delete api call
 func (t ProxyClient[A]) Delete(uri, selector string, isContentExpected bool) error {
-	return t.ExecuteMethod(http.MethodDelete, uri, selector, isContentExpected)
+	return t.ExecuteMethod(http.MethodDelete, uri, map[string]string{"selector": selector}, isContentExpected)
 }
 
-func (t ProxyClient[A]) ExecuteMethod(method, uri string, selector string, isContentExpected bool) error {
-	resp, err := t.baseExec(method, uri, uri, nil, map[string]string{"selector": selector})
+func (t ProxyClient[A]) ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error {
+	resp, err := t.baseExec(method, uri, uri, nil, params)
 	if err != nil {
 		return err
 	}

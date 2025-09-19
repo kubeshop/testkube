@@ -213,25 +213,25 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 // PauseTestWorkflowExecution pauses selected execution
 func (c TestWorkflowClient) PauseTestWorkflowExecution(workflow, id string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/pause", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // ResumeTestWorkflowExecution pauses selected execution
 func (c TestWorkflowClient) ResumeTestWorkflowExecution(workflow, id string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/resume", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // AbortTestWorkflowExecution aborts selected execution
-func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string) error {
+func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string, force bool) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, map[string]string{"forceAgent": fmt.Sprint(force)}, false)
 }
 
 // AbortTestWorkflowExecutions aborts all workflow executions
 func (c TestWorkflowClient) AbortTestWorkflowExecutions(workflow string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/abort", workflow)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // GetTestWorkflowExecutionArtifacts returns execution artifacts

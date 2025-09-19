@@ -128,13 +128,13 @@ func (c TestSuiteClient) GetTestSuiteExecution(executionID string) (execution te
 // AbortTestSuiteExecution aborts a test suite execution
 func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions/%s", executionID)
-	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
+	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, nil, false)
 }
 
 // AbortTestSuiteExecutions aborts all test suite executions
 func (c TestSuiteClient) AbortTestSuiteExecutions(testSuiteName string) error {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/abort", testSuiteName)
-	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // GetTestSuiteExecutionArtifacts returns test suite execution artifacts by excution id

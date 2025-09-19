@@ -179,7 +179,7 @@ type TestWorkflowAPI interface {
 type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
 	ListTestWorkflowExecutions(id string, limit int, options FilterTestWorkflowExecutionOptions) (executions testkube.TestWorkflowExecutionsResult, err error)
-	AbortTestWorkflowExecution(workflow string, id string) error
+	AbortTestWorkflowExecution(workflow string, id string, force bool) error
 	AbortTestWorkflowExecutions(workflow string) error
 	PauseTestWorkflowExecution(workflow string, id string) error
 	ResumeTestWorkflowExecution(workflow string, id string) error
@@ -351,7 +351,7 @@ type Transport[A All] interface {
 	Execute(method, uri string, body []byte, params map[string]string) (result A, err error)
 	ExecuteMultiple(method, uri string, body []byte, params map[string]string) (result []A, err error)
 	Delete(uri, selector string, isContentExpected bool) error
-	ExecuteMethod(method, uri, selector string, isContentExpected bool) error
+	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
 	GetLogsV2(uri string, logs chan events.Log) error
