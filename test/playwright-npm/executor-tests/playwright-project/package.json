@@ -8,7 +8,7 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-      "test": "playwright test"
+      "test": "playwright test --reporter=list,html,junit --trace on"
   },
   "devDependencies": {
     "@playwright/test": "1.32.3"
