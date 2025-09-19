@@ -3,11 +3,11 @@
   "displayName": "Testkube MCP Server",
   "description": "Model Context Protocol server for Testkube, enabling AI assistants to interact with Testkube workflows, executions, and artifacts. Provides comprehensive tools for managing test workflows, monitoring executions, and accessing test artifacts.",
   "version": "1.0.0",
-  "author": "Kubeshop",
+  "author": "Testkube",
   "license": "MIT",
   "homepage": "https://testkube.io",
   "repository": "https://github.com/kubeshop/testkube",
-  "documentation": "https://docs.testkube.io",
+  "documentation": "https://docs.testkube.io/articles/mcp-overview",
   "keywords": [
     "testkube",
     "testing",
