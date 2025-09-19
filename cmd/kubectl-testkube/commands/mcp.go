@@ -137,6 +137,10 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 				if ui.IsVerbose() {
 					ui.Info("Using API key for authentication")
 				}
+			} else {
+				if ui.IsVerbose() {
+					ui.Info("Using OAuth authentication")
+				}
 			}
 
 			// Display connection information
