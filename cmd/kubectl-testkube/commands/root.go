@@ -92,6 +92,31 @@ var RootCmd = &cobra.Command{
 		if err = validator.ValidateCloudContext(cfg); err != nil {
 			common.UiCloudContextValidationError(err)
 		}
+
+		// Send telemetry early to ensure it's captured even if command fails
+		if cfg.TelemetryEnabled {
+			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+			out, err := telemetry.SendCmdEvent(cmd, common.Version)
+			if ui.Verbose && err != nil {
+				ui.Err(err)
+			}
+			ui.Debug("telemetry send event response", out)
+
+			// trigger init event only for first run
+			if !cfg.Initialized {
+				cfg.SetInitialized()
+				err := config.Save(cfg)
+				ui.WarnOnError("saving config", err)
+
+				ui.Debug("sending 'init' event")
+
+				out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
+				if ui.Verbose && err != nil {
+					ui.Err(err)
+				}
+				ui.Debug("telemetry init event response", out)
+			}
+		}
 	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
@@ -121,32 +146,6 @@ var RootCmd = &cobra.Command{
 
 				err = config.Save(clientCfg)
 				ui.WarnOnError("syncing config", err)
-			}
-		}
-		if clientCfg.TelemetryEnabled {
-			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-			out, err := telemetry.SendCmdEvent(cmd, common.Version)
-			if ui.Verbose && err != nil {
-				ui.Err(err)
-			}
-			ui.Debug("telemetry send event response", out)
-
-			// trigger init event only for first run
-			clientCfg, err := config.Load()
-			ui.WarnOnError("loading config", err)
-
-			if !clientCfg.Initialized {
-				clientCfg.SetInitialized()
-				err := config.Save(clientCfg)
-				ui.WarnOnError("saving config", err)
-
-				ui.Debug("sending 'init' event")
-
-				out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
-				if ui.Verbose && err != nil {
-					ui.Err(err)
-				}
-				ui.Debug("telemetry init event response", out)
 			}
 		}
 	},

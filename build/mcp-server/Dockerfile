@@ -41,6 +41,8 @@ RUN mkdir -p /.testkube && \
     chmod 755 /.testkube && \
     chmod 660 /.testkube/config.json
 
+RUN /bin/kubectl-testkube enable telemetry
+
 # Set working directory
 WORKDIR /home/mcpuser
 
