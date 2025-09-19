@@ -246,11 +246,3 @@ docker run --rm -it \
   -e TK_DEBUG=true \
   testkube/mcp-server:latest
 ```
-
-## Next Steps
-
-1. Test the containerized MCP server thoroughly
-2. Submit to Docker MCP Registry
-3. Monitor for approval and publication
-4. Update documentation with Docker Hub links
-5. Consider adding to CI/CD pipeline for automated builds
