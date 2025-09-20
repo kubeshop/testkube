@@ -42,7 +42,7 @@ func TestNewWatcherEvent(t *testing.T) {
 		"testkube.io/resource-kind":          gvk.Kind,
 		"testkube.io/resource-group":         gvk.Group,
 		"testkube.io/resource-version":       gvk.Version,
-		"testkube.io/resource-group-version": gvk.Group + "/" + gvk.Version,
+		"testkube.io/resource-group-version": gvk.Group + "_" + gvk.Version,
 	}
 
 	assert.EqualValues(t, "deployment", event.resource, "resource should be correct")

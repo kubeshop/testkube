@@ -118,7 +118,7 @@ func (s Service) newWatcherEvent(
 		w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
 		w.EventLabels[eventLabelKeyResourceGroup] = gvk.Group
 		w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
-		w.EventLabels[eventLabelKeyResourceGroupVersion] = gvk.Group + "/" + gvk.Version
+		w.EventLabels[eventLabelKeyResourceGroupVersion] = gvk.Group + "_" + gvk.Version
 	}
 
 	for _, opt := range opts {
