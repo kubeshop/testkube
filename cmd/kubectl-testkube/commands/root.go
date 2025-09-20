@@ -30,6 +30,12 @@ var (
 	headers      map[string]string
 )
 
+// preRunTelemetryCommands defines which commands should send telemetry in PreRun
+// These are typically long-running or blocking commands that won't reach PostRun until completion
+var preRunTelemetryCommands = map[string]string{
+	"serve": "mcp", // serve command under mcp parent - this won't reach PostRun until the server is stopped
+}
+
 func init() {
 	// New commands
 	RootCmd.AddCommand(NewCreateCmd())
@@ -93,29 +99,9 @@ var RootCmd = &cobra.Command{
 			common.UiCloudContextValidationError(err)
 		}
 
-		// Send telemetry early to ensure it's captured even if command fails
-		if cfg.TelemetryEnabled {
-			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-			out, err := telemetry.SendCmdEvent(cmd, common.Version)
-			if ui.Verbose && err != nil {
-				ui.Err(err)
-			}
-			ui.Debug("telemetry send event response", out)
-
-			// trigger init event only for first run
-			if !cfg.Initialized {
-				cfg.SetInitialized()
-				err := config.Save(cfg)
-				ui.WarnOnError("saving config", err)
-
-				ui.Debug("sending 'init' event")
-
-				out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
-				if ui.Verbose && err != nil {
-					ui.Err(err)
-				}
-				ui.Debug("telemetry init event response", out)
-			}
+		// send telemetry as needed
+		if isPreRunTelemetry(cmd) {
+			handleTelemetry(cmd, &cfg, true)
 		}
 	},
 
@@ -127,6 +113,7 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
+
 		// We ignore this check for cloud, since agent can be offline, and config API won't work
 		// but other commands should work.
 		if clientCfg.ContextType != config.ContextTypeCloud {
@@ -148,6 +135,10 @@ var RootCmd = &cobra.Command{
 				ui.WarnOnError("syncing config", err)
 			}
 		}
+
+		if !isPreRunTelemetry(cmd) {
+			handleTelemetry(cmd, &clientCfg, false)
+		}
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
@@ -156,6 +147,43 @@ var RootCmd = &cobra.Command{
 		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true
 	},
+}
+
+// isPreRunTelemetry determines if telemetry should be sent in PreRun for this command
+func isPreRunTelemetry(cmd *cobra.Command) bool {
+	expectedParent, exists := preRunTelemetryCommands[cmd.Name()]
+	if !exists {
+		return false
+	}
+	return cmd.Parent() != nil && cmd.Parent().Name() == expectedParent
+}
+
+// handleTelemetry sends telemetry events and handles initialization events
+func handleTelemetry(cmd *cobra.Command, cfg *config.Data, isPreRun bool) {
+	// Send telemetry early to ensure it's captured even if command fails
+	if cfg.TelemetryEnabled {
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		out, err := telemetry.SendCmdEvent(cmd, common.Version)
+		if ui.Verbose && err != nil {
+			ui.Err(err)
+		}
+		ui.Debug("telemetry send event response", out)
+
+		// trigger init event only for first run
+		if !cfg.Initialized && !isPreRun {
+			cfg.SetInitialized()
+			err := config.Save(*cfg)
+			ui.WarnOnError("saving config", err)
+
+			ui.Debug("sending 'init' event")
+
+			out, err := telemetry.SendCmdInitEvent(cmd, common.Version)
+			if ui.Verbose && err != nil {
+				ui.Err(err)
+			}
+			ui.Debug("telemetry init event response", out)
+		}
+	}
 }
 
 func Execute() {

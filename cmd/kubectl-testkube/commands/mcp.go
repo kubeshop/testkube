@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -81,7 +82,7 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 			cfg, err := config.Load()
 			if err != nil {
 				if ui.IsVerbose() {
-					ui.Failf("Failed to load configuration: %v", err)
+					fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
 				}
 				return
 			}
@@ -89,10 +90,10 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 			// OAuth authentication check (default mode)
 			if cfg.CloudContext.ApiKey == "" && !common.IsOAuthAuthenticated() {
 				if ui.IsVerbose() {
-					ui.Failf("API key or OAuth authentication required")
-					ui.Info("Please run 'testkube login' to authenticate with OAuth flow")
-					ui.Info("Or set API key using 'testkube set context'")
-					ui.Info("Setup guide: https://docs.testkube.io/articles/mcp-setup")
+					fmt.Fprintf(os.Stderr, "API key or OAuth authentication required\n")
+					fmt.Fprintf(os.Stderr, "Please run 'testkube login' to authenticate with OAuth flow\n")
+					fmt.Fprintf(os.Stderr, "Or set API key using 'testkube set context'\n")
+					fmt.Fprintf(os.Stderr, "Setup guide: https://docs.testkube.io/articles/mcp-setup\n")
 				}
 				return
 			}
@@ -100,25 +101,25 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 			// Validate we have required context information
 			if cfg.ContextType != config.ContextTypeCloud {
 				if ui.IsVerbose() {
-					ui.Failf("MCP server requires cloud context. Current context: %s", cfg.ContextType)
-					ui.Info("Please run 'testkube set context --help' to configure cloud context")
-					ui.Info("Setup guide: https://docs.testkube.io/articles/mcp-setup")
+					fmt.Fprintf(os.Stderr, "MCP server requires cloud context. Current context: %s\n", cfg.ContextType)
+					fmt.Fprintf(os.Stderr, "Please run 'testkube set context --help' to configure cloud context\n")
+					fmt.Fprintf(os.Stderr, "Setup guide: https://docs.testkube.io/articles/mcp-setup\n")
 				}
 				return
 			}
 
 			if cfg.CloudContext.OrganizationId == "" {
 				if ui.IsVerbose() {
-					ui.Failf("Organization ID not found in configuration")
-					ui.Info("Please run 'testkube set context' to configure organization")
+					fmt.Fprintf(os.Stderr, "Organization ID not found in configuration\n")
+					fmt.Fprintf(os.Stderr, "Please run 'testkube set context' to configure organization\n")
 				}
 				return
 			}
 
 			if cfg.CloudContext.EnvironmentId == "" {
 				if ui.IsVerbose() {
-					ui.Failf("Environment ID not found in configuration")
-					ui.Info("Please run 'testkube set context' to configure environment")
+					fmt.Fprintf(os.Stderr, "Environment ID not found in configuration\n")
+					fmt.Fprintf(os.Stderr, "Please run 'testkube set context' to configure environment\n")
 				}
 				return
 			}
@@ -130,44 +131,46 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 				accessToken = cfg.CloudContext.ApiKey
 				if accessToken == "" {
 					if ui.IsVerbose() {
-						ui.Failf("Failed to get access token: %v", err)
+						fmt.Fprintf(os.Stderr, "Failed to get access token: %v\n", err)
 					}
 					return
 				}
 				if ui.IsVerbose() {
-					ui.Info("Using API key for authentication")
+					fmt.Fprintf(os.Stderr, "Using API key for authentication\n")
 				}
 			} else {
 				if ui.IsVerbose() {
-					ui.Info("Using OAuth authentication")
+					fmt.Fprintf(os.Stderr, "Using OAuth authentication\n")
 				}
 			}
 
 			// Display connection information
 			if ui.IsVerbose() {
-				ui.Info("Starting MCP server with configuration:")
-				ui.InfoGrid(map[string]string{
+				fmt.Fprintf(os.Stderr, "Starting MCP server with configuration:\n")
+				configData := map[string]string{
 					"Organization":  fmt.Sprintf("%s (%s)", cfg.CloudContext.OrganizationName, cfg.CloudContext.OrganizationId),
 					"Environment":   fmt.Sprintf("%s (%s)", cfg.CloudContext.EnvironmentName, cfg.CloudContext.EnvironmentId),
 					"API URL":       cfg.CloudContext.ApiUri,
 					"Dashboard URL": cfg.CloudContext.UiUri,
 					"API Key":       text.Obfuscate(accessToken),
-				})
-				ui.Info("Configure AI tools: https://docs.testkube.io/articles/mcp-configuration")
-				ui.Info("Feedback welcome: https://bit.ly/testkube-slack")
+				}
+				configJSON, _ := json.MarshalIndent(configData, "", "  ")
+				fmt.Fprintf(os.Stderr, "Configuration: %s\n", string(configJSON))
+				fmt.Fprintf(os.Stderr, "Configure AI tools: https://docs.testkube.io/articles/mcp-configuration\n")
+				fmt.Fprintf(os.Stderr, "Feedback welcome: https://bit.ly/testkube-slack\n")
 			}
 
 			// Start the MCP server
 			if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug); err != nil {
 				if ui.IsVerbose() {
-					ui.Failf("Failed to start MCP server: %v", err)
+					fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
 				}
 				return
 			}
 
 			// If we reach here, the server shut down gracefully
 			if ui.IsVerbose() {
-				ui.Info("MCP server shut down gracefully")
+				fmt.Fprintf(os.Stderr, "MCP server shut down gracefully\n")
 			}
 		},
 	}
@@ -187,8 +190,8 @@ func startMCPServerInEnvMode(debug bool) {
 
 	if accessToken == "" || orgID == "" || envID == "" {
 		if ui.IsVerbose() {
-			ui.Failf("Environment variable mode requires TK_ACCESS_TOKEN, TK_ORG_ID, and TK_ENV_ID")
-			ui.Info("Set TK_MCP_ENV_MODE=true to enable environment variable mode")
+			fmt.Fprintf(os.Stderr, "Environment variable mode requires TK_ACCESS_TOKEN, TK_ORG_ID, and TK_ENV_ID\n")
+			fmt.Fprintf(os.Stderr, "Set TK_MCP_ENV_MODE=true to enable environment variable mode\n")
 		}
 	}
 
@@ -203,20 +206,22 @@ func startMCPServerInEnvMode(debug bool) {
 	}
 
 	if ui.IsVerbose() {
-		ui.Info("Starting MCP server in environment variable mode:")
-		ui.InfoGrid(map[string]string{
+		fmt.Fprintf(os.Stderr, "Starting MCP server in environment variable mode:\n")
+		envConfigData := map[string]string{
 			"Organization":  orgID,
 			"Environment":   envID,
 			"API Key":       text.Obfuscate(accessToken),
 			"API URL":       baseURL,
 			"Dashboard URL": dashboardURL,
-		})
+		}
+		envConfigJSON, _ := json.MarshalIndent(envConfigData, "", "  ")
+		fmt.Fprintf(os.Stderr, "Configuration: %s\n", string(envConfigJSON))
 	}
 
 	// Start the MCP server with environment variables
 	if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug); err != nil {
 		if ui.IsVerbose() {
-			ui.Failf("Failed to start MCP server: %v", err)
+			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
 		}
 	}
 }
