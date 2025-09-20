@@ -40,6 +40,7 @@ type Params struct {
 	TestWorkflowSteps          int32      `json:"test_workflow_steps,omitempty"`
 	TestWorkflowExecuteCount   int32      `json:"test_workflow_execute_count,omitempty"`
 	TestWorkflowParallelUsed   bool       `json:"test_workflow_parallel_used,omitempty"`
+	ToolName                   string     `json:"tool_name,omitempty"`
 	TestWorkflowMatrixUsed     bool       `json:"test_workflow_matrix_used,omitempty"`
 	TestWorkflowServicesUsed   bool       `json:"test_workflow_services_used,omitempty"`
 	TestWorkflowIsSample       bool       `json:"test_workflow_is_sample,omitempty"`

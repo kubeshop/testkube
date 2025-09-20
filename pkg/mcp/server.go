@@ -23,6 +23,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		cfg.Version,
 		server.WithToolCapabilities(true),
 		server.WithToolHandlerMiddleware(DebugMiddleware(cfg.Debug)),
+		server.WithToolHandlerMiddleware(TelemetryMiddleware(cfg.TelemetryEnabled)),
 	)
 
 	// If no client is provided, use the default API client

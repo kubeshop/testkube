@@ -28,6 +28,9 @@ type MCPServerConfig struct {
 
 	// Debug enables debug mode which includes detailed operation information in responses
 	Debug bool
+
+	// TelemetryEnabled enables telemetry collection for MCP tool usage
+	TelemetryEnabled bool
 }
 
 // LoadConfigFromEnv loads configuration from environment variables
@@ -44,13 +47,14 @@ func LoadConfigFromEnv() MCPServerConfig {
 	}
 
 	return MCPServerConfig{
-		Version:         "1.0.0",
-		ControlPlaneUrl: controlPlaneUrl,
-		DashboardUrl:    dashboardUrl,
-		AccessToken:     os.Getenv("TK_ACCESS_TOKEN"),
-		OrgId:           os.Getenv("TK_ORG_ID"),
-		EnvId:           os.Getenv("TK_ENV_ID"),
-		Debug:           os.Getenv("TK_DEBUG") == "true",
+		Version:          "1.0.0",
+		ControlPlaneUrl:  controlPlaneUrl,
+		DashboardUrl:     dashboardUrl,
+		AccessToken:      os.Getenv("TK_ACCESS_TOKEN"),
+		OrgId:            os.Getenv("TK_ORG_ID"),
+		EnvId:            os.Getenv("TK_ENV_ID"),
+		Debug:            os.Getenv("TK_DEBUG") == "true",
+		TelemetryEnabled: os.Getenv("TK_TELEMETRY_ENABLED") != "false", // Default to true unless explicitly disabled
 	}
 }
 

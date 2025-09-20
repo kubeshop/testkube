@@ -227,15 +227,23 @@ func startMCPServerInEnvMode(debug bool) {
 }
 
 func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool) error {
+	// Load config to check telemetry settings
+	cfg, err := config.Load()
+	telemetryEnabled := true
+	if err == nil {
+		telemetryEnabled = cfg.TelemetryEnabled
+	}
+
 	// Create MCP server configuration
 	mcpCfg := mcp.MCPServerConfig{
-		Version:         common.Version,
-		ControlPlaneUrl: baseURL,
-		DashboardUrl:    dashboardURL,
-		AccessToken:     accessToken,
-		OrgId:           orgID,
-		EnvId:           envID,
-		Debug:           debug,
+		Version:          common.Version,
+		ControlPlaneUrl:  baseURL,
+		DashboardUrl:     dashboardURL,
+		AccessToken:      accessToken,
+		OrgId:            orgID,
+		EnvId:            envID,
+		Debug:            debug,
+		TelemetryEnabled: telemetryEnabled,
 	}
 
 	// If no base URL is provided, use the default from testkube context
