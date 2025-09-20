@@ -13,7 +13,7 @@ variable "SEGMENTIO_KEY"           { default = ""}
 variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
 
 group "default" {
-  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit"]
+  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit", "mcp-server"]
 }
 
 target "api-meta" {}
@@ -93,5 +93,18 @@ target "testworkflow-toolkit" {
   args = {
     GOCACHE = "${GOCACHE}"
     GOMODCACHE = "${GOMODCACHE}"
+  }
+}
+
+target "mcp-server-meta" {}
+target "mcp-server" {
+  inherits = ["mcp-server-meta"]
+  context="."
+  dockerfile = "build/mcp-server/Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    VERSION = "${VERSION}"
+    GIT_SHA = "${GIT_SHA}"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
   }
 }

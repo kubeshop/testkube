@@ -269,7 +269,135 @@ func GetClusterType() string {
 	return "others"
 }
 
+// IsRunningInDocker detects if the CLI is running inside a Docker container
+func IsRunningInDocker() bool {
+	// Method 1: Check for .dockerenv file
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+
+	// Method 2: Check Docker-specific environment variables
+	dockerEnvVars := []string{
+		"DOCKER_CONTAINER",
+		"DOCKER_BUILDKIT",
+		"DOCKER_HOST",
+		"DOCKER_TLS_VERIFY",
+		"DOCKER_CERT_PATH",
+		"DOCKER_MACHINE_NAME",
+	}
+
+	for _, envVar := range dockerEnvVars {
+		if _, exists := os.LookupEnv(envVar); exists {
+			return true
+		}
+	}
+
+	// Method 3: Check cgroup for Docker/containerd (Linux only)
+	if runtime.GOOS == "linux" {
+		if cgroupData, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+			cgroupContent := string(cgroupData)
+			if strings.Contains(cgroupContent, "docker") ||
+				strings.Contains(cgroupContent, "containerd") {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// GetDockerContext detects how the Docker container is being run
+func GetDockerContext() string {
+	if !IsRunningInDocker() {
+		return ""
+	}
+
+	// Check for Docker Compose
+	if _, ok := os.LookupEnv("COMPOSE_PROJECT_NAME"); ok {
+		projectName := os.Getenv("COMPOSE_PROJECT_NAME")
+		if projectName != "" {
+			return "docker-compose:" + projectName
+		}
+		return "docker-compose"
+	}
+
+	// Check for Docker Swarm
+	if _, ok := os.LookupEnv("DOCKER_SWARM"); ok {
+		return "docker-swarm"
+	}
+
+	// Check for Kubernetes (running in a pod)
+	if _, ok := os.LookupEnv("KUBERNETES_SERVICE_HOST"); ok {
+		namespace := os.Getenv("POD_NAMESPACE")
+		if namespace != "" {
+			return "kubernetes:" + namespace
+		}
+		return "kubernetes"
+	}
+
+	// Check for Docker BuildKit (during build)
+	if _, ok := os.LookupEnv("DOCKER_BUILDKIT"); ok {
+		return "docker-buildkit"
+	}
+
+	// Check for Docker Desktop
+	if _, ok := os.LookupEnv("DOCKER_DESKTOP"); ok {
+		return "docker-desktop"
+	}
+
+	// Check for specific container runtime
+	if runtime.GOOS == "linux" {
+		if cgroupData, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+			cgroupContent := string(cgroupData)
+			if strings.Contains(cgroupContent, "containerd") {
+				return "containerd"
+			}
+			if strings.Contains(cgroupContent, "crio") {
+				return "cri-o"
+			}
+		}
+	}
+
+	// Check for custom Testkube Docker image version
+	if version, ok := os.LookupEnv("TESTKUBE_DOCKER_IMAGE_VERSION"); ok {
+		return "docker:testkube:" + version
+	}
+
+	// Check for CI/CD environments that might be using Docker
+	if _, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
+		return "docker:github-actions"
+	}
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		return "docker:circleci"
+	}
+	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
+		return "docker:gitlab-ci"
+	}
+	if _, ok := os.LookupEnv("BUILDKITE"); ok {
+		return "docker:buildkite"
+	}
+
+	// Check for container orchestration platforms
+	if _, ok := os.LookupEnv("AWS_EXECUTION_ENV"); ok {
+		return "docker:aws"
+	}
+	if _, ok := os.LookupEnv("GOOGLE_CLOUD_PROJECT"); ok {
+		return "docker:gcp"
+	}
+	if _, ok := os.LookupEnv("AZURE_CONTAINER_REGISTRY"); ok {
+		return "docker:azure"
+	}
+
+	// Default Docker context
+	return "docker"
+}
+
 func GetCliRunContext() string {
+	// Check for Docker first with detailed context
+	if dockerContext := GetDockerContext(); dockerContext != "" {
+		return dockerContext
+	}
+
 	if value, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
 		if value == "true" {
 			return "github-actions"
