@@ -9,9 +9,9 @@ import (
 
 // SendMCPToolEvent sends telemetry for MCP tool execution
 func SendMCPToolEvent(toolName string, duration time.Duration, hasError bool, version string) (string, error) {
-	eventName := "mcp_tool_execution"
+	eventName := "testkube_mcp_tool_execution"
 	if hasError {
-		eventName = "mcp_tool_error"
+		eventName = "testkube_mcp_tool_error"
 	}
 
 	payload := NewMCPToolPayload(toolName, eventName, duration, version)
@@ -28,9 +28,9 @@ func NewMCPToolPayload(toolName, eventName string, duration time.Duration, versi
 			Name: text.GAEventName(eventName),
 			Params: Params{
 				EventCount:      1,
-				EventCategory:   "mcp_tool",
+				EventCategory:   "testkube_mcp_tool",
 				AppVersion:      version,
-				AppName:         "testkube-mcp",
+				AppName:         "testkube-mcp-server",
 				MachineID:       machineID,
 				OperatingSystem: runtime.GOOS,
 				Architecture:    runtime.GOARCH,
