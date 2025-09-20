@@ -60,7 +60,9 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		// TODO(emil): make these all debug level later
 		selectorLogger := s.logger.With(
 			"selectorSpecified", selectorSpecified,
+			"selector", t.Spec.Selector,
 			"resourceSelectorSpecified", resourceSelectorSpecified,
+			"resourceSelector", t.Spec.ResourceSelector,
 			"selectorMatched", selectorMatched,
 			"resourceSelectorMatched", resourceSelectorMatched)
 
