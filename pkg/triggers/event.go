@@ -113,8 +113,6 @@ func (s Service) newWatcherEvent(
 	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
-	s.logger.Infof("OBJECT: type: %T, value: %v", object, object)
-	s.logger.Infof("OBJECT META: type: %T, value: %v", objectMeta, objectMeta)
 	if runtimeObject, ok := object.(runtime.Object); ok {
 		gvk := runtimeObject.GetObjectKind().GroupVersionKind()
 		w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
@@ -122,8 +120,13 @@ func (s Service) newWatcherEvent(
 		w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
 		if gvk.Group != "" && gvk.Version != "" {
 			w.EventLabels[eventLabelKeyResourceGroupVersion] = gvk.Group + "_" + gvk.Version
+		} else {
+			s.logger.Infof("OBJECT with empty groupo version: type: %T, value: %v", object, object)
+			s.logger.Infof("OBJECT GVK with empty group: %T, value: %v", gvk, gvk)
 		}
 	}
+
+	s.logger.Infof("EVENT LABELS", w.EventLabels)
 
 	for _, opt := range opts {
 		opt(w)
