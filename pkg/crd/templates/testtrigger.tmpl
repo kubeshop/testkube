@@ -30,7 +30,7 @@ spec:
   {{- if .Resource }}
   resource: {{ .Resource }}
   {{- end }}
-  {{- if or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels ResourceSelector.LabelSelector.MatchExpressions)) }}
+  {{- if or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions)) }}
   resourceSelector:
     {{- if .ResourceSelector.Name }}
     name: {{ .ResourceSelector.Name }}
