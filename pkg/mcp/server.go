@@ -10,6 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 // NewMCPServer creates and configures a new Testkube MCP server
@@ -86,6 +87,11 @@ func ServeStdioMCP(cfg MCPServerConfig, client Client) error {
 		}
 	}()
 
+	if ui.IsVerbose() {
+		fmt.Fprintf(os.Stderr, "Testkube MCP server started in stdio mode\n")
+		fmt.Fprintf(os.Stderr, "Use 'testkube mcp serve --help' for more options\n")
+	}
+
 	// Wait for either server error or interrupt signal
 	select {
 	case <-sigCh:
@@ -96,5 +102,78 @@ func ServeStdioMCP(cfg MCPServerConfig, client Client) error {
 			return err
 		}
 		return nil
+	}
+}
+
+// ServeSHTTPMCP creates and starts an MCP server with the given configuration,
+// serving over Streamable HTTP. This provides HTTP-based access to the MCP server.
+func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
+	mcpServer, err := NewMCPServer(cfg, client)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP server: %v", err)
+	}
+
+	// Create StreamableHTTP server
+	httpServer := server.NewStreamableHTTPServer(mcpServer)
+
+	// Set up signal handling for graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	// Build the address
+	addr := fmt.Sprintf("%s:%d", cfg.SHTTPConfig.Host, cfg.SHTTPConfig.Port)
+
+	// Start the server in a goroutine
+	serverErrCh := make(chan error, 1)
+	go func() {
+		defer close(serverErrCh)
+
+		// Start HTTP server (mcp-go handles both HTTP and HTTPS)
+		// The server will be available at http://addr/mcp by default
+		if err := httpServer.Start(addr); err != nil {
+			serverErrCh <- fmt.Errorf("failed to start MCP HTTP server: %v", err)
+		}
+	}()
+
+	// Log server startup information
+	protocol := "http"
+	if cfg.SHTTPConfig.EnableTLS {
+		protocol = "https"
+	}
+
+	if ui.IsVerbose() {
+		fmt.Fprintf(os.Stderr, "Testkube MCP server starting on %s://%s\n", protocol, addr)
+		fmt.Fprintf(os.Stderr, "MCP endpoint available at: %s://%s/mcp\n", protocol, addr)
+		fmt.Fprintf(os.Stderr, "Use 'testkube mcp serve --transport=shttp --help' for more options\n")
+	}
+
+	// Wait for either server error or interrupt signal
+	select {
+	case <-sigCh:
+		// Signal received, shutdown gracefully
+		if ui.IsVerbose() {
+			fmt.Fprintf(os.Stderr, "\nShutting down MCP server...\n")
+		}
+
+		// Graceful shutdown handled by the mcp-go library
+		// The server will stop when the context is cancelled
+		return nil
+	case err := <-serverErrCh:
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+// ServeMCP starts the MCP server using the configured transport type
+func ServeMCP(cfg MCPServerConfig, client Client) error {
+	switch cfg.Transport {
+	case TransportSHTTP:
+		return ServeSHTTPMCP(cfg, client)
+	case TransportStdio:
+		fallthrough
+	default:
+		return ServeStdioMCP(cfg, client)
 	}
 }

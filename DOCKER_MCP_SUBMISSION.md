@@ -133,6 +133,7 @@ If using self-provided images:
 
 ### Example Docker Compose
 
+#### Stdio Transport (Default)
 ```yaml
 version: '3.8'
 services:
@@ -146,10 +147,28 @@ services:
     command: ["mcp", "serve"]
 ```
 
+#### SHTTP Transport
+```yaml
+version: '3.8'
+services:
+  testkube-mcp:
+    image: testkube/mcp-server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - TK_ACCESS_TOKEN=${TK_ACCESS_TOKEN}
+      - TK_ORG_ID=${TK_ORG_ID}
+      - TK_ENV_ID=${TK_ENV_ID}
+      - TK_DEBUG=false
+
+    command: ["mcp", "serve", "--transport=shttp"]
+```
+
 ## MCP Client Configuration
 
 ### VSCode Configuration
 
+#### Stdio Transport
 ```json
 {
   "servers": {
@@ -169,8 +188,30 @@ services:
 }
 ```
 
+#### SHTTP Transport
+```json
+{
+  "servers": {
+    "testkube": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-p", "8080:8080",
+        "-e", "TK_ACCESS_TOKEN=${TK_ACCESS_TOKEN}",
+        "-e", "TK_ORG_ID=${TK_ORG_ID}",
+        "-e", "TK_ENV_ID=${TK_ENV_ID}",
+        "-e", "TK_MCP_TRANSPORT=shttp",
+        "testkube/mcp-server:latest",
+        "mcp", "serve", "--transport=shttp"
+      ],
+      "type": "shttp"
+    }
+  }
+}
+```
+
 ### Claude Desktop Configuration
 
+#### Stdio Transport
 ```json
 {
   "mcpServers": {
@@ -183,6 +224,26 @@ services:
         "-e", "TK_ENV_ID=${TK_ENV_ID}",
         "testkube/mcp-server:latest",
         "mcp", "serve"
+      ]
+    }
+  }
+}
+```
+
+#### SHTTP Transport
+```json
+{
+  "mcpServers": {
+    "testkube": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-p", "8080:8080",
+        "-e", "TK_ACCESS_TOKEN=${TK_ACCESS_TOKEN}",
+        "-e", "TK_ORG_ID=${TK_ORG_ID}",
+        "-e", "TK_ENV_ID=${TK_ENV_ID}",
+        "-e", "TK_MCP_TRANSPORT=shttp",
+        "testkube/mcp-server:latest",
+        "mcp", "serve", "--transport=shttp"
       ]
     }
   }

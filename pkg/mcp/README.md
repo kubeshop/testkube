@@ -43,13 +43,14 @@ This flexibility allows the same MCP tools to work in different deployment scena
 
 ### Starting the MCP Server
 
+#### Stdio Transport (Default)
 ```bash
 # Build the CLI
 make build-kubectl-testkube-cli
 # This also deletes the previously built cli
 make rebuild-kubectl-testkube-cli
 
-# Start the MCP server
+# Start the MCP server with stdio transport (default)
 ./bin/app/kubectl-testkube mcp serve
 
 # Start with debug output
@@ -57,6 +58,21 @@ make rebuild-kubectl-testkube-cli
 
 # Use --verbose if you need to check what context is used, but this will log things to stdout
 ./bin/app/kubectl-testkube mcp serve --verbose
+```
+
+#### Streamable HTTP (SHTTP) Transport
+```bash
+# Start MCP server with SHTTP transport on localhost:8080
+./bin/app/kubectl-testkube mcp serve --transport=shttp
+
+# Start SHTTP server on custom host and port
+./bin/app/kubectl-testkube mcp serve --transport=shttp --shttp-host=0.0.0.0 --shttp-port=9090
+
+# Start SHTTP server with TLS
+./bin/app/kubectl-testkube mcp serve --transport=shttp --shttp-tls --shttp-cert-file=cert.pem --shttp-key-file=key.pem
+
+# Start SHTTP server with debug output
+./bin/app/kubectl-testkube mcp serve --transport=shttp --debug
 ```
 
 ### Development and Testing
@@ -71,13 +87,27 @@ The debug mode enables detailed request/response logging for the API client, mak
 
 ### Example MCP configuration for VSCode
 
-```
+#### Stdio Configuration
+```json
 {
   "servers": {
     "testkube": {
       "command": "/path/to/your/testkube/bin/app/kubectl-testkube",
       "args": ["mcp", "serve", "--debug"],
       "type": "stdio"
+    }
+  }
+}
+```
+
+#### SHTTP Configuration
+```json
+{
+  "servers": {
+    "testkube": {
+      "command": "/path/to/your/testkube/bin/app/kubectl-testkube",
+      "args": ["mcp", "serve", "--transport=shttp", "--shttp-host=localhost", "--shttp-port=8080"],
+      "type": "shttp"
     }
   }
 }

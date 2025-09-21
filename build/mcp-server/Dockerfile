@@ -50,12 +50,10 @@ WORKDIR /home/mcpuser
 USER mcpuser
 
 # Set environment variables for MCP server
+# Required environment variables:
 ENV TK_CONTROL_PLANE_URL=https://api.testkube.io
 ENV TK_DEBUG=false
 ENV TK_MCP_ENV_MODE=true
 
-# Expose port not needed for now, this MCP server uses stdio
-# EXPOSE 8080
-
-# Default command runs the MCP server
+# Default command runs the MCP server in stdio mode
 ENTRYPOINT ["/bin/kubectl-testkube", "mcp", "serve"]
