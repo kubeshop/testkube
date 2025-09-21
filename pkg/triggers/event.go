@@ -113,6 +113,8 @@ func (s Service) newWatcherEvent(
 	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
+	s.logger.Infof("OBJECT: type: %T, value: %v", object, object)
+	s.logger.Infof("OBJECT META: type: %T, value: %v", objectMeta, objectMeta)
 	if runtimeObject, ok := object.(runtime.Object); ok {
 		gvk := runtimeObject.GetObjectKind().GroupVersionKind()
 		w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
