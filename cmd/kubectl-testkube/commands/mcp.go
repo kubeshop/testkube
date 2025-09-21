@@ -154,11 +154,11 @@ func validateCloudContext(cfg config.Data) error {
 	}
 
 	if cfg.CloudContext.OrganizationId == "" {
-		return fmt.Errorf("Organization ID not found in configuration. Please run 'testkube set context' to configure organization")
+		return fmt.Errorf("organization ID not found in configuration. Please run 'testkube set context' to configure organization")
 	}
 
 	if cfg.CloudContext.EnvironmentId == "" {
-		return fmt.Errorf("Environment ID not found in configuration. Please run 'testkube set context' to configure environment")
+		return fmt.Errorf("environment ID not found in configuration. Please run 'testkube set context' to configure environment")
 	}
 
 	return nil
