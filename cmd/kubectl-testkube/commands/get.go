@@ -57,8 +57,6 @@ func NewGetCmd() *cobra.Command {
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowExecutionsCmd())
 	cmd.AddCommand(testworkflowtemplates.NewGetTestWorkflowTemplatesCmd())
 	cmd.AddCommand(agents.NewGetAgentCommand())
-	cmd.AddCommand(agents.NewGetRunnerCommand())
-	cmd.AddCommand(agents.NewGetGitOpsCommand())
 
 	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of json|yaml|pretty|go")
 	cmd.PersistentFlags().StringP("go-template", "", "{{.}}", "go template to render")
