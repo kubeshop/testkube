@@ -11,6 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -38,9 +40,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 type k8sInformers struct {
+	scheme *runtime.Scheme
+
 	podInformers          []coreinformerv1.PodInformer
 	deploymentInformers   []appsinformerv1.DeploymentInformer
 	daemonsetInformers    []appsinformerv1.DaemonSetInformer
@@ -67,35 +72,44 @@ type deprecatedK8sInformers struct {
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
 	testkubeNamespace string, watcherNamespaces []string,
 ) *k8sInformers {
-	var k8sInformers k8sInformers
+	scheme := runtime.NewScheme()
+	metav1.AddToGroupVersion(scheme, schema.GroupVersion{Version: "v1"})
+	k8sscheme.AddToScheme(scheme)
+	inf := &k8sInformers{scheme: scheme}
+	executorv1.AddToScheme(inf.scheme)
+	testsuitev3.AddToScheme(inf.scheme)
+	testsv3.AddToScheme(inf.scheme)
+	testsourcev1.AddToScheme(inf.scheme)
+	testtriggersv1.AddToScheme(inf.scheme)
+
 	if len(watcherNamespaces) == 0 {
 		watcherNamespaces = append(watcherNamespaces, metav1.NamespaceAll)
 	}
 
 	for _, namespace := range watcherNamespaces {
 		f := informers.NewSharedInformerFactoryWithOptions(clientset, 0, informers.WithNamespace(namespace))
-		k8sInformers.podInformers = append(k8sInformers.podInformers, f.Core().V1().Pods())
-		k8sInformers.deploymentInformers = append(k8sInformers.deploymentInformers, f.Apps().V1().Deployments())
-		k8sInformers.daemonsetInformers = append(k8sInformers.daemonsetInformers, f.Apps().V1().DaemonSets())
-		k8sInformers.statefulsetInformers = append(k8sInformers.statefulsetInformers, f.Apps().V1().StatefulSets())
-		k8sInformers.serviceInformers = append(k8sInformers.serviceInformers, f.Core().V1().Services())
-		k8sInformers.ingressInformers = append(k8sInformers.ingressInformers, f.Networking().V1().Ingresses())
-		k8sInformers.clusterEventInformers = append(k8sInformers.clusterEventInformers, f.Core().V1().Events())
-		k8sInformers.configMapInformers = append(k8sInformers.configMapInformers, f.Core().V1().ConfigMaps())
+		inf.podInformers = append(inf.podInformers, f.Core().V1().Pods())
+		inf.deploymentInformers = append(inf.deploymentInformers, f.Apps().V1().Deployments())
+		inf.daemonsetInformers = append(inf.daemonsetInformers, f.Apps().V1().DaemonSets())
+		inf.statefulsetInformers = append(inf.statefulsetInformers, f.Apps().V1().StatefulSets())
+		inf.serviceInformers = append(inf.serviceInformers, f.Core().V1().Services())
+		inf.ingressInformers = append(inf.ingressInformers, f.Networking().V1().Ingresses())
+		inf.clusterEventInformers = append(inf.clusterEventInformers, f.Core().V1().Events())
+		inf.configMapInformers = append(inf.configMapInformers, f.Core().V1().ConfigMaps())
 	}
 
 	testkubeInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(
 		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
-	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
-	k8sInformers.webhookInformer = testkubeInformerFactory.Executor().V1().Webhook()
-	k8sInformers.webhookTemplateInformer = testkubeInformerFactory.Executor().V1().WebhookTemplate()
+	inf.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
+	inf.webhookInformer = testkubeInformerFactory.Executor().V1().Webhook()
+	inf.webhookTemplateInformer = testkubeInformerFactory.Executor().V1().WebhookTemplate()
 
-	k8sInformers.deprecated.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
-	k8sInformers.deprecated.testInformer = testkubeInformerFactory.Tests().V3().Tests()
-	k8sInformers.deprecated.executorInformer = testkubeInformerFactory.Executor().V1().Executor()
-	k8sInformers.deprecated.testSourceInformer = testkubeInformerFactory.Tests().V1().TestSource()
+	inf.deprecated.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
+	inf.deprecated.testInformer = testkubeInformerFactory.Tests().V3().Tests()
+	inf.deprecated.executorInformer = testkubeInformerFactory.Executor().V1().Executor()
+	inf.deprecated.testSourceInformer = testkubeInformerFactory.Tests().V1().TestSource()
 
-	return &k8sInformers
+	return inf
 }
 
 func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {

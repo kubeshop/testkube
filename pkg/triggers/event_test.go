@@ -3,15 +3,25 @@ package triggers
 import (
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func TestNewWatcherEvent(t *testing.T) {
+	scheme := runtime.NewScheme()
+	metav1.AddToGroupVersion(scheme, schema.GroupVersion{Version: "v1"})
+	k8sscheme.AddToScheme(scheme)
+
 	service := &Service{
 		agentName:         "testkube-agent",
 		testkubeNamespace: "testkube-ns",
+		informers:         &k8sInformers{scheme: scheme},
+		logger:            log.DefaultLogger,
 	}
 
 	deploymentLabels := map[string]string{"app": "nginx", "env": "prod"}
@@ -35,14 +45,13 @@ func TestNewWatcherEvent(t *testing.T) {
 
 	gvk := deployment.GetObjectKind().GroupVersionKind()
 	expectedEventLabels := map[string]string{
-		"testkube.io/agent-name":             "testkube-agent",
-		"testkube.io/agent-namespace":        "testkube-ns",
-		"testkube.io/resource-name":          "nginx-deployment",
-		"testkube.io/resource-namespace":     "default",
-		"testkube.io/resource-kind":          gvk.Kind,
-		"testkube.io/resource-group":         gvk.Group,
-		"testkube.io/resource-version":       gvk.Version,
-		"testkube.io/resource-group-version": gvk.Group + "_" + gvk.Version,
+		"testkube.io/agent-name":         "testkube-agent",
+		"testkube.io/agent-namespace":    "testkube-ns",
+		"testkube.io/resource-name":      "nginx-deployment",
+		"testkube.io/resource-namespace": "default",
+		"testkube.io/resource-kind":      gvk.Kind,
+		"testkube.io/resource-group":     gvk.Group,
+		"testkube.io/resource-version":   gvk.Version,
 	}
 
 	assert.EqualValues(t, "deployment", event.resource, "resource should be correct")

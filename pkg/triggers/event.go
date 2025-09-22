@@ -78,14 +78,13 @@ func withNotEmptyName(name string) watcherOpts {
 }
 
 const (
-	eventLabelKeyAgentName            string = "testkube.io/agent-name"
-	eventLabelKeyAgentNamespace       string = "testkube.io/agent-namespace"
-	eventLabelKeyResourceName         string = "testkube.io/resource-name"
-	eventLabelKeyResourceNamespace    string = "testkube.io/resource-namespace"
-	eventLabelKeyResourceKind         string = "testkube.io/resource-kind"
-	eventLabelKeyResourceGroup        string = "testkube.io/resource-group"
-	eventLabelKeyResourceVersion      string = "testkube.io/resource-version"
-	eventLabelKeyResourceGroupVersion string = "testkube.io/resource-group-version"
+	eventLabelKeyAgentName         string = "testkube.io/agent-name"
+	eventLabelKeyAgentNamespace    string = "testkube.io/agent-namespace"
+	eventLabelKeyResourceName      string = "testkube.io/resource-name"
+	eventLabelKeyResourceNamespace string = "testkube.io/resource-namespace"
+	eventLabelKeyResourceKind      string = "testkube.io/resource-kind"
+	eventLabelKeyResourceGroup     string = "testkube.io/resource-group"
+	eventLabelKeyResourceVersion   string = "testkube.io/resource-version"
 )
 
 func (s Service) newWatcherEvent(
@@ -113,20 +112,18 @@ func (s Service) newWatcherEvent(
 	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
-	if runtimeObject, ok := object.(runtime.Object); ok {
-		gvk := runtimeObject.GetObjectKind().GroupVersionKind()
-		w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
-		w.EventLabels[eventLabelKeyResourceGroup] = gvk.Group
-		w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
-		if gvk.Group != "" && gvk.Version != "" {
-			w.EventLabels[eventLabelKeyResourceGroupVersion] = gvk.Group + "_" + gvk.Version
-		} else {
-			s.logger.Infof("OBJECT with empty groupo version: type: %T, value: %v", object, object)
-			s.logger.Infof("OBJECT GVK with empty group: %T, value: %v", gvk, gvk)
+	if runtimeObject, ok := object.(runtime.Object); ok &&
+		s.informers != nil && s.informers.scheme != nil {
+		gvks, _, err := s.informers.scheme.ObjectKinds(runtimeObject)
+		if err != nil {
+			s.logger.Warnf("error getting object kinds from scheme, skipped adding event label: %v", err)
+		} else if len(gvks) > 0 {
+			gvk := gvks[0]
+			w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
+			w.EventLabels[eventLabelKeyResourceGroup] = gvk.Group
+			w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
 		}
 	}
-
-	s.logger.Infof("EVENT LABELS", w.EventLabels)
 
 	for _, opt := range opts {
 		opt(w)
