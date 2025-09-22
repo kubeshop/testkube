@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -376,4 +375,3 @@ func TestExtractResults(t *testing.T) {
 		assert.Len(t, results, 1)
 	})
 }
-
