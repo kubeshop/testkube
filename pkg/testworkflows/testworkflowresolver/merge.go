@@ -434,3 +434,16 @@ func MergeTags(dst, src map[string]string) map[string]string {
 
 	return dst
 }
+
+func MergeConcurrency(dst, src *testworkflowsv1.ConcurrencyPolicy) *testworkflowsv1.ConcurrencyPolicy {
+	if dst == nil {
+		return src
+	} else if src == nil {
+		return dst
+	}
+
+	dst.Max = src.Max
+	dst.Group = src.Group
+	dst.CancelInProgress = src.CancelInProgress
+	return dst
+}

@@ -62,6 +62,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template *test
 	spec.Job = MergeJobConfig(template.Spec.Job, spec.Job)
 	spec.Events = append(template.Spec.Events, spec.Events...)
 	spec.Execution = MergeExecution(template.Spec.Execution, spec.Execution)
+	spec.Concurrency = MergeConcurrency(template.Spec.Concurrency, spec.Concurrency)
 	spec.Pvcs = MergeMap(template.Spec.Pvcs, spec.Pvcs)
 
 	// Apply basic configuration
