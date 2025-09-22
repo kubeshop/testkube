@@ -57,37 +57,23 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		selectorMatched := matchSelector(t.Spec.Selector, e, s.logger)
 		resourceSelectorMatched := matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger)
 
-		// TODO(emil): make these all debug level later
-		selectorLogger := s.logger.With(
-			"selectorSpecified", selectorSpecified,
-			"selector", t.Spec.Selector,
-			"resourceSelectorSpecified", resourceSelectorSpecified,
-			"resourceSelector", t.Spec.ResourceSelector,
-			"selectorMatched", selectorMatched,
-			"resourceSelectorMatched", resourceSelectorMatched)
-
 		if !selectorSpecified && t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
-			selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of resource field", e.eventType, t.Namespace, t.Name, e.resource)
 			continue
 		}
 
 		if (selectorSpecified || !resourceSelectorSpecified) && !selectorMatched {
-			selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of selector field", e.eventType, t.Namespace, t.Name, e.resource)
 			continue
 		}
 
 		if (resourceSelectorSpecified || !selectorSpecified) && !resourceSelectorMatched {
-			selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of resourceSelector field", e.eventType, t.Namespace, t.Name, e.resource)
 			continue
 		}
 
 		if (selectorSpecified && resourceSelectorSpecified) && (!selectorMatched || !resourceSelectorMatched) {
-			selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of selector and resourceSelector fields", e.eventType, t.Namespace, t.Name, e.resource)
 			continue
 		}
 
 		if !matchEventOrCause(string(t.Spec.Event), e) {
-			selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of event fields", e.eventType, t.Namespace, t.Name, e.resource)
 			continue
 		}
 
@@ -99,7 +85,6 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 
 			if !matched {
-				selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of conditions fields", e.eventType, t.Namespace, t.Name, e.resource)
 				continue
 			}
 		}
@@ -112,7 +97,6 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 
 			if !matched {
-				selectorLogger.Infof("trigger service: matcher component: event %s does not match trigger %s/%s for resource %s because of probe fields", e.eventType, t.Namespace, t.Name, e.resource)
 				continue
 			}
 		}
