@@ -91,6 +91,18 @@ var TestWorkflowTerminalStatus = []TestWorkflowStatus{
 	CANCELED_TestWorkflowStatus,
 }
 
+// TestWorkflowOngoingStatus are all statuses that are neither queued nor terminated.
+var TestWorkflowOngoingStatus = []TestWorkflowStatus{
+	ASSIGNED_TestWorkflowStatus,
+	STARTING_TestWorkflowStatus,
+	SCHEDULING_TestWorkflowStatus,
+	RUNNING_TestWorkflowStatus,
+	PAUSING_TestWorkflowStatus,
+	PAUSED_TestWorkflowStatus,
+	RESUMING_TestWorkflowStatus,
+	STOPPING_TestWorkflowStatus,
+}
+
 func (s TestWorkflowStatus) Finished() bool {
 	return s != "" && slices.Contains(TestWorkflowTerminalStatus, s)
 }
