@@ -1,0 +1,11 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+// GetExecutionUpdatesRequest is currently empty but remains reserved for future usage
+// without breaking backwards proto compatibility.
+// https://buf.build/docs/best-practices/style-guide/#rpc-use-empty
+// Information used to select Execution information to return is expected to be provided
+// using message headers including Organization, Environment, and Agent identifiers and
+// authorization tokens.
+message GetExecutionUpdatesRequest {}
