@@ -44,15 +44,14 @@ func TestNewWatcherEvent(t *testing.T) {
 		"deployment",
 	)
 
-	gvk := deployment.GetObjectKind().GroupVersionKind()
 	expectedEventLabels := map[string]string{
 		"testkube.io/agent-name":         "testkube-agent",
 		"testkube.io/agent-namespace":    "testkube-ns",
 		"testkube.io/resource-name":      "nginx-deployment",
 		"testkube.io/resource-namespace": "default",
-		"testkube.io/resource-kind":      gvk.Kind,
-		"testkube.io/resource-group":     gvk.Group,
-		"testkube.io/resource-version":   gvk.Version,
+		"testkube.io/resource-kind":      "Deployment",
+		"testkube.io/resource-group":     "apps",
+		"testkube.io/resource-version":   "v1",
 	}
 
 	assert.EqualValues(t, "deployment", event.resource, "resource should be correct")
