@@ -133,7 +133,7 @@ DEVBOX_NAMESPACE ?= devbox
 SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
-GOLANGCI_LINT_VERSION := v2.3.0
+GOLANGCI_LINT_VERSION := v2.5.0
 MOCKGEN_VERSION := v1.6.0
 
 # Tool binaries
@@ -511,7 +511,7 @@ $(GORELEASER): $(LOCALBIN_TOOLING)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
 $(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
-	test -s $(GOLANGCI_LINT) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	test -s $(GOLANGCI_LINT) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 .PHONY: mockgen
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary
