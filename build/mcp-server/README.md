@@ -5,8 +5,8 @@ This directory contains the Docker build configuration and scripts for the Testk
 ## Files
 
 - **`Dockerfile`** - Multi-platform Docker image definition
-- **`scripts/build-mcp-server.sh`** - Build and push script for production
-- **`scripts/build-local-mcp.sh`** - Local build script for testing
+- **`build-mcp-server.sh`** - Build and push script for production
+- **`build-local-mcp.sh`** - Local build script for testing
 
 ## Quick Start
 
@@ -60,7 +60,3 @@ npx @modelcontextprotocol/inspector docker run --rm -i \
   -e TK_ENV_ID=$TK_ENV_ID \
   testkube/mcp-server:local mcp serve
 ```
-
-## Docker MCP Catalog
-
-This MCP server is designed for submission to the Docker MCP catalog. See the main project documentation for submission details.
