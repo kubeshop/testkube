@@ -35,12 +35,13 @@ import (
 	testkubeexecutorinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/executor/v1"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
 
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+
 	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 type k8sInformers struct {

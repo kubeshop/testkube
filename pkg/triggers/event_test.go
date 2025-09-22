@@ -3,13 +3,14 @@ package triggers
 import (
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestNewWatcherEvent(t *testing.T) {
