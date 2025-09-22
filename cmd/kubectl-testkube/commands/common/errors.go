@@ -30,6 +30,8 @@ const (
 	TKErrInvalidInstallConfig ErrorCode = "TKERR-1202"
 	// TKErrInvalidDockerConfig is returned when docker client configuration is invalid.
 	TKErrInvalidDockerConfig ErrorCode = "TKERR-1203"
+	// TKErrInvalidRuntimeParameter is returned when invalid runtime parameters are provided.
+	TKErrInvalidRuntimeParameter ErrorCode = "TKERR-1204"
 
 	// TKERR-13xx errors are related to install operations.
 

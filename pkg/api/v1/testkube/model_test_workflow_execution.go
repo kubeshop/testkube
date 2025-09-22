@@ -51,4 +51,5 @@ type TestWorkflowExecution struct {
 	Tags            map[string]string                           `json:"tags,omitempty"`
 	RunningContext  *TestWorkflowRunningContext                 `json:"runningContext,omitempty"`
 	ConfigParams    map[string]TestWorkflowExecutionConfigValue `json:"configParams,omitempty"`
+	Runtime         *TestWorkflowExecutionRuntime               `json:"runtime,omitempty"`
 }

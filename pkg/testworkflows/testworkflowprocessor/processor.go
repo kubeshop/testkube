@@ -154,6 +154,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
+
 	err = expressions.Simplify(&workflow, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
@@ -390,6 +391,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if len(options.CommonEnvVariables) > 0 {
 		for i := range containers {
 			containers[i].Env = append(options.CommonEnvVariables, containers[i].Env...)
+		}
+	}
+	if options.Runtime != nil && len(options.Runtime.Variables) > 0 {
+		for i := range containers {
+			for k, v := range options.Runtime.Variables {
+				containers[i].Env = append(containers[i].Env, corev1.EnvVar{
+					Name:  k,
+					Value: v,
+				})
+			}
 		}
 	}
 

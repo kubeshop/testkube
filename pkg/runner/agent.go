@@ -238,7 +238,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 				}
 			case cloud.RunnerRequestType_START:
 				a.logger.Infow("received start request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
-				err := a.runTestWorkflow(req.EnvironmentID(), req.ExecutionID(), req.Start().Token())
+				err := a.runTestWorkflow(req.EnvironmentID(), req.ExecutionID(), req.Start().Token(), req.Start().Runtime())
 				if err == nil {
 					err = req.Start().Send(&cloud.RunnerStartResponse{})
 					if err != nil {
@@ -320,15 +320,15 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	return watcher.Err()
 }
 
-func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, executionToken string) error {
+func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, executionToken string, runtime *cloud.TestWorkflowRuntime) error {
 	_, err, _ := a.sf.Do(environmentId+"."+executionId, func() (interface{}, error) {
-		return nil, a.directRunTestWorkflow(environmentId, executionId, executionToken)
+		return nil, a.directRunTestWorkflow(environmentId, executionId, executionToken, runtime)
 	})
 
 	return err
 }
 
-func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string) error {
+func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string, runtime *cloud.TestWorkflowRuntime) error {
 	ctx := context.Background()
 	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
 
@@ -350,8 +350,21 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
 		parentIds = execution.RunningContext.Actor.ExecutionPath
 	}
+
+	// Create runtime configuration from control plane data
+	var executionRuntime *executionworkertypes.Runtime
+	if runtime != nil && len(runtime.EnvVars) > 0 {
+		executionRuntime = &executionworkertypes.Runtime{
+			Variables: runtime.EnvVars,
+		}
+		logger.Debugw("Received runtime configuration from control plane",
+			"executionId", executionId,
+			"variableCount", len(runtime.EnvVars))
+	}
+
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{
-		Token: executionToken,
+		Token:   executionToken,
+		Runtime: executionRuntime,
 		Execution: testworkflowconfig.ExecutionConfig{
 			Id:               execution.Id,
 			GroupId:          execution.GroupId,

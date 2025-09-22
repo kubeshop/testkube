@@ -33,6 +33,7 @@ type TestWorkflowExecutionSummary struct {
 	Tags           map[string]string                           `json:"tags,omitempty"`
 	RunningContext *TestWorkflowRunningContext                 `json:"runningContext,omitempty"`
 	ConfigParams   map[string]TestWorkflowExecutionConfigValue `json:"configParams,omitempty"`
+	Runtime        *TestWorkflowExecutionRuntime               `json:"runtime,omitempty"`
 	// generated reports from the steps, like junit
 	Reports              []TestWorkflowReport                             `json:"reports,omitempty"`
 	ResourceAggregations *TestWorkflowExecutionResourceAggregationsReport `json:"resourceAggregations,omitempty"`

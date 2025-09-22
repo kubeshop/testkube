@@ -7627,6 +7627,16 @@ components:
           type: string
           description: Context value depending from its type
 
+    TestWorkflowExecutionRuntime:
+      description: runtime configuration for a specific test workflow execution
+      type: object
+      properties:
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+          description: runtime variables passed to the test workflow execution
+
     TestWorkflowRunningContext:
       description: running context for test workflow execution
       type: object
@@ -8642,6 +8652,9 @@ components:
           description: custom execution name
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        runtime:
+          $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
+          description: runtime configuration for the test workflow execution
         testWorkflowExecutionName:
           type: string
           description: test workflow execution name started the test workflow execution
@@ -8800,6 +8813,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContext"
         configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
+        runtime:
+          $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
       required:
         - id
         - name
@@ -8847,6 +8862,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContext"
         configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
+        runtime:
+          $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
         reports:
           type: array
           description: generated reports from the steps, like junit

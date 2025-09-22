@@ -495,6 +495,12 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			}
 			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
 		}
+		if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+			scheduleExecution.Runtime = &cloud.TestWorkflowRuntime{
+				EnvVars: request.Runtime.Variables,
+			}
+		}
+
 		if name != "" {
 			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 			scheduleExecution.Config = request.Config
@@ -620,6 +626,11 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 		scheduleExecution.Config = request.Config
+		if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+			scheduleExecution.Runtime = &cloud.TestWorkflowRuntime{
+				EnvVars: request.Runtime.Variables,
+			}
+		}
 		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
 			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:    request.DisableWebhooks,

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -70,8 +69,37 @@ func TestParseTargetMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseTargetMap(tt.targets)
+			result, err := parseTargetMap(tt.targets)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseTargetMapErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		targets []string
+		errMsg  string
+	}{
+		{
+			name:    "empty key",
+			targets: []string{"=value"},
+			errMsg:  "key cannot be empty",
+		},
+		{
+			name:    "empty string",
+			targets: []string{""},
+			errMsg:  "key cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseTargetMap(tt.targets)
+			assert.Nil(t, result)
+			assert.NotNil(t, err)
+			assert.Contains(t, err.Error(), tt.errMsg)
 		})
 	}
 }
@@ -347,4 +375,3 @@ func TestExtractResults(t *testing.T) {
 		assert.Len(t, results, 1)
 	})
 }
-

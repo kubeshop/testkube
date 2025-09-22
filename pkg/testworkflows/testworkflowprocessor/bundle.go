@@ -18,12 +18,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
+// RuntimeOptions contains runtime overrides for test workflow execution
+type RuntimeOptions struct {
+	Variables map[string]string
+}
+
 type BundleOptions struct {
 	Secrets                []corev1.Secret
 	Config                 testworkflowconfig.InternalConfig
 	ScheduledAt            time.Time
 	CommonEnvVariables     []corev1.EnvVar
 	AllowLowSecurityFields bool
+	Runtime                *RuntimeOptions // Runtime configuration overrides
 }
 
 type Bundle struct {
