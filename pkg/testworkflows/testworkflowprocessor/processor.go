@@ -154,6 +154,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
+
 	err = expressions.Simplify(&workflow, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while simplifying workflow instructions")

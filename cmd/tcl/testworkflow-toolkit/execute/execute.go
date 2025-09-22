@@ -70,8 +70,15 @@ func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowE
 		targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*request.Target})
 	}
 
+	var runtime *cloud.TestWorkflowRuntime
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtime = &cloud.TestWorkflowRuntime{
+			EnvVars: request.Runtime.Variables,
+		}
+	}
+
 	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, &cloud.ScheduleRequest{
-		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Targets: targets}},
+		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Runtime: runtime, Targets: targets}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
 	}).All()

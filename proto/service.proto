@@ -265,6 +265,7 @@ message ScheduleExecution {
   string execution_name = 3;
   map<string, string> tags = 4;
   repeated ExecutionTarget targets = 5;
+  TestWorkflowRuntime runtime = 6; // Runtime configuration overrides for the execution
 }
 
 // map<string, []string> is not supported in protobuf
@@ -377,8 +378,14 @@ enum RunnerRequestType {
   CANCEL = 6; // Cancel the execution (API call)
 }
 
+// Runtime configuration for test workflow execution
+message TestWorkflowRuntime {
+  map<string, string> env_vars = 1; // Runtime environment variables overrides
+}
+
 message RunnerStartRequest {
   string token = 1;
+  TestWorkflowRuntime runtime = 2; // Runtime configuration for the execution
 }
 
 message RunnerRequest {

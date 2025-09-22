@@ -58,6 +58,7 @@ type RunnerRequestConsider interface {
 type RunnerRequestStart interface {
 	RunnerRequestData
 	Token() string
+	Runtime() *cloud.TestWorkflowRuntime
 	Send(response *cloud.RunnerStartResponse) error
 }
 
@@ -135,6 +136,10 @@ type runnerRequestStart struct {
 
 func (r *runnerRequestStart) Token() string {
 	return r.data.GetRequest().(*cloud.RunnerRequest_Start).Start.Token
+}
+
+func (r *runnerRequestStart) Runtime() *cloud.TestWorkflowRuntime {
+	return r.data.GetRequest().(*cloud.RunnerRequest_Start).Start.Runtime
 }
 
 func (r *runnerRequestStart) Send(response *cloud.RunnerStartResponse) error {

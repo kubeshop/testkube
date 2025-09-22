@@ -9,6 +9,7 @@ import (
 	errors2 "github.com/go-errors/errors"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -57,14 +58,16 @@ type IntermediateExecution struct {
 	sensitiveData *IntermediateExecutionSensitiveData
 	prepended     []string
 	tags          map[string]string
+	variables     map[string]string
 }
 
 // Handling different execution state
 
 func NewIntermediateExecution() *IntermediateExecution {
 	return &IntermediateExecution{
-		tags:  make(map[string]string),
-		dirty: true,
+		tags:      make(map[string]string),
+		variables: make(map[string]string),
+		dirty:     true,
 		execution: &testkube.TestWorkflowExecution{
 			Signature: []testkube.TestWorkflowSignature{},
 			Result: &testkube.TestWorkflowResult{
@@ -109,6 +112,23 @@ func (e *IntermediateExecution) GroupID() string {
 
 func (e *IntermediateExecution) SetName(name string) *IntermediateExecution {
 	e.execution.Name = name
+	return e
+}
+
+func (e *IntermediateExecution) SetVariables(variables map[string]string) *IntermediateExecution {
+	if e.execution.Runtime == nil {
+		e.execution.Runtime = &testkube.TestWorkflowExecutionRuntime{}
+	}
+	if e.execution.Runtime.Variables == nil {
+		e.execution.Runtime.Variables = make(map[string]string)
+	}
+	if e.variables == nil {
+		e.variables = make(map[string]string)
+	}
+	for k, v := range variables {
+		e.execution.Runtime.Variables[k] = v
+		e.variables[k] = v
+	}
 	return e
 }
 
@@ -253,6 +273,22 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		return errors.New("execution is not ready yet")
 	}
 
+	if len(e.variables) > 0 {
+		if e.cr.Spec.Container == nil {
+			e.cr.Spec.Container = &testworkflowsv1.ContainerConfig{}
+		}
+
+		for k, v := range e.variables {
+			e.cr.Spec.Container.Env = append(e.cr.Spec.Container.Env, testworkflowsv1.EnvVar{
+				EnvVar: corev1.EnvVar{
+					Name:  k,
+					Value: expressions.NewStringValue(v).Template(),
+				},
+			})
+		}
+		e.dirty = true
+	}
+
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
 		Id:               e.execution.Id,
 		GroupId:          e.execution.GroupId,
@@ -360,5 +396,6 @@ func (e *IntermediateExecution) Clone() *IntermediateExecution {
 		execution:     e.execution.Clone(),
 		prepended:     e.prepended,
 		sensitiveData: e.sensitiveData.Clone(),
+		variables:     maps.Clone(e.variables),
 	}
 }

@@ -15,6 +15,11 @@ type ServiceConfig struct {
 	ReadinessProbe *testkube.Probe
 }
 
+// Runtime contains runtime overrides for test workflow execution
+type Runtime struct {
+	Variables map[string]string
+}
+
 // TODO: Consider some context data
 type ExecuteRequest struct {
 	Token       string
@@ -23,6 +28,7 @@ type ExecuteRequest struct {
 	Workflow    testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
 	Secrets     map[string]map[string]string
 	ScheduledAt *time.Time
+	Runtime     *Runtime // Runtime configuration overrides
 
 	Execution           testworkflowconfig.ExecutionConfig
 	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
@@ -38,6 +44,7 @@ type ServiceRequest struct {
 	ScheduledAt    *time.Time
 	ReadinessProbe *testkube.Probe
 	RestartPolicy  string
+	Runtime        *Runtime // Runtime configuration overrides
 
 	Execution           testworkflowconfig.ExecutionConfig
 	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
