@@ -54,3 +54,6 @@ depot-build-meta.json
 
 # Environment files
 .env
+
+# GitHub Actions temporary Google credentials
+gha-creds-*.json
