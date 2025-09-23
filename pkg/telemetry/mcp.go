@@ -9,17 +9,12 @@ import (
 
 // SendMCPToolEvent sends telemetry for MCP tool execution
 func SendMCPToolEvent(toolName string, duration time.Duration, hasError bool, version string) (string, error) {
-	eventName := "testkube_mcp_tool_execution"
-	if hasError {
-		eventName = "testkube_mcp_tool_error"
-	}
-
-	payload := NewMCPToolPayload(toolName, eventName, duration, version)
+	payload := NewMCPToolPayload(toolName, "testkube_mcp_tool_execution", duration, version, hasError)
 	return sendData(senders, payload)
 }
 
 // NewMCPToolPayload creates a payload for MCP tool telemetry events
-func NewMCPToolPayload(toolName, eventName string, duration time.Duration, version string) Payload {
+func NewMCPToolPayload(toolName, eventName string, duration time.Duration, version string, hasError bool) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: machineID,
@@ -36,22 +31,17 @@ func NewMCPToolPayload(toolName, eventName string, duration time.Duration, versi
 				Architecture:    runtime.GOARCH,
 				Context:         getCurrentContext(),
 				ClusterType:     GetClusterType(),
-				ToolName:        toolName,
-				DurationMs:      int32(duration.Milliseconds()),
-				Status:          getStatusFromDuration(duration),
-				CliContext:      GetCliRunContext(),
+				Status: func() string {
+					if hasError {
+						return "error"
+					} else {
+						return "success"
+					}
+				}(),
+				ToolName:   toolName,
+				DurationMs: int32(duration.Milliseconds()),
+				CliContext: GetCliRunContext(),
 			},
 		}},
-	}
-}
-
-// getStatusFromDuration determines status based on execution duration
-func getStatusFromDuration(duration time.Duration) string {
-	if duration < time.Second {
-		return "fast"
-	} else if duration < 5*time.Second {
-		return "normal"
-	} else {
-		return "slow"
 	}
 }
