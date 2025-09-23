@@ -32,252 +32,539 @@ import (
 )
 
 const (
-	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
-	apiErrorMessage    = "processing error:"
-	logsCheckDelay     = 100 * time.Millisecond
+	apiErrorMessage = "processing error:"
+	logsCheckDelay  = 100 * time.Millisecond
 
 	logsRetryAttempts = 10
 	logsRetryDelay    = time.Second
+
+	// Iteration delay thresholds and values
+	initialIterationThreshold = 5
+	normalIterationThreshold  = 100
+	initialIterationDelay     = 500 * time.Millisecond
+	normalIterationDelay      = 1 * time.Second
+	slowIterationDelay        = 5 * time.Second
+
+	// Timestamp detection constants
+	timestampTPosition = 10
 )
 
 var (
 	NL = []byte("\n")
 )
 
+// executionError represents an error during test workflow execution
+type executionError struct {
+	Operation   string
+	ExecutionID string
+	Cause       error
+}
+
+func (e executionError) Error() string {
+	if e.ExecutionID != "" {
+		return fmt.Sprintf("%s for execution %s: %v", e.Operation, e.ExecutionID, e.Cause)
+	}
+	return fmt.Sprintf("%s: %v", e.Operation, e.Cause)
+}
+
+func (e executionError) Unwrap() error {
+	return e.Cause
+}
+
+// RunOptions contains all configuration for running test workflows
+type RunOptions struct {
+	ExecutionName            string
+	Config                   map[string]string
+	Variables                []string
+	WatchEnabled             bool
+	DisableWebhooks          bool
+	DownloadArtifactsEnabled bool
+	DownloadDir              string
+	Format                   string
+	Masks                    []string
+	Tags                     map[string]string
+	Selectors                []string
+	ServiceName              string
+	ParallelStepName         string
+	ServiceIndex             int
+	ParallelStepIndex        int
+	TargetMatch              []string
+	TargetNot                []string
+	TargetReplicate          []string
+}
+
+// ExecutionOptions contains options for processing executions
+type ExecutionOptions struct {
+	WatchEnabled             bool
+	ServiceName              string
+	ServiceIndex             int
+	ParallelStepName         string
+	ParallelStepIndex        int
+	DownloadArtifactsEnabled bool
+	DownloadDir              string
+	Format                   string
+	Masks                    []string
+}
+
+// WatchOptions contains options for watching execution logs
+type WatchOptions struct {
+	ServiceName       string
+	ServiceIndex      int
+	ParallelStepName  string
+	ParallelStepIndex int
+	DownloadOptions   DownloadOptions
+}
+
+// DownloadOptions contains artifact download configuration
+type DownloadOptions struct {
+	Enabled bool
+	Dir     string
+	Format  string
+	Masks   []string
+}
+
+// TargetOptions contains execution target configuration
+type TargetOptions struct {
+	Match     []string
+	Not       []string
+	Replicate []string
+}
+
+// NewRunTestWorkflowCmd creates cobra command for running test workflows
 func NewRunTestWorkflowCmd() *cobra.Command {
-	var (
-		executionName            string
-		config                   map[string]string
-		watchEnabled             bool
-		disableWebhooks          bool
-		downloadArtifactsEnabled bool
-		downloadDir              string
-		format                   string
-		masks                    []string
-		tags                     map[string]string
-		selectors                []string
-		serviceName              string
-		parallelStepName         string
-		serviceIndex             int
-		parallelStepIndex        int
-		targetMatch              []string
-		targetNot                []string
-		targetReplicate          []string
-	)
+	opts := &RunOptions{
+		DownloadDir: "artifacts",
+		Format:      "folder",
+	}
 
 	cmd := &cobra.Command{
 		Use:     "testworkflow [name]",
 		Aliases: []string{"testworkflows", "tw"},
 		Short:   "Starts test workflow execution",
 
-		Run: func(cmd *cobra.Command, args []string) {
-			outputFlag := cmd.Flag("output")
-			outputType := render.OutputPretty
-			if outputFlag != nil {
-				outputType = render.OutputType(outputFlag.Value.String())
-			}
-
-			outputPretty := outputType == render.OutputPretty
-			namespace := cmd.Flag("namespace").Value.String()
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
-
-			runContext := telemetry.GetCliRunContext()
-			interfaceType := testkube.CICD_TestWorkflowRunningContextInterfaceType
-			if runContext == "others|local" {
-				runContext = ""
-				interfaceType = testkube.CLI_TestWorkflowRunningContextInterfaceType
-			}
-
-			cfg, err := testkubecfg.Load()
-			ui.ExitOnError("loading config file", err)
-			ui.NL()
-
-			var runningContext *testkube.TestWorkflowRunningContext
-			// Pro edition only (tcl protected code)
-			if cfg.ContextType == testkubecfg.ContextTypeCloud {
-				runningContext = tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType)
-			}
-
-			request := testkube.TestWorkflowExecutionRequest{
-				Name:            executionName,
-				Config:          config,
-				DisableWebhooks: disableWebhooks,
-				Tags:            tags,
-				RunningContext:  runningContext,
-				Target:          &testkube.ExecutionTarget{},
-			}
-
-			if len(targetMatch) > 0 {
-				request.Target.Match = make(map[string][]string)
-				for _, match := range targetMatch {
-					key, values, _ := strings.Cut(match, "=")
-					request.Target.Match[key] = common2.MapSlice(strings.Split(values, ","), strings.TrimSpace)
-				}
-			}
-			if len(targetNot) > 0 {
-				request.Target.Not = make(map[string][]string)
-				for _, match := range targetNot {
-					key, values, _ := strings.Cut(match, "=")
-					request.Target.Not[key] = common2.MapSlice(strings.Split(values, ","), strings.TrimSpace)
-				}
-			}
-			if len(targetReplicate) > 0 {
-				request.Target.Replicate = common2.MapSlice(strings.Split(strings.Join(targetReplicate, ","), ","), strings.TrimSpace)
-			}
-
-			var executions []testkube.TestWorkflowExecution
-			switch {
-			case len(args) > 0:
-				name := args[0]
-
-				var execution testkube.TestWorkflowExecution
-				execution, err = client.ExecuteTestWorkflow(name, request)
-				executions = append(executions, execution)
-			case len(selectors) != 0:
-				selector := strings.Join(selectors, ",")
-				executions, err = client.ExecuteTestWorkflows(selector, request)
-			default:
-				ui.Failf("Pass Test workflow name or labels to run by labels ")
-			}
-
-			if err != nil {
-				// User friendly Open Source operation error
-				errMessage := err.Error()
-				if strings.Contains(errMessage, constants.OpenSourceOperationErrorMessage) {
-					startp := strings.LastIndex(errMessage, apiErrorMessage)
-					endp := strings.Index(errMessage, constants.OpenSourceOperationErrorMessage)
-					if startp != -1 && endp != -1 {
-						startp += len(apiErrorMessage)
-						operation := ""
-						if endp > startp {
-							operation = strings.TrimSpace(errMessage[startp:endp])
-						}
-
-						err = errors.New(operation + " " + constants.OpenSourceOperationErrorMessage)
-					}
-				}
-			}
-
-			if len(args) > 0 {
-				ui.ExitOnError("execute test workflow "+args[0]+" from namespace "+namespace, err)
-			} else {
-				ui.ExitOnError("execute test workflows "+strings.Join(selectors, ",")+" from namespace "+namespace, err)
-			}
-
-			go func() {
-				<-cmd.Context().Done()
-				if errors.Is(cmd.Context().Err(), context.Canceled) {
-					os.Exit(0)
-				}
-			}()
-
-			var wg sync.WaitGroup
-			var mu sync.Mutex
-			var exitCode = 0
-			for _, execution := range executions {
-				err = renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
-				ui.ExitOnError("render test workflow execution", err)
-
-				if outputPretty {
-					ui.NL()
-					if !execution.FailedToInitialize() {
-						if watchEnabled {
-							var pServiceName, pParallelStepName *string
-							if cmd.Flag("service-name").Changed || cmd.Flag("service-index").Changed {
-								pServiceName = &serviceName
-							}
-							if cmd.Flag("parallel-step-name").Changed || cmd.Flag("parallel-step-index").Changed {
-								pParallelStepName = &parallelStepName
-							}
-
-							if len(args) > 0 {
-								exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
-								ui.NL()
-								if downloadArtifactsEnabled {
-									tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
-								}
-							} else {
-								wg.Add(1)
-								go func(exec *testkube.TestWorkflowExecution) {
-									defer wg.Done()
-
-									prefix := ""
-									if exec.Workflow != nil {
-										prefix = fmt.Sprintf("[%s] ", exec.Workflow.Name)
-									}
-
-									options := []Options{{Prefix: prefix}}
-									ec := uiWatch(*exec, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client, options...)
-									ui.NL()
-									if downloadArtifactsEnabled {
-										tests.DownloadTestWorkflowArtifacts(exec.Id, downloadDir, format, masks, client, outputPretty)
-									}
-
-									if ec != 0 {
-										mu.Lock()
-										exitCode |= ec
-										mu.Unlock()
-									}
-								}(&execution)
-							}
-						} else {
-							uiShellWatchExecution(execution.Id)
-						}
-					}
-
-					execution, err = client.GetTestWorkflowExecution(execution.Id)
-					ui.ExitOnError("get execution failed", err)
-
-					render.PrintTestWorkflowExecutionURIs(&execution)
-					uiShellGetExecution(execution.Id)
-				}
-			}
-
-			wg.Wait()
-			if exitCode != 0 {
-				os.Exit(exitCode)
-			}
-		},
+		Run: runTestWorkflow(opts),
 	}
 
-	cmd.Flags().StringVarP(&executionName, "name", "n", "", "execution name, if empty will be autogenerated")
-	cmd.Flags().StringToStringVarP(&config, "config", "", map[string]string{}, "configuration variables in a form of name1=val1 passed to executor")
-	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
-	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks for this execution")
+	cmd.Flags().StringVarP(&opts.ExecutionName, "name", "n", "", "execution name, if empty will be autogenerated")
+	cmd.Flags().StringToStringVarP(&opts.Config, "config", "", map[string]string{}, "configuration variables in a form of name1=val1 passed to executor")
+	cmd.Flags().StringArrayVarP(&opts.Variables, "variable", "v", []string{}, "execution variable passed to executor")
+	cmd.Flags().BoolVarP(&opts.WatchEnabled, "watch", "f", false, "watch for changes after start")
+	cmd.Flags().BoolVar(&opts.DisableWebhooks, "disable-webhooks", false, "disable webhooks for this execution")
 	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
-	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
-	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
-	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
-	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tag adds a tag to execution in form of name1=val1 passed to executor")
-	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label is used to select test workflows to run using key value pair: --label key1=value1 or label expression")
-	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
-	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
-	cmd.Flags().StringVar(&parallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")
-	cmd.Flags().IntVar(&parallelStepIndex, "parallel-step-index", 0, "test workflow parallel step index starting from 0")
-	cmd.Flags().StringArrayVar(&targetMatch, "target", nil, "runner labels to match")
-	cmd.Flags().StringArrayVar(&targetNot, "target-not", nil, "runner labels to not match")
-	cmd.Flags().StringArrayVar(&targetReplicate, "target-replicate", nil, "runner labels to replicate over")
+	cmd.Flags().StringVar(&opts.DownloadDir, "download-dir", opts.DownloadDir, "download dir")
+	cmd.Flags().BoolVarP(&opts.DownloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
+	cmd.Flags().StringVar(&opts.Format, "format", opts.Format, "data format for storing files, one of folder|archive")
+	cmd.Flags().StringArrayVarP(&opts.Masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+	cmd.Flags().StringToStringVarP(&opts.Tags, "tag", "", map[string]string{}, "execution tag adds a tag to execution in form of name1=val1 passed to executor")
+	cmd.Flags().StringSliceVarP(&opts.Selectors, "label", "l", nil, "label is used to select test workflows to run using key value pair: --label key1=value1 or label expression")
+	cmd.Flags().StringVar(&opts.ServiceName, "service-name", "", "test workflow service name")
+	cmd.Flags().IntVar(&opts.ServiceIndex, "service-index", 0, "test workflow service index starting from 0")
+	cmd.Flags().StringVar(&opts.ParallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")
+	cmd.Flags().IntVar(&opts.ParallelStepIndex, "parallel-step-index", 0, "test workflow parallel step index starting from 0")
+	cmd.Flags().StringArrayVar(&opts.TargetMatch, "target", nil, "runner labels to match")
+	cmd.Flags().StringArrayVar(&opts.TargetNot, "target-not", nil, "runner labels to not match")
+	cmd.Flags().StringArrayVar(&opts.TargetReplicate, "target-replicate", nil, "runner labels to replicate over")
 
 	return cmd
 }
 
-func getIterationDelay(iteration int) time.Duration {
-	if iteration < 5 {
-		return 500 * time.Millisecond
-	} else if iteration < 100 {
-		return 1 * time.Second
+// runTestWorkflow returns the cobra run function that orchestrates workflow execution
+func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
+	return func(cmd *cobra.Command, args []string) {
+		// Create cancelable context that exits cleanly on interrupt
+		ctx, cancel := context.WithCancel(cmd.Context())
+		go func() {
+			<-ctx.Done()
+			if errors.Is(ctx.Err(), context.Canceled) {
+				cancel()
+				os.Exit(0)
+			}
+		}()
+
+		outputPretty, namespace, client := initializeCommand(cmd)
+
+		runContext, interfaceType := getRunContext()
+		cfg, cliErr := loadConfig()
+		common.HandleCLIError(cliErr)
+
+		targetOpts := TargetOptions{
+			Match:     opts.TargetMatch,
+			Not:       opts.TargetNot,
+			Replicate: opts.TargetReplicate,
+		}
+
+		variables, cliErr := parseVariables(opts.Variables)
+		common.HandleCLIError(cliErr)
+
+		request, cliErr := buildExecutionRequest(cfg, runContext, interfaceType, opts.ExecutionName, opts.Config,
+			variables, opts.DisableWebhooks, opts.Tags, targetOpts)
+		common.HandleCLIError(cliErr)
+
+		executions, err := executeWorkflows(client, args, opts.Selectors, request)
+		processExecutionError(err, args, opts.Selectors, namespace)
+
+		execOpts := ExecutionOptions{
+			WatchEnabled:             opts.WatchEnabled,
+			ServiceName:              opts.ServiceName,
+			ServiceIndex:             opts.ServiceIndex,
+			ParallelStepName:         opts.ParallelStepName,
+			ParallelStepIndex:        opts.ParallelStepIndex,
+			DownloadArtifactsEnabled: opts.DownloadArtifactsEnabled,
+			DownloadDir:              opts.DownloadDir,
+			Format:                   opts.Format,
+			Masks:                    opts.Masks,
+		}
+		exitCode, cliErr := processExecutions(cmd, executions, client, outputPretty, execOpts, args)
+		common.HandleCLIError(cliErr)
+
+		if exitCode != 0 {
+			os.Exit(exitCode)
+		}
 	}
-	return 5 * time.Second
+}
+
+// initializeCommand extracts output preferences and initializes the API client
+func initializeCommand(cmd *cobra.Command) (bool, string, apiclientv1.Client) {
+	outputFlag := cmd.Flag("output")
+	outputType := render.OutputPretty
+	if outputFlag != nil {
+		outputType = render.OutputType(outputFlag.Value.String())
+	}
+
+	outputPretty := outputType == render.OutputPretty
+	namespace := cmd.Flag("namespace").Value.String()
+	client, _, err := common.GetClient(cmd)
+	ui.ExitOnError("getting client", err)
+
+	return outputPretty, namespace, client
+}
+
+// getRunContext determines if running in CI/CD or CLI mode
+func getRunContext() (string, testkube.TestWorkflowRunningContextInterfaceType) {
+	runContext := telemetry.GetCliRunContext()
+	interfaceType := testkube.CICD_TestWorkflowRunningContextInterfaceType
+	if runContext == "others|local" {
+		runContext = ""
+		interfaceType = testkube.CLI_TestWorkflowRunningContextInterfaceType
+	}
+	return runContext, interfaceType
+}
+
+// loadConfig loads testkube config from disk
+func loadConfig() (testkubecfg.Data, *common.CLIError) {
+	cfg, err := testkubecfg.Load()
+	if err != nil {
+		return testkubecfg.Data{}, common.NewCLIError(
+			common.TKErrConfigInitFailed,
+			"Error Loading Testkube Config",
+			"Check that the Testkube config file (~/.testkube/config.json) exists and has correct permissions.",
+			err,
+		)
+	}
+	ui.NL()
+	return cfg, nil
+}
+
+// parseVariables converts variable array to map and validates format
+func parseVariables(variables []string) (map[string]string, *common.CLIError) {
+	vars := make(map[string]string)
+	for _, v := range variables {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) != 2 {
+			return nil, common.NewCLIError(
+				common.TKErrInvalidRuntimeParameter,
+				"Invalid Variable Format",
+				fmt.Sprintf("Variable '%s' must be in KEY=value format. Use --variable KEY=value (example: --variable API_KEY=secret123)", v),
+				fmt.Errorf("invalid variable format '%s'", v),
+			)
+		}
+		if parts[0] == "" {
+			return nil, common.NewCLIError(
+				common.TKErrInvalidRuntimeParameter,
+				"Empty Variable Key",
+				fmt.Sprintf("Variable key cannot be empty in '%s'. Use --variable KEY=value (example: --variable API_KEY=secret123)", v),
+				fmt.Errorf("empty variable key in '%s'", v),
+			)
+		}
+		vars[parts[0]] = parts[1]
+	}
+	return vars, nil
+}
+
+// buildExecutionRequest builds API request from command flags
+func buildExecutionRequest(
+	cfg testkubecfg.Data,
+	runContext string,
+	interfaceType testkube.TestWorkflowRunningContextInterfaceType,
+	executionName string,
+	config map[string]string,
+	variables map[string]string,
+	disableWebhooks bool,
+	tags map[string]string,
+	targetOpts TargetOptions,
+) (testkube.TestWorkflowExecutionRequest, *common.CLIError) {
+
+	var runningContext *testkube.TestWorkflowRunningContext
+	if cfg.ContextType == testkubecfg.ContextTypeCloud {
+		runningContext = tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType)
+	}
+
+	request := testkube.TestWorkflowExecutionRequest{
+		Name:            executionName,
+		Config:          config,
+		DisableWebhooks: disableWebhooks,
+		Tags:            tags,
+		RunningContext:  runningContext,
+		Target:          &testkube.ExecutionTarget{},
+	}
+
+	if len(variables) > 0 {
+		request.Runtime = &testkube.TestWorkflowExecutionRuntime{
+			Variables: variables,
+		}
+	}
+
+	if len(targetOpts.Match) > 0 {
+		match, err := parseTargetMap(targetOpts.Match)
+		if err != nil {
+			return testkube.TestWorkflowExecutionRequest{}, err
+		}
+		request.Target.Match = match
+	}
+	if len(targetOpts.Not) > 0 {
+		not, err := parseTargetMap(targetOpts.Not)
+		if err != nil {
+			return testkube.TestWorkflowExecutionRequest{}, err
+		}
+		request.Target.Not = not
+	}
+	if len(targetOpts.Replicate) > 0 {
+		request.Target.Replicate = common2.MapSlice(strings.Split(strings.Join(targetOpts.Replicate, ","), ","), strings.TrimSpace)
+	}
+
+	return request, nil
+}
+
+// parseTargetMap parses key=value1,value2 strings into map
+func parseTargetMap(targets []string) (map[string][]string, *common.CLIError) {
+	result := make(map[string][]string)
+	for _, target := range targets {
+		key, values, _ := strings.Cut(target, "=")
+		if key == "" {
+			return nil, common.NewCLIError(
+				common.TKErrInvalidRuntimeParameter,
+				"Invalid Target Format",
+				fmt.Sprintf("Target key cannot be empty in '%s'. Use --target-match key=value1,value2 (example: --target-match env=staging,prod)", target),
+				fmt.Errorf("empty target key in '%s'", target),
+			)
+		}
+		result[key] = common2.MapSlice(strings.Split(values, ","), strings.TrimSpace)
+	}
+	return result, nil
+}
+
+// executeWorkflows runs single workflow by name or multiple by label selector
+func executeWorkflows(client apiclientv1.Client, args []string, selectors []string,
+	request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
+
+	var executions []testkube.TestWorkflowExecution
+	var err error
+
+	switch {
+	case len(args) > 0:
+		name := args[0]
+		var execution testkube.TestWorkflowExecution
+		execution, err = client.ExecuteTestWorkflow(name, request)
+		executions = append(executions, execution)
+	case len(selectors) != 0:
+		selector := strings.Join(selectors, ",")
+		executions, err = client.ExecuteTestWorkflows(selector, request)
+	default:
+		ui.Failf("Pass Test workflow name or labels to run by labels ")
+	}
+
+	return executions, err
+}
+
+// processExecutionError reformats open-source edition errors to be user-friendly
+func processExecutionError(err error, args []string, selectors []string, namespace string) {
+	if err == nil {
+		return
+	}
+
+	// User friendly Open Source operation error
+	errMessage := err.Error()
+	if strings.Contains(errMessage, constants.OpenSourceOperationErrorMessage) {
+		startp := strings.LastIndex(errMessage, apiErrorMessage)
+		endp := strings.Index(errMessage, constants.OpenSourceOperationErrorMessage)
+		if startp != -1 && endp != -1 {
+			startp += len(apiErrorMessage)
+			operation := ""
+			if endp > startp {
+				operation = strings.TrimSpace(errMessage[startp:endp])
+			}
+			err = errors.New(operation + " " + constants.OpenSourceOperationErrorMessage)
+		}
+	}
+
+	if len(args) > 0 {
+		ui.ExitOnError("execute test workflow "+args[0]+" from namespace "+namespace, err)
+	} else {
+		ui.ExitOnError("execute test workflows "+strings.Join(selectors, ",")+" from namespace "+namespace, err)
+	}
+}
+
+// processExecutions runs all workflow executions and returns combined exit code and error
+func processExecutions(
+	cmd *cobra.Command,
+	executions []testkube.TestWorkflowExecution,
+	client apiclientv1.Client,
+	outputPretty bool,
+	opts ExecutionOptions,
+	args []string,
+) (int, *common.CLIError) {
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var exitCode = 0
+
+	for _, execution := range executions {
+		err := renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
+		if err != nil {
+			return 0, common.NewCLIError(
+				common.TKErrInvalidRuntimeParameter,
+				"Failed to Render Execution",
+				"Check that the execution data is valid and the output format is supported",
+				err,
+			)
+		}
+
+		if outputPretty {
+			ui.NL()
+			if !execution.FailedToInitialize() {
+				if opts.WatchEnabled {
+					watchOpts := WatchOptions{
+						ServiceName:       opts.ServiceName,
+						ServiceIndex:      opts.ServiceIndex,
+						ParallelStepName:  opts.ParallelStepName,
+						ParallelStepIndex: opts.ParallelStepIndex,
+						DownloadOptions: DownloadOptions{
+							Enabled: opts.DownloadArtifactsEnabled,
+							Dir:     opts.DownloadDir,
+							Format:  opts.Format,
+							Masks:   opts.Masks,
+						},
+					}
+					exitCode = handleWatchMode(cmd, args, &execution, &wg, &mu, &exitCode,
+						client, watchOpts, outputPretty)
+				} else {
+					uiShellWatchExecution(execution.Id)
+				}
+			}
+
+			executionId := execution.Id
+			execution, err = client.GetTestWorkflowExecution(executionId)
+			if err != nil {
+				return 0, common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Failed to Get Execution Status",
+					fmt.Sprintf("Could not retrieve execution status for '%s'. Check that the execution exists and Testkube API is accessible", executionId),
+					err,
+				)
+			}
+
+			render.PrintTestWorkflowExecutionURIs(&execution)
+			uiShellGetExecution(executionId)
+		}
+	}
+
+	wg.Wait()
+	return exitCode, nil
+}
+
+// handleWatchMode streams logs and waits for workflow completion
+func handleWatchMode(
+	cmd *cobra.Command,
+	args []string,
+	execution *testkube.TestWorkflowExecution,
+	wg *sync.WaitGroup,
+	mu *sync.Mutex,
+	exitCode *int,
+	client apiclientv1.Client,
+	opts WatchOptions,
+	outputPretty bool,
+) int {
+
+	var pServiceName, pParallelStepName *string
+	if cmd.Flag("service-name").Changed || cmd.Flag("service-index").Changed {
+		pServiceName = &opts.ServiceName
+	}
+	if cmd.Flag("parallel-step-name").Changed || cmd.Flag("parallel-step-index").Changed {
+		pParallelStepName = &opts.ParallelStepName
+	}
+
+	if len(args) > 0 {
+		ec := uiWatch(*execution, pServiceName, opts.ServiceIndex, pParallelStepName, opts.ParallelStepIndex, client)
+		ui.NL()
+		if opts.DownloadOptions.Enabled {
+			tests.DownloadTestWorkflowArtifacts(execution.Id, opts.DownloadOptions.Dir,
+				opts.DownloadOptions.Format, opts.DownloadOptions.Masks, client, outputPretty)
+		}
+		return ec
+	} else {
+		wg.Add(1)
+		go func(exec *testkube.TestWorkflowExecution) {
+			defer wg.Done()
+
+			prefix := ""
+			if exec.Workflow != nil {
+				prefix = fmt.Sprintf("[%s] ", exec.Workflow.Name)
+			}
+
+			options := []Options{{Prefix: prefix}}
+			ec := uiWatch(*exec, pServiceName, opts.ServiceIndex, pParallelStepName, opts.ParallelStepIndex, client, options...)
+			ui.NL()
+			if opts.DownloadOptions.Enabled {
+				tests.DownloadTestWorkflowArtifacts(exec.Id, opts.DownloadOptions.Dir,
+					opts.DownloadOptions.Format, opts.DownloadOptions.Masks, client, outputPretty)
+			}
+
+			if ec != 0 {
+				mu.Lock()
+				*exitCode |= ec
+				mu.Unlock()
+			}
+		}(execution)
+		return 0
+	}
+}
+
+// getIterationDelay returns progressively longer delays for polling retries
+func getIterationDelay(iteration int) time.Duration {
+	switch {
+	case iteration < initialIterationThreshold:
+		return initialIterationDelay
+	case iteration < normalIterationThreshold:
+		return normalIterationDelay
+	default:
+		return slowIterationDelay
+	}
 }
 
 type Options struct {
 	Prefix string
 }
 
-func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serviceIndex int,
-	parallelStepName *string, parallelStepIndex int, client apiclientv1.Client, options ...Options) int {
+// uiWatch waits for execution assignment, streams logs, and returns exit code
+func uiWatch(
+	execution testkube.TestWorkflowExecution,
+	serviceName *string,
+	serviceIndex int,
+	parallelStepName *string,
+	parallelStepIndex int,
+	client apiclientv1.Client,
+	options ...Options,
+) int {
 	prefix := ""
 	for _, o := range options {
 		if o.Prefix != "" {
@@ -287,13 +574,14 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 
 	// Wait until the execution will be assigned to some runner
 	iteration := 0
+	executionId := execution.Id // Store ID before potential error
 	for !execution.Assigned() {
 		var err error
 		iteration++
 		time.Sleep(getIterationDelay(iteration))
-		execution, err = client.GetTestWorkflowExecution(execution.Id)
+		execution, err = client.GetTestWorkflowExecution(executionId)
 		if err != nil {
-			ui.Failf("get execution failed: %v", err)
+			ui.Failf("failed to get execution %s: %v", executionId, err)
 		}
 	}
 
@@ -341,7 +629,11 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 	}
 
 	if result == nil && err == nil {
-		err = errors.New("no result found")
+		err = executionError{
+			Operation:   "get execution result",
+			ExecutionID: executionId,
+			Cause:       errors.New("no result found"),
+		}
 	}
 
 	ui.ExitOnError("reading test workflow execution logs", err)
@@ -370,6 +662,7 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 	return 0
 }
 
+// uiShellGetExecution prints kubectl command to get execution details
 func uiShellGetExecution(id string) {
 	ui.ShellCommand(
 		"Use following command to get test workflow execution details",
@@ -377,6 +670,7 @@ func uiShellGetExecution(id string) {
 	)
 }
 
+// uiShellWatchExecution prints kubectl command to watch execution
 func uiShellWatchExecution(id string) {
 	ui.ShellCommand(
 		"Watch test workflow execution until complete",
@@ -384,6 +678,7 @@ func uiShellWatchExecution(id string) {
 	)
 }
 
+// printSingleResultDifference prints status change between two step results, returns true if changed
 func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube.TestWorkflowStepResult, signature testkube.TestWorkflowSignature, index int, steps int, prefix string) bool {
 	r1Status := testkube.QUEUED_TestWorkflowStepStatus
 	r2Status := testkube.QUEUED_TestWorkflowStepStatus
@@ -406,6 +701,7 @@ func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube
 	return true
 }
 
+// printResultDifference prints all status changes between two workflow results
 func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.TestWorkflowResult, steps []testkube.TestWorkflowSignature, prefix string) bool {
 	if res1 == nil || res2 == nil {
 		return false
@@ -418,16 +714,7 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 	return changed
 }
 
-// getTimestampLength returns length of timestamp in the line if timestamp is valid RFC timestamp.
-func getTimestampLength(line string) int {
-	// 29th character will be either '+' for +00:00 timestamp,
-	// or 'Z' for UTC timestamp (without 00:00 section).
-	if len(line) >= 29 && (line[29] == '+' || line[29] == 'Z') {
-		return len(time.RFC3339Nano)
-	}
-	return 0
-}
-
+// printTestWorkflowLogs consumes notification stream and prints logs with step status updates
 func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string) (result *testkube.TestWorkflowResult, err error) {
 	steps := testworkflows.FlattenSignatures(signature)
 
@@ -435,19 +722,15 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 	var isFirstLine = true
 	for l := range notifications {
 		if l.Output != nil {
-			if isFirstLine {
-				isFirstLine = false
-			}
+			isFirstLine = false
 			continue
 		}
 		if l.Result != nil {
 			if printResultDifference(result, l.Result, steps, prefix) {
 				isLineBeginning = true
 			}
-			if isFirstLine {
-				isFirstLine = false
-			}
 			result = l.Result
+			isFirstLine = false
 			continue
 		}
 
@@ -455,15 +738,73 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 		if err != nil {
 			return nil, err
 		}
-		if isFirstLine {
-			isFirstLine = false
-		}
+		isFirstLine = false
 	}
 
 	ui.NL()
 	return result, nil
 }
 
+// watchWorkflowLogsCommon retries fetching and printing logs until workflow finishes
+func watchWorkflowLogsCommon(
+	id, prefix, spinnerMessage string,
+	signature []testkube.TestWorkflowSignature,
+	client apiclientv1.Client,
+	getNotifications func() (chan testkube.TestWorkflowExecutionNotification, error),
+) (*testkube.TestWorkflowResult, error) {
+
+	var (
+		notifications chan testkube.TestWorkflowExecutionNotification
+		result        *testkube.TestWorkflowResult
+		nErr          error
+	)
+
+	spinner := ui.NewSpinner(spinnerMessage)
+	for {
+		notifications, nErr = getNotifications()
+		if nErr != nil {
+			execution, cErr := client.GetTestWorkflowExecution(id)
+			if cErr != nil {
+				spinner.Fail()
+				return nil, cErr
+			}
+
+			if execution.Result != nil {
+				if execution.Result.IsFinished() {
+					nErr = executionError{
+						Operation:   "watch logs",
+						ExecutionID: id,
+						Cause:       errors.New("execution already finished"),
+					}
+				} else {
+					time.Sleep(logsCheckDelay)
+					continue
+				}
+			}
+		}
+
+		if nErr != nil {
+			spinner.Fail()
+			return nil, nErr
+		}
+
+		spinner.Stop()
+		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
+		if nErr != nil {
+			spinner.Warning("Retrying logs")
+			ui.NL()
+			continue
+		}
+
+		spinner.Success("Logs received")
+		ui.NL()
+		break
+	}
+
+	return result, nil
+}
+
+// watchTestWorkflowLogs streams main workflow execution logs with retry logic
 func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
 
@@ -495,108 +836,31 @@ func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowS
 	return result, err
 }
 
+// watchTestWorkflowServiceLogs streams logs for a specific service instance
 func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow service job", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
 
-	var (
-		notifications chan testkube.TestWorkflowExecutionNotification
-		result        *testkube.TestWorkflowResult
-		nErr          error
-	)
-
-	spinner := ui.NewSpinner("Waiting for service logs")
-	for {
-		notifications, nErr = client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
-		if nErr != nil {
-			execution, cErr := client.GetTestWorkflowExecution(id)
-			if cErr != nil {
-				spinner.Fail()
-				return nil, cErr
-			}
-
-			if execution.Result != nil {
-				if execution.Result.IsFinished() {
-					nErr = errors.New("test workflow execution is finished")
-				} else {
-					time.Sleep(logsCheckDelay)
-					continue
-				}
-			}
-		}
-
-		if nErr != nil {
-			spinner.Fail()
-			return nil, nErr
-		}
-
-		spinner.Stop()
-		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
-		if nErr != nil {
-			spinner.Warning("Retrying logs")
-			ui.NL()
-			continue
-		}
-
-		spinner.Success("Log received")
-		ui.NL()
-		break
+	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
 	}
 
-	return result, nil
+	return watchWorkflowLogsCommon(id, prefix, "Waiting for service logs", signature, client, getNotifications)
 }
 
+// watchTestWorkflowParallelStepLogs streams logs for a specific parallel worker
 func watchTestWorkflowParallelStepLogs(id, prefix, ref string, workerIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
 
-	var (
-		notifications chan testkube.TestWorkflowExecutionNotification
-		result        *testkube.TestWorkflowResult
-		nErr          error
-	)
-
-	spinner := ui.NewSpinner("Waiting for parallel step logs")
-	for {
-		notifications, nErr = client.GetTestWorkflowExecutionParallelStepNotifications(id, ref, workerIndex)
-		if nErr != nil {
-			execution, cErr := client.GetTestWorkflowExecution(id)
-			if cErr != nil {
-				spinner.Fail()
-				return nil, cErr
-			}
-
-			if execution.Result != nil {
-				if execution.Result.IsFinished() {
-					nErr = errors.New("test workflow execution is finished")
-				} else {
-					time.Sleep(logsCheckDelay)
-					continue
-				}
-			}
-		}
-
-		if nErr != nil {
-			spinner.Fail()
-			return nil, nErr
-		}
-
-		spinner.Stop()
-		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
-		if nErr != nil {
-			spinner.Warning("Retrying logs")
-			ui.NL()
-			continue
-		}
-
-		spinner.Success("Logs received")
-		ui.NL()
-		break
+	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionParallelStepNotifications(id, ref, workerIndex)
 	}
 
-	return result, nil
+	return watchWorkflowLogsCommon(id, prefix, "Waiting for parallel step logs", signature, client, getNotifications)
 }
 
+// printStatusHeader prints step header with progress indicator
 func printStatusHeader(i, n int, name, prefix string) {
 	if i == -1 {
 		fmt.Println("\n" + prefix + ui.LightCyan(fmt.Sprintf("• %s", name)))
@@ -605,6 +869,7 @@ func printStatusHeader(i, n int, name, prefix string) {
 	}
 }
 
+// printStatus prints colored step status based on result
 func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflowStepStatus, took time.Duration,
 	i, n int, name string, errorMessage, prefix string) {
 	if len(errorMessage) > 0 {
@@ -628,18 +893,29 @@ func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflow
 	}
 }
 
-// if format is any RFC based timestamp
-// locate next space after timestamp and trim
+// trimTimestamp removes RFC timestamp prefix from log line if present
 func trimTimestamp(line string) string {
-	if strings.Index(line, "T") == 10 {
-		idx := strings.Index(line, " ")
-		if len(line) >= idx {
-			return line[idx+1:]
-		}
+	// RFC3339 format has 'T' at position 10: "2006-01-02T15:04:05"
+	//                                          0123456789T
+	hasTSeparatorAtExpectedPos := strings.Index(line, "T") == timestampTPosition
+	if !hasTSeparatorAtExpectedPos {
+		return line
 	}
+
+	// Find the space that separates timestamp from the actual log message
+	spaceAfterTimestamp := strings.Index(line, " ")
+	hasSpaceSeparator := spaceAfterTimestamp > 0
+	hasContentAfterSpace := len(line) > spaceAfterTimestamp
+
+	if hasSpaceSeparator && hasContentAfterSpace {
+		logContent := line[spaceAfterTimestamp+1:]
+		return logContent
+	}
+
 	return line
 }
 
+// printStructuredLogLines prints log lines with timestamps removed and prefix applied
 func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool, prefix string) (bool, error) {
 	if len(logs) == 0 {
 		return isLineBeginning, nil
@@ -664,17 +940,46 @@ func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool, pre
 	return willBeLineBeginning, nil
 }
 
+// printRawLogLines parses raw logs to extract step transitions and print formatted output
 func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execution testkube.TestWorkflowExecution, options ...Options) {
-	currentRef := ""
-	i := -1
-	prefix := ""
-	for _, o := range options {
-		if o.Prefix != "" {
-			prefix = o.Prefix
-		}
+	state := &logPrintState{
+		currentRef: "",
+		stepIndex:  -1,
+		prefix:     extractPrefix(options),
+		results:    extractResults(execution),
 	}
 
-	// Process the results
+	// Handle case where only error message is available
+	if shouldPrintOnlyError(state.results, logs) {
+		fmt.Printf("\n%s%s\n", state.prefix, ui.Red(state.results[""].ErrorMessage))
+		return
+	}
+
+	printStatusHeader(-1, len(steps), "Initializing", state.prefix)
+	processLogLines(logs, steps, state)
+	printRemainingSteps(steps, state)
+}
+
+// logPrintState maintains state while processing log lines
+type logPrintState struct {
+	currentRef string
+	stepIndex  int
+	prefix     string
+	results    map[string]testkube.TestWorkflowStepResult
+}
+
+// extractPrefix returns prefix string from options array
+func extractPrefix(options []Options) string {
+	for _, o := range options {
+		if o.Prefix != "" {
+			return o.Prefix
+		}
+	}
+	return ""
+}
+
+// extractResults converts execution result to step result map
+func extractResults(execution testkube.TestWorkflowExecution) map[string]testkube.TestWorkflowStepResult {
 	results := make(map[string]testkube.TestWorkflowStepResult)
 	if execution.Result != nil {
 		if execution.Result.Steps != nil {
@@ -684,65 +989,81 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 			results[""] = *execution.Result.Initialization
 		}
 	}
+	return results
+}
 
-	// Print error message if that's the only available thing
-	if len(results) < 2 && len(logs) == 0 && len(results[""].ErrorMessage) > 0 {
-		fmt.Printf("\n%s%s\n", prefix, ui.Red(results[""].ErrorMessage))
-		return
-	}
+// shouldPrintOnlyError returns true if only initialization error exists
+func shouldPrintOnlyError(results map[string]testkube.TestWorkflowStepResult, logs []byte) bool {
+	return len(results) < 2 && len(logs) == 0 && len(results[""].ErrorMessage) > 0
+}
 
-	printStatusHeader(-1, len(steps), "Initializing", prefix)
-
-	// Strip timestamp + space for all new lines in the log
+// processLogLines scans logs for step hints and prints formatted output
+func processLogLines(logs []byte, steps []testkube.TestWorkflowSignature, state *logPrintState) {
 	for len(logs) > 0 {
-		newLineIndex := bytes.Index(logs, NL)
-		var line string
-		if newLineIndex == -1 {
-			line = string(logs)
-			logs = nil
-		} else {
-			line = string(logs[:newLineIndex])
-			logs = logs[newLineIndex+len(NL):]
-		}
+		line, remaining := extractNextLine(logs)
+		logs = remaining
 
 		line = trimTimestamp(line)
 
 		start := instructions.StartHintRe.FindStringSubmatch(line)
 		if len(start) == 0 {
 			line += "\x07"
-			fmt.Println(prefix + line)
+			fmt.Println(state.prefix + line)
 			continue
 		}
 
 		nextRef := start[1]
+		advanceToStep(nextRef, steps, state)
+	}
+}
 
-		for i == -1 || (i < len(steps) && steps[i].Ref != nextRef) {
-			if ps, ok := results[currentRef]; ok && ps.Status != nil {
-				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-				if i != -1 {
-					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage, prefix)
-				}
-			}
+// extractNextLine splits off first line from byte buffer
+func extractNextLine(logs []byte) (string, []byte) {
+	newLineIndex := bytes.Index(logs, NL)
+	if newLineIndex == -1 {
+		return string(logs), nil
+	}
+	return string(logs[:newLineIndex]), logs[newLineIndex+len(NL):]
+}
 
-			i++
-			if i < len(steps) {
-				currentRef = steps[i].Ref
-				printStatusHeader(i, len(steps), steps[i].Label(), prefix)
-			}
+// advanceToStep prints results for steps until reaching target reference
+func advanceToStep(targetRef string, steps []testkube.TestWorkflowSignature, state *logPrintState) {
+	for state.stepIndex == -1 || (state.stepIndex < len(steps) && steps[state.stepIndex].Ref != targetRef) {
+		printStepResultIfExists(steps, state)
+
+		state.stepIndex++
+		if state.stepIndex < len(steps) {
+			state.currentRef = steps[state.stepIndex].Ref
+			printStatusHeader(state.stepIndex, len(steps), steps[state.stepIndex].Label(), state.prefix)
 		}
 	}
+}
 
-	if i != -1 && i < len(steps) {
-		for _, step := range steps[i:] {
-			if ps, ok := results[step.Ref]; ok && ps.Status != nil {
+// printStepResultIfExists prints step result if available in results map
+func printStepResultIfExists(steps []testkube.TestWorkflowSignature, state *logPrintState) {
+	if ps, ok := state.results[state.currentRef]; ok && ps.Status != nil {
+		took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+		if state.stepIndex != -1 && state.stepIndex < len(steps) {
+			printStatus(steps[state.stepIndex], *ps.Status, took, state.stepIndex, len(steps),
+				steps[state.stepIndex].Label(), ps.ErrorMessage, state.prefix)
+		}
+	}
+}
+
+// printRemainingSteps prints results for steps not seen in logs
+func printRemainingSteps(steps []testkube.TestWorkflowSignature, state *logPrintState) {
+	if state.stepIndex != -1 && state.stepIndex < len(steps) {
+		for _, step := range steps[state.stepIndex:] {
+			if ps, ok := state.results[step.Ref]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage, prefix)
+				printStatus(step, *ps.Status, took, state.stepIndex, len(steps),
+					steps[state.stepIndex].Label(), ps.ErrorMessage, state.prefix)
 			}
 
-			i++
-			currentRef = step.Ref
-			if i < len(steps) {
-				printStatusHeader(i, len(steps), steps[i].Label(), prefix)
+			state.stepIndex++
+			state.currentRef = step.Ref
+			if state.stepIndex < len(steps) {
+				printStatusHeader(state.stepIndex, len(steps), steps[state.stepIndex].Label(), state.prefix)
 			}
 		}
 	}

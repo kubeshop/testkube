@@ -11,8 +11,9 @@ package testkube
 
 type TestWorkflowExecutionRequest struct {
 	// custom execution name
-	Name   string            `json:"name,omitempty"`
-	Config map[string]string `json:"config,omitempty"`
+	Name    string                        `json:"name,omitempty"`
+	Config  map[string]string             `json:"config,omitempty"`
+	Runtime *TestWorkflowExecutionRuntime `json:"runtime,omitempty"`
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 	// whether webhooks on the execution of this test workflow are disabled

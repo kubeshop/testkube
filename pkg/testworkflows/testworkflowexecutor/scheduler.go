@@ -276,6 +276,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				Selector:      &cloud.ScheduleResourceSelector{Name: w.Name},
 				Targets:       execution.Targets,
 				Config:        execution.Config,
+				Runtime:       execution.Runtime,
 				ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 				Tags:          execution.Tags,
 			})
@@ -399,6 +400,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 					Selector:      execution.Selector,
 					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, Not: target.Not}},
 					Config:        execution.Config,
+					Runtime:       execution.Runtime,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
 				})
@@ -443,6 +445,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 					Selector:      execution.Selector,
 					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, Not: nextNot}},
 					Config:        execution.Config,
+					Runtime:       execution.Runtime,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
 				})
@@ -468,6 +471,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 					Selector:      execution.Selector,
 					Targets:       []*cloud.ExecutionTarget{{Match: matcher, Not: target.Not}},
 					Config:        execution.Config,
+					Runtime:       execution.Runtime,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
 				})
@@ -531,13 +535,28 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 
 		intermediate = append(intermediate, current)
 
+		// Merge variables into config (variables override config for same keys)
+		mergedConfig := make(map[string]string)
+		for k, val := range v.Config {
+			mergedConfig[k] = val
+		}
+		var variables map[string]string
+		if v.Runtime != nil && len(v.Runtime.EnvVars) > 0 {
+			variables = v.Runtime.EnvVars
+			for k, val := range variables {
+				mergedConfig[k] = val
+			}
+		}
+
+		current.SetVariables(variables)
+
 		// Inject configuration
-		if testworkflows.CountMapBytes(v.Config) < ConfigSizeLimit {
-			current.StoreConfig(v.Config)
+		if testworkflows.CountMapBytes(mergedConfig) < ConfigSizeLimit {
+			current.StoreConfig(mergedConfig)
 		}
 
 		// Apply the configuration
-		if err := current.ApplyConfig(v.Config); err != nil {
+		if err := current.ApplyConfig(mergedConfig); err != nil {
 			current.SetError("Cannot inline Test Workflow configuration", err)
 			continue
 		}

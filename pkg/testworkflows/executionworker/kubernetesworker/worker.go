@@ -137,6 +137,13 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
 	}
 
+	var runtimeOptions *testworkflowprocessor.RuntimeOptions
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtimeOptions = &testworkflowprocessor.RuntimeOptions{
+			Variables: request.Runtime.Variables,
+		}
+	}
+
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
 		Config:                 cfg,
@@ -144,6 +151,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		ScheduledAt:            scheduledAt,
 		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+		Runtime:                runtimeOptions,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
@@ -195,6 +203,13 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
 	}
 
+	var runtimeOptions *testworkflowprocessor.RuntimeOptions
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtimeOptions = &testworkflowprocessor.RuntimeOptions{
+			Variables: request.Runtime.Variables,
+		}
+	}
+
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
 		Config:                 cfg,
@@ -202,6 +217,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		ScheduledAt:            scheduledAt,
 		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+		Runtime:                runtimeOptions,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
