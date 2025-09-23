@@ -85,7 +85,7 @@ type Service struct {
 type Option func(*Service)
 
 func NewService(
-	listenerName string,
+	agentName string,
 	deprecatedSystem *services.DeprecatedSystem,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
@@ -106,7 +106,7 @@ func NewService(
 	s := &Service{
 		identifier:                    identifier,
 		clusterID:                     defaultClusterID,
-		agentName:                     listenerName,
+		agentName:                     agentName,
 		scraperInterval:               defaultScraperInterval,
 		leaseCheckInterval:            defaultLeaseCheckInterval,
 		maxLeaseDuration:              leasebackend.DefaultMaxLeaseDuration,

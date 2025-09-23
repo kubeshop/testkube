@@ -41,13 +41,6 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			continue
 		}
 
-		if t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
-			continue
-		}
-		if !matchEventOrCause(string(t.Spec.Event), e) {
-			continue
-		}
-
 		// To keep things backward compatible, but also enable the use of
 		// selector and resourceSelector individually so that we can transition to
 		// eventually deprecating the resourceSelector the logic below toggles
@@ -55,19 +48,32 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		selectorSpecified := t.Spec.Selector != nil &&
 			(len(t.Spec.Selector.MatchLabels) > 0 || len(t.Spec.Selector.MatchExpressions) > 0)
 		resourceSelectorSpecified := (t.Spec.ResourceSelector.LabelSelector != nil &&
-			(len(t.Spec.ResourceSelector.LabelSelector.MatchLabels) > 0 || len(t.Spec.ResourceSelector.LabelSelector.MatchExpressions) > 0)) ||
-			(strings.TrimSpace(t.Spec.ResourceSelector.Name) != "" &&
-				strings.TrimSpace(t.Spec.ResourceSelector.NameRegex) != "" &&
-				strings.TrimSpace(t.Spec.ResourceSelector.Namespace) != "" &&
-				strings.TrimSpace(t.Spec.ResourceSelector.NamespaceRegex) != "")
+			(len(t.Spec.ResourceSelector.LabelSelector.MatchLabels) > 0 ||
+				len(t.Spec.ResourceSelector.LabelSelector.MatchExpressions) > 0)) ||
+			strings.TrimSpace(t.Spec.ResourceSelector.Name) != "" ||
+			strings.TrimSpace(t.Spec.ResourceSelector.NameRegex) != "" ||
+			strings.TrimSpace(t.Spec.ResourceSelector.Namespace) != "" ||
+			strings.TrimSpace(t.Spec.ResourceSelector.NamespaceRegex) != ""
 		selectorMatched := matchSelector(t.Spec.Selector, e, s.logger)
 		resourceSelectorMatched := matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger)
+
+		if !selectorSpecified && t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
+			continue
+		}
 
 		if (selectorSpecified || !resourceSelectorSpecified) && !selectorMatched {
 			continue
 		}
 
 		if (resourceSelectorSpecified || !selectorSpecified) && !resourceSelectorMatched {
+			continue
+		}
+
+		if (selectorSpecified && resourceSelectorSpecified) && (!selectorMatched || !resourceSelectorMatched) {
+			continue
+		}
+
+		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
 

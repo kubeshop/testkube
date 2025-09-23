@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
@@ -81,6 +82,9 @@ const (
 	eventLabelKeyAgentNamespace    string = "testkube.io/agent-namespace"
 	eventLabelKeyResourceName      string = "testkube.io/resource-name"
 	eventLabelKeyResourceNamespace string = "testkube.io/resource-namespace"
+	eventLabelKeyResourceKind      string = "testkube.io/resource-kind"
+	eventLabelKeyResourceGroup     string = "testkube.io/resource-group"
+	eventLabelKeyResourceVersion   string = "testkube.io/resource-version"
 )
 
 func (s Service) newWatcherEvent(
@@ -107,6 +111,19 @@ func (s Service) newWatcherEvent(
 	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
 	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
+
+	if runtimeObject, ok := object.(runtime.Object); ok &&
+		s.informers != nil && s.informers.scheme != nil {
+		gvks, _, err := s.informers.scheme.ObjectKinds(runtimeObject)
+		if err != nil {
+			s.logger.Warnf("error getting object kinds from scheme, skipped adding event label: %v", err)
+		} else if len(gvks) > 0 {
+			gvk := gvks[0]
+			w.EventLabels[eventLabelKeyResourceKind] = gvk.Kind
+			w.EventLabels[eventLabelKeyResourceGroup] = gvk.Group
+			w.EventLabels[eventLabelKeyResourceVersion] = gvk.Version
+		}
+	}
 
 	for _, opt := range opts {
 		opt(w)
