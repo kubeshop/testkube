@@ -220,6 +220,28 @@ setup: install-tools ## Initial project setup
 .PHONY: all
 all: clean build test ## Clean, build, and test everything
 
+# ==================== Release  ====================
+##@ Release
+
+.PHONY: version-bump
+version-bump: version-bump-patch
+
+.PHONY: version-bump-patch
+version-bump-patch:
+	go run cmd/tools/main.go bump -k patch
+
+.PHONY: version-bump-minor
+version-bump-minor:
+	go run cmd/tools/main.go bump -k minor
+
+.PHONY: version-bump-major
+version-bump-major:
+	go run cmd/tools/main.go bump -k major
+
+.PHONY: version-bump-dev
+version-bump-dev:
+	go run cmd/tools/main.go bump --dev
+
 # ==================== Primary Build Targets ====================
 ##@ Build
 
