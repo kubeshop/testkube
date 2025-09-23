@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/gofiber/adaptor/v2"
+	"github.com/gofiber/contrib/otelfiber"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -45,6 +46,10 @@ func (s *HTTPServer) Init() {
 	})
 
 	s.Mux.Use(pprof.New())
+
+	if s.Config.EnableTracing {
+		s.Mux.Use(otelfiber.Middleware())
+	}
 
 	// server generic endpoints
 	s.Mux.Get("/health", s.HealthEndpoint())
