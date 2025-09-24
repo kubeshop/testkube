@@ -75,6 +75,11 @@ func (a *agentLoop) Start(ctx context.Context) error {
 	reconnectionLoop := func(name string, fn func(context.Context) error) func() {
 		return func() {
 			for {
+				// Pre check for already finished context in case it is not correctly handled by the passed function.
+				if ctx.Err() != nil {
+					return
+				}
+
 				a.logger.Infow("starting reconnection loop",
 					"name", name)
 
@@ -100,10 +105,13 @@ func (a *agentLoop) Start(ctx context.Context) error {
 
 	var wg sync.WaitGroup
 
-	wg.Go(reconnectionLoop("runners loop", a.loopRunnerRequests))
 	wg.Go(reconnectionLoop("notifications loop", a.loopNotifications))
 	wg.Go(reconnectionLoop("service notifications loop", a.loopServiceNotifications))
 	wg.Go(reconnectionLoop("parallel steps notifications loop", a.loopParallelStepNotifications))
+
+	if a.proContext.NewArchitecture {
+		wg.Go(reconnectionLoop("runners loop", a.loopRunnerRequests))
+	}
 
 	wg.Wait()
 
