@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -36,6 +37,7 @@ const (
 	dockerImageVersionMeta  = "docker-image-version"
 	newArchitectureMeta     = "exec"
 	testWorkflowStorageMeta = "tw-storage"
+	reconnectionLoopDelay   = 5 * time.Second
 )
 
 // buffer up to five messages per worker
@@ -108,49 +110,53 @@ func NewAgent(logger *zap.SugaredLogger,
 }
 
 func (ag *Agent) Run(ctx context.Context) error {
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
+	reconnectionLoop := func(name string, fn func(context.Context) error) func() {
+		return func() {
+			for {
+				// Pre check for already finished context in case it is not correctly handled by the passed function.
+				if ctx.Err() != nil {
+					return
+				}
+
+				ag.logger.Infow("starting reconnection loop",
+					"name", name)
+
+				err := fn(ctx)
+				switch {
+				case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+					// After context cancellation exit the loop.
+					return
+				case err != nil:
+					ag.logger.Errorw("error running agent connection",
+						"name", name,
+						"error", err)
+				}
+
+				ag.logger.Infow("agent connection closed, reconnecting after delay",
+					"name", name,
+					"delay", reconnectionLoopDelay)
+
+				time.Sleep(reconnectionLoopDelay)
+			}
 		}
-		err := ag.run(ctx)
-
-		ag.logger.Errorw("agent connection failed, reconnecting", "error", err)
-
-		// TODO: some smart back off strategy?
-		time.Sleep(5 * time.Second)
 	}
-}
 
-func (ag *Agent) run(ctx context.Context) (err error) {
-	g, groupCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		return ag.runCommandLoop(groupCtx)
-	})
+	var wg sync.WaitGroup
 
-	g.Go(func() error {
-		return ag.runWorkers(groupCtx, ag.workerCount)
-	})
-
-	g.Go(func() error {
-		return ag.runEventLoop(groupCtx)
-	})
+	wg.Go(reconnectionLoop("command loop", ag.runCommandLoop))
+	wg.Go(reconnectionLoop("worker loop", ag.runWorkers(ag.workerCount)))
+	wg.Go(reconnectionLoop("event loop", ag.runEventLoop))
+	wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
 
 	if !ag.features.LogsV2 {
-		g.Go(func() error {
-			return ag.runLogStreamLoop(groupCtx)
-		})
-		g.Go(func() error {
-			return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
-		})
+		wg.Go(reconnectionLoop("log stream loop", ag.runLogStreamLoop))
+		wg.Go(reconnectionLoop("log stream worker loop", ag.runLogStreamWorker(ag.logStreamWorkerCount)))
 	}
 
-	g.Go(func() error {
-		return ag.runEventsReaderLoop(groupCtx)
-	})
+	wg.Wait()
 
-	err = g.Wait()
-
-	return err
+	// We can only return here if the context has been cancelled.
+	return ctx.Err()
 }
 
 func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
@@ -325,25 +331,27 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	return err
 }
 
-func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
-	g, groupCtx := errgroup.WithContext(ctx)
-	for i := 0; i < numWorkers; i++ {
-		g.Go(func() error {
-			for {
-				select {
-				case cmd := <-ag.requestBuffer:
+func (ag *Agent) runWorkers(numWorkers int) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		g, groupCtx := errgroup.WithContext(ctx)
+		for i := 0; i < numWorkers; i++ {
+			g.Go(func() error {
+				for {
 					select {
-					case ag.responseBuffer <- ag.executeCommand(groupCtx, cmd):
+					case cmd := <-ag.requestBuffer:
+						select {
+						case ag.responseBuffer <- ag.executeCommand(groupCtx, cmd):
+						case <-groupCtx.Done():
+							return groupCtx.Err()
+						}
 					case <-groupCtx.Done():
 						return groupCtx.Err()
 					}
-				case <-groupCtx.Done():
-					return groupCtx.Err()
 				}
-			}
-		})
+			})
+		}
+		return g.Wait()
 	}
-	return g.Wait()
 }
 
 func (ag *Agent) executeCommand(_ context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {

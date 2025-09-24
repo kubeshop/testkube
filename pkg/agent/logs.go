@@ -63,33 +63,35 @@ func (ag *Agent) runLogStreamLoop(ctx context.Context) error {
 	return err
 }
 
-func (ag *Agent) runLogStreamWorker(ctx context.Context, numWorkers int) error {
-	g, groupCtx := errgroup.WithContext(ctx)
-	for i := 0; i < numWorkers; i++ {
-		g.Go(func() error {
-			for {
-				select {
-				case req := <-ag.logStreamRequestBuffer:
+func (ag *Agent) runLogStreamWorker(numWorkers int) func(context.Context) error {
+	return func(ctx context.Context) error {
+		g, groupCtx := errgroup.WithContext(ctx)
+		for i := 0; i < numWorkers; i++ {
+			g.Go(func() error {
+				for {
+					select {
+					case req := <-ag.logStreamRequestBuffer:
 
-					if req.RequestType == cloud.LogsStreamRequestType_STREAM_HEALTH_CHECK {
-						ag.logStreamResponseBuffer <- &cloud.LogsStreamResponse{
-							StreamId: req.StreamId,
-							SeqNo:    0,
+						if req.RequestType == cloud.LogsStreamRequestType_STREAM_HEALTH_CHECK {
+							ag.logStreamResponseBuffer <- &cloud.LogsStreamResponse{
+								StreamId: req.StreamId,
+								SeqNo:    0,
+							}
+							break
 						}
-						break
-					}
 
-					err := ag.executeLogStreamRequest(groupCtx, req)
-					if err != nil {
-						ag.logger.Errorf("error executing log stream request: %s", err.Error())
+						err := ag.executeLogStreamRequest(groupCtx, req)
+						if err != nil {
+							ag.logger.Errorf("error executing log stream request: %s", err.Error())
+						}
+					case <-groupCtx.Done():
+						return groupCtx.Err()
 					}
-				case <-groupCtx.Done():
-					return groupCtx.Err()
 				}
-			}
-		})
+			})
+		}
+		return g.Wait()
 	}
-	return g.Wait()
 }
 
 func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStreamRequest) error {
