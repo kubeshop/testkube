@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	}
 
 	// Support pull secrets
-	authConfigs, err := ParseSecretData(pullSecrets, registry)
+	authConfigs, err := ParseSecretData(pullSecrets, registry, image)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ type DockerAuths struct {
 }
 
 // ParseSecretData parses secret data for docker auth config
-func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.AuthConfig, error) {
+func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]authn.AuthConfig, error) {
 	var results []authn.AuthConfig
 	for _, imageSecret := range imageSecrets {
 		auths := DockerAuths{}
@@ -182,6 +183,37 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.Aut
 			}
 
 			results = append(results, authn.AuthConfig{Username: username, Password: password})
+		} else {
+			var slice []struct {
+				Path  string
+				Creds authn.AuthConfig
+			}
+
+			for path, creds := range auths.Auths {
+				slice = append(slice, struct {
+					Path  string
+					Creds authn.AuthConfig
+				}{
+					Path:  path,
+					Creds: creds,
+				})
+			}
+
+			sort.Slice(slice, func(i, j int) bool {
+				return slice[i].Path > slice[j].Path
+			})
+
+			for _, item := range slice {
+				if strings.HasPrefix(image, item.Path) {
+					username, password, err := extractRegistryCredentials(item.Creds)
+					if err != nil {
+						return nil, err
+					}
+
+					results = append(results, authn.AuthConfig{Username: username, Password: password})
+					break
+				}
+			}
 		}
 	}
 
