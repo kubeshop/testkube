@@ -59,7 +59,7 @@ func TestAgentLoop_Start_SimpleReconnectionDelay(t *testing.T) {
 	mockWorker := executionworkertypes.NewMockWorker(nil)
 	mockEmitter := &simpleMockEventEmitter{}
 
-	logger := zap.NewNop().Sugar()
+	logger := zap.NewExample().Sugar()
 
 	// Create agent loop
 	agent := newAgentLoop(
@@ -177,6 +177,8 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(conn)
 
+	testTimeout := time.Second
+
 	mockClient := controlplaneclient.New(grpcClient, config.ProContext{
 		NewArchitecture: true,
 		Agent: config.ProContextAgent{
@@ -188,7 +190,7 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 			Namespace: "test-namespace",
 		},
 		SendTimeout: 100 * time.Second,
-		RecvTimeout: 2 * time.Second, // Set receive timeout to 2 seconds
+		RecvTimeout: testTimeout,
 	}, zap.NewExample().Sugar())
 
 	// Create mocks for other dependencies
@@ -217,8 +219,8 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 		"test-env",
 	)
 
-	// Create context with timeout longer than the receive timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	// Create context with timeout longer than 2x receive timeout + reconnect timeout
+	ctx, cancel := context.WithTimeout(context.Background(), (2*testTimeout)+agentLoopReconnectionDelay)
 	defer cancel()
 
 	// Start the agent loop

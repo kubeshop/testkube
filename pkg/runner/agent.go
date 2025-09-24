@@ -10,8 +10,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -74,25 +72,43 @@ func newAgentLoop(
 }
 
 func (a *agentLoop) Start(ctx context.Context) error {
-	for {
-		a.logger.Infow("starting runner agent connection with control plane")
+	reconnectionLoop := func(name string, fn func(context.Context) error) func() {
+		return func() {
+			for {
+				a.logger.Infow("starting reconnection loop",
+					"name", name)
 
-		if ctx.Err() != nil {
-			return ctx.Err()
+				err := fn(ctx)
+				switch {
+				case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+					// After context cancellation exit the loop.
+					return
+				case err != nil:
+					a.logger.Errorw("error running agent connection",
+						"name", name,
+						"error", err)
+				}
+
+				a.logger.Infow("agent connection closed, reconnecting after delay",
+					"name", name,
+					"delay", agentLoopReconnectionDelay)
+
+				time.Sleep(agentLoopReconnectionDelay)
+			}
 		}
-		err := a.run(ctx)
-
-		log := a.logger
-		level := zapcore.InfoLevel
-		if err != nil {
-			log = log.With("error", err)
-			level = zapcore.ErrorLevel
-		}
-		log.Logw(level, "runner agent connection closed, reconnecting")
-
-		// TODO: some smart back off strategy?
-		time.Sleep(agentLoopReconnectionDelay)
 	}
+
+	var wg sync.WaitGroup
+
+	wg.Go(reconnectionLoop("runners loop", a.loopRunnerRequests))
+	wg.Go(reconnectionLoop("notifications loop", a.loopNotifications))
+	wg.Go(reconnectionLoop("service notifications loop", a.loopServiceNotifications))
+	wg.Go(reconnectionLoop("parallel steps notifications loop", a.loopParallelStepNotifications))
+
+	wg.Wait()
+
+	// We can only return here if the context has been cancelled.
+	return ctx.Err()
 }
 
 func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
@@ -156,29 +172,6 @@ func (a *agentLoop) init(ctx context.Context, environmentId string, execution *t
 		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
 	}
 	return err
-}
-
-func (a *agentLoop) run(ctx context.Context) error {
-	g, ctx := errgroup.WithContext(ctx)
-	// Handle the new mechanism for runners
-	if a.proContext.NewArchitecture {
-		g.Go(func() error {
-			return errors2.Wrap(a.loopRunnerRequests(ctx), "runners loop")
-		})
-	}
-
-	// Handle Test Workflow notifications of all kinds
-	g.Go(func() error {
-		return errors2.Wrap(a.loopNotifications(ctx), "notifications loop")
-	})
-	g.Go(func() error {
-		return errors2.Wrap(a.loopServiceNotifications(ctx), "service notifications loop")
-	})
-	g.Go(func() error {
-		return errors2.Wrap(a.loopParallelStepNotifications(ctx), "parallel steps notifications loop")
-	})
-
-	return g.Wait()
 }
 
 func (a *agentLoop) loopNotifications(ctx context.Context) error {
