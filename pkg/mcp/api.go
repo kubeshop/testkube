@@ -553,6 +553,10 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 		defer cancel()
 	}
 
+	// Track completed executions to avoid re-checking them
+	completedExecutions := make(map[string]bool)
+	allResults := make(map[string]map[string]interface{})
+
 	// Polling loop
 	ticker := time.NewTicker(5 * time.Second) // Check every 5 seconds
 	defer ticker.Stop()
@@ -562,7 +566,7 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 		case <-ctx.Done():
 			return "", fmt.Errorf("timeout waiting for executions: %w", ctx.Err())
 		case <-ticker.C:
-			allComplete, results, err := c.checkExecutionStatuses(ctx, executionIds)
+			allComplete, results, err := c.checkExecutionStatuses(ctx, executionIds, completedExecutions, allResults)
 			if err != nil {
 				return "", fmt.Errorf("failed to check execution status: %w", err)
 			}
@@ -574,27 +578,46 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 	}
 }
 
-func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []string) (bool, string, error) {
+func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []string, completedExecutions map[string]bool, allResults map[string]map[string]interface{}) (bool, string, error) {
 	var allComplete = true
-	var results []map[string]interface{}
 
 	// Final status values that indicate execution has completed
 	finalStatuses := []string{"passed", "failed", "aborted", "timeout", "skipped", "canceled"}
 
+	// Only check executions that haven't completed yet
+	var remainingExecutions []string
 	for _, executionId := range executionIds {
+		if !completedExecutions[executionId] {
+			remainingExecutions = append(remainingExecutions, executionId)
+		}
+	}
+
+	// Check status of remaining executions
+	for _, executionId := range remainingExecutions {
 		status, err := c.getExecutionStatus(ctx, executionId)
 		if err != nil {
 			return false, "", err
 		}
 
-		results = append(results, map[string]interface{}{
+		// Store the result
+		allResults[executionId] = map[string]interface{}{
 			"executionId": executionId,
 			"status":      status,
-		})
+		}
 
 		// Check if execution is in a final state
-		if !slices.Contains(finalStatuses, status) {
+		if slices.Contains(finalStatuses, status) {
+			completedExecutions[executionId] = true
+		} else {
 			allComplete = false
+		}
+	}
+
+	// Build results array from all results (both completed and in-progress)
+	var results []map[string]interface{}
+	for _, executionId := range executionIds {
+		if result, exists := allResults[executionId]; exists {
+			results = append(results, result)
 		}
 	}
 
