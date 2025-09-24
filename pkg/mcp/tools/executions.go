@@ -256,3 +256,44 @@ func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, han
 
 	return tool, handler
 }
+
+type ExecutionWaiter interface {
+	WaitForExecutions(ctx context.Context, executionIds []string, timeoutMinutes int) (string, error)
+}
+
+func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("wait_for_executions",
+		mcp.WithDescription(WaitForExecutionsDescription),
+		mcp.WithString("executionIds", mcp.Required(), mcp.Description(ExecutionIdsDescription)),
+		mcp.WithString("timeoutMinutes", mcp.Description(TimeoutMinutesDescription)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		executionIdsStr, err := RequiredParam[string](request, "executionIds")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		// Parse comma-separated execution IDs
+		executionIds := strings.Split(executionIdsStr, ",")
+		for i, id := range executionIds {
+			executionIds[i] = strings.TrimSpace(id)
+		}
+
+		timeoutMinutes := 30 // default
+		if timeoutStr := request.GetString("timeoutMinutes", ""); timeoutStr != "" {
+			if timeout, err := strconv.Atoi(timeoutStr); err == nil && timeout > 0 {
+				timeoutMinutes = timeout
+			}
+		}
+
+		result, err := client.WaitForExecutions(ctx, executionIds, timeoutMinutes)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to wait for executions: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(result), nil
+	}
+
+	return tool, handler
+}

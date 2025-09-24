@@ -10,6 +10,7 @@ type Client interface {
 	tools.ExecutionLister
 	tools.ExecutionInfoGetter
 	tools.ExecutionLookup
+	tools.ExecutionWaiter
 	tools.WorkflowExecutionAborter
 
 	tools.LabelsLister

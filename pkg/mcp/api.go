@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
@@ -542,4 +543,91 @@ func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string)
 			"workflowName": workflowName,
 		},
 	})
+}
+
+func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string, timeoutMinutes int) (string, error) {
+	// Create a context with timeout
+	if timeoutMinutes > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMinutes)*time.Minute)
+		defer cancel()
+	}
+
+	// Polling loop
+	ticker := time.NewTicker(5 * time.Second) // Check every 5 seconds
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("timeout waiting for executions: %w", ctx.Err())
+		case <-ticker.C:
+			allComplete, results, err := c.checkExecutionStatuses(ctx, executionIds)
+			if err != nil {
+				return "", fmt.Errorf("failed to check execution status: %w", err)
+			}
+
+			if allComplete {
+				return results, nil
+			}
+		}
+	}
+}
+
+func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []string) (bool, string, error) {
+	var allComplete = true
+	var results []map[string]interface{}
+
+	// Final status values that indicate execution has completed
+	finalStatuses := []string{"passed", "failed", "aborted", "timeout", "skipped", "canceled"}
+
+	for _, executionId := range executionIds {
+		status, err := c.getExecutionStatus(ctx, executionId)
+		if err != nil {
+			return false, "", err
+		}
+
+		results = append(results, map[string]interface{}{
+			"executionId": executionId,
+			"status":      status,
+		})
+
+		// Check if execution is in a final state
+		if !slices.Contains(finalStatuses, status) {
+			allComplete = false
+		}
+	}
+
+	resultJSON, _ := json.Marshal(results)
+	return allComplete, string(resultJSON), nil
+}
+
+func (c *APIClient) getExecutionStatus(ctx context.Context, executionId string) (string, error) {
+	// Use the test-workflow-executions endpoint which only requires execution ID
+	response, err := c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/agent/test-workflow-executions/{executionId}",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"executionId": executionId,
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get execution: %w", err)
+	}
+
+	// Parse the response to extract status
+	var execInfo map[string]interface{}
+	if err := json.Unmarshal([]byte(response), &execInfo); err != nil {
+		return "", fmt.Errorf("failed to parse execution response: %w", err)
+	}
+
+	// Check if there's a result object with status
+	if result, ok := execInfo["result"].(map[string]interface{}); ok {
+		if status, ok := result["status"].(string); ok {
+			return status, nil
+		}
+	}
+
+	return "", fmt.Errorf("status not found in execution response")
 }
