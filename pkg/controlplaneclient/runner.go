@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -142,7 +143,13 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	}
 	go func() {
 		defer func() {
-			c.logger.Errorw("shutting down watch runner requests", "error", err)
+			log := c.logger
+			level := zapcore.InfoLevel
+			if err != nil {
+				log = log.With("error", err)
+				level = zapcore.ErrorLevel
+			}
+			log.Logw(level, "shutting down watch runner requests")
 			cancel(err)
 			watcher.Close(err)
 		}()
@@ -190,7 +197,10 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 				err = ctx.Err()
 				return
 			case <-time.After(c.opts.RecvTimeout):
-				err = errors.New("receive request too slow")
+				// Not erroring here because this isn't an error, it is expected gRPC behaviour
+				// if we stop playing ping pong with the server.
+				c.logger.Infow("did not receive runner request before timeout, closing connection",
+					"timeout", c.opts.RecvTimeout)
 				return
 			}
 

@@ -10,6 +10,7 @@ import (
 
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 
@@ -81,7 +82,13 @@ func (a *agentLoop) Start(ctx context.Context) error {
 		}
 		err := a.run(ctx)
 
-		a.logger.Errorw("runner agent connection failed, reconnecting", "error", err)
+		log := a.logger
+		level := zapcore.InfoLevel
+		if err != nil {
+			log = log.With("error", err)
+			level = zapcore.ErrorLevel
+		}
+		log.Logw(level, "runner agent connection closed, reconnecting")
 
 		// TODO: some smart back off strategy?
 		time.Sleep(agentLoopReconnectionDelay)
