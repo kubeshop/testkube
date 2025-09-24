@@ -56,6 +56,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.ListExecutions(client))
 	mcpServer.AddTool(tools.LookupExecutionId(client))
 	mcpServer.AddTool(tools.GetExecutionInfo(client))
+	mcpServer.AddTool(tools.GetWorkflowExecutionMetrics(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
 
 	// Artifact tools
