@@ -261,3 +261,36 @@ func GetWorkflowMetrics(client WorkflowMetricsGetter) (tool mcp.Tool, handler se
 
 	return tool, handler
 }
+
+type WorkflowExecutionMetricsGetter interface {
+	GetWorkflowExecutionMetrics(ctx context.Context, workflowName, executionID string) (string, error)
+}
+
+func GetWorkflowExecutionMetrics(client WorkflowExecutionMetricsGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("get_workflow_execution_metrics",
+		mcp.WithDescription(GetWorkflowExecutionMetricsDescription),
+		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		workflowName, err := RequiredParam[string](request, "workflowName")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		executionID, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		result, err := client.GetWorkflowExecutionMetrics(ctx, workflowName, executionID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow execution metrics: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(result), nil
+	}
+
+	return tool, handler
+}

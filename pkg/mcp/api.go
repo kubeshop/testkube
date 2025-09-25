@@ -543,3 +543,15 @@ func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string)
 		},
 	})
 }
+
+func (c *APIClient) GetWorkflowExecutionMetrics(ctx context.Context, workflowName, executionID string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}/metrics",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": workflowName,
+			"executionId":  executionID,
+		},
+	})
+}
