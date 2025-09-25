@@ -52,9 +52,14 @@ USER mcpuser
 
 # Set environment variables for MCP server
 # Required environment variables:
+ENV TK_ACCESS_TOKEN=
+ENV TK_ORG_ID=
+ENV TK_ENV_ID=
 ENV TK_CONTROL_PLANE_URL=https://api.testkube.io
 ENV TK_DEBUG=false
 ENV TK_MCP_ENV_MODE=true
+
+LABEL io.modelcontextprotocol.server.name="io.github.kubeshop/testkube"
 
 # Default command runs the MCP server in stdio mode
 ENTRYPOINT ["/bin/kubectl-testkube", "mcp", "serve"]

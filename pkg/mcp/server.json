@@ -1,0 +1,54 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-16/server.schema.json",
+  "name": "io.github.kubeshop/testkube",
+  "description": "An MCP server that provides access to Testkube Test Orchestration and Execution capabilities to AI assistants and agents",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/kubeshop/testkube",
+    "source": "github",
+    "subfolder": "build/mcp-server"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "oci",
+      "registryBaseUrl": "https://docker.io",
+      "identifier": "testkube/mcp-server",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Testkube API access token",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "TK_ACCESS_TOKEN"
+        },
+        {
+          "description": "Testkube organization ID",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "TK_ORG_ID"
+        },
+        {
+          "description": "Testkube environment ID",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "TK_ENV_ID"
+        }        ,
+        {
+          "description": "Testkube control plane URL",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "default": "https://api.testkube.io",
+          "name": "TK_CONTROL_PLANE_URL"
+        }
+      ]
+    }
+  ]
+}

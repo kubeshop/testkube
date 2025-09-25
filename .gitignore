@@ -57,3 +57,5 @@ depot-build-meta.json
 
 # GitHub Actions temporary Google credentials
 gha-creds-*.json
+pkg/mcp/.mcpregistry_github_token
+pkg/mcp/.mcpregistry_registry_token
