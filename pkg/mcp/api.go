@@ -559,87 +559,74 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 		case <-ctx.Done():
 			return "", fmt.Errorf("timeout waiting for executions: %w", ctx.Err())
 		case <-ticker:
-			allComplete, results, err := c.checkExecutionStatuses(ctx, executionIds, completedExecutions, allResults)
-			if err != nil {
-				return "", fmt.Errorf("failed to check execution status: %w", err)
+			var allComplete = true
+
+			// Only check executions that haven't completed yet
+			var remainingExecutions []string
+			for _, executionId := range executionIds {
+				if !completedExecutions[executionId] {
+					remainingExecutions = append(remainingExecutions, executionId)
+				}
+			}
+
+			// Check status of remaining executions
+			for _, executionId := range remainingExecutions {
+				// Get execution status
+				response, err := c.makeRequest(ctx, APIRequest{
+					Method: "GET",
+					Path:   "/agent/test-workflow-executions/{executionId}",
+					Scope:  ApiScopeOrgEnv,
+					PathParams: map[string]string{
+						"executionId": executionId,
+					},
+				})
+				if err != nil {
+					return "", fmt.Errorf("failed to get execution %s: %w", executionId, err)
+				}
+
+				// Parse the response to extract status
+				var execInfo map[string]interface{}
+				if err := json.Unmarshal([]byte(response), &execInfo); err != nil {
+					return "", fmt.Errorf("failed to parse execution response for %s: %w", executionId, err)
+				}
+
+				// Extract status
+				var status string
+				if result, ok := execInfo["result"].(map[string]interface{}); ok {
+					if statusVal, ok := result["status"].(string); ok {
+						status = statusVal
+					}
+				}
+				if status == "" {
+					return "", fmt.Errorf("status not found in execution response for %s", executionId)
+				}
+
+				// Store the result
+				allResults[executionId] = map[string]interface{}{
+					"executionId": executionId,
+					"status":      status,
+				}
+
+				// Check if execution is in a final state
+				if slices.Contains(testkube.TestWorkflowTerminalStatus, testkube.TestWorkflowStatus(status)) {
+					completedExecutions[executionId] = true
+				} else {
+					allComplete = false
+				}
 			}
 
 			if allComplete {
-				return results, nil
+				// Build results array from all results (both completed and in-progress)
+				var results []map[string]interface{}
+				for _, executionId := range executionIds {
+					if result, exists := allResults[executionId]; exists {
+						results = append(results, result)
+					}
+				}
+
+				resultJSON, _ := json.Marshal(results)
+				return string(resultJSON), nil
 			}
 		}
 	}
-}
-
-func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []string, completedExecutions map[string]bool, allResults map[string]map[string]interface{}) (bool, string, error) {
-	var allComplete = true
-
-	// Only check executions that haven't completed yet
-	var remainingExecutions []string
-	for _, executionId := range executionIds {
-		if !completedExecutions[executionId] {
-			remainingExecutions = append(remainingExecutions, executionId)
-		}
-	}
-
-	// Check status of remaining executions
-	for _, executionId := range remainingExecutions {
-		status, err := c.getExecutionStatus(ctx, executionId)
-		if err != nil {
-			return false, "", err
-		}
-
-		// Store the result
-		allResults[executionId] = map[string]interface{}{
-			"executionId": executionId,
-			"status":      status,
-		}
-		// Check if execution is in a final state
-		if slices.Contains(testkube.TestWorkflowTerminalStatus, testkube.TestWorkflowStatus(status)) {
-			completedExecutions[executionId] = true
-		} else {
-			allComplete = false
-		}
-	}
-
-	// Build results array from all results (both completed and in-progress)
-	var results []map[string]interface{}
-	for _, executionId := range executionIds {
-		if result, exists := allResults[executionId]; exists {
-			results = append(results, result)
-		}
-	}
-
-	resultJSON, _ := json.Marshal(results)
-	return allComplete, string(resultJSON), nil
-}
-
-func (c *APIClient) getExecutionStatus(ctx context.Context, executionId string) (string, error) {
-	// Use the test-workflow-executions endpoint which only requires execution ID
-	response, err := c.makeRequest(ctx, APIRequest{
-		Method: "GET",
-		Path:   "/agent/test-workflow-executions/{executionId}",
-		Scope:  ApiScopeOrgEnv,
-		PathParams: map[string]string{
-			"executionId": executionId,
-		},
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to get execution: %w", err)
-	}
-
-	// Parse the response to extract status
-	var execInfo map[string]interface{}
-	if err := json.Unmarshal([]byte(response), &execInfo); err != nil {
-		return "", fmt.Errorf("failed to parse execution response: %w", err)
-	}
-
-	// Check if there's a result object with status
-	if result, ok := execInfo["result"].(map[string]interface{}); ok {
-		if status, ok := result["status"].(string); ok {
-			return status, nil
-		}
-	}
-
-	return "", fmt.Errorf("status not found in execution response")
 }
