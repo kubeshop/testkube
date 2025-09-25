@@ -547,26 +547,18 @@ func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string)
 }
 
 func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string, timeoutMinutes int) (string, error) {
-	// Create a context with timeout
-	if timeoutMinutes > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMinutes)*time.Minute)
-		defer cancel()
-	}
-
 	// Track completed executions to avoid re-checking them
 	completedExecutions := make(map[string]bool)
 	allResults := make(map[string]map[string]interface{})
 
 	// Polling loop
-	ticker := time.NewTicker(5 * time.Second) // Check every 5 seconds
-	defer ticker.Stop()
+	ticker := time.Tick(5 * time.Second) // Check every 5 seconds
 
 	for {
 		select {
 		case <-ctx.Done():
 			return "", fmt.Errorf("timeout waiting for executions: %w", ctx.Err())
-		case <-ticker.C:
+		case <-ticker:
 			allComplete, results, err := c.checkExecutionStatuses(ctx, executionIds, completedExecutions, allResults)
 			if err != nil {
 				return "", fmt.Errorf("failed to check execution status: %w", err)
@@ -581,14 +573,6 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 
 func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []string, completedExecutions map[string]bool, allResults map[string]map[string]interface{}) (bool, string, error) {
 	var allComplete = true
-
-	// Final status values that indicate execution has completed
-	finalStatuses := []string{
-		string(testkube.PASSED_TestWorkflowStatus),
-		string(testkube.FAILED_TestWorkflowStatus),
-		string(testkube.ABORTED_TestWorkflowStatus),
-		string(testkube.CANCELED_TestWorkflowStatus),
-	}
 
 	// Only check executions that haven't completed yet
 	var remainingExecutions []string
@@ -610,9 +594,8 @@ func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []s
 			"executionId": executionId,
 			"status":      status,
 		}
-
 		// Check if execution is in a final state
-		if slices.Contains(finalStatuses, status) {
+		if slices.Contains(testkube.TestWorkflowTerminalStatus, testkube.TestWorkflowStatus(status)) {
 			completedExecutions[executionId] = true
 		} else {
 			allComplete = false

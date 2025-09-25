@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -285,6 +286,13 @@ func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.To
 			if timeout, err := strconv.Atoi(timeoutStr); err == nil && timeout > 0 {
 				timeoutMinutes = timeout
 			}
+		}
+
+		// Create a context with timeout
+		if timeoutMinutes > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMinutes)*time.Minute)
+			defer cancel()
 		}
 
 		result, err := client.WaitForExecutions(ctx, executionIds, timeoutMinutes)
