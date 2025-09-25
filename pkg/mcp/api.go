@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
@@ -582,7 +583,12 @@ func (c *APIClient) checkExecutionStatuses(ctx context.Context, executionIds []s
 	var allComplete = true
 
 	// Final status values that indicate execution has completed
-	finalStatuses := []string{"passed", "failed", "aborted", "timeout", "skipped", "canceled"}
+	finalStatuses := []string{
+		string(testkube.PASSED_TestWorkflowStatus),
+		string(testkube.FAILED_TestWorkflowStatus),
+		string(testkube.ABORTED_TestWorkflowStatus),
+		string(testkube.CANCELED_TestWorkflowStatus),
+	}
 
 	// Only check executions that haven't completed yet
 	var remainingExecutions []string
