@@ -259,7 +259,7 @@ func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, han
 }
 
 type ExecutionWaiter interface {
-	WaitForExecutions(ctx context.Context, executionIds []string, timeoutMinutes int) (string, error)
+	WaitForExecutions(ctx context.Context, executionIds []string) (string, error)
 }
 
 func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
@@ -295,7 +295,7 @@ func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.To
 			defer cancel()
 		}
 
-		result, err := client.WaitForExecutions(ctx, executionIds, timeoutMinutes)
+		result, err := client.WaitForExecutions(ctx, executionIds)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to wait for executions: %v", err)), nil
 		}
