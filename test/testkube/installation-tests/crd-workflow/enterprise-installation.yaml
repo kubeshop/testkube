@@ -82,6 +82,8 @@ description: "Enterprise installation test - edge, multi-namespace. Can be run O
 spec:
   system:
     pureByDefault: true
+  concurrency:
+    max: 1
   content:
     files:
     - path: /root/edge-cluster-sa-key.json
