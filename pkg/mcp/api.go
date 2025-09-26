@@ -554,6 +554,7 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 	// Polling loop
 	ticker := time.Tick(5 * time.Second) // Check every 5 seconds
 
+	// TODO: improve inner loop / polling logic in line with suggestion at https://github.com/kubeshop/testkube/pull/6706#discussion_r2381356579
 	for {
 		select {
 		case <-ctx.Done():
