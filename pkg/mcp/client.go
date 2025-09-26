@@ -15,6 +15,7 @@ type Client interface {
 
 	tools.LabelsLister
 	tools.ResourceGroupsLister
+	tools.AgentsLister
 
 	tools.WorkflowLister
 	tools.WorkflowCreator

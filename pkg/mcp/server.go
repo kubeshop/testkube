@@ -51,6 +51,9 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	// Resource groups tools
 	mcpServer.AddTool(tools.ListResourceGroups(client))
 
+	// Agent tools
+	mcpServer.AddTool(tools.ListAgents(client))
+
 	// Execution tools
 	mcpServer.AddTool(tools.FetchExecutionLogs(client))
 	mcpServer.AddTool(tools.ListExecutions(client))
