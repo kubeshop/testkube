@@ -11,7 +11,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
@@ -542,4 +544,90 @@ func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string)
 			"workflowName": workflowName,
 		},
 	})
+}
+
+func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string) (string, error) {
+	// Track completed executions to avoid re-checking them
+	completedExecutions := make(map[string]bool)
+	allResults := make(map[string]map[string]interface{})
+
+	// Polling loop
+	ticker := time.Tick(5 * time.Second) // Check every 5 seconds
+
+	// TODO: improve inner loop / polling logic in line with suggestion at https://github.com/kubeshop/testkube/pull/6706#discussion_r2381356579
+	for {
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("timeout waiting for executions: %w", ctx.Err())
+		case <-ticker:
+			var allComplete = true
+
+			// Only check executions that haven't completed yet
+			var remainingExecutions []string
+			for _, executionId := range executionIds {
+				if !completedExecutions[executionId] {
+					remainingExecutions = append(remainingExecutions, executionId)
+				}
+			}
+
+			// Check status of remaining executions
+			for _, executionId := range remainingExecutions {
+				// Get execution status
+				response, err := c.makeRequest(ctx, APIRequest{
+					Method: "GET",
+					Path:   "/agent/test-workflow-executions/{executionId}",
+					Scope:  ApiScopeOrgEnv,
+					PathParams: map[string]string{
+						"executionId": executionId,
+					},
+				})
+				if err != nil {
+					return "", fmt.Errorf("failed to get execution %s: %w", executionId, err)
+				}
+
+				// Parse the response to extract status
+				var execInfo map[string]interface{}
+				if err := json.Unmarshal([]byte(response), &execInfo); err != nil {
+					return "", fmt.Errorf("failed to parse execution response for %s: %w", executionId, err)
+				}
+
+				// Extract status
+				var status string
+				if result, ok := execInfo["result"].(map[string]interface{}); ok {
+					if statusVal, ok := result["status"].(string); ok {
+						status = statusVal
+					}
+				}
+				if status == "" {
+					return "", fmt.Errorf("status not found in execution response for %s", executionId)
+				}
+
+				// Store the result
+				allResults[executionId] = map[string]interface{}{
+					"executionId": executionId,
+					"status":      status,
+				}
+
+				// Check if execution is in a final state
+				if slices.Contains(testkube.TestWorkflowTerminalStatus, testkube.TestWorkflowStatus(status)) {
+					completedExecutions[executionId] = true
+				} else {
+					allComplete = false
+				}
+			}
+
+			if allComplete {
+				// Build results array from all results (both completed and in-progress)
+				var results []map[string]interface{}
+				for _, executionId := range executionIds {
+					if result, exists := allResults[executionId]; exists {
+						results = append(results, result)
+					}
+				}
+
+				resultJSON, _ := json.Marshal(results)
+				return string(resultJSON), nil
+			}
+		}
+	}
 }
