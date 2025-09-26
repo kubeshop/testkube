@@ -546,7 +546,7 @@ func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string)
 	})
 }
 
-func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string, timeoutMinutes int) (string, error) {
+func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string) (string, error) {
 	// Track completed executions to avoid re-checking them
 	completedExecutions := make(map[string]bool)
 	allResults := make(map[string]map[string]interface{})
