@@ -189,7 +189,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
 		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test suite execution")
 		return
-	case event.TestWorkflowExecution != nil && event.TestWorkflowExecution.DisableWebhooks:
+	case event.TestWorkflowExecution != nil && (event.TestWorkflowExecution.DisableWebhooks ||
+		(event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Webhooks)):
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
 		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test workflow execution")
 		return

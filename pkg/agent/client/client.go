@@ -129,17 +129,14 @@ func NewGRPCConnectionWithTracing(
 		return client, fmt.Errorf("create new grpc client: %w", err)
 	}
 
-	// Wait for connection to go ready.
 	for {
 		s := client.GetState()
 		if s == connectivity.Idle {
 			client.Connect()
 		}
 		if s == connectivity.Ready {
-			// Successfully connected.
 			return client, nil
 		}
-		// Wait for transition away from current state.
 		if !client.WaitForStateChange(ctx, s) {
 			return client, ctx.Err()
 		}
