@@ -24,7 +24,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		cfg.Version,
 		server.WithToolCapabilities(true),
 		server.WithToolHandlerMiddleware(DebugMiddleware(cfg.Debug)),
-		server.WithToolHandlerMiddleware(TelemetryMiddleware(cfg.TelemetryEnabled)),
+		server.WithToolHandlerMiddleware(TelemetryMiddleware(&cfg)),
 	)
 
 	// If no client is provided, use the default API client
@@ -51,12 +51,16 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	// Resource groups tools
 	mcpServer.AddTool(tools.ListResourceGroups(client))
 
+	// Agent tools
+	mcpServer.AddTool(tools.ListAgents(client))
+
 	// Execution tools
 	mcpServer.AddTool(tools.FetchExecutionLogs(client))
 	mcpServer.AddTool(tools.ListExecutions(client))
 	mcpServer.AddTool(tools.LookupExecutionId(client))
 	mcpServer.AddTool(tools.GetExecutionInfo(client))
 	mcpServer.AddTool(tools.GetWorkflowExecutionMetrics(client))
+	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
 
 	// Artifact tools

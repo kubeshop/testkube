@@ -9,6 +9,30 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// convertConfigValuesToStrings converts all values in the config map to strings
+// to avoid API errors when passing configuration parameters to workflows
+func convertConfigValuesToStrings(config map[string]any) map[string]any {
+	result := make(map[string]any)
+	for key, value := range config {
+		switch v := value.(type) {
+		case string:
+			result[key] = v
+		case int:
+			result[key] = strconv.Itoa(v)
+		case int64:
+			result[key] = strconv.FormatInt(v, 10)
+		case float64:
+			result[key] = strconv.FormatFloat(v, 'f', -1, 64)
+		case bool:
+			result[key] = strconv.FormatBool(v)
+		default:
+			// For any other type, convert to string using fmt.Sprintf
+			result[key] = fmt.Sprintf("%v", v)
+		}
+	}
+	return result
+}
+
 type ListWorkflowsParams struct {
 	ResourceGroup string
 	Selector      string
@@ -162,7 +186,7 @@ func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandl
 		mcp.WithObject("config",
 			mcp.Description("Configuration parameters for the workflow. Use get_workflow_definition tool first to examine the spec.config section to see what parameters are available.")),
 		mcp.WithObject("target",
-			mcp.Description("Target specification for multi-agent execution (optional)")),
+			mcp.Description("Target specification for multi-agent execution (optional). Supports: {\"name\": \"agent-name\"} for name-based targeting, {\"labels\": {\"env\": \"prod\"}} for label-based targeting, or standard ExecutionTarget format with match/not/replicate fields.")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -175,7 +199,8 @@ func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandl
 		if configValue, ok, err := OptionalParamOK[map[string]any](request, "config"); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		} else if ok {
-			config = configValue
+			// Convert all config values to strings to avoid API errors
+			config = convertConfigValuesToStrings(configValue)
 		}
 
 		var target map[string]any

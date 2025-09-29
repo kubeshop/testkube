@@ -7,14 +7,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-// SendMCPToolEvent sends telemetry for MCP tool execution
-func SendMCPToolEvent(toolName string, duration time.Duration, hasError bool, version string) (string, error) {
-	payload := NewMCPToolPayload(toolName, "testkube_mcp_tool_execution", duration, version, hasError)
+// SendMCPToolEventWithContext sends telemetry for MCP tool execution with explicit context
+func SendMCPToolEventWithContext(toolName string, duration time.Duration, hasError bool, version string, runContext RunContext) (string, error) {
+	payload := NewMCPToolPayloadWithContext(toolName, "testkube_mcp_tool_execution", duration, version, hasError, runContext)
 	return sendData(senders, payload)
 }
 
-// NewMCPToolPayload creates a payload for MCP tool telemetry events
-func NewMCPToolPayload(toolName, eventName string, duration time.Duration, version string, hasError bool) Payload {
+// NewMCPToolPayloadWithContext creates a payload for MCP tool telemetry events with custom context
+func NewMCPToolPayloadWithContext(toolName, eventName string, duration time.Duration, version string, hasError bool, runContext RunContext) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: machineID,
@@ -29,7 +29,7 @@ func NewMCPToolPayload(toolName, eventName string, duration time.Duration, versi
 				MachineID:       machineID,
 				OperatingSystem: runtime.GOOS,
 				Architecture:    runtime.GOARCH,
-				Context:         getCurrentContext(),
+				Context:         runContext, // Use the provided context instead of getCurrentContext()
 				ClusterType:     GetClusterType(),
 				Status: func() string {
 					if hasError {

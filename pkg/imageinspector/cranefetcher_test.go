@@ -46,7 +46,7 @@ func TestParseSecretData(t *testing.T) {
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"auth\": \"ZG9ja2VyLXVzZXJuYW1lOnlvdXItcmVhbGx5LXJlYWxseS1sb25nLWF1dGgta2V5\"}}}")},
 		}
 
-		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/")
+		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/", "image")
 
 		assert.Equal(t, 1, len(out))
 		assert.Equal(t, "docker-username", out[0].Username)
@@ -61,7 +61,7 @@ func TestParseSecretData(t *testing.T) {
 			Data: map[string][]byte{".dockercfg": []byte("{\"https://index.docker.io/v1/\": {\"auth\": \"ZG9ja2VyLXVzZXJuYW1lOnlvdXItcmVhbGx5LXJlYWxseS1sb25nLWF1dGgta2V5\"}}")},
 		}
 
-		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/")
+		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/", "image")
 
 		assert.Equal(t, 1, len(out))
 		assert.Equal(t, "docker-username", out[0].Username)
@@ -76,7 +76,37 @@ func TestParseSecretData(t *testing.T) {
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}}}")},
 		}
 
-		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/")
+		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/", "image")
+
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "plainuser", out[0].Username)
+		assert.Equal(t, "plainpass", out[0].Password)
+		assert.NoError(t, err)
+	})
+
+	t.Run("parse docker config path credentials", func(t *testing.T) {
+		t.Parallel()
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com/company\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/company/image")
+
+		assert.Equal(t, 1, len(out))
+		assert.Equal(t, "plainuser", out[0].Username)
+		assert.Equal(t, "plainpass", out[0].Password)
+		assert.NoError(t, err)
+	})
+
+	t.Run("parse docker config longest path credentials", func(t *testing.T) {
+		t.Parallel()
+
+		secret := corev1.Secret{
+			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com/company/path\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}, \"registry.gitlab.com/company\": {\"username\": \"user\", \"password\": \"pass\"}}}")},
+		}
+
+		out, err := ParseSecretData([]corev1.Secret{secret}, "registry.gitlab.com", "registry.gitlab.com/company/path/image")
 
 		assert.Equal(t, 1, len(out))
 		assert.Equal(t, "plainuser", out[0].Username)
@@ -93,7 +123,7 @@ func TestParseSecretData(t *testing.T) {
 			},
 		}
 
-		out, err := ParseSecretData([]corev1.Secret{secret}, "fake")
+		out, err := ParseSecretData([]corev1.Secret{secret}, "fake", "image")
 
 		assert.Nil(t, out)
 		assert.EqualError(t, err, "imagePullSecret dockercfg contains neither .dockercfg nor .dockerconfigjson")
@@ -106,7 +136,7 @@ func TestParseSecretData(t *testing.T) {
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"auth\": \"12345\"}}}")},
 		}
 
-		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/")
+		out, err := ParseSecretData([]corev1.Secret{secret}, "https://index.docker.io/v1/", "image")
 
 		assert.Nil(t, out)
 		assert.ErrorContains(t, err, "illegal base64 data")

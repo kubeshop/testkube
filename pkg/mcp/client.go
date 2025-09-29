@@ -10,11 +10,13 @@ type Client interface {
 	tools.ExecutionLister
 	tools.ExecutionInfoGetter
 	tools.ExecutionLookup
+	tools.ExecutionWaiter
 	tools.WorkflowExecutionAborter
 	tools.WorkflowExecutionMetricsGetter
 
 	tools.LabelsLister
 	tools.ResourceGroupsLister
+	tools.AgentsLister
 
 	tools.WorkflowLister
 	tools.WorkflowCreator

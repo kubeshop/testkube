@@ -37,7 +37,7 @@ to find items containing all terms`
 	GetWorkflowDescription                 = "Retrieve detailed workflow information including execution history, health metrics, and current status. Returns JSON format with comprehensive workflow metadata."
 	GetWorkflowMetricsDescription          = "Get metrics of test workflow executions including execution statistics, health scores, pass rates, and performance data. Returns comprehensive metrics data for analyzing workflow performance and reliability."
 	GetWorkflowExecutionMetricsDescription = "Get detailed resource consumption metrics for a specific workflow execution. Returns comprehensive resource usage data including CPU, memory, disk, and network metrics with timestamps. This tool enables analysis and comparison of resource consumption across different executions."
-	RunWorkflowDescription                 = "Run a TestWorkflow with optional configuration parameters. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available."
+	RunWorkflowDescription                 = "Run a TestWorkflow with optional configuration parameters and target specification. If the workflow requires config parameters, use the get_workflow_definition tool first to examine the spec.config section to see what parameters are available. The target parameter supports multiple formats: 1) {\"name\": \"agent-name\"} to target a specific runner by name, 2) {\"labels\": {\"env\": \"prod\", \"type\": \"runner\"}} to target runners by labels, 3) Standard ExecutionTarget format with match/not/replicate fields."
 	UpdateWorkflowDescription              = `Update an existing TestWorkflow in Testkube with a new YAML definition. This tool allows you to modify workflow steps, configuration, and metadata. The workflow will be updated immediately and available for execution with the new configuration.`
 
 	// Execution tool descriptions
@@ -45,7 +45,12 @@ to find items containing all terms`
 	ListExecutionsDescription         = "List executions for a specific test workflow with filtering and pagination options. Returns execution summaries with status, timing, and results."
 	GetExecutionInfoDescription       = "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
+	WaitForExecutionsDescription      = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
 	AbortWorkflowExecutionDescription = "Abort a running test workflow execution. This will stop the execution and mark it as aborted. Use this tool to cancel long-running or stuck workflow executions."
+
+	// Additional parameter descriptions
+	ExecutionIdsDescription   = "Comma-separated list of execution IDs to wait for (e.g., 'exec1,exec2,exec3')."
+	TimeoutMinutesDescription = "Maximum time to wait in minutes before timing out (default: 30). Set to 0 for no timeout."
 
 	// Artifact tool descriptions
 	ListArtifactsDescription = "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."
@@ -55,4 +60,5 @@ to find items containing all terms`
 	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions."
 	ListLabelsDescription         = "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."
 	ListResourceGroupsDescription = "Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools."
+	ListAgentsDescription         = "Retrieve all available agents from the current Testkube organization that can be used when specifying target agent(s) in run_workflow. Returns a list of agents with their IDs, names, types, capabilities, labels, and environment information. This is useful for discovering what agents are available for workflow execution targeting."
 )
