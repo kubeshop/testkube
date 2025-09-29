@@ -202,6 +202,11 @@ func getCurrentContext() RunContext {
 	}
 }
 
+// GetCurrentContext returns the current run context, making it accessible from other packages
+func GetCurrentContext() RunContext {
+	return getCurrentContext()
+}
+
 func getUserID(cmd *cobra.Command) string {
 	id := "command-cli-user"
 	client, _, err := common.GetClient(cmd)

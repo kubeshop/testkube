@@ -38,7 +38,7 @@ func DebugMiddleware(enabled bool) server.ToolHandlerMiddleware {
 }
 
 // TelemetryMiddleware creates a middleware that collects telemetry for MCP tool execution
-func TelemetryMiddleware(telemetryEnabled bool) server.ToolHandlerMiddleware {
+func TelemetryMiddleware(cfg *MCPServerConfig) server.ToolHandlerMiddleware {
 	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
 		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			startTime := time.Now()
@@ -47,17 +47,30 @@ func TelemetryMiddleware(telemetryEnabled bool) server.ToolHandlerMiddleware {
 			result, err := next(ctx, request)
 
 			// Send telemetry event
-			if telemetryEnabled {
+			if cfg.TelemetryEnabled {
 				duration := time.Since(startTime)
 				hasError := err != nil
-
-				// For now, use a generic tool name since we don't have direct access to the tool name
-				// This can be enhanced later with a more sophisticated approach
 				toolName := request.Params.Name
 
 				// Send telemetry asynchronously to avoid blocking tool execution
 				go func() {
-					telemetry.SendMCPToolEvent(toolName, duration, hasError, common.Version)
+					// Determine context source based on how MCP was configured
+					var runContext telemetry.RunContext
+
+					// If MCP config has org/env IDs, use them (environment mode)
+					if cfg.OrgId != "" && cfg.EnvId != "" {
+						runContext = telemetry.RunContext{
+							Type:           "mcp-environment",
+							OrganizationId: cfg.OrgId,
+							EnvironmentId:  cfg.EnvId,
+						}
+					} else {
+						// Fall back to config file (default mode)
+						runContext = telemetry.GetCurrentContext()
+					}
+
+					// Use the determined context for telemetry
+					telemetry.SendMCPToolEventWithContext(toolName, duration, hasError, common.Version, runContext)
 				}()
 			}
 
