@@ -461,6 +461,68 @@ func (c *APIClient) UpdateWorkflow(ctx context.Context, workflowName, workflowDe
 	})
 }
 
+// convertTargetToExecutionTarget converts the MCP target parameter to the proper ExecutionTarget format
+// Supports multiple input formats:
+// 1. {"name": "agent-name"} -> {"match": {"name": ["agent-name"]}}
+// 2. {"labels": {"env": "prod", "type": "runner"}} -> {"match": {"env": ["prod"], "type": ["runner"]}}
+// 3. {"match": {"env": ["prod"]}} -> passed through as-is
+// 4. {"not": {"env": ["dev"]}} -> passed through as-is
+// 5. {"replicate": ["env"]} -> passed through as-is
+func convertTargetToExecutionTarget(target map[string]any) map[string]any {
+	result := make(map[string]any)
+
+	// Handle name-based targeting (convert to match format)
+	if name, exists := target["name"]; exists {
+		if nameStr, ok := name.(string); ok {
+			result["match"] = map[string]any{
+				"name": []string{nameStr},
+			}
+		}
+		return result
+	}
+
+	// Handle labels-based targeting (convert to match format)
+	if labels, exists := target["labels"]; exists {
+		if labelsMap, ok := labels.(map[string]any); ok {
+			match := make(map[string]any)
+			for key, value := range labelsMap {
+				switch v := value.(type) {
+				case string:
+					match[key] = []string{v}
+				case []string:
+					match[key] = v
+				case []any:
+					// Convert []any to []string
+					strSlice := make([]string, len(v))
+					for i, item := range v {
+						if str, ok := item.(string); ok {
+							strSlice[i] = str
+						}
+					}
+					match[key] = strSlice
+				}
+			}
+			if len(match) > 0 {
+				result["match"] = match
+			}
+		}
+		return result
+	}
+
+	// Handle standard ExecutionTarget fields (pass through)
+	if match, exists := target["match"]; exists {
+		result["match"] = match
+	}
+	if not, exists := target["not"]; exists {
+		result["not"] = not
+	}
+	if replicate, exists := target["replicate"]; exists {
+		result["replicate"] = replicate
+	}
+
+	return result
+}
+
 func (c *APIClient) RunWorkflow(ctx context.Context, params tools.RunWorkflowParams) (string, error) {
 	body := map[string]any{
 		"config": params.Config,
@@ -475,7 +537,7 @@ func (c *APIClient) RunWorkflow(ctx context.Context, params tools.RunWorkflowPar
 	}
 
 	if params.Target != nil {
-		body["target"] = params.Target
+		body["target"] = convertTargetToExecutionTarget(params.Target)
 	}
 
 	return c.makeRequest(ctx, APIRequest{
@@ -502,6 +564,39 @@ func (c *APIClient) ListResourceGroups(ctx context.Context) (string, error) {
 		Method: "GET",
 		Path:   "/groups",
 		Scope:  ApiScopeOrg,
+	})
+}
+
+func (c *APIClient) ListAgents(ctx context.Context, params tools.ListAgentsParams) (string, error) {
+	queryParams := make(map[string]string)
+
+	if params.Type != "" {
+		queryParams["type"] = params.Type
+	}
+	if params.Capability != "" {
+		queryParams["capability"] = params.Capability
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	} else {
+		queryParams["pageSize"] = "20"
+	}
+	if params.Page >= 0 {
+		queryParams["page"] = strconv.Itoa(params.Page)
+	} else {
+		queryParams["page"] = "0"
+	}
+
+	queryParams["includeDeleted"] = "false"
+
+	// Add environment ID as a filter
+	queryParams["environmentId"] = c.config.EnvId
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      "GET",
+		Path:        "/agents",
+		Scope:       ApiScopeOrg,
+		QueryParams: queryParams,
 	})
 }
 
