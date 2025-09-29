@@ -17,8 +17,9 @@ func NewDeleteAgentCommand() *cobra.Command {
 		deleteAgent, noDeleteAgent bool
 	)
 	cmd := &cobra.Command{
-		Use:  "agent",
-		Args: cobra.ExactArgs(1),
+		Use:     "agent",
+		Aliases: []string{"runner"},
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !uninstall && !noUninstall {
 				uninstall = ui.Confirm("should it uninstall agent?")
