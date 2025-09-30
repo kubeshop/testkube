@@ -80,6 +80,16 @@ type TestKubeCloudAPIClient interface {
 	DeleteAllTestTriggers(ctx context.Context, in *DeleteAllTestTriggersRequest, opts ...grpc.CallOption) (*DeleteAllTestTriggersResponse, error)
 	DeleteTestTriggersByLabels(ctx context.Context, in *DeleteTestTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestTriggersByLabelsResponse, error)
 	WatchTestTriggerUpdates(ctx context.Context, in *WatchTestTriggerUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestTriggerUpdatesClient, error)
+	// -- Webhook
+	GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error)
+	ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error)
+	ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error)
+	CreateWebhook(ctx context.Context, in *CreateWebhookRequest, opts ...grpc.CallOption) (*CreateWebhookResponse, error)
+	UpdateWebhook(ctx context.Context, in *UpdateWebhookRequest, opts ...grpc.CallOption) (*UpdateWebhookResponse, error)
+	DeleteWebhook(ctx context.Context, in *DeleteWebhookRequest, opts ...grpc.CallOption) (*DeleteWebhookResponse, error)
+	DeleteAllWebhooks(ctx context.Context, in *DeleteAllWebhooksRequest, opts ...grpc.CallOption) (*DeleteAllWebhooksResponse, error)
+	DeleteWebhooksByLabels(ctx context.Context, in *DeleteWebhooksByLabelsRequest, opts ...grpc.CallOption) (*DeleteWebhooksByLabelsResponse, error)
+	WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -917,6 +927,133 @@ func (x *testKubeCloudAPIWatchTestTriggerUpdatesClient) Recv() (*TestTriggerUpda
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error) {
+	out := new(GetWebhookResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetWebhook", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[17], "/cloud.TestKubeCloudAPI/ListWebhooks", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIListWebhooksClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ListWebhooksClient interface {
+	Recv() (*WebhookListItem, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIListWebhooksClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIListWebhooksClient) Recv() (*WebhookListItem, error) {
+	m := new(WebhookListItem)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error) {
+	out := new(ListWebhookLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListWebhookLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) CreateWebhook(ctx context.Context, in *CreateWebhookRequest, opts ...grpc.CallOption) (*CreateWebhookResponse, error) {
+	out := new(CreateWebhookResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CreateWebhook", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateWebhook(ctx context.Context, in *UpdateWebhookRequest, opts ...grpc.CallOption) (*UpdateWebhookResponse, error) {
+	out := new(UpdateWebhookResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateWebhook", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteWebhook(ctx context.Context, in *DeleteWebhookRequest, opts ...grpc.CallOption) (*DeleteWebhookResponse, error) {
+	out := new(DeleteWebhookResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteWebhook", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteAllWebhooks(ctx context.Context, in *DeleteAllWebhooksRequest, opts ...grpc.CallOption) (*DeleteAllWebhooksResponse, error) {
+	out := new(DeleteAllWebhooksResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteAllWebhooks", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteWebhooksByLabels(ctx context.Context, in *DeleteWebhooksByLabelsRequest, opts ...grpc.CallOption) (*DeleteWebhooksByLabelsResponse, error) {
+	out := new(DeleteWebhooksByLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteWebhooksByLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[18], "/cloud.TestKubeCloudAPI/WatchWebhookUpdates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIWatchWebhookUpdatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_WatchWebhookUpdatesClient interface {
+	Recv() (*WebhookUpdate, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIWatchWebhookUpdatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIWatchWebhookUpdatesClient) Recv() (*WebhookUpdate, error) {
+	m := new(WebhookUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -978,6 +1115,16 @@ type TestKubeCloudAPIServer interface {
 	DeleteAllTestTriggers(context.Context, *DeleteAllTestTriggersRequest) (*DeleteAllTestTriggersResponse, error)
 	DeleteTestTriggersByLabels(context.Context, *DeleteTestTriggersByLabelsRequest) (*DeleteTestTriggersByLabelsResponse, error)
 	WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error
+	// -- Webhook
+	GetWebhook(context.Context, *GetWebhookRequest) (*GetWebhookResponse, error)
+	ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error
+	ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error)
+	CreateWebhook(context.Context, *CreateWebhookRequest) (*CreateWebhookResponse, error)
+	UpdateWebhook(context.Context, *UpdateWebhookRequest) (*UpdateWebhookResponse, error)
+	DeleteWebhook(context.Context, *DeleteWebhookRequest) (*DeleteWebhookResponse, error)
+	DeleteAllWebhooks(context.Context, *DeleteAllWebhooksRequest) (*DeleteAllWebhooksResponse, error)
+	DeleteWebhooksByLabels(context.Context, *DeleteWebhooksByLabelsRequest) (*DeleteWebhooksByLabelsResponse, error)
+	WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -1131,6 +1278,33 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteTestTriggersByLabels(context.Co
 }
 func (UnimplementedTestKubeCloudAPIServer) WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method WatchTestTriggerUpdates not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetWebhook(context.Context, *GetWebhookRequest) (*GetWebhookResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWebhook not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListWebhooks not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWebhookLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) CreateWebhook(context.Context, *CreateWebhookRequest) (*CreateWebhookResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWebhook not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateWebhook(context.Context, *UpdateWebhookRequest) (*UpdateWebhookResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWebhook not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteWebhook(context.Context, *DeleteWebhookRequest) (*DeleteWebhookResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWebhook not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteAllWebhooks(context.Context, *DeleteAllWebhooksRequest) (*DeleteAllWebhooksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllWebhooks not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteWebhooksByLabels(context.Context, *DeleteWebhooksByLabelsRequest) (*DeleteWebhooksByLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWebhooksByLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchWebhookUpdates not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -2118,6 +2292,174 @@ func (x *testKubeCloudAPIWatchTestTriggerUpdatesServer) Send(m *TestTriggerUpdat
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_GetWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWebhookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetWebhook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetWebhook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetWebhook(ctx, req.(*GetWebhookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_ListWebhooks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListWebhooksRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ListWebhooks(m, &testKubeCloudAPIListWebhooksServer{stream})
+}
+
+type TestKubeCloudAPI_ListWebhooksServer interface {
+	Send(*WebhookListItem) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIListWebhooksServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIListWebhooksServer) Send(m *WebhookListItem) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_ListWebhookLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWebhookLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ListWebhookLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ListWebhookLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ListWebhookLabels(ctx, req.(*ListWebhookLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_CreateWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWebhookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).CreateWebhook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/CreateWebhook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).CreateWebhook(ctx, req.(*CreateWebhookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWebhookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateWebhook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateWebhook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateWebhook(ctx, req.(*UpdateWebhookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWebhookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteWebhook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteWebhook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteWebhook(ctx, req.(*DeleteWebhookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteAllWebhooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAllWebhooksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteAllWebhooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteAllWebhooks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteAllWebhooks(ctx, req.(*DeleteAllWebhooksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteWebhooksByLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWebhooksByLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteWebhooksByLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteWebhooksByLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteWebhooksByLabels(ctx, req.(*DeleteWebhooksByLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_WatchWebhookUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchWebhookUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).WatchWebhookUpdates(m, &testKubeCloudAPIWatchWebhookUpdatesServer{stream})
+}
+
+type TestKubeCloudAPI_WatchWebhookUpdatesServer interface {
+	Send(*WebhookUpdate) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIWatchWebhookUpdatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIWatchWebhookUpdatesServer) Send(m *WebhookUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2253,6 +2595,34 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteTestTriggersByLabels",
 			Handler:    _TestKubeCloudAPI_DeleteTestTriggersByLabels_Handler,
 		},
+		{
+			MethodName: "GetWebhook",
+			Handler:    _TestKubeCloudAPI_GetWebhook_Handler,
+		},
+		{
+			MethodName: "ListWebhookLabels",
+			Handler:    _TestKubeCloudAPI_ListWebhookLabels_Handler,
+		},
+		{
+			MethodName: "CreateWebhook",
+			Handler:    _TestKubeCloudAPI_CreateWebhook_Handler,
+		},
+		{
+			MethodName: "UpdateWebhook",
+			Handler:    _TestKubeCloudAPI_UpdateWebhook_Handler,
+		},
+		{
+			MethodName: "DeleteWebhook",
+			Handler:    _TestKubeCloudAPI_DeleteWebhook_Handler,
+		},
+		{
+			MethodName: "DeleteAllWebhooks",
+			Handler:    _TestKubeCloudAPI_DeleteAllWebhooks_Handler,
+		},
+		{
+			MethodName: "DeleteWebhooksByLabels",
+			Handler:    _TestKubeCloudAPI_DeleteWebhooksByLabels_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -2345,6 +2715,16 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "WatchTestTriggerUpdates",
 			Handler:       _TestKubeCloudAPI_WatchTestTriggerUpdates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListWebhooks",
+			Handler:       _TestKubeCloudAPI_ListWebhooks_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WatchWebhookUpdates",
+			Handler:       _TestKubeCloudAPI_WatchWebhookUpdates_Handler,
 			ServerStreams: true,
 		},
 	},
