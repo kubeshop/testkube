@@ -371,8 +371,8 @@ message RegisterResponse {
   string runner_key = 2;
 }
 
-// Deprecated
 enum RunnerRequestType {
+  option deprecated = true;
   PING = 0 [deprecated = true]; // Heartbeat
   CONSIDER = 1  [deprecated = true]; // Consider a new execution to be run
   START = 2  [deprecated = true]; // Start
@@ -383,19 +383,19 @@ enum RunnerRequestType {
 }
 
 // Runtime configuration for test workflow execution
-// Deprecated
 message TestWorkflowRuntime {
+  option deprecated = true;
   map<string, string> env_vars = 1 [deprecated = true]; // Runtime environment variables overrides
 }
 
-// Deprecated
 message RunnerStartRequest {
+  option deprecated = true;
   string token = 1 [deprecated = true];
   TestWorkflowRuntime runtime = 2 [deprecated = true]; // Runtime configuration for the execution
 }
 
-// Deprecated
 message RunnerRequest {
+  option deprecated = true;
   string message_id = 1 [deprecated = true];
   string environment_id = 2 [deprecated = true];
   string execution_id = 3 [deprecated = true];
@@ -405,17 +405,17 @@ message RunnerRequest {
   }
 }
 
-// Deprecated
 message RunnerConsiderResponse {
+  option deprecated = true;
   bool ok = 1  [deprecated = true];
 }
 
-// Deprecated
 message RunnerStartResponse {
+  option deprecated = true;
 }
 
-// Deprecated
 message RunnerResponse {
+  option deprecated = true;
   string message_id = 1 [deprecated = true];
   string environment_id = 2 [deprecated = true];
   string execution_id = 3 [deprecated = true];
