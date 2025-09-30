@@ -51,9 +51,13 @@ type ExecutionStart struct {
 	// It can be used to obtain the full workflow either from kubernetes directly or
 	// via the Control Plane if the workflow is in a different location inaccessible
 	// to the client.
-	WorkflowName  *string `protobuf:"bytes,10,opt,name=workflow_name,json=workflowName" json:"workflow_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	WorkflowName *string `protobuf:"bytes,10,opt,name=workflow_name,json=workflowName" json:"workflow_name,omitempty"`
+	// variable_overrides indicates values that should be used to override pre-set variables when executing
+	// this instance of the workflow execution. Keys may refer to known variables, and the values to the
+	// override values. Unknown keys may be ignored.
+	VariableOverrides map[string]string `protobuf:"bytes,11,rep,name=variable_overrides,json=variableOverrides" json:"variable_overrides,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ExecutionStart) Reset() {
@@ -156,11 +160,18 @@ func (x *ExecutionStart) GetWorkflowName() string {
 	return ""
 }
 
+func (x *ExecutionStart) GetVariableOverrides() map[string]string {
+	if x != nil {
+		return x.VariableOverrides
+	}
+	return nil
+}
+
 var File_testkube_testworkflow_execution_v1_execution_start_proto protoreflect.FileDescriptor
 
 const file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc = "" +
 	"\n" +
-	"8testkube/testworkflow/execution/v1/execution_start.proto\x12\"testkube.testworkflow.execution.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x89\x03\n" +
+	"8testkube/testworkflow/execution/v1/execution_start.proto\x12\"testkube.testworkflow.execution.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x04\n" +
 	"\x0eExecutionStart\x12!\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\x12\x12\n" +
@@ -172,7 +183,11 @@ const file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc = ""
 	"\x0fexecution_token\x18\b \x01(\tR\x0eexecutionToken\x124\n" +
 	"\x16ancestor_execution_ids\x18\t \x03(\tR\x14ancestorExecutionIds\x12#\n" +
 	"\rworkflow_name\x18\n" +
-	" \x01(\tR\fworkflowNameB\x98\x02\n" +
+	" \x01(\tR\fworkflowName\x12x\n" +
+	"\x12variable_overrides\x18\v \x03(\v2I.testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntryR\x11variableOverrides\x1aD\n" +
+	"\x16VariableOverridesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x98\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B\x13ExecutionStartProtoP\x01Z.testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
@@ -187,18 +202,20 @@ func file_testkube_testworkflow_execution_v1_execution_start_proto_rawDescGZIP()
 	return file_testkube_testworkflow_execution_v1_execution_start_proto_rawDescData
 }
 
-var file_testkube_testworkflow_execution_v1_execution_start_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_testkube_testworkflow_execution_v1_execution_start_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_testkube_testworkflow_execution_v1_execution_start_proto_goTypes = []any{
 	(*ExecutionStart)(nil),        // 0: testkube.testworkflow.execution.v1.ExecutionStart
-	(*timestamppb.Timestamp)(nil), // 1: google.protobuf.Timestamp
+	nil,                           // 1: testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntry
+	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 }
 var file_testkube_testworkflow_execution_v1_execution_start_proto_depIdxs = []int32{
-	1, // 0: testkube.testworkflow.execution.v1.ExecutionStart.queued_at:type_name -> google.protobuf.Timestamp
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 0: testkube.testworkflow.execution.v1.ExecutionStart.queued_at:type_name -> google.protobuf.Timestamp
+	1, // 1: testkube.testworkflow.execution.v1.ExecutionStart.variable_overrides:type_name -> testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntry
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_testkube_testworkflow_execution_v1_execution_start_proto_init() }
@@ -212,7 +229,7 @@ func file_testkube_testworkflow_execution_v1_execution_start_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc), len(file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

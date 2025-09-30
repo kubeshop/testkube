@@ -40,6 +40,7 @@ type TestKubeCloudAPIClient interface {
 	// Runner
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
+	// Deprecated: Do not use.
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
 	InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error)
 	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error)
@@ -442,6 +443,7 @@ func (x *testKubeCloudAPIGetUnfinishedExecutionsClient) Recv() (*UnfinishedExecu
 	return m, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[10], "/cloud.TestKubeCloudAPI/GetRunnerRequests", opts...)
 	if err != nil {
@@ -938,6 +940,7 @@ type TestKubeCloudAPIServer interface {
 	// Runner
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
+	// Deprecated: Do not use.
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
 	InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error)
 	GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error)
