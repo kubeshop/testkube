@@ -332,7 +332,7 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 	return next, images, nil
 }
 
-func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
 		APIKey:                              cfg.ControlPlaneConfig.TestkubeProAPIKey,
 		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
@@ -363,7 +363,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
-		return proContext
+		return proContext, nil
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
@@ -376,7 +376,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
-		return proContext
+		return proContext, fmt.Errorf("cannot get pro context: %v", err)
 	}
 
 	if proContext.EnvID == "" {
@@ -437,7 +437,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
-	return proContext
+	return proContext, nil
 }
 
 func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
