@@ -25,7 +25,10 @@ service TestKubeCloudAPI {
     // Runner
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
-    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest) {
+      // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.GetExecutionUpdates instead.
+      option deprecated = true;
+    };
     rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
     rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
     rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
@@ -368,52 +371,59 @@ message RegisterResponse {
   string runner_key = 2;
 }
 
+// Deprecated
 enum RunnerRequestType {
   PING = 0 [deprecated = true]; // Heartbeat
-  CONSIDER = 1; // Consider a new execution to be run
-  START = 2; // Start
-  ABORT = 3; // Abort the execution
-  RESUME = 4; // Resume the execution
-  PAUSE = 5; // Pause the execution
-  CANCEL = 6; // Cancel the execution (API call)
+  CONSIDER = 1  [deprecated = true]; // Consider a new execution to be run
+  START = 2  [deprecated = true]; // Start
+  ABORT = 3  [deprecated = true]; // Abort the execution
+  RESUME = 4  [deprecated = true]; // Resume the execution
+  PAUSE = 5  [deprecated = true]; // Pause the execution
+  CANCEL = 6  [deprecated = true]; // Cancel the execution (API call)
 }
 
 // Runtime configuration for test workflow execution
+// Deprecated
 message TestWorkflowRuntime {
-  map<string, string> env_vars = 1; // Runtime environment variables overrides
+  map<string, string> env_vars = 1 [deprecated = true]; // Runtime environment variables overrides
 }
 
+// Deprecated
 message RunnerStartRequest {
-  string token = 1;
-  TestWorkflowRuntime runtime = 2; // Runtime configuration for the execution
+  string token = 1 [deprecated = true];
+  TestWorkflowRuntime runtime = 2 [deprecated = true]; // Runtime configuration for the execution
 }
 
+// Deprecated
 message RunnerRequest {
-  string message_id = 1;
-  string environment_id = 2;
-  string execution_id = 3;
-  RunnerRequestType type = 4;
+  string message_id = 1 [deprecated = true];
+  string environment_id = 2 [deprecated = true];
+  string execution_id = 3 [deprecated = true];
+  RunnerRequestType type = 4 [deprecated = true];
   oneof request {
-    RunnerStartRequest start = 5;
+    RunnerStartRequest start = 5 [deprecated = true];
   }
 }
 
+// Deprecated
 message RunnerConsiderResponse {
-  bool ok = 1;
+  bool ok = 1  [deprecated = true];
 }
 
+// Deprecated
 message RunnerStartResponse {
 }
 
+// Deprecated
 message RunnerResponse {
-  string message_id = 1;
-  string environment_id = 2;
-  string execution_id = 3;
-  RunnerRequestType type = 4;
+  string message_id = 1 [deprecated = true];
+  string environment_id = 2 [deprecated = true];
+  string execution_id = 3 [deprecated = true];
+  RunnerRequestType type = 4 [deprecated = true];
   oneof response {
-    string error = 5;
-    RunnerConsiderResponse consider = 6;
-    RunnerStartResponse start = 7;
+    string error = 5 [deprecated = true];
+    RunnerConsiderResponse consider = 6 [deprecated = true];
+    RunnerStartResponse start = 7 [deprecated = true];
   }
 }
 
