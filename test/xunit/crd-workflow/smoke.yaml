@@ -15,7 +15,7 @@ spec:
       paths:
       - test/xunit/xunit-project
   container:
-    image: bitnami/dotnet-sdk:8-debian-12
+    image: bitnamilegacy/dotnet-sdk:8-debian-12 # TODO: replace
     resources:
       requests:
         cpu: 512m
