@@ -49,7 +49,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
-	leasebackend "github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -281,7 +281,8 @@ func main() {
 		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 		testTriggersClient          testtriggerclient.TestTriggerClient
 	)
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
+	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
+	commons.ExitOnError("cannot connect to control plane", err)
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
