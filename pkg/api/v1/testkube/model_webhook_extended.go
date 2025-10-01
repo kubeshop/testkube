@@ -11,7 +11,9 @@ package testkube
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v3"
 )
 
@@ -93,4 +95,26 @@ func printPayloadTemplate(text string) (string, error) {
 	}
 
 	return string(yamlData), nil
+}
+
+func (w *Webhook) Equals(other *Webhook) bool {
+	// Avoid check when there is one existing and the other one not
+	if (w == nil) != (other == nil) {
+		return false
+	}
+
+	// Reset timestamps to avoid influence
+	wCreated := w.Created
+	otherCreated := other.Created
+	w.Created = time.Time{}
+	other.Created = time.Time{}
+
+	// Compare
+	result := cmp.Equal(w, other)
+
+	// Restore values
+	w.Created = wCreated
+	other.Created = otherCreated
+
+	return result
 }
