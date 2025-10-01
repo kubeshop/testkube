@@ -99,6 +99,20 @@ func (mr *MockClientMockRecorder) CreateTestWorkflowTemplate(ctx, environmentId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).CreateTestWorkflowTemplate), ctx, environmentId, workflow)
 }
 
+// CreateWebhook mocks base method.
+func (m *MockClient) CreateWebhook(ctx context.Context, environmentId string, webhook testkube.Webhook) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWebhook", ctx, environmentId, webhook)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateWebhook indicates an expected call of CreateWebhook.
+func (mr *MockClientMockRecorder) CreateWebhook(ctx, environmentId, webhook any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWebhook", reflect.TypeOf((*MockClient)(nil).CreateWebhook), ctx, environmentId, webhook)
+}
+
 // DeleteAllTestTriggers mocks base method.
 func (m *MockClient) DeleteAllTestTriggers(ctx context.Context, environmentId, namespace string) (uint32, error) {
 	m.ctrl.T.Helper()
@@ -199,6 +213,35 @@ func (m *MockClient) DeleteTestWorkflowsByLabels(ctx context.Context, environmen
 func (mr *MockClientMockRecorder) DeleteTestWorkflowsByLabels(ctx, environmentId, labels any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTestWorkflowsByLabels", reflect.TypeOf((*MockClient)(nil).DeleteTestWorkflowsByLabels), ctx, environmentId, labels)
+}
+
+// DeleteWebhook mocks base method.
+func (m *MockClient) DeleteWebhook(ctx context.Context, environmentId, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWebhook", ctx, environmentId, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWebhook indicates an expected call of DeleteWebhook.
+func (mr *MockClientMockRecorder) DeleteWebhook(ctx, environmentId, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWebhook", reflect.TypeOf((*MockClient)(nil).DeleteWebhook), ctx, environmentId, name)
+}
+
+// DeleteWebhooksByLabels mocks base method.
+func (m *MockClient) DeleteWebhooksByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWebhooksByLabels", ctx, environmentId, labels)
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteWebhooksByLabels indicates an expected call of DeleteWebhooksByLabels.
+func (mr *MockClientMockRecorder) DeleteWebhooksByLabels(ctx, environmentId, labels any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWebhooksByLabels", reflect.TypeOf((*MockClient)(nil).DeleteWebhooksByLabels), ctx, environmentId, labels)
 }
 
 // FinishExecutionResult mocks base method.
@@ -318,6 +361,21 @@ func (m *MockClient) GetTestWorkflowTemplate(ctx context.Context, environmentId,
 func (mr *MockClientMockRecorder) GetTestWorkflowTemplate(ctx, environmentId, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).GetTestWorkflowTemplate), ctx, environmentId, name)
+}
+
+// GetWebhook mocks base method.
+func (m *MockClient) GetWebhook(ctx context.Context, environmentId, name string) (*testkube.Webhook, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWebhook", ctx, environmentId, name)
+	ret0, _ := ret[0].(*testkube.Webhook)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWebhook indicates an expected call of GetWebhook.
+func (mr *MockClientMockRecorder) GetWebhook(ctx, environmentId, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWebhook", reflect.TypeOf((*MockClient)(nil).GetWebhook), ctx, environmentId, name)
 }
 
 // InitExecution mocks base method.
@@ -461,6 +519,35 @@ func (m *MockClient) ListTestWorkflows(ctx context.Context, environmentId string
 func (mr *MockClientMockRecorder) ListTestWorkflows(ctx, environmentId, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTestWorkflows", reflect.TypeOf((*MockClient)(nil).ListTestWorkflows), ctx, environmentId, options)
+}
+
+// ListWebhookLabels mocks base method.
+func (m *MockClient) ListWebhookLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWebhookLabels", ctx, environmentId)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWebhookLabels indicates an expected call of ListWebhookLabels.
+func (mr *MockClientMockRecorder) ListWebhookLabels(ctx, environmentId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWebhookLabels", reflect.TypeOf((*MockClient)(nil).ListWebhookLabels), ctx, environmentId)
+}
+
+// ListWebhooks mocks base method.
+func (m *MockClient) ListWebhooks(ctx context.Context, environmentId string, options ListWebhookOptions) WebhooksReader {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWebhooks", ctx, environmentId, options)
+	ret0, _ := ret[0].(WebhooksReader)
+	return ret0
+}
+
+// ListWebhooks indicates an expected call of ListWebhooks.
+func (mr *MockClientMockRecorder) ListWebhooks(ctx, environmentId, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWebhooks", reflect.TypeOf((*MockClient)(nil).ListWebhooks), ctx, environmentId, options)
 }
 
 // ProcessExecutionNotificationRequests mocks base method.
@@ -633,6 +720,20 @@ func (mr *MockClientMockRecorder) UpdateTestWorkflowTemplate(ctx, environmentId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).UpdateTestWorkflowTemplate), ctx, environmentId, workflow)
 }
 
+// UpdateWebhook mocks base method.
+func (m *MockClient) UpdateWebhook(ctx context.Context, environmentId string, webhook testkube.Webhook) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWebhook", ctx, environmentId, webhook)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateWebhook indicates an expected call of UpdateWebhook.
+func (mr *MockClientMockRecorder) UpdateWebhook(ctx, environmentId, webhook any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWebhook", reflect.TypeOf((*MockClient)(nil).UpdateWebhook), ctx, environmentId, webhook)
+}
+
 // WatchRunnerRequests mocks base method.
 func (m *MockClient) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
 	m.ctrl.T.Helper()
@@ -687,4 +788,18 @@ func (m *MockClient) WatchTestWorkflowUpdates(ctx context.Context, environmentId
 func (mr *MockClientMockRecorder) WatchTestWorkflowUpdates(ctx, environmentId, includeInitialData any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchTestWorkflowUpdates", reflect.TypeOf((*MockClient)(nil).WatchTestWorkflowUpdates), ctx, environmentId, includeInitialData)
+}
+
+// WatchWebhookUpdates mocks base method.
+func (m *MockClient) WatchWebhookUpdates(ctx context.Context, environmentId string, includeInitialData bool) WebhookWatcher {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchWebhookUpdates", ctx, environmentId, includeInitialData)
+	ret0, _ := ret[0].(WebhookWatcher)
+	return ret0
+}
+
+// WatchWebhookUpdates indicates an expected call of WatchWebhookUpdates.
+func (mr *MockClientMockRecorder) WatchWebhookUpdates(ctx, environmentId, includeInitialData any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchWebhookUpdates", reflect.TypeOf((*MockClient)(nil).WatchWebhookUpdates), ctx, environmentId, includeInitialData)
 }
