@@ -262,6 +262,11 @@ message ScheduleResourceSelector {
   map<string, string> labels = 2;
 }
 
+// Runtime configuration for test workflow execution
+message TestWorkflowRuntime {
+  map<string, string> env_vars = 1; // Runtime environment variables overrides
+}
+
 message ScheduleExecution {
   ScheduleResourceSelector selector = 1;
   map<string, string> config = 2;
@@ -380,12 +385,6 @@ enum RunnerRequestType {
   RESUME = 4  [deprecated = true]; // Resume the execution
   PAUSE = 5  [deprecated = true]; // Pause the execution
   CANCEL = 6  [deprecated = true]; // Cancel the execution (API call)
-}
-
-// Runtime configuration for test workflow execution
-message TestWorkflowRuntime {
-  option deprecated = true;
-  map<string, string> env_vars = 1 [deprecated = true]; // Runtime environment variables overrides
 }
 
 message RunnerStartRequest {
