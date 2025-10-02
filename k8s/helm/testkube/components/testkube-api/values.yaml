@@ -1,0 +1,804 @@
+# Default values for testkube-api.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+### @section  Global image parameters
+## Important! Please, note that this will override sub-chart image parameters.
+## Global Docker image registry
+## Global Docker registry secret names as an array
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  labels: {}
+  annotations: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  podDisruptionBudget:
+    enabled: false
+  ## Global TLS settings
+  tls:
+    ## Toggle whether to globally skip certificate verification
+    #skipVerify: false
+    ## Path to the PEM-encoded CA certificate file (needs to be mounted to the container previously)
+    caCertPath: ""
+  ## Global volume settings (API & Test Jobs)
+  volumes:
+    ## Additional volumes to be added to the Testkube API container and Test Jobs containers
+    additionalVolumes: []
+    ## Additional volume mounts to be added to the Testkube API container and Test Jobs containers
+    additionalVolumeMounts: []
+  # -- Global security Context for all containers
+  containerSecurityContext: {}
+  # -- Global security Context for all pods
+  podSecurityContext: {}
+  features:
+    logsV2: false
+    whitelistedContainers: init,logs,scraper
+  testWorkflows:
+    createServiceAccountTemplates: true
+    createOfficialTemplates: true
+    globalTemplate:
+      enabled: false
+      external: false
+      inline: false
+      name: global-template
+      spec: null
+
+### @section Common parameters
+## Kubernetes version (using Helm capabilities if not set)
+kubeVersion: ""
+
+## create roles and rolebindings
+rbac:
+  create: true
+
+## Number of Testkube API Pod replicas
+replicaCount: 1
+
+## Testkube Pod annotations
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+## To add annotations to the pods related to the test executions use the
+## jobPodAnnotations field.
+podAnnotations: {}
+
+## Extra labels for Testkube API pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+### @section Specific parameters
+## image.registry Testkube API image registry
+## image.repository Testkube API image name
+## image.tag Testkube API image tag
+## image.digest Testkube API image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+## image.pullPolicy Testkube API Image pull policy
+## image.secret k8s secret for private registries
+image:
+  registry: docker.io
+  repository: kubeshop/testkube-api-server
+  pullPolicy: IfNotPresent
+  ## Overrides the image tag whose default is the chart appVersion.
+  # tag: "1.7.24"
+  digest: ""
+  pullSecrets: []
+
+## Sets a specific tag for the executors to the last built version
+executorsTag: 2.1.123
+
+imageTwToolkit:
+  registry: docker.io
+  repository: kubeshop/testkube-tw-toolkit
+  ## Overrides the image tag whose default is the api-server version.
+  # tag: "1.7.24"
+  digest: ""
+
+imageTwInit:
+  registry: docker.io
+  repository: kubeshop/testkube-tw-init
+  ## Overrides the image tag whose default is the api-server version.
+  # tag: "1.7.24"
+  digest: ""
+
+## Chart parameters
+## nameOverride Overrides Chart name
+## fullnameOverride Full name that overrides Chart name
+nameOverride: ""
+fullnameOverride: ""
+
+# jobPodAnnotations adds annotations to the pods spawned to execute tests using
+# prebuilt and container executors.
+# For test workflows you can specify annotations either individually on each workflow
+# or you can specify a global template (use global.testWorkflows.globalTemplate) to
+# set annotations for all workflows.
+jobPodAnnotations: {}
+
+# jobAnnotations adds annotations to the jobs spawned to execute tests using
+# prebuilt and container executors, when using the default job templates.
+jobAnnotations: {}
+
+## Custom job-container-template.yml that will be passed to Testkube API
+jobContainerTemplate: ""
+
+## Custom job-scraper-template.yml that will be passed to Testkube API
+jobScraperTemplate: ""
+
+## Custom job-template.yml that will be passed to Testkube API
+configValues: ""
+
+## Resource requests and limits for Init Container
+initContainerResources: {}
+
+## Resource requests and limits for LogsV2 Container
+logsV2ContainerResources: {}
+
+## Resource requests and limits for Scraper Container
+scraperContainerResources: {}
+
+## Resource requests and limits for Main Container
+containerResources: {}
+
+## Enable the new architecture
+next:
+  ## Enable next architecture
+  enabled: true
+  ## Enable storing resources in the Control Plane
+  cloudStorage: false
+
+  ## Configure legacy agent connection.
+  # - tkcagnt_*** - Super Agent
+  legacyAgent:
+    enabled: true
+
+  ## Configure webhooks in this installation.
+  # - tkcagnt_*** - Super Agent
+  webhooks:
+    ## Should it emit the webhooks
+    enabled: true
+
+  ## Configure test triggers in this installation.
+  # - tkcagnt_*** - Super Agent
+  testTriggers:
+    ## Should it emit the test triggers
+    enabled: true
+
+  # Configure the Test Workflows runner in this installation.
+  # - tkcagnt_*** - Super Agent
+  # - tkcrun_***  - Runner Agent
+  runner:
+    ## Should it be enabled
+    enabled: true
+
+  # Configure GitOps to synchronise the resources between Kubernetes cluster and Control Plane.
+  # - tkcagnt_*** - Super Agent
+  # - tkcsync_*** - GitOps Agent
+  gitops:
+    ## Should it copy data from Control Plane to Kubernetes
+    syncCloudToKubernetes: false
+    ## Should it copy data from Kubernetes to Control Plane
+    syncKubernetesToCloud: false
+    ## Define the naming patterns for resources in different sources
+    namePatterns:
+      ## Name pattern for resources in the Control Plane
+      cloud: "<name>"
+      ## Name pattern for resources in the Kubernetes cluster
+      kubernetes: "<name>"
+
+  # Configure the legacy Tests and Test Suites execution
+  # - tkcagnt_*** - Super Agent
+  legacyTests:
+    ## Should it be enabled
+    enabled: true
+
+  ## Configure controlling API in this installation
+  # - tkcagnt_*** - Super Agent
+  api:
+    ## Should it enable controller API
+    enabled: true
+
+  ## Configure cron jobs in this installation.
+  # - tkcagnt_*** - Super Agent
+  cronJobs:
+    ## Should it manage cron jobs
+    enabled: true
+
+  ## Configure control of TestKube custom resources in this installation.
+  # - tkcagnt_*** - Super Agent
+  controllers:
+    ## Should it manage Kubernetes resources
+    enabled: true
+
+## Testkube API Deployment parameters
+## Running Testkube in Agent mode
+cloud:
+  ## URL of the Cloud Saas Control Plane
+  url: "agent.testkube.io:443"
+  ## URL of the Cloud UI
+  uiUrl: ""
+  ## Public Agent ID
+  agentId: ""
+  ## Agent Token / Secret Key
+  key: ""
+  ## Organization ID
+  orgId: ""
+  ## Environment ID
+  envId: ""
+  ## true if migration from OSS
+  migrate: ""
+  tls:
+    ## Toggle should the connection to Agent API in Cloud/Enterprise use secure GRPC (GRPCS) (if false, it will use insecure GRPC)
+    enabled: true
+    ## Toggle should the client skip verifying the Agent API server cert in Cloud/Enterprise
+    skipVerify: false
+    ## If specified, injects a custom CA into the list of trusted CAs. Specify a secret with the PEM encoded CA under the key specified by customCaSecretKey.
+    customCaSecretRef: ""
+    ## Specify the key for the PEM encoded CA in the secret specified by customCaSecretRef.
+    customCaSecretKey: "ca.crt"
+    # -- Specifies the path to the directory (skip the trailing slash) where CA certificates should be mounted. The mounted file should container a PEM encoded CA certificate.
+    customCaDirPath: ""
+    certificate:
+      ## When provided, it will use the provided certificates when authenticating with the Agent (gRPC) API (secret should contain cert.crt, key.crt and ca.crt)
+      secretRef: ""
+      ## Default path for certificate file
+      certFile: /tmp/agent-cert/cert.crt
+      ## Default path for certificate key file
+      keyFile: /tmp/agent-cert/cert.key
+      ## Default path for ca file
+      caFile: /tmp/agent-cert/ca.crt
+  ## Retrieve cloud information from existing secret
+  existingSecret:
+    ## Name of the secret. If set, this will be used instead of the above values
+    name: ""
+    ## Key for the License Key
+    key: ""
+    ## Key for the Organization ID
+    orgId: ""
+    ## Key for the Environment ID
+    envId: ""
+
+## Persistent cache for Docker
+imageInspectionCache:
+  ## Status of the persistent cache
+  enabled: true
+  ## ConfigMap name to persist cache
+  name: "testkube-image-cache"
+  ## TTL for image pull secrets cache (set to 0 to disable)
+  ttl: 30m
+
+## Multinamespace feature. Disabled by default
+multinamespace:
+  enabled: false
+
+## Extra Environment Variables which will be injected into the Testkube API container
+extraEnvVars: []
+# - name: FOO
+#   value: BAR
+## Additional namespaces for Testkube API to watch
+# Watch namespaces. In this case, a Role and a RoleBinding will be created for each specified namespace.
+additionalNamespaces: []
+## Enable analytics for Testkube
+analyticsEnabled: true
+# -- Testkube timeout for pod start
+podStartTimeout: "30m"
+
+## Integration with Slack.
+##ref: https://kubeshop.github.io/testkube/integrations/slack-integration/
+## Slack token from the testkube authentication endpoint
+slackToken: ""
+
+## Slack secret to store slackToken, the key name should be SLACK_TOKEN
+slackSecret: ""
+
+## Slack config for the events, tests, testsuites and channels
+slackConfig: ""
+
+templates:
+  ## Base64 encoded Job template
+  job: ""
+  ## Base64 encoded Job Container template
+  jobContainer: ""
+  ## Base64 encoded Scraper Container template
+  scraperContainer: ""
+  ## Base64 encoded PVC Container template
+  pvcContainer: ""
+  ## Base64 encoded Slave Pod template
+  slavePod: ""
+
+## base64 encoded executors.json alike data
+executors: ""
+
+## target for cdevents emission via http(s)
+cdeventsTarget: ""
+
+## dashboard uri to be used in notification events
+dashboardUri: ""
+
+## cluster name to be used in events
+clusterName: ""
+
+## enable endpoint to list testkube namespace secrets
+enableSecretsEndpoint: false
+
+## disable running MongoDB migrations on API start
+disableMongoMigrations: false
+
+## disable running PostgreSQL migrations on API start
+disablePostgresMigrations: false
+
+## disable secret creation for tests and test sources
+disableSecretCreation: false
+
+## enable only specified executors with enabled flag
+enabledExecutors:
+
+## Execution namespaces for Testkube API to only run tests
+## Execution namespaces. In this case, a Role and a RoleBinding will be created for each specified namespace.
+executionNamespaces:
+
+# -- Namespace for test execution
+#  - namespace: default
+# -- Whether to generate RBAC for testkube api server or use manually provided
+#    generateAPIServerRBAC: true
+# -- Job service account name for test jobs
+#    jobServiceAccountName: tests-job-default
+# -- Whether to generate RBAC for test job or use manually provided
+#    generateTestJobRBAC: true
+
+## default storage class name for PVC volumes
+defaultStorageClassName: ""
+
+# storageRequest is the requested storage for PVC utilized for artifact requests.
+storageRequest: "1Gi"
+
+## enable k8s events for testkube events
+enableK8sEvents: true
+
+## docker image version of Testkube Agent
+dockerImageVersion: ""
+
+## allow to use low securiy fields for test workflow pod and container configurations
+allowLowSecurityFields: false
+
+# Testkube log server parameters
+testkubeLogs:
+  # -- GRPC address
+  grpcAddress: "testkube-logs:9090"
+  tls:
+    # -- Toggle whether to enable TLS in GRPC client
+    enabled: false
+    # -- Toggle whether to verify certificates
+    skipVerify: false
+    # -- If enabled, will also require a CA certificate to be provided
+    mountCACertificate: false
+    certSecret:
+      # -- Toggle whether to mount k8s secret which contains GRPC client certificate (cert.crt, cert.key, ca.crt)
+      enabled: false
+      # -- Name of the grpc client certificate secret
+      name: "grpc-client-cert"
+      # -- Base path to mount the client certificate secret
+      baseMountPath: /etc/client-certs/grpc
+      # -- Path to client certificate file
+      certFile: "cert.crt"
+      # -- Path to client certificate key file
+      keyFile: "cert.key"
+      # -- Path to ca file (used for self-signed certificates)
+      caFile: "ca.crt"
+
+## Testkube API resource requests and limits
+resources:
+  {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+## Autoscaling parameters
+## Enable autoscaling for Testkube API deployment
+## Add custom labels to autoscaling
+## Add custom annotations to autoscaling
+## Minimum number of replicas to scale back
+## Maximum number of replicas to scale out
+## Target CPU utilization percentage
+## Target Memory utilization percentage
+autoscaling:
+  enabled: false
+  labels: {}
+  annotations: {}
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+## Node labels for Testkube API pod assignment.
+nodeSelector: {}
+
+## Tolerations for Testkube API  assignment.
+tolerations: []
+
+## Affinity for Testkube API pod assignment.
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## Note: podAffinityPreset, podAntiAffinityPreset, and nodeAffinityPreset will be ignored when it's set
+affinity: {}
+
+## Specify priorityClassName for Testkube API Deployment
+priorityClassName: ""
+
+## Specify terminationGracePeriodSeconds for Testkube API Deployment
+terminationGracePeriodSeconds: ""  
+
+## Specify hostNetwork for Testkube API Deployment
+hostNetwork: ""
+
+## Specify dnsPolicy for Testkube API Deployment
+dnsPolicy: ""
+
+## Additional volumes to be added
+## ref: https://kubernetes.io/docs/concepts/storage/volumes/
+additionalVolumes: []
+## Additional volume mounts to be added
+## ref: https://kubernetes.io/docs/concepts/storage/volumes/
+additionalVolumeMounts: []
+## Additional volumes to be added to the Test Jobs
+## ref: https://kubernetes.io/docs/concepts/storage/volumes/
+additionalJobVolumes: []
+## Additional volume mounts to be added to the Test Jobs
+## ref: https://kubernetes.io/docs/concepts/storage/volumes/
+additionalJobVolumeMounts: []
+
+## Storage for Testkube API. Now Minio is used:
+storage:
+  endpoint: ""
+  endpoint_port: "9000"
+  accessKeyId: ""
+  accessKey: ""
+  ## k8s Secret name for storage accessKeyId
+  secretNameAccessKeyId: ""
+  ## Key for storage accessKeyId taken from k8s secret
+  secretKeyAccessKeyId: ""
+  ## K8s Secret Name for storage secretAccessKeyId
+  secretNameSecretAccessKey: ""
+  ## Key for storage secretAccessKeyId taken from k8s secret
+  secretKeySecretAccessKey: ""
+  region: ""
+  token: ""
+  bucket: "testkube-artifacts"
+  ## expiration period in days
+  expiration: 0
+  ## Toggle whether to enable TLS in the storage client
+  SSL: false
+  ## Skip Verify is used to configure storage client not to verify SSL certificates
+  skipVerify: false
+  ## If enabled, will also require a CA certificate to be provided
+  mountCACertificate: false
+  certSecret:
+    ## Toggle whether to mount k8s secret which contains storage client certificate (defaults are: cert.crt, cert.key, ca.crt, can be edited using the below keys
+    enabled: false
+    ## Name of the storage client certificate secret
+    name: "nats-client-cert"
+    ## Base path to mount the client certificate secret
+    baseMountPath: /etc/client-certs/storage
+    ## Path to client certificate file
+    certFile: "cert.crt"
+    ## Path to client certificate key file
+    keyFile: "cert.key"
+    ## Path to ca file (used for self-signed certificates)
+    caFile: "ca.crt"
+  ## Toggle whether to enable artifact scrapping
+  scrapperEnabled: true
+  ## Toggle whether to compress artifacts into tarballs
+  compressArtifacts: true
+
+## Logs storage for Testkube API.
+logs:
+  ## where the logs should be stored there are 2 possible valuse : minio|mongo
+  storage: "minio"
+  ## if storage is set to minio then the bucket must be specified, if minio with s3 is used make sure to use a unique name
+  bucket: "testkube-logs"
+
+## Service Account parameters
+serviceAccount:
+  ## Specifies whether a service account should be created
+  create: true
+  ## Annotations to add to the service account
+  annotations: {}
+  ## The name of the service account to use.
+  ## If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+## Logs service and sidecar service account parameters
+logsServiceAccount:
+  ## Specifies whether a service account should be created
+  create: true
+  ## Annotations to add to the service account
+  annotations: {}
+  ## The name of the service account to use.
+  ## If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+## Test Job ServiceAccount parameters
+testServiceAccount:
+  ## Specifies whether a service account should be created
+  create: true
+  ## Annotations to add to the service account
+  annotations: {}
+
+## Test Job ServiceAccount name
+jobServiceAccountName: ""
+
+## Security Context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+podSecurityContext: {}
+
+## Configure Container Security Context for Testkube API
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+##
+securityContext: {}
+
+## Toggle to enable debug mode
+enableDebugMode: false
+
+## Service parameters
+service:
+  ## Adapter service type
+  type: ClusterIP
+  ## HTTP Port
+  port: 8088
+  ## gRPC Port
+  grpcPort: 8089
+  ## Annotations
+  annotations: {}
+  ## Service labels
+  labels: {}
+
+##MongoDB parameters
+mongodb:
+  ## Deploy MongoDB server to the cluster
+  enabled: true
+  dsn: "mongodb://testkube-mongodb:27017"
+  ## or use dsn in secrets
+  # secretName: testkube-secrets
+  # secretKey: mongo-dsn
+
+  ## SSL certificate secret reference
+  # sslCertSecret: mongo-ssl-certs
+  # sslCAFileKey: sslCertificateAuthorityFile
+  # sslClientFileKey: sslClientCertificateKeyFile
+  # sslClientFilePassKey: sslClientCertificateKeyFilePassword
+
+  ## k8s Secret Name for SSL Client Certificate Key File Password
+  ## Key for SSL Client Certificate Key File Password k8s Secret
+  ## k8s Secret Name for SSL Client Certificate Key File
+  ## Key for SSL Client Certificate Key File k8s Secret
+  ## k8s Secret Name for SSL CA File Key
+  ## Key for SSL CA File Key k8s Secret
+  ## k8s Secret Name for SSL Cert Secret
+  ## Key for SSL Cert Secret k8s Secret
+  # sslClientFilePassKeySecretName: sslClientFilePassKeySecretName
+  # sslClientFilePassKeySecretKey: sslClientFilePassKeySecretKey
+  # sslClientFileKeySecretName: sslClientFileKeySecretName
+  # sslClientFileKeySecretKey: sslClientFileKeySecretKey
+  # sslCAFileKeySecretName: sslCAFileKeySecretName
+  # sslCAFileKeySecretKey: sslCAFileKeySecretKey
+  # sslCertSecretSecretName: sslCertSecretSecretName
+  # sslCertSecretSecretKey: sslCertSecretSecretKey
+
+  allowDiskUse: true
+  # to use docdb with TLS, set dbType to docdb and allowTLS to true
+  # dbType possible values: docdb|mongo; empty string defaults to mongo
+  # dbType: docdb
+  # allowTLS will be checked for docdb; on true: docdb ca certs will be downloaded and used
+  # allowTLS: true
+
+##PostgreSQL parameters
+postgresql:
+  ## Deploy PostgreSQL server to the cluster
+  enabled: false
+  ## Define dsn connection string
+  dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+
+## NATS parameters
+## ref: https://github.com/nats-io/nats-server
+nats:
+  ## Start NATS embedded server in api binary instead of separate deployment
+  embedded: false
+  ## Deploy NATS server to the cluster
+  enabled: true
+  tls:
+    ## Toggle whether to enable TLS in NATS client
+    enabled: false
+    ## Toggle whether to verify certificates
+    skipVerify: false
+    ## If enabled, will also require a CA certificate to be provided
+    mountCACertificate: false
+    certSecret:
+      ## Toggle whether to mount k8s secret which contains storage client certificate (cert.crt, cert.key, ca.crt)
+      enabled: false
+      ## Name of the storage client certificate secret
+      name: "nats-client-cert"
+      ## Base path to mount the client certificate secret
+      baseMountPath: /etc/client-certs/nats
+      ## Path to client certificate file
+      certFile: "cert.crt"
+      ## Path to client certificate key file
+      keyFile: "cert.key"
+      ## Path to ca file (used for self-signed certificates)
+      caFile: "ca.crt"
+
+  ## load URI from secrets
+  # secretName: XXX
+  # secretKey: XXX
+  ## load URI from plain-text
+  #uri: "nats://testkube-nats:4222"
+
+## MINIO parameters
+minio:
+  replicaCount: 1
+  ## Deploy Minio server to the cluster
+  enabled: true
+  ## Minio extra vars
+  extraEnvVars: []
+  ## PVC Access Modes for Minio. The volume is mounted as read-write by a single node.
+  ## Read more about access modes here: http://kubernetes.io/docs/user-guide/persistent-volumes/#access-modes
+  accessModes:
+    - ReadWriteOnce
+  ## Specify priorityClassName for Minio
+  priorityClassName: ""
+  ## Node labels for pod assignment.
+  nodeSelector: {}
+  ## Tolerations for pod assignment.
+  tolerations: []
+  ## Affinity for pod assignment.
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and nodeAffinityPreset will be ignored when it's set
+  affinity: {}
+  podDisruptionBudget:
+    # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
+    enabled: false
+    # -- (int/percentage) Number or percentage of pods that must remain available.
+    minAvailable: ""
+    # -- (int/percentage) Number or percentage of pods that can be unavailable.
+    maxUnavailable: ""
+  ## Minio image from DockerHub
+  image:
+    registry: docker.io
+    repository: minio/minio
+    tag: RELEASE.2025-07-18T21-56-31Z
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  ## ServiceAccount name to use for Minio
+  serviceAccountName: ""
+  ## Optionally specify extra list of additional volumeMounts for Minio
+  extraVolumeMounts: []
+  ## Optionally specify extra list of additional volumes for Minio
+  extraVolumes: []
+  ## k8s Secret name for Minio root username
+  secretUserName: ""
+  ## Secret key for Minio root username taken from k8s secret
+  secretUserKey: ""
+  ## k8s Secret name for Minio root password
+  secretPasswordName: ""
+  ## Secret key for Minio root username taken from k8s secret
+  secretPasswordKey: ""
+  ## Plain text Minio root username
+  ## Plain text Minio root password
+  minioRootUser: ""
+  minioRootPassword: ""
+  ## PVC Storage Request for MinIO. Should be available in the cluster.
+  storage: 10Gi
+  ## Selector labels to match
+  matchLabels: []
+  ## Resources limits and requests
+  resources: {}
+  ## MinIO Liveness probe configuration
+  livenessProbe:
+    initialDelaySeconds: 3
+    periodSeconds: 10
+  ## MinIO Readiness probe configuration
+  readinessProbe:
+    initialDelaySeconds: 3
+    periodSeconds: 10
+  ## MinIO Pod Security Context
+  podSecurityContext: {}
+  ## MinIO Container Security Context
+  securityContext: {}
+
+  ## Service Monitor for MinIO
+  ## ref: https://github.com/minio/minio/blob/master/docs/metrics/prometheus/README.md
+  serviceMonitor:
+    ## Toggle whether to install ServiceMonitor
+    enabled: false
+    ## Additional monitoring labels
+    labels: {}
+    ## Selector labels to match
+    matchLabels: []
+    ## Scrape interval
+    interval: 15s
+    ## SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.
+    #sampleLimit: 1000
+
+## uiIngress parameters
+uiIngress:
+  ## Use uiIngress
+  enabled: false
+  ## Labels to add to the Ingress
+  labels: {}
+  ## Annotations to add to the Ingress
+  annotations: {}
+  ## The Path to Nginx.
+  path: /results/(v\d/executions.*)
+  ## The PathType to Nginx.
+  pathType: Prefix
+  ## Hostnames must be provided if Ingress is enabled.
+  hosts: []
+  # - testkube.example.com
+  ## Enable TLS configuration for the hostname defined at `uiIngress.hosts` parameter
+  tlsenabled: false
+  ## Placing a host in the TLS config will indicate a certificate should be created
+  tls: []
+  # - hosts:
+  #     - testkube.example.com
+  #   secretName: testkube-cert-secret
+
+## cliIngress parameters
+cliIngress:
+  ## Use cliIngress
+  enabled: false
+  ## Labels to add to the Ingress
+  labels: {}
+  ## Annotations to add to the Ingress
+  annotations: {}
+  ## The Path to Nginx.
+  path: /results/(v\d/.*)
+  ## Hostnames must be provided if Ingress is enabled.
+  hosts: []
+  # - testkube.example.com
+  tlsenabled: false
+  # Placing a host in the TLS config will indicate a certificate should be created
+  tls: []
+  # - hosts:
+  #     - testkube.example.com
+  #   secretName: testkube-cert-secret
+
+## Prometheus monitoring
+prometheus:
+  ## Toggle whether to install ServiceMonitor
+  enabled: false
+  ## Scrape interval
+  interval: 15s
+  ## Additional monitoring labels
+  monitoringLabels: {}
+
+##Test Connection pod
+testConnection:
+  enabled: false
+  affinity: {}
+  tolerations: []
+  nodeSelector: {}
+
+## Testkube API Liveness probe
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+
+readinessProbe:
+  enabled: true
+
+## Testkube API HTTP body size limit
+## httpBodyLimit: 1073741824
+
+## Testkube API HTTP Read buffer size (in bytes)
+## Might need further increase if observing "431 Request Header Fields Too Large from api server"
+##  See https://github.com/kubeshop/testkube/pull/2871#issuecomment-1341116696
+httpReadBufferSize: 8192
+
+## Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
+podDisruptionBudget:
+  enabled: false
+  # -- (int/percentage) Number or percentage of pods that must remain available.
+  minAvailable: ""
+  # -- (int/percentage) Number or percentage of pods that can be unavailable.
+  maxUnavailable: ""

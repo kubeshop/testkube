@@ -1,0 +1,211 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "testkube-logs.fullname" . }}
+  labels:
+    {{- include "testkube-logs.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations}}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "testkube-logs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "testkube-logs.selectorLabels" . | nindent 8 }}
+        {{- if .Values.podLabels }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.podLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.labels }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.image.pullSecrets) | nindent 6 }}
+      serviceAccountName: {{ include "testkube-logs.serviceAccountName" . }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          env:
+          - name: DEBUG
+            value:  "{{ .Values.debug }}"
+          {{- if .Values.pro.key }}
+          - name: TESTKUBE_PRO_API_KEY
+            value:  "{{ .Values.pro.key }}"
+          {{- end}}
+          {{- if .Values.pro.existingSecret.key }}
+          - name: TESTKUBE_PRO_API_KEY
+            valueFrom:
+              secretKeyRef:
+                key: {{ .Values.pro.existingSecret.key }}
+                name: {{ .Values.pro.existingSecret.name }}
+          {{- end}}
+          {{- if .Values.pro.url }}
+          - name: TESTKUBE_PRO_URL
+            value:  "{{ .Values.pro.url }}"
+          {{- end }}
+          {{- if .Values.pro.uiUrl}}
+          - name: TESTKUBE_PRO_UI_URL
+            value: "{{ .Values.pro.uiUrl }}"
+          {{- end}}
+          {{- if not .Values.pro.tls.enabled }}
+          - name: TESTKUBE_PRO_TLS_INSECURE
+            value:  "true"
+          {{- end }}
+          {{- if .Values.pro.tls.skipVerify }}
+          - name: TESTKUBE_PRO_SKIP_VERIFY
+            value:  "true"
+          {{- end }}
+          {{- if .Values.pro.orgId }}
+          - name: TESTKUBE_PRO_ORG_ID
+            value:  "{{ .Values.pro.orgId }}"
+          {{- end}}
+          {{- if .Values.pro.existingSecret.orgId }}
+          - name: TESTKUBE_PRO_ORG_ID
+            valueFrom:
+              secretKeyRef:
+                key: {{ .Values.pro.existingSecret.orgId }}
+                name: {{ .Values.pro.existingSecret.name }}
+          {{- end}}
+          {{- if .Values.pro.envId }}
+          - name: TESTKUBE_PRO_ENV_ID
+            value:  "{{ .Values.pro.envId }}"
+          {{- end}}
+          {{- if .Values.pro.existingSecret.envId }}
+          - name: TESTKUBE_PRO_ENV_ID
+            valueFrom:
+              secretKeyRef:
+                key: {{ .Values.pro.existingSecret.envId }}
+                name: {{ .Values.pro.existingSecret.name }}
+          {{- end}}
+          - name: NATS_URI
+            value: {{ .Values.nats.uri }}
+          - name: "HTTP_ADDRESS"
+            value:  "{{ .Values.service.httpHostname }}:{{ .Values.service.httpPort }}"
+          - name: "GRPC_ADDRESS"
+            value:  "{{ .Values.service.grpcHostname }}:{{ .Values.service.grpcPort }}"
+          - name: "STORAGE_ENDPOINT"
+            {{- if .Values.storage.endpoint }}
+            value:  "{{ .Values.storage.endpoint }}"
+            {{- else if .Values.executionNamespaces }}
+            value:  "testkube-minio-service-{{ .Release.Namespace }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.storage.endpoint_port }}"
+            {{- else }}
+            value:  "testkube-minio-service-{{ .Release.Namespace }}:{{ .Values.storage.endpoint_port }}"
+            {{- end }}
+          - name: "STORAGE_BUCKET"
+            value:  "{{ .Values.storage.bucket }}"
+          - name: "STORAGE_EXPIRATION"
+            value:  "{{ .Values.storage.expiration }}"
+          - name: "STORAGE_ACCESSKEYID"
+            {{- if .Values.storage.secretNameAccessKeyId }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.storage.secretNameAccessKeyId }}
+                key: {{ .Values.storage.secretKeyAccessKeyId }}
+            {{- else }}
+            value: "{{ .Values.storage.accessKeyId }}"
+          {{- end }}
+          - name: "STORAGE_SECRETACCESSKEY"
+            {{- if .Values.storage.secretNameSecretAccessKey }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.storage.secretNameSecretAccessKey }}
+                key: {{ .Values.storage.secretKeySecretAccessKey }}
+            {{- else }}
+            value: "{{ .Values.storage.accessKey }}"
+          {{- end }}
+          - name: "STORAGE_REGION"
+            value: "{{ .Values.storage.region }}"
+          - name: "STORAGE_TOKEN"
+            value: "{{ .Values.storage.token }}"
+          - name: "STORAGE_SSL"
+            value:  "{{ .Values.storage.SSL }}"
+          - name: "STORAGE_SKIP_VERIFY"
+            value:  "{{ .Values.storage.skipVerify }}"
+          {{- if .Values.storage.certSecret.enabled }}
+          - name: "STORAGE_CERT_FILE"
+            value:  "{{ .Values.storage.certSecret.baseMountPath }}/{{ .Values.storage.certSecret.certFile }}"
+          - name: "STORAGE_KEY_FILE"
+            value: "{{ .Values.storage.certSecret.baseMountPath }}/{{ .Values.storage.certSecret.keyFile }}"
+          {{- if .Values.storage.mountCACertificate }}
+          - name: "STORAGE_CA_FILE"
+            value: "{{ .Values.storage.certSecret.baseMountPath }}/{{ .Values.storage.certSecret.caFile }}"
+          {{- end }}
+          {{- end }}
+          - name: "GRPC_SECURE"
+            value: "{{ .Values.tls.enabled }}"
+          - name: "GRPC_CLIENT_AUTH"
+            value:  "{{ .Values.tls.clientAuth }}"
+          {{- if .Values.tls.certSecret.enabled }}
+          - name: "GRPC_CERT_FILE"
+            value:  "{{ .Values.tls.certSecret.baseMountPath }}/{{ .Values.tls.certSecret.certFile }}"
+          - name: "GRPC_KEY_FILE"
+            value: "{{ .Values.tls.certSecret.baseMountPath }}/{{ .Values.tls.certSecret.keyFile }}"
+          {{- if .Values.tls.mountClientCACertificate }}
+          - name: "GRPC_CLIENT_CA_FILE"
+            value: "{{ .Values.tls.certSecret.baseMountPath }}/{{ .Values.tls.certSecret.clientCAFile }}"
+          {{- end }}
+          {{- end }}
+          {{- if .Values.extraEnvVars }}
+            {{ include "global.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 | trim }}
+          {{- end }}
+          securityContext: {{ include "testkube-logs.containerSecurityContext" . | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.httpPort }}
+              protocol: TCP
+            - name: grpc
+              containerPort: {{ .Values.service.grpcPort }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.tls.certSecret.enabled }}
+          volumeMounts:
+            - mountPath: /etc/server-certs/grpc
+              name: {{ .Values.tls.certSecret.name }}
+              readOnly: true
+          {{- end }}
+      securityContext: {{ include "testkube-logs.podSecurityContext" . | nindent 8 }}
+      {{- if .Values.tls.certSecret.enabled }}
+      volumes:
+        - name: {{ .Values.tls.certSecret.name }}
+          secret:
+            secretName: {{ .Values.tls.certSecret.name }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+      {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if .Values.global.affinity }}
+      affinity:
+      {{- toYaml .Values.global.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+      {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- else if .Values.global.tolerations }}
+      tolerations:
+      {{- toYaml .Values.global.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- else if .Values.global.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+      {{- end }}

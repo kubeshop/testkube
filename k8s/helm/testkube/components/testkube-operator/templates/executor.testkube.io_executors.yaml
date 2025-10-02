@@ -1,0 +1,152 @@
+{{- if .Values.installCRD }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: executors.executor.testkube.io
+spec:
+  group: executor.testkube.io
+  names:
+    kind: Executor
+    listKind: ExecutorList
+    plural: executors
+    singular: executor
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Executor is the Schema for the executors API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ExecutorSpec defines the desired state of Executor
+            properties:
+              args:
+                description: executor binary arguments
+                items:
+                  type: string
+                type: array
+              command:
+                description: executor default binary command
+                items:
+                  type: string
+                type: array
+              content_types:
+                description: ContentTypes list of handled content types
+                items:
+                  enum:
+                  - string
+                  - file-uri
+                  - git-file
+                  - git-dir
+                  - git
+                  type: string
+                type: array
+              executor_type:
+                description: |-
+                  ExecutorType one of "rest" for rest openapi based executors or "job" which will be default runners for testkube
+                  or "container" for container executors
+                enum:
+                - job
+                - container
+                type: string
+              features:
+                description: Features list of possible features which executor handles
+                items:
+                  enum:
+                  - artifacts
+                  - junit-report
+                  type: string
+                type: array
+              image:
+                description: Image for kube-job
+                type: string
+              imagePullSecrets:
+                description: container executor default image pull secrets
+                items:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      default: ""
+                      description: |-
+                        Name of the referent.
+                        This field is effectively required, but due to backwards compatibility is
+                        allowed to be empty. Instances of this type with an empty value here are
+                        almost certainly wrong.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+              job_template:
+                description: Job template to launch executor
+                type: string
+              jobTemplateReference:
+                description: name of the template resource
+                type: string
+              meta:
+                description: Meta data about executor
+                properties:
+                  docsURI:
+                    description: URI for executor docs
+                    type: string
+                  iconURI:
+                    description: URI for executor icon
+                    type: string
+                  tooltips:
+                    additionalProperties:
+                      type: string
+                    description: executor tooltips
+                    type: object
+                type: object
+              slaves:
+                description: Slaves data to run test in distributed environment
+                properties:
+                  image:
+                    type: string
+                required:
+                - image
+                type: object
+              types:
+                description: Types defines what types can be handled by executor e.g.
+                  "postman/collection", ":curl/command" etc
+                items:
+                  type: string
+                type: array
+              uri:
+                description: URI for rest based executors
+                type: string
+              useDataDirAsWorkingDir:
+                description: use data dir as working dir for executor
+                type: boolean
+            type: object
+          status:
+            description: ExecutorStatus defines the observed state of Executor
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

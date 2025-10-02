@@ -1,0 +1,44 @@
+{
+  "name": "@testkube/root",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Testkube monorepo",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:kubeshop/testkube-cloud-api.git"
+  },
+  "author": "Kubeshop",
+  "contributors": [
+    "ole@kubeshop.io"
+  ],
+  "workspaces": [
+    "packages/*",
+    "scripts/*"
+  ],
+  "scripts": {
+    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && turbo run build",
+    "build:preview": "export NODE_OPTIONS=--max_old_space_size=4096 && turbo run build && npx import-meta-env --disposable --env packages/web/.env.preview -x packages/web/.env.example --path packages/web/dist/index.html",
+    "dev": "turbo run dev --filter=@testkube/web",
+    "lint": "turbo run lint",
+    "start": "turbo run dev --filter=@testkube/web",
+    "test": "turbo run test",
+    "ts-check": "turbo run ts-check"
+  },
+  "devDependencies": {
+    "@changesets/cli": "2.29.7",
+    "turbo": "2.5.8",
+    "typescript": "5.9.2"
+  },
+  "optionalDependencies": {
+    "@esbuild/linux-x64": "0.24.2",
+    "@rollup/rollup-linux-x64-gnu": "4.32.1"
+  },
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": "^20.0.0 || ^22.0.0 || ^24.0.0",
+    "npm": ">=10.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

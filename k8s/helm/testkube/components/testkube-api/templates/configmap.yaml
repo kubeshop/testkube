@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "testkube-api.fullname" . }}
+  labels: {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+data:
+{{- if .Values.next.enabled }}
+  enable-cron-jobs: "{{ .Values.next.cronJobs.enabled }}"
+{{- end }}
+  executors.json: |-
+{{ include "testkube-api.executors" . | indent 4 }}
+  job-container-template.yml: |-
+{{- if .Values.jobContainerTemplate }}
+  {{ toYaml .Values.jobContainerTemplate | trimAll "|" | trim | indent 4 }}
+{{- else }}
+{{ include "testkube-api.job-container-template" . | indent 4 }}
+{{- end }}
+  job-scraper-template.yml: |-
+{{- if .Values.jobScraperTemplate }}
+  {{ toYaml .Values.jobScraperTemplate | trimAll "|" | trim | indent 4 }}
+{{- else }}
+{{ include "testkube-api.job-scraper-template" . | indent 4 }}
+{{- end }}
+  job-template.yml: |-
+{{- if .Values.configValues }}
+  {{ toYaml .Values.configValues | trimAll "|" | trim | indent 4 }}
+{{- else }}
+{{ include "testkube-api.job-template" . | indent 4 }}
+{{- end }}
+  pvc-template.yml: |-
+{{ include "testkube-api.pvc-template" . | indent 4 }}
+  slack-config.json: |-
+{{- if .Values.slackConfig }}
+  {{ toJson .Values.slackConfig | indent 4 }}
+{{- else }}
+{{ .Files.Get "slack-config.json" | indent 4 }}
+{{- end }}
+  slack-template.json: |-
+{{ .Files.Get "slack-template.json.tmpl" | indent 4 }}
+  slave-pod-template.yml: |-
+{{ include "testkube-api.slave-pod-template" . | indent 4 }}
+{{- $executors := "" }}
+{{- range $k, $v := .Values.enabledExecutors }}
+  {{- if $v.enabled }}
+    {{- $executors = print $executors "," $k }}
+  {{- end }}
+{{- end }}
+  enabledExecutors: "{{ $executors }}"
