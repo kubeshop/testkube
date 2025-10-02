@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
+	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"

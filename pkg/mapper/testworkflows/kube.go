@@ -10,11 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
+	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 )
 

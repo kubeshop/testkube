@@ -11,8 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	testexecutionv1 "github.com/kubeshop/testkube-operator/api/testexecution/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	testkubev1 "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/workerpool"

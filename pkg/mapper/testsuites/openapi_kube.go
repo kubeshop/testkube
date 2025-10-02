@@ -5,8 +5,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/api/common/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	v1 "github.com/kubeshop/testkube/api/common/v1"
+	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/types"
 )
