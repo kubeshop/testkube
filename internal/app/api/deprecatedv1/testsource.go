@@ -9,14 +9,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
-	"github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
-	"github.com/kubeshop/testkube-operator/pkg/secret"
+	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsourcesmapper "github.com/kubeshop/testkube/pkg/mapper/testsources"
+	"github.com/kubeshop/testkube/pkg/operator/client/testsources/v1"
+	"github.com/kubeshop/testkube/pkg/operator/secret"
 )
 
 func (s *DeprecatedTestkubeAPI) CreateTestSourceHandler() fiber.Handler {

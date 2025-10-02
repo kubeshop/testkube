@@ -6,7 +6,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/kubeshop/testkube-operator/pkg/client/common"
+	"github.com/kubeshop/testkube/pkg/operator/client/common"
 )
 
 // ReconcileTestSuites is watching for testsuite change and schedule testsuite cron jobs

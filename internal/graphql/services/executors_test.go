@@ -10,9 +10,9 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 )
 
 var (

@@ -1,6 +1,6 @@
 package triggers
 
-import "github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
+import "github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 
 type KeyMap struct {
 	Resources           []string            `json:"resources"`

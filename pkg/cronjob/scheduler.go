@@ -8,12 +8,12 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	testsclientv3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
+	testsuitesclientv3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )

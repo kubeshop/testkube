@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/utils"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"

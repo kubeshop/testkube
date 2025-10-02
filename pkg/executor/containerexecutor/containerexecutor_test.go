@@ -13,16 +13,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
-	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	templatesclientv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
+	v3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 

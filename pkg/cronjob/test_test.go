@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	"github.com/kubeshop/testkube-operator/pkg/client/common"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/operator/client/common"
+	testsclientv3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 

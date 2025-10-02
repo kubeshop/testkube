@@ -8,15 +8,15 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	v1 "github.com/kubeshop/testkube/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
+	testsclientv3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
 

@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	v10 "k8s.io/api/core/v1"
 )

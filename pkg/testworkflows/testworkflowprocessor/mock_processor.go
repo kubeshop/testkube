@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	expressions "github.com/kubeshop/testkube/pkg/expressions"
 	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )

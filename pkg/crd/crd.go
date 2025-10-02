@@ -15,7 +15,7 @@ import (
 	"k8s.io/kube-openapi/pkg/validation/strfmt"
 	"k8s.io/kube-openapi/pkg/validation/validate"
 
-	opcrd "github.com/kubeshop/testkube-operator/config/crd"
+	opcrd "github.com/kubeshop/testkube/k8s"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
