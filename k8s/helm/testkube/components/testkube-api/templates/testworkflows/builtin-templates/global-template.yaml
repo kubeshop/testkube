@@ -1,0 +1,11 @@
+{{- if and .Values.global.testWorkflows.globalTemplate.enabled (not (or .Values.global.testWorkflows.globalTemplate.external .Values.global.testWorkflows.globalTemplate.inline)) }}
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: "{{ .Values.global.testWorkflows.globalTemplate.name }}"
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "19"
+    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
+spec: {{- toYaml .Values.global.testWorkflows.globalTemplate.spec | nindent 2 }}
+{{- end }}

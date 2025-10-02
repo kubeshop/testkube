@@ -1,0 +1,344 @@
+# Default values for testkube-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+### @section  Global image parameters
+## Important! Please, note that this will override sub-chart image parameters.
+## Global Docker image registry
+## Global Docker registry secret names as an array
+## Labels to add to all deployed objects
+## Annotations to add to all deployed objects
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  labels: {}
+  annotations: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  # -- Global security Context for all containers
+  containerSecurityContext: {}
+  # -- Global security Context for all pods
+  podSecurityContext: {}
+  # -- Global pdb
+  podDisruptionBudget:
+    enabled: false
+
+### @section Common parameters
+## Kubernetes version (using Helm capabilities if not set)
+kubeVersion: ""
+
+## Should install the Operator
+enabled: true
+
+## Should we install CRDS - when they can be installed from other Testkube instance
+installCRD: true
+
+## Additional labels for Testkube Operator pod
+podLabels: {}
+
+## Additional pod annotations to Testkube Operator pod
+podAnnotations: {}
+
+## Number of Testkube Operator Pod replicas
+replicaCount: 1
+
+## Namespace to install Testkube Operator
+namespace: ""
+
+## Chart parameters
+## nameOverride Overrides Chart name
+## fullnameOverride Full name that overrides Chart name
+nameOverride: ""
+fullnameOverride: ""
+
+### @section Specific parameters
+## image.registry Testkube Operator image registry
+## image.repository Testkube Operator image name
+## image.tag Testkube Operator image tag
+## image.pullPolicy Testkube Operator Image pull policy
+## image.digest Testkube Operator image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+## image.pullSecret Testkube Operator image pull k8s secret name for private registries
+
+image:
+  registry: docker.io
+  repository: kubeshop/testkube-operator
+  pullPolicy: ""
+  # Overrides the image tag whose default is the chart appVersion.
+  #tag: "1.7.1"
+  digest: ""
+  pullSecrets: []
+
+# Arguments to be passed to the Testkube Operator container
+args:
+  - --logtostderr=true
+
+# Proxy settings
+proxy:
+  # Proxy Image parameters
+  image:
+    # -- Testkube Operator rbac-proxy image registry
+    registry: quay.io
+    # -- Testkube Operator rbac-proxy image repository
+    repository: brancz/kube-rbac-proxy
+    # -- Testkube Operator rbac-proxy image tag
+    tag: "v0.18.1"
+    # -- Testkube Operator rbac-proxy k8s secret for private registries
+    pullSecrets: []
+  # -- Testkube Operator rbac-proxy resource settings
+  resources: {}
+
+## Testkube API full name
+apiFullname: "testkube-api-server"
+# -- Testkube API port
+apiPort: 8088
+# -- Testkube Operator webhook server port
+webhookServerPort: 9443
+# -- Testkube Operator metrics server port
+metricsServerPort: 8443
+# -- Testkube Operator insecure metrics server port
+#metricsServerPortInsecure: 8080
+# -- Testkube Operator healthcheck port
+healthcheckPort: 8081
+# use ArgoCD sync owner references
+useArgoCDSync: false
+# purge executions on CRD deletion
+purgeExecutions: false
+# agent cron jobs for scheduling test, suites, workflows
+agentCronJobs: true
+
+## Service Account parameters
+serviceAccount:
+  ## Specifies whether a service account should be created
+  create: true
+  ## Annotations to add to the service account
+  annotations: {}
+  ## The name of the service account to use.
+  ## If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+## Extra environment variables to be set on deployment
+## For example:
+extraEnvVars: []
+#  - name: FOO
+#    value: BAR
+
+## Liveness probe configuration
+livenessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 10
+
+## Readiness probe configuration
+readinessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 10
+
+##Name of the metrics server. If not specified, default name from the template is used
+metricsServiceName: ""
+
+## Terminating a container that failed its liveness or startup probe after 10s
+terminationGracePeriodSeconds: 10
+
+## Testkube Operator Pod Security Context
+podSecurityContext: {}
+#  runAsUser: 1000670000
+#  runAsNonRoot: true
+
+## Configure Security Context for Manager Container
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+##
+securityContext: {}
+#  readOnlyRootFilesystem: true
+#  allowPrivilegeEscalation: false
+#  seccompProfile:
+#    type: RuntimeDefault
+#  capabilities:
+#    drop:
+#      - ALL
+
+## Testkube Operator Pod Volume
+volumes:
+  secret:
+    defaultMode: 420
+
+## Webhook parameters
+webhook:
+  ## Use webhook
+  enabled: true
+  ## Name of the webhook
+  name: webhook-admission
+  ## Limit which requests for namespaced resources are intercepted, by specifying a namespaceSelector.
+  namespaceSelector: {}
+  ## Webhook specific labels
+  labels: {}
+  ## Webhook specific annotations
+  annotations: {}
+
+  ## Migrate Job parameters
+  migrate:
+    ## Deploy Migrate Job
+    enabled: true
+    ## image.registry Migrate container job image registry
+    ## image.repository Migrate container job image name
+    ## image.tag Migrate container job image tag
+    ## image.pullPolicy Migrate container job image pull policy
+    ## image.pullSecret Migrate container job image pull k8s secret name for private registries
+    image:
+      registry: docker.io
+      repository: rancher/kubectl
+      tag: v1.23.7
+      pullPolicy: Always
+      pullSecrets: []
+    ## Configure Security Context for Migrate Container
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ##
+    securityContext: {}
+#      readOnlyRootFilesystem: true
+#      allowPrivilegeEscalation: false
+#      seccompProfile:
+#        type: RuntimeDefault
+#      capabilities:
+#        drop:
+#          - ALL
+    ## Number of retries before considering a Job as failed
+    backoffLimit: 1
+    ## Resources limits and requests
+    resources: {}
+
+  ## Patch Job parameters
+  patch:
+    enabled: true
+    ## image.registry patch container job image registry
+    ## image.repository patch container image name
+    ## image.tag patch container image tag
+    ## image.pullPolicy patch container image pull policy
+    ## image.pullSecret patch container image pull k8s secret name for private registries
+    image:
+      registry: docker.io
+      repository: kubeshop/kube-webhook-certgen
+      tag: 0.0.7
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    ## Annotations to add to the patch Job
+    annotations: {}
+    ## Pod annotations to add to the patch Job
+    podAnnotations: {}
+    ## Pod specific labels
+    labels: {}
+    ## Configure Security Context for Migrate Container
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ##
+    podSecurityContext: {}
+#      runAsUser: 1000670000
+#      runAsNonRoot: true
+
+    createSecretJob:
+      ## Create Secret job container security context
+      securityContext: {}
+#        readOnlyRootFilesystem: true
+#        allowPrivilegeEscalation: false
+#        seccompProfile:
+#          type: RuntimeDefault
+#        capabilities:
+#          drop:
+#            - ALL
+      ## Create Secret resource requests and limits
+      resources: {}
+
+    patchWebhookJob:
+      ## Patch Webhook job container security context
+      securityContext: {}
+#        readOnlyRootFilesystem: true
+#        allowPrivilegeEscalation: false
+#        seccompProfile:
+#          type: RuntimeDefault
+#        capabilities:
+#          drop:
+#            - ALL
+      ## Patch Webhook resource requests and limits
+      resources: {}
+
+    ## Name of the SA to use by patch Job
+    serviceAccount:
+      ## SA specific annotations
+      annotations: {}
+      ## SA name
+      name: testkube-operator-webhook-cert-mgr
+    ##Node labels for pod assignment
+    ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+    ##
+    nodeSelector: {}
+    ## tolerations Tolerations for pod assignment
+    ### Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    ###
+    tolerations: []
+    ## Affinity for pod assignment.
+    affinity: {}
+    ## Number of retries before considering a Job as failed
+    backoffLimit: 1
+
+  ## Webhook certificate
+  certificate:
+    ## Webhook certificate secret name
+    secretName: webhook-server-cert
+
+## Create RBAC roles for users and controller
+rbac:
+  create: true
+
+## Service Parameters
+service:
+  ## Adapter service type
+  type: ClusterIP
+  ## HTTP Port
+  port: 80
+  ## Annotations
+  annotations: {}
+
+## Testkube Operator resource requests and limits
+resources:
+  {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+#  limits:
+#    cpu: 100m
+#    memory: 128Mi
+#  requests:
+#    cpu: 100m
+#    memory: 128Mi
+
+## Node labels for Testkube Operator pod assignment.
+nodeSelector: {}
+
+## Tolerations for Testkube Operator  assignment.
+tolerations: []
+
+## Affinity for Testkube Operator pod assignment.
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## Note: podAffinityPreset, podAntiAffinityPreset, and nodeAffinityPreset will be ignored when it's set
+affinity: {}
+
+## Specify priorityClassName for Minio
+priorityClassName: ""
+
+##Test Connection pod
+testConnection:
+  enabled: false
+
+  ## Affinity for pre-upgrade job
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and nodeAffinityPreset will be ignored when it's set
+  affinity: {}
+
+## Pass a custom cronJobTemplate to the Testkube Operator Deployment
+cronJobTemplate: ""
+
+## Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
+podDisruptionBudget:
+  enabled: false
+  # -- (int/percentage) Number or percentage of pods that must remain available.
+  minAvailable: ""
+  # -- (int/percentage) Number or percentage of pods that can be unavailable.
+  maxUnavailable: ""

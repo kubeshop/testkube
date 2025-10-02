@@ -1,0 +1,357 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ include "testkube-runner.fullname" . }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.deployment.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.deployment.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.deployment.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.deployment.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "testkube-runner.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "testkube-runner.selectorLabels" . | nindent 8 }}
+        {{- if .Values.global.labels }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.pod.labels }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.pod.labels "context" $ ) | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if .Values.global.annotations }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.pod.annotations }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.pod.annotations "context" $ ) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.images.agent.pullSecrets) | nindent 6 }}
+      {{- if .Values.pod.serviceAccount.name }}
+      serviceAccountName: "{{ .Values.pod.serviceAccount.name }}"
+      {{- else if .Values.pod.serviceAccount.autoCreate }}
+      serviceAccountName: "agent-sa-{{ .Release.Name }}"
+      {{- end }}
+      {{- if .Values.pod.priorityClassName }}
+      priorityClassName: "{{ .Values.pod.priorityClassName }}"
+      {{- end }}
+      {{- if .Values.pod.hostNetwork }}
+      hostNetwork: {{ .Values.pod.hostNetwork }}
+      {{- end }}
+      {{- if .Values.pod.dnsPolicy }}
+      dnsPolicy: "{{ .Values.pod.dnsPolicy }}"
+      {{- end }}
+      {{- if .Values.pod.affinity }}
+      affinity:
+        {{- toYaml .Values.pod.affinity | nindent 8 }}
+      {{- else if .Values.global.affinity }}
+      affinity:
+        {{- toYaml .Values.global.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.pod.tolerations }}
+      tolerations:
+        {{- toYaml .Values.pod.tolerations | nindent 8 }}
+      {{- else if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.pod.nodeSelector | nindent 8 }}
+      {{- else if .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+      {{- end }}
+      securityContext: {{ include "testkube-runner.podSecurityContext" . | nindent 8 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nats
+          emptyDir: {}
+        {{- if .Values.cloud.tls.customCa.secretRef.name }}
+        - name: custom-ca
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.cloud.tls.customCa.secretRef.name }}
+        {{- end }}
+        {{- if .Values.pod.additionalVolumes }}
+        {{- toYaml .Values.pod.additionalVolumes | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.global.volumes .Values.global.volumes.additionalVolumes }}
+        {{- toYaml .Values.global.volumes.additionalVolumes | nindent 8 }}
+        {{- end }}
+
+      containers:
+        - name: "{{ .Chart.Name }}"
+          image: "{{ include "testkube-runner.agent.image" . }}"
+          imagePullPolicy: "{{ .Values.images.agent.pullPolicy }}"
+          ports:
+          - name: http
+            containerPort: 8088
+            protocol: TCP
+          startupProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+            timeoutSeconds: 3
+            failureThreshold: 100
+            httpGet:
+              path: /health
+              port: 8088
+              scheme: HTTP
+          {{- if .Values.pod.customReadinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.pod.customReadinessProbe | nindent 12 }}
+          {{- else if .Values.pod.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.pod.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.pod.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.pod.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.pod.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.pod.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.pod.customLivenessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.pod.customLivenessProbe | nindent 12 }}
+          {{- else if .Values.pod.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.pod.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.pod.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.pod.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.pod.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.pod.livenessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.pod.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nats
+              mountPath: /app/nats
+            {{- if .Values.cloud.tls.customCa.secretRef.name }}
+            - name: custom-ca
+              mountPath: /etc/testkube/certs/testkube-custom-ca.pem
+              readOnly: true
+              subPath: "{{ .Values.cloud.tls.customCa.secretRef.key }}"
+            {{- end }}
+            {{- if .Values.pod.additionalVolumeMounts }}
+            {{- toYaml .Values.pod.additionalVolumeMounts | nindent 12 -}}
+            {{- end }}
+            {{- if and .Values.global.volumes .Values.global.volumes.additionalVolumeMounts }}
+            {{- toYaml .Values.global.volumes.additionalVolumeMounts | nindent 12 -}}
+            {{- end }}
+          securityContext: {{ include "testkube-runner.containerSecurityContext" . | nindent 12 }}
+          env:
+            # Runner configuration
+            {{- if not .Values.runner.enabled }}
+            - name: "DISABLE_RUNNER"
+              value: "true"
+            {{- end }}
+            {{- if .Values.runner.secretRef.name }}
+            - name: "TESTKUBE_PRO_AGENT_ID"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.runner.secretRef.name }}"
+                  key: "{{ .Values.runner.secretRef.idKey }}"
+            - name: "TESTKUBE_PRO_API_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.runner.secretRef.name }}"
+                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
+            - name: "TESTKUBE_PRO_ORG_ID"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.runner.secretRef.name }}"
+                  key: "{{ .Values.runner.secretRef.secretKey }}"
+            - name: "TESTKUBE_PRO_ENV_ID"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.runner.secretRef.name }}"
+                  key: "{{ .Values.runner.secretRef.envIdKey }}"
+            {{- else }}
+            {{- if not .Values.runner.register.token }}
+            - name: "TESTKUBE_PRO_AGENT_ID"
+              value: "{{ .Values.runner.id }}"
+            - name: "TESTKUBE_PRO_API_KEY"
+              value: "{{ .Values.runner.secret }}"
+            {{- end }}
+            - name: "TESTKUBE_PRO_ORG_ID"
+              value: "{{ .Values.runner.orgId }}"
+            - name: "TESTKUBE_PRO_ENV_ID"
+              value: "{{ .Values.runner.envId }}"
+            {{- end }}
+            - name: "TESTKUBE_PRO_URL"
+              value: "{{ .Values.cloud.url }}"
+            {{- if not .Values.cloud.tls.enabled }}
+            - name: "TESTKUBE_PRO_TLS_INSECURE"
+              value: "true"
+            {{- end }}
+            - name: "TESTKUBE_PRO_TLS_SKIP_VERIFY"
+              value: "{{ .Values.cloud.tls.skipVerify }}"
+
+            # Server
+            - name: "APISERVER_FULLNAME"
+              value: "{{ include "testkube-runner.fullname" . }}"
+            - name: "APISERVER_PORT"
+              value: "8088" # TODO: check
+
+            # Security
+            - name: "ALLOW_LOW_SECURITY_FIELDS"
+              value: "{{ .Values.allowLowSecurityFields }}"
+            - name: "TESTKUBE_NAMESPACE"
+              value: "{{ .Release.Namespace }}"
+            {{- if .Values.execution.default.namespace }}
+            - name: "DEFAULT_EXECUTION_NAMESPACE"
+              value: "{{ .Values.execution.default.namespace }}"
+            {{- end }}
+            {{- if .Values.execution.default.serviceAccount.name }}
+            - name: "JOB_SERVICE_ACCOUNT_NAME"
+              value: "{{ .Values.execution.default.serviceAccount.name }}"
+            {{- else if .Values.execution.default.serviceAccount.autoCreate }}
+            - name: "JOB_SERVICE_ACCOUNT_NAME"
+              value: "exec-sa-{{ .Release.Name }}"
+            {{- else }}
+            - name: "JOB_SERVICE_ACCOUNT_NAME"
+              value: ""
+            {{- end }}
+            {{- $executionNamespaces := "" }}
+            {{- if .Values.execution.additionalNamespaces }}
+            {{- range $ns, $data := .Values.execution.additionalNamespaces }}
+              {{ with $ }}
+              {{- if $executionNamespaces }}
+                {{ $executionNamespaces = printf "%s," $executionNamespaces }}
+              {{- end }}
+              {{- if and $data.serviceAccount (or $data.serviceAccount.autoCreate $data.serviceAccount.name) }}
+              # support custom or auto-created service account
+              {{ $executionNamespaces = printf "%s%s=%s" $executionNamespaces $ns (or $data.serviceAccount.name (printf "exec-sa-%s" .Release.Name)) }}
+              {{- else }}
+              # support omitting the service account
+              {{ $executionNamespaces = printf "%s%s=" $executionNamespaces $ns }}
+              {{- end }}
+              {{- end }}
+            {{- end }}
+            - name: "TESTKUBE_EXECUTION_NAMESPACES"
+              value: "{{ $executionNamespaces }}"
+            {{- end }}
+
+            # Global template
+            {{- if and .Values.globalTemplate.enabled .Values.globalTemplate.spec }}
+            - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE"
+              {{- if kindIs "map" .Values.globalTemplate.spec }}
+              value: {{ toJson .Values.globalTemplate.spec | quote }}
+              {{- else }}
+              value: {{ toJson (fromYaml .Values.globalTemplate.spec) | quote }}
+              {{- end }}
+            {{- end }}
+
+            # Certificates
+            {{- if and .Values.global.tls .Values.global.tls.caCertPath }}
+            - name: "SSL_CERT_DIR"
+              value: "{{ .Values.global.tls.caCertPath }}"
+            - name: "GIT_SSL_CAPATH"
+              value: "{{ .Values.global.tls.caCertPath }}"
+            {{- else if .Values.cloud.tls.customCa.dirPath }}
+            - name: "SSL_CERT_DIR"
+              value: "{{ .Values.cloud.tls.customCa.dirPath }}"
+            {{- else if .Values.cloud.tls.customCa.secretRef.name }}
+            - name: "SSL_CERT_DIR"
+              value: /etc/testkube/certs
+            - name: "TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET"
+              value: "{{ .Values.cloud.tls.customCa.secretRef.name }}"
+            {{- end }}
+
+            # Images
+            - name: "TESTKUBE_TW_TOOLKIT_IMAGE"
+              value: "{{ include "testkube-runner.toolkit.image" . }}"
+            - name: "TESTKUBE_TW_INIT_IMAGE"
+              value: "{{ include "testkube-runner.init.image" . }}"
+            {{- if .Values.imageInspectionCache.enabled }}
+            - name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE"
+              value:  "true"
+            - name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY"
+              value:  "{{ .Values.imageInspectionCache.name }}"
+            - name: "TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"
+              value: "{{ .Values.imageInspectionCache.ttl }}"
+            {{- end }}
+
+            # Constants
+            - name: "SLACK_CONFIG"
+              value: "[]"
+            - name: "ENABLE_K8S_EVENTS"
+              value: "false"
+            - name: "DISABLE_TEST_TRIGGERS"
+              value: "{{ if .Values.listener.enabled }}false{{ else }}true{{ end }}"
+            - name: "DISABLE_WEBHOOKS"
+              value: "true"
+            - name: "DISABLE_DEPRECATED_TESTS"
+              value: "true"
+            - name: "DISABLE_DEFAULT_AGENT"
+              value: "true"
+            - name: "GITOPS_KUBERNETES_TO_CLOUD_ENABLED"
+              value: "false"
+            - name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED"
+              value: "false"
+            - name: "ENABLE_CRON_JOBS"
+              value: "false"
+            - name: "NATS_EMBEDDED"
+              value: "true"
+            - name: "FEATURE_NEW_ARCHITECTURE"
+              value: "true"
+            {{- if .Values.listener.enabled }}
+            - name: "TEST_TRIGGER_CONTROL_PLANE"
+              value: "true"
+            - name: "FEATURE_CLOUD_STORAGE"
+              value: "true"
+            {{- end }}
+            # - name: "FEATURE_CLOUD_STORAGE"
+            #   value: "true"
+
+            # Other
+            - name: TESTKUBE_HELMCHART_VERSION
+              value: "{{ .Chart.Version }}"
+            - name: "TESTKUBE_ANALYTICS_ENABLED"
+              value: "{{ .Values.analyticsEnabled }}"
+
+            {{- if .Values.pod.extraEnvVars }}
+            {{ toYaml .Values.pod.extraEnvVars | nindent 12 | trim }}
+            {{- end }}
+
+            # Self registration
+          {{- if .Values.runner.register.token }}
+            - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+              value: "{{ .Values.runner.register.token }}"
+            - name: RUNNER_NAME
+              value: "{{ include "testkube-runner.fullname" . }}-{{ now | date "20060102150405" }}"
+            - name: ENABLE_SECRETS_ENDPOINT
+              value: "true"
+            - name: SELF_REGISTRATION_SECRET
+              value: "self-registration"
+            - name: SECRET_CREATION_PREFIX
+              value: "{{ include "testkube-runner.fullname" . }}-{{ now | date "20060102150405" }}-"
+            - name: FLOATING_RUNNER
+              value: "{{ .Values.runner.register.floating }}"
+          envFrom:
+            - secretRef:
+                name: "{{ include "testkube-runner.fullname" . }}-{{ now | date "20060102150405" }}-self-registration"
+                optional: true
+          {{- end }}

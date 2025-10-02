@@ -1,0 +1,49 @@
+{{- if and .Values.enabled .Values.webhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.webhook.name }}
+  annotations:
+    {{- if .Values.webhook.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.webhook.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  labels:
+    app.kubernetes.io/component: admission-webhook
+    {{- include "testkube-operator.labels" . | nindent 4 }}
+    {{- with .Values.webhook.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  {{- if .Values.webhook.namespaceSelector }}
+  namespaceSelector:
+  {{- toYaml .Values.webhook.namespaceSelector | nindent 4 }}
+  {{- end }}
+  clientConfig:
+    service:
+      name: {{ include "testkube-operator.webhookServiceName" . }}
+      namespace: {{ include "testkube-operator.namespace" . }}
+      path: /validate-tests-testkube-io-v1-testtrigger
+  failurePolicy: Fail
+  name: vtesttrigger.kb.io
+  rules:
+  - apiGroups:
+    - tests.testkube.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - testtriggers
+    scope: Namespaced
+  sideEffects: None
+{{- end }}

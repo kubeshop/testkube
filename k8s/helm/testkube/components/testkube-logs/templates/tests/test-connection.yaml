@@ -1,0 +1,30 @@
+{{- if .Values.testConnection.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "testkube-logs.fullname" . }}-test-connection"
+  labels:
+    {{- include "global.labels.standard" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  annotations:
+    "helm.sh/hook": test
+    {{- if .Values.global.annotations}}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "testkube-logs.fullname" . }}:{{ .Values.service.httpPort }}']
+      {{- if .Values.testConnection.resources }}
+      resources: {{ toYaml .Values.testConnection.resources | nindent 8 }}
+      {{- end }}
+  restartPolicy: Never
+  {{- with .Values.testConnection.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
