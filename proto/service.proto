@@ -29,7 +29,10 @@ service TestKubeCloudAPI {
       // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.GetExecutionUpdates instead.
       option deprecated = true;
     };
-    rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
+    rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse) {
+      // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.SetExecutionScheduling instead.
+      option deprecated = true;
+    };
     rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
     rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
     rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
@@ -440,12 +443,14 @@ message GetExecutionResponse {
 }
 
 message InitExecutionRequest {
-  string id = 1;
-  string namespace = 2;
-  bytes signature = 3; // []TestWorkflowSignature
+  option deprecated = true;
+  string id = 1 [deprecated = true];
+  string namespace = 2 [deprecated = true];
+  bytes signature = 3 [deprecated = true]; // []TestWorkflowSignature
 }
 
 message InitExecutionResponse {
+  option deprecated = true;
 }
 
 message UpdateExecutionResultRequest {

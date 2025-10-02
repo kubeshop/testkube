@@ -42,6 +42,7 @@ type TestKubeCloudAPIClient interface {
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	// Deprecated: Do not use.
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
+	// Deprecated: Do not use.
 	InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error)
 	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error)
 	UpdateExecutionResult(ctx context.Context, in *UpdateExecutionResultRequest, opts ...grpc.CallOption) (*UpdateExecutionResultResponse, error)
@@ -475,6 +476,7 @@ func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequest, error)
 	return m, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error) {
 	out := new(InitExecutionResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/InitExecution", in, out, opts...)
@@ -942,6 +944,7 @@ type TestKubeCloudAPIServer interface {
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	// Deprecated: Do not use.
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
+	// Deprecated: Do not use.
 	InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error)
 	GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error)
 	UpdateExecutionResult(context.Context, *UpdateExecutionResultRequest) (*UpdateExecutionResultResponse, error)
