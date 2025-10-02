@@ -187,8 +187,8 @@ const file_testkube_testworkflow_execution_v1_execution_start_proto_rawDesc = ""
 	"\x12variable_overrides\x18\v \x03(\v2I.testkube.testworkflow.execution.v1.ExecutionStart.VariableOverridesEntryR\x11variableOverrides\x1aD\n" +
 	"\x16VariableOverridesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x98\x02\n" +
-	"&com.testkube.testworkflow.execution.v1B\x13ExecutionStartProtoP\x01Z.testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xbf\x02\n" +
+	"&com.testkube.testworkflow.execution.v1B\x13ExecutionStartProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
 	file_testkube_testworkflow_execution_v1_execution_start_proto_rawDescOnce sync.Once

@@ -68,8 +68,8 @@ var File_testkube_testworkflow_execution_v1_get_execution_updates_request_proto 
 const file_testkube_testworkflow_execution_v1_get_execution_updates_request_proto_rawDesc = "" +
 	"\n" +
 	"Ftestkube/testworkflow/execution/v1/get_execution_updates_request.proto\x12\"testkube.testworkflow.execution.v1\"\x1c\n" +
-	"\x1aGetExecutionUpdatesRequestB\xa4\x02\n" +
-	"&com.testkube.testworkflow.execution.v1B\x1fGetExecutionUpdatesRequestProtoP\x01Z.testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
+	"\x1aGetExecutionUpdatesRequestB\xcb\x02\n" +
+	"&com.testkube.testworkflow.execution.v1B\x1fGetExecutionUpdatesRequestProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
 	file_testkube_testworkflow_execution_v1_get_execution_updates_request_proto_rawDescOnce sync.Once
