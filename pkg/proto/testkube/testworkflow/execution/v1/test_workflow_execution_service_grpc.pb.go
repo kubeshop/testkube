@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TestWorkflowExecutionService_GetExecutionUpdates_FullMethodName = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/GetExecutionUpdates"
+	TestWorkflowExecutionService_GetExecutionUpdates_FullMethodName    = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/GetExecutionUpdates"
+	TestWorkflowExecutionService_SetExecutionScheduling_FullMethodName = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/SetExecutionScheduling"
 )
 
 // TestWorkflowExecutionServiceClient is the client API for TestWorkflowExecutionService service.
@@ -32,6 +33,11 @@ type TestWorkflowExecutionServiceClient interface {
 	// Executions that are understood by the Control Plane to be under the control of the
 	// calling client.
 	GetExecutionUpdates(ctx context.Context, in *GetExecutionUpdatesRequest, opts ...grpc.CallOption) (*GetExecutionUpdatesResponse, error)
+	// SetExecutionScheduling informs the server that the client has transitioned an execution
+	// to a SCHEDULING state. This should be initiated by a client immediately after an execution
+	// has been successfully applied to Kubernetes in order to prevent the execution from being
+	// sent in subsequent calls to GetExecutionUpdates.
+	SetExecutionScheduling(ctx context.Context, in *SetExecutionSchedulingRequest, opts ...grpc.CallOption) (*SetExecutionSchedulingResponse, error)
 }
 
 type testWorkflowExecutionServiceClient struct {
@@ -52,6 +58,16 @@ func (c *testWorkflowExecutionServiceClient) GetExecutionUpdates(ctx context.Con
 	return out, nil
 }
 
+func (c *testWorkflowExecutionServiceClient) SetExecutionScheduling(ctx context.Context, in *SetExecutionSchedulingRequest, opts ...grpc.CallOption) (*SetExecutionSchedulingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetExecutionSchedulingResponse)
+	err := c.cc.Invoke(ctx, TestWorkflowExecutionService_SetExecutionScheduling_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestWorkflowExecutionServiceServer is the server API for TestWorkflowExecutionService service.
 // All implementations must embed UnimplementedTestWorkflowExecutionServiceServer
 // for forward compatibility.
@@ -62,6 +78,11 @@ type TestWorkflowExecutionServiceServer interface {
 	// Executions that are understood by the Control Plane to be under the control of the
 	// calling client.
 	GetExecutionUpdates(context.Context, *GetExecutionUpdatesRequest) (*GetExecutionUpdatesResponse, error)
+	// SetExecutionScheduling informs the server that the client has transitioned an execution
+	// to a SCHEDULING state. This should be initiated by a client immediately after an execution
+	// has been successfully applied to Kubernetes in order to prevent the execution from being
+	// sent in subsequent calls to GetExecutionUpdates.
+	SetExecutionScheduling(context.Context, *SetExecutionSchedulingRequest) (*SetExecutionSchedulingResponse, error)
 	mustEmbedUnimplementedTestWorkflowExecutionServiceServer()
 }
 
@@ -74,6 +95,9 @@ type UnimplementedTestWorkflowExecutionServiceServer struct{}
 
 func (UnimplementedTestWorkflowExecutionServiceServer) GetExecutionUpdates(context.Context, *GetExecutionUpdatesRequest) (*GetExecutionUpdatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetExecutionUpdates not implemented")
+}
+func (UnimplementedTestWorkflowExecutionServiceServer) SetExecutionScheduling(context.Context, *SetExecutionSchedulingRequest) (*SetExecutionSchedulingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetExecutionScheduling not implemented")
 }
 func (UnimplementedTestWorkflowExecutionServiceServer) mustEmbedUnimplementedTestWorkflowExecutionServiceServer() {
 }
@@ -115,6 +139,24 @@ func _TestWorkflowExecutionService_GetExecutionUpdates_Handler(srv interface{}, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestWorkflowExecutionService_SetExecutionScheduling_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetExecutionSchedulingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestWorkflowExecutionServiceServer).SetExecutionScheduling(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestWorkflowExecutionService_SetExecutionScheduling_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestWorkflowExecutionServiceServer).SetExecutionScheduling(ctx, req.(*SetExecutionSchedulingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestWorkflowExecutionService_ServiceDesc is the grpc.ServiceDesc for TestWorkflowExecutionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -125,6 +167,10 @@ var TestWorkflowExecutionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetExecutionUpdates",
 			Handler:    _TestWorkflowExecutionService_GetExecutionUpdates_Handler,
+		},
+		{
+			MethodName: "SetExecutionScheduling",
+			Handler:    _TestWorkflowExecutionService_SetExecutionScheduling_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

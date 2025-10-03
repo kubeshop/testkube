@@ -99,8 +99,8 @@ const file_testkube_testworkflow_execution_v1_get_execution_updates_response_pro
 	"Gtestkube/testworkflow/execution/v1/get_execution_updates_response.proto\x12\"testkube.testworkflow.execution.v1\x1a8testkube/testworkflow/execution/v1/execution_start.proto\x1aCtestkube/testworkflow/execution/v1/execution_state_transition.proto\"\xbd\x01\n" +
 	"\x1bGetExecutionUpdatesResponse\x12H\n" +
 	"\x05start\x18\x01 \x03(\v22.testkube.testworkflow.execution.v1.ExecutionStartR\x05start\x12T\n" +
-	"\x06update\x18\x02 \x03(\v2<.testkube.testworkflow.execution.v1.ExecutionStateTransitionR\x06updateB\xa5\x02\n" +
-	"&com.testkube.testworkflow.execution.v1B GetExecutionUpdatesResponseProtoP\x01Z.testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
+	"\x06update\x18\x02 \x03(\v2<.testkube.testworkflow.execution.v1.ExecutionStateTransitionR\x06updateB\xcc\x02\n" +
+	"&com.testkube.testworkflow.execution.v1B GetExecutionUpdatesResponseProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
 	file_testkube_testworkflow_execution_v1_get_execution_updates_response_proto_rawDescOnce sync.Once

@@ -33,4 +33,8 @@ message ExecutionStart {
   // via the Control Plane if the workflow is in a different location inaccessible
   // to the client.
   string workflow_name = 10;
+  // variable_overrides indicates values that should be used to override pre-set variables when executing
+  // this instance of the workflow execution. Keys may refer to known variables, and the values to the
+  // override values. Unknown keys may be ignored.
+  map<string, string> variable_overrides = 11;
 }

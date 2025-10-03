@@ -4,6 +4,8 @@ package testkube.testworkflow.execution.v1;
 
 import "testkube/testworkflow/execution/v1/get_execution_updates_request.proto";
 import "testkube/testworkflow/execution/v1/get_execution_updates_response.proto";
+import "testkube/testworkflow/execution/v1/set_execution_scheduling_request.proto";
+import "testkube/testworkflow/execution/v1/set_execution_scheduling_response.proto";
 
 // TestWorkflowExecutionService contains RPCs related to TestWorkflowExecutions.
 service TestWorkflowExecutionService {
@@ -11,4 +13,9 @@ service TestWorkflowExecutionService {
   // Executions that are understood by the Control Plane to be under the control of the
   // calling client.
   rpc GetExecutionUpdates(GetExecutionUpdatesRequest) returns (GetExecutionUpdatesResponse);
+  // SetExecutionScheduling informs the server that the client has transitioned an execution
+  // to a SCHEDULING state. This should be initiated by a client immediately after an execution
+  // has been successfully applied to Kubernetes in order to prevent the execution from being
+  // sent in subsequent calls to GetExecutionUpdates.
+  rpc SetExecutionScheduling(SetExecutionSchedulingRequest) returns (SetExecutionSchedulingResponse);
 }

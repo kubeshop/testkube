@@ -9,9 +9,8 @@ import (
 	"time"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
@@ -129,18 +128,22 @@ func NewGRPCConnectionWithTracing(
 	if err != nil {
 		return client, fmt.Errorf("create new grpc client: %w", err)
 	}
-	var eg errgroup.Group
-	eg.Go(func() error {
-		if !client.WaitForStateChange(ctx, connectivity.Ready) {
-			return context.DeadlineExceeded
+
+	// Wait for connection to go ready.
+	for {
+		s := client.GetState()
+		if s == connectivity.Idle {
+			client.Connect()
 		}
-		return nil
-	})
-	client.Connect()
-	if err := eg.Wait(); err != nil {
-		return client, fmt.Errorf("connection did not go ready: %w", err)
+		if s == connectivity.Ready {
+			// Successfully connected.
+			return client, nil
+		}
+		// Wait for transition away from current state.
+		if !client.WaitForStateChange(ctx, s) {
+			return client, ctx.Err()
+		}
 	}
-	return client, nil
 }
 
 func rootCAs(tlsConfig *tls.Config, file ...string) error {
