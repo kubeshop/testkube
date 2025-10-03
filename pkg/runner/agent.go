@@ -45,7 +45,7 @@ type agentLoop struct {
 }
 
 type AgentLoop interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, withRunnerRequests bool) error
 }
 
 func newAgentLoop(
@@ -72,7 +72,7 @@ func newAgentLoop(
 	}
 }
 
-func (a *agentLoop) Start(ctx context.Context) error {
+func (a *agentLoop) Start(ctx context.Context, withRunnerRequests bool) error {
 	reconnectionLoop := func(name string, fn func(context.Context) error) func() {
 		return func() {
 			for {
@@ -110,7 +110,7 @@ func (a *agentLoop) Start(ctx context.Context) error {
 	wg.Go(reconnectionLoop("service notifications loop", a.loopServiceNotifications))
 	wg.Go(reconnectionLoop("parallel steps notifications loop", a.loopParallelStepNotifications))
 
-	if a.proContext.NewArchitecture {
+	if withRunnerRequests {
 		wg.Go(reconnectionLoop("runners loop", a.loopRunnerRequests))
 	}
 

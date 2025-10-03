@@ -52,6 +52,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
+	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -393,11 +394,19 @@ func main() {
 	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
+	runner := runner2.New(
+		executionWorker,
+		configMapConfig,
+		client,
+		eventsEmitter,
+		metrics,
+		proContext,
+		runnerOpts.StorageSkipVerify,
+		runnerOpts.GlobalTemplate,
+	)
 	runnerService := runner2.NewService(
 		log.DefaultLogger,
 		eventsEmitter,
-		metrics,
-		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
 			DashboardUrl:   proContext.DashboardURI,
@@ -406,10 +415,41 @@ func main() {
 		proContext,
 		executionWorker,
 		runnerOpts,
+		runner,
 	)
+
+	runnerClient := runnergrpc.NewClient(
+		grpcConn,
+		log.DefaultLogger,
+		runner,
+		proContext.APIKey,
+		proContext.OrgID,
+		testworkflowconfig.ControlPlaneConfig{
+			DashboardUrl:   proContext.DashboardURI,
+			CDEventsTarget: cfg.CDEventsTarget,
+		},
+		testWorkflowsClient,
+	)
+
 	if !cfg.DisableRunner {
 		g.Go(func() error {
-			return runnerService.Start(ctx)
+			// Check if the new client is supported by the control plane.
+			// If not then just start up the existing implementation.
+			if !runnerClient.IsSupported(ctx, proContext.EnvID) {
+				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
+				return runnerService.Start(ctx, proContext.NewArchitecture)
+			}
+			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
+			// If the client is supported then start both services/clients.
+			var eg errgroup.Group
+			eg.Go(func() error {
+				// Start the older service but without the legacy execution RPC loop.
+				return runnerService.Start(ctx, false)
+			})
+			eg.Go(func() error {
+				return runnerClient.Start(ctx, proContext.EnvID)
+			})
+			return eg.Wait()
 		})
 	}
 	lazyRunner.Set(runnerService)
