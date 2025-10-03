@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -117,4 +118,33 @@ func (w *Webhook) Equals(other *Webhook) bool {
 	other.Created = otherCreated
 
 	return result
+}
+
+func (w *Webhook) ConvertDots(fn func(string) string) *Webhook {
+	if w == nil {
+		return w
+	}
+
+	if w.Labels != nil {
+		w.Labels = convertDotsInMap(w.Labels, fn)
+	}
+	if w.Annotations != nil {
+		w.Annotations = convertDotsInMap(w.Annotations, fn)
+	}
+	if w.Headers != nil {
+		w.Headers = convertDotsInMap(w.Headers, fn)
+	}
+	if w.Config != nil {
+		w.Config = convertDotsInMap(w.Config, fn)
+	}
+
+	return w
+}
+
+func (w *Webhook) EscapeDots() *Webhook {
+	return w.ConvertDots(utils.EscapeDots)
+}
+
+func (w *Webhook) UnscapeDots() *Webhook {
+	return w.ConvertDots(utils.UnescapeDots)
 }

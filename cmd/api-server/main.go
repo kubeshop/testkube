@@ -509,7 +509,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowsKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
 						}
@@ -532,7 +532,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
 						}
@@ -555,7 +555,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := webhooksKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced Webhook from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced Webhook from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include Webhook in Kubernetes", "error", err)
 						}
@@ -580,7 +580,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowsCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
 						}
@@ -603,7 +603,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
 						}
@@ -626,7 +626,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := webhooksCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced Webhook from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced Webhook from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include Webhook in Control Plane", "error", err)
 						}
