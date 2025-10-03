@@ -39,7 +39,7 @@ func (s *TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
-			webhook = webhooksmapper.MapAPIToCRD(request)
+			webhook = webhooksmapper.MapAPICreateRequestToCRD(request)
 			webhook.Namespace = s.Namespace
 		}
 

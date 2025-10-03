@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/repository/result"
