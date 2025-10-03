@@ -48,18 +48,18 @@ func (s *DeprecatedTestkubeAPI) OauthHandler() fiber.Handler {
 		}
 		code := c.Query("code", "")
 		if code == "" {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("Code was not provided"))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("Code was not provided")) //nolint:staticcheck // considered legacy code to be deleted
 		}
 
 		if SlackBotClientID == "" && SlackBotClientSecret == "" {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nSlack secrets are not set\n"))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nSlack secrets are not set\n")) //nolint:staticcheck // considered legacy code to be deleted
 		}
 
 		var slackClient = thttp.NewClient()
 
 		req, err := http.NewRequest(http.MethodGet, slackAccessUrl, nil)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to create request: %+v\n", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to create request: %+v\n", err)) //nolint:staticcheck // considered legacy code to be deleted
 		}
 
 		req.SetBasicAuth(SlackBotClientID, SlackBotClientSecret)
@@ -70,25 +70,25 @@ func (s *DeprecatedTestkubeAPI) OauthHandler() fiber.Handler {
 
 		resp, err := slackClient.Do(req)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to get access token: %+v\n", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nFailed to get access token: %+v\n", err)) //nolint:staticcheck // considered legacy code to be deleted
 		}
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
 
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nInvalid format for access token: %+v", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nInvalid format for access token: %+v", err)) //nolint:staticcheck // considered legacy code to be deleted
 		}
 
 		oResp := oauthResponse{}
 		err = json.Unmarshal(body, &oResp)
 
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nUnable to unmarshal the response: %+v", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("\nUnable to unmarshal the response: %+v", err)) //nolint:staticcheck // considered legacy code to be deleted
 		}
 
 		if len(oResp.AccessToken) == 0 {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Unable to get the response from the slack oauth endpoint"))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Unable to get the response from the slack oauth endpoint")) //nolint:staticcheck // considered legacy code to be deleted
 		}
 
 		_, err = fmt.Fprintf(c, "Authentification was succesfull!\nPlease use the following token in the helm values for slackToken : %s", oResp.AccessToken)

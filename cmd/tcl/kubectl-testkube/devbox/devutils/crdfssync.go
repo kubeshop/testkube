@@ -166,7 +166,6 @@ func (c *CRDFSSync) deleteTemplate(name string) {
 				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.templates = append(c.templates[:i], c.templates[i+1:]...)
-			i--
 			return
 		}
 	}
@@ -180,7 +179,6 @@ func (c *CRDFSSync) deleteWorkflow(name string) {
 				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.workflows = append(c.workflows[:i], c.workflows[i+1:]...)
-			i--
 			return
 		}
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 func MapAllTargetsApiToGrpc(ts []testkube.ExecutionTarget) []*cloud.ExecutionTarget {
-	if ts == nil || len(ts) == 0 {
+	if len(ts) == 0 {
 		return nil
 	}
 	targets := make([]*cloud.ExecutionTarget, len(ts))
@@ -42,7 +42,7 @@ func MapTargetApiToGrpc(t *testkube.ExecutionTarget) *cloud.ExecutionTarget {
 }
 
 func MapAllTargetsKubeToGrpc(ts []commonv1.Target) []*cloud.ExecutionTarget {
-	if ts == nil || len(ts) == 0 {
+	if len(ts) == 0 {
 		return nil
 	}
 	targets := make([]*cloud.ExecutionTarget, len(ts))

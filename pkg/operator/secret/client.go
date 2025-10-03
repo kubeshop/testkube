@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -133,14 +132,14 @@ func (c *Client) DeleteAll(selector string) error {
 }
 
 // NewSpec is a method to return secret spec
-func NewSpec(id, namespace, label string, labels, stringData map[string]string) *v1.Secret {
-	configuration := &v1.Secret{
+func NewSpec(id, namespace, label string, labels, stringData map[string]string) *corev1.Secret {
+	configuration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
 			Namespace: namespace,
 			Labels:    map[string]string{"testkube": label, "createdBy": "testkube"},
 		},
-		Type:       v1.SecretTypeOpaque,
+		Type:       corev1.SecretTypeOpaque,
 		StringData: stringData,
 	}
 

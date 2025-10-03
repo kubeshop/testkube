@@ -91,9 +91,9 @@ func TestNATS_Integration(t *testing.T) {
 	defer nc.Close()
 
 	// and automatic JSON encoder
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 	assert.NoError(t, err)
-	defer ec.Close()
+	defer ec.Close() //nolint:staticcheck
 
 	// and NATS event bus
 	n := NewNATSBus(ec)

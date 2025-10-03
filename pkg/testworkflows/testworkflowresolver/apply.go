@@ -361,7 +361,6 @@ func addGlobalTemplateRefToStep(step *testworkflowsv1.Step, ref testworkflowsv1.
 	for i := range step.Steps {
 		addGlobalTemplateRefToStep(&step.Steps[i], ref)
 	}
-	return
 }
 
 func addGlobalTemplateRefToSpec(spec *testworkflowsv1.TestWorkflowSpec, ref testworkflowsv1.TemplateRef) {
@@ -378,7 +377,6 @@ func addGlobalTemplateRefToSpec(spec *testworkflowsv1.TestWorkflowSpec, ref test
 	for i := range spec.After {
 		addGlobalTemplateRefToStep(&spec.After[i], ref)
 	}
-	return
 }
 
 func AddGlobalTemplateRef(t *testworkflowsv1.TestWorkflow, ref testworkflowsv1.TemplateRef) {

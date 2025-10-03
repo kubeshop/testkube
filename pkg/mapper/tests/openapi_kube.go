@@ -2,7 +2,6 @@ package tests
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -213,9 +212,9 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	return mappertcl.MapExecutionRequestToSpecExecutionRequest(executionRequest, result)
 }
 
-func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []v1.LocalObjectReference) {
+func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []corev1.LocalObjectReference) {
 	for _, secret := range secrets {
-		res = append(res, v1.LocalObjectReference{Name: secret.Name})
+		res = append(res, corev1.LocalObjectReference{Name: secret.Name})
 	}
 	return res
 }
@@ -231,7 +230,7 @@ func mapEnvReferences(envs []testkube.EnvReference) []testsv3.EnvReference {
 		}
 
 		res = append(res, testsv3.EnvReference{
-			LocalObjectReference: v1.LocalObjectReference{
+			LocalObjectReference: corev1.LocalObjectReference{
 				Name: env.Reference.Name,
 			},
 			Mount:          env.Mount,

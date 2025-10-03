@@ -21,7 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	executionsmapper "github.com/kubeshop/testkube/pkg/mapper/executions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	tests "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
+	"github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/operator/secret"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
@@ -527,7 +527,6 @@ func (s *DeprecatedTestkubeAPI) AbortTestHandler() fiber.Handler {
 			res, errAbort := s.Executor.Abort(ctx, &execution)
 			if errAbort != nil {
 				s.Log.Errorw("aborting execution failed", "execution", execution, "error", errAbort)
-				err = errAbort
 			}
 			s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
 			results = append(results, *res)

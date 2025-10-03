@@ -47,20 +47,20 @@ const (
 // Gettable is an interface of gettable objects
 type Gettable interface {
 	testkube.Test |
-	testkube.TestSuite |
-	testkube.Webhook |
-	testkube.WebhookTemplate |
-	testkube.TestUpsertRequest |
-	testkube.TestSuiteUpsertRequest |
-	testkube.ExecutorUpsertRequest |
-	testkube.WebhookCreateRequest |
-	testkube.WebhookTemplateCreateRequest |
-	testkube.TestTrigger |
-	testkube.TestTriggerUpsertRequest |
-	testkube.TestSource |
-	testkube.TestSourceUpsertRequest |
-	testkube.Template |
-	testkube.TemplateCreateRequest
+		testkube.TestSuite |
+		testkube.Webhook |
+		testkube.WebhookTemplate |
+		testkube.TestUpsertRequest |
+		testkube.TestSuiteUpsertRequest |
+		testkube.ExecutorUpsertRequest |
+		testkube.WebhookCreateRequest |
+		testkube.WebhookTemplateCreateRequest |
+		testkube.TestTrigger |
+		testkube.TestTriggerUpsertRequest |
+		testkube.TestSource |
+		testkube.TestSourceUpsertRequest |
+		testkube.Template |
+		testkube.TemplateCreateRequest
 }
 
 // ExecuteTemplate executes crd template

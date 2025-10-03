@@ -261,7 +261,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 func (w *worker) Notifications(ctx context.Context, id string, opts executionworkertypes.NotificationsOptions) executionworkertypes.NotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -296,7 +296,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 func (w *worker) StatusNotifications(ctx context.Context, id string, opts executionworkertypes.StatusNotificationsOptions) executionworkertypes.StatusNotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewStatusNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -411,7 +411,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 func (w *worker) Get(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, options.Hints)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +450,7 @@ func (w *worker) Get(ctx context.Context, id string, options executionworkertype
 func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, options.Hints)
 	if err != nil {
 		return nil, err
 	}

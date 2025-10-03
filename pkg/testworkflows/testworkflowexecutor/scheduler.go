@@ -480,7 +480,6 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			}
 		}
 	}
-	intermediateSelectors = nil
 
 	// Resolve executions for each selector
 	//

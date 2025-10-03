@@ -56,7 +56,7 @@ func CreateDeprecatedSystem(
 	configMapConfig configRepo.Repository,
 	secretConfig testkube.SecretConfig,
 	grpcClient cloud.TestKubeCloudAPIClient,
-	natsConn *nats.EncodedConn,
+	natsConn *nats.EncodedConn, //nolint:staticcheck
 	eventsEmitter *event.Emitter,
 	eventBus *bus.NATSBus,
 	inspector imageinspector.Inspector,

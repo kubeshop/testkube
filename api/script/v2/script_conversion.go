@@ -72,7 +72,7 @@ func (dst *Script) ConvertFrom(srcRaw conversion.Hub) error {
 
 	if src.Spec.Repository != nil {
 		dst.Spec.Content = &ScriptContent{
-			Type_: string(executorv1.ScriptContentTypeGitDir),
+			Type_: string(executorv1.ScriptContentTypeGitDir), //nolint:staticcheck
 			Repository: &Repository{
 				Type_:  src.Spec.Repository.Type_,
 				Uri:    src.Spec.Repository.Uri,

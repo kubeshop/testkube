@@ -63,9 +63,8 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 		}
 
 		// Deep copy object, as it will have modifications
-		switch cr := cr.(type) {
-		case runtime.Object:
-			cr = cr.DeepCopyObject()
+		if obj, ok := cr.(runtime.Object); ok {
+			cr = obj.DeepCopyObject()
 		}
 
 		// Clean messy metadata

@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -119,7 +118,7 @@ func GetIngressAddress(clientSet kubernetes.Interface, ingressName string, names
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("Getting ingress failed with timeout(%d sec) previous err: %w.", period, err)
+		err = fmt.Errorf("getting ingress failed with timeout(%d sec) previous err: %w", period, err)
 	case <-processDone:
 	}
 
@@ -285,7 +284,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 	if err != nil {
 		return err
 	}
-	svc, err := clientSet.CoreV1().Services(namespace).Get(ctx, serviceName, v1.GetOptions{})
+	svc, err := clientSet.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -301,7 +300,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 	pods, err := clientSet.
 		CoreV1().
 		Pods(namespace).
-		List(ctx, v1.ListOptions{
+		List(ctx, metav1.ListOptions{
 			LabelSelector: labels.SelectorFromSet(labels.Set(svc.Spec.Selector)).String(),
 		})
 	if err != nil {
@@ -384,14 +383,14 @@ func IsPodOfServiceRunning(ctx context.Context, namespace, serviceName string) (
 		return false, err
 	}
 
-	svc, err := clientSet.CoreV1().Services(namespace).Get(ctx, serviceName, v1.GetOptions{})
+	svc, err := clientSet.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
 	pods, err := clientSet.
 		CoreV1().
 		Pods(namespace).
-		List(ctx, v1.ListOptions{
+		List(ctx, metav1.ListOptions{
 			LabelSelector: labels.SelectorFromSet(labels.Set(svc.Spec.Selector)).String(),
 		})
 	if err != nil {

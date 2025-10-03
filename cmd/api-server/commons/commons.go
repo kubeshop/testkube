@@ -456,7 +456,7 @@ func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.Sl
 		testkube.AllEventTypes, envs)
 }
 
-func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
+func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
@@ -464,7 +464,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 
 		log.DefaultLogger.Info("started embedded NATS server")
 
-		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 		ExitOnError("creating NATS connection", err)
 		return conn
 	}

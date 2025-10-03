@@ -304,7 +304,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
 		}
 	}
-	containerStages = nil
 
 	// Determine FS Group for the containers
 	fsGroup := common.Ptr(constants.DefaultFsGroup)

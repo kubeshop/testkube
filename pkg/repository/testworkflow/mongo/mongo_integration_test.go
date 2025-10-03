@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -14,10 +13,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-)
-
-var (
-	cfg, _ = config.Get()
 )
 
 func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {

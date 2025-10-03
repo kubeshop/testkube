@@ -266,10 +266,8 @@ func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards
 	}
 	if maxCount != nil && *maxCount > minShards {
 		count = &minShards
-		maxCount = nil
 	} else if maxCount != nil {
 		count = maxCount
-		maxCount = nil
 	}
 
 	return &ParamsSpec{

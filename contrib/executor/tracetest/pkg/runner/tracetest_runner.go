@@ -9,7 +9,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -66,7 +65,7 @@ func (e *tracetestCloudExecutor) Execute(envManager *env.Manager, execution test
 	_, err = executor.Run("", configCommand, envManager, configArgs...)
 
 	if err != nil {
-		outputPkg.PrintLogf("%s Failed to configure Tracetest CLI %v", ui.IconCross, err)
+		output.PrintLogf("%s Failed to configure Tracetest CLI %v", ui.IconCross, err)
 		return model.Result{}, err
 	}
 

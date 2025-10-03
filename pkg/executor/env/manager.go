@@ -267,8 +267,6 @@ func (m Manager) GetReferenceVars(variables map[string]testkube.Variable) {
 			variables[name] = variable
 		}
 	}
-
-	return
 }
 
 // ObfuscateSecrets obfuscates secret values

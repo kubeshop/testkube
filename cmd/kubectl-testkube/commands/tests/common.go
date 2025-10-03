@@ -18,7 +18,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
-	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/test/detector"
@@ -74,7 +73,7 @@ func printExecutionDetails(cmd *cobra.Command, w io.Writer, execution testkube.E
 	return nil
 }
 
-func DownloadTestArtifacts(id, dir, format string, masks []string, client apiclientv1.Client, outputPretty bool) {
+func DownloadTestArtifacts(id, dir, format string, masks []string, client client.Client, outputPretty bool) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts", err)
 
@@ -87,7 +86,7 @@ func DownloadTestArtifacts(id, dir, format string, masks []string, client apicli
 	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive, outputPretty)
 }
 
-func DownloadTestWorkflowArtifacts(id, dir, format string, masks []string, client apiclientv1.Client, outputPretty bool) {
+func DownloadTestWorkflowArtifacts(id, dir, format string, masks []string, client client.Client, outputPretty bool) {
 	artifacts, err := client.GetTestWorkflowExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts", err)
 
@@ -197,7 +196,7 @@ func downloadArtifacts(
 	}
 }
 
-func watchLogs(id string, silentMode bool, client apiclientv1.Client) error {
+func watchLogs(id string, silentMode bool, client client.Client) error {
 	ui.Info("Getting logs from test job", id)
 
 	logs, err := client.Logs(id)
@@ -241,7 +240,7 @@ func watchLogs(id string, silentMode bool, client apiclientv1.Client) error {
 	return result
 }
 
-func watchLogsV2(id string, silentMode bool, client apiclientv1.Client) error {
+func watchLogsV2(id string, silentMode bool, client client.Client) error {
 	ui.Info("Getting logs from test job", id)
 
 	logs, err := client.LogsV2(id)
@@ -680,7 +679,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 }
 
 // NewUpsertTestOptionsFromFlags creates upsert test options from command flags
-func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestOptions, err error) {
+func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options client.UpsertTestOptions, err error) {
 	content, err := newContentFromFlags(cmd)
 	if err != nil {
 		return options, fmt.Errorf("creating content from passed parameters %w", err)
@@ -710,7 +709,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	if cmd.Flag("source") != nil {
 		sourceName = cmd.Flag("source").Value.String()
 	}
-	options = apiclientv1.UpsertTestOptions{
+	options = client.UpsertTestOptions{
 		Name:        name,
 		Description: description,
 		Type_:       executorType,
@@ -821,7 +820,7 @@ func uploadFiles(client client.Client, parentName string, parentType client.Test
 }
 
 // NewUpdateTestOptionsFromFlags creates update test options from command flags
-func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestOptions, err error) {
+func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options client.UpdateTestOptions, err error) {
 	contentUpdate, err := newContentUpdateFromFlags(cmd)
 	if err != nil {
 		return options, fmt.Errorf("creating content from passed parameters %w", err)
