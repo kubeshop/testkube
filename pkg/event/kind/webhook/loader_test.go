@@ -3,8 +3,8 @@ package webhook
 import (
 	"testing"
 
-	gomock "go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 
 	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
