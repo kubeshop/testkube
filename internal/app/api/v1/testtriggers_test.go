@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	gomock "go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/config"

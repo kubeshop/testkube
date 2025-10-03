@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	gomock "go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
