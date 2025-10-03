@@ -53,6 +53,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
+	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -415,9 +416,50 @@ func main() {
 		runnerOpts,
 		runner,
 	)
+
+	runnerClient := runnergrpc.NewClient(
+		grpcConn,
+		log.DefaultLogger,
+		runner,
+		proContext.APIKey,
+		proContext.OrgID,
+		testworkflowconfig.ControlPlaneConfig{
+			DashboardUrl:   proContext.DashboardURI,
+			CDEventsTarget: cfg.CDEventsTarget,
+		},
+		testWorkflowsClient,
+	)
+
 	if !cfg.DisableRunner {
 		g.Go(func() error {
-			return runnerService.Start(ctx, proContext.NewArchitecture)
+			// Check if the new client is supported by the control plane.
+			// If not then just start up the existing implementation.
+			// Here we are using a context with a timeout because the client and/or server may not have TLS implemented as it was
+			// not previously enforced, however it is required with the new client implementation to secure authentication tokens.
+			// gRPC does not provide a specific error for an attempt to transmit credentials over an unencrypted connection so to
+			// prevent the fallback to the previous insecure behaviour we must instead wait to see whether connectivity can be
+			// established. The repercussions of this is that the agent will eagerly fallback to the insecure and legacy behaviour
+			// and so bringing up an agent before networking with the Control Plane has been established, or during a Control Plane
+			// outage will cause a fallback to the previous behaviour.
+			// This timeout should be removed once TLS is enforced across deployments.
+			supportedCtx, cancel := context.WithTimeout(ctx, time.Minute)
+			if !runnerClient.IsSupported(supportedCtx, proContext.EnvID) {
+				cancel()
+				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
+				return runnerService.Start(ctx, proContext.NewArchitecture)
+			}
+			cancel()
+			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
+			// If the client is supported then start both services/clients.
+			var eg errgroup.Group
+			eg.Go(func() error {
+				// Start the older service but without the legacy execution RPC loop.
+				return runnerService.Start(ctx, false)
+			})
+			eg.Go(func() error {
+				return runnerClient.Start(ctx, proContext.EnvID)
+			})
+			return eg.Wait()
 		})
 	}
 	lazyRunner.Set(runnerService)
