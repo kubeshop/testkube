@@ -83,7 +83,7 @@ func bumpPrerelease(version *semver.Version) *semver.Version {
 		num, err := strconv.Atoi(matches[0])
 		if err == nil {
 			num = num + 1
-			prerelease = strings.Replace(prerelease, matches[0], fmt.Sprintf("%03d", num), -1)
+			prerelease = strings.ReplaceAll(prerelease, matches[0], fmt.Sprintf("%03d", num))
 			v, _ := version.SetPrerelease(prerelease)
 			return &v
 

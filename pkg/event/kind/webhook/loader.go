@@ -107,7 +107,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		}
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
-		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
+		name := fmt.Sprintf("%s.%s", webhook.Namespace, webhook.Name)
 
 		listeners = append(
 			listeners,
@@ -129,12 +129,12 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		s *map[string]string
 	}{
 		{
-			&dst.ObjectMeta.Labels,
-			&src.ObjectMeta.Labels,
+			&dst.Labels,
+			&src.Labels,
 		},
 		{
-			&dst.ObjectMeta.Annotations,
-			&src.ObjectMeta.Annotations,
+			&dst.Annotations,
+			&src.Annotations,
 		},
 		{
 			&dst.Spec.Headers,

@@ -250,7 +250,7 @@ func (c *CRDFSSync) loadFile(path string) error {
 			break
 		}
 
-		if obj["kind"] == nil || !(obj["kind"].(string) == "TestWorkflow" || obj["kind"].(string) == "TestWorkflowTemplate") {
+		if obj["kind"] == nil || (obj["kind"].(string) != "TestWorkflow" && obj["kind"].(string) != "TestWorkflowTemplate") {
 			continue
 		}
 

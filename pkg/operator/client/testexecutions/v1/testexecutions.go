@@ -3,9 +3,10 @@ package testexecutions
 import (
 	"context"
 
-	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
 )
 
 //go:generate mockgen -destination=./mock_testexecutions.go -package=testexecutions "github.com/kubeshop/testkube/pkg/operator/client/testexecutions/v1" Interface

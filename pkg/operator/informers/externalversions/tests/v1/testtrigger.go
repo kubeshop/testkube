@@ -18,11 +18,12 @@ package v1
 
 import (
 	"context"
+	"time"
+
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/operator/informers/externalversions/internalinterfaces"
 	testtriggerslisterv1 "github.com/kubeshop/testkube/pkg/operator/listers/tests/v1"
-	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

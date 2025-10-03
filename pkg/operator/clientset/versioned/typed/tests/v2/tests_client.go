@@ -21,8 +21,9 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned/scheme"
 
-	testsuitev2 "github.com/kubeshop/testkube/api/testsuite/v2"
 	"k8s.io/client-go/rest"
+
+	testsuitev2 "github.com/kubeshop/testkube/api/testsuite/v2"
 )
 
 type TestsV2Interface interface {

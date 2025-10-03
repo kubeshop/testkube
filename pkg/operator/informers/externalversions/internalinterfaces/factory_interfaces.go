@@ -17,8 +17,9 @@ limitations under the License.
 package internalinterfaces
 
 import (
-	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	time "time"
+
+	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

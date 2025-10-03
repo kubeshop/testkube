@@ -25,7 +25,7 @@ func (n *logsReader) End(err error) {
 		if err != nil {
 			n.err.Store(err)
 		}
-		n.WriteCloser.Close()
+		n.Close()
 	}
 }
 

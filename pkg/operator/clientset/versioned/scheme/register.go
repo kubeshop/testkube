@@ -17,16 +17,17 @@ limitations under the License.
 package scheme
 
 import (
-	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
-	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
-	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
-	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
+	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
 var Scheme = runtime.NewScheme()

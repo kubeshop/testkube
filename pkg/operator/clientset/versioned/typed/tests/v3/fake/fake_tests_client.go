@@ -17,9 +17,10 @@ limitations under the License.
 package fake
 
 import (
-	v3 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/typed/tests/v3"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
+
+	v3 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/typed/tests/v3"
 )
 
 type FakeTestsV3 struct {

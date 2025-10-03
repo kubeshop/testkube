@@ -142,7 +142,7 @@ func getVariableWithWarning(envManager *env.Manager, variableName string, requir
 
 	if !ok {
 		outputPkg.PrintLog(warningMessage)
-		return "", fmt.Errorf(variableName + " variable was not found")
+		return "", fmt.Errorf("%s", variableName+" variable was not found")
 	}
 
 	return strings.ReplaceAll(v.Value, "\"", ""), nil

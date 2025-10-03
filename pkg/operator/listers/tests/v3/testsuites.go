@@ -17,11 +17,12 @@ limitations under the License.
 package v3
 
 import (
-	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
+
+	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 )
 
 // TestSuiteLister helps list TestSuites.

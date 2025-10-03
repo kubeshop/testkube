@@ -3,12 +3,13 @@ package executors
 import (
 	"testing"
 
-	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
+
+	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
 )
 
 func TestWebhooks(t *testing.T) {
@@ -72,7 +73,7 @@ func TestWebhooks(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, w.Name, created.Name)
 
-				res, err := wClient.Get(w.ObjectMeta.Name)
+				res, err := wClient.Get(w.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, w.Name, res.Name)
 			}

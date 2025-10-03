@@ -52,7 +52,7 @@ func (v OfflineLicenseValidator) Validate(_ any) (r validators.ValidationResult)
 			WithDetails(fmt.Sprintf("Your license file expired in %s, please renew your license", l.License.Expiry)))
 	}
 
-	left := l.License.Expiry.Sub(time.Now())
+	left := time.Until(*l.License.Expiry)
 	return r.WithValidStatus().WithAdditionalInfo(fmt.Sprintf("license is still valid %d days", int(left.Hours())/24))
 }
 

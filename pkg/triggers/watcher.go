@@ -410,7 +410,7 @@ func (s *Service) deprecatedPodEventHandler(ctx context.Context) cache.ResourceE
 			}
 			if oldPod.Namespace == s.testkubeNamespace && oldPod.Labels["job-name"] != "" && oldPod.Labels[testkube.TestLabelTestName] != "" &&
 				newPod.Namespace == s.testkubeNamespace && newPod.Labels["job-name"] != "" && newPod.Labels[testkube.TestLabelTestName] != "" &&
-				!(strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) || strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
+				(!strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) && !strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
 				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
 				s.metrics.IncTestTriggerEventCount("", string(testtrigger.ResourcePod), string(testtrigger.CauseEventUpdated), nil)
 				s.deprecatedCheckExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})

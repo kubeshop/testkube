@@ -91,7 +91,7 @@ func (s *DeprecatedTestkubeAPI) OauthHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Unable to get the response from the slack oauth endpoint"))
 		}
 
-		_, err = c.WriteString(fmt.Sprintf("Authentification was succesfull!\nPlease use the following token in the helm values for slackToken : %s", oResp.AccessToken))
+		_, err = fmt.Fprintf(c, "Authentification was succesfull!\nPlease use the following token in the helm values for slackToken : %s", oResp.AccessToken)
 		return err
 	}
 }

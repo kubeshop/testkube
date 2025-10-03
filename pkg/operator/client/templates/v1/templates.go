@@ -3,11 +3,12 @@ package templates
 import (
 	"context"
 
-	templatev1 "github.com/kubeshop/testkube/api/template/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	templatev1 "github.com/kubeshop/testkube/api/template/v1"
 )
 
 //go:generate mockgen -destination=./mock_templates.go -package=templates "github.com/kubeshop/testkube/pkg/operator/client/templates/v1" Interface

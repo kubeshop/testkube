@@ -12,10 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/operator/secret"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (

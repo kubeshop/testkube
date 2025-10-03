@@ -33,7 +33,7 @@ type Diagnostics struct {
 func (d Diagnostics) Run() error {
 
 	// for now we'll make validators concurrent
-	for groupName, _ := range d.Groups {
+	for groupName := range d.Groups {
 		ch, err := d.RunGroup(groupName)
 		if err != nil {
 			return err

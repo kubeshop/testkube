@@ -386,10 +386,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 // TODO: Allow fetching temporary logs too?
 func (w *worker) Logs(ctx context.Context, id string, options executionworkertypes.LogsOptions) utils.LogsReader {
 	reader := utils.NewLogsReader()
-	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
-		Hints:    options.Hints,
-		NoFollow: options.NoFollow,
-	})
+	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions(options))
 	if notifications.Err() != nil {
 		reader.End(notifications.Err())
 		return reader

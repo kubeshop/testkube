@@ -645,7 +645,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ArtifactRequest != nil {
 		emptyArtifact := true
-		if !(*executionRequest.ArtifactRequest == nil || (*executionRequest.ArtifactRequest).IsEmpty()) {
+		if *executionRequest.ArtifactRequest != nil && !(*executionRequest.ArtifactRequest).IsEmpty() {
 			if request.ArtifactRequest == nil {
 				request.ArtifactRequest = &testsv3.ArtifactRequest{}
 			}
@@ -705,7 +705,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.SlavePodRequest != nil {
 		emptyPodRequest := true
-		if !(*executionRequest.SlavePodRequest == nil || (*executionRequest.SlavePodRequest).IsEmpty()) {
+		if *executionRequest.SlavePodRequest != nil && !(*executionRequest.SlavePodRequest).IsEmpty() {
 			if request.SlavePodRequest == nil {
 				request.SlavePodRequest = &testsv3.PodRequest{}
 			}

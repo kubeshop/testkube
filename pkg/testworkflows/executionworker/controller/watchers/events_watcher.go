@@ -92,7 +92,7 @@ func (e *eventsWatcher) Started() <-chan struct{} {
 
 func (e *eventsWatcher) waitForOpts(opts <-chan metav1.ListOptions) {
 	select {
-	case v, _ := <-opts:
+	case v := <-opts:
 		e.mu.Lock()
 		e.opts = v
 		e.mu.Unlock()
@@ -226,10 +226,10 @@ func (e *eventsWatcher) watch() error {
 			// Save the latest resource version to recover
 			e.mu.Lock()
 			e.opts.ResourceVersion = object.ResourceVersion
-			if object.CreationTimestamp.Time.After(e.lastTs) {
+			if object.CreationTimestamp.After(e.lastTs) {
 				e.lastTs = object.CreationTimestamp.Time
 			}
-			if object.LastTimestamp.Time.After(e.lastTs) {
+			if object.LastTimestamp.After(e.lastTs) {
 				e.lastTs = object.LastTimestamp.Time
 			}
 			e.mu.Unlock()
@@ -259,7 +259,7 @@ func (e *eventsWatcher) cycle() {
 
 	// Read the initial data
 	started, finished := e.read(time.Time{}, 0)
-	result, _ := <-started
+	result := <-started
 	if result.err != nil {
 		e.cancel(result.err)
 		return
@@ -291,7 +291,7 @@ func (e *eventsWatcher) Update(t time.Duration) (int, error) {
 
 	// Start reading data
 	started, _ := e.read(time.Time{}, t)
-	result, _ := <-started
+	result := <-started
 	return result.count, result.err
 }
 
@@ -310,6 +310,6 @@ func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, 
 
 	// Start reading data
 	started, _ := e.read(tsInPast.Truncate(time.Second).Add(-1), timeout)
-	result, _ := <-started
+	result := <-started
 	return result.count, result.err
 }

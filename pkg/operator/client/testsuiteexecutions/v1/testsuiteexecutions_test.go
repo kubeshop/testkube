@@ -67,7 +67,7 @@ func TestTestSuiteExecutions(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, te.Name, created.Name)
 
-				res, err := tseClient.Get(te.ObjectMeta.Name)
+				res, err := tseClient.Get(te.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, te.Name, res.Name)
 			}
@@ -76,7 +76,7 @@ func TestTestSuiteExecutions(t *testing.T) {
 	t.Run("TestSuiteExecutionUpdate", func(t *testing.T) {
 		t.Run("Update new testsuiteexecutions", func(t *testing.T) {
 			for _, te := range testTestSuiteExecutions {
-				res, err := tseClient.Get(te.ObjectMeta.Name)
+				res, err := tseClient.Get(te.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, te.Name, res.Name)
 

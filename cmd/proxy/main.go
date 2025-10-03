@@ -49,7 +49,7 @@ func proxyPass(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("%s\n", body)
 
 	prefix := fmt.Sprintf("/api/v1/namespaces/%s/services/testkube-api-server:%d/proxy", *namespace, *apiPort)
-	req.URL.Path = strings.Replace(req.URL.Path, prefix, "", -1)
+	req.URL.Path = strings.ReplaceAll(req.URL.Path, prefix, "")
 
 	newReq := req.Clone(req.Context())
 	newReq.Body = io.NopCloser(bytes.NewReader(body))

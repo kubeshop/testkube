@@ -235,14 +235,15 @@ func (s *math) SafeResolve(m ...Machine) (v Expression, changed bool, err error)
 
 	// Fast track for cutting dead paths
 	if s.left.Static() != nil {
-		if s.operator == operatorAnd {
+		switch s.operator {
+		case operatorAnd:
 			b, err := s.left.Static().BoolValue()
 			if err == nil && !b {
 				return s.left, true, nil
 			} else if err == nil {
 				return s.right, true, nil
 			}
-		} else if s.operator == operatorOr {
+		case operatorOr:
 			b, err := s.left.Static().BoolValue()
 			if err == nil && b {
 				return s.left, true, nil
@@ -261,14 +262,15 @@ func (s *math) SafeResolve(m ...Machine) (v Expression, changed bool, err error)
 	// Fast track for cutting dead paths
 	t := s.left.Type()
 	if s.left.Static() == nil && s.right.Static() != nil && t != TypeUnknown && t == s.right.Type() && t == TypeBool {
-		if s.operator == operatorAnd {
+		switch s.operator {
+		case operatorAnd:
 			b, err := s.right.Static().BoolValue()
 			if err == nil && !b {
 				return s.right, true, nil
 			} else if err == nil {
 				return s.left, true, nil
 			}
-		} else if s.operator == operatorOr {
+		case operatorOr:
 			b, err := s.right.Static().BoolValue()
 			if err == nil && b {
 				return s.right, true, nil
