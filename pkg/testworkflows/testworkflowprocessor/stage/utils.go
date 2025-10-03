@@ -5,7 +5,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	quantity "k8s.io/apimachinery/pkg/api/resource"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
 func MapResourcesToKubernetesResources(resources *testworkflowsv1.Resources) (corev1.ResourceRequirements, error) {

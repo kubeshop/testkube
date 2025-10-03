@@ -20,28 +20,28 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 
-	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
-	testkubeexecutorinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/executor/v1"
-	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
+	"github.com/kubeshop/testkube/pkg/operator/informers/externalversions"
+	testkubeexecutorinformerv1 "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/executor/v1"
+	testkubeinformerv1 "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/tests/v1"
 
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 
-	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
-	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	testkubeinformerv3 "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/tests/v3"
+	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
 
 type k8sInformers struct {
@@ -410,7 +410,7 @@ func (s *Service) deprecatedPodEventHandler(ctx context.Context) cache.ResourceE
 			}
 			if oldPod.Namespace == s.testkubeNamespace && oldPod.Labels["job-name"] != "" && oldPod.Labels[testkube.TestLabelTestName] != "" &&
 				newPod.Namespace == s.testkubeNamespace && newPod.Labels["job-name"] != "" && newPod.Labels[testkube.TestLabelTestName] != "" &&
-				!(strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) || strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
+				(!strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) && !strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
 				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
 				s.metrics.IncTestTriggerEventCount("", string(testtrigger.ResourcePod), string(testtrigger.CauseEventUpdated), nil)
 				s.deprecatedCheckExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})

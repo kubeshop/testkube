@@ -22,7 +22,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -183,7 +183,7 @@ func (s *DeprecatedTestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 
 		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
-		defer c.Conn.Close()
+		defer c.Close()
 
 		logs, err := s.GetLogsStream(context.Background(), executionID)
 		if err != nil {
@@ -209,7 +209,7 @@ func (s *DeprecatedTestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
 		l.Debugw("getting logs from grpc log server and passing to websocket",
 			"id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
-		defer c.Conn.Close()
+		defer c.Close()
 
 		logs, err := s.logGrpcClient.Get(context.Background(), executionID)
 		if err != nil {

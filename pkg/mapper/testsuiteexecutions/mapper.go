@@ -4,7 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
+	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/testsuiteexecutions"
 )

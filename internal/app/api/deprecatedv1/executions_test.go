@@ -19,14 +19,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executorclient "github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	logclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 )
 
 func TestDeprecatedTestkubeAPI_ExecutionLogsHandler(t *testing.T) {

@@ -355,8 +355,8 @@ func (ag *Agent) runWorkers(numWorkers int) func(ctx context.Context) error {
 }
 
 func (ag *Agent) executeCommand(_ context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
-	switch {
-	case cmd.Url == healthcheckCommand:
+	switch cmd.Url {
+	case healthcheckCommand:
 		return &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 0}
 	default:
 		req := &fasthttp.RequestCtx{}

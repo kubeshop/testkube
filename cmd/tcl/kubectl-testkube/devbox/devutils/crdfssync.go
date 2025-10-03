@@ -22,7 +22,7 @@ import (
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 )
@@ -166,7 +166,6 @@ func (c *CRDFSSync) deleteTemplate(name string) {
 				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.templates = append(c.templates[:i], c.templates[i+1:]...)
-			i--
 			return
 		}
 	}
@@ -180,7 +179,6 @@ func (c *CRDFSSync) deleteWorkflow(name string) {
 				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.workflows = append(c.workflows[:i], c.workflows[i+1:]...)
-			i--
 			return
 		}
 	}
@@ -250,7 +248,7 @@ func (c *CRDFSSync) loadFile(path string) error {
 			break
 		}
 
-		if obj["kind"] == nil || !(obj["kind"].(string) == "TestWorkflow" || obj["kind"].(string) == "TestWorkflowTemplate") {
+		if obj["kind"] == nil || (obj["kind"].(string) != "TestWorkflow" && obj["kind"].(string) != "TestWorkflowTemplate") {
 			continue
 		}
 

@@ -9,15 +9,15 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
-	"github.com/kubeshop/testkube-operator/pkg/secret"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	"github.com/kubeshop/testkube/pkg/operator/secret"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -559,7 +559,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		TestName:             id,
 		Namespace:            request.Namespace,
 		TestSpec:             testCR.Spec,
-		ExecutorName:         executorCR.ObjectMeta.Name,
+		ExecutorName:         executorCR.Name,
 		ExecutorSpec:         executorCR.Spec,
 		Request:              request,
 		Sync:                 request.Sync,

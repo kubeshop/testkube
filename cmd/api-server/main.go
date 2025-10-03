@@ -20,12 +20,9 @@ import (
 	k8sctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	testexecutionv1 "github.com/kubeshop/testkube-operator/api/testexecution/v1"
-	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	cronjobclient "github.com/kubeshop/testkube-operator/pkg/cronjob/client"
+	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
+	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -49,6 +46,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
+	testkubeclientset "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
+	cronjobclient "github.com/kubeshop/testkube/pkg/operator/cronjob/client"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
@@ -71,13 +71,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/triggers"
 
-	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
-	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/log"
+	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
+	testtriggersclientv1 "github.com/kubeshop/testkube/pkg/operator/client/testtriggers/v1"
+	testworkflowsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
@@ -227,7 +227,7 @@ func main() {
 		}
 		// If not configured to store secrets then registering the runner could cause severe issues such as
 		// the runner registering on every restart creating new runner IDs in the Control Plane.
-		if !(cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation) {
+		if !cfg.EnableSecretsEndpoint || cfg.DisableSecretCreation {
 			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
 		}
 

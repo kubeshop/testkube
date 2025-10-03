@@ -10,13 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/utils/test"
-)
-
-var (
-	cfg, _ = config.Get()
 )
 
 func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *testing.T) {

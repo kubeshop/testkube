@@ -5,8 +5,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/api/common/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	v1 "github.com/kubeshop/testkube/api/common/v1"
+	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/types"
 )
@@ -53,7 +53,7 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 
 func mapStepResultV2ToStepExecutionSummary(r testkube.TestSuiteStepExecutionResultV2) testkube.TestSuiteStepExecutionSummary {
 	var id, testName, name string
-	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
+	var status = testkube.ExecutionStatusPassed
 	var stepType *testkube.TestSuiteStepType
 
 	if r.Test != nil {
@@ -94,7 +94,7 @@ func mapBatchStepResultToExecutionSummary(r testkube.TestSuiteBatchStepExecution
 
 func mapStepResultToStepExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
 	var id, testName, name string
-	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
+	var status = testkube.ExecutionStatusPassed
 	var stepType *testkube.TestSuiteStepType
 
 	if r.Test != nil {

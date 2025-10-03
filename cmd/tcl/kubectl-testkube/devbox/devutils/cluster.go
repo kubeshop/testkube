@@ -17,8 +17,8 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
+	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 )
 
 type ClusterObject struct {

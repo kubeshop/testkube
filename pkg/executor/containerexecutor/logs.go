@@ -7,6 +7,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -98,13 +99,12 @@ func (c *ContainerExecutor) TailPodLogs(id, namespace string, pod corev1.Pod, lo
 
 			for {
 				b, err := utils.ReadLongLine(reader)
-				if err != nil {
-					if err == io.EOF {
-						err = nil
-					} else {
-						l.Errorw("scanner error", "error", err)
-					}
-					break
+				switch {
+				case errors.Is(err, io.EOF):
+					return
+				case err != nil:
+					l.Errorw("scanner error", "error", err)
+					return
 				}
 				logs <- b
 				l.Debugw("log chunk pushed", "out", string(b), "pod", pod.Name)

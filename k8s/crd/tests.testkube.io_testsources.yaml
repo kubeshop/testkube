@@ -1,0 +1,128 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: testsources.tests.testkube.io
+spec:
+  group: tests.testkube.io
+  names:
+    kind: TestSource
+    listKind: TestSourceList
+    plural: testsources
+    singular: testsource
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: TestSource is the Schema for the testsources API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TestSourceSpec defines the desired state of TestSource
+            properties:
+              data:
+                description: test content body
+                type: string
+              repository:
+                description: repository of test content
+                properties:
+                  authType:
+                    description: auth type for git requests
+                    enum:
+                    - basic
+                    - header
+                    type: string
+                  branch:
+                    description: branch/tag name for checkout
+                    type: string
+                  certificateSecret:
+                    description: git auth certificate secret for private repositories
+                    type: string
+                  commit:
+                    description: commit id (sha) for checkout
+                    type: string
+                  path:
+                    description: If specified, does a sparse checkout of the repository
+                      at the given path
+                    type: string
+                  tokenSecret:
+                    description: SecretRef is the Testkube internal reference for
+                      secret storage in Kubernetes secrets
+                    properties:
+                      key:
+                        description: object key
+                        type: string
+                      name:
+                        description: object name
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  type:
+                    description: VCS repository type
+                    type: string
+                  uri:
+                    description: uri of content file or git directory
+                    type: string
+                  usernameSecret:
+                    description: SecretRef is the Testkube internal reference for
+                      secret storage in Kubernetes secrets
+                    properties:
+                      key:
+                        description: object key
+                        type: string
+                      name:
+                        description: object name
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  workingDir:
+                    description: if provided we checkout the whole repository and
+                      run test from this directory
+                    type: string
+                required:
+                - type
+                - uri
+                type: object
+              type:
+                enum:
+                - string
+                - file-uri
+                - git-file
+                - git-dir
+                - git
+                type: string
+              uri:
+                description: uri of test content
+                type: string
+            type: object
+          status:
+            description: TestSourceStatus defines the observed state of TestSource
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

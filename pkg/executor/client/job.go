@@ -33,8 +33,7 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -46,6 +45,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	templatesv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
 )

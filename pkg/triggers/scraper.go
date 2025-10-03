@@ -95,7 +95,7 @@ func (s *Service) checkForRunningTestWorkflowExecutions(ctx context.Context, sta
 			s.logger.Errorf("trigger service: execution scraper component: error fetching testworkflow execution result: %v", err)
 			continue
 		}
-		if execution.Result != nil && !(execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
+		if execution.Result != nil && (!execution.Result.IsRunning() && !execution.Result.IsQueued() && !execution.Result.IsPaused()) {
 			s.logger.Debugf("trigger service: execution scraper component: testworkflow execution %s is finished", id)
 			status.removeTestWorkflowExecutionID(id)
 		}

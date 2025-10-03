@@ -11,9 +11,9 @@ package devutils
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	testworkflowsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1"
 )
 
 type ResourcesClient interface {

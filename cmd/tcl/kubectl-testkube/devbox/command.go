@@ -543,10 +543,8 @@ func NewDevBoxCommand() *cobra.Command {
 					fail(errors.Wrap(err, "failed to watch for YAML changes"))
 				}
 				go func() {
-					for {
-						if ctx.Err() != nil {
-							break
-						}
+					for ctx.Err() == nil {
+
 						file, err := yamlWatcher.Next(ctx)
 						if !strings.HasSuffix(file, ".yml") && !strings.HasSuffix(file, ".yaml") {
 							continue
@@ -632,10 +630,8 @@ func NewDevBoxCommand() *cobra.Command {
 						}
 						<-parallel
 					}
-					for {
-						if ctx.Err() != nil {
-							break
-						}
+					for ctx.Err() == nil {
+
 						update, err := sync.Next(ctx)
 						if err != nil {
 							continue
@@ -851,10 +847,8 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			_, rebuildCtxCancel := context.WithCancel(ctx)
-			for {
-				if ctx.Err() != nil {
-					break
-				}
+			for ctx.Err() == nil {
+
 				file, err := goWatcher.Next(ctx)
 				if err != nil {
 					fmt.Println("file system watcher error:", err.Error())

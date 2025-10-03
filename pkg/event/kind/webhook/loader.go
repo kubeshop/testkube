@@ -6,8 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -15,6 +14,7 @@ import (
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
@@ -107,7 +107,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		}
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
-		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
+		name := fmt.Sprintf("%s.%s", webhook.Namespace, webhook.Name)
 
 		listeners = append(
 			listeners,
@@ -129,12 +129,12 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		s *map[string]string
 	}{
 		{
-			&dst.ObjectMeta.Labels,
-			&src.ObjectMeta.Labels,
+			&dst.Labels,
+			&src.Labels,
 		},
 		{
-			&dst.ObjectMeta.Annotations,
-			&src.ObjectMeta.Annotations,
+			&dst.Annotations,
+			&src.Annotations,
 		},
 		{
 			&dst.Spec.Headers,

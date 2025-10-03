@@ -5,7 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
 // MapCRDConditionsToAPI maps Deployment CRD conditions to OpenAPI spec TestTriggerConditions
@@ -13,7 +13,7 @@ func MapCRDConditionsToAPI(conditions []appsv1.DeploymentCondition, currentTime 
 	var results []testtriggersv1.TestTriggerCondition
 	for _, condition := range conditions {
 		latestTime := condition.LastTransitionTime.Time
-		if condition.LastUpdateTime.Time.After(latestTime) {
+		if condition.LastUpdateTime.After(latestTime) {
 			latestTime = condition.LastUpdateTime.Time
 		}
 

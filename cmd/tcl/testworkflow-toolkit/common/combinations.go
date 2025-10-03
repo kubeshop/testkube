@@ -17,7 +17,7 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -266,10 +266,8 @@ func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards
 	}
 	if maxCount != nil && *maxCount > minShards {
 		count = &minShards
-		maxCount = nil
 	} else if maxCount != nil {
 		count = maxCount
-		maxCount = nil
 	}
 
 	return &ParamsSpec{

@@ -26,8 +26,6 @@ import (
 	"k8s.io/client-go/rest"
 	kubeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
@@ -49,6 +47,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	testsclientv3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
+	testsuitesclientv3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -334,17 +334,17 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
-		APIKey:                              cfg.ControlPlaneConfig.TestkubeProAPIKey,
-		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
-		TLSInsecure:                         cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
-		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
-		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
-		EnvSlug:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
-		EnvName:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
-		OrgID:                               cfg.ControlPlaneConfig.TestkubeProOrgID,
-		OrgSlug:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
-		OrgName:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
-		ConnectionTimeout:                   cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
+		APIKey:                              cfg.TestkubeProAPIKey,
+		URL:                                 cfg.TestkubeProURL,
+		TLSInsecure:                         cfg.TestkubeProTLSInsecure,
+		SkipVerify:                          cfg.TestkubeProSkipVerify,
+		EnvID:                               cfg.TestkubeProEnvID,
+		EnvSlug:                             cfg.TestkubeProEnvID,
+		EnvName:                             cfg.TestkubeProEnvID,
+		OrgID:                               cfg.TestkubeProOrgID,
+		OrgSlug:                             cfg.TestkubeProOrgID,
+		OrgName:                             cfg.TestkubeProOrgID,
+		ConnectionTimeout:                   cfg.TestkubeProConnectionTimeout,
 		WorkerCount:                         cfg.TestkubeProWorkerCount,
 		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
@@ -353,8 +353,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		CloudStorage:                        grpcClient == nil,
 		CloudStorageSupportedInControlPlane: grpcClient == nil,
 	}
-	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
-	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
+	proContext.Agent.ID = cfg.TestkubeProAgentID
+	proContext.Agent.Name = cfg.TestkubeProAgentID
 
 	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
 	if proContext.DashboardURI == "" && cloudUiUrl != "" {
@@ -456,7 +456,7 @@ func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.Sl
 		testkube.AllEventTypes, envs)
 }
 
-func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
+func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
@@ -464,7 +464,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 
 		log.DefaultLogger.Info("started embedded NATS server")
 
-		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 		ExitOnError("creating NATS connection", err)
 		return conn
 	}

@@ -255,7 +255,7 @@ func (e *jobWatcher) cycle() {
 
 	// Read the initial data
 	started, finished := e.read(context.Background())
-	result, _ := <-started
+	result := <-started
 	if result.err != nil {
 		e.cancel(result.err)
 		return
@@ -283,7 +283,7 @@ func (e *jobWatcher) Done() <-chan struct{} {
 // It returns number of items that have been appended.
 func (e *jobWatcher) Update(ctx context.Context) (int, error) {
 	started, _ := e.read(ctx)
-	result, _ := <-started
+	result := <-started
 	if errors.Is(result.err, ErrDone) {
 		result.err = nil
 	}

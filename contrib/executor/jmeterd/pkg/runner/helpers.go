@@ -40,7 +40,6 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 			if (i + 1) < len(execution.Args) {
 				if execution.Args[i+1] != "<runPath>" {
 					testFlag = os.ExpandEnv(execution.Args[i+1])
-					i++
 					continue
 				}
 			}

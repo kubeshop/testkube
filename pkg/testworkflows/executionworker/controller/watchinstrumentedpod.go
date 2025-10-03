@@ -141,7 +141,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Iterate over containers
-		lastStarted := constants.InitStepName
 		containersReady := false
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
@@ -180,7 +179,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Start the initial one
-			lastStarted = refs[containerIndex][0]
+			lastStarted := refs[containerIndex][0]
 
 			// Read the Container logs
 			isLastHint := func(hint *instructions.Instruction) bool {

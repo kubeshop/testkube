@@ -59,7 +59,7 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 			creds = c.creds
 		}
 
-		conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(creds))
+		conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(creds)) //nolint:staticcheck
 		if err != nil {
 			ch <- events.LogResponse{Error: err}
 			return

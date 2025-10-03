@@ -7,4 +7,4 @@ const (
 	ModeAgent      = "agent"
 )
 
-var ErrNotSupported = errors.New("Feature is not supported in standalone mode")
+var ErrNotSupported = errors.New("feature is not supported in standalone mode")

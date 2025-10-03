@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/logs/config"
@@ -130,10 +131,7 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 		isOk := true
 		for {
 			line, err := utils.ReadLongLine(r)
-			if err != nil {
-				if err == io.EOF {
-					err = nil
-				}
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			var LogChunk events.Log

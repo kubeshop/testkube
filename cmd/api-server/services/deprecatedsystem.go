@@ -6,7 +6,6 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	deprecatedapiv1 "github.com/kubeshop/testkube/internal/app/api/deprecatedv1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -28,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -56,7 +56,7 @@ func CreateDeprecatedSystem(
 	configMapConfig configRepo.Repository,
 	secretConfig testkube.SecretConfig,
 	grpcClient cloud.TestKubeCloudAPIClient,
-	natsConn *nats.EncodedConn,
+	natsConn *nats.EncodedConn, //nolint:staticcheck
 	eventsEmitter *event.Emitter,
 	eventBus *bus.NATSBus,
 	inspector imageinspector.Inspector,

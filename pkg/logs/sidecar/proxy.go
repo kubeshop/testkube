@@ -175,33 +175,35 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err er
 		}
 
 		reader := bufio.NewReader(stream)
-		for {
-			b, err := utils.ReadLongLine(reader)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					err = nil
-				}
-				break
-			}
-
-			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
-			source := events.SourceJobPod
-			if p.source != "" {
-				source = p.source
-			}
-
-			logs <- events.NewLogFromBytes(b).
-				WithSource(source)
-		}
-
-		if err != nil {
+		if err := p.pipeLogs(reader, logs); err != nil {
 			p.handleError(err, "error while reading pod logs stream")
 			return err
 		}
 	}
 
 	return
+}
 
+func (p *Proxy) pipeLogs(stream io.Reader, logs chan<- *events.Log) error {
+	reader := bufio.NewReader(stream)
+	for {
+		b, err := utils.ReadLongLine(reader)
+		switch {
+		case errors.Is(err, io.EOF):
+			return nil
+		case err != nil:
+			return err
+		}
+
+		// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
+		source := events.SourceJobPod
+		if p.source != "" {
+			source = p.source
+		}
+
+		logs <- events.NewLogFromBytes(b).
+			WithSource(source)
+	}
 }
 
 // isPodLoggable checks if pod can be logged through kubernetes API

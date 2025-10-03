@@ -34,9 +34,10 @@ func NewFinalizer(fn FinalizerFn) Machine {
 
 func (f *finalizer) Get(name string) (Expression, bool, error) {
 	result := f.handler(finalizerItem{name: name})
-	if result == FinalizerResultFail {
+	switch result {
+	case FinalizerResultFail:
 		return nil, true, errors.New("unknown variable")
-	} else if result == FinalizerResultNone {
+	case FinalizerResultNone:
 		return None, true, nil
 	}
 	return nil, false, nil
@@ -44,9 +45,10 @@ func (f *finalizer) Get(name string) (Expression, bool, error) {
 
 func (f *finalizer) Call(name string, _ []CallArgument) (Expression, bool, error) {
 	result := f.handler(finalizerItem{function: true, name: name})
-	if result == FinalizerResultFail {
+	switch result {
+	case FinalizerResultFail:
 		return nil, true, errors.New("unknown function")
-	} else if result == FinalizerResultNone {
+	case FinalizerResultNone:
 		return None, true, nil
 	}
 	return nil, false, nil

@@ -1,7 +1,7 @@
 package commonmapper
 
 import (
-	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
