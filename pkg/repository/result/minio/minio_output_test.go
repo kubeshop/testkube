@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 

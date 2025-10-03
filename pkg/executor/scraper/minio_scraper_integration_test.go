@@ -12,7 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

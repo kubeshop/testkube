@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	"github.com/pkg/errors"
 
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"

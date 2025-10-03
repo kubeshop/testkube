@@ -8,7 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/filesystem"

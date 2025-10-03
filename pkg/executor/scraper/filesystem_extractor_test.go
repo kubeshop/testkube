@@ -14,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/executor/scraper"

@@ -3,7 +3,7 @@ package webhook
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
