@@ -17,11 +17,12 @@ limitations under the License.
 package v2
 
 import (
-	testsuitev2 "github.com/kubeshop/testkube/api/testsuite/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
+
+	testsuitev2 "github.com/kubeshop/testkube/api/testsuite/v2"
 )
 
 // TestSuiteLister helps list TestSuites.

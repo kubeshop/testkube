@@ -126,7 +126,7 @@ func (c *Client) DeleteAll(selector string) error {
 	u := &unstructured.Unstructured{}
 	u.SetKind("Secret")
 	u.SetAPIVersion("v1")
-	err = c.Client.DeleteAllOf(ctx, u, client.InNamespace(c.namespace),
+	err = c.DeleteAllOf(ctx, u, client.InNamespace(c.namespace),
 		client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(reqs...)})
 
 	return err

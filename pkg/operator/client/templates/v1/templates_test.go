@@ -77,7 +77,7 @@ func TestTemplates(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tp.Name, created.Name)
 
-				res, err := tClient.Get(tp.ObjectMeta.Name)
+				res, err := tClient.Get(tp.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, tp.Name, res.Name)
 			}
@@ -86,7 +86,7 @@ func TestTemplates(t *testing.T) {
 	t.Run("TemplateUpdate", func(t *testing.T) {
 		t.Run("Update new templates", func(t *testing.T) {
 			for _, tp := range testTemplates {
-				res, err := tClient.Get(tp.ObjectMeta.Name)
+				res, err := tClient.Get(tp.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, tp.Name, res.Name)
 

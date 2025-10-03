@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/google/uuid"
+
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 )

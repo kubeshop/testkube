@@ -242,7 +242,7 @@ func (c *Client) DeleteAll(ctx context.Context, selector, namespace string) erro
 	u := &unstructured.Unstructured{}
 	u.SetKind("CronJob")
 	u.SetAPIVersion("batch/v1")
-	return c.Client.DeleteAllOf(ctx, u, k8sclient.InNamespace(namespace),
+	return c.DeleteAllOf(ctx, u, k8sclient.InNamespace(namespace),
 		k8sclient.MatchingLabelsSelector{Selector: labels.NewSelector().Add(reqs...)})
 }
 

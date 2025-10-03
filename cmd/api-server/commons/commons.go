@@ -334,17 +334,17 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
-		APIKey:                              cfg.ControlPlaneConfig.TestkubeProAPIKey,
-		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
-		TLSInsecure:                         cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
-		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
-		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
-		EnvSlug:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
-		EnvName:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
-		OrgID:                               cfg.ControlPlaneConfig.TestkubeProOrgID,
-		OrgSlug:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
-		OrgName:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
-		ConnectionTimeout:                   cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
+		APIKey:                              cfg.TestkubeProAPIKey,
+		URL:                                 cfg.TestkubeProURL,
+		TLSInsecure:                         cfg.TestkubeProTLSInsecure,
+		SkipVerify:                          cfg.TestkubeProSkipVerify,
+		EnvID:                               cfg.TestkubeProEnvID,
+		EnvSlug:                             cfg.TestkubeProEnvID,
+		EnvName:                             cfg.TestkubeProEnvID,
+		OrgID:                               cfg.TestkubeProOrgID,
+		OrgSlug:                             cfg.TestkubeProOrgID,
+		OrgName:                             cfg.TestkubeProOrgID,
+		ConnectionTimeout:                   cfg.TestkubeProConnectionTimeout,
 		WorkerCount:                         cfg.TestkubeProWorkerCount,
 		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
@@ -353,8 +353,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		CloudStorage:                        grpcClient == nil,
 		CloudStorageSupportedInControlPlane: grpcClient == nil,
 	}
-	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
-	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
+	proContext.Agent.ID = cfg.TestkubeProAgentID
+	proContext.Agent.Name = cfg.TestkubeProAgentID
 
 	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
 	if proContext.DashboardURI == "" && cloudUiUrl != "" {

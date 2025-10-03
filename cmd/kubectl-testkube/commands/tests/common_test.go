@@ -109,7 +109,7 @@ func createCopyFiles() ([]*os.File, error) {
 			return files, err
 		}
 
-		_, err = file.WriteString(fmt.Sprintf("config file #%d", i))
+		_, err = fmt.Fprintf(file, "config file #%d", i)
 		if err != nil {
 			return files, err
 		}

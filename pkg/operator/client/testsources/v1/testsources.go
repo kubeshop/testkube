@@ -3,13 +3,14 @@ package testsources
 import (
 	"context"
 
-	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
-	"github.com/kubeshop/testkube/pkg/operator/secret"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
+	"github.com/kubeshop/testkube/pkg/operator/secret"
 )
 
 const (

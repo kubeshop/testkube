@@ -44,7 +44,7 @@ type ArtifactURL struct {
 // GetFile, in cloud we need to call non
 func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
 
-	cloudURI := strings.Replace(uri, "/agent", "", -1)
+	cloudURI := strings.ReplaceAll(uri, "/agent", "")
 	req, err := http.NewRequest(http.MethodGet, cloudURI, nil)
 	if err != nil {
 		return "", err

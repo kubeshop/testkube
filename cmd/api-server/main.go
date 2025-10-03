@@ -227,7 +227,7 @@ func main() {
 		}
 		// If not configured to store secrets then registering the runner could cause severe issues such as
 		// the runner registering on every restart creating new runner IDs in the Control Plane.
-		if !(cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation) {
+		if !cfg.EnableSecretsEndpoint || cfg.DisableSecretCreation {
 			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
 		}
 

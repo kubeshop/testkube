@@ -194,7 +194,8 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 }
 
 func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerReference, error) {
-	if kind == testworkflowsv1.Resource {
+	switch kind {
+	case testworkflowsv1.Resource:
 		obj, err := s.TestWorkflowsK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
@@ -210,7 +211,7 @@ func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerRefere
 			UID:        obj.UID,
 		}
 		return ownerRef, nil
-	} else if kind == testworkflowsv1.ResourceTemplate {
+	case testworkflowsv1.ResourceTemplate:
 		obj, err := s.TestWorkflowTemplatesK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")

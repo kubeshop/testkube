@@ -3,13 +3,14 @@ package testsources
 import (
 	"testing"
 
-	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
+
+	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
 )
 
 func TestTestSources(t *testing.T) {
@@ -77,7 +78,7 @@ func TestTestSources(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, w.Name, created.Name)
 
-				res, err := wClient.Get(w.ObjectMeta.Name)
+				res, err := wClient.Get(w.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, w.Name, res.Name)
 			}

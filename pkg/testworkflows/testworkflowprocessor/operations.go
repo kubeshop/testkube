@@ -54,7 +54,7 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container stage.
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Run")
 	if step.Run.Shell != nil {
-		if step.Run.ContainerConfig.Command != nil || step.Run.ContainerConfig.Args != nil {
+		if step.Run.Command != nil || step.Run.Args != nil {
 			return nil, errors.New("run.shell should not be used in conjunction with run.command or run.args")
 		}
 		stage.SetCategory("Run shell command")

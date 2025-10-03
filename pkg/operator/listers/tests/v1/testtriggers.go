@@ -17,11 +17,12 @@ limitations under the License.
 package v1
 
 import (
-	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
+
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
 // TestTriggerLister helps list TestTriggers.

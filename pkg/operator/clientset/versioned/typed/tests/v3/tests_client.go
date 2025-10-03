@@ -21,8 +21,9 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned/scheme"
 
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"k8s.io/client-go/rest"
+
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 )
 
 type TestsV3Interface interface {

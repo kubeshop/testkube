@@ -205,8 +205,8 @@ const BASELINE = "baseline"
 const FULL = "full"
 
 func zapScript(scanType string) string {
-	switch {
-	case scanType == BASELINE:
+	switch scanType {
+	case BASELINE:
 		return "./zap-baseline.py"
 	default:
 		return fmt.Sprintf("./zap-%s-scan.py", scanType)
@@ -214,12 +214,12 @@ func zapScript(scanType string) string {
 }
 
 func zapArgs(scanType string, options Options, reportFile string) (args []string) {
-	switch {
-	case scanType == API:
+	switch scanType {
+	case API:
 		args = options.ToApiScanArgs(reportFile)
-	case scanType == BASELINE:
+	case BASELINE:
 		args = options.ToBaselineScanArgs(reportFile)
-	case scanType == FULL:
+	case FULL:
 		args = options.ToFullScanArgs(reportFile)
 	}
 	return args
@@ -232,12 +232,12 @@ func stepName(line string) string {
 func warnStatus(scanType string, options Options) string {
 	var fail bool
 
-	switch {
-	case scanType == API:
+	switch scanType {
+	case API:
 		fail = options.API.FailOnWarn
-	case scanType == BASELINE:
+	case BASELINE:
 		fail = options.Baseline.FailOnWarn
-	case scanType == FULL:
+	case FULL:
 		fail = options.Full.FailOnWarn
 	}
 

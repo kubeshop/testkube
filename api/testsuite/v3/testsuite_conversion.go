@@ -18,8 +18,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	testkubev2 "github.com/kubeshop/testkube/api/testsuite/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testkubev2 "github.com/kubeshop/testkube/api/testsuite/v2"
 )
 
 // ConvertTo converts this Script to the Hub version (v2).

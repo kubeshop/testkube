@@ -177,7 +177,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler()
 			ctxCancel()
 			return originalClose(code, text)
 		})
-		defer c.Conn.Close()
+		defer c.Close()
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, id)
@@ -216,7 +216,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHa
 			ctxCancel()
 			return originalClose(code, text)
 		})
-		defer c.Conn.Close()
+		defer c.Close()
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
@@ -264,7 +264,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsWebSoc
 			ctxCancel()
 			return originalClose(code, text)
 		})
-		defer c.Conn.Close()
+		defer c.Close()
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)

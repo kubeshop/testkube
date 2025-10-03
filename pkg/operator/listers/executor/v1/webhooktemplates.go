@@ -17,11 +17,12 @@ limitations under the License.
 package v1
 
 import (
-	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
+
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 )
 
 // WebhookTemplateLister helps list WebhookTemplates.

@@ -5,9 +5,10 @@ import (
 	"context"
 	"fmt"
 
-	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 )
 
 // NewClient returns new client instance, needs kubernetes client to be passed as dependecy

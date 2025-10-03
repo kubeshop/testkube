@@ -559,7 +559,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		TestName:             id,
 		Namespace:            request.Namespace,
 		TestSpec:             testCR.Spec,
-		ExecutorName:         executorCR.ObjectMeta.Name,
+		ExecutorName:         executorCR.Name,
 		ExecutorSpec:         executorCR.Spec,
 		Request:              request,
 		Sync:                 request.Sync,

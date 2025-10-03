@@ -21,8 +21,9 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned/scheme"
 
-	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"k8s.io/client-go/rest"
+
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 )
 
 type ExecutorV1Interface interface {

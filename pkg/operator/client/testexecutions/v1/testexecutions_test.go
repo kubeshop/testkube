@@ -67,7 +67,7 @@ func TestTestExecutions(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, te.Name, created.Name)
 
-				res, err := teClient.Get(te.ObjectMeta.Name)
+				res, err := teClient.Get(te.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, te.Name, res.Name)
 			}
@@ -76,7 +76,7 @@ func TestTestExecutions(t *testing.T) {
 	t.Run("TestExecutionUpdate", func(t *testing.T) {
 		t.Run("Update new testexecutions", func(t *testing.T) {
 			for _, te := range testTestExecutions {
-				res, err := teClient.Get(te.ObjectMeta.Name)
+				res, err := teClient.Get(te.Name)
 				assert.NoError(t, err)
 				assert.Equal(t, te.Name, res.Name)
 

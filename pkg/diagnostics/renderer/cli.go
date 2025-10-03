@@ -17,7 +17,7 @@ type CLIRenderer struct {
 }
 
 func (r CLIRenderer) RenderGroupStart(message string) {
-	message = strings.ToUpper(strings.Replace(message, ".", " ", -1))
+	message = strings.ToUpper(strings.ReplaceAll(message, ".", " "))
 	lines := strings.Repeat("=", len(message))
 	ui.Printf("\n%s\n%s\n\n", ui.Green(message), ui.Yellow(lines))
 }
