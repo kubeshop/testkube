@@ -757,10 +757,10 @@ func (s *scheduler) start(ctx context.Context, execution *testkube.TestWorkflowE
 		return err
 	}
 	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		_, err := s.grpcClient.InitExecution(metadata.NewOutgoingContext(ctx, md), &cloud.InitExecutionRequest{
-			Id:        execution.Id,
-			Namespace: execution.Namespace,
-			Signature: signatureBytes,
+		_, err := s.grpcClient.InitExecution(metadata.NewOutgoingContext(ctx, md), &cloud.InitExecutionRequest{ //nolint:staticcheck
+			Id:        execution.Id,        //nolint:staticcheck
+			Namespace: execution.Namespace, //nolint:staticcheck
+			Signature: signatureBytes,      //nolint:staticcheck
 		}, opts...)
 		if err != nil {
 			s.logger.Warnw("failed to init the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
