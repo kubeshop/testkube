@@ -84,7 +84,7 @@ func TestAgentLoop_Start_SimpleReconnectionDelay(t *testing.T) {
 	defer cancel()
 
 	// Start the agent loop
-	err := agent.Start(ctx)
+	err := agent.Start(ctx, true)
 
 	// Should return context deadline exceeded error (expected) and should have made multiple calls
 	assert.Error(t, err)
@@ -152,7 +152,7 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 	defer cancel()
 
 	// Start the agent loop
-	err := agent.Start(ctx)
+	err := agent.Start(ctx, true)
 
 	// Should return context deadline exceeded error (expected) and should have made multiple calls
 	// due to receive timeout causing reconnections
@@ -224,7 +224,7 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 	defer cancel()
 
 	// Start the agent loop
-	err := agent.Start(ctx)
+	err := agent.Start(ctx, true)
 
 	// Should return context deadline exceeded error (expected) and should have made multiple calls
 	// due to receive timeout causing reconnections
