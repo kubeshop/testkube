@@ -483,7 +483,7 @@ func main() {
 			"namespace": cfg.TestkubeNamespace,
 		})
 		commons.ExitOnError("connecting to k8s TestWorkflows storage", err)
-		// TestWorkflowTesmplates storage
+		// TestWorkflowTemplates storage
 		testWorkflowTemplatesCloudStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflowTemplates storage", err)
 		testWorkflowTemplatesKubernetesStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(must(testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
