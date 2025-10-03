@@ -392,11 +392,19 @@ func main() {
 	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
+	runner := runner2.New(
+		executionWorker,
+		configMapConfig,
+		client,
+		eventsEmitter,
+		metrics,
+		proContext,
+		runnerOpts.StorageSkipVerify,
+		runnerOpts.GlobalTemplate,
+	)
 	runnerService := runner2.NewService(
 		log.DefaultLogger,
 		eventsEmitter,
-		metrics,
-		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
 			DashboardUrl:   proContext.DashboardURI,
@@ -405,10 +413,11 @@ func main() {
 		proContext,
 		executionWorker,
 		runnerOpts,
+		runner,
 	)
 	if !cfg.DisableRunner {
 		g.Go(func() error {
-			return runnerService.Start(ctx)
+			return runnerService.Start(ctx, proContext.NewArchitecture)
 		})
 	}
 	lazyRunner.Set(runnerService)
