@@ -110,7 +110,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4288/junit-flaky-tests
+      revision: main
       paths:
       - test/pytest/pytest-project
   container:
