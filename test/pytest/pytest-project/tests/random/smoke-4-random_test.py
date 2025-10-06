@@ -18,7 +18,7 @@ def test_GGG():
 
 def test_HHH():
     time.sleep(1)
-    if random.randint(1, 10) == 10:
+    if random.randint(1, 10) == 15:
         assert 0 == 1
     else:
         assert 1 == 1
