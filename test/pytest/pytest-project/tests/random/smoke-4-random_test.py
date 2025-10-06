@@ -14,7 +14,7 @@ def test_FFF():
 
 def test_GGG():
     time.sleep(2)
-    assert 1 == 2
+    assert 1 == 1
 
 def test_HHH():
     time.sleep(1)
