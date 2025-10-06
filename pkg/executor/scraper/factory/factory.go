@@ -109,8 +109,6 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 		params.ProAPITLSInsecure,
 		params.ProAPISkipVerify,
 		params.ProAPIURL,
-		params.ProAPICertFile,
-		params.ProAPIKeyFile,
 		params.ProAPICAFile,
 		log.DefaultLogger,
 	)

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudflare/backoff"
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -38,6 +39,9 @@ const (
 	newArchitectureMeta     = "exec"
 	testWorkflowStorageMeta = "tw-storage"
 	reconnectionLoopDelay   = 5 * time.Second
+
+	eventStreamUnimplementedBackoffInterval = 24 * time.Hour
+	eventStreamUnimplementedBackoffMax      = 7 * 24 * time.Hour
 )
 
 // buffer up to five messages per worker
@@ -184,21 +188,31 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 		return errors.Wrap(err, "failed to setup events stream")
 	}
 
+	// Backoff a day at a time up to a week.
+	// This backoff is for retrying against a Control Plane that does not support
+	// The required endpoint, so if we don't want to wait then instead we can just be restarted.
+	b := backoff.New(eventStreamUnimplementedBackoffMax, eventStreamUnimplementedBackoffInterval)
+
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		msg, err := stream.Recv()
-		if err != nil {
-			// Ignore if it's not implemented in the Control Plane
-			if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok && e.GRPCStatus().Code() == codes.Unimplemented {
-				return nil
-			}
-			return err
-		}
-		if msg.Ping {
+		code, ok := status.FromError(err)
+		switch {
+		case ok && code.Code() == codes.Unimplemented:
+			// If the control plane does not have this endpoint then we can't return (otherwise we will get retried).
+			// Instead we can backoff and retry again later.
+			time.Sleep(b.Duration())
+			continue
+		case err != nil:
+			return fmt.Errorf("receiving events stream from Control Plane: %w", err)
+		case msg.Ping:
+			// Older ping pong stream keepalive mechanism, still handled here but not all Control Planes will send this anymore.
 			continue
 		}
+		b.Reset()
+
 		ev := msg.Event
 		if ev.Resource == nil {
 			ev.Resource = &cloud.EventResource{}
