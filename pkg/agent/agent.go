@@ -150,7 +150,10 @@ func (ag *Agent) Run(ctx context.Context) error {
 	wg.Go(reconnectionLoop("command loop", ag.runCommandLoop))
 	wg.Go(reconnectionLoop("worker loop", ag.runWorkers(ag.workerCount)))
 	wg.Go(reconnectionLoop("event loop", ag.runEventLoop))
-	wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
+
+	if ag.proContext.NewArchitecture {
+		wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
+	}
 
 	if !ag.features.LogsV2 {
 		wg.Go(reconnectionLoop("log stream loop", ag.runLogStreamLoop))
@@ -164,11 +167,6 @@ func (ag *Agent) Run(ctx context.Context) error {
 }
 
 func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
-	// Ignore when Control Plane doesn't support new executions
-	if !ag.proContext.NewArchitecture {
-		return nil
-	}
-
 	if ag.proContext.APIKey != "" {
 		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
 	}
