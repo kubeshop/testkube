@@ -585,6 +585,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			Tags:            execution.Tags,
 			DisableWebhooks: execution.DisableWebhooks,
 			Target:          execution.RunnerTarget,
+			Runtime:         execution.Runtime,
 		}
 
 		request.Config = make(map[string]string)
