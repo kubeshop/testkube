@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -19,6 +20,7 @@ func NewDeleteTestsCmd() *cobra.Command {
 		Short:   "Delete Test",
 		Run: func(cmd *cobra.Command, args []string) {
 
+			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
@@ -32,6 +34,10 @@ func NewDeleteTestsCmd() *cobra.Command {
 			if len(args) > 0 {
 				name := args[0]
 				err := client.DeleteTest(name)
+				if ignoreNotFound && apiutils.IsNotFound(err) {
+					ui.Info("Test '" + name + "' not found, but ignoring since --ignore-not-found was passed")
+					ui.SuccessAndExit("Operation completed")
+				}
 				ui.ExitOnError("delete test "+name+" from namespace "+namespace, err)
 				ui.SuccessAndExit("Succesfully deleted test", name)
 			}
@@ -39,6 +45,10 @@ func NewDeleteTestsCmd() *cobra.Command {
 			if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
 				err := client.DeleteTests(selector)
+				if ignoreNotFound && apiutils.IsNotFound(err) {
+					ui.Info("Tests not found for matching selector '" + selector + "', but ignoring since --ignore-not-found was passed")
+					ui.SuccessAndExit("Operation completed")
+				}
 				ui.ExitOnError("deleting tests by labels: "+selector, err)
 				ui.SuccessAndExit("Succesfully deleted tests by labels", selector)
 			}
