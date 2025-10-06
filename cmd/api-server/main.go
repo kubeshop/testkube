@@ -187,7 +187,7 @@ func main() {
 
 		log.DefaultLogger.Info("connecting to embedded Control Plane...")
 		var err error
-		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger, cfg.TracingEnabled)
+		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", log.DefaultLogger, cfg.TracingEnabled)
 		commons.ExitOnError("connecting to embedded Control Plane", err)
 		log.DefaultLogger.Infow("connected to embedded control plane successfully", "port", cfg.GRPCServerPort)
 	} else {
@@ -198,8 +198,6 @@ func main() {
 			cfg.TestkubeProTLSInsecure,
 			cfg.TestkubeProSkipVerify,
 			cfg.TestkubeProURL,
-			cfg.TestkubeProCertFile,
-			cfg.TestkubeProKeyFile,
 			cfg.TestkubeProCAFile, //nolint
 			log.DefaultLogger,
 			cfg.TracingEnabled,

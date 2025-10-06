@@ -37,7 +37,7 @@ func TestCloudAdapter_Integration(t *testing.T) {
 		id := "id1"
 
 		// and connection
-		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", log.DefaultLogger)
 		if err != nil {
 			t.Fatalf("Failed to create gRPC connection: %v", err)
 		}
@@ -82,7 +82,7 @@ func TestCloudAdapter_Integration(t *testing.T) {
 		id3 := "id3"
 
 		// and connection
-		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", log.DefaultLogger)
 		if err != nil {
 			t.Fatalf("Failed to create gRPC connection: %v", err)
 		}
@@ -134,7 +134,7 @@ func TestCloudAdapter_Integration(t *testing.T) {
 		id := "id1M"
 
 		// and grpc connetion to the server
-		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", log.DefaultLogger)
 		if err != nil {
 			t.Fatalf("Failed to create gRPC connection: %v", err)
 		}
@@ -171,7 +171,7 @@ func TestCloudAdapter_Integration(t *testing.T) {
 		ctx := context.Background()
 
 		// and grpc connetion to the server
-		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", log.DefaultLogger)
 		if err != nil {
 			t.Fatalf("Failed to create gRPC connection: %v", err)
 		}
