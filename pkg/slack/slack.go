@@ -131,7 +131,7 @@ func (s *Notifier) getChannels(event *testkube.Event) ([]string, error) {
 		}
 		_, needsSending := s.config.NeedsSending(event)
 		if len(channels) > 0 && needsSending {
-			result = append(result, channels[0].GroupConversation.ID)
+			result = append(result, channels[0].ID)
 			return result, nil
 		}
 	} else {

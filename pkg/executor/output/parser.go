@@ -142,7 +142,6 @@ func parseLogs(b []byte) ([]Output, error) {
 		b, err := utils.ReadLongLine(reader)
 		if err != nil {
 			if err == io.EOF {
-				err = nil
 				break
 			}
 			return logs, fmt.Errorf("could not read line: %w", err)
@@ -191,7 +190,6 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 
 		if err != nil {
 			if err == io.EOF {
-				err = nil
 				break
 			}
 

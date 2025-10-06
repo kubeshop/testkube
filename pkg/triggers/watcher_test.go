@@ -10,13 +10,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
+	faketestkube "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/fake"
 )
 
 func TestService_runWatcher_lease(t *testing.T) {

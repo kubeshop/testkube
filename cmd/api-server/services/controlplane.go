@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/client-go/kubernetes"
 
-	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -29,6 +28,7 @@ import (
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"

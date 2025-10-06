@@ -22,12 +22,11 @@ import (
 )
 
 var (
-	client       string
-	verbose      bool
-	namespace    string
-	oauthEnabled bool
-	insecure     bool
-	headers      map[string]string
+	client    string
+	verbose   bool
+	namespace string
+	insecure  bool
+	headers   map[string]string
 )
 
 // preRunTelemetryCommands defines which commands should send telemetry in PreRun

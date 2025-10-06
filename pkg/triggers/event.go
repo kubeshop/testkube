@@ -12,14 +12,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/mapper/daemonsets"
 	"github.com/kubeshop/testkube/pkg/mapper/deployments"
 	"github.com/kubeshop/testkube/pkg/mapper/k8sevents"
 	"github.com/kubeshop/testkube/pkg/mapper/pods"
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
+	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
 
 const testkubeEventCausePrefix = "event-"

@@ -131,10 +131,7 @@ func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []st
 
 // DeleteAllExecutionNumbers deletes all execution numbers by type
 func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType sequence.ExecutionType) (err error) {
-	isTestSuite := false
-	if executionType == sequence.ExecutionTypeTestSuite {
-		isTestSuite = true
-	}
+	isTestSuite := executionType == sequence.ExecutionTypeTestSuite
 
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"istestsuite": isTestSuite})
 	if err != nil {

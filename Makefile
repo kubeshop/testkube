@@ -407,7 +407,7 @@ lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
 ##@ Code Generation
 
 .PHONY: generate
-generate: generate-protobuf generate-openapi generate-mocks generate-sqlc ## Generate all code
+generate: generate-protobuf generate-openapi generate-mocks generate-sqlc generate-crds ## Generate all code
 
 .PHONY: generate-protobuf
 generate-protobuf: ## Generate protobuf code
@@ -431,6 +431,10 @@ generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, 
 generate-sqlc: ## Generate sqlc package with sql queries
 	@echo "Generating sqlc queries..."
 	@$(SQLC) generate
+
+.PHONY: generate-crds
+generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
+	go tool controller-gen crd:allowDangerousTypes=true object paths="./api/..." output:crd:dir=k8s/crd
 
 # ==================== Docker ====================
 ##@ Docker

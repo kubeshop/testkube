@@ -114,7 +114,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 			err = json.NewDecoder(r.Body).Decode(&data)
 			// then
 			assert.NoError(t, err)
-			assert.Equal(t, string(body.Bytes()), data["field"])
+			assert.Equal(t, body.String(), data["field"])
 		})
 
 		svr := httptest.NewServer(testHandler)

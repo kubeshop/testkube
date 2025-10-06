@@ -9,7 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
@@ -82,13 +82,13 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
-				if newEnv.EnvVar.ValueFrom != nil {
-					if newEnv.EnvVar.ValueFrom.ConfigMapKeyRef != nil && newEnv.EnvVar.ValueFrom.ConfigMapKeyRef.Optional == nil {
-						newEnv.EnvVar.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+				if newEnv.ValueFrom != nil {
+					if newEnv.ValueFrom.ConfigMapKeyRef != nil && newEnv.ValueFrom.ConfigMapKeyRef.Optional == nil {
+						newEnv.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
 					}
 
-					if newEnv.EnvVar.ValueFrom.SecretKeyRef != nil && newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional == nil {
-						newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+					if newEnv.ValueFrom.SecretKeyRef != nil && newEnv.ValueFrom.SecretKeyRef.Optional == nil {
+						newEnv.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
 					}
 				}
 

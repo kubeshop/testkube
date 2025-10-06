@@ -117,7 +117,7 @@ func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]
 		Floating:     floating,
 		Capabilities: []AgentCapability{AgentCapabilityRunner},
 	}
-	return c.RESTClient.Create(agent)
+	return c.Create(agent)
 }
 
 func (c AgentsClient) CreateGitOpsAgent(envId string, name string, labels map[string]string) (Agent, error) {
@@ -128,5 +128,5 @@ func (c AgentsClient) CreateGitOpsAgent(envId string, name string, labels map[st
 		Labels:       common.Ptr(labels),
 		Capabilities: []AgentCapability{AgentCapabilityGitops},
 	}
-	return c.RESTClient.Create(agent)
+	return c.Create(agent)
 }

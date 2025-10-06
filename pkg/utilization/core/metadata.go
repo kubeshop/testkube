@@ -162,7 +162,7 @@ func isZero(v reflect.Value) bool {
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0.0
 	case reflect.Bool:
-		return v.Bool() == false
+		return !v.Bool()
 	case reflect.Slice, reflect.Array:
 		return v.Len() == 0
 	case reflect.Map, reflect.Ptr, reflect.Interface:

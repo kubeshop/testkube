@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -480,7 +480,6 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			}
 		}
 	}
-	intermediateSelectors = nil
 
 	// Resolve executions for each selector
 	//
@@ -758,10 +757,10 @@ func (s *scheduler) start(ctx context.Context, execution *testkube.TestWorkflowE
 		return err
 	}
 	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		_, err := s.grpcClient.InitExecution(metadata.NewOutgoingContext(ctx, md), &cloud.InitExecutionRequest{
-			Id:        execution.Id,
-			Namespace: execution.Namespace,
-			Signature: signatureBytes,
+		_, err := s.grpcClient.InitExecution(metadata.NewOutgoingContext(ctx, md), &cloud.InitExecutionRequest{ //nolint:staticcheck
+			Id:        execution.Id,        //nolint:staticcheck
+			Namespace: execution.Namespace, //nolint:staticcheck
+			Signature: signatureBytes,      //nolint:staticcheck
 		}, opts...)
 		if err != nil {
 			s.logger.Warnw("failed to init the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)

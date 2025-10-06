@@ -9,13 +9,13 @@ import (
 	gomock "go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
-	"github.com/kubeshop/testkube-operator/pkg/client/common"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/operator/client/common"
+	testsuitesclientv3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 

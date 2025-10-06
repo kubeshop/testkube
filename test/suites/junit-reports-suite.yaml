@@ -20,6 +20,7 @@ spec:
       - name: playwright-workflow-smoke
       - name: postman-workflow-smoke-junit
       - name: pytest-workflow-smoke-junit-mixed-failures
+      - name: pytest-workflow-smoke-junit-random-failures
       - name: pytest-workflow-smoke-junit-success-only
       - name: xunit-workflow-smoke
       - name: junit-report-high-level-failure

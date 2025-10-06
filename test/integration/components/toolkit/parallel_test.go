@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	k8sconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"

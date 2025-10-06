@@ -7,13 +7,13 @@ type noneType struct{}
 var noneValue noneType
 
 func isInt(s interface{}) bool {
-	switch s.(type) {
+	switch s := s.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return true
 	case float32:
-		return s.(float32) == float32(int32(s.(float32)))
+		return s == float32(int32(s))
 	case float64:
-		return s.(float64) == float64(int64(s.(float64)))
+		return s == float64(int64(s))
 	}
 	return false
 }

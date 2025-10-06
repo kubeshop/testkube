@@ -12,13 +12,13 @@ package commons
 import (
 	reflect "reflect"
 
-	executors "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	templates "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
-	testexecutions "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
-	tests "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsources "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
-	testsuiteexecutions "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
-	v3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	executors "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
+	templates "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
+	testexecutions "github.com/kubeshop/testkube/pkg/operator/client/testexecutions/v1"
+	tests "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
+	testsources "github.com/kubeshop/testkube/pkg/operator/client/testsources/v1"
+	testsuiteexecutions "github.com/kubeshop/testkube/pkg/operator/client/testsuiteexecutions/v1"
+	v3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3"
 	gomock "go.uber.org/mock/gomock"
 )
 

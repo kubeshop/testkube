@@ -7395,9 +7395,6 @@ components:
       allOf:
         - $ref: "#/components/schemas/WebhookTemplate"
 
-    # Copied from CRD spec
-    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml
-    # TODO we need to sync those in some nice way
     Executor:
       description: CRD based executor data
       type: object

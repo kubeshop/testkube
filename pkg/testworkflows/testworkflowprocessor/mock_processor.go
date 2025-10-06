@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	expressions "github.com/kubeshop/testkube/pkg/expressions"
 	gomock "go.uber.org/mock/gomock"
 )

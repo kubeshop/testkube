@@ -12,7 +12,7 @@ package testworkflowprocessor
 import (
 	reflect "reflect"
 
-	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	gomock "go.uber.org/mock/gomock"
 )

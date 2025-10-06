@@ -6,7 +6,7 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 )
 

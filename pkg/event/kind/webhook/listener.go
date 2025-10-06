@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"

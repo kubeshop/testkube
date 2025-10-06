@@ -14,15 +14,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	tests "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	"github.com/kubeshop/testkube-operator/pkg/secret"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	executionsmapper "github.com/kubeshop/testkube/pkg/mapper/executions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	"github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
+	"github.com/kubeshop/testkube/pkg/operator/secret"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
@@ -527,7 +527,6 @@ func (s *DeprecatedTestkubeAPI) AbortTestHandler() fiber.Handler {
 			res, errAbort := s.Executor.Abort(ctx, &execution)
 			if errAbort != nil {
 				s.Log.Errorw("aborting execution failed", "execution", execution, "error", errAbort)
-				err = errAbort
 			}
 			s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
 			results = append(results, *res)

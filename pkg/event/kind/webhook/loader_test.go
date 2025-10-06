@@ -7,12 +7,12 @@ import (
 	gomock "go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
+	templatesclientv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
 )
 
 func TestWebhookLoader(t *testing.T) {

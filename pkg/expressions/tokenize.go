@@ -47,19 +47,20 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			str := singleQuoteStringRe.Find([]byte(exp[i:]))
 			originalLen := len(str)
 			for index := 1; index < len(str)-1; index++ {
-				if str[index] == '\\' {
+				switch str[index] {
+				case '\\':
 					if len(str) > index+2 && str[index+1] == '\'' {
 						str = append(str[0:index], str[index+1:]...)
 					} else {
 						index++
 					}
-				} else if str[index] == '"' {
+				case '"':
 					str = append(str[0:index], append([]byte{'\\', '"'}, str[index+1:]...)...)
 					index++
-				} else if str[index] == '\n' {
+				case '\n':
 					str = append(str[0:index], append([]byte{'\\', 'n'}, str[index+1:]...)...)
 					index++
-				} else if str[index] == '\t' {
+				case '\t':
 					str = append(str[0:index], append([]byte{'\\', 't'}, str[index+1:]...)...)
 					index++
 				}
@@ -79,14 +80,15 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			if exp[i] == '"' {
 				inside := true
 				for index := i + 1; inside && index < len(exp); index++ {
-					if exp[index] == '\\' {
+					switch exp[index] {
+					case '\\':
 						index++
-					} else if exp[index] == '"' {
+					case '"':
 						inside = false
-					} else if exp[index] == '\n' {
+					case '\n':
 						exp = exp[0:index] + "\\n" + exp[index+1:]
 						appended++
-					} else if exp[index] == '\t' {
+					case '\t':
 						exp = exp[0:index] + "\\t" + exp[index+1:]
 						appended++
 					}

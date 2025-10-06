@@ -1,3 +1,4 @@
+//nolint:staticcheck
 package controlplaneclient
 
 import "github.com/kubeshop/testkube/pkg/cloud"

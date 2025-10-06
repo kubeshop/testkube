@@ -143,7 +143,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		}()
 
 		// and test event emitter
-		ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+		ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 		assert.NoError(t, err)
 		eventBus := bus.NewNATSBus(ec)
 		emitter := event.NewEmitter(eventBus, "test-cluster")

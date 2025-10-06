@@ -12,7 +12,7 @@ package stage
 import (
 	reflect "reflect"
 
-	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	expressions "github.com/kubeshop/testkube/pkg/expressions"
 	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
 	gomock "go.uber.org/mock/gomock"

@@ -10,7 +10,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
-	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -111,12 +110,12 @@ func NewCreateTestsCmd() *cobra.Command {
 			}
 
 			namespace := cmd.Flag("namespace").Value.String()
-			var client client.Client
+			var kubeClient client.Client
 			if !crdOnly {
-				client, namespace, err = common.GetClient(cmd)
+				kubeClient, namespace, err = common.GetClient(cmd)
 				ui.ExitOnError("getting client", err)
 
-				test, _ := client.GetTest(testName)
+				test, _ := kubeClient.GetTest(testName)
 
 				if testName == test.Name {
 					if cmd.Flag("update").Changed {
@@ -138,7 +137,7 @@ func NewCreateTestsCmd() *cobra.Command {
 					options, err := NewUpdateTestOptionsFromFlags(cmd)
 					ui.ExitOnError("getting test options", err)
 
-					test, err = client.UpdateTest(options)
+					test, err = kubeClient.UpdateTest(options)
 					ui.ExitOnError("updating test "+testName+" in namespace "+namespace, err)
 
 					ui.SuccessAndExit("Test updated", namespace, "/", testName)
@@ -154,7 +153,7 @@ func NewCreateTestsCmd() *cobra.Command {
 			ui.ExitOnError("getting test options", err)
 
 			if !crdOnly {
-				executors, err := client.ListExecutors("")
+				executors, err := kubeClient.ListExecutors("")
 				ui.ExitOnError("getting available executors", err)
 
 				contentType := ""
@@ -174,18 +173,18 @@ func NewCreateTestsCmd() *cobra.Command {
 				}
 
 				if len(flags.VariablesFile) > 0 {
-					options.ExecutionRequest.VariablesFile, options.ExecutionRequest.IsVariablesFileUploaded, err = PrepareVariablesFile(client, testName, apiv1.Test, flags.VariablesFile, timeout)
+					options.ExecutionRequest.VariablesFile, options.ExecutionRequest.IsVariablesFileUploaded, err = PrepareVariablesFile(kubeClient, testName, client.Test, flags.VariablesFile, timeout)
 					if err != nil {
 						ui.ExitOnError("could not prepare variables file", err)
 					}
 				}
 
 				if len(flags.CopyFiles) > 0 {
-					err := uploadFiles(client, testName, apiv1.Test, flags.CopyFiles, timeout)
+					err := uploadFiles(kubeClient, testName, client.Test, flags.CopyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}
 
-				_, err = client.CreateTest(options)
+				_, err = kubeClient.CreateTest(options)
 				ui.ExitOnError("creating test "+testName+" in namespace "+namespace, err)
 
 				ui.Success("Test created", namespace, "/", testName)

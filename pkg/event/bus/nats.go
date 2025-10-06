@@ -1,3 +1,4 @@
+//nolint:staticcheck
 package bus
 
 import (

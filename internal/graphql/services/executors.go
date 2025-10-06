@@ -3,9 +3,9 @@ package services
 import (
 	"context"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 )
 
 //go:generate mockgen -destination=./mock_executors.go -package=services "github.com/kubeshop/testkube/internal/graphql/services" ExecutorsService

@@ -9,12 +9,12 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gorilla/websocket"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/graphql/gen"
 	"github.com/kubeshop/testkube/internal/graphql/resolvers"
 	"github.com/kubeshop/testkube/internal/graphql/services"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 )
 
 func GetServer(eventBus bus.Bus, executorsClient executorsclientv1.Interface) *handler.Server {

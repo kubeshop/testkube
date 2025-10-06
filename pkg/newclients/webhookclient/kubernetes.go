@@ -17,7 +17,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/repository/channels"

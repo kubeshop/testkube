@@ -45,7 +45,7 @@ func IsJobFinished(job *batchv1.Job) bool {
 	if job == nil {
 		return false
 	}
-	if job.ObjectMeta.DeletionTimestamp != nil {
+	if job.DeletionTimestamp != nil {
 		return true
 	}
 	if job.Status.CompletionTime != nil {
@@ -68,7 +68,7 @@ func IsPodFinished(pod *corev1.Pod) bool {
 	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 		return true
 	}
-	if pod.ObjectMeta.DeletionTimestamp != nil {
+	if pod.DeletionTimestamp != nil {
 		return true
 	}
 	if pod.Status.Phase == corev1.PodUnknown {
@@ -139,10 +139,10 @@ func IsContainerFinished(pod *corev1.Pod, name string) bool {
 
 func GetEventTimestamp(event *corev1.Event) time.Time {
 	ts := event.CreationTimestamp.Time
-	if event.FirstTimestamp.Time.After(ts) {
+	if event.FirstTimestamp.After(ts) {
 		ts = event.FirstTimestamp.Time
 	}
-	if event.LastTimestamp.Time.After(ts) {
+	if event.LastTimestamp.After(ts) {
 		ts = event.LastTimestamp.Time
 	}
 	return ts
@@ -306,8 +306,8 @@ func GetJobError(job *batchv1.Job) string {
 	if job.DeletionTimestamp != nil {
 		msg = "Job has been aborted"
 	}
-	if job.ObjectMeta.Annotations != nil {
-		if terminationReason, ok := job.ObjectMeta.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
+	if job.Annotations != nil {
+		if terminationReason, ok := job.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
 			msg = terminationReason
 		}
 	}
@@ -315,10 +315,10 @@ func GetJobError(job *batchv1.Job) string {
 }
 
 func GetTerminationCode(job *batchv1.Job) string {
-	if job == nil || job.ObjectMeta.Annotations == nil {
+	if job == nil || job.Annotations == nil {
 		return string(testkube.ABORTED_TestWorkflowStatus)
 	}
-	if terminationCode, ok := job.ObjectMeta.Annotations[constants2.AnnotationTerminationCode]; ok && terminationCode != "" {
+	if terminationCode, ok := job.Annotations[constants2.AnnotationTerminationCode]; ok && terminationCode != "" {
 		return terminationCode
 	}
 	return string(testkube.ABORTED_TestWorkflowStatus)

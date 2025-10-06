@@ -16,11 +16,11 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
+	testsclientv3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
 )
 
 func TestDeprecatedTestkubeAPI_DeleteTest(t *testing.T) {

@@ -2,10 +2,9 @@ package tests
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/tests"
 )
@@ -213,9 +212,9 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	return mappertcl.MapExecutionRequestToSpecExecutionRequest(executionRequest, result)
 }
 
-func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []v1.LocalObjectReference) {
+func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []corev1.LocalObjectReference) {
 	for _, secret := range secrets {
-		res = append(res, v1.LocalObjectReference{Name: secret.Name})
+		res = append(res, corev1.LocalObjectReference{Name: secret.Name})
 	}
 	return res
 }
@@ -231,7 +230,7 @@ func mapEnvReferences(envs []testkube.EnvReference) []testsv3.EnvReference {
 		}
 
 		res = append(res, testsv3.EnvReference{
-			LocalObjectReference: v1.LocalObjectReference{
+			LocalObjectReference: corev1.LocalObjectReference{
 				Name: env.Reference.Name,
 			},
 			Mount:          env.Mount,
@@ -645,7 +644,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ArtifactRequest != nil {
 		emptyArtifact := true
-		if !(*executionRequest.ArtifactRequest == nil || (*executionRequest.ArtifactRequest).IsEmpty()) {
+		if *executionRequest.ArtifactRequest != nil && !(*executionRequest.ArtifactRequest).IsEmpty() {
 			if request.ArtifactRequest == nil {
 				request.ArtifactRequest = &testsv3.ArtifactRequest{}
 			}
@@ -705,7 +704,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.SlavePodRequest != nil {
 		emptyPodRequest := true
-		if !(*executionRequest.SlavePodRequest == nil || (*executionRequest.SlavePodRequest).IsEmpty()) {
+		if *executionRequest.SlavePodRequest != nil && !(*executionRequest.SlavePodRequest).IsEmpty() {
 			if request.SlavePodRequest == nil {
 				request.SlavePodRequest = &testsv3.PodRequest{}
 			}
