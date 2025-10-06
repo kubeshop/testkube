@@ -1,5 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
+-- Add control panel columns
 ALTER TABLE test_workflow_executions ADD COLUMN organization_id VARCHAR(255) DEFAULT '' NOT NULL;
 ALTER TABLE test_workflow_executions ADD COLUMN environment_id VARCHAR(255) DEFAULT '' NOT NULL;
 

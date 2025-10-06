@@ -66,6 +66,7 @@ type TestWorkflowExecution struct {
 	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	OrganizationID            string             `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
+	Runtime                   []byte             `db:"runtime" json:"runtime"`
 }
 
 type TestWorkflowOutput struct {

@@ -23,7 +23,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 
 	// Define expected query pattern
 	expectedQuery := `SELECT
-	    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.created_at, e\.updated_at,
+	    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.runtime, e\.created_at, e\.updated_at,
 	    r\.status, r\.predicted_status, r\.queued_at, r\.started_at, r\.finished_at,
 	    r\.duration, r\.total_duration, r\.duration_ms, r\.paused_ms, r\.total_duration_ms,
 	    r\.pauses, r\.initialization, r\.steps,
@@ -86,7 +86,7 @@ WHERE \(e\.id = \$1 OR e\.name = \$1\) AND \(e\.organization_id = \$2 AND e\.env
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
 		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
-		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"tags", "running_context", "config_params", "runtime", "created_at", "updated_at",
 		"status", "predicted_status", "queued_at", "started_at", "finished_at",
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 		"pauses", "initialization", "steps",
@@ -99,7 +99,7 @@ WHERE \(e\.id = \$1 OR e\.name = \$1\) AND \(e\.organization_id = \$2 AND e\.env
 	}).AddRow(
 		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
-		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
 		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
@@ -134,7 +134,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
 	ctx := context.Background()
 
 	expectedQuery := `SELECT 
-    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.created_at, e\.updated_at,
+    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.runtime, e\.created_at, e\.updated_at,
     r\.status, r\.predicted_status, r\.queued_at, r\.started_at, r\.finished_at,
     r\.duration, r\.total_duration, r\.duration_ms, r\.paused_ms, r\.total_duration_ms,
     r\.pauses, r\.initialization, r\.steps,
@@ -196,7 +196,7 @@ WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2::text AND \(e\.organiza
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
 		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
-		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"tags", "running_context", "config_params", "runtime", "created_at", "updated_at",
 		"status", "predicted_status", "queued_at", "started_at", "finished_at",
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 		"pauses", "initialization", "steps",
@@ -209,7 +209,7 @@ WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2::text AND \(e\.organiza
 	}).AddRow(
 		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
-		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
 		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
@@ -248,7 +248,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionByTestWo
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
 		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
-		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"tags", "running_context", "config_params", "runtime", "created_at", "updated_at",
 		"status", "predicted_status", "queued_at", "started_at", "finished_at",
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 		"pauses", "initialization", "steps",
@@ -261,7 +261,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionByTestWo
 	}).AddRow(
 		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
-		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
 		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
@@ -297,7 +297,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
 	ctx := context.Background()
 
 	expectedQuery := `SELECT DISTINCT ON \(w\.name\)
-    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.created_at, e\.updated_at,
+    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.runtime, e\.created_at, e\.updated_at,
     r\.status, r\.predicted_status, r\.queued_at, r\.started_at, r\.finished_at,
     r\.duration, r\.total_duration, r\.duration_ms, r\.paused_ms, r\.total_duration_ms,
     r\.pauses, r\.initialization, r\.steps,
@@ -360,7 +360,7 @@ ORDER BY w\.name, e\.status_at DESC`
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
 		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
-		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"tags", "running_context", "config_params", "runtime", "created_at", "updated_at",
 		"status", "predicted_status", "queued_at", "started_at", "finished_at",
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 		"pauses", "initialization", "steps",
@@ -373,7 +373,7 @@ ORDER BY w\.name, e\.status_at DESC`
 	}).AddRow(
 		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
-		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
 		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
@@ -409,7 +409,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
 	ctx := context.Background()
 
 	expectedQuery := `SELECT 
-    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.created_at, e\.updated_at,
+    e\.id, e\.group_id, e\.runner_id, e\.runner_target, e\.runner_original_target, e\.name, e\.namespace, e\.number, e\.scheduled_at, e\.assigned_at, e\.status_at, e\.test_workflow_execution_name, e\.disable_webhooks, e\.tags, e\.running_context, e\.config_params, e\.runtime, e\.created_at, e\.updated_at,
     r\.status, r\.predicted_status, r\.queued_at, r\.started_at, r\.finished_at,
     r\.duration, r\.total_duration, r\.duration_ms, r\.paused_ms, r\.total_duration_ms,
     r\.pauses, r\.initialization, r\.steps,
@@ -472,7 +472,7 @@ ORDER BY e\.id DESC`
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
 		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
-		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"tags", "running_context", "config_params", "runtime", "created_at", "updated_at",
 		"status", "predicted_status", "queued_at", "started_at", "finished_at",
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 		"pauses", "initialization", "steps",
@@ -485,7 +485,7 @@ ORDER BY e\.id DESC`
 	}).AddRow(
 		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
-		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"running", "running", time.Now(), time.Now(), time.Now(),
 		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
@@ -682,11 +682,11 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 	expectedQuery := `INSERT INTO test_workflow_executions \(
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id
+    tags, running_context, config_params, organization_id, environment_id, runtime
 \) VALUES \(
     \$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8,
     \$9, \$10, \$11, \$12, \$13,
-    \$14, \$15, \$16, \$17, \$18
+    \$14, \$15, \$16, \$17, \$18, \$19
 \)`
 
 	params := InsertTestWorkflowExecutionParams{
@@ -708,6 +708,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 		ConfigParams:              []byte(`{}`),
 		OrganizationID:            "org-id",
 		EnvironmentID:             "env-id",
+		Runtime:                   []byte(`{}`),
 	}
 
 	mock.ExpectExec(expectedQuery).WithArgs(
@@ -729,6 +730,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 		params.ConfigParams,
 		params.OrganizationID,
 		params.EnvironmentID,
+		params.Runtime,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	// Execute query
@@ -1186,8 +1188,9 @@ SET
     disable_webhooks = \$12,
     tags = \$13,
     running_context = \$14,
-    config_params = \$15
-WHERE id = \$16 AND \(organization_id = \$17 AND environment_id = \$18\)`
+    config_params = \$15,
+	runtime = \$16
+WHERE id = \$17 AND \(organization_id = \$18 AND environment_id = \$19\)`
 
 	params := UpdateTestWorkflowExecutionParams{
 		GroupID:                   pgtype.Text{String: "group-1", Valid: true},
@@ -1205,6 +1208,7 @@ WHERE id = \$16 AND \(organization_id = \$17 AND environment_id = \$18\)`
 		Tags:                      []byte(`{"env":"prod"}`),
 		RunningContext:            []byte(`{}`),
 		ConfigParams:              []byte(`{}`),
+		Runtime:                   []byte(`{}`),
 		ID:                        "test-id",
 		OrganizationID:            "org-id",
 		EnvironmentID:             "env-id",
@@ -1226,6 +1230,7 @@ WHERE id = \$16 AND \(organization_id = \$17 AND environment_id = \$18\)`
 		params.Tags,
 		params.RunningContext,
 		params.ConfigParams,
+		params.Runtime,
 		params.ID,
 		params.OrganizationID,
 		params.EnvironmentID,
