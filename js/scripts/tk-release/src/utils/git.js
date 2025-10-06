@@ -35,14 +35,13 @@ function getBranchName(tag) {
 }
 
 export async function getCurrentBranch() {
-  // const gitCurrentBranchProcess = await $`git branch --show-current`;
-  // return gitCurrentBranchProcess.stdout;
-    return "main"
+  const gitCurrentBranchProcess = await $`git branch --show-current`;
+  return gitCurrentBranchProcess.stdout;
 }
 
 export async function assertGit() {
   await assertGitRepo();
-  // await assertGitClean();
+  await assertGitClean();
   await assertGitBranch();
 }
 

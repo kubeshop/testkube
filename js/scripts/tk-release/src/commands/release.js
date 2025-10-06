@@ -1,5 +1,5 @@
 import { createCommit, createTag, createBranch } from "../utils/git.js";
-import { editHelmChart, parseCurrentVersion } from "../utils/helm.js";
+import { editHelmChartOfTestkube ,editHelmChartOfRunner, parseCurrentVersion } from "../utils/helm.js";
 import { failure, info, askConfirmation } from "../utils/io.js";
 import semver from "semver";
 
@@ -13,7 +13,8 @@ export async function release({ branch, kind, dryRun, yes }) {
   console.log("Release strategy:", releaseStrategy.release, releaseStrategy.prefix, releaseStrategy.branch);
   await inform(branch, kind, yes);
 
-  await editHelmChart(nextAppVersion, releaseStrategy);
+  await editHelmChartOfRunner(nextAppVersion, releaseStrategy);
+  await editHelmChartOfTestkube(nextAppVersion, releaseStrategy);
 
   await createCommit(nextAppVersion, dryRun);
   await createTag(nextAppVersion, dryRun);

@@ -3,7 +3,7 @@ import { release } from "./src/commands/release.js";
 import { assertGit, getCurrentBranch } from "./src/utils/git.js";
 import cac from "cac";
 
-const cli = cac("tk-release");
+const cli = cac("tk-release-agent");
 
 cli
   .command("", "Creates a release")

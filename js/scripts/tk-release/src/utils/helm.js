@@ -3,63 +3,61 @@ import { $ } from "execa";
 import semver from "semver";
 import shell from "shelljs";
 
-export async function editHelmChart(appVersion, releaseStrategy) {
-  const subcharts = ["testkube-api", "testkube-operator", "testkube-runner", "testkube-logs"];
+export function parseCurrentVersion(chartPath = `./k8s/helm/testkube/Chart.yaml`) {
+    const grepAppVersion = shell.grep(/^appVersion: .*/, chartPath);
+    const appVersion = grepAppVersion.replace("appVersion: ", "").replace("\n", "");
 
-  for (const c of subcharts) {
-    await bumpSubChartVersion(c, releaseStrategy);
-    await bumpSubChartAppVersion(c, appVersion);
-    await bumpSubChartValuesImageTag(c, appVersion);
-  }
+    const grepChartVersion = shell.grep(/^version: .*/, chartPath);
+    const chartVersion = grepChartVersion.replace("version: ", "").replace("\n", "");
 
-  await bumpChartVersion(releaseStrategy);
-  await bumpChartAppVersion(appVersion);
-
-  info("helm dependency updating…");
-  await $({ cwd: "./k8s/helm/testkube" })`helm dependency update`;
+    return [appVersion, chartVersion];
 }
 
-async function bumpSubChartVersion(chart, releaseStrategy) {
-  const file = `./k8s/helm/${chart}/Chart.yaml`;
-  const grep = shell.grep(/^version: .*/, file);
-  const current = grep.replace("version: ", "").replace("\n", "");
+export async function editHelmChartOfTestkube(appVersion, releaseStrategy) {
+    // Subcharts
+    const apiChartPath =   `./k8s/helm/testkube-api/Chart.yaml`
+    const apiValuesPath =   `./k8s/helm/testkube-api/values.yaml`
+    await bumpChartVersion(apiChartPath, releaseStrategy);
+    await bumpChartAppVersion(apiChartPath, appVersion);
+    await bumpValuesImageTag(apiValuesPath, appVersion);
 
-  const nextChartVersion = semver.inc(current, releaseStrategy.release, releaseStrategy.prefix);
-  if (!nextChartVersion) return;
+    // Remark: testkube-operator will never have new builds so do not update app version!
+    const operatorChartPath =   `./k8s/helm/testkube-api/Chart.yaml`
+    await bumpChartVersion(operatorChartPath, releaseStrategy);
 
-  shell.sed("-i", "^version:.*$", `version: ${nextChartVersion}`, file);
+    const chartPath = `./k8s/helm/testkube/Chart.yaml`;
+    await bumpChartVersion(chartPath, releaseStrategy);
+    await bumpChartAppVersion(chartPath, appVersion);
+
+    info("helm dependency updating for testkube chart…");
+    await $({ cwd: "./k8s/helm/testkube" })`helm dependency update`;
 }
 
-async function bumpSubChartAppVersion(chart, appVersion) {
-  shell.sed("-i", "^appVersion:.*$", `appVersion: ${appVersion}`, `./k8s/helm/testkube/components/${chart}/Chart.yaml`);
+export async function editHelmChartOfRunner(appVersion, releaseStrategy) {
+    const chartPath = `./k8s/helm/testkube-runner/Chart.yaml`;
+    const valuesPath = `./k8s/helm/testkube-runner/values.yaml`;
+    await bumpChartVersion(chartPath, releaseStrategy);
+    await bumpChartAppVersion(valuesPath, appVersion);
+
+    info("helm dependency updating for testkube-runner…");
+    await $({ cwd: "./k8s/helm/testkube-runner" })`helm dependency update`;
 }
 
-async function bumpSubChartValuesImageTag(chart, appVersion) {
-  shell.sed("-i", "^  tag:.*$", `  tag: ${appVersion}`, `./k8s/helm/testkube/components/${chart}/values.yaml`);
+async function bumpChartAppVersion(chartPath, appVersion) {
+  shell.sed("-i", "^appVersion:.*$", `appVersion: ${appVersion}`, chartPath);
 }
 
-async function bumpChartVersion(releaseStrategy) {
-  const file = `./k8s/helm/testkube/Chart.yaml`;
-  const grep = shell.grep(/^version: .*/, file);
-  const current = grep.replace("version: ", "").replace("\n", "");
-
-  const nextChartVersion = semver.inc(current, releaseStrategy.release, releaseStrategy.prefix);
-  if (!nextChartVersion) return;
-
-  shell.sed("-i", "^version:.*$", `version: ${nextChartVersion}`, file);
+async function bumpValuesImageTag(valuesPath, appVersion) {
+  shell.sed("-i", "^  tag:.*$", `  tag: ${appVersion}`, valuesPath);
 }
 
-async function bumpChartAppVersion(appVersion) {
-  shell.sed("-i", "^appVersion:.*$", `appVersion: ${appVersion}`, `./k8s/helm/testkube/Chart.yaml`);
+async function bumpChartVersion(chartPath, releaseStrategy) {
+    const grep = shell.grep(/^version: .*/, chartPath);
+    const current = grep.replace("version: ", "").replace("\n", "");
+
+    const nextChartVersion = semver.inc(current, releaseStrategy.release, releaseStrategy.prefix);
+    if (!nextChartVersion) return;
+
+    shell.sed("-i", "^version:.*$", `version: ${nextChartVersion}`, chartPath);
 }
 
-export function parseCurrentVersion() {
-  const file = `./k8s/helm/testkube/Chart.yaml`;
-  const grepAppVersion = shell.grep(/^appVersion: .*/, file);
-  const appVersion = grepAppVersion.replace("appVersion: ", "").replace("\n", "");
-
-  const grepChartVersion = shell.grep(/^version: .*/, file);
-  const chartVersion = grepChartVersion.replace("version: ", "").replace("\n", "");
-
-  return [appVersion, chartVersion];
-}

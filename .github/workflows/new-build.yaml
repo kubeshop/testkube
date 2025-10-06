@@ -2,7 +2,10 @@ name: New Docker images builds for API; tk-init and tk-toolkit services
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - '[0-9].[0-9]+.[0-9]+'
+      - '[0-9].[0-9]+.[0-9]+-rc.[0-9]+'
+      - '[0-9].[0-9]+.[0-9]+-dev.[0-9]+'
+      - '[0-9].[0-9]+.[0-9]+-beta.[0-9]+'
     branches:
       - main
 env:
@@ -16,7 +19,7 @@ permissions:
   id-token: write # needed for depot
 
 jobs:
-  api:
+  build:
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
@@ -114,3 +117,75 @@ jobs:
           event-type: release-testkube-api-charts
           client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
 
+
+  helm:
+    runs-on: depot-ubuntu-22.04
+    needs: build
+    # Only runs on releases (candidates), excluding -dev and -beta
+    if: ${{ startsWith(github.event.ref, 'refs/tags') && !contains(github.event.ref, '-dev') && !contains(github.event.ref, '-beta') }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GAR_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_PROD }}
+      GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
+      CHARTS_REPOSITORY: testkube
+    steps:
+      - uses: actions/checkout@v3
+      - id: helm-version
+        name: Extract Helm Chart version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq '.version' k8s/helm/testkube/Chart.yaml
+
+      - name: Auth to Google Cloud
+        if: ${{ github.ref_type == 'tag' }}
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.GAR_PROJECT_ID }}
+          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }} #Key to SA in Testkube Prod project
+
+      - name: Configure Docker for GAR
+        if: ${{ github.ref_type == 'tag' }}
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: helm-publish
+        name: Publish Helm Chart
+        run: |
+          REGISTRY=registry-1.docker.io
+          REGISTRY_GAR=${{ env.GAR_LOCATION }}-docker.pkg.dev
+          
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login ${REGISTRY} --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          
+          # testkube chart
+          helm dependency build k8s/helm/testkube
+          helm package k8s/helm/testkube
+          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
+          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+
+          # testkube runner chart
+          helm dependency build k8s/helm/testkube-runner
+          helm package k8s/helm/testkube-runner
+          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
+          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+
+      - id: helm-index-update
+        name: Dispatch update for legacy Helm index
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.CI_BOT_TOKEN }}
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'kubeshop',
+              repo: 'helm-charts',
+              ref: 'main',
+              workflow_id: 'index-update.yaml',
+              inputs: {
+                chart_version: '${{ steps.helm-version.outputs.result }}'
+              }
+            })
