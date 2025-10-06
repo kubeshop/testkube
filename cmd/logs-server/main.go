@@ -110,8 +110,6 @@ func main() {
 			cfg.TestkubeProTLSInsecure,
 			cfg.TestkubeProSkipVerify,
 			cfg.TestkubeProURL,
-			cfg.TestkubeProCertFile,
-			cfg.TestkubeProKeyFile,
 			cfg.TestkubeProCAFile,
 			log,
 		)

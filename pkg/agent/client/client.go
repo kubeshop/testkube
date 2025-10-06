@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"os"
 	"time"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -16,6 +15,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials/local"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
@@ -49,10 +49,10 @@ func NewGRPCConnection(
 	isInsecure bool,
 	skipVerify bool,
 	server string,
-	certFile, keyFile, caFile string,
+	caFile string,
 	logger *zap.SugaredLogger,
 ) (*grpc.ClientConn, error) {
-	return NewGRPCConnectionWithTracing(ctx, isInsecure, skipVerify, server, certFile, keyFile, caFile, logger, false)
+	return NewGRPCConnectionWithTracing(ctx, isInsecure, skipVerify, server, caFile, logger, false)
 }
 
 // NewGRPCConnectionWithTracing creates a gRPC client and optionally instruments it with OpenTelemetry (non-deprecated stats handler).
@@ -61,47 +61,18 @@ func NewGRPCConnectionWithTracing(
 	isInsecure bool,
 	skipVerify bool,
 	server string,
-	certFile, keyFile, caFile string,
+	caFile string,
 	logger *zap.SugaredLogger,
 	enableTracing bool,
 ) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, connectionTimeout)
-	defer cancel()
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-	if skipVerify {
-		tlsConfig = &tls.Config{InsecureSkipVerify: true}
-	} else {
-		if certFile != "" && keyFile != "" {
-			if err := clientCert(tlsConfig, certFile, keyFile); err != nil {
-				return nil, err
-			}
-		}
-		if caFile != "" {
-			if err := rootCAs(tlsConfig, caFile); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	creds := credentials.NewTLS(tlsConfig)
-	if isInsecure {
-		creds = insecure.NewCredentials()
-	}
-
-	kacp := keepalive.ClientParameters{
-		Time:                GRPCKeepaliveTime,
-		Timeout:             GRPCKeepaliveTimeout,
-		PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
-	}
-
-	userAgent := version.Version + "/" + version.Commit
-	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
-
 	// Build dial options
 	opts := []grpc.DialOption{
-		grpc.WithUserAgent(userAgent),
-		grpc.WithTransportCredentials(creds),
-		grpc.WithKeepaliveParams(kacp),
+		grpc.WithUserAgent(version.Version + "/" + version.Commit),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                GRPCKeepaliveTime,
+			Timeout:             GRPCKeepaliveTimeout,
+			PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
+		}),
 		grpc.WithConnectParams(grpc.ConnectParams{
 			Backoff: backoff.Config{
 				BaseDelay:  backoffDelay,
@@ -118,17 +89,94 @@ func NewGRPCConnectionWithTracing(
 			grpczap.UnaryClientInterceptor(logger.Desugar()),
 		),
 	}
-
 	// Conditionally add OpenTelemetry (non-deprecated) stats handler
 	if enableTracing {
 		opts = append(opts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 
-	client, err := grpc.NewClient(server, opts...)
+	// CONNECTION SECURITY
+	// Here we're attempting to enforce some level of security here with the intention to
+	// eventually just totally remove the ability to connect insecurely between Agents
+	// and the Control Plane.
+	// The logic for the below section is intended to be as follows:
+	// 	1. Attempt to connect using TLS with either:
+	// 		a. System Root CAs, or
+	// 		b. Optionally provided CA from a PEM file.
+	// 	2. Attempt to connect with a local only connection, for standalone Agents.
+	// 	3. If secure connection fails then:
+	// 		a. If skipVerify is set attempt to create a TLS connection without certificate verification (NOT RECOMMENDED!).
+	// 		b. If skipVerify fails and insecure is set attempt to create a connection without TLS (EVEN MORE NOT RECOMMENDED!).
+	//
+	// All of step 2 should be removed in the future when Control Planes are required to create TLS connections.
+
+	// Default credentials using the system CAs to verify server certificates.
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+	creds := credentials.NewClientTLSFromCert(certPool, "")
+
+	// If a CA certificate file is passed then use that CA to verify server certificates.
+	if caFile != "" {
+		creds, err = credentials.NewClientTLSFromFile(caFile, "")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Attempt to use a TLS connection.
+	tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
+	client, err := attemptConnection(ctx, server, tlsDialOptions...)
+	// WARNING, checking for no error to early return with a secure client before attempting with local client.
+	if err == nil {
+		logger.Info("Using TLS gRPC connection")
+		return client, nil
+	}
+
+	// Attempt to use a Local connection (for our usage only local TCP connections will work).
+	localDialOptions := append(opts, grpc.WithTransportCredentials(local.NewCredentials()))
+	client, err = attemptConnection(ctx, server, localDialOptions...)
+	// WARNING, checking for no error to early return with a local client before descending into madness.
+	if err == nil {
+		logger.Info("Using local gRPC connection")
+		return client, nil
+	}
+
+	// The following cases exist purely for backwards compatibility.
+	// They should be removed once TLS is enforced on Control Plane gRPC servers.
+	if skipVerify {
+		skipVerifyDialOptions := append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: skipVerify,
+		})))
+		client, err = attemptConnection(ctx, server, skipVerifyDialOptions...)
+		// WARNING, checking for no error to early return with an insecure (MitM is possible with skip verify) client before descending further into madness.
+		if err == nil {
+			logger.Error("Using TLS with no certificate verification for gRPC connection")
+			return client, nil
+		}
+	}
+	if isInsecure {
+		insecureDialOptions := append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		client, err = attemptConnection(ctx, server, insecureDialOptions...)
+		// WARNING, checking for no error to early return with an insecure client, this is madness.
+		if err == nil {
+			logger.Error("Using insecure gRPC connection")
+			return client, nil
+		}
+	}
+
+	return nil, err
+}
+
+func attemptConnection(ctx context.Context, url string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(ctx, connectionTimeout)
+	defer cancel()
+
+	client, err := grpc.NewClient(url, opts...)
 	if err != nil {
 		return client, fmt.Errorf("create new grpc client: %w", err)
 	}
-
 	// Wait for connection to go ready.
 	for {
 		s := client.GetState()
@@ -141,38 +189,9 @@ func NewGRPCConnectionWithTracing(
 		}
 		// Wait for transition away from current state.
 		if !client.WaitForStateChange(ctx, s) {
-			return client, ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
-}
-
-func rootCAs(tlsConfig *tls.Config, file ...string) error {
-	pool := x509.NewCertPool()
-	for _, f := range file {
-		rootPEM, err := os.ReadFile(f)
-		if err != nil || rootPEM == nil {
-			return fmt.Errorf("agent: error loading or parsing rootCA file: %v", err)
-		}
-		ok := pool.AppendCertsFromPEM(rootPEM)
-		if !ok {
-			return fmt.Errorf("agent: failed to parse root certificate from %q", f)
-		}
-	}
-	tlsConfig.RootCAs = pool
-	return nil
-}
-
-func clientCert(tlsConfig *tls.Config, certFile, keyFile string) error {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return fmt.Errorf("agent: error loading client certificate: %v", err)
-	}
-	cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
-	if err != nil {
-		return fmt.Errorf("agent: error parsing client certificate: %v", err)
-	}
-	tlsConfig.Certificates = []tls.Certificate{cert}
-	return nil
 }
 
 func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
