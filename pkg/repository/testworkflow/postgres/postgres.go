@@ -231,7 +231,7 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	}
 
 	// Parse basic JSONB fields
-	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
+	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime)
 
 	// Build result if exists
 	if row.Status.Valid {
@@ -446,6 +446,7 @@ func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecuti
 		Tags:                 row.Tags,
 		RunningContext:       row.RunningContext,
 		ConfigParams:         row.ConfigParams,
+		Runtime:              row.Runtime,
 		Reports:              row.Reports,
 		ResourceAggregations: row.ResourceAggregations,
 	}
@@ -795,6 +796,11 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	runtime, err := toJSONB(execution.Runtime)
+	if err != nil {
+		return err
+	}
+
 	return qtx.InsertTestWorkflowExecution(ctx, sqlc.InsertTestWorkflowExecutionParams{
 		ID:                        execution.Id,
 		GroupID:                   toPgText(execution.GroupId),
@@ -814,6 +820,7 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		ConfigParams:              configParams,
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
+		Runtime:                   runtime,
 	})
 }
 
@@ -2085,7 +2092,7 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 
 // Helper methods for building complex objects
 
-func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams []byte) error {
+func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams, runtime []byte) error {
 	var err error
 	if len(runnerTarget) > 0 {
 		execution.RunnerTarget, err = fromJSONB[testkube.ExecutionTarget](runnerTarget)
@@ -2114,6 +2121,13 @@ func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWo
 
 	if len(configParams) > 0 {
 		json.Unmarshal(configParams, &execution.ConfigParams)
+	}
+
+	if len(runtime) > 0 {
+		execution.Runtime, err = fromJSONB[testkube.TestWorkflowExecutionRuntime](runtime)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -2235,6 +2249,11 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	runtime, err := toJSONB(execution.Runtime)
+	if err != nil {
+		return err
+	}
+
 	// Placeholder - you would call the generated method here:
 	return qtx.UpdateTestWorkflowExecution(ctx, sqlc.UpdateTestWorkflowExecutionParams{
 		GroupID:                   toPgText(execution.GroupId),
@@ -2252,6 +2271,7 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		Tags:                      tags,
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
+		Runtime:                   runtime,
 		ID:                        execution.Id,
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,

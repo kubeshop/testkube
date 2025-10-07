@@ -547,6 +547,7 @@ func createTestRow() sqlc.GetTestWorkflowExecutionRow {
 		Tags:                tagsJSON,
 		RunningContext:      []byte(`{}`),
 		ConfigParams:        []byte(`{}`),
+		Runtime:             []byte(`{}`),
 		Status:              pgtype.Text{String: "passed", Valid: true},
 		PredictedStatus:     pgtype.Text{String: "passed", Valid: true},
 		QueuedAt:            pgtype.Timestamptz{Time: time.Now(), Valid: true},

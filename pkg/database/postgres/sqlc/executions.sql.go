@@ -459,7 +459,7 @@ func (q *Queries) FinishTestWorkflowExecutionResultStrict(ctx context.Context, a
 
 const getFinishedTestWorkflowExecutions = `-- name: GetFinishedTestWorkflowExecutions :many
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -644,6 +644,7 @@ type GetFinishedTestWorkflowExecutionsRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -736,6 +737,7 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 			&i.Tags,
 			&i.RunningContext,
 			&i.ConfigParams,
+			&i.Runtime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -789,7 +791,7 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 
 const getLatestTestWorkflowExecutionByTestWorkflow = `-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -882,6 +884,7 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -950,6 +953,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 		&i.Tags,
 		&i.RunningContext,
 		&i.ConfigParams,
+		&i.Runtime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -996,7 +1000,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 
 const getLatestTestWorkflowExecutionsByTestWorkflows = `-- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many
 SELECT DISTINCT ON (w.name)
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1080,6 +1084,7 @@ type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1148,6 +1153,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 			&i.Tags,
 			&i.RunningContext,
 			&i.ConfigParams,
+			&i.Runtime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -1232,7 +1238,7 @@ func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousF
 
 const getRunningTestWorkflowExecutions = `-- name: GetRunningTestWorkflowExecutions :many
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1315,6 +1321,7 @@ type GetRunningTestWorkflowExecutionsRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1383,6 +1390,7 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context, arg GetR
 			&i.Tags,
 			&i.RunningContext,
 			&i.ConfigParams,
+			&i.Runtime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -1436,7 +1444,7 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context, arg GetR
 
 const getTestWorkflowExecution = `-- name: GetTestWorkflowExecution :one
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1519,6 +1527,7 @@ type GetTestWorkflowExecutionRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1581,6 +1590,7 @@ func (q *Queries) GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkf
 		&i.Tags,
 		&i.RunningContext,
 		&i.ConfigParams,
+		&i.Runtime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -1627,7 +1637,7 @@ func (q *Queries) GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkf
 
 const getTestWorkflowExecutionByNameAndTestWorkflow = `-- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1711,6 +1721,7 @@ type GetTestWorkflowExecutionByNameAndTestWorkflowRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1778,6 +1789,7 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 		&i.Tags,
 		&i.RunningContext,
 		&i.ConfigParams,
+		&i.Runtime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -1878,7 +1890,7 @@ func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, arg GetTestW
 
 const getTestWorkflowExecutionWithRunner = `-- name: GetTestWorkflowExecutionWithRunner :one
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1962,6 +1974,7 @@ type GetTestWorkflowExecutionWithRunnerRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -2029,6 +2042,7 @@ func (q *Queries) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg Ge
 		&i.Tags,
 		&i.RunningContext,
 		&i.ConfigParams,
+		&i.Runtime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -2075,7 +2089,7 @@ func (q *Queries) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg Ge
 
 const getTestWorkflowExecutions = `-- name: GetTestWorkflowExecutions :many
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -2260,6 +2274,7 @@ type GetTestWorkflowExecutionsRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -2352,6 +2367,7 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 			&i.Tags,
 			&i.RunningContext,
 			&i.ConfigParams,
+			&i.Runtime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -2405,7 +2421,7 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 
 const getTestWorkflowExecutionsSummary = `-- name: GetTestWorkflowExecutionsSummary :many
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -2590,6 +2606,7 @@ type GetTestWorkflowExecutionsSummaryRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -2682,6 +2699,7 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 			&i.Tags,
 			&i.RunningContext,
 			&i.ConfigParams,
+			&i.Runtime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -2970,7 +2988,7 @@ func (q *Queries) GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflo
 
 const getUnassignedTestWorkflowExecutions = `-- name: GetUnassignedTestWorkflowExecutions :many
 SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -3054,6 +3072,7 @@ type GetUnassignedTestWorkflowExecutionsRow struct {
 	Tags                        []byte             `db:"tags" json:"tags"`
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	Runtime                     []byte             `db:"runtime" json:"runtime"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -3122,6 +3141,7 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg G
 			&i.Tags,
 			&i.RunningContext,
 			&i.ConfigParams,
+			&i.Runtime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -3259,11 +3279,11 @@ const insertTestWorkflowExecution = `-- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id
+    tags, running_context, config_params, organization_id, environment_id, runtime
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12, $13,
-    $14, $15, $16, $17, $18
+    $14, $15, $16, $17, $18, $19
 )
 `
 
@@ -3286,6 +3306,7 @@ type InsertTestWorkflowExecutionParams struct {
 	ConfigParams              []byte             `db:"config_params" json:"config_params"`
 	OrganizationID            string             `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
+	Runtime                   []byte             `db:"runtime" json:"runtime"`
 }
 
 func (q *Queries) InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error {
@@ -3308,6 +3329,7 @@ func (q *Queries) InsertTestWorkflowExecution(ctx context.Context, arg InsertTes
 		arg.ConfigParams,
 		arg.OrganizationID,
 		arg.EnvironmentID,
+		arg.Runtime,
 	)
 	return err
 }
@@ -3544,8 +3566,9 @@ SET
     disable_webhooks = $12,
     tags = $13,
     running_context = $14,
-    config_params = $15
-WHERE id = $16 AND (organization_id = $17 AND environment_id = $18)
+    config_params = $15,
+    runtime = $16
+WHERE id = $17 AND (organization_id = $18 AND environment_id = $19)
 `
 
 type UpdateTestWorkflowExecutionParams struct {
@@ -3564,6 +3587,7 @@ type UpdateTestWorkflowExecutionParams struct {
 	Tags                      []byte             `db:"tags" json:"tags"`
 	RunningContext            []byte             `db:"running_context" json:"running_context"`
 	ConfigParams              []byte             `db:"config_params" json:"config_params"`
+	Runtime                   []byte             `db:"runtime" json:"runtime"`
 	ID                        string             `db:"id" json:"id"`
 	OrganizationID            string             `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
@@ -3586,6 +3610,7 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 		arg.Tags,
 		arg.RunningContext,
 		arg.ConfigParams,
+		arg.Runtime,
 		arg.ID,
 		arg.OrganizationID,
 		arg.EnvironmentID,
