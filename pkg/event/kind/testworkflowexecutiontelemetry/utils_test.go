@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"

@@ -109,7 +109,7 @@ $(shell mkdir -p $(BUILD_DIR) $(TMP_DIR))
 
 # ==================== Build Configuration ====================
 # Go build configuration
-GO := go
+GO := $(shell which go)
 GOFLAGS := -trimpath
 GOARCH ?= $(ARCH)
 GOOS ?= $(OS)
@@ -134,7 +134,7 @@ SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
-MOCKGEN_VERSION := v1.6.0
+MOCKGEN_VERSION := v0.6.0
 
 # Tool binaries
 GOTESTSUM ?= $(LOCALBIN_TOOLING)/gotestsum
@@ -425,8 +425,7 @@ generate-openapi: swagger-codegen-check ## Generate OpenAPI models
 .PHONY: generate-mocks
 generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, and ./pkg
 	@echo "Generating mock files..."
-	@grep -rl '//go:generate mockgen' ./cmd ./internal ./pkg \
-	| xargs -I {} sh -c 'echo "Generating mocks for {}" && PATH=$(LOCALBIN_TOOLING):$$PATH $(GO) generate {}'
+	find ./cmd ./internal ./pkg -type f -name "*.go" -exec grep -q '//go:generate mockgen' {} \; -exec sh -c 'echo "Generating mocks for {}" && PATH=$(LOCALBIN_TOOLING) $(GO) generate {}' \;
 
 .PHONY: generate-sqlc
 generate-sqlc: ## Generate sqlc package with sql queries
@@ -542,7 +541,7 @@ $(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
 .PHONY: mockgen
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary
 $(MOCKGEN): $(LOCALBIN_TOOLING)
-	test -s $(MOCKGEN) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golang/mock/mockgen@$(MOCKGEN_VERSION)
+	test -s $(MOCKGEN) || GOBIN=$(LOCALBIN_TOOLING) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
 
 .PHONY: swagger-codegen-check
 swagger-codegen-check: ## Check if swagger-codegen is installed

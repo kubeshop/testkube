@@ -45,6 +45,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/newclients/webhookclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
@@ -472,20 +473,29 @@ func main() {
 	// Update TestWorkflowExecution Kubernetes resource objects on status change
 	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
-	// Synchronise Test Workflows with cloud
+	// Synchronise resources with cloud
 	if proContext.CloudStorageSupportedInControlPlane && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
+		// TestWorkflows storage
 		testWorkflowsCloudStorage, err := crdstorage.NewTestWorkflowsStorage(testworkflowclient.NewCloudTestWorkflowClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflows storage", err)
 		testWorkflowsKubernetesStorage, err := crdstorage.NewTestWorkflowsStorage(must(testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
 			"namespace": cfg.TestkubeNamespace,
 		})
 		commons.ExitOnError("connecting to k8s TestWorkflows storage", err)
+		// TestWorkflowTemplates storage
 		testWorkflowTemplatesCloudStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflowTemplates storage", err)
 		testWorkflowTemplatesKubernetesStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(must(testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
 			"namespace": cfg.TestkubeNamespace,
 		})
 		commons.ExitOnError("connecting to k8s TestWorkflowTemplates storage", err)
+		// Webhooks storage
+		webhooksCloudStorage, err := crdstorage.NewWebhooksStorage(webhookclient.NewCloudWebhookClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
+		commons.ExitOnError("connecting to cloud Webhooks storage", err)
+		webhooksKubernetesStorage, err := crdstorage.NewWebhooksStorage(must(webhookclient.NewKubernetesWebhookClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
+			"namespace": cfg.TestkubeNamespace,
+		})
+		commons.ExitOnError("connecting to k8s Webhooks storage", err)
 
 		if cfg.GitOpsSyncCloudToKubernetesEnabled && cfg.FeatureCloudStorage {
 			// Test Workflows - Continuous Sync (eventual) - Cloud -> Kubernetes
@@ -498,7 +508,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowsKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
 						}
@@ -521,13 +531,36 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
 						}
 					}
 					if watcher.Err() != nil {
 						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Control Plane", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+
+			// Webhooks - Continuous Sync (eventual) - Cloud -> Kubernetes
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := webhooksCloudStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := webhooksKubernetesStorage.Process(ctx, obj)
+						if err == nil {
+							log.DefaultLogger.Infow("synced Webhook from Control Plane in Kubernetes", "name", obj.Resource.Name)
+						} else {
+							log.DefaultLogger.Errorw("failed to include Webhook in Kubernetes", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch Webhooks in Control Plane", "error", watcher.Err())
 					}
 
 					time.Sleep(200 * time.Millisecond)
@@ -546,7 +579,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowsCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
 						}
@@ -569,13 +602,36 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
 						}
 					}
 					if watcher.Err() != nil {
 						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Kubernetes", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+
+			// Webhooks - Continuous Sync (eventual) - Kubernetes -> Cloud
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := webhooksKubernetesStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := webhooksCloudStorage.Process(ctx, obj)
+						if err == nil {
+							log.DefaultLogger.Infow("synced Webhook from Kubernetes into Control Plane", "name", obj.Resource.Name)
+						} else {
+							log.DefaultLogger.Errorw("failed to include Webhook in Control Plane", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch Webhooks in Kubernetes", "error", watcher.Err())
 					}
 
 					time.Sleep(200 * time.Millisecond)

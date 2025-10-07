@@ -7715,6 +7715,37 @@ components:
         namespace:
           type: string
           example: "testkube"
+        labels:
+          type: object
+          description: "webhook labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        annotations:
+          type: object
+          description: "webhook annotations"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        created:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        updated:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        disabled:
+          type: boolean
+          description: whether webhook is disabled
+          default: false
+          example:
+            - true
+            - false
         uri:
           type: string
           example: "https://hooks.app.com/services/1"
@@ -7741,29 +7772,6 @@ components:
             type: string
           example:
             Content-Type: "application/xml"
-        labels:
-          type: object
-          description: "webhook labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
-        annotations:
-          type: object
-          description: "webhook annotations"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
-        disabled:
-          type: boolean
-          description: whether webhook is disabled
-          default: false
-          example:
-            - true
-            - false
         config:
           $ref: "#/components/schemas/WebhookConfig"
         parameters:

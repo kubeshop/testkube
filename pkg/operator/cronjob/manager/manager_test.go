@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metaav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
