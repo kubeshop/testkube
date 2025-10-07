@@ -10,7 +10,7 @@ on:
 jobs:
   prlint:
     name: Lint PR
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
     steps:
       - name: Lint PR
         uses: amannn/action-semantic-pull-request@v5

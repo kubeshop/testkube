@@ -14,26 +14,27 @@ permissions:
   pull-requests: read
 
 jobs:
-  lint-openapi:
-    name: Lint OpenAPI
-    runs-on: ubuntu-latest
+  lint:
+    name: Lint
+    runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: OpenAPI Lint Checks
-        uses: swaggerexpert/swagger-editor-validate@v1
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          definition-file: api/v1/testkube.yaml
+          go-version: '1.25'
 
-  lint-protobuf:
-    name: Lint Protocol Buffers
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Lint Go
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.4.0
+          args: --timeout=10m
+          only-new-issues: true
+          verify: true
 
-      - name: Run buf checks
+      - name: Lint Protocol Buffers
         uses: bufbuild/buf-action@v1
         with:
           version: 1.56.0
@@ -53,22 +54,7 @@ jobs:
             proto/logs.proto
             proto/service.proto
 
-  lint-go:
-    name: Lint Go
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Lint OpenAPI
+        uses: swaggerexpert/swagger-editor-validate@v1
         with:
-          go-version: '1.25'
-
-      - name: Lint using golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.4.0
-          args: --timeout=10m
-          only-new-issues: true
-          verify: true
+          definition-file: api/v1/testkube.yaml

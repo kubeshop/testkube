@@ -20,7 +20,7 @@ env:
 jobs:
   pre_build:
     name: Pre-build
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
     strategy:
       matrix:
         include:
@@ -148,7 +148,7 @@ jobs:
 
   build_agent_image:
     name: Build a Docker image for Testkube Agent
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
     env:
       TESTKUBE_CLOUD_URL: "agent.testkube.io:443"
 
@@ -218,7 +218,7 @@ jobs:
   release:
     name: Create and upload release-artifacts
     needs: pre_build
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -383,7 +383,7 @@ jobs:
 
   build-and-publish-linux-installer:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
 
     steps:
       - name: Get Intermediate Artifacts
@@ -418,26 +418,3 @@ jobs:
 
           ### Publish repo
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
-
-  trigger-argocd-image-build:
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Release tag
-        id: release_tag
-        run: |
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
-
-      - name: Set env
-        env:
-          SOURCE_TAG: ${{ steps.release_tag.outputs.SOURCE_TAG }}
-        run: |
-          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
-
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/testkube-argocd
-          event-type: trigger-argocd-image-build
-          client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'
