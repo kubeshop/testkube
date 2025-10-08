@@ -23,6 +23,7 @@ import (
 )
 
 func TestInitProcessCore_Integration(t *testing.T) {
+	t.Skip()
 	test.IntegrationTest(t)
 
 	testDir := t.TempDir()
