@@ -5,7 +5,7 @@ type: application
 version: 2.3.0
 dependencies:
   - name: testkube-operator
-    version: 2.1.154
+    version: 2.x.x
     repository: "file://../testkube-operator"
   - name: mongodb
     condition: mongodb.enabled
@@ -20,13 +20,8 @@ dependencies:
     version: 1.2.6-3
     repository: "file://./charts/nats"
   - name: testkube-api
-    version: 2.3.0
-    #repository: https://kubeshop.github.io/helm-charts
+    version: 2.x.x
     repository: "file://../testkube-api"
-  - name: testkube-logs
-    version: 0.2.0
-    repository: "file://../testkube-logs"
-    condition: global.features.logsV2
   - name: global
-    version: 0.1.3
+    version: 0.x.x
     repository: "file://../global"
