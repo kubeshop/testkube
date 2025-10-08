@@ -3,6 +3,7 @@ name: testkube
 description: Testkube is an open-source platform that simplifies the deployment and management of automated testing infrastructure.
 type: application
 version: 2.3.0
+appVersion: 2.3.0
 dependencies:
   - name: testkube-operator
     version: 2.x.x
