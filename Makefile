@@ -435,7 +435,8 @@ generate-sqlc: ## Generate sqlc package with sql queries
 
 .PHONY: generate-crds
 generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
-	go tool controller-gen crd:allowDangerousTypes=true object paths="./api/..." output:crd:dir=k8s/crd && node js/scripts/crd-postprocess.js
+	go tool controller-gen crd:allowDangerousTypes=true object paths="./api/..." output:crd:dir=k8s/crd
+	node js/scripts/crd-postprocess.js
 
 # ==================== Docker ====================
 ##@ Docker
