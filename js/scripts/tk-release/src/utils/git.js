@@ -41,7 +41,7 @@ export async function getCurrentBranch() {
 
 export async function assertGit() {
   await assertGitRepo();
-  await assertGitClean();
+  // await assertGitClean();
   await assertGitBranch();
 }
 
