@@ -95,3 +95,85 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{ toYaml .Values.pod.securityContext }}
 {{- end }}
 {{- end }}
+
+{{- define "testkube-runner.eventLabels" -}}
+{{- $yamlString := toYaml .Values.listener.eventLabels }}
+{{- $lines := split "\n" (trim $yamlString) }}
+{{- $processedLines := list }}
+{{- range $line := $lines }}
+{{- $processedLines = append $processedLines (regexReplaceAll ": " $line ":") }}
+{{- end }}
+{{- join "," $processedLines -}}
+{{- end }}
+
+{{/*
+Define TESTKUBE_WATCHER_NAMESPACES variable
+*/}}
+{{- define "testkube-runner.watcher-namespaces" -}}
+{{- if .Values.listener.watchAllNamespaces -}}
+{{- "" -}}
+{{- else -}}
+{{- $additional := default (list) .Values.listener.additionalNamespaces -}}
+{{ join "," (concat (list .Release.Namespace) $additional) }}
+{{- end -}}
+{{- end }}
+
+{{- define "testkube-runner.listener.watchers.rules" -}}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - events
+      - namespaces
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "apps"
+    resources:
+      - deployments
+      - daemonsets
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "networking.k8s.io"
+      - "extensions"
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "tests.testkube.io"
+    resources:
+      - testtriggers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "executor.testkube.io"
+    resources:
+      - webhooks
+      - webhooktemplates
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "testworkflows.testkube.io"
+    resources:
+      - testworkflows
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}

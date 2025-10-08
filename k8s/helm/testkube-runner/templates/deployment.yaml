@@ -322,6 +322,12 @@ spec:
               value: "true"
             - name: "FEATURE_CLOUD_STORAGE"
               value: "true"
+            {{- if .Values.listener.eventLabels }}
+            - name: "EVENT_LABELS"
+              value: "{{ include "testkube-runner.eventLabels" . }}"
+            {{- end }}
+            - name: TESTKUBE_WATCHER_NAMESPACES
+              value: "{{ include "testkube-runner.watcher-namespaces" . | nindent 12 | trim }}"
             {{- end }}
             # - name: "FEATURE_CLOUD_STORAGE"
             #   value: "true"
@@ -341,17 +347,17 @@ spec:
             - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
               value: "{{ .Values.runner.register.token }}"
             - name: RUNNER_NAME
-              value: "{{ include "testkube-runner.fullname" . }}-{{ now | date "20060102150405" }}"
+              value: "{{ include "testkube-runner.fullname" . }}"
             - name: ENABLE_SECRETS_ENDPOINT
               value: "true"
             - name: SELF_REGISTRATION_SECRET
               value: "self-registration"
             - name: SECRET_CREATION_PREFIX
-              value: "{{ include "testkube-runner.fullname" . }}-{{ now | date "20060102150405" }}-"
+              value: "{{ include "testkube-runner.fullname" . }}-"
             - name: FLOATING_RUNNER
               value: "{{ .Values.runner.register.floating }}"
           envFrom:
             - secretRef:
-                name: "{{ include "testkube-runner.fullname" . }}-{{ now | date "20060102150405" }}-self-registration"
+                name: "{{ include "testkube-runner.fullname" . }}-self-registration"
                 optional: true
           {{- end }}

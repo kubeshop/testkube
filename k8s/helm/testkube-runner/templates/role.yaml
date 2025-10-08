@@ -181,6 +181,9 @@ rules:
 
 # Allow Agent to watch resources for triggers functionality
 {{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- $watchAll := .Values.listener.watchAllNamespaces }}
+{{- $additional := default (list) .Values.listener.additionalNamespaces }}
+{{- if $watchAll }}
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: ClusterRole
 metadata:
@@ -193,63 +196,32 @@ metadata:
   annotations:
     {{- toYaml .Values.global.annotations | nindent 4 }}
   {{- end }}
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-      - services
-      - events
-      - namespaces
-      - configmaps
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "apps"
-    resources:
-      - deployments
-      - daemonsets
-      - statefulsets
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "networking.k8s.io"
-      - "extensions"
-    resources:
-      - ingresses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "tests.testkube.io"
-    resources:
-      - testtriggers
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "executor.testkube.io"
-    resources:
-      - webhooks
-      - webhooktemplates
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "testworkflows.testkube.io"
-    resources:
-      - testworkflows
-    verbs:
-      - get
-      - list
-      - watch
+{{ include "testkube-runner.listener.watchers.rules" . | nindent 0 }}
+{{- else }}
+{{- $root := . }}
+{{- $namespaces := uniq (concat (list .Release.Namespace) $additional) }}
+{{- range $idx, $ns := $namespaces }}
+{{- if gt $idx 0 }}---
+
+{{- end }}
+{{- with $root }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "watchers-role-{{ $ns }}"
+  namespace: {{ $ns }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations:
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+  {{- end }}
+{{ include "testkube-runner.listener.watchers.rules" . | nindent 0 }}
+{{ end }}
+{{- end }}
+{{- end }}
 {{- end }}
 
 ---

@@ -202,8 +202,9 @@ roleRef:
 
 ---
 
-# Apply watchers cluster role for triggers functionality
+# Apply watchers role bindings for triggers functionality
 {{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- if .Values.listener.watchAllNamespaces }}
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: ClusterRoleBinding
 metadata:
@@ -228,4 +229,40 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: "watchers-role-{{ .Release.Name }}"
+{{- else }}
+{{- $root := . }}
+{{- $namespaces := uniq (concat (list .Release.Namespace) (default (list) .Values.listener.additionalNamespaces)) }}
+{{- range $idx, $ns := $namespaces }}
+{{- if gt $idx 0 }}---
+
+{{- end }}
+{{- with $root }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "watchers-role-rb-{{ $ns }}"
+  namespace: {{ $ns }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations:
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+  {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "watchers-role-{{ $ns }}"
+{{ end }}
+{{- end }}
+{{- end }}
 {{- end }}

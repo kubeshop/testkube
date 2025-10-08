@@ -2,28 +2,31 @@ apiVersion: v2
 name: testkube
 description: Testkube is an open-source platform that simplifies the deployment and management of automated testing infrastructure.
 type: application
-version: 2.2.10
-appVersion: 2.2.10
+version: 2.3.0
 dependencies:
-  - name: global
-    version: 0.x.x-x
-    repository: "file://../global"
-  - name: postgresql
-    condition: postgresql.enabled
-    version: 16.3.0
-    repository: https://charts.bitnami.com/bitnami
+  - name: testkube-operator
+    version: 2.1.154
+    repository: "file://../testkube-operator"
   - name: mongodb
     condition: mongodb.enabled
     version: 13.10.1
-    repository: https://charts.bitnami.com/bitnami
+    repository: "file://../mongodb"
+  - name: postgresql
+    condition: postgresql.enabled
+    version: 16.3.0
+    repository: "file://../postgresql"
   - name: nats
     condition: testkube-api.nats.enabled
     version: 1.2.6-3
     repository: "file://./charts/nats"
-
   - name: testkube-api
-    version: 2.x.x-x
+    version: 2.3.0
+    #repository: https://kubeshop.github.io/helm-charts
     repository: "file://../testkube-api"
-  - name: testkube-operator
-    version: 2.x.x-x
-    repository: "file://../testkube-operator"
+  - name: testkube-logs
+    version: 0.2.0
+    repository: "file://../testkube-logs"
+    condition: global.features.logsV2
+  - name: global
+    version: 0.1.3
+    repository: "file://../global"

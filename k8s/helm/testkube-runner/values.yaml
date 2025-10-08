@@ -54,6 +54,12 @@ globalTemplate:
 listener:
   ## Enable listener functionality
   enabled: false
+  ## Watch all namespaces instead of a specific list
+  watchAllNamespaces: false
+  ## Custom event labels which to put on events emitted from this listener
+  eventLabels: {}
+  ## Additional namespaces to watch
+  additionalNamespaces: []
 
 execution:
   default:
