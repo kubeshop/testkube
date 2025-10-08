@@ -64,7 +64,7 @@ export async function assertGitBranch() {
 }
 
 export async function assertGitRepo() {
-  const errMsg = "Expected execution within root of testkube-cloud-api monorepo.";
+  const errMsg = "Expected execution within root of testkube monorepo.";
   try {
     const grep = await $`grep github.com/kubeshop/testkube go.mod`;
     if (grep.stdout.length === 0) {

@@ -5,7 +5,7 @@
   "description": "Testkube monorepo",
   "repository": {
     "type": "git",
-    "url": "git@github.com:kubeshop/testkube-cloud-api.git"
+    "url": "git@github.com:kubeshop/testkube.git"
   },
   "author": "Kubeshop",
   "contributors": [
