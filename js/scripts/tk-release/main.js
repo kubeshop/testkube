@@ -32,7 +32,7 @@ function normaliseKind(kind) {
       return "release";
     case "Release Candidate":
       return "rc";
-    case "Preview":
+    case "Preview Release":
       return "preview";
     default:
       return kind;
