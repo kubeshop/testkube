@@ -55,6 +55,18 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
 
+      - name: Create Docker tags and metadata for the API
+        id: cli-meta
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'cli-meta'
+          images: |
+            kubeshop/testkube-cli
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/cli
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=
+
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
         uses: docker/metadata-action@v5
@@ -87,6 +99,7 @@ jobs:
             ${{ steps.api-meta.outputs.bake-file }}
             ${{ steps.tw-toolkit.outputs.bake-file }}
             ${{ steps.tw-init.outputs.bake-file }}
+            ${{ steps.cli-meta.outputs.bake-file }}
           targets: api,tw-toolkit,tw-init
           provenance: mode=max
           push: true

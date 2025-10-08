@@ -36,6 +36,21 @@ target "api" {
   }
 }
 
+target "cli-meta" {}
+target "cli" {
+  inherits = ["testworkflow-init-meta"]
+  context="."
+  dockerfile = "build/new/cli.Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    VERSION = "0.0.0+unknown"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
+    ANALYTICS_TRACKING_ID=""
+    ANALYTICS_API_KEY=""
+    KEYGEN_PUBLIC_KEY="adfe762551bf19d5d43641a7e297d5c82fe46d6d1ea15e3cb9be79f8047e19c6"
+  }
+}
+
 target "tw-init-meta" {}
 target "tw-init" {
   inherits = ["testworkflow-init-meta"]

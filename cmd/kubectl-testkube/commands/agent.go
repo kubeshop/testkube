@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agent"
@@ -23,11 +25,18 @@ func NewAgentCmd() *cobra.Command {
 
 			ui.Logo()
 			ui.Info("Client Version", common.Version)
-			ui.Info("Server Version", info.Version)
-			ui.Info("Commit", common.Commit)
-			ui.Info("Built by", common.BuiltBy)
-			ui.Info("Build date", common.Date)
-
+			if info.Version != "" && !strings.Contains(info.Version, "invalid character") {
+				ui.Info("Server Version", info.Version)
+			}
+			if info.Commit != "" {
+				ui.Info("Commit", common.Commit)
+			}
+			if common.BuiltBy != "" {
+				ui.Info("Built by", common.BuiltBy)
+			}
+			if common.Date != "" {
+				ui.Info("Build date", common.Date)
+			}
 		},
 	}
 

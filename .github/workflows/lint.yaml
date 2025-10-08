@@ -1,11 +1,9 @@
 name: "Linting"
 
 on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - synchronize
+  push:
+    branches-ignore:
+      - main
 
 permissions:
   # allow read access to the content for analysis.

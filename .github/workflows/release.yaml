@@ -35,21 +35,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up QEMU
-        if: matrix.name == 'linux'
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        if: matrix.name == 'linux'
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: stable
-
       - name: Go Cache
         uses: actions/cache@v4
         with:
@@ -59,31 +48,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        if: matrix.name == 'linux'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Setup gcloud SA key for GAR
-        if: matrix.name == 'linux'
-        uses: google-github-actions/auth@v2
-        with:
-          project_id: ${{ env.GAR_PROJECT_ID }}
-          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
-
-      - name: Configure Docker for GAR
-        if: matrix.name == 'linux'
-        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
-
       - name: Get tag
         id: tag
         uses: dawidd6/action-get-tag@v1
         with:
           strip_v: true
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -103,41 +72,6 @@ jobs:
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
-
-      - name: Push Docker images
-        if: matrix.name == 'linux'
-        run: |
-          GAR_REG='${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}'
-          TAG='${{ steps.tag.outputs.tag }}'
-          
-          docker push kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-arm64v8
-          docker push kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-amd64
-          
-          # adding the docker manifest for the latest image tag
-          docker manifest create kubeshop/testkube-cli:latest --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-amd64 --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-arm64v8
-          docker manifest push -p kubeshop/testkube-cli:latest
-          docker manifest create kubeshop/testkube-cli:${{steps.tag.outputs.tag}} --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-amd64 --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-arm64v8
-          docker manifest push -p kubeshop/testkube-cli:${{steps.tag.outputs.tag}}
-
-          # retag arch images to GAR
-          docker tag kubeshop/testkube-cli:${TAG}-amd64   ${GAR_REG}/cli:${TAG}-amd64
-          docker tag kubeshop/testkube-cli:${TAG}-arm64v8 ${GAR_REG}/cli:${TAG}-arm64v8
-
-          # push arch images to GAR
-          docker push ${GAR_REG}/cli:${TAG}-amd64
-          docker push ${GAR_REG}/cli:${TAG}-arm64v8
-
-          # create & push manifests in GAR
-          docker manifest create ${GAR_REG}/cli:${TAG} \
-            --amend ${GAR_REG}/cli:${TAG}-amd64 \
-            --amend ${GAR_REG}/cli:${TAG}-arm64v8
-          docker manifest push -p ${GAR_REG}/cli:${TAG}
-
-          docker manifest create ${GAR_REG}/cli:latest \
-            --amend ${GAR_REG}/cli:${TAG}-amd64 \
-            --amend ${GAR_REG}/cli:${TAG}-arm64v8
-          docker manifest push -p ${GAR_REG}/cli:latest
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
         with:
@@ -145,75 +79,6 @@ jobs:
           path: |
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
           retention-days: 1
-
-  build_agent_image:
-    name: Build a Docker image for Testkube Agent
-    runs-on: depot-ubuntu-22.04
-    env:
-      TESTKUBE_CLOUD_URL: "agent.testkube.io:443"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Setup gcloud (SA key) for GAR
-        uses: google-github-actions/auth@v2
-        with:
-          project_id: ${{ env.GAR_PROJECT_ID }}
-          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
-
-      - name: Configure Docker for GAR
-        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
-
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
-
-      - name: Preload kind images
-        run: |
-          mkdir -p build/kind/images/arm
-          mkdir -p build/kind/images/amd
-
-          docker pull --platform linux/arm64 kindest/node:v1.31.0
-          docker save kindest/node:v1.31.0 > build/kind/images/arm/node.tar
-
-          docker pull --platform linux/amd64 kindest/node:v1.31.0
-          docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          build-args: |
-            segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}
-            ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
-            ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
-            docker_image_version=${{steps.tag.outputs.tag}}
-            cloud_url=${{ env.TESTKUBE_CLOUD_URL }}
-          context: build/kind
-          file: build/kind/kind.Dockerfile
-          platforms: linux/amd64,linux/arm64
-          provenance: mode=max
-          push: true
-          sbom: true
-          tags: |
-            kubeshop/testkube-agent:${{steps.tag.outputs.tag}}
-            kubeshop/testkube-agent:latest
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:${{steps.tag.outputs.tag}}
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:latest
 
   release:
     name: Create and upload release-artifacts
@@ -406,9 +271,7 @@ jobs:
           VERSION: ${{steps.tag.outputs.tag}}
         run: |
           ### Upload files
-          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_386.deb http://${APTLY_URL}/api/files/testkube
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
-          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
 
           ### Add file to repo
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
@@ -418,3 +281,74 @@ jobs:
 
           ### Publish repo
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
+
+  # This is a Docker image for "Docker" Testkube Agent.
+  # This image runs Testkube in Kind (Kubernetes in Docker) in Docker.
+  build_agent_image:
+    name: Build a Docker image for Testkube Agent
+    runs-on: depot-ubuntu-22.04
+    env:
+      TESTKUBE_CLOUD_URL: "agent.testkube.io:443"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Setup gcloud (SA key) for GAR
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.GAR_PROJECT_ID }}
+          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
+
+      - name: Configure Docker for GAR
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
+      - name: Preload kind images
+        run: |
+          mkdir -p build/kind/images/arm
+          mkdir -p build/kind/images/amd
+
+          docker pull --platform linux/arm64 kindest/node:v1.31.0
+          docker save kindest/node:v1.31.0 > build/kind/images/arm/node.tar
+
+          docker pull --platform linux/amd64 kindest/node:v1.31.0
+          docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}
+            ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
+            ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
+            docker_image_version=${{steps.tag.outputs.tag}}
+            cloud_url=${{ env.TESTKUBE_CLOUD_URL }}
+          context: build/kind
+          file: build/kind/kind.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: mode=max
+          push: true
+          sbom: true
+          tags: |
+            kubeshop/testkube-agent:${{steps.tag.outputs.tag}}
+            kubeshop/testkube-agent:latest
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:${{steps.tag.outputs.tag}}
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/agent:latest
