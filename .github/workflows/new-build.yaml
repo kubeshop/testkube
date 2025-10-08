@@ -2,7 +2,10 @@ name: New Docker images builds for API; tk-init and tk-toolkit services
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - '[0-9].[0-9]+.[0-9]+'
+      - '[0-9].[0-9]+.[0-9]+-rc.[0-9]+'
+      - '[0-9].[0-9]+.[0-9]+-dev.[0-9]+'
+      - '[0-9].[0-9]+.[0-9]+-beta.[0-9]+'
     branches:
       - main
 env:
@@ -16,7 +19,7 @@ permissions:
   id-token: write # needed for depot
 
 jobs:
-  api:
+  build:
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
@@ -48,6 +51,18 @@ jobs:
           images: |
             kubeshop/testkube-api-server
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/api-server
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=
+
+      - name: Create Docker tags and metadata for the API
+        id: cli-meta
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'cli-meta'
+          images: |
+            kubeshop/testkube-cli
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/cli
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
@@ -84,6 +99,7 @@ jobs:
             ${{ steps.api-meta.outputs.bake-file }}
             ${{ steps.tw-toolkit.outputs.bake-file }}
             ${{ steps.tw-init.outputs.bake-file }}
+            ${{ steps.cli-meta.outputs.bake-file }}
           targets: api,tw-toolkit,tw-init
           provenance: mode=max
           push: true
@@ -95,22 +111,78 @@ jobs:
           SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
           ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+          KEYGEN_PUBLIC_KEY: ${{secrets.KEYGEN_PUBLIC_KEY}}
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
-      - name: Check if it is a release
-        id: check-tag
-        run: |
-          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "match=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Repository Dispatch
-        if: steps.check-tag.outputs.match == 'true'
-        uses: peter-evans/repository-dispatch@v3
+  helm:
+    runs-on: depot-ubuntu-22.04
+    needs: build
+    # Only runs on releases (candidates), excluding -dev and -beta
+    if: ${{ startsWith(github.event.ref, 'refs/tags') && !contains(github.event.ref, '-dev') && !contains(github.event.ref, '-beta') }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GAR_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_PROD }}
+      GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
+      CHARTS_REPOSITORY: testkube
+    steps:
+      - uses: actions/checkout@v3
+      - id: helm-version
+        name: Extract Helm Chart version
+        uses: mikefarah/yq@master
         with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: release-testkube-api-charts
-          client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
+          cmd: yq '.version' k8s/helm/testkube/Chart.yaml
 
+      - name: Auth to Google Cloud
+        if: ${{ github.ref_type == 'tag' }}
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.GAR_PROJECT_ID }}
+          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }} #Key to SA in Testkube Prod project
+
+      - name: Configure Docker for GAR
+        if: ${{ github.ref_type == 'tag' }}
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: helm-publish
+        name: Publish Helm Chart
+        run: |
+          REGISTRY=registry-1.docker.io
+          REGISTRY_GAR=${{ env.GAR_LOCATION }}-docker.pkg.dev
+          
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login ${REGISTRY} --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          
+          # testkube chart
+          helm dependency build k8s/helm/testkube
+          helm package k8s/helm/testkube
+          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
+          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+
+          # testkube runner chart
+          helm dependency build k8s/helm/testkube-runner
+          helm package k8s/helm/testkube-runner
+          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
+          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+
+      - id: helm-index-update
+        name: Dispatch update for legacy Helm index
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.CI_BOT_TOKEN }}
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'kubeshop',
+              repo: 'helm-charts',
+              ref: 'main',
+              workflow_id: 'index-update.yaml',
+              inputs: {
+                chart_version: '${{ steps.helm-version.outputs.result }}'
+              }
+            })

@@ -1,0 +1,52 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "testkube-operator.metricsServiceName" . }}
+  labels: {{- include "testkube-operator.selectorLabels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+  annotations:
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.service.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.service.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+spec:
+  ports:
+  - name: https
+    port: {{ .Values.metricsServerPort }}
+    targetPort: https
+  {{- if .Values.metricsServerPortInsecure }}
+  - name: http
+    port: {{ .Values.metricsServerPortInsecure }}
+    targetPort: http
+  {{- end }}
+  selector:
+    control-plane: controller-manager
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "testkube-operator.webhookServiceName" . }}
+  labels: {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+  annotations:
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: {{ .Values.webhookServerPort }}
+  selector:
+    control-plane: controller-manager
+{{- end }}
