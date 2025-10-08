@@ -49,6 +49,7 @@ export async function assertGitClean() {
   const gitStatus = await $`git status --porcelain --untracked-files=all`;
   const clean = gitStatus.stdout === "";
   if (!clean) {
+    console.log("DEBUG", gitStatus.stdout);
     throw new Error("Git is dirty. Please stash and try again.");
   }
 }
