@@ -11,6 +11,7 @@ variable "ANALYTICS_TRACKING_ID"   { default = ""}
 variable "ANALYTICS_API_KEY"       { default = ""}
 variable "SEGMENTIO_KEY"           { default = ""}
 variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
+variable "KEYGEN_PUBLIC_KEY"       { default = ""}
 
 group "default" {
   targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit", "mcp-server"]
@@ -43,11 +44,12 @@ target "cli" {
   dockerfile = "build/new/cli.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
   args = {
-    VERSION = "0.0.0+unknown"
+    VERSION = "${VERSION}"
+    GIT_SHA = "${GIT_SHA}"
+    ANALYTICS_TRACKING_ID = "${ANALYTICS_TRACKING_ID}"
+    ANALYTICS_API_KEY = "${ANALYTICS_API_KEY}"
     ALPINE_IMAGE = "${ALPINE_IMAGE}"
-    ANALYTICS_TRACKING_ID=""
-    ANALYTICS_API_KEY=""
-    KEYGEN_PUBLIC_KEY="adfe762551bf19d5d43641a7e297d5c82fe46d6d1ea15e3cb9be79f8047e19c6"
+    KEYGEN_PUBLIC_KEY="${KEYGEN_PUBLIC_KEY}"
   }
 }
 
