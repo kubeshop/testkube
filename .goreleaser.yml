@@ -4,14 +4,6 @@ builds:
     goos:
       - linux
     goarch:
-      - arm64
-    prebuilt:
-      path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
-    binary: kubectl-testkube
-  - builder: prebuilt
-    goos:
-      - darwin
-    goarch:
       - amd64
     goamd64:
       - v1
@@ -20,10 +12,20 @@ builds:
     binary: kubectl-testkube
   - builder: prebuilt
     goos:
-      - windows
+      - darwin
     goarch:
       - arm64
-      - 381
+    prebuilt:
+      path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
+    binary: kubectl-testkube
+  - builder: prebuilt
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - 386
+    goamd64:
+      - v1
     prebuilt:
       path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
     binary: kubectl-testkube
