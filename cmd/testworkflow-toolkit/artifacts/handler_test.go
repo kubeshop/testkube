@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	gomock "go.uber.org/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common/testdata"
 	"github.com/kubeshop/testkube/pkg/filesystem"
