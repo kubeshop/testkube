@@ -22,7 +22,7 @@ export async function editHelmChartOfTestkube(appVersion, releaseStrategy) {
     await bumpValuesImageTag(apiValuesPath, appVersion);
 
     // Remark: testkube-operator will never have new builds so do not update app version!
-    const operatorChartPath =   `./k8s/helm/testkube-api/Chart.yaml`
+    const operatorChartPath =   `./k8s/helm/testkube-operator/Chart.yaml`
     await bumpChartVersion(operatorChartPath, releaseStrategy);
 
     const chartPath = `./k8s/helm/testkube/Chart.yaml`;
