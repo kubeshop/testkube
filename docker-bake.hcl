@@ -14,7 +14,7 @@ variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
 variable "KEYGEN_PUBLIC_KEY"       { default = ""}
 
 group "default" {
-  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit", "mcp-server"]
+  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit", "mcp-server", "cli"]
 }
 
 target "api-meta" {}
