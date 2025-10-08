@@ -6,5 +6,5 @@ version: 2.3.1
 appVersion: 2.3.0
 dependencies:
 - name: global
-  version: 0.x.x
+  version: 0.x.x-x
   repository: "file://../global"
