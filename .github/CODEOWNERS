@@ -1,11 +1,5 @@
 * @kubeshop/testkube-backend
 
-/assets/ @kubeshop/testkube-docs
-/docs/ @kubeshop/testkube-docs
-/licenses/ @kubeshop/testkube-docs
-LICENSE @kubeshop/testkube-docs
-*.md @kubeshop/testkube-docs
-
 /test/ @kubeshop/testkube-qa @kubeshop/testkube
 
 /.github/ @kubeshop/testkube-devops
