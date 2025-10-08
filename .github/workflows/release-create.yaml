@@ -23,6 +23,8 @@ jobs:
   release:
     name: Release
     runs-on: depot-ubuntu-22.04
+    permissions:
+      contents: write
     if: ${{ inputs.confirm == 'yes' }}
     steps:
       # Configure git to push: We use a GitHub App so that we have an entity that can be configured to bypass merge to main.
