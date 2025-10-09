@@ -2,6 +2,7 @@
 import { release } from "./src/commands/release.js";
 import { assertGit, getCurrentBranch } from "./src/utils/git.js";
 import cac from "cac";
+import {failure} from "./src/utils/io.js";
 
 const cli = cac("tk-release-agent");
 
@@ -14,10 +15,9 @@ cli
     try {
       await assertGit();
       const kind = normaliseKind(options.kind);
-      assertKind(kind);
-
       const yes = options.ci || options.yes;
       const branch = await getCurrentBranch();
+      assertKind(kind, branch);
 
       await release({ branch, kind, dryRun: options.dryRun, yes });
     } catch (err) {
@@ -39,9 +39,16 @@ function normaliseKind(kind) {
   }
 }
 
-function assertKind(kind) {
+function assertKind(kind, branch) {
   const valid = ["release", "rc", "preview"].includes(kind);
   if (!valid) throw new Error(`invalid kind: ${kind}`);
+
+    if (branch === "main" && kind === "release") {
+        failure("Cannot release on main. Please first create a release candidate using the following flag: --kind=rc");
+        throw new Error();
+    } else if (kind === "preview") {
+        failure("Cannot create preview release on release branches.");
+    }
 }
 
 cli.help();
