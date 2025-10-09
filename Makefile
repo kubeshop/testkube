@@ -439,7 +439,7 @@ generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
 
     # Reduce size of TestWorkflow CRDs to fit in the "last-applied" annotation which has a limit of 262144 bytes.
 	@for file in testworkflows.testkube.io_testworkflows.yaml testworkflows.testkube.io_testworkflowtemplates.yaml testworkflows.testkube.io_testworkflowexecutions.yaml; do \
-		for key in securityContext volumes dnsPolicy affinity tolerations hostAliases dnsConfig topologySpreadConstraints schedulingGates resourceClaims volumeMounts fieldRef resourceFieldRef configMapKeyRef secretKeyRef pvcs matchExpressions matchLabels env envFrom readinessProbe; do \
+		for key in securityContext volumes dnsPolicy affinity tolerations hostAliases dnsConfig topologySpreadConstraints schedulingGates resourceClaims imagePullSecrets volumeMounts fieldRef resourceFieldRef configMapKeyRef secretKeyRef pvcs matchExpressions matchLabels env envFrom fileKeyRef readinessProbe; do \
 			go tool yq --no-colors -i "del(.. | select(has(\"$$key\")).$$key | .. | select(has(\"description\")).description)" "k8s/crd/$$file"; \
 		done; \
 		go tool yq --no-colors -i \

@@ -358,34 +358,15 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     fileKeyRef:
-                                      description: |-
-                                        FileKeyRef selects a key of the env file.
-                                        Requires the EnvFiles feature gate to be enabled.
                                       properties:
                                         key:
-                                          description: |-
-                                            The key within the env file. An invalid key will prevent the pod from starting.
-                                            The keys defined within a source may consist of any printable ASCII characters except '='.
-                                            During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                           type: string
                                         optional:
                                           default: false
-                                          description: |-
-                                            Specify whether the file or its key must be defined. If the file or key
-                                            does not exist, then the env var is not published.
-                                            If optional is set to true and the specified key does not exist,
-                                            the environment variable will not be set in the Pod's containers.
-
-                                            If optional is set to false and the specified key does not exist,
-                                            an error will be returned during Pod creation.
                                           type: boolean
                                         path:
-                                          description: |-
-                                            The path within the volume from which to select the file.
-                                            Must be relative and may not contain the '..' path or start with '..'.
                                           type: string
                                         volumeName:
-                                          description: The name of the volume mount containing the env file.
                                           type: string
                                       required:
                                         - key
@@ -489,34 +470,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -584,34 +546,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -682,34 +625,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -948,20 +872,10 @@ spec:
                                       description: container executor image
                                       type: string
                                     imagePullSecrets:
-                                      description: container executor image pull secrets
                                       items:
-                                        description: |-
-                                          LocalObjectReference contains enough information to let you locate the
-                                          referenced object inside the same namespace.
                                         properties:
                                           name:
                                             default: ""
-                                            description: |-
-                                              Name of the referent.
-                                              This field is effectively required, but due to backwards compatibility is
-                                              allowed to be empty. Instances of this type with an empty value here are
-                                              almost certainly wrong.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                             type: string
                                         type: object
                                         x-kubernetes-map-type: atomic
@@ -1034,34 +948,15 @@ spec:
                                                 type: object
                                                 x-kubernetes-map-type: atomic
                                               fileKeyRef:
-                                                description: |-
-                                                  FileKeyRef selects a key of the env file.
-                                                  Requires the EnvFiles feature gate to be enabled.
                                                 properties:
                                                   key:
-                                                    description: |-
-                                                      The key within the env file. An invalid key will prevent the pod from starting.
-                                                      The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                      During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                     type: string
                                                   optional:
                                                     default: false
-                                                    description: |-
-                                                      Specify whether the file or its key must be defined. If the file or key
-                                                      does not exist, then the env var is not published.
-                                                      If optional is set to true and the specified key does not exist,
-                                                      the environment variable will not be set in the Pod's containers.
-
-                                                      If optional is set to false and the specified key does not exist,
-                                                      an error will be returned during Pod creation.
                                                     type: boolean
                                                   path:
-                                                    description: |-
-                                                      The path within the volume from which to select the file.
-                                                      Must be relative and may not contain the '..' path or start with '..'.
                                                     type: string
                                                   volumeName:
-                                                    description: The name of the volume mount containing the env file.
                                                     type: string
                                                 required:
                                                   - key
@@ -1451,20 +1346,10 @@ spec:
                                           description: container executor image
                                           type: string
                                         imagePullSecrets:
-                                          description: container executor image pull secrets
                                           items:
-                                            description: |-
-                                              LocalObjectReference contains enough information to let you locate the
-                                              referenced object inside the same namespace.
                                             properties:
                                               name:
                                                 default: ""
-                                                description: |-
-                                                  Name of the referent.
-                                                  This field is effectively required, but due to backwards compatibility is
-                                                  allowed to be empty. Instances of this type with an empty value here are
-                                                  almost certainly wrong.
-                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                                 type: string
                                             type: object
                                             x-kubernetes-map-type: atomic
@@ -1537,34 +1422,15 @@ spec:
                                                     type: object
                                                     x-kubernetes-map-type: atomic
                                                   fileKeyRef:
-                                                    description: |-
-                                                      FileKeyRef selects a key of the env file.
-                                                      Requires the EnvFiles feature gate to be enabled.
                                                     properties:
                                                       key:
-                                                        description: |-
-                                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                         type: string
                                                       optional:
                                                         default: false
-                                                        description: |-
-                                                          Specify whether the file or its key must be defined. If the file or key
-                                                          does not exist, then the env var is not published.
-                                                          If optional is set to true and the specified key does not exist,
-                                                          the environment variable will not be set in the Pod's containers.
-
-                                                          If optional is set to false and the specified key does not exist,
-                                                          an error will be returned during Pod creation.
                                                         type: boolean
                                                       path:
-                                                        description: |-
-                                                          The path within the volume from which to select the file.
-                                                          Must be relative and may not contain the '..' path or start with '..'.
                                                         type: string
                                                       volumeName:
-                                                        description: The name of the volume mount containing the env file.
                                                         type: string
                                                     required:
                                                       - key
@@ -2368,34 +2234,15 @@ spec:
                                             type: object
                                             x-kubernetes-map-type: atomic
                                           fileKeyRef:
-                                            description: |-
-                                              FileKeyRef selects a key of the env file.
-                                              Requires the EnvFiles feature gate to be enabled.
                                             properties:
                                               key:
-                                                description: |-
-                                                  The key within the env file. An invalid key will prevent the pod from starting.
-                                                  The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                  During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                 type: string
                                               optional:
                                                 default: false
-                                                description: |-
-                                                  Specify whether the file or its key must be defined. If the file or key
-                                                  does not exist, then the env var is not published.
-                                                  If optional is set to true and the specified key does not exist,
-                                                  the environment variable will not be set in the Pod's containers.
-
-                                                  If optional is set to false and the specified key does not exist,
-                                                  an error will be returned during Pod creation.
                                                 type: boolean
                                               path:
-                                                description: |-
-                                                  The path within the volume from which to select the file.
-                                                  Must be relative and may not contain the '..' path or start with '..'.
                                                 type: string
                                               volumeName:
-                                                description: The name of the volume mount containing the env file.
                                                 type: string
                                             required:
                                               - key
@@ -2499,34 +2346,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -2594,34 +2422,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -2692,34 +2501,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -2975,20 +2765,10 @@ spec:
                                   description: Specifies the hostname of the Pod
                                   type: string
                                 imagePullSecrets:
-                                  description: references to secrets with credentials for pulling the images from registry
                                   items:
-                                    description: |-
-                                      LocalObjectReference contains enough information to let you locate the
-                                      referenced object inside the same namespace.
                                     properties:
                                       name:
                                         default: ""
-                                        description: |-
-                                          Name of the referent.
-                                          This field is effectively required, but due to backwards compatibility is
-                                          allowed to be empty. Instances of this type with an empty value here are
-                                          almost certainly wrong.
-                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                         type: string
                                     type: object
                                     x-kubernetes-map-type: atomic
@@ -3848,34 +3628,15 @@ spec:
                                 type: object
                                 x-kubernetes-map-type: atomic
                               fileKeyRef:
-                                description: |-
-                                  FileKeyRef selects a key of the env file.
-                                  Requires the EnvFiles feature gate to be enabled.
                                 properties:
                                   key:
-                                    description: |-
-                                      The key within the env file. An invalid key will prevent the pod from starting.
-                                      The keys defined within a source may consist of any printable ASCII characters except '='.
-                                      During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                     type: string
                                   optional:
                                     default: false
-                                    description: |-
-                                      Specify whether the file or its key must be defined. If the file or key
-                                      does not exist, then the env var is not published.
-                                      If optional is set to true and the specified key does not exist,
-                                      the environment variable will not be set in the Pod's containers.
-
-                                      If optional is set to false and the specified key does not exist,
-                                      an error will be returned during Pod creation.
                                     type: boolean
                                   path:
-                                    description: |-
-                                      The path within the volume from which to select the file.
-                                      Must be relative and may not contain the '..' path or start with '..'.
                                     type: string
                                   volumeName:
-                                    description: The name of the volume mount containing the env file.
                                     type: string
                                 required:
                                   - key
@@ -3979,34 +3740,15 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                             fileKeyRef:
-                              description: |-
-                                FileKeyRef selects a key of the env file.
-                                Requires the EnvFiles feature gate to be enabled.
                               properties:
                                 key:
-                                  description: |-
-                                    The key within the env file. An invalid key will prevent the pod from starting.
-                                    The keys defined within a source may consist of any printable ASCII characters except '='.
-                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                   type: string
                                 optional:
                                   default: false
-                                  description: |-
-                                    Specify whether the file or its key must be defined. If the file or key
-                                    does not exist, then the env var is not published.
-                                    If optional is set to true and the specified key does not exist,
-                                    the environment variable will not be set in the Pod's containers.
-
-                                    If optional is set to false and the specified key does not exist,
-                                    an error will be returned during Pod creation.
                                   type: boolean
                                 path:
-                                  description: |-
-                                    The path within the volume from which to select the file.
-                                    Must be relative and may not contain the '..' path or start with '..'.
                                   type: string
                                 volumeName:
-                                  description: The name of the volume mount containing the env file.
                                   type: string
                               required:
                                 - key
@@ -4074,34 +3816,15 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                             fileKeyRef:
-                              description: |-
-                                FileKeyRef selects a key of the env file.
-                                Requires the EnvFiles feature gate to be enabled.
                               properties:
                                 key:
-                                  description: |-
-                                    The key within the env file. An invalid key will prevent the pod from starting.
-                                    The keys defined within a source may consist of any printable ASCII characters except '='.
-                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                   type: string
                                 optional:
                                   default: false
-                                  description: |-
-                                    Specify whether the file or its key must be defined. If the file or key
-                                    does not exist, then the env var is not published.
-                                    If optional is set to true and the specified key does not exist,
-                                    the environment variable will not be set in the Pod's containers.
-
-                                    If optional is set to false and the specified key does not exist,
-                                    an error will be returned during Pod creation.
                                   type: boolean
                                 path:
-                                  description: |-
-                                    The path within the volume from which to select the file.
-                                    Must be relative and may not contain the '..' path or start with '..'.
                                   type: string
                                 volumeName:
-                                  description: The name of the volume mount containing the env file.
                                   type: string
                               required:
                                 - key
@@ -4172,34 +3895,15 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                             fileKeyRef:
-                              description: |-
-                                FileKeyRef selects a key of the env file.
-                                Requires the EnvFiles feature gate to be enabled.
                               properties:
                                 key:
-                                  description: |-
-                                    The key within the env file. An invalid key will prevent the pod from starting.
-                                    The keys defined within a source may consist of any printable ASCII characters except '='.
-                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                   type: string
                                 optional:
                                   default: false
-                                  description: |-
-                                    Specify whether the file or its key must be defined. If the file or key
-                                    does not exist, then the env var is not published.
-                                    If optional is set to true and the specified key does not exist,
-                                    the environment variable will not be set in the Pod's containers.
-
-                                    If optional is set to false and the specified key does not exist,
-                                    an error will be returned during Pod creation.
                                   type: boolean
                                 path:
-                                  description: |-
-                                    The path within the volume from which to select the file.
-                                    Must be relative and may not contain the '..' path or start with '..'.
                                   type: string
                                 volumeName:
-                                  description: The name of the volume mount containing the env file.
                                   type: string
                               required:
                                 - key
@@ -4431,20 +4135,10 @@ spec:
                       description: Specifies the hostname of the Pod
                       type: string
                     imagePullSecrets:
-                      description: references to secrets with credentials for pulling the images from registry
                       items:
-                        description: |-
-                          LocalObjectReference contains enough information to let you locate the
-                          referenced object inside the same namespace.
                         properties:
                           name:
                             default: ""
-                            description: |-
-                              Name of the referent.
-                              This field is effectively required, but due to backwards compatibility is
-                              allowed to be empty. Instances of this type with an empty value here are
-                              almost certainly wrong.
-                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                             type: string
                         type: object
                         x-kubernetes-map-type: atomic
@@ -4740,34 +4434,15 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     fileKeyRef:
-                                      description: |-
-                                        FileKeyRef selects a key of the env file.
-                                        Requires the EnvFiles feature gate to be enabled.
                                       properties:
                                         key:
-                                          description: |-
-                                            The key within the env file. An invalid key will prevent the pod from starting.
-                                            The keys defined within a source may consist of any printable ASCII characters except '='.
-                                            During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                           type: string
                                         optional:
                                           default: false
-                                          description: |-
-                                            Specify whether the file or its key must be defined. If the file or key
-                                            does not exist, then the env var is not published.
-                                            If optional is set to true and the specified key does not exist,
-                                            the environment variable will not be set in the Pod's containers.
-
-                                            If optional is set to false and the specified key does not exist,
-                                            an error will be returned during Pod creation.
                                           type: boolean
                                         path:
-                                          description: |-
-                                            The path within the volume from which to select the file.
-                                            Must be relative and may not contain the '..' path or start with '..'.
                                           type: string
                                         volumeName:
-                                          description: The name of the volume mount containing the env file.
                                           type: string
                                       required:
                                         - key
@@ -4871,34 +4546,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -4966,34 +4622,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -5064,34 +4701,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -5347,20 +4965,10 @@ spec:
                             description: Specifies the hostname of the Pod
                             type: string
                           imagePullSecrets:
-                            description: references to secrets with credentials for pulling the images from registry
                             items:
-                              description: |-
-                                LocalObjectReference contains enough information to let you locate the
-                                referenced object inside the same namespace.
                               properties:
                                 name:
                                   default: ""
-                                  description: |-
-                                    Name of the referent.
-                                    This field is effectively required, but due to backwards compatibility is
-                                    allowed to be empty. Instances of this type with an empty value here are
-                                    almost certainly wrong.
-                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -6143,34 +5751,15 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     fileKeyRef:
-                                      description: |-
-                                        FileKeyRef selects a key of the env file.
-                                        Requires the EnvFiles feature gate to be enabled.
                                       properties:
                                         key:
-                                          description: |-
-                                            The key within the env file. An invalid key will prevent the pod from starting.
-                                            The keys defined within a source may consist of any printable ASCII characters except '='.
-                                            During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                           type: string
                                         optional:
                                           default: false
-                                          description: |-
-                                            Specify whether the file or its key must be defined. If the file or key
-                                            does not exist, then the env var is not published.
-                                            If optional is set to true and the specified key does not exist,
-                                            the environment variable will not be set in the Pod's containers.
-
-                                            If optional is set to false and the specified key does not exist,
-                                            an error will be returned during Pod creation.
                                           type: boolean
                                         path:
-                                          description: |-
-                                            The path within the volume from which to select the file.
-                                            Must be relative and may not contain the '..' path or start with '..'.
                                           type: string
                                         volumeName:
-                                          description: The name of the volume mount containing the env file.
                                           type: string
                                       required:
                                         - key
@@ -6274,34 +5863,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -6369,34 +5939,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -6467,34 +6018,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -6733,20 +6265,10 @@ spec:
                                       description: container executor image
                                       type: string
                                     imagePullSecrets:
-                                      description: container executor image pull secrets
                                       items:
-                                        description: |-
-                                          LocalObjectReference contains enough information to let you locate the
-                                          referenced object inside the same namespace.
                                         properties:
                                           name:
                                             default: ""
-                                            description: |-
-                                              Name of the referent.
-                                              This field is effectively required, but due to backwards compatibility is
-                                              allowed to be empty. Instances of this type with an empty value here are
-                                              almost certainly wrong.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                             type: string
                                         type: object
                                         x-kubernetes-map-type: atomic
@@ -6819,34 +6341,15 @@ spec:
                                                 type: object
                                                 x-kubernetes-map-type: atomic
                                               fileKeyRef:
-                                                description: |-
-                                                  FileKeyRef selects a key of the env file.
-                                                  Requires the EnvFiles feature gate to be enabled.
                                                 properties:
                                                   key:
-                                                    description: |-
-                                                      The key within the env file. An invalid key will prevent the pod from starting.
-                                                      The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                      During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                     type: string
                                                   optional:
                                                     default: false
-                                                    description: |-
-                                                      Specify whether the file or its key must be defined. If the file or key
-                                                      does not exist, then the env var is not published.
-                                                      If optional is set to true and the specified key does not exist,
-                                                      the environment variable will not be set in the Pod's containers.
-
-                                                      If optional is set to false and the specified key does not exist,
-                                                      an error will be returned during Pod creation.
                                                     type: boolean
                                                   path:
-                                                    description: |-
-                                                      The path within the volume from which to select the file.
-                                                      Must be relative and may not contain the '..' path or start with '..'.
                                                     type: string
                                                   volumeName:
-                                                    description: The name of the volume mount containing the env file.
                                                     type: string
                                                 required:
                                                   - key
@@ -7236,20 +6739,10 @@ spec:
                                           description: container executor image
                                           type: string
                                         imagePullSecrets:
-                                          description: container executor image pull secrets
                                           items:
-                                            description: |-
-                                              LocalObjectReference contains enough information to let you locate the
-                                              referenced object inside the same namespace.
                                             properties:
                                               name:
                                                 default: ""
-                                                description: |-
-                                                  Name of the referent.
-                                                  This field is effectively required, but due to backwards compatibility is
-                                                  allowed to be empty. Instances of this type with an empty value here are
-                                                  almost certainly wrong.
-                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                                 type: string
                                             type: object
                                             x-kubernetes-map-type: atomic
@@ -7322,34 +6815,15 @@ spec:
                                                     type: object
                                                     x-kubernetes-map-type: atomic
                                                   fileKeyRef:
-                                                    description: |-
-                                                      FileKeyRef selects a key of the env file.
-                                                      Requires the EnvFiles feature gate to be enabled.
                                                     properties:
                                                       key:
-                                                        description: |-
-                                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                         type: string
                                                       optional:
                                                         default: false
-                                                        description: |-
-                                                          Specify whether the file or its key must be defined. If the file or key
-                                                          does not exist, then the env var is not published.
-                                                          If optional is set to true and the specified key does not exist,
-                                                          the environment variable will not be set in the Pod's containers.
-
-                                                          If optional is set to false and the specified key does not exist,
-                                                          an error will be returned during Pod creation.
                                                         type: boolean
                                                       path:
-                                                        description: |-
-                                                          The path within the volume from which to select the file.
-                                                          Must be relative and may not contain the '..' path or start with '..'.
                                                         type: string
                                                       volumeName:
-                                                        description: The name of the volume mount containing the env file.
                                                         type: string
                                                     required:
                                                       - key
@@ -8153,34 +7627,15 @@ spec:
                                             type: object
                                             x-kubernetes-map-type: atomic
                                           fileKeyRef:
-                                            description: |-
-                                              FileKeyRef selects a key of the env file.
-                                              Requires the EnvFiles feature gate to be enabled.
                                             properties:
                                               key:
-                                                description: |-
-                                                  The key within the env file. An invalid key will prevent the pod from starting.
-                                                  The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                  During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                 type: string
                                               optional:
                                                 default: false
-                                                description: |-
-                                                  Specify whether the file or its key must be defined. If the file or key
-                                                  does not exist, then the env var is not published.
-                                                  If optional is set to true and the specified key does not exist,
-                                                  the environment variable will not be set in the Pod's containers.
-
-                                                  If optional is set to false and the specified key does not exist,
-                                                  an error will be returned during Pod creation.
                                                 type: boolean
                                               path:
-                                                description: |-
-                                                  The path within the volume from which to select the file.
-                                                  Must be relative and may not contain the '..' path or start with '..'.
                                                 type: string
                                               volumeName:
-                                                description: The name of the volume mount containing the env file.
                                                 type: string
                                             required:
                                               - key
@@ -8284,34 +7739,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -8379,34 +7815,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -8477,34 +7894,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -8760,20 +8158,10 @@ spec:
                                   description: Specifies the hostname of the Pod
                                   type: string
                                 imagePullSecrets:
-                                  description: references to secrets with credentials for pulling the images from registry
                                   items:
-                                    description: |-
-                                      LocalObjectReference contains enough information to let you locate the
-                                      referenced object inside the same namespace.
                                     properties:
                                       name:
                                         default: ""
-                                        description: |-
-                                          Name of the referent.
-                                          This field is effectively required, but due to backwards compatibility is
-                                          allowed to be empty. Instances of this type with an empty value here are
-                                          almost certainly wrong.
-                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                         type: string
                                     type: object
                                     x-kubernetes-map-type: atomic
@@ -9573,34 +8961,15 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     fileKeyRef:
-                                      description: |-
-                                        FileKeyRef selects a key of the env file.
-                                        Requires the EnvFiles feature gate to be enabled.
                                       properties:
                                         key:
-                                          description: |-
-                                            The key within the env file. An invalid key will prevent the pod from starting.
-                                            The keys defined within a source may consist of any printable ASCII characters except '='.
-                                            During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                           type: string
                                         optional:
                                           default: false
-                                          description: |-
-                                            Specify whether the file or its key must be defined. If the file or key
-                                            does not exist, then the env var is not published.
-                                            If optional is set to true and the specified key does not exist,
-                                            the environment variable will not be set in the Pod's containers.
-
-                                            If optional is set to false and the specified key does not exist,
-                                            an error will be returned during Pod creation.
                                           type: boolean
                                         path:
-                                          description: |-
-                                            The path within the volume from which to select the file.
-                                            Must be relative and may not contain the '..' path or start with '..'.
                                           type: string
                                         volumeName:
-                                          description: The name of the volume mount containing the env file.
                                           type: string
                                       required:
                                         - key
@@ -9704,34 +9073,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -9799,34 +9149,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -9897,34 +9228,15 @@ spec:
                                     type: object
                                     x-kubernetes-map-type: atomic
                                   fileKeyRef:
-                                    description: |-
-                                      FileKeyRef selects a key of the env file.
-                                      Requires the EnvFiles feature gate to be enabled.
                                     properties:
                                       key:
-                                        description: |-
-                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                         type: string
                                       optional:
                                         default: false
-                                        description: |-
-                                          Specify whether the file or its key must be defined. If the file or key
-                                          does not exist, then the env var is not published.
-                                          If optional is set to true and the specified key does not exist,
-                                          the environment variable will not be set in the Pod's containers.
-
-                                          If optional is set to false and the specified key does not exist,
-                                          an error will be returned during Pod creation.
                                         type: boolean
                                       path:
-                                        description: |-
-                                          The path within the volume from which to select the file.
-                                          Must be relative and may not contain the '..' path or start with '..'.
                                         type: string
                                       volumeName:
-                                        description: The name of the volume mount containing the env file.
                                         type: string
                                     required:
                                       - key
@@ -10163,20 +9475,10 @@ spec:
                                       description: container executor image
                                       type: string
                                     imagePullSecrets:
-                                      description: container executor image pull secrets
                                       items:
-                                        description: |-
-                                          LocalObjectReference contains enough information to let you locate the
-                                          referenced object inside the same namespace.
                                         properties:
                                           name:
                                             default: ""
-                                            description: |-
-                                              Name of the referent.
-                                              This field is effectively required, but due to backwards compatibility is
-                                              allowed to be empty. Instances of this type with an empty value here are
-                                              almost certainly wrong.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                             type: string
                                         type: object
                                         x-kubernetes-map-type: atomic
@@ -10249,34 +9551,15 @@ spec:
                                                 type: object
                                                 x-kubernetes-map-type: atomic
                                               fileKeyRef:
-                                                description: |-
-                                                  FileKeyRef selects a key of the env file.
-                                                  Requires the EnvFiles feature gate to be enabled.
                                                 properties:
                                                   key:
-                                                    description: |-
-                                                      The key within the env file. An invalid key will prevent the pod from starting.
-                                                      The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                      During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                     type: string
                                                   optional:
                                                     default: false
-                                                    description: |-
-                                                      Specify whether the file or its key must be defined. If the file or key
-                                                      does not exist, then the env var is not published.
-                                                      If optional is set to true and the specified key does not exist,
-                                                      the environment variable will not be set in the Pod's containers.
-
-                                                      If optional is set to false and the specified key does not exist,
-                                                      an error will be returned during Pod creation.
                                                     type: boolean
                                                   path:
-                                                    description: |-
-                                                      The path within the volume from which to select the file.
-                                                      Must be relative and may not contain the '..' path or start with '..'.
                                                     type: string
                                                   volumeName:
-                                                    description: The name of the volume mount containing the env file.
                                                     type: string
                                                 required:
                                                   - key
@@ -10666,20 +9949,10 @@ spec:
                                           description: container executor image
                                           type: string
                                         imagePullSecrets:
-                                          description: container executor image pull secrets
                                           items:
-                                            description: |-
-                                              LocalObjectReference contains enough information to let you locate the
-                                              referenced object inside the same namespace.
                                             properties:
                                               name:
                                                 default: ""
-                                                description: |-
-                                                  Name of the referent.
-                                                  This field is effectively required, but due to backwards compatibility is
-                                                  allowed to be empty. Instances of this type with an empty value here are
-                                                  almost certainly wrong.
-                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                                 type: string
                                             type: object
                                             x-kubernetes-map-type: atomic
@@ -10752,34 +10025,15 @@ spec:
                                                     type: object
                                                     x-kubernetes-map-type: atomic
                                                   fileKeyRef:
-                                                    description: |-
-                                                      FileKeyRef selects a key of the env file.
-                                                      Requires the EnvFiles feature gate to be enabled.
                                                     properties:
                                                       key:
-                                                        description: |-
-                                                          The key within the env file. An invalid key will prevent the pod from starting.
-                                                          The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                          During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                         type: string
                                                       optional:
                                                         default: false
-                                                        description: |-
-                                                          Specify whether the file or its key must be defined. If the file or key
-                                                          does not exist, then the env var is not published.
-                                                          If optional is set to true and the specified key does not exist,
-                                                          the environment variable will not be set in the Pod's containers.
-
-                                                          If optional is set to false and the specified key does not exist,
-                                                          an error will be returned during Pod creation.
                                                         type: boolean
                                                       path:
-                                                        description: |-
-                                                          The path within the volume from which to select the file.
-                                                          Must be relative and may not contain the '..' path or start with '..'.
                                                         type: string
                                                       volumeName:
-                                                        description: The name of the volume mount containing the env file.
                                                         type: string
                                                     required:
                                                       - key
@@ -11583,34 +10837,15 @@ spec:
                                             type: object
                                             x-kubernetes-map-type: atomic
                                           fileKeyRef:
-                                            description: |-
-                                              FileKeyRef selects a key of the env file.
-                                              Requires the EnvFiles feature gate to be enabled.
                                             properties:
                                               key:
-                                                description: |-
-                                                  The key within the env file. An invalid key will prevent the pod from starting.
-                                                  The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                  During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                                 type: string
                                               optional:
                                                 default: false
-                                                description: |-
-                                                  Specify whether the file or its key must be defined. If the file or key
-                                                  does not exist, then the env var is not published.
-                                                  If optional is set to true and the specified key does not exist,
-                                                  the environment variable will not be set in the Pod's containers.
-
-                                                  If optional is set to false and the specified key does not exist,
-                                                  an error will be returned during Pod creation.
                                                 type: boolean
                                               path:
-                                                description: |-
-                                                  The path within the volume from which to select the file.
-                                                  Must be relative and may not contain the '..' path or start with '..'.
                                                 type: string
                                               volumeName:
-                                                description: The name of the volume mount containing the env file.
                                                 type: string
                                             required:
                                               - key
@@ -11714,34 +10949,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -11809,34 +11025,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -11907,34 +11104,15 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         fileKeyRef:
-                                          description: |-
-                                            FileKeyRef selects a key of the env file.
-                                            Requires the EnvFiles feature gate to be enabled.
                                           properties:
                                             key:
-                                              description: |-
-                                                The key within the env file. An invalid key will prevent the pod from starting.
-                                                The keys defined within a source may consist of any printable ASCII characters except '='.
-                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
                                               type: string
                                             optional:
                                               default: false
-                                              description: |-
-                                                Specify whether the file or its key must be defined. If the file or key
-                                                does not exist, then the env var is not published.
-                                                If optional is set to true and the specified key does not exist,
-                                                the environment variable will not be set in the Pod's containers.
-
-                                                If optional is set to false and the specified key does not exist,
-                                                an error will be returned during Pod creation.
                                               type: boolean
                                             path:
-                                              description: |-
-                                                The path within the volume from which to select the file.
-                                                Must be relative and may not contain the '..' path or start with '..'.
                                               type: string
                                             volumeName:
-                                              description: The name of the volume mount containing the env file.
                                               type: string
                                           required:
                                             - key
@@ -12190,20 +11368,10 @@ spec:
                                   description: Specifies the hostname of the Pod
                                   type: string
                                 imagePullSecrets:
-                                  description: references to secrets with credentials for pulling the images from registry
                                   items:
-                                    description: |-
-                                      LocalObjectReference contains enough information to let you locate the
-                                      referenced object inside the same namespace.
                                     properties:
                                       name:
                                         default: ""
-                                        description: |-
-                                          Name of the referent.
-                                          This field is effectively required, but due to backwards compatibility is
-                                          allowed to be empty. Instances of this type with an empty value here are
-                                          almost certainly wrong.
-                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                         type: string
                                     type: object
                                     x-kubernetes-map-type: atomic
