@@ -434,7 +434,27 @@ generate-sqlc: ## Generate sqlc package with sql queries
 
 .PHONY: generate-crds
 generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
+	# Generate CRDs
 	go tool controller-gen crd:allowDangerousTypes=true object paths="./api/..." output:crd:dir=k8s/crd
+
+    # Reduce size of TestWorkflow CRDs to fit in the "last-applied" annotation which has a limit of 262144 bytes.
+	@for file in testworkflows.testkube.io_testworkflows.yaml testworkflows.testkube.io_testworkflowtemplates.yaml testworkflows.testkube.io_testworkflowexecutions.yaml; do \
+		for key in securityContext volumes dnsPolicy affinity tolerations hostAliases dnsConfig topologySpreadConstraints schedulingGates resourceClaims volumeMounts fieldRef resourceFieldRef configMapKeyRef secretKeyRef pvcs matchExpressions matchLabels env envFrom readinessProbe; do \
+			go tool yq --no-colors -i "del(.. | select(has(\"$$key\")).$$key | .. | select(has(\"description\")).description)" "k8s/crd/$$file"; \
+		done; \
+		go tool yq --no-colors -i \
+		'with(..; . | select(has("additionalProperties")) | select(.additionalProperties | has("type")) | select(.additionalProperties.type == "dynamicList") | \
+			.["x-kubernetes-preserve-unknown-fields"] = true | \
+			del(.additionalProperties) \
+		) | \
+		with(..; . | select(has("properties")) | select(.properties | to_entries | filter(.value | has("type")) | filter(.value.type == "dynamicList") | length > 0) | \
+			.["x-kubernetes-preserve-unknown-fields"] = true | \
+			del(.properties) \
+		)' \
+		"k8s/crd/$$file"; \
+	done
+
+	# Copy to testkube-operator chart as Helm Templated
 	node js/scripts/crd-postprocess.js
 
 # ==================== Docker ====================
