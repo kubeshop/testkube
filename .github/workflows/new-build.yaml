@@ -177,7 +177,7 @@ jobs:
 
       - id: helm-index-update
         name: Dispatch update for legacy Helm index
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.CI_BOT_TOKEN }}
           script: |
