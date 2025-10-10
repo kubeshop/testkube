@@ -502,9 +502,18 @@ func main() {
 	// TODO(emil): need a feature flag on the pro context to move this to the control plane
 	if !cfg.DisableWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-		// NOTE(emil): webhook loader
-		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
-			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
+		webhookLoader := webhook.NewWebhookLoader(
+			webhooksClient,
+			webhookTemplatesClient,
+			webhookRepository,
+			&proContext,
+			webhook.WithDeprecatedClients(deprecatedClients),
+			webhook.WithDeprecatedRepositories(deprecatedRepositories),
+			webhook.WithTestWorkflowExecutionResults(testWorkflowResultsRepository),
+			webhook.WithSecretClient(secretClient),
+			webhook.WithMetrics(&metrics),
+			webhook.WithEnvs(envs))
+		eventsEmitter.Loader.Register(webhookLoader)
 	}
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))

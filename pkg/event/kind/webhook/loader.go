@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
+	log "github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -21,41 +22,88 @@ import (
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
-// TODO(emil): just passed in the default logger anyway remove argument
-// TODO(emil): make some of this pluggables with opts
-func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
-	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, deprecatedClients commons.DeprecatedClients,
-	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
-	secretClient secret.Interface, metrics v1.Metrics, webhookRepository cloudwebhook.WebhookRepository,
-	proContext *config.ProContext, envs map[string]string,
+// WebhookLoaderOption is an option for NewWebhookLoader
+type WebhookLoaderOption func(*WebhooksLoader)
+
+// NewWebhookLoader creates a new WebhooksLoader
+func NewWebhookLoader(
+	webhooksClient executorsclientv1.WebhooksInterface,
+	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface,
+	webhookRepository cloudwebhook.WebhookRepository,
+	proContext *config.ProContext,
+	opts ...WebhookLoaderOption,
 ) *WebhooksLoader {
-	return &WebhooksLoader{
-		log:                          log,
-		WebhooksClient:               webhooksClient,
-		WebhookTemplatesClient:       webhookTemplatesClient,
-		deprecatedClients:            deprecatedClients,
-		deprecatedRepositories:       deprecatedRepositories,
-		testWorkflowExecutionResults: testWorkflowExecutionResults,
-		secretClient:                 secretClient,
-		metrics:                      metrics,
-		webhookRepository:            webhookRepository,
-		proContext:                   proContext,
-		envs:                         envs,
+	loader := &WebhooksLoader{
+		log:                    log.DefaultLogger,
+		WebhooksClient:         webhooksClient,
+		WebhookTemplatesClient: webhookTemplatesClient,
+		webhookRepository:      webhookRepository,
+		proContext:             proContext,
 	}
+
+	for _, opt := range opts {
+		opt(loader)
+	}
+
+	return loader
 }
 
 type WebhooksLoader struct {
-	log                          *zap.SugaredLogger
-	WebhooksClient               executorsclientv1.WebhooksInterface
-	WebhookTemplatesClient       executorsclientv1.WebhookTemplatesInterface
+	log                    *zap.SugaredLogger
+	WebhooksClient         executorsclientv1.WebhooksInterface
+	WebhookTemplatesClient executorsclientv1.WebhookTemplatesInterface
+	webhookRepository      cloudwebhook.WebhookRepository
+	proContext             *config.ProContext
+
+	// Optional fields
 	deprecatedClients            commons.DeprecatedClients
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
 	secretClient                 secret.Interface
-	metrics                      v1.Metrics
-	webhookRepository            cloudwebhook.WebhookRepository
-	proContext                   *config.ProContext
+	metrics                      *v1.Metrics
 	envs                         map[string]string
+}
+
+// WithDeprecatedClients sets the deprecated clients
+func WithDeprecatedClients(deprecatedClients commons.DeprecatedClients) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.deprecatedClients = deprecatedClients
+	}
+}
+
+// WithDeprecatedRepositories sets the deprecated repositories
+func WithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.deprecatedRepositories = deprecatedRepositories
+	}
+}
+
+// WithTestWorkflowExecutionResults sets the test workflow execution results repository
+func WithTestWorkflowExecutionResults(testWorkflowExecutionResults testworkflow.Repository) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.testWorkflowExecutionResults = testWorkflowExecutionResults
+	}
+}
+
+// WithSecretClient sets the secret client
+func WithSecretClient(secretClient secret.Interface) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.secretClient = secretClient
+	}
+}
+
+// WithMetrics sets the metrics
+func WithMetrics(metrics *v1.Metrics) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.metrics = metrics
+	}
+}
+
+// WithEnvs sets the environment variables
+func WithEnvs(envs map[string]string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.envs = envs
+	}
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -118,7 +166,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
+				*r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
 			),
 		)
 	}
