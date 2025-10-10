@@ -3,6 +3,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"net"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
