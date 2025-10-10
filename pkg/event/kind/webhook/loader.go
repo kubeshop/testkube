@@ -61,6 +61,7 @@ func (r WebhooksLoader) Kind() string {
 }
 
 func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
+	// TODO(emil): loads webhooks from the crds
 	// load all webhooks from kubernetes CRDs
 	webhookList, err := r.WebhooksClient.List("")
 	if err != nil {

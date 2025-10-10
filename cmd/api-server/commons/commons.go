@@ -430,6 +430,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.NewArchitecture = true
 	}
 
+	// NOTE(emil): can use capabilities to determine, control plane support for webhooks - but these are different capabilities
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
 		proContext.CloudStorageSupportedInControlPlane = true
 		if cfg.FeatureCloudStorage {

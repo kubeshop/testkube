@@ -34,12 +34,18 @@ var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
+	// NOTE(emil): not going to be supported in control plane
 	deprecatedRepositories commons.DeprecatedRepositories,
+	// NOTE(emil): use to get the previous execution result - GetPreviousFinishedState, maybe don't support in first version
 	testWorkflowExecutionResults testworkflow.Repository,
+	// NOTE(emil): not going to be supported in control plane
 	metrics v1.Metrics,
 	webhookRepository cloudwebhook.WebhookRepository,
+	// NOTE(emil): not going to be supported in control plane
 	secretClient secret.Interface,
+	// NOTE(emil): used to generate uris to the dashboard in the template rendering - essentially need the ui uri, org, and env ids
 	proContext *config.ProContext,
+	// NOTE(emil): not going to be supported in control plane
 	envs map[string]string,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
@@ -196,6 +202,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
+		// NOTE(emil): this makes queries for the previous state
 		became, err := l.hasBecomeState(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)

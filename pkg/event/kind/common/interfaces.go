@@ -35,6 +35,7 @@ type Listeners []Listener
 
 func (l Listeners) Log() []any {
 	var result []any
+	// TODO(emil): what the hell is? it is compiling the log fields from all the listeners, and taking the last value - why would this be useful?
 	for _, listener := range l {
 		result = append(result, map[string]any{
 			"kind":     listener.Kind(),

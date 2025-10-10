@@ -127,6 +127,7 @@ func listerersToMap(listeners []common.Listener) map[string]map[string]common.Li
 
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
+	// TODO(emil): what does specifying cluster name do here? is this used anywhere? does this have signficance to nats?
 	event.ClusterName = e.ClusterName
 	err := e.Bus.PublishTopic(event.Topic(), event)
 	if err != nil {
@@ -159,6 +160,8 @@ func (e *Emitter) Listen(ctx context.Context) {
 }
 
 func (e *Emitter) startListener(l common.Listener) {
+	// TODO(emil): why are we creating a subscription to the same topic for all these listeners, and then coding all this logic to start and stop listeners
+	// NOTE(emil): the topic where the listeners events come in on
 	err := e.Bus.SubscribeTopic("agentevents.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error while starting listener", "error", err)
@@ -177,9 +180,14 @@ func (e *Emitter) stopListener(name string) {
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
+		// NOTE(emil): filters listeners (corresponding to webhooks) partially here
+		// TODO(emil): this seems to belong in the listener implementation
 		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
+			// TODO(emil): the fanout here with the matches event types - can an event even match multiple event types? and even if it does should it fire multiple events for the same listener/webhook
 			for i := range types {
 				event.Type_ = &types[i]
+				// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener
+				// NOTE(emil): more filtering of the event happens in the notify itself
 				result := l.Notify(event)
 				log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 			}
@@ -206,6 +214,7 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 	}
 }
 
+// NOTE(emil): what is this used for? to produce arguments from the logs
 func (e *Emitter) Logs() []any {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()

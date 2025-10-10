@@ -156,6 +156,7 @@ func main() {
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
+	// TODO(emil): what is this lazy emitter for?
 	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
@@ -272,6 +273,7 @@ func main() {
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	webhookTemplatesClient := executorsclientv1.NewWebhookTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 
+	// NOTE(emil): environment variables are also being passed into webhooks right now
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
@@ -297,6 +299,7 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
+	// NOTE(emil): entry point to event emitter
 	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Build new client
@@ -494,9 +497,12 @@ func main() {
 	}
 
 	// Initialize event handlers
+	// NOTE(emil): where the various loaders are registered with the emitter
 	websocketLoader := ws.NewWebsocketLoader()
+	// TODO(emil): need a feature flag on the pro context to move this to the control plane
 	if !cfg.DisableWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+		// NOTE(emil): webhook loader
 		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
 			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
 	}
