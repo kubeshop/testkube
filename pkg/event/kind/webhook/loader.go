@@ -21,6 +21,8 @@ import (
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
+// TODO(emil): just passed in the default logger anyway remove argument
+// TODO(emil): make some of this pluggables with opts
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
 	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, deprecatedClients commons.DeprecatedClients,
 	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
