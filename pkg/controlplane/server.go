@@ -3,7 +3,6 @@ package controlplane
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"net"
 	"time"
@@ -22,6 +21,7 @@ import (
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
@@ -35,6 +35,7 @@ const (
 
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
+	executionv1.UnimplementedTestWorkflowExecutionServiceServer
 	cfg                         Config
 	server                      *grpc.Server
 	commands                    map[cloudexecutor.Command]CommandHandler
@@ -56,13 +57,6 @@ type Config struct {
 	FeatureTestWorkflowsCloudStorage bool
 }
 
-type CommandNotImplementedError string
-
-func (e CommandNotImplementedError) Error() string {
-	return fmt.Sprintf("command not implemented: %s", string(e))
-}
-
-// TODO: Check if runner works fine
 func New(
 	cfg Config,
 	executor testworkflowexecutor.TestWorkflowExecutor,
