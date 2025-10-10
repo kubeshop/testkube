@@ -13,16 +13,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
-
-func (s *Server) GetExecutionUpdates(context.Context, *executionv1.GetExecutionUpdatesRequest) (*executionv1.GetExecutionUpdatesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetExecutionUpdates not implemented")
-}
-func (s *Server) SetExecutionScheduling(context.Context, *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetExecutionScheduling not implemented")
-}
 
 func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (*cloud.RegisterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not supported in the standalone version")
