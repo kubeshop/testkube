@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
+	"github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
@@ -28,8 +29,6 @@ import (
 )
 
 const (
-	KeepAliveTime       = 10 * time.Second
-	KeepAliveTimeout    = 5 * time.Second
 	HealthCheckInterval = 60 * time.Second
 	SendPingInterval    = HealthCheckInterval / 2
 )
@@ -132,7 +131,7 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	}
 	opts = append(opts,
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{PermitWithoutStream: true}),
-		grpc.KeepaliveParams(keepalive.ServerParameters{Time: KeepAliveTime, Timeout: KeepAliveTimeout}))
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: client.GRPCKeepaliveTime, Timeout: client.GRPCKeepaliveTimeout}))
 	grpcServer := grpc.NewServer(opts...)
 
 	cloud.RegisterTestKubeCloudAPIServer(grpcServer, s)
