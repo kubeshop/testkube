@@ -2,6 +2,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -24,6 +25,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 )
+
+type CommandNotImplementedError string
+
+func (e CommandNotImplementedError) Error() string {
+	return fmt.Sprintf("command not implemented: %s", string(e))
+}
 
 func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*cloud.CommandResponse, error) {
 	if cmd, ok := s.commands[cloudexecutor.Command(request.Command)]; ok {
