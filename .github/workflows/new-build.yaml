@@ -1,4 +1,4 @@
-name: New Docker images builds for API; tk-init and tk-toolkit services
+name: Build
 on:
   push:
     tags:
@@ -8,7 +8,7 @@ on:
       - "[0-9].[0-9]+.[0-9]+-dev.[0-9]+"
       - "[0-9].[0-9]+.[0-9]+-beta.[0-9]+"
     branches:
-      - main
+      - "*"
 env:
   ALPINE_IMAGE: alpine:3.20.6
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -113,7 +113,7 @@ jobs:
             ${{ steps.tw-init.outputs.bake-file }}
             ${{ steps.cli-meta.outputs.bake-file }}
             ${{ steps.mcp-meta.outputs.bake-file }}
-          targets: api,tw-toolkit,tw-init
+          targets: api,tw-toolkit,tw-init,mcp-server,cli
           provenance: mode=max
           sbom: true
           # Only tags are pushed, pushes to branches test whether app can be built.
