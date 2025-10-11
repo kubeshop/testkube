@@ -32,67 +32,110 @@ import (
 
 var _ common.Listener = (*WebhookListener)(nil)
 
-func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
-	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	// NOTE(emil): not going to be supported in control plane
-	deprecatedRepositories commons.DeprecatedRepositories,
-	// NOTE(emil): use to get the previous execution result - GetPreviousFinishedState, maybe don't support in first version
-	testWorkflowExecutionResults testworkflow.Repository,
-	// NOTE(emil): not going to be supported in control plane
-	metrics v1.Metrics,
+func NewWebhookListener(
+	name, uri, selector string,
+	events []testkube.EventType,
+	payloadObjectField, payloadTemplate string,
+	headers map[string]string,
+	disabled bool,
 	webhookRepository cloudwebhook.WebhookRepository,
-	// NOTE(emil): not going to be supported in control plane
-	secretClient secret.Interface,
-	// NOTE(emil): used to generate uris to the dashboard in the template rendering - essentially need the ui uri, org, and env ids
 	proContext *config.ProContext,
-	// NOTE(emil): not going to be supported in control plane
-	envs map[string]string,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
+	opts ...WebhookListenerOption,
 ) *WebhookListener {
-	return &WebhookListener{
-		name:                         name,
-		Uri:                          uri,
-		Log:                          log.DefaultLogger,
-		HttpClient:                   thttp.NewClient(),
-		selector:                     selector,
-		events:                       events,
-		payloadObjectField:           payloadObjectField,
-		payloadTemplate:              payloadTemplate,
-		headers:                      headers,
-		disabled:                     disabled,
-		deprecatedRepositories:       deprecatedRepositories,
-		testWorkflowExecutionResults: testWorkflowExecutionResults,
-		metrics:                      metrics,
-		webhookRepository:            webhookRepository,
-		secretClient:                 secretClient,
-		proContext:                   proContext,
-		envs:                         envs,
-		config:                       config,
-		parameters:                   parameters,
+	wl := &WebhookListener{
+		name:               name,
+		Uri:                uri,
+		Log:                log.DefaultLogger,
+		HttpClient:         thttp.NewClient(),
+		selector:           selector,
+		events:             events,
+		payloadObjectField: payloadObjectField,
+		payloadTemplate:    payloadTemplate,
+		headers:            headers,
+		disabled:           disabled,
+		webhookRepository:  webhookRepository,
+		proContext:         proContext,
+		config:             config,
+		parameters:         parameters,
 	}
+
+	for _, opt := range opts {
+		opt(wl)
+	}
+
+	return wl
 }
 
 type WebhookListener struct {
-	name                         string
-	Uri                          string
-	Log                          *zap.SugaredLogger
-	HttpClient                   *http.Client
-	events                       []testkube.EventType
-	selector                     string
-	payloadObjectField           string
-	payloadTemplate              string
-	headers                      map[string]string
-	disabled                     bool
+	name               string
+	Uri                string
+	Log                *zap.SugaredLogger
+	HttpClient         *http.Client
+	selector           string
+	events             []testkube.EventType
+	payloadObjectField string
+	payloadTemplate    string
+	headers            map[string]string
+	disabled           bool
+	// TODO(emil): what should be done with this?
+	webhookRepository cloudwebhook.WebhookRepository
+	proContext        *config.ProContext
+	config            map[string]executorv1.WebhookConfigValue
+	parameters        []executorv1.WebhookParameterSchema
+
+	// Optional fields
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
-	metrics                      v1.Metrics
-	webhookRepository            cloudwebhook.WebhookRepository
+	metrics                      *v1.Metrics
 	secretClient                 secret.Interface
-	proContext                   *config.ProContext
 	envs                         map[string]string
-	config                       map[string]executorv1.WebhookConfigValue
-	parameters                   []executorv1.WebhookParameterSchema
+}
+
+// WebhookListenerOption is a functional option for WebhookListener
+type WebhookListenerOption func(*WebhookListener)
+
+// listenerWithLogger configures the logger for the webhook listener.
+func listenerWithLogger(log *zap.SugaredLogger) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.Log = log
+	}
+}
+
+// listenerWithDeprecatedRepositories configures the deprecated repositories for the webhook listener.
+func listenerWithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.deprecatedRepositories = deprecatedRepositories
+	}
+}
+
+// listenerWithTestWorkflowExecutionResults configures the test workflow execution results repository for the webhook listener.
+func listenerWithTestWorkflowExecutionResults(testWorkflowExecutionResults testworkflow.Repository) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.testWorkflowExecutionResults = testWorkflowExecutionResults
+	}
+}
+
+// listenerWithMetrics configures the metrics for the webhook listener.
+func listenerWithMetrics(metrics *v1.Metrics) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.metrics = metrics
+	}
+}
+
+// listenerWithSecretClient configures the secret client for the webhook listener.
+func listenerWithSecretClient(secretClient secret.Interface) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.secretClient = secretClient
+	}
+}
+
+// listenerWithEnvs configures the environment variables for the webhook listener.
+func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.envs = envs
+	}
 }
 
 func (l *WebhookListener) Name() string {
@@ -106,6 +149,7 @@ func (l *WebhookListener) Selector() string {
 func (l *WebhookListener) Events() []testkube.EventType {
 	return l.events
 }
+
 func (l *WebhookListener) Metadata() map[string]string {
 	headers, err := getMapHashedMetadata(l.headers)
 	if err != nil {

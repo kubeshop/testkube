@@ -157,16 +157,28 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			payloadTemplate = webhook.Spec.PayloadTemplate
 		}
 
-		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
+		eventTypes := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.Namespace, webhook.Name)
-
 		listeners = append(
 			listeners,
 			NewWebhookListener(
-				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
-				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				*r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
+				name,
+				webhook.Spec.Uri,
+				webhook.Spec.Selector,
+				eventTypes,
+				webhook.Spec.PayloadObjectField,
+				payloadTemplate,
+				webhook.Spec.Headers,
+				webhook.Spec.Disabled,
+				r.webhookRepository,
+				r.proContext,
+				webhook.Spec.Config,
+				webhook.Spec.Parameters,
+				listenerWithDeprecatedRepositories(r.deprecatedRepositories),
+				listenerWithTestWorkflowExecutionResults(r.testWorkflowExecutionResults),
+				listenerWithMetrics(r.metrics),
+				listenerWithSecretClient(r.secretClient),
+				listenerWithEnvs(r.envs),
 			),
 		)
 	}
