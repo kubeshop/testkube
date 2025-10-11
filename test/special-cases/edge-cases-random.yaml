@@ -3,6 +3,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: expected-random-random-oomkilled
   labels:
+    category: platform-features
     core-tests: expected-random
 description: "Expected random result"
 spec:

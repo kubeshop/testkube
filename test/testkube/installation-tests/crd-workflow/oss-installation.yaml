@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: oss-standalone-installation-test
   labels:
+    category: platform-features
     core-tests: installation
     tool: testkube-oss
 spec:

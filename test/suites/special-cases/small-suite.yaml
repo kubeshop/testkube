@@ -3,6 +3,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: tw-suite-small-smoke
   labels:
+    category: platform-features
     core-tests: workflows-suite
     type: suite
 spec:

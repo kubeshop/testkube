@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: playwright
   labels:
+    category: e2e-ui-testing
     artifacts: "true"
 spec:
   content:

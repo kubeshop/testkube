@@ -2,6 +2,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: tw-testkube-website-5m
+  labels:
+    category: platform-features
 spec:
   events:
     - cronjob:
@@ -20,6 +22,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: tw-testkube-docs-5m
+  labels:
+    category: platform-features
 spec:
   events:
     - cronjob:
@@ -38,6 +42,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: tw-testkube-blog-5m
+  labels:
+    category: platform-features
 spec:
   events:
     - cronjob:

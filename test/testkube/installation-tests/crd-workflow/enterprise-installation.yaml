@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: enterprise-installation-test
   labels:
+    category: platform-features
     core-tests: installation
 description: "Enterprise installation test - DinD+kind"
 spec:
@@ -76,6 +77,7 @@ kind: TestWorkflow
 metadata:
   name: enterprise-installation-multi-namespace
   labels:
+    category: platform-features
     core-tests: installation
     environment-specific: dev
 description: "Enterprise installation test - edge, multi-namespace. Can be run ONLY at .dev"

@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: write-read-100mb
   labels:
+    category: platform-features
     core-tests: write-read
 description: "Write 100 MB, read (redirected to /dev/null)"
 spec:

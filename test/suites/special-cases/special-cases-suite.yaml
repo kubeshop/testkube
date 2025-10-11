@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: edge-cases-special-cases-suite
   labels:
+    category: platform-features
     core-tests: special-cases-suite
     type: suite
 spec:

@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -32,6 +33,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -62,6 +64,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -92,6 +95,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -121,6 +125,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -158,6 +163,7 @@ metadata:
     tool: postman
     artifacts: "true"
     junit: "true"
+    category: api-testing
 spec:
   content:
     git:
@@ -188,6 +194,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:

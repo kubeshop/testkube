@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: edge-cases-expected-failure-suite
   labels:
+    category: platform-features
     core-tests: expected-fail-suite
     type: suite
 spec:

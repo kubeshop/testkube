@@ -4,6 +4,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-runner-target--dev-runner-2-ind
   labels:
+    category: platform-features
     core-tests: special-cases
 description: Run only at .dev where these runners are created!
 spec:

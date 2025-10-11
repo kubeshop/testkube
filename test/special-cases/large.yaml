@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-1mb-no-delay
   labels:
+    category: platform-features
     core-tests: large
 description: "Logs: 1 MB"
 spec:
@@ -20,6 +21,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-1mb-1s
   labels:
+    category: platform-features
     core-tests: large
 description: "Logs: 1 MB"
 spec:
@@ -37,6 +39,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-11mb-no-delay
   labels:
+    category: platform-features
     core-tests: large
 description: "Logs: 11 MB"
 spec:
@@ -54,6 +57,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-11mb-1s
   labels:
+    category: platform-features
     core-tests: large
 description: "Logs: 11 MB"
 spec:
@@ -71,6 +75,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-22mb-2s
   labels:
+    category: platform-features
     core-tests: large
 description: "Logs: 22 MB"
 spec:
@@ -88,6 +93,7 @@ kind: TestWorkflow
 metadata:
   name: large-artifacts-1gb
   labels:
+    category: platform-features
     core-tests: large
 description: "Artifacts: 1GB file generated with openssl"
 spec:
@@ -107,6 +113,7 @@ kind: TestWorkflow
 metadata:
   name: large-artifacts-100mb
   labels:
+    category: platform-features
     core-tests: large
 description: "Artifacts: 100MB file generated with openssl"
 spec:

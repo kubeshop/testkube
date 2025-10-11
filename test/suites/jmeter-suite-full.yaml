@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: jmeter-workflow-suite
   labels:
+    category: platform-features
     core-tests: workflows-suite
     type: suite
     tool: jmeter

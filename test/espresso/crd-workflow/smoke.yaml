@@ -8,6 +8,10 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: espresso-android-workflow
+  labels:
+    core-tests: workflows
+    tool: espresso
+    category: build-integration
 description: "Android emulator - K8s+KVM"
 spec:
   content:

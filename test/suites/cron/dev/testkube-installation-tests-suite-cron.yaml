@@ -3,6 +3,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: testkube-installation-tests-workflow-suite-cron-trigger
   labels:
+    category: platform-features
     core-tests: workflows-suite-trigger
     type: suite-trigger
 spec:

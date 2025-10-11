@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
 spec:
   content:
     git:
@@ -38,6 +39,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
 spec:
   content:
     git:
@@ -72,6 +74,7 @@ metadata:
     core-tests: workflows
     tool: jmeter
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -106,6 +109,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
     artifacts: "true"
 spec:
   content:
@@ -139,6 +143,7 @@ metadata:
   labels:
     core-tests: workflows
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -171,6 +176,7 @@ metadata:
   labels:
     core-tests: workflows
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -206,6 +212,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
 spec:
   content:
     git:
@@ -239,6 +246,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
 spec:
   content:
     git:
@@ -299,6 +307,7 @@ metadata:
     core-tests: workflows
     tool: jmeter
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:

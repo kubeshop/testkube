@@ -3,6 +3,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: cloud-ui-e2e-cron-trigger
   labels:
+    category: platform-features
     core-tests: workflows-suite-trigger
     type: workflow-trigger
 spec:

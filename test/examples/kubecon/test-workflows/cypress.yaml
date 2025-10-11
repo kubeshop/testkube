@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: cypress-video
   labels:
+    category: e2e-ui-testing
     artifacts: "true"
 spec:
   content:

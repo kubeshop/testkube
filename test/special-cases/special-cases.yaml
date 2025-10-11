@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-global-env
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "Global ENV - set for both pods and slave pods"
 spec:
@@ -32,6 +33,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-step-env-override
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "ENV override - container ENV vs expression ENV in steps, services and parallel"
 spec:
@@ -92,6 +94,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-env-expression-env-not-set
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "ENV expression - ENV variable not set - should default to empty"
 spec:
@@ -110,6 +113,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-workingdir-override
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "workingDir - override at step level"
 spec:
@@ -136,6 +140,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-securitycontext-runasuser-runasgroup
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "securityContext - runAsUser and runAsGroup"
 spec:
@@ -181,6 +186,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-multiple-git-repositories-custommountpath
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "Git - multiple repositories (one on step level), custom mountPath"
 spec:
@@ -224,6 +230,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-optional-step-failed
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "optional step failed"
 spec:
@@ -243,6 +250,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-optional-step-timed-out
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "optional step failed"
 spec:
@@ -263,6 +271,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-optional-step-passed
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "optional step passed"
 spec:
@@ -280,6 +289,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-conditional-step-skipped
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "conditional step skipped"
 spec:
@@ -299,6 +309,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-conditional-step-passed
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "conditional step passed"
 spec:
@@ -316,6 +327,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-conditional-step-failed-but-optional
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "conditional step failed but optional"
 spec:
@@ -336,6 +348,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-step-retry
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "step retry (until step passed)"
 spec:
@@ -358,6 +371,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-negative-step
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "negative step failed - inverting step result to passed"
 spec:
@@ -376,6 +390,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-custom-shared-volume-steps
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "sharing custom volume between steps"
 spec:
@@ -420,6 +435,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-step-timeout-ok
   labels:
+    category: platform-features
     core-tests: special-cases
 spec:
   container:
@@ -434,6 +450,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-missing-env-secret
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "Missing Secret - ENV should default to empty string"
 spec:
@@ -462,6 +479,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-missing-configmap-key
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "Missing ConfigMap - ENV should default to empty string"
 spec:
@@ -489,6 +507,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-no-initial-output
   labels:
+    category: platform-features
     core-tests: special-cases
 description: "No output at the beginning (just sleep)"
 spec:
@@ -505,6 +524,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-artifact-double-asterisk
   labels:
+    category: platform-features
     core-tests: special-cases
     artifacts: "true"
     manual: "true"
