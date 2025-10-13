@@ -53,7 +53,8 @@ func NewWebhookLoader(
 type WebhooksLoader struct {
 	log           *zap.SugaredLogger
 	webhookClient WebhookClient
-	proContext    *config.ProContext
+	// TODO(emil): how should this be replaced in cloud setting? essentially used to generate the UI URIs
+	proContext *config.ProContext
 
 	// Optional fields
 	testWorkflowResultsRepository testworkflow.Repository
