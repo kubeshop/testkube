@@ -52,23 +52,22 @@ type WebhooksLoader struct {
 	proContext     *config.ProContext
 
 	// Optional fields
-	// TODO(emil): rename testWorkflowResultsRepository for consistency
-	testWorkflowExecutionResults testworkflow.Repository
-	webhookResultsRepository     cloudwebhook.WebhookRepository
-	webhookTemplateClient        executorsclientv1.WebhookTemplatesInterface
-	secretClient                 secret.Interface
-	metrics                      v1.Metrics
-	envs                         map[string]string
+	testWorkflowResultsRepository testworkflow.Repository
+	webhookResultsRepository      cloudwebhook.WebhookRepository
+	webhookTemplateClient         executorsclientv1.WebhookTemplatesInterface
+	secretClient                  secret.Interface
+	metrics                       v1.Metrics
+	envs                          map[string]string
 
 	// Deprecated fields
 	deprecatedClients      commons.DeprecatedClients
 	deprecatedRepositories commons.DeprecatedRepositories
 }
 
-// WithTestWorkflowExecutionResults sets the test workflow execution results repository
-func WithTestWorkflowExecutionResults(testWorkflowExecutionResults testworkflow.Repository) WebhookLoaderOption {
+// WithTestWorkflowResultsRepository sets the test workflow results repository
+func WithTestWorkflowResultsRepository(repo testworkflow.Repository) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
-		loader.testWorkflowExecutionResults = testWorkflowExecutionResults
+		loader.testWorkflowResultsRepository = repo
 	}
 }
 
@@ -196,7 +195,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				webhook.Spec.Config,
 				webhook.Spec.Parameters,
 				listenerWithDeprecatedRepositories(r.deprecatedRepositories),
-				listenerWithTestWorkflowExecutionResults(r.testWorkflowExecutionResults),
+				listenerWithTestWorkflowResultsRepository(r.testWorkflowResultsRepository),
 				listenerWithWebhookResultsRepository(r.webhookResultsRepository),
 				listenerWithMetrics(r.metrics),
 				listenerWithSecretClient(r.secretClient),

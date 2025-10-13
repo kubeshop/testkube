@@ -507,7 +507,7 @@ func main() {
 			&proContext,
 			webhook.WithDeprecatedClients(deprecatedClients),
 			webhook.WithDeprecatedRepositories(deprecatedRepositories),
-			webhook.WithTestWorkflowExecutionResults(testWorkflowResultsRepository),
+			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
 			webhook.WithWebhookResultsRepository(webhookRepository),
 			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
 			webhook.WithSecretClient(secretClient),

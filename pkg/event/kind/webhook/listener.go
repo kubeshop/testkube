@@ -83,12 +83,11 @@ type WebhookListener struct {
 	parameters         []executorv1.WebhookParameterSchema
 
 	// Optional fields
-	// TODO(emil): rename testWorkflowResultsRepository for consistency
-	testWorkflowExecutionResults testworkflow.Repository
-	webhookResultsRepository     cloudwebhook.WebhookRepository
-	metrics                      v1.Metrics
-	secretClient                 secret.Interface
-	envs                         map[string]string
+	testWorkflowResultsRepository testworkflow.Repository
+	webhookResultsRepository      cloudwebhook.WebhookRepository
+	secretClient                  secret.Interface
+	metrics                       v1.Metrics
+	envs                          map[string]string
 
 	// Deprecated fields
 	deprecatedRepositories commons.DeprecatedRepositories
@@ -104,10 +103,10 @@ func listenerWithLogger(log *zap.SugaredLogger) WebhookListenerOption {
 	}
 }
 
-// listenerWithTestWorkflowExecutionResults configures the test workflow execution results repository for the webhook listener.
-func listenerWithTestWorkflowExecutionResults(testWorkflowExecutionResults testworkflow.Repository) WebhookListenerOption {
+// listenerWithTestWorkflowResultsRepository configures the test workflow results repository for the webhook listener.
+func listenerWithTestWorkflowResultsRepository(repo testworkflow.Repository) WebhookListenerOption {
 	return func(wl *WebhookListener) {
-		wl.testWorkflowExecutionResults = testWorkflowExecutionResults
+		wl.testWorkflowResultsRepository = repo
 	}
 }
 
@@ -118,17 +117,17 @@ func listenerWithWebhookResultsRepository(repo webhook.WebhookRepository) Webhoo
 	}
 }
 
-// listenerWithMetrics configures the metrics for the webhook listener.
-func listenerWithMetrics(metrics v1.Metrics) WebhookListenerOption {
-	return func(wl *WebhookListener) {
-		wl.metrics = metrics
-	}
-}
-
 // listenerWithSecretClient configures the secret client for the webhook listener.
 func listenerWithSecretClient(secretClient secret.Interface) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.secretClient = secretClient
+	}
+}
+
+// listenerWithMetrics configures the metrics for the webhook listener.
+func listenerWithMetrics(metrics v1.Metrics) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.metrics = metrics
 	}
 }
 
@@ -490,11 +489,11 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	}
 
 	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil && event.Type_ != nil {
-		if l.testWorkflowExecutionResults == nil {
+		if l.testWorkflowResultsRepository == nil {
 			log.Warn("unable to determine become state, testworkflow execution results queries not supported")
 			return false, nil
 		}
-		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
+		prevStatus, err := l.testWorkflowResultsRepository.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
 		if err != nil {
 			return false, err
 		}
