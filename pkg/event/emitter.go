@@ -36,6 +36,7 @@ type Interface interface {
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
+	// TODO(emil): why all these fields exported
 	Listeners   common.Listeners
 	Loader      *Loader
 	Log         *zap.SugaredLogger
