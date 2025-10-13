@@ -213,6 +213,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	event.Envs = l.envs
 
 	defer func() {
+		// TODO(emil): this is a really strange/unreadable pattern, just wrap all this instead of doing this crap
 		// Webhook metrics
 		var eventType, res string
 		if event.Type_ != nil {
