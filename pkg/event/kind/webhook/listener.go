@@ -88,7 +88,7 @@ type WebhookListener struct {
 	// Optional fields
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
-	metrics                      *v1.Metrics
+	metrics                      v1.Metrics
 	secretClient                 secret.Interface
 	envs                         map[string]string
 }
@@ -118,7 +118,7 @@ func listenerWithTestWorkflowExecutionResults(testWorkflowExecutionResults testw
 }
 
 // listenerWithMetrics configures the metrics for the webhook listener.
-func listenerWithMetrics(metrics *v1.Metrics) WebhookListenerOption {
+func listenerWithMetrics(metrics v1.Metrics) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.metrics = metrics
 	}

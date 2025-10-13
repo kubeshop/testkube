@@ -511,7 +511,7 @@ func main() {
 			webhook.WithDeprecatedRepositories(deprecatedRepositories),
 			webhook.WithTestWorkflowExecutionResults(testWorkflowResultsRepository),
 			webhook.WithSecretClient(secretClient),
-			webhook.WithMetrics(&metrics),
+			webhook.WithMetrics(metrics),
 			webhook.WithEnvs(envs))
 		eventsEmitter.Loader.Register(webhookLoader)
 	}

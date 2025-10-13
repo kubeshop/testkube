@@ -60,7 +60,7 @@ type WebhooksLoader struct {
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
 	secretClient                 secret.Interface
-	metrics                      *v1.Metrics
+	metrics                      v1.Metrics
 	envs                         map[string]string
 }
 
@@ -93,7 +93,7 @@ func WithSecretClient(secretClient secret.Interface) WebhookLoaderOption {
 }
 
 // WithMetrics sets the metrics
-func WithMetrics(metrics *v1.Metrics) WebhookLoaderOption {
+func WithMetrics(metrics v1.Metrics) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
 		loader.metrics = metrics
 	}
