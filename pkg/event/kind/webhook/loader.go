@@ -153,6 +153,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			}
 		}
 
+		// TODO(emil): no point for this, avoiding setting to zero value
 		if webhook.Spec.PayloadTemplate != "" {
 			payloadTemplate = webhook.Spec.PayloadTemplate
 		}
