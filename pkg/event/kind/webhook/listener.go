@@ -435,7 +435,12 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
-	if l.deprecatedRepositories != nil && event.TestExecution != nil && event.Type_ != nil {
+	if event.TestExecution != nil && event.Type_ != nil {
+		if l.deprecatedRepositories == nil {
+			log.Warn("unable to determine become state, test execution results queries not supported")
+			return false, nil
+
+		}
 		prevStatus, err := l.deprecatedRepositories.TestResults().GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
 		if err != nil {
 			return false, err
@@ -449,7 +454,12 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if l.deprecatedRepositories != nil && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
+	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
+		if l.deprecatedRepositories == nil {
+			log.Warn("unable to determine become state, testsuite execution results queries not supported")
+			return false, nil
+
+		}
 		prevStatus, err := l.deprecatedRepositories.TestSuiteResults().GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
 			return false, err
@@ -464,6 +474,10 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	}
 
 	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil && event.Type_ != nil {
+		if l.testWorkflowExecutionResults == nil {
+			log.Warn("unable to determine become state, testworkflow execution results queries not supported")
+			return false, nil
+		}
 		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
 		if err != nil {
 			return false, err
