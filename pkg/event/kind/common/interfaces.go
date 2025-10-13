@@ -33,9 +33,8 @@ type ListenerLoader interface {
 
 type Listeners []Listener
 
-func (l Listeners) Log() []any {
+func (l Listeners) Dump() []any {
 	var result []any
-	// TODO(emil): do we need this?
 	for _, listener := range l {
 		result = append(result, map[string]any{
 			"kind":     listener.Kind(),

@@ -20,11 +20,11 @@ const (
 // NewEmitter returns new emitter instance
 func NewEmitter(eventBus bus.Bus, clusterName string) *Emitter {
 	return &Emitter{
-		Log:         log.DefaultLogger,
-		Loader:      NewLoader(),
-		Bus:         eventBus,
-		Listeners:   make(common.Listeners, 0),
-		ClusterName: clusterName,
+		loader:      NewLoader(),
+		log:         log.DefaultLogger,
+		bus:         eventBus,
+		listeners:   make(common.Listeners, 0),
+		clusterName: clusterName,
 	}
 }
 
@@ -34,13 +34,13 @@ type Interface interface {
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	// TODO(emil): why all these fields exported
-	Listeners   common.Listeners
-	Loader      *Loader
-	Log         *zap.SugaredLogger
+	*loader
+
+	log         *zap.SugaredLogger
+	listeners   common.Listeners
 	mutex       sync.RWMutex
-	Bus         bus.Bus
-	ClusterName string
+	bus         bus.Bus
+	clusterName string
 }
 
 // Register adds new listener
@@ -48,17 +48,17 @@ func (e *Emitter) Register(listener common.Listener) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	e.Listeners = append(e.Listeners, listener)
+	e.listeners = append(e.listeners, listener)
 }
 
-// UpdateListeners updates listeners list
-func (e *Emitter) UpdateListeners(listeners common.Listeners) {
+// updateListeners updates listeners list
+func (e *Emitter) updateListeners(listeners common.Listeners) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
 	result := make([]common.Listener, 0)
 
-	oldMap := listerersToMap(e.Listeners)
+	oldMap := listerersToMap(e.listeners)
 	newMap := listerersToMap(listeners)
 
 	// check for missing listeners
@@ -107,7 +107,7 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 		}
 	}
 
-	e.Listeners = result
+	e.listeners = result
 }
 
 func listerersToMap(listeners []common.Listener) map[string]map[string]common.Listener {
@@ -127,13 +127,13 @@ func listerersToMap(listeners []common.Listener) map[string]map[string]common.Li
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	// TODO(emil): what does specifying cluster name do here? is this used anywhere? does this have signficance to nats?
-	event.ClusterName = e.ClusterName
-	err := e.Bus.PublishTopic(event.Topic(), event)
+	event.ClusterName = e.clusterName
+	err := e.bus.PublishTopic(event.Topic(), event)
 	if err != nil {
-		e.Log.Errorw("error publishing event", append(event.Log(), "error", err))
+		e.log.Errorw("error publishing event", append(event.Log(), "error", err))
 		return
 	}
-	e.Log.Debugw("event published", event.Log()...)
+	e.log.Debugw("event published", event.Log()...)
 }
 
 // Listen runs emitter workers responsible for sending HTTP requests
@@ -141,19 +141,19 @@ func (e *Emitter) Listen(ctx context.Context) {
 	// clean after closing Emitter
 	go func() {
 		<-ctx.Done()
-		e.Log.Warn("closing event bus")
+		e.log.Warn("closing event bus")
 
-		for _, l := range e.Listeners {
-			go e.Bus.Unsubscribe(l.Name())
+		for _, l := range e.listeners {
+			go e.bus.Unsubscribe(l.Name())
 		}
 
-		e.Bus.Close()
+		e.bus.Close()
 	}()
 
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	for _, l := range e.Listeners {
+	for _, l := range e.listeners {
 		go e.startListener(l)
 	}
 }
@@ -161,23 +161,23 @@ func (e *Emitter) Listen(ctx context.Context) {
 func (e *Emitter) startListener(l common.Listener) {
 	// TODO(emil): why are we creating a subscription to the same topic for all these listeners, and then coding all this logic to start and stop listeners
 	// NOTE(emil): the topic where the listeners events come in on
-	err := e.Bus.SubscribeTopic("agentevents.>", l.Name(), e.notifyHandler(l))
+	err := e.bus.SubscribeTopic("agentevents.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
-		e.Log.Errorw("error while starting listener", "error", err)
+		e.log.Errorw("error while starting listener", "error", err)
 	}
-	e.Log.Infow("started listener", l.Name(), l.Metadata())
+	e.log.Infow("started listener", l.Name(), l.Metadata())
 }
 
 func (e *Emitter) stopListener(name string) {
-	err := e.Bus.Unsubscribe(name)
+	err := e.bus.Unsubscribe(name)
 	if err != nil {
-		e.Log.Errorw("error while stopping listener", "error", err)
+		e.log.Errorw("error while stopping listener", "error", err)
 	}
-	e.Log.Info("stopped listener", name)
+	e.log.Info("stopped listener", name)
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
-	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
+	logger := e.log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		// NOTE(emil): filters listeners (corresponding to webhooks) partially here
 		// TODO(emil): this seems to belong in the listener implementation
@@ -202,26 +202,20 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			e.Log.Info("stopping reconciler")
+			e.log.Info("stopping reconciler")
 			return
 		default:
-			listeners := e.Loader.Reconcile()
-			e.UpdateListeners(listeners)
-			log.Tracew(e.Log, "reconciled listeners", e.Logs()...)
+			listeners := e.loader.Reconcile()
+			e.updateListeners(listeners)
+			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 			time.Sleep(reconcileInterval)
 		}
 	}
 }
 
-// NOTE(emil): what is this used for? to produce arguments from the logs
-func (e *Emitter) Logs() []any {
+// ListenersDump dumps all the currently reconciled listeners in an array for debugging.
+func (e *Emitter) ListenersDump() []any {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-	return e.Listeners.Log()
-}
-
-func (e *Emitter) GetListeners() common.Listeners {
-	e.mutex.RLock()
-	defer e.mutex.RUnlock()
-	return e.Listeners
+	return e.listeners.Dump()
 }

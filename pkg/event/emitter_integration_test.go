@@ -45,7 +45,7 @@ func TestEmitter_NATS_Register_Integration(t *testing.T) {
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
 		// then
-		assert.Equal(t, 1, len(emitter.Listeners))
+		assert.Equal(t, 1, len(emitter.listeners))
 
 		t.Log("T1 completed")
 	})

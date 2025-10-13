@@ -513,31 +513,31 @@ func main() {
 			webhook.WithSecretClient(secretClient),
 			webhook.WithMetrics(metrics),
 			webhook.WithEnvs(envs))
-		eventsEmitter.Loader.Register(webhookLoader)
+		eventsEmitter.RegisterLoader(webhookLoader)
 	}
-	eventsEmitter.Loader.Register(websocketLoader)
-	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
+	eventsEmitter.RegisterLoader(websocketLoader)
+	eventsEmitter.RegisterLoader(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
 		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {
-			eventsEmitter.Loader.Register(cdeventLoader)
+			eventsEmitter.RegisterLoader(cdeventLoader)
 		} else {
 			log.DefaultLogger.Debugw("cdevents init error", "error", err.Error())
 		}
 	}
 	if cfg.EnableK8sEvents {
-		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
+		eventsEmitter.RegisterLoader(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
 	}
 
 	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
+	eventsEmitter.RegisterLoader(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
-	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
+	eventsEmitter.RegisterLoader(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
 
 	// Update TestWorkflowExecution Kubernetes resource objects on status change
-	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
+	eventsEmitter.RegisterLoader(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
 	// Synchronise resources with cloud
 	if proContext.CloudStorageSupportedInControlPlane && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
@@ -823,7 +823,7 @@ func main() {
 			commons.ExitOnError("running agent", err)
 			return nil
 		})
-		eventsEmitter.Loader.Register(agentHandle)
+		eventsEmitter.Register(agentHandle)
 	}
 
 	if !cfg.DisableTestTriggers {
@@ -969,7 +969,7 @@ func main() {
 
 		if deprecatedSystem.API != nil {
 			g.Go(func() error {
-				return deprecatedSystem.API.RunGraphQLServer(ctx)
+				return deprecatedSystem.API.RunGraphQLServer(ctx, eventBus)
 			})
 		}
 	}

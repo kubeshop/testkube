@@ -18,6 +18,13 @@ func init() {
 	os.Setenv("DEBUG", "true")
 }
 
+// getListeners allows getting listeners in a multithreaded fashion only used by tests.
+func (e *Emitter) getListeners() common.Listeners {
+	e.mutex.RLock()
+	defer e.mutex.RUnlock()
+	return e.listeners
+}
+
 func TestEmitter_Register(t *testing.T) {
 	t.Parallel()
 
@@ -30,7 +37,7 @@ func TestEmitter_Register(t *testing.T) {
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
 		// then
-		assert.Equal(t, 1, len(emitter.Listeners))
+		assert.Equal(t, 1, len(emitter.listeners))
 
 		t.Log("T1 completed")
 	})
@@ -176,7 +183,7 @@ func TestEmitter_Reconcile(t *testing.T) {
 		go emitter.Reconcile(ctx)
 
 		time.Sleep(100 * time.Millisecond)
-		assert.Len(t, emitter.GetListeners(), 4)
+		assert.Len(t, emitter.getListeners(), 4)
 
 		cancel()
 
@@ -191,7 +198,7 @@ func TestEmitter_Reconcile(t *testing.T) {
 
 		// then each reconciler (3 reconcilers) should load 2 listeners
 		time.Sleep(100 * time.Millisecond)
-		assert.Len(t, emitter.GetListeners(), 6)
+		assert.Len(t, emitter.getListeners(), 6)
 
 		cancel()
 	})
@@ -222,7 +229,7 @@ func newExampleTestEvent5() testkube.Event {
 	}
 }
 
-func TestEmitter_UpdateListeners(t *testing.T) {
+func TestEmitter_updateListeners(t *testing.T) {
 	t.Parallel()
 
 	t.Run("add, update and delete new listeners", func(t *testing.T) {
@@ -242,42 +249,42 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 		listener5 := &FakeListener{name: "l5"}
 
 		// when listeners are added
-		emitter.UpdateListeners(common.Listeners{listener1, listener2})
+		emitter.updateListeners(common.Listeners{listener1, listener2})
 
 		// then should have 2 listeners
-		assert.Len(t, emitter.Listeners, 2)
+		assert.Len(t, emitter.listeners, 2)
 
 		// when listeners are deleted
-		emitter.UpdateListeners(common.Listeners{listener1})
-		assert.Equal(t, "type=listener1", emitter.Listeners[0].Selector())
+		emitter.updateListeners(common.Listeners{listener1})
+		assert.Equal(t, "type=listener1", emitter.listeners[0].Selector())
 
 		// then should have 1 listener
-		assert.Len(t, emitter.Listeners, 1)
+		assert.Len(t, emitter.listeners, 1)
 
 		// when listeners are updated
-		emitter.UpdateListeners(common.Listeners{listener3})
+		emitter.updateListeners(common.Listeners{listener3})
 
 		// then should have 1 listener
-		assert.Len(t, emitter.Listeners, 1)
-		assert.Equal(t, "type=listener3", emitter.Listeners[0].Selector())
+		assert.Len(t, emitter.listeners, 1)
+		assert.Equal(t, "type=listener3", emitter.listeners[0].Selector())
 
 		// when listeners are added
-		emitter.UpdateListeners(common.Listeners{listener3, listener2})
+		emitter.updateListeners(common.Listeners{listener3, listener2})
 
 		// then should have 2 listeners
-		assert.Len(t, emitter.Listeners, 2)
+		assert.Len(t, emitter.listeners, 2)
 
 		// when listeners are added
-		emitter.UpdateListeners(common.Listeners{listener4})
+		emitter.updateListeners(common.Listeners{listener4})
 
 		// then should have 1 listeners
-		assert.Len(t, emitter.Listeners, 1)
+		assert.Len(t, emitter.listeners, 1)
 
 		// when listeners are added
-		emitter.UpdateListeners(common.Listeners{listener4, listener5})
+		emitter.updateListeners(common.Listeners{listener4, listener5})
 
 		// then should have 4 listeners
-		assert.Len(t, emitter.Listeners, 2)
+		assert.Len(t, emitter.listeners, 2)
 	})
 
 }
