@@ -29,15 +29,13 @@ type WebhookLoaderOption func(*WebhooksLoader)
 // NewWebhookLoader creates a new WebhooksLoader
 func NewWebhookLoader(
 	webhooksClient executorsclientv1.WebhooksInterface,
-	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface,
 	proContext *config.ProContext,
 	opts ...WebhookLoaderOption,
 ) *WebhooksLoader {
 	loader := &WebhooksLoader{
-		log:                    log.DefaultLogger,
-		WebhooksClient:         webhooksClient,
-		WebhookTemplatesClient: webhookTemplatesClient,
-		proContext:             proContext,
+		log:            log.DefaultLogger,
+		WebhooksClient: webhooksClient,
+		proContext:     proContext,
 	}
 
 	for _, opt := range opts {
@@ -50,9 +48,7 @@ func NewWebhookLoader(
 type WebhooksLoader struct {
 	log            *zap.SugaredLogger
 	WebhooksClient executorsclientv1.WebhooksInterface
-	// TODO(emil): make optional
-	WebhookTemplatesClient executorsclientv1.WebhookTemplatesInterface
-	proContext             *config.ProContext
+	proContext     *config.ProContext
 
 	// Optional fields
 	deprecatedClients      commons.DeprecatedClients
@@ -60,6 +56,7 @@ type WebhooksLoader struct {
 	// TODO(emil): rename testWorkflowResultsRepository for consistency
 	testWorkflowExecutionResults testworkflow.Repository
 	webhookResultsRepository     cloudwebhook.WebhookRepository
+	webhookTemplateClient        executorsclientv1.WebhookTemplatesInterface
 	secretClient                 secret.Interface
 	metrics                      v1.Metrics
 	envs                         map[string]string
@@ -93,10 +90,17 @@ func WithWebhookResultsRepository(repo webhook.WebhookRepository) WebhookLoaderO
 	}
 }
 
-// WithSecretClient sets the secret client
-func WithSecretClient(secretClient secret.Interface) WebhookLoaderOption {
+// WithWebhookTemplateClient sets the webhook template client
+func WithWebhookTemplateClient(client executorsclientv1.WebhookTemplatesInterface) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
-		loader.secretClient = secretClient
+		loader.webhookTemplateClient = client
+	}
+}
+
+// WithSecretClient sets the secret client
+func WithSecretClient(client secret.Interface) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.secretClient = client
 	}
 }
 
@@ -129,7 +133,11 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// and create listeners for each webhook spec
 	for _, webhook := range webhookList.Items {
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
-			webhookTemplate, err := r.WebhookTemplatesClient.Get(webhook.Spec.WebhookTemplateRef.Name)
+			if r.webhookTemplateClient == nil {
+				r.log.Errorw("webhook using unsupported WebhookTemplateRef", "name", webhook.Name, "template_ref", webhook.Spec.WebhookTemplateRef)
+				continue
+			}
+			webhookTemplate, err := r.webhookTemplateClient.Get(webhook.Spec.WebhookTemplateRef.Name)
 			if err != nil {
 				r.log.Errorw("error webhook template loading", "error", err, "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
 				continue
@@ -146,7 +154,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		payloadTemplate := ""
 		if webhook.Spec.PayloadTemplateReference != "" {
 			if r.deprecatedClients == nil {
-				r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template", webhook.Spec.PayloadTemplateReference)
+				r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template_ref", webhook.Spec.PayloadTemplateReference)
 				continue
 			}
 			template, err := r.deprecatedClients.Templates().Get(webhook.Spec.PayloadTemplateReference)
