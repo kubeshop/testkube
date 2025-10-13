@@ -159,8 +159,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			webhook = mergeWebhooks(webhook, *webhookTemplate)
 		}
 
-		payloadTemplate := ""
-		if webhook.Spec.PayloadTemplateReference != "" {
+		if webhook.Spec.PayloadTemplate == "" && webhook.Spec.PayloadTemplateReference != "" {
 			if r.deprecatedClients == nil {
 				r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template_ref", webhook.Spec.PayloadTemplateReference)
 				continue
@@ -171,15 +170,10 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			}
 
 			if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.WEBHOOK_TemplateType {
-				payloadTemplate = template.Spec.Body
+				webhook.Spec.PayloadTemplate = template.Spec.Body
 			} else {
 				r.log.Warnw("not matching template type", "template", webhook.Spec.PayloadTemplateReference)
 			}
-		}
-
-		// TODO(emil): no point for this, avoiding setting to zero value
-		if webhook.Spec.PayloadTemplate != "" {
-			payloadTemplate = webhook.Spec.PayloadTemplate
 		}
 
 		eventTypes := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
@@ -192,7 +186,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				webhook.Spec.Selector,
 				eventTypes,
 				webhook.Spec.PayloadObjectField,
-				payloadTemplate,
+				webhook.Spec.PayloadTemplate,
 				webhook.Spec.Headers,
 				webhook.Spec.Disabled,
 				r.proContext,
