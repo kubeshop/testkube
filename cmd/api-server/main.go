@@ -505,11 +505,11 @@ func main() {
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksClient,
 			webhookTemplatesClient,
-			webhookRepository,
 			&proContext,
 			webhook.WithDeprecatedClients(deprecatedClients),
 			webhook.WithDeprecatedRepositories(deprecatedRepositories),
 			webhook.WithTestWorkflowExecutionResults(testWorkflowResultsRepository),
+			webhook.WithWebhookResultsRepository(webhookRepository),
 			webhook.WithSecretClient(secretClient),
 			webhook.WithMetrics(metrics),
 			webhook.WithEnvs(envs))

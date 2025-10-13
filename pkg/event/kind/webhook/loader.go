@@ -11,6 +11,7 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	log "github.com/kubeshop/testkube/pkg/log"
@@ -29,7 +30,6 @@ type WebhookLoaderOption func(*WebhooksLoader)
 func NewWebhookLoader(
 	webhooksClient executorsclientv1.WebhooksInterface,
 	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface,
-	webhookRepository cloudwebhook.WebhookRepository,
 	proContext *config.ProContext,
 	opts ...WebhookLoaderOption,
 ) *WebhooksLoader {
@@ -37,7 +37,6 @@ func NewWebhookLoader(
 		log:                    log.DefaultLogger,
 		WebhooksClient:         webhooksClient,
 		WebhookTemplatesClient: webhookTemplatesClient,
-		webhookRepository:      webhookRepository,
 		proContext:             proContext,
 	}
 
@@ -53,14 +52,14 @@ type WebhooksLoader struct {
 	WebhooksClient executorsclientv1.WebhooksInterface
 	// TODO(emil): make optional
 	WebhookTemplatesClient executorsclientv1.WebhookTemplatesInterface
-	// TODO(emil): make optional
-	webhookRepository cloudwebhook.WebhookRepository
-	proContext        *config.ProContext
+	proContext             *config.ProContext
 
 	// Optional fields
-	deprecatedClients            commons.DeprecatedClients
-	deprecatedRepositories       commons.DeprecatedRepositories
+	deprecatedClients      commons.DeprecatedClients
+	deprecatedRepositories commons.DeprecatedRepositories
+	// TODO(emil): rename testWorkflowResultsRepository for consistency
 	testWorkflowExecutionResults testworkflow.Repository
+	webhookResultsRepository     cloudwebhook.WebhookRepository
 	secretClient                 secret.Interface
 	metrics                      v1.Metrics
 	envs                         map[string]string
@@ -84,6 +83,13 @@ func WithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedReposit
 func WithTestWorkflowExecutionResults(testWorkflowExecutionResults testworkflow.Repository) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
 		loader.testWorkflowExecutionResults = testWorkflowExecutionResults
+	}
+}
+
+// WithWebhookResultsRepository sets the repository used for collecting webhook results
+func WithWebhookResultsRepository(repo webhook.WebhookRepository) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.webhookResultsRepository = repo
 	}
 }
 
@@ -173,12 +179,12 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				payloadTemplate,
 				webhook.Spec.Headers,
 				webhook.Spec.Disabled,
-				r.webhookRepository,
 				r.proContext,
 				webhook.Spec.Config,
 				webhook.Spec.Parameters,
 				listenerWithDeprecatedRepositories(r.deprecatedRepositories),
 				listenerWithTestWorkflowExecutionResults(r.testWorkflowExecutionResults),
+				listenerWithWebhookResultsRepository(r.webhookResultsRepository),
 				listenerWithMetrics(r.metrics),
 				listenerWithSecretClient(r.secretClient),
 				listenerWithEnvs(r.envs),

@@ -20,6 +20,7 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
@@ -38,7 +39,6 @@ func NewWebhookListener(
 	payloadObjectField, payloadTemplate string,
 	headers map[string]string,
 	disabled bool,
-	webhookRepository cloudwebhook.WebhookRepository,
 	proContext *config.ProContext,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
@@ -55,7 +55,6 @@ func NewWebhookListener(
 		payloadTemplate:    payloadTemplate,
 		headers:            headers,
 		disabled:           disabled,
-		webhookRepository:  webhookRepository,
 		proContext:         proContext,
 		config:             config,
 		parameters:         parameters,
@@ -79,15 +78,15 @@ type WebhookListener struct {
 	payloadTemplate    string
 	headers            map[string]string
 	disabled           bool
-	// TODO(emil): what should be done with this?
-	webhookRepository cloudwebhook.WebhookRepository
-	proContext        *config.ProContext
-	config            map[string]executorv1.WebhookConfigValue
-	parameters        []executorv1.WebhookParameterSchema
+	proContext         *config.ProContext
+	config             map[string]executorv1.WebhookConfigValue
+	parameters         []executorv1.WebhookParameterSchema
 
 	// Optional fields
-	deprecatedRepositories       commons.DeprecatedRepositories
+	deprecatedRepositories commons.DeprecatedRepositories
+	// TODO(emil): rename testWorkflowResultsRepository for consistency
 	testWorkflowExecutionResults testworkflow.Repository
+	webhookResultsRepository     cloudwebhook.WebhookRepository
 	metrics                      v1.Metrics
 	secretClient                 secret.Interface
 	envs                         map[string]string
@@ -114,6 +113,13 @@ func listenerWithDeprecatedRepositories(deprecatedRepositories commons.Deprecate
 func listenerWithTestWorkflowExecutionResults(testWorkflowExecutionResults testworkflow.Repository) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.testWorkflowExecutionResults = testWorkflowExecutionResults
+	}
+}
+
+// listenerWithWebhookResultsRepository sets the repository used for collecting webhook results
+func listenerWithWebhookResultsRepository(repo webhook.WebhookRepository) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.webhookResultsRepository = repo
 	}
 }
 
@@ -205,23 +211,26 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	event.Envs = l.envs
 
 	defer func() {
+		// Webhook metrics
 		var eventType, res string
 		if event.Type_ != nil {
 			eventType = string(*event.Type_)
 		}
-
 		res = "success"
 		if result.Error() != "" {
 			res = "error"
 		}
-
 		l.metrics.IncWebhookEventCount(l.name, eventType, res)
+
+		// Webhook telemetry
+		if l.webhookResultsRepository == nil {
+			return
+		}
 		errorMessage := ""
 		if err != nil {
 			errorMessage = err.Error()
 		}
-
-		if err = l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
+		if err = l.webhookResultsRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
 			log.Errorw("webhook collecting execution result error", "error", err)
 		}
 	}()
