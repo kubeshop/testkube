@@ -377,6 +377,10 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		}
 
 		if val.Secret != nil {
+			if l.secretClient == nil {
+				log.Errorw("secret references are unsupported in webhooks", "name", val.Secret.Name)
+				return nil, errors.New("secret references are unsupported in webhooks")
+			}
 			var ns []string
 			if val.Secret.Namespace != "" {
 				ns = append(ns, val.Secret.Namespace)
