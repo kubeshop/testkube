@@ -83,13 +83,15 @@ type WebhookListener struct {
 	parameters         []executorv1.WebhookParameterSchema
 
 	// Optional fields
-	deprecatedRepositories commons.DeprecatedRepositories
 	// TODO(emil): rename testWorkflowResultsRepository for consistency
 	testWorkflowExecutionResults testworkflow.Repository
 	webhookResultsRepository     cloudwebhook.WebhookRepository
 	metrics                      v1.Metrics
 	secretClient                 secret.Interface
 	envs                         map[string]string
+
+	// Deprecated fields
+	deprecatedRepositories commons.DeprecatedRepositories
 }
 
 // WebhookListenerOption is a functional option for WebhookListener
@@ -99,13 +101,6 @@ type WebhookListenerOption func(*WebhookListener)
 func listenerWithLogger(log *zap.SugaredLogger) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.Log = log
-	}
-}
-
-// listenerWithDeprecatedRepositories configures the deprecated repositories for the webhook listener.
-func listenerWithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookListenerOption {
-	return func(wl *WebhookListener) {
-		wl.deprecatedRepositories = deprecatedRepositories
 	}
 }
 
@@ -141,6 +136,14 @@ func listenerWithSecretClient(secretClient secret.Interface) WebhookListenerOpti
 func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.envs = envs
+	}
+}
+
+// listenerWithDeprecatedRepositories configures the deprecated repositories for the webhook listener.
+// Deprecated: test and test suites are deprecated.
+func listenerWithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.deprecatedRepositories = deprecatedRepositories
 	}
 }
 

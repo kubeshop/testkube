@@ -46,13 +46,12 @@ func NewWebhookLoader(
 }
 
 type WebhooksLoader struct {
-	log            *zap.SugaredLogger
+	log *zap.SugaredLogger
+	// TODO(emil): reduce the method set of this interface
 	WebhooksClient executorsclientv1.WebhooksInterface
 	proContext     *config.ProContext
 
 	// Optional fields
-	deprecatedClients      commons.DeprecatedClients
-	deprecatedRepositories commons.DeprecatedRepositories
 	// TODO(emil): rename testWorkflowResultsRepository for consistency
 	testWorkflowExecutionResults testworkflow.Repository
 	webhookResultsRepository     cloudwebhook.WebhookRepository
@@ -60,20 +59,10 @@ type WebhooksLoader struct {
 	secretClient                 secret.Interface
 	metrics                      v1.Metrics
 	envs                         map[string]string
-}
 
-// WithDeprecatedClients sets the deprecated clients
-func WithDeprecatedClients(deprecatedClients commons.DeprecatedClients) WebhookLoaderOption {
-	return func(loader *WebhooksLoader) {
-		loader.deprecatedClients = deprecatedClients
-	}
-}
-
-// WithDeprecatedRepositories sets the deprecated repositories
-func WithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookLoaderOption {
-	return func(loader *WebhooksLoader) {
-		loader.deprecatedRepositories = deprecatedRepositories
-	}
+	// Deprecated fields
+	deprecatedClients      commons.DeprecatedClients
+	deprecatedRepositories commons.DeprecatedRepositories
 }
 
 // WithTestWorkflowExecutionResults sets the test workflow execution results repository
@@ -115,6 +104,22 @@ func WithMetrics(metrics v1.Metrics) WebhookLoaderOption {
 func WithEnvs(envs map[string]string) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
 		loader.envs = envs
+	}
+}
+
+// WithDeprecatedClients sets the deprecated clients
+// Deprecated: test and test suites are deprecated.
+func WithDeprecatedClients(deprecatedClients commons.DeprecatedClients) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.deprecatedClients = deprecatedClients
+	}
+}
+
+// WithDeprecatedRepositories sets the deprecated repositories
+// Deprecated: test and test suites are deprecated.
+func WithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.deprecatedRepositories = deprecatedRepositories
 	}
 }
 
