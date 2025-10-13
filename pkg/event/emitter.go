@@ -14,8 +14,6 @@ import (
 )
 
 const (
-	eventsBuffer      = 10000
-	workersCount      = 20
 	reconcileInterval = time.Second
 )
 
