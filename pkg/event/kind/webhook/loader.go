@@ -49,11 +49,13 @@ func NewWebhookLoader(
 }
 
 type WebhooksLoader struct {
-	log                    *zap.SugaredLogger
-	WebhooksClient         executorsclientv1.WebhooksInterface
+	log            *zap.SugaredLogger
+	WebhooksClient executorsclientv1.WebhooksInterface
+	// TODO(emil): make optional
 	WebhookTemplatesClient executorsclientv1.WebhookTemplatesInterface
-	webhookRepository      cloudwebhook.WebhookRepository
-	proContext             *config.ProContext
+	// TODO(emil): make optional
+	webhookRepository cloudwebhook.WebhookRepository
+	proContext        *config.ProContext
 
 	// Optional fields
 	deprecatedClients            commons.DeprecatedClients
