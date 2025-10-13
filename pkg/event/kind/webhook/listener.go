@@ -131,7 +131,7 @@ func listenerWithMetrics(metrics v1.Metrics) WebhookListenerOption {
 	}
 }
 
-// listenerWithEnvs configures the environment variables for the webhook listener.
+// listenerWithEnvs sets the agent's environment variables to be used in templates.
 func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.envs = envs

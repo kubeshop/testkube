@@ -26,16 +26,21 @@ var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 // WebhookLoaderOption is an option for NewWebhookLoader
 type WebhookLoaderOption func(*WebhooksLoader)
 
+//go:generate mockgen -destination=./mock_webhook_client.go -package=webhook "github.com/kubeshop/testkube/pkg/event/kind/webhook" WebhookClient
+type WebhookClient interface {
+	List(selector string) (*executorv1.WebhookList, error)
+}
+
 // NewWebhookLoader creates a new WebhooksLoader
 func NewWebhookLoader(
-	webhooksClient executorsclientv1.WebhooksInterface,
+	webhookClient WebhookClient,
 	proContext *config.ProContext,
 	opts ...WebhookLoaderOption,
 ) *WebhooksLoader {
 	loader := &WebhooksLoader{
-		log:            log.DefaultLogger,
-		WebhooksClient: webhooksClient,
-		proContext:     proContext,
+		log:           log.DefaultLogger,
+		webhookClient: webhookClient,
+		proContext:    proContext,
 	}
 
 	for _, opt := range opts {
@@ -46,10 +51,9 @@ func NewWebhookLoader(
 }
 
 type WebhooksLoader struct {
-	log *zap.SugaredLogger
-	// TODO(emil): reduce the method set of this interface
-	WebhooksClient executorsclientv1.WebhooksInterface
-	proContext     *config.ProContext
+	log           *zap.SugaredLogger
+	webhookClient WebhookClient
+	proContext    *config.ProContext
 
 	// Optional fields
 	testWorkflowResultsRepository testworkflow.Repository
@@ -99,7 +103,7 @@ func WithMetrics(metrics v1.Metrics) WebhookLoaderOption {
 	}
 }
 
-// WithEnvs sets the environment variables
+// WithEnvs sets the agent's environment variables to be used in templates
 func WithEnvs(envs map[string]string) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
 		loader.envs = envs
@@ -129,7 +133,7 @@ func (r WebhooksLoader) Kind() string {
 func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// TODO(emil): loads webhooks from the crds
 	// load all webhooks from kubernetes CRDs
-	webhookList, err := r.WebhooksClient.List("")
+	webhookList, err := r.webhookClient.List("")
 	if err != nil {
 		return listeners, err
 	}
