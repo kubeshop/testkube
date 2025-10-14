@@ -278,6 +278,7 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 	return
 }
 
+// TODO(emil): move this to the emitter to be able to configure prefix for these events
 // Topic returns topic for event based on resource and resource id
 // or fallback to global "events" topic
 func (e Event) Topic() string {
