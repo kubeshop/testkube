@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"time"
 
@@ -110,32 +109,32 @@ func NewGRPCConnectionWithTracing(
 	// All of step 2 should be removed in the future when Control Planes are required to create TLS connections.
 
 	// Default credentials using the system CAs to verify server certificates.
-	certPool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, err
-	}
-	creds := credentials.NewClientTLSFromCert(certPool, "")
-
-	// If a CA certificate file is passed then use that CA to verify server certificates.
-	if caFile != "" {
-		creds, err = credentials.NewClientTLSFromFile(caFile, "")
-		if err != nil {
-			return nil, err
-		}
-	}
+	//certPool, err := x509.SystemCertPool()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//creds := credentials.NewClientTLSFromCert(certPool, "")
+	//
+	//// If a CA certificate file is passed then use that CA to verify server certificates.
+	//if caFile != "" {
+	//	creds, err = credentials.NewClientTLSFromFile(caFile, "")
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	// Attempt to use a TLS connection.
-	tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
-	client, err := attemptConnection(ctx, server, tlsDialOptions...)
-	// WARNING, checking for no error to early return with a secure client before attempting with local client.
-	if err == nil {
-		logger.Info("Using TLS gRPC connection")
-		return client, nil
-	}
+	//tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
+	//client, err := attemptConnection(ctx, server, tlsDialOptions...)
+	//// WARNING, checking for no error to early return with a secure client before attempting with local client.
+	//if err == nil {
+	//	logger.Info("Using TLS gRPC connection")
+	//	return client, nil
+	//}
 
 	// Attempt to use a Local connection (for our usage only local TCP connections will work).
 	localDialOptions := append(opts, grpc.WithTransportCredentials(local.NewCredentials()))
-	client, err = attemptConnection(ctx, server, localDialOptions...)
+	client, err := attemptConnection(ctx, server, localDialOptions...)
 	// WARNING, checking for no error to early return with a local client before descending into madness.
 	if err == nil {
 		logger.Info("Using local gRPC connection")

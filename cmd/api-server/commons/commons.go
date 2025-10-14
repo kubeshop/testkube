@@ -349,9 +349,9 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
 		DashboardURI:                        cfg.TestkubeDashboardURI,
-		NewArchitecture:                     grpcClient == nil,
-		CloudStorage:                        grpcClient == nil,
-		CloudStorageSupportedInControlPlane: grpcClient == nil,
+		NewArchitecture:                     false,
+		CloudStorage:                        false,
+		CloudStorageSupportedInControlPlane: false,
 	}
 	proContext.Agent.ID = cfg.TestkubeProAgentID
 	proContext.Agent.Name = cfg.TestkubeProAgentID
@@ -362,16 +362,15 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
 
-	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
-		return proContext, nil
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-		"api-key":         proContext.APIKey,
-		"organization-id": proContext.OrgID,
-		"agent-id":        proContext.Agent.ID,
-	}))
+
+	if proContext.APIKey != "" {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
+			"api-key":         proContext.APIKey,
+			"organization-id": proContext.OrgID,
+			"agent-id":        proContext.Agent.ID,
+		}))
+	}
 	defer cancel()
 	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
