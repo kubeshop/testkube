@@ -75,6 +75,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.DisableDeprecatedTests, cfg.StorageBucket, deprecatedRepositories, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
+	enqueuer := controlplane.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository)
+
 	// Ensure the buckets exist
 	if cfg.StorageBucket != "" {
 		exists, err := storageClient.BucketExists(ctx, cfg.StorageBucket)
@@ -128,7 +130,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+	}, enqueuer, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 

@@ -239,7 +239,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 			t.Namespace, t.Name,
 		)
 
-		resp := s.testWorkflowExecutor.Execute(ctx, "", request)
+		resp := s.testWorkflowExecutor.Execute(ctx, common.StandaloneEnvironment, request)
 		for exec := range resp.Channel() {
 			status.addTestWorkflowExecutionID(exec.Id)
 		}

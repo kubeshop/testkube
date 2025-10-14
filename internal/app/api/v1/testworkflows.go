@@ -18,6 +18,7 @@ import (
 	opcrd "github.com/kubeshop/testkube/k8s"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
@@ -516,7 +517,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleExecution.Config = request.Config
 		}
 
-		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+		resp := s.testWorkflowExecutor.Execute(ctx, common.StandaloneEnvironment, &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,
@@ -632,7 +633,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 				EnvVars: request.Runtime.Variables,
 			}
 		}
-		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+		resp := s.testWorkflowExecutor.Execute(ctx, common.StandaloneEnvironment, &cloud.ScheduleRequest{
 			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:    request.DisableWebhooks,
 			Tags:               request.Tags,
