@@ -3,7 +3,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: prod-healthcheck
   labels:
-    category: platform-features
     core-tests: healthcheck
     environment: prod
 spec:

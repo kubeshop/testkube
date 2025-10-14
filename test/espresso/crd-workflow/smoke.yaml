@@ -11,7 +11,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: espresso
-    category: build-integration
+    category: e2e-ui-testing
 description: "Android emulator - K8s+KVM"
 spec:
   content:

@@ -3,7 +3,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: wizard-examples-suite
   labels:
-    category: platform-features
     core-tests: workflows-suite
     type: workflow-suite
 spec:

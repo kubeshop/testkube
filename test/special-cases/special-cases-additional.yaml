@@ -4,7 +4,6 @@ kind: TestWorkflow
 metadata:
   name: special-cases-long-lasting-30m
   labels:
-    category: platform-features
     core-tests: special-cases
 description: "Long lasting workflow - 30 minutes"
 spec:
@@ -21,7 +20,6 @@ kind: TestWorkflow
 metadata:
   name: special-cases-long-lasting-90m
   labels:
-    category: platform-features
     core-tests: special-cases
 description: "Long lasting workflow - 90 minutes"
 spec:
@@ -38,7 +36,6 @@ kind: TestWorkflow
 metadata:
   name: special-cases-long-lasting-sleep-90m
   labels:
-    category: platform-features
     core-tests: special-cases
 description: "Long lasting workflow - 90 minutes sleep + echo in the end"
 spec:
@@ -52,7 +49,6 @@ kind: TestWorkflow
 metadata:
   name: special-cases-service-name-with-dash  # only . notation is supported (https://linear.app/kubeshop/issue/TKC-4047/)
   labels:
-    category: platform-features
     core-tests: special-cases
 description: "Service name with dash"
 spec:

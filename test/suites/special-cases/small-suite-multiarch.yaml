@@ -3,7 +3,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: tw-suite-small-smoke-multiarch
   labels:
-    category: platform-features
     core-tests: workflows-suite
     type: suite
 description: "Small smoke test suite with only workflows using multiarch images (available for both amd64 and arm64)"

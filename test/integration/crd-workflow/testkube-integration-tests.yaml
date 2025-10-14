@@ -3,7 +3,6 @@ kind: TestWorkflow
 metadata:
   name: testkube-integration
   labels:
-    category: platform-features
     core-tests: workflows
 spec:
   config:

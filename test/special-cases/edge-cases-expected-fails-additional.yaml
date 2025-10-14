@@ -3,7 +3,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-high-parallel-step-failed-sync-paused
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "one of 20 parallel steps failed (last), synced parallel (paused: true)"
 spec:
@@ -36,7 +35,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-high-parallel-first-step-failed-sync-paused
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "one of 20 parallel steps failed (last), synced parallel (paused: true)"
 spec:
@@ -69,7 +67,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-high-parallel-step-failed
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "one of 20 parallel steps failed (last)"
 spec:

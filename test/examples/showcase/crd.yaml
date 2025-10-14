@@ -4,7 +4,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: combined-workflows-suite
   labels:
-    category: platform-features
     demo: showcase-2
     workflow-suite: "true"
 spec:
@@ -34,7 +33,6 @@ kind: TestWorkflow
 metadata:
   name: k6-distributed # ShowCase 2
   labels:
-    category: platform-features
     demo: showcase-2
     artifacts: report
     junit: "true"
@@ -98,7 +96,6 @@ kind: TestWorkflow
 metadata:
   name: cypress-browsers-matrix
   labels:
-    category: platform-features
     demo: showcase-3
     junit: "true"
 spec:
@@ -153,7 +150,6 @@ kind: TestWorkflow
 metadata:
   name: curl-with-nginx-service
   labels:
-    category: platform-features
     demo: showcase-4
 spec:
   container:
@@ -183,7 +179,6 @@ kind: TestWorkflow
 metadata:
   name: cypress-video-recording
   labels:
-    category: platform-features
     demo: showcase-5
     artifacts-video: "true"
 spec:
@@ -229,7 +224,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: postman-junit-report
   labels:
-    category: platform-features
     demo: showcase-6
     junit: "true"
 spec:
@@ -262,7 +256,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: cypress-junit-report
   labels:
-    category: platform-features
     demo: showcase-6
     junit: "true"
 spec:
@@ -309,7 +302,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: junit5-junit
   labels:
-    category: platform-features
     demo: showcase-6
     artifacts-report: "true"
     junit: "true"
@@ -342,7 +334,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: junit5-mixed-results-failures-junit-report
   labels:
-    category: platform-features
     demo: showcase-6
     artifacts-report: "true"
     junit: "true"
@@ -376,7 +367,6 @@ kind: TestWorkflow
 metadata:
   name: pytest-junit
   labels:
-    category: platform-features
     demo: showcase-6
     junit: "true"
 spec:
@@ -411,7 +401,6 @@ kind: TestWorkflow
 metadata:
   name: pytest-mixed-results-failures-junit-report
   labels:
-    category: platform-features
     demo: showcase-6
     junit: "true"
     expected-fail: "true"
@@ -447,7 +436,6 @@ kind: TestWorkflow
 metadata:
   name: nunit-junit-report
   labels:
-    category: platform-features
     demo: showcase-6
     junit: "true"
 spec:
@@ -479,7 +467,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: playwright-workflow-smoke-junit
   labels:
-    category: platform-features
     demo: showcase-6
     junit: "true"
 spec:
@@ -549,7 +536,6 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: trigger-remote-workflow-with-template
   labels:
-    category: platform-features
     demo: showcase-9
 spec:
   steps:

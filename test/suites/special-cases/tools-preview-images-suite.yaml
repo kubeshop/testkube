@@ -3,7 +3,6 @@ kind: TestWorkflow
 metadata:
   name: tools-preview-images-suite
   labels:
-    category: platform-features
     core-tests: tools-preview-images-suite
     type: suite
 spec:

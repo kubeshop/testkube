@@ -3,7 +3,6 @@ kind: TestWorkflow
 metadata:
   name: postman-workflow-suite-small
   labels:
-    category: platform-features
     core-tests: workflows-suite
     type: suite
     tool: postman

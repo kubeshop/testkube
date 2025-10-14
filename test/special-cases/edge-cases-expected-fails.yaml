@@ -3,7 +3,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-cypress-incorrect-repo-path
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: default no-cone mode
 spec:
@@ -41,7 +40,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-cypress-incorrect-repo-path-cone-mode
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -79,7 +77,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-cypress-incorrect-image-name
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -116,7 +113,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-cypress-incorrect-workingdir
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -155,7 +151,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-cypress-resource-limits # OOMKilled
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -194,7 +189,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-cypress-artifacts-condition-always-with-artifacts
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -229,7 +223,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-k6-test-report-condition-always-no-artifacts
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -267,7 +260,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-timeout-activedeadlineseconds
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   job:
@@ -302,7 +294,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-timeout-step
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -338,7 +329,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-private-registry-auth
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   container:
@@ -357,7 +347,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-private-repo-auth
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -387,7 +376,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-missing-git-secret
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   content:
@@ -421,7 +409,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-missing-template
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   job:
@@ -445,7 +432,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-service-exit-code # https://linear.app/kubeshop/issue/TKC-3897/
   labels:
-    category: platform-features
     core-tests: expected-fail
 spec:
   container:
@@ -470,7 +456,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-step-retry
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "step retry (until step failed)"
 spec:
@@ -493,7 +478,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-negative-step
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "negative step passed - inverting step result to failed"
 spec:
@@ -512,7 +496,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-volume-not-mounted
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "volumeMount references missing volume"
 spec:
@@ -543,7 +526,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-template-missing-config-options
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "Required template config missing"
 spec:
@@ -557,7 +539,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-template-not-defined-config-options
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "Not defined template config params passed"
 spec:
@@ -574,7 +555,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-service-readiness-probe
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "Service with failing readiness probe"
 spec:
@@ -597,7 +577,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-conditional-step-failed
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "conditional step failed"
 spec:
@@ -615,7 +594,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-parallel-step-failed
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "one of parallel steps failed"
 spec:
@@ -647,7 +625,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-parallel-step-timed-out
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "one of parallel steps timed out"
 spec:
@@ -680,7 +657,6 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-parallel-oomkilled
   labels:
-    category: platform-features
     core-tests: expected-fail
 description: "one of parallel steps oomkilled"
 spec:

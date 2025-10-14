@@ -76,7 +76,6 @@ kind: TestWorkflow
 metadata:
   name: oss-tests-mongo
   labels:
-    category: platform-features
     core-tests: workflows
     tool: testkube-oss
     environment-specific: dev
@@ -99,7 +98,6 @@ kind: TestWorkflow
 metadata:
   name: oss-tests-postgres
   labels:
-    category: platform-features
     core-tests: workflows
     tool: testkube-oss
     environment-specific: dev
