@@ -42,6 +42,7 @@ type Server struct {
 	commands                    map[cloudexecutor.Command]CommandHandler
 	enqueuer                    scheduling.Enqueuer
 	scheduler                   scheduling.Scheduler
+	executionController         scheduling.Controller
 	executor                    testworkflowexecutor.TestWorkflowExecutor
 	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
@@ -64,6 +65,7 @@ func New(
 	cfg Config,
 	enqueuer scheduling.Enqueuer,
 	scheduler scheduling.Scheduler,
+	executionController scheduling.Controller,
 	executor testworkflowexecutor.TestWorkflowExecutor,
 	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
@@ -83,6 +85,7 @@ func New(
 		cfg:                         cfg,
 		enqueuer:                    enqueuer,
 		scheduler:                   scheduler,
+		executionController:         executionController,
 		executor:                    executor,
 		commands:                    commands,
 		storageClient:               storageClient,
