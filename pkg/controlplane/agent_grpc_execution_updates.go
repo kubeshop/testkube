@@ -47,7 +47,11 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 	}
 
 	// TODO Generate execution token
-	// TODO Mark execution as starting
+
+	// Mark the execution as starting
+	if err := s.executionController.StartExecution(ctx, exe.Id); err != nil {
+		log.Warnw("error marking execution as starting", "err", err)
+	}
 
 	// Populate some possibly missing values and avoid nil pointer issues.
 	var workflowName string
