@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -12,9 +13,23 @@ import (
 	"text/template"
 	"time"
 
-	sprig "github.com/Masterminds/sprig/v3"
+	"github.com/Masterminds/sprig/v3"
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, pgx.ErrNoRows) {
+		return true
+	}
+
+	return false
+}
 
 func ContainsTag(tags []string, tag string) bool {
 	for _, t := range tags {

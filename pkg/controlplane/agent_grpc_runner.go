@@ -20,10 +20,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
-func (s *Server) GetExecutionUpdates(context.Context, *executionv1.GetExecutionUpdatesRequest) (*executionv1.GetExecutionUpdatesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetExecutionUpdates not implemented")
-}
-
 func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
 	execution, err := s.resultsRepository.Get(ctx, req.GetExecutionId())
 	if err != nil {
