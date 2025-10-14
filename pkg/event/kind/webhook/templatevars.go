@@ -41,6 +41,7 @@ func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config
 		return vars
 	}
 
+	// TODO(emil): replace with something in the cloud setting
 	switch {
 	case event.TestExecution != nil:
 		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/tests/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestExecution.TestName, event.TestExecution.Id)

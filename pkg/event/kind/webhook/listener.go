@@ -39,7 +39,6 @@ func NewWebhookListener(
 	payloadObjectField, payloadTemplate string,
 	headers map[string]string,
 	disabled bool,
-	proContext *config.ProContext,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
 	opts ...WebhookListenerOption,
@@ -55,7 +54,6 @@ func NewWebhookListener(
 		payloadTemplate:    payloadTemplate,
 		headers:            headers,
 		disabled:           disabled,
-		proContext:         proContext,
 		config:             config,
 		parameters:         parameters,
 	}
@@ -78,7 +76,6 @@ type WebhookListener struct {
 	payloadTemplate    string
 	headers            map[string]string
 	disabled           bool
-	proContext         *config.ProContext
 	config             map[string]executorv1.WebhookConfigValue
 	parameters         []executorv1.WebhookParameterSchema
 
@@ -88,6 +85,7 @@ type WebhookListener struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
+	proContext                    *config.ProContext
 
 	// Deprecated fields
 	deprecatedRepositories commons.DeprecatedRepositories
@@ -135,6 +133,14 @@ func listenerWithMetrics(metrics v1.Metrics) WebhookListenerOption {
 func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.envs = envs
+	}
+}
+
+// listenerWithProContext sets the "pro context" for the connection to the
+// control plane to be used in templates.
+func listenerWithProContext(proContext *config.ProContext) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.proContext = proContext
 	}
 }
 

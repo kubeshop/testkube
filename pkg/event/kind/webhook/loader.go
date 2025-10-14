@@ -34,13 +34,11 @@ type WebhookClient interface {
 // NewWebhookLoader creates a new WebhooksLoader
 func NewWebhookLoader(
 	webhookClient WebhookClient,
-	proContext *config.ProContext,
 	opts ...WebhookLoaderOption,
 ) *WebhooksLoader {
 	loader := &WebhooksLoader{
 		log:           log.DefaultLogger,
 		webhookClient: webhookClient,
-		proContext:    proContext,
 	}
 
 	for _, opt := range opts {
@@ -53,8 +51,6 @@ func NewWebhookLoader(
 type WebhooksLoader struct {
 	log           *zap.SugaredLogger
 	webhookClient WebhookClient
-	// TODO(emil): how should this be replaced in cloud setting? essentially used to generate the UI URIs
-	proContext *config.ProContext
 
 	// Optional fields
 	testWorkflowResultsRepository testworkflow.Repository
@@ -63,6 +59,7 @@ type WebhooksLoader struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
+	proContext                    *config.ProContext
 
 	// Deprecated fields
 	deprecatedClients      commons.DeprecatedClients
@@ -108,6 +105,14 @@ func WithMetrics(metrics v1.Metrics) WebhookLoaderOption {
 func WithEnvs(envs map[string]string) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
 		loader.envs = envs
+	}
+}
+
+// WithProContext sets the "pro context" for the connection to the control plane
+// to be used in templates
+func WithProContext(proContext *config.ProContext) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.proContext = proContext
 	}
 }
 
@@ -190,7 +195,6 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				webhook.Spec.PayloadTemplate,
 				webhook.Spec.Headers,
 				webhook.Spec.Disabled,
-				r.proContext,
 				webhook.Spec.Config,
 				webhook.Spec.Parameters,
 				listenerWithDeprecatedRepositories(r.deprecatedRepositories),
@@ -199,6 +203,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				listenerWithMetrics(r.metrics),
 				listenerWithSecretClient(r.secretClient),
 				listenerWithEnvs(r.envs),
+				listenerWithProContext(r.proContext),
 			),
 		)
 	}

@@ -504,7 +504,6 @@ func main() {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksClient,
-			&proContext,
 			webhook.WithDeprecatedClients(deprecatedClients),
 			webhook.WithDeprecatedRepositories(deprecatedRepositories),
 			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
@@ -512,7 +511,8 @@ func main() {
 			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
 			webhook.WithSecretClient(secretClient),
 			webhook.WithMetrics(metrics),
-			webhook.WithEnvs(envs))
+			webhook.WithEnvs(envs),
+			webhook.WithProContext(&proContext))
 		eventsEmitter.RegisterLoader(webhookLoader)
 	}
 	eventsEmitter.RegisterLoader(websocketLoader)
