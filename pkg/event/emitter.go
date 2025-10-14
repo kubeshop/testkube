@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	reconcileInterval = time.Second
+	reconcileInterval            = time.Second
+	eventEmitterQueueName string = "emitter"
 )
 
 // NewEmitter returns new emitter instance
@@ -51,79 +52,6 @@ func (e *Emitter) Register(listener common.Listener) {
 	e.listeners = append(e.listeners, listener)
 }
 
-// updateListeners updates listeners list
-func (e *Emitter) updateListeners(listeners common.Listeners) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	result := make([]common.Listener, 0)
-
-	oldMap := listerersToMap(e.listeners)
-	newMap := listerersToMap(listeners)
-
-	// check for missing listeners
-	for kind, lMap := range oldMap {
-		// clean missing kinds
-		if _, ok := newMap[kind]; !ok {
-			for _, l := range lMap {
-				e.stopListener(l.Name())
-			}
-
-			continue
-		}
-
-		// stop missing listeners
-		for name, l := range lMap {
-			if _, ok := newMap[kind][name]; !ok {
-				e.stopListener(l.Name())
-			}
-		}
-	}
-
-	// check for new listeners
-	for kind, lMap := range newMap {
-		// start all listeners for new kind
-		if _, ok := oldMap[kind]; !ok {
-			for _, l := range lMap {
-				e.startListener(l)
-				result = append(result, l)
-			}
-
-			continue
-		}
-
-		// start new listeners and restart updated ones
-		for name, l := range lMap {
-			if current, ok := oldMap[kind][name]; !ok {
-				e.startListener(l)
-			} else {
-				if !common.CompareListeners(current, l) {
-					e.stopListener(current.Name())
-					e.startListener(l)
-				}
-			}
-
-			result = append(result, l)
-		}
-	}
-
-	e.listeners = result
-}
-
-func listerersToMap(listeners []common.Listener) map[string]map[string]common.Listener {
-	m := make(map[string]map[string]common.Listener, 0)
-
-	for _, l := range listeners {
-		if _, ok := m[l.Kind()]; !ok {
-			m[l.Kind()] = make(map[string]common.Listener, 0)
-		}
-
-		m[l.Kind()][l.Name()] = l
-	}
-
-	return m
-}
-
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	// TODO(emil): what does specifying cluster name do here? is this used anywhere? does this have signficance to nats?
@@ -144,42 +72,35 @@ func (e *Emitter) Listen(ctx context.Context) {
 		<-ctx.Done()
 		e.log.Warn("closing event bus")
 
-		for _, l := range e.listeners {
-			go e.bus.Unsubscribe(l.Name())
+		err := e.bus.Unsubscribe(eventEmitterQueueName)
+		if err != nil {
+			e.log.Warnw("error while unsubscribing from emitted events", "error", err)
 		}
 
-		e.bus.Close()
+		err = e.bus.Close()
+		if err != nil {
+			e.log.Warnw("error while closing event bus", "error", err)
+		}
+		e.log.Debug("closed event bus")
 	}()
 
+	err := e.bus.SubscribeTopic("agentevents.>", eventEmitterQueueName, e.eventHandler)
+	if err != nil {
+		e.log.Errorw("error while starting to listen for events", "error", err)
+	}
+	e.log.Infow("started listening for events")
+}
+
+func (e *Emitter) eventHandler(event testkube.Event) error {
+	// Current set of listeners
 	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
+	listeners := make([]common.Listener, len(e.listeners))
+	copy(listeners, e.listeners)
+	e.mutex.Unlock()
+	// Find listeners that match the event
 	for _, l := range e.listeners {
-		go e.startListener(l)
-	}
-}
-
-func (e *Emitter) startListener(l common.Listener) {
-	// TODO(emil): why are we creating a subscription to the same topic for all these listeners, and then coding all this logic to start and stop listeners
-	// NOTE(emil): the topic where the listeners events come in on
-	err := e.bus.SubscribeTopic("agentevents.>", l.Name(), e.notifyHandler(l))
-	if err != nil {
-		e.log.Errorw("error while starting listener", "error", err)
-	}
-	e.log.Infow("started listener", l.Name(), l.Metadata())
-}
-
-func (e *Emitter) stopListener(name string) {
-	err := e.bus.Unsubscribe(name)
-	if err != nil {
-		e.log.Errorw("error while stopping listener", "error", err)
-	}
-	e.log.Info("stopped listener", name)
-}
-
-func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
-	logger := e.log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
-	return func(event testkube.Event) error {
+		// TODO(emil): this logging should be moved to listener
+		logger := e.log.With("listen-on", l.Events(), "selector", l.Selector(), "metadata", l.Metadata())
 		if !l.Match(event) {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 			return nil
@@ -194,12 +115,14 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 		matchedEventTypes, _ := event.Valid(l.Selector(), l.Events())
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]
-			// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener
-			result := l.Notify(event)
-			log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
+			go func(notifyEvent testkube.Event, notifyLogger *zap.SugaredLogger) {
+				// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener and all this can be simplified also
+				result := l.Notify(notifyEvent)
+				log.Tracew(notifyLogger, "listener notified", append(notifyEvent.Log(), "result", result)...)
+			}(event, logger)
 		}
-		return nil
 	}
+	return nil
 }
 
 // Reconcile reloads listeners from all registered reconcilers
@@ -211,8 +134,11 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 			return
 		default:
 			listeners := e.loader.Reconcile()
-			e.updateListeners(listeners)
+			e.mutex.Lock()
+			e.listeners = listeners
+			e.mutex.Unlock()
 			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
+			// TODO(emil): this should be a ticker instead
 			time.Sleep(reconcileInterval)
 		}
 	}
