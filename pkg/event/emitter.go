@@ -128,6 +128,7 @@ func listerersToMap(listeners []common.Listener) map[string]map[string]common.Li
 func (e *Emitter) Notify(event testkube.Event) {
 	// TODO(emil): what does specifying cluster name do here? is this used anywhere? does this have signficance to nats?
 	event.ClusterName = e.clusterName
+	// TODO(emil): log a warning if the topic is not matching the subscribe topic for the emitter
 	err := e.bus.PublishTopic(event.Topic(), event)
 	if err != nil {
 		e.log.Errorw("error publishing event", append(event.Log(), "error", err))
