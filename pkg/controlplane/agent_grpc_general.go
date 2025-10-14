@@ -254,21 +254,19 @@ func (s *Server) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) e
 }
 
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	resp := s.executor.Execute(srv.Context(), "", req)
-	for execution := range resp.Channel() {
-		// Send the data
-		// TODO: Use protobuf struct?
+	executions, err := s.enqueuer.Execute(srv.Context(), req)
+	if err != nil {
+		return status.Error(codes.Internal, "cannot enqueue execution")
+	}
+
+	for execution := range executions {
 		v, err := json.Marshal(execution)
 		if err != nil {
 			return err
 		}
 		if err = srv.Send(&cloud.ScheduleResponse{Execution: v}); err != nil {
-			// TODO: retry?
 			return err
 		}
-	}
-	if resp.Error() != nil {
-		return resp.Error()
 	}
 	return nil
 }
