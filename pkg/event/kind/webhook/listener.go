@@ -66,7 +66,8 @@ func NewWebhookListener(
 }
 
 type WebhookListener struct {
-	name               string
+	name string
+	// TODO(emil): check if these fields really need to be exported
 	Uri                string
 	Log                *zap.SugaredLogger
 	HttpClient         *http.Client
