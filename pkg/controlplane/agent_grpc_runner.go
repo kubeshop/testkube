@@ -3,6 +3,8 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -14,14 +16,50 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
+	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 func (s *Server) GetExecutionUpdates(context.Context, *executionv1.GetExecutionUpdatesRequest) (*executionv1.GetExecutionUpdatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetExecutionUpdates not implemented")
 }
-func (s *Server) SetExecutionScheduling(context.Context, *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetExecutionScheduling not implemented")
+
+func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
+	execution, err := s.resultsRepository.Get(ctx, req.GetExecutionId())
+	if err != nil {
+		return nil, errors.Join(
+			status.Error(codes.NotFound, "execution does not exist"),
+			fmt.Errorf("retrieve execution to set scheduling: %w", err),
+		)
+	}
+	if err := s.resultsRepository.Init(ctx, req.GetExecutionId(), testworkflow.InitData{
+		RunnerID:   execution.RunnerId,
+		Namespace:  req.GetNamespace(),
+		Signature:  translateSignature(req.GetSignature()),
+		AssignedAt: execution.AssignedAt,
+	}); err != nil {
+		return nil, errors.Join(
+			status.Error(codes.Internal, "failed to set execution scheduling"),
+			fmt.Errorf("set execution scheduling: %w", err),
+		)
+	}
+
+	return &executionv1.SetExecutionSchedulingResponse{}, nil
+}
+
+func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {
+	var ret []testkube.TestWorkflowSignature
+	for _, sig := range sigs {
+		ret = append(ret, testkube.TestWorkflowSignature{
+			Ref:      sig.GetRef(),
+			Name:     sig.GetName(),
+			Category: sig.GetCategory(),
+			Optional: sig.GetOptional(),
+			Negative: sig.GetNegative(),
+			Children: translateSignature(sig.GetChildren()),
+		})
+	}
+	return ret
 }
 
 func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (*cloud.RegisterResponse, error) {
