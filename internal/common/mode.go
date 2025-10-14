@@ -13,6 +13,8 @@ const (
 	StandaloneEnvironmentSlug  = ""
 	StandaloneOrganization     = "standalone"
 	StandaloneOrganizationSlug = ""
+	StandaloneRunner           = "default-agent"
+	StandaloneRunnerName       = "Testkube Agent"
 )
 
 var ErrNotSupported = errors.New("feature is not supported in standalone mode")

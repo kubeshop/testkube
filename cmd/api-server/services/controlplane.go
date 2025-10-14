@@ -10,8 +10,10 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/controlplane"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -75,7 +77,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.DisableDeprecatedTests, cfg.StorageBucket, deprecatedRepositories, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
-	enqueuer := controlplane.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository)
+	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository)
+	scheduler := factory.NewScheduler()
 
 	// Ensure the buckets exist
 	if cfg.StorageBucket != "" {
@@ -115,11 +118,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeDashboardURI,
-		"",
-		"",
-		"",
-		nil,
-		"",
+		common.StandaloneOrganization,
+		common.StandaloneOrganizationSlug,
+		common.StandaloneEnvironment,
+		func(string) string { return common.StandaloneEnvironmentSlug },
+		common.StandaloneRunner,
 		cfg.FeatureNewArchitecture,
 	)
 
@@ -130,7 +133,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, enqueuer, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+	}, enqueuer, scheduler, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
