@@ -44,8 +44,9 @@ func NewWebhookListener(
 	opts ...WebhookListenerOption,
 ) *WebhookListener {
 	wl := &WebhookListener{
-		name:               name,
-		Uri:                uri,
+		name: name,
+		Uri:  uri,
+		// TODO(emil): add some fields to this logger by default
 		Log:                log.DefaultLogger,
 		HttpClient:         thttp.NewClient(),
 		selector:           selector,
