@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
@@ -39,7 +40,8 @@ type Server struct {
 	cfg                         Config
 	server                      *grpc.Server
 	commands                    map[cloudexecutor.Command]CommandHandler
-	enqueuer                    Enqueuer
+	enqueuer                    scheduling.Enqueuer
+	scheduler                   scheduling.Scheduler
 	executor                    testworkflowexecutor.TestWorkflowExecutor
 	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
@@ -60,7 +62,8 @@ type Config struct {
 
 func New(
 	cfg Config,
-	enqueuer Enqueuer,
+	enqueuer scheduling.Enqueuer,
+	scheduler scheduling.Scheduler,
 	executor testworkflowexecutor.TestWorkflowExecutor,
 	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
@@ -79,6 +82,7 @@ func New(
 	return &Server{
 		cfg:                         cfg,
 		enqueuer:                    enqueuer,
+		scheduler:                   scheduler,
 		executor:                    executor,
 		commands:                    commands,
 		storageClient:               storageClient,
