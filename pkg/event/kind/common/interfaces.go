@@ -13,6 +13,8 @@ const (
 type Listener interface {
 	// Name uniquely identifies listener
 	Name() string
+	// Match determines whether an event should be sent to the listener
+	Match(event testkube.Event) bool
 	// Notify sends event to listener
 	Notify(event testkube.Event) testkube.EventResult
 	// TODO(emil): double check that all these are even necessary for the implementation

@@ -204,6 +204,30 @@ func (l *WebhookListener) Disabled() bool {
 	return l.disabled
 }
 
+func (l *WebhookListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Selector(), l.Events())
+	if !valid {
+		return false
+	}
+	// Handle disabled Webhooks
+	switch {
+	case l.disabled:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
+		return false
+	case event.TestExecution != nil && event.TestExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test execution")
+		return false
+	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
+		return false
+	case event.TestWorkflowExecution != nil && event.TestWorkflowExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
+		return false
+	default:
+		return true
+	}
+}
+
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var statusCode int
 	var err error
@@ -237,25 +261,6 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			log.Errorw("webhook collecting execution result error", "error", err)
 		}
 	}()
-
-	switch {
-	case l.disabled:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled")
-		return
-	case event.TestExecution != nil && event.TestExecution.DisableWebhooks:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test execution")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test execution")
-		return
-	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test suite execution")
-		return
-	case event.TestWorkflowExecution != nil && event.TestWorkflowExecution.DisableWebhooks:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test workflow execution")
-		return
-	}
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
 		// NOTE(emil): this makes queries for the previous state

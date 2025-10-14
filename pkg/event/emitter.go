@@ -180,20 +180,23 @@ func (e *Emitter) stopListener(name string) {
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	logger := e.log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
-		// NOTE(emil): filters listeners (corresponding to webhooks) partially here
-		// TODO(emil): this seems to belong in the listener implementation
-		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
-			// TODO(emil): the fanout here with the matches event types - can an event even match multiple event types? and even if it does should it fire multiple events for the same listener/webhook
-			// TODO(emil): this fanout should going into the notify logic
-			for i := range types {
-				event.Type_ = &types[i]
-				// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener
-				// NOTE(emil): more filtering of the event happens in the notify itself
-				result := l.Notify(event)
-				log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
-			}
-		} else {
+		if !l.Match(event) {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
+			return nil
+		}
+		// Event type fanout
+		// NOTE(emil): This fanout behavior is old, but kept in tact because it
+		// is not of priority - can an event even match multiple event types?
+		// and even if it does should it fire multiple events for the same
+		// listener? even then does this fanout logic not belong in the
+		// listener notify implementation where each one might decide to handle
+		// this differently?
+		matchedEventTypes, _ := event.Valid(l.Selector(), l.Events())
+		for i := range matchedEventTypes {
+			event.Type_ = &matchedEventTypes[i]
+			// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener
+			result := l.Notify(event)
+			log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 		}
 		return nil
 	}

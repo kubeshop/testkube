@@ -60,6 +60,11 @@ func (l *CDEventListener) Metadata() map[string]string {
 	}
 }
 
+func (l *CDEventListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Selector(), l.Events())
+	return valid
+}
+
 func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	// Create the base event
 	namespace := l.defaultNamespace

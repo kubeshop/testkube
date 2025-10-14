@@ -49,6 +49,11 @@ func (ag *Agent) Metadata() map[string]string {
 	}
 }
 
+func (ag *Agent) Match(event testkube.Event) bool {
+	_, valid := event.Valid(ag.Selector(), ag.Events())
+	return valid
+}
+
 func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 	// Avoid re-delivering Control Plane's event back to Control Plane
 	if event.External {
