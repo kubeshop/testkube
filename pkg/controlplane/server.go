@@ -39,6 +39,7 @@ type Server struct {
 	cfg                         Config
 	server                      *grpc.Server
 	commands                    map[cloudexecutor.Command]CommandHandler
+	enqueuer                    Enqueuer
 	executor                    testworkflowexecutor.TestWorkflowExecutor
 	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
@@ -59,6 +60,7 @@ type Config struct {
 
 func New(
 	cfg Config,
+	enqueuer Enqueuer,
 	executor testworkflowexecutor.TestWorkflowExecutor,
 	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
@@ -76,6 +78,7 @@ func New(
 	}
 	return &Server{
 		cfg:                         cfg,
+		enqueuer:                    enqueuer,
 		executor:                    executor,
 		commands:                    commands,
 		storageClient:               storageClient,
@@ -141,7 +144,6 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	return nil
 }
 
-// TODO: Use this when context is down
 func (s *Server) Shutdown() {
 	if s.server != nil {
 		s.server.GracefulStop()

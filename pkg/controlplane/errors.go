@@ -2,11 +2,6 @@ package controlplane
 
 type Entity string
 
-func IsNotFoundErr(err error) bool {
-	_, ok := err.(*ErrNotFound)
-	return ok
-}
-
 func NewNotFoundErr(entity Entity) *ErrNotFound {
 	return &ErrNotFound{
 		entity: entity,
