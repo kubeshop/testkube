@@ -1,4 +1,4 @@
-package controlplane
+package scheduling
 
 import (
 	"context"
@@ -124,6 +124,8 @@ func (e *Enqueuer) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO WITO: Should Standalone agents dispatch events over embedded NATS?
 
 	return executions, nil
 }
