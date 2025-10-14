@@ -15,7 +15,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/jackc/pgx/v5"
-	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
