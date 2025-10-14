@@ -299,8 +299,7 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
-	// NOTE(emil): entry point to event emitter
-	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+	eventsEmitter = event.NewEmitter(eventBus, "agentevents", cfg.TestkubeClusterName)
 
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{

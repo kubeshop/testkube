@@ -19,11 +19,12 @@ const (
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, clusterName string) *Emitter {
+func NewEmitter(eventBus bus.Bus, subjectRoot string, clusterName string) *Emitter {
 	return &Emitter{
 		loader:      NewLoader(),
 		log:         log.DefaultLogger,
 		bus:         eventBus,
+		subjectRoot: subjectRoot,
 		listeners:   make(common.Listeners, 0),
 		clusterName: clusterName,
 	}
@@ -41,6 +42,7 @@ type Emitter struct {
 	listeners   common.Listeners
 	mutex       sync.RWMutex
 	bus         bus.Bus
+	subjectRoot string
 	clusterName string
 }
 
@@ -57,12 +59,30 @@ func (e *Emitter) Notify(event testkube.Event) {
 	// TODO(emil): what does specifying cluster name do here? is this used anywhere? does this have signficance to nats?
 	event.ClusterName = e.clusterName
 	// TODO(emil): log a warning if the topic is not matching the subscribe topic for the emitter
-	err := e.bus.PublishTopic(event.Topic(), event)
+	err := e.bus.PublishTopic(e.eventTopic(event), event)
 	if err != nil {
 		e.log.Errorw("error publishing event", append(event.Log(), "error", err))
 		return
 	}
 	e.log.Debugw("event published", event.Log()...)
+}
+
+// eventTopic returns topic to publish a particular evnet.
+func (e *Emitter) eventTopic(event testkube.Event) string {
+	// TODO(emil): is even necessary only used in tests, it does not makes sense to allow an override here considering where we are subscribed to
+	if event.StreamTopic != "" {
+		return event.StreamTopic
+	}
+
+	if event.Resource == nil {
+		return e.subjectRoot + ".all"
+	}
+
+	if event.ResourceId == "" {
+		return e.subjectRoot + "." + string(*event.Resource)
+	}
+
+	return e.subjectRoot + "." + string(*event.Resource) + "." + event.ResourceId
 }
 
 // Listen runs emitter workers responsible for sending HTTP requests
@@ -84,7 +104,7 @@ func (e *Emitter) Listen(ctx context.Context) {
 		e.log.Debug("closed event bus")
 	}()
 
-	err := e.bus.SubscribeTopic("agentevents.>", eventEmitterQueueName, e.eventHandler)
+	err := e.bus.SubscribeTopic(e.subjectRoot+".>", eventEmitterQueueName, e.eventHandler)
 	if err != nil {
 		e.log.Errorw("error while starting to listen for events", "error", err)
 	}
