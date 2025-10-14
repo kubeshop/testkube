@@ -75,6 +75,10 @@ func (f *PostgreSQLFactory) NewScheduler() scheduling.Scheduler {
 	return scheduling.NewPostgresScheduler()
 }
 
+func (f *PostgreSQLFactory) NewExecutionController() scheduling.Controller {
+	return scheduling.NewPostgresExecutionController()
+}
+
 func (f *PostgreSQLFactory) GetDatabaseType() DatabaseType {
 	return DatabaseTypePostgreSQL
 }
