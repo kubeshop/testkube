@@ -15,6 +15,7 @@ type Listener interface {
 	Name() string
 	// Notify sends event to listener
 	Notify(event testkube.Event) testkube.EventResult
+	// TODO(emil): double check that all these are even necessary for the implementation
 	// Kind of listener
 	Kind() string
 	// Selector is used to filter events

@@ -183,6 +183,7 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 		// TODO(emil): this seems to belong in the listener implementation
 		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
 			// TODO(emil): the fanout here with the matches event types - can an event even match multiple event types? and even if it does should it fire multiple events for the same listener/webhook
+			// TODO(emil): this fanout should going into the notify logic
 			for i := range types {
 				event.Type_ = &types[i]
 				// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener
