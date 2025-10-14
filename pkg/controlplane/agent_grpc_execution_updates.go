@@ -46,8 +46,6 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 		return nil
 	}
 
-	// TODO Generate execution token
-
 	// Mark the execution as starting
 	if err := s.executionController.StartExecution(ctx, exe.Id); err != nil {
 		log.Warnw("error marking execution as starting", "err", err)
@@ -72,7 +70,7 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 			QueuedAt:        timestamppb.New(exe.ScheduledAt),
 			DisableWebhooks: common.Ptr(exe.DisableWebhooks),
 			EnvironmentId:   common.Ptr(info.EnvironmentId),
-			//ExecutionToken:       common.Ptr(token), TODO
+			//ExecutionToken:       common.Ptr(token), TODO currently build-in control plane is insecure. Add auth and generate execution tokens.
 			AncestorExecutionIds: ancestorIds,
 			WorkflowName:         common.Ptr(workflowName),
 			VariableOverrides:    exe.Runtime.Variables,
