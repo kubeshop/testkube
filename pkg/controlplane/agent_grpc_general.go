@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
@@ -25,7 +26,13 @@ func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProC
 	if s.cfg.FeatureTestWorkflowsCloudStorage {
 		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityCloudStorage), Enabled: true})
 	}
-	return &cloud.ProContextResponse{Capabilities: caps}, nil
+	return &cloud.ProContextResponse{
+		Capabilities: caps,
+		OrgId:        common.StandaloneOrganization,
+		OrgName:      common.StandaloneOrganization,
+		OrgSlug:      common.StandaloneOrganizationSlug,
+		EnvId:        common.StandaloneEnvironment,
+	}, nil
 }
 
 // Send is called on agent client, returning from this method closes the connection
