@@ -52,6 +52,7 @@ func NewNotifier(template, clusterName, dashboardURI string, config []Notificati
 		notifier.client = slack.New(token, slack.OptionDebug(true))
 		notifier.Ready = true
 	} else {
+		// TODO(emil): this is deprecated and this warning should be removed, confuses uses, there should be a warning if they are using this in the clause above
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
 	return &notifier

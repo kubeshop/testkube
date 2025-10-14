@@ -127,19 +127,18 @@ func (e *Emitter) eventHandler(event testkube.Event) error {
 
 // Reconcile reloads listeners from all registered reconcilers
 func (e *Emitter) Reconcile(ctx context.Context) {
+	ticker := time.NewTicker(reconcileInterval)
 	for {
 		select {
 		case <-ctx.Done():
 			e.log.Info("stopping reconciler")
 			return
-		default:
+		case <-ticker.C:
 			listeners := e.loader.Reconcile()
 			e.mutex.Lock()
 			e.listeners = listeners
 			e.mutex.Unlock()
 			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
-			// TODO(emil): this should be a ticker instead
-			time.Sleep(reconcileInterval)
 		}
 	}
 }
