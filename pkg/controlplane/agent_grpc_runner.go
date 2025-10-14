@@ -71,7 +71,7 @@ func (s *Server) GetUnfinishedExecutions(_ *emptypb.Empty, srv cloud.TestKubeClo
 		return err
 	}
 	for _, execution := range executions {
-		err = srv.Send(&cloud.UnfinishedExecution{Id: execution.Id})
+		err = srv.Send(&cloud.UnfinishedExecution{EnvironmentId: common.StandaloneEnvironment, Id: execution.Id})
 		if err != nil {
 			return err
 		}
