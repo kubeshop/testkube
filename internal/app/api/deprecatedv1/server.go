@@ -1,17 +1,7 @@
 package deprecatedv1
 
 import (
-	"fmt"
-	"io"
-	"net"
-	"reflect"
-	"sync"
-	"syscall"
-
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
-
-	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
@@ -40,7 +30,6 @@ func NewDeprecatedTestkubeAPI(
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
-	graphqlPort int,
 	artifactsStorage storage.ArtifactsStorage,
 	mode string,
 	eventsBus bus.Bus,
@@ -63,7 +52,6 @@ func NewDeprecatedTestkubeAPI(
 		ContainerExecutor:      containerExecutor,
 		storageParams:          storageParams,
 		scheduler:              scheduler,
-		graphqlPort:            graphqlPort,
 		ArtifactsStorage:       artifactsStorage,
 		mode:                   mode,
 		eventsBus:              eventsBus,
@@ -87,7 +75,6 @@ type DeprecatedTestkubeAPI struct {
 	Namespace              string
 	Events                 *event.Emitter
 	scheduler              *scheduler.Scheduler
-	graphqlPort            int
 	ArtifactsStorage       storage.ArtifactsStorage
 	mode                   string
 	eventsBus              bus.Bus
@@ -217,72 +204,4 @@ func (s *DeprecatedTestkubeAPI) Init(server server.HTTPServer) {
 
 	files := root.Group("/uploads")
 	files.Post("/", s.UploadFiles())
-
-	// set up proxy for the internal GraphQL server
-	server.Mux.All("/graphql", func(c *fiber.Ctx) error {
-		// Connect to server
-		serverConn, err := net.Dial("tcp", fmt.Sprintf(":%d", s.graphqlPort))
-		if err != nil {
-			s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
-			return err
-		}
-
-		// Resend headers to the server
-		_, err = serverConn.Write(c.Request().Header.Header())
-		if err != nil {
-			serverConn.Close()
-			s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
-			return err
-		}
-
-		// Resend body to the server
-		_, err = serverConn.Write(c.Body())
-		if err != nil && err != io.EOF {
-			serverConn.Close()
-			s.Log.Errorw("error while reading GraphQL client data", "error", err)
-			return err
-		}
-
-		// Handle optional WebSocket connection
-		c.Context().HijackSetNoResponse(true)
-		c.Context().Hijack(func(clientConn net.Conn) {
-			// Close the connection afterward
-			defer serverConn.Close()
-			defer clientConn.Close()
-
-			// Extract Unix connection
-			serverSock, ok := serverConn.(*net.TCPConn)
-			if !ok {
-				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
-				return
-			}
-			clientSock, ok := reflect.Indirect(reflect.ValueOf(clientConn)).FieldByName("Conn").Interface().(*net.TCPConn)
-			if !ok {
-				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
-				return
-			}
-
-			// Duplex communication between client and GraphQL server
-			var wg sync.WaitGroup
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				_, err := io.Copy(clientSock, serverSock)
-				if err != nil && err != io.EOF && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
-					s.Log.Errorw("error while reading GraphQL client data", "error", err)
-				}
-				serverSock.CloseWrite()
-			}()
-			go func() {
-				defer wg.Done()
-				_, err = io.Copy(serverSock, clientSock)
-				if err != nil && err != io.EOF {
-					s.Log.Errorw("error while reading GraphQL server data", "error", err)
-				}
-				clientSock.CloseWrite()
-			}()
-			wg.Wait()
-		})
-		return nil
-	})
 }
