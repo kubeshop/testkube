@@ -206,7 +206,6 @@ func CreateDeprecatedSystem(
 		containerExecutor,
 		metrics,
 		sched,
-		cfg.GraphqlPort,
 		deprecatedArtifactStorage,
 		mode,
 		eventBus,
