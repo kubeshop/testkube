@@ -17,7 +17,6 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	testkubev1 "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 var scheduleCmpOpts = []cmp.Option{
@@ -35,9 +34,9 @@ type fakeTestWorkflowExecutor struct {
 	req *cloud.ScheduleRequest
 }
 
-func (f *fakeTestWorkflowExecutor) Execute(_ context.Context, _ string, request *cloud.ScheduleRequest) testworkflowexecutor.TestWorkflowExecutionStream {
+func (f *fakeTestWorkflowExecutor) Execute(_ context.Context, request *cloud.ScheduleRequest) ([]testkubev1.TestWorkflowExecution, error) {
 	f.req = request
-	return testworkflowexecutor.NewStream[*testkubev1.TestWorkflowExecution](make(chan *testkubev1.TestWorkflowExecution))
+	return []testkubev1.TestWorkflowExecution{}, nil
 }
 
 func TestWorkflowExecutionExecutorController(t *testing.T) {
