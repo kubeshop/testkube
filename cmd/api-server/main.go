@@ -240,6 +240,13 @@ func main() {
 		if !cfg.DisableTestTriggers {
 			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
 		}
+		if !cfg.DisableWebhooks {
+			if cfg.EnableCloudWebhooks {
+				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_CLOUD_WEBHOOKS)
+			} else {
+				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
+			}
+		}
 
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
 			RegistrationToken: cfg.TestkubeProAgentRegToken,
