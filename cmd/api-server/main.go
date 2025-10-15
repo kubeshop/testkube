@@ -461,23 +461,11 @@ func main() {
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,
 		cfg.TestkubeProAPIKey,
-		cfg.CDEventsTarget,
 		eventsEmitter,
 		runnerService,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowsClient,
-		metrics,
-		secretManager,
-		cfg.GlobalWorkflowTemplateName,
-		proContext.DashboardURI,
 		proContext.OrgID,
-		proContext.OrgSlug,
 		proContext.EnvID,
-		proContext.GetEnvSlug,
 		proContext.Agent.ID,
-		proContext.NewArchitecture,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
