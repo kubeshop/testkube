@@ -97,13 +97,16 @@ func main() {
 	cfg := commons.MustGetConfig()
 	features := commons.MustGetFeatureFlags()
 
+	mode := common.ModeStandalone
+	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
+		mode = common.ModeAgent
+	} else {
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+	}
+
 	log.DefaultLogger.Infow("configuration loaded",
-		"mode", func() string {
-			if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
-				return "agent"
-			}
-			return "standalone"
-		}(),
+		"mode", mode,
 		"namespace", cfg.TestkubeNamespace,
 		"apiServerPort", cfg.APIServerPort,
 		"grpcPort", cfg.GRPCServerPort,
@@ -121,14 +124,6 @@ func main() {
 	defer func() { _ = shutdownTracing(context.Background()) }()
 
 	// Determine the running mode
-
-	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
-		mode = common.ModeAgent
-	} else {
-		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
-		cfg.TestkubeProTLSInsecure = true
-	}
 
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -156,7 +151,6 @@ func main() {
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
-	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -179,7 +173,7 @@ func main() {
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, features)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
