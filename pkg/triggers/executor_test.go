@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -215,11 +215,7 @@ func TestWorkflowExecute(t *testing.T) {
 			}},
 		},
 	}
-	executionsCh := make(chan *testkube.TestWorkflowExecution, 1)
-	executionsCh <- &testkube.TestWorkflowExecution{}
-	close(executionsCh)
-	executionsStream := testworkflowexecutor.NewStream(executionsCh)
-	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), mockTestWorkflowExecutionRequest).Return(executionsStream)
+	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}, nil)
 
 	s := &Service{
 		triggerStatus:        make(map[statusKey]*triggerStatus),

@@ -10,12 +10,13 @@
 package testworkflowexecutor
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	cloud "github.com/kubeshop/testkube/pkg/cloud"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 // MockTestWorkflowExecutor is a mock of TestWorkflowExecutor interface.
@@ -43,29 +44,15 @@ func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorde
 }
 
 // Execute mocks base method.
-func (m *MockTestWorkflowExecutor) Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
+func (m *MockTestWorkflowExecutor) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", ctx, environmentId, req)
-	ret0, _ := ret[0].(TestWorkflowExecutionStream)
-	return ret0
+	ret := m.ctrl.Call(m, "Execute", ctx, req)
+	ret0, _ := ret[0].([]testkube.TestWorkflowExecution)
+	return ret0, nil
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockTestWorkflowExecutorMockRecorder) Execute(ctx, environmentId, req any) *gomock.Call {
+func (mr *MockTestWorkflowExecutorMockRecorder) Execute(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), ctx, environmentId, req)
-}
-
-// Start mocks base method.
-func (m *MockTestWorkflowExecutor) Start(environmentId string, execution *testkube.TestWorkflowExecution, secrets map[string]map[string]string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", environmentId, execution, secrets)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockTestWorkflowExecutorMockRecorder) Start(environmentId, execution, secrets any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Start), environmentId, execution, secrets)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), ctx, req)
 }
