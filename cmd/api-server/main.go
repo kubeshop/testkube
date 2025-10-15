@@ -138,7 +138,6 @@ func main() {
 	g.Go(commons.HandleCancelSignal(ctx))
 
 	commons.MustFreePort(cfg.APIServerPort)
-	commons.MustFreePort(cfg.GraphqlPort)
 	commons.MustFreePort(cfg.GRPCServerPort)
 
 	log.DefaultLogger.Info("initializing...")
@@ -857,11 +856,7 @@ func main() {
 		"version", version.Version,
 		"startupTime", time.Since(startTime),
 	)
-	log.DefaultLogger.Infow("api endpoints ready",
-		"httpPort", cfg.APIServerPort,
-		"grpcPort", cfg.GRPCServerPort,
-		"graphqlPort", cfg.GraphqlPort,
-	)
+	log.DefaultLogger.Infow("api endpoints ready", "httpPort", cfg.APIServerPort, "grpcPort", cfg.GRPCServerPort)
 
 	if cfg.EnableDebugServer {
 		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
@@ -932,12 +927,6 @@ func main() {
 		if deprecatedSystem.Reconciler != nil {
 			g.Go(func() error {
 				return deprecatedSystem.Reconciler.Run(ctx)
-			})
-		}
-
-		if deprecatedSystem.API != nil {
-			g.Go(func() error {
-				return deprecatedSystem.API.RunGraphQLServer(ctx)
 			})
 		}
 	}
