@@ -44,7 +44,6 @@ type Server struct {
 	scheduler                   scheduling.Scheduler
 	executionController         scheduling.Controller
 	executionQuerier            scheduling.ExecutionQuerier
-	executor                    testworkflowexecutor.TestWorkflowExecutor
 	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
@@ -68,7 +67,6 @@ func New(
 	scheduler scheduling.Scheduler,
 	executionController scheduling.Controller,
 	executionQuerier scheduling.ExecutionQuerier,
-	executor testworkflowexecutor.TestWorkflowExecutor,
 	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -89,7 +87,6 @@ func New(
 		scheduler:                   scheduler,
 		executionController:         executionController,
 		executionQuerier:            executionQuerier,
-		executor:                    executor,
 		commands:                    commands,
 		storageClient:               storageClient,
 		testWorkflowsClient:         testWorkflowsClient,
