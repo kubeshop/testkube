@@ -4,21 +4,24 @@
 -- Main table for TestWorkflowExecution (simplified)
 CREATE TABLE test_workflow_executions (
     id VARCHAR(255) PRIMARY KEY,
+
+    name VARCHAR(255) NOT NULL,
+    namespace VARCHAR(255),
+    number INTEGER,
+    test_workflow_execution_name VARCHAR(255),
+
     group_id VARCHAR(255),
     runner_id VARCHAR(255),
     runner_target JSONB,
     runner_original_target JSONB,
-    name VARCHAR(255) NOT NULL,
-    namespace VARCHAR(255),
-    number INTEGER,
-    scheduled_at TIMESTAMP WITH TIME ZONE,
-    assigned_at TIMESTAMP WITH TIME ZONE,
-    status_at TIMESTAMP WITH TIME ZONE,
-    test_workflow_execution_name VARCHAR(255),
     disable_webhooks BOOLEAN DEFAULT FALSE,
     tags JSONB,
     running_context JSONB,
     config_params JSONB,
+
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    assigned_at TIMESTAMP WITH TIME ZONE,
+    status_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -27,23 +30,25 @@ CREATE TABLE test_workflow_executions (
 CREATE TABLE test_workflow_signatures (
     id SERIAL PRIMARY KEY,
     execution_id VARCHAR(255) NOT NULL REFERENCES test_workflow_executions(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES test_workflow_signatures(id) ON DELETE CASCADE,
+
     ref VARCHAR(255),
     name VARCHAR(255),
+
     category VARCHAR(255),
     optional BOOLEAN DEFAULT FALSE,
     negative BOOLEAN DEFAULT FALSE,
-    parent_id INTEGER REFERENCES test_workflow_signatures(id) ON DELETE CASCADE,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- TestWorkflowResult table
 CREATE TABLE test_workflow_results (
     execution_id VARCHAR(255) PRIMARY KEY REFERENCES test_workflow_executions(id) ON DELETE CASCADE,
+
     status VARCHAR(50),
     predicted_status VARCHAR(50),
-    queued_at TIMESTAMP WITH TIME ZONE,
-    started_at TIMESTAMP WITH TIME ZONE,
-    finished_at TIMESTAMP WITH TIME ZONE,
+
     duration VARCHAR(100),
     total_duration VARCHAR(100),
     duration_ms INTEGER DEFAULT 0,
@@ -52,6 +57,10 @@ CREATE TABLE test_workflow_results (
     pauses JSONB,
     initialization JSONB,
     steps JSONB,
+
+    queued_at TIMESTAMP WITH TIME ZONE,
+    started_at TIMESTAMP WITH TIME ZONE,
+    finished_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -60,9 +69,12 @@ CREATE TABLE test_workflow_results (
 CREATE TABLE test_workflow_outputs (
     id SERIAL PRIMARY KEY,
     execution_id VARCHAR(255) NOT NULL REFERENCES test_workflow_executions(id) ON DELETE CASCADE,
+
     ref VARCHAR(255),
     name VARCHAR(255),
+
     value JSONB,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -70,18 +82,23 @@ CREATE TABLE test_workflow_outputs (
 CREATE TABLE test_workflow_reports (
     id SERIAL PRIMARY KEY,
     execution_id VARCHAR(255) NOT NULL REFERENCES test_workflow_executions(id) ON DELETE CASCADE,
+
     ref VARCHAR(255),
     kind VARCHAR(255),
+
     file VARCHAR(500),
     summary JSONB,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- TestWorkflowExecutionResourceAggregations table
 CREATE TABLE test_workflow_resource_aggregations (
     execution_id VARCHAR(255) PRIMARY KEY REFERENCES test_workflow_executions(id) ON DELETE CASCADE,
+
     global JSONB,
     step JSONB,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -90,27 +107,30 @@ CREATE TABLE test_workflow_resource_aggregations (
 CREATE TABLE test_workflows (
     id SERIAL PRIMARY KEY,
     execution_id VARCHAR(255) NOT NULL REFERENCES test_workflow_executions(id) ON DELETE CASCADE,
+
     workflow_type VARCHAR(20) NOT NULL, -- 'workflow' or 'resolved_workflow'
     name VARCHAR(255),
     namespace VARCHAR(255),
     description TEXT,
+
     labels JSONB,
     annotations JSONB,
-    created TIMESTAMP WITH TIME ZONE,
-    updated TIMESTAMP WITH TIME ZONE,
     spec JSONB,
     read_only BOOLEAN DEFAULT FALSE,
     status JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+    created TIMESTAMP WITH TIME ZONE,
+    updated TIMESTAMP WITH TIME ZONE,
     UNIQUE(execution_id, workflow_type)
 );
 
 -- Create the main table for Leases
 CREATE TABLE leases (
     id VARCHAR(255) PRIMARY KEY, -- This will be the lease mongo ID (lease-{clusterID})
+
     identifier VARCHAR(255) NOT NULL,
     cluster_id VARCHAR(255) NOT NULL,
+
     acquired_at TIMESTAMP WITH TIME ZONE NOT NULL,
     renewed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -120,7 +140,9 @@ CREATE TABLE leases (
 -- Create the main table for execution sequences
 CREATE TABLE execution_sequences (
     name VARCHAR(255) PRIMARY KEY,
+
     number INTEGER NOT NULL DEFAULT 0,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
