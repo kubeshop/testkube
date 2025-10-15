@@ -1,0 +1,268 @@
+# Apply roles for Agent
+{{- if .Values.pod.serviceAccount.autoCreate }}
+# Apply read config role
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "agent-rb-{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "agent-role-{{ .Release.Name }}"
+
+---
+
+# Apply triggers lease access role
+{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "triggers-lease-access-rb-{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "triggers-lease-access-{{ .Release.Name }}"
+{{- end }}
+
+---
+
+# Apply execution in default namespace role
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "aexec-rb-{{ .Release.Name }}"
+  {{- if .Values.execution.default.namespace }}
+  namespace: "{{ .Values.execution.default.namespace }}"
+  {{- else }}
+  namespace: "{{ .Release.Namespace }}"
+  {{- end }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "exec-role-{{ .Release.Name }}"
+
+# Apply execution in additional namespaces roles
+{{- if or .Values.pod.serviceAccount.autoCreate .Values.execution.default.serviceAccount.autoCreate }}
+{{- range $ns, $data := .Values.execution.additionalNamespaces }}
+{{ with $ }}
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "aexec-rb-{{ .Release.Name }}"
+  namespace: "{{ $ns }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "exec-role-{{ .Release.Name }}"
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# Apply roles for execution workers (default namespace)
+{{- if .Values.execution.default.serviceAccount.autoCreate }}
+---
+
+# Apply execution in default namespace role
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "exec-rb-{{ .Release.Name }}"
+  {{- if .Values.execution.default.namespace }}
+  namespace: "{{ .Values.execution.default.namespace }}"
+  {{- else }}
+  namespace: "{{ .Release.Namespace }}"
+  {{- end }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.execution.default.serviceAccount.name }}
+  name: "{{ .Values.execution.default.serviceAccount.name }}"
+  {{- else }}
+  name: "exec-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "exec-role-{{ .Release.Name }}"
+{{- end }}
+
+
+# Apply roles for execution workers (additional namespaces)
+{{- range $ns, $data := .Values.execution.additionalNamespaces }}
+{{- if and $data.serviceAccount $data.serviceAccount.autoCreate }}
+{{ with $ }}
+---
+
+# Apply execution in default namespace role
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "exec-{{ $ns }}-rb-{{ .Release.Name }}"
+  namespace: "{{ $ns }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ $ns }}"
+  {{- if $data.serviceAccount.name }}
+  name: "{{ $data.serviceAccount.name }}"
+  {{- else }}
+  name: "exec-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "exec-role-{{ .Release.Name }}"
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+
+# Apply watchers role bindings for triggers functionality
+{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- if .Values.listener.watchAllNamespaces }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: "watchers-role-rb-{{ .Release.Name }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations:
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+  {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "watchers-role-{{ .Release.Name }}"
+{{- else }}
+{{- $root := . }}
+{{- $namespaces := uniq (concat (list .Release.Namespace) (default (list) .Values.listener.additionalNamespaces)) }}
+{{- range $idx, $ns := $namespaces }}
+{{- if gt $idx 0 }}---
+
+{{- end }}
+{{- with $root }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: "watchers-role-rb-{{ $ns }}"
+  namespace: {{ $ns }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations:
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+  {{- end }}
+subjects:
+- kind: ServiceAccount
+  namespace: "{{ .Release.Namespace }}"
+  {{- if .Values.pod.serviceAccount.name }}
+  name: "{{ .Values.pod.serviceAccount.name }}"
+  {{- else }}
+  name: "agent-sa-{{ .Release.Name }}"
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "watchers-role-{{ $ns }}"
+{{ end }}
+{{- end }}
+{{- end }}
+{{- end }}

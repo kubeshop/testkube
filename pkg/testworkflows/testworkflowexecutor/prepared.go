@@ -157,6 +157,11 @@ func (e *IntermediateExecution) SetDisabledWebhooks(disabled bool) *Intermediate
 	return e
 }
 
+func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *IntermediateExecution {
+	e.execution.SilentMode = silentMode
+	return e
+}
+
 func (e *IntermediateExecution) SetRunningContext(runningContext *testkube.TestWorkflowRunningContext) *IntermediateExecution {
 	e.execution.RunningContext = runningContext
 	return e

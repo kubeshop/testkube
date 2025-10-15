@@ -383,6 +383,7 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testw
 			"resolvedworkflow.spec.config": 1,
 			"reports":                      1,
 			"resourceaggregations":         1,
+			"silentmode":                   1,
 		}},
 	}
 

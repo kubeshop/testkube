@@ -12,7 +12,6 @@ builds:
       - windows
     goarch:
       - amd64
-      - arm64
       - 386
     ldflags:
       - -s -w -X main.version={{.Version}}

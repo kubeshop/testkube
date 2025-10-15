@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -45,6 +46,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/newclients/webhookclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
@@ -52,6 +54,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
+	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -178,15 +181,12 @@ func main() {
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
 		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
+
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
+		commons.ExitOnError("cannot listen to gRPC port", err)
 		g.Go(func() error {
-			return controlPlane.Start(ctx)
+			return controlPlane.Start(ctx, ln)
 		})
-
-		// Wait a bit for the control plane to start
-		time.Sleep(2 * time.Second)
-
-		log.DefaultLogger.Info("connecting to embedded Control Plane...")
-		var err error
 		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", log.DefaultLogger, cfg.TracingEnabled)
 		commons.ExitOnError("connecting to embedded Control Plane", err)
 		log.DefaultLogger.Infow("connected to embedded control plane successfully", "port", cfg.GRPCServerPort)
@@ -391,11 +391,19 @@ func main() {
 	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
+	runner := runner2.New(
+		executionWorker,
+		configMapConfig,
+		client,
+		eventsEmitter,
+		metrics,
+		proContext,
+		runnerOpts.StorageSkipVerify,
+		runnerOpts.GlobalTemplate,
+	)
 	runnerService := runner2.NewService(
 		log.DefaultLogger,
 		eventsEmitter,
-		metrics,
-		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
 			DashboardUrl:   proContext.DashboardURI,
@@ -404,10 +412,52 @@ func main() {
 		proContext,
 		executionWorker,
 		runnerOpts,
+		runner,
 	)
+
+	runnerClient := runnergrpc.NewClient(
+		grpcConn,
+		log.DefaultLogger,
+		runner,
+		proContext.APIKey,
+		proContext.OrgID,
+		testworkflowconfig.ControlPlaneConfig{
+			DashboardUrl:   proContext.DashboardURI,
+			CDEventsTarget: cfg.CDEventsTarget,
+		},
+		testWorkflowsClient,
+	)
+
 	if !cfg.DisableRunner {
 		g.Go(func() error {
-			return runnerService.Start(ctx)
+			// Check if the new client is supported by the control plane.
+			// If not then just start up the existing implementation.
+			// Here we are using a context with a timeout because the client and/or server may not have TLS implemented as it was
+			// not previously enforced, however it is required with the new client implementation to secure authentication tokens.
+			// gRPC does not provide a specific error for an attempt to transmit credentials over an unencrypted connection so to
+			// prevent the fallback to the previous insecure behaviour we must instead wait to see whether connectivity can be
+			// established. The repercussions of this is that the agent will eagerly fallback to the insecure and legacy behaviour
+			// and so bringing up an agent before networking with the Control Plane has been established, or during a Control Plane
+			// outage will cause a fallback to the previous behaviour.
+			// This timeout should be removed once TLS is enforced across deployments.
+			supportedCtx, cancel := context.WithTimeout(ctx, time.Minute)
+			if !runnerClient.IsSupported(supportedCtx, proContext.EnvID) {
+				cancel()
+				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
+				return runnerService.Start(ctx, proContext.NewArchitecture)
+			}
+			cancel()
+			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
+			// If the client is supported then start both services/clients.
+			var eg errgroup.Group
+			eg.Go(func() error {
+				// Start the older service but without the legacy execution RPC loop.
+				return runnerService.Start(ctx, false)
+			})
+			eg.Go(func() error {
+				return runnerClient.Start(ctx, proContext.EnvID)
+			})
+			return eg.Wait()
 		})
 	}
 	lazyRunner.Set(runnerService)
@@ -472,20 +522,29 @@ func main() {
 	// Update TestWorkflowExecution Kubernetes resource objects on status change
 	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
-	// Synchronise Test Workflows with cloud
+	// Synchronise resources with cloud
 	if proContext.CloudStorageSupportedInControlPlane && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
+		// TestWorkflows storage
 		testWorkflowsCloudStorage, err := crdstorage.NewTestWorkflowsStorage(testworkflowclient.NewCloudTestWorkflowClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflows storage", err)
 		testWorkflowsKubernetesStorage, err := crdstorage.NewTestWorkflowsStorage(must(testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
 			"namespace": cfg.TestkubeNamespace,
 		})
 		commons.ExitOnError("connecting to k8s TestWorkflows storage", err)
+		// TestWorkflowTemplates storage
 		testWorkflowTemplatesCloudStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflowTemplates storage", err)
 		testWorkflowTemplatesKubernetesStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(must(testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
 			"namespace": cfg.TestkubeNamespace,
 		})
 		commons.ExitOnError("connecting to k8s TestWorkflowTemplates storage", err)
+		// Webhooks storage
+		webhooksCloudStorage, err := crdstorage.NewWebhooksStorage(webhookclient.NewCloudWebhookClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
+		commons.ExitOnError("connecting to cloud Webhooks storage", err)
+		webhooksKubernetesStorage, err := crdstorage.NewWebhooksStorage(must(webhookclient.NewKubernetesWebhookClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
+			"namespace": cfg.TestkubeNamespace,
+		})
+		commons.ExitOnError("connecting to k8s Webhooks storage", err)
 
 		if cfg.GitOpsSyncCloudToKubernetesEnabled && cfg.FeatureCloudStorage {
 			// Test Workflows - Continuous Sync (eventual) - Cloud -> Kubernetes
@@ -498,7 +557,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowsKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
 						}
@@ -521,13 +580,36 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesKubernetesStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
 						}
 					}
 					if watcher.Err() != nil {
 						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Control Plane", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+
+			// Webhooks - Continuous Sync (eventual) - Cloud -> Kubernetes
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := webhooksCloudStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := webhooksKubernetesStorage.Process(ctx, obj)
+						if err == nil {
+							log.DefaultLogger.Infow("synced Webhook from Control Plane in Kubernetes", "name", obj.Resource.Name)
+						} else {
+							log.DefaultLogger.Errorw("failed to include Webhook in Kubernetes", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch Webhooks in Control Plane", "error", watcher.Err())
 					}
 
 					time.Sleep(200 * time.Millisecond)
@@ -546,7 +628,7 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowsCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
 						}
@@ -569,13 +651,36 @@ func main() {
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesCloudStorage.Process(ctx, obj)
 						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name)
 						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
 						}
 					}
 					if watcher.Err() != nil {
 						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Kubernetes", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+
+			// Webhooks - Continuous Sync (eventual) - Kubernetes -> Cloud
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := webhooksKubernetesStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := webhooksCloudStorage.Process(ctx, obj)
+						if err == nil {
+							log.DefaultLogger.Infow("synced Webhook from Kubernetes into Control Plane", "name", obj.Resource.Name)
+						} else {
+							log.DefaultLogger.Errorw("failed to include Webhook in Control Plane", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch Webhooks in Kubernetes", "error", watcher.Err())
 					}
 
 					time.Sleep(200 * time.Millisecond)

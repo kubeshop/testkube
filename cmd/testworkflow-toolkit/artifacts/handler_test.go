@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 

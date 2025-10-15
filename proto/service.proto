@@ -63,7 +63,6 @@ service TestKubeCloudAPI {
     rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
     rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
     rpc WatchTestWorkflowTemplateUpdates(WatchTestWorkflowTemplateUpdatesRequest) returns (stream TestWorkflowTemplateUpdate);
-
     // -- Test Triggers
     rpc GetTestTrigger(GetTestTriggerRequest) returns (GetTestTriggerResponse);
     rpc ListTestTriggers(ListTestTriggersRequest) returns (stream TestTriggerListItem);
@@ -74,8 +73,16 @@ service TestKubeCloudAPI {
     rpc DeleteAllTestTriggers(DeleteAllTestTriggersRequest) returns (DeleteAllTestTriggersResponse);
     rpc DeleteTestTriggersByLabels(DeleteTestTriggersByLabelsRequest) returns (DeleteTestTriggersByLabelsResponse);
     rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate);
-
-    
+    // -- Webhook
+    rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse);
+    rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem);
+    rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse);
+    rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse);
+    rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse);
+    rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse);
+    rpc DeleteAllWebhooks(DeleteAllWebhooksRequest) returns (DeleteAllWebhooksResponse);
+    rpc DeleteWebhooksByLabels(DeleteWebhooksByLabelsRequest) returns (DeleteWebhooksByLabelsResponse);
+    rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate);
 }
 
 enum LogsStreamRequestType {
@@ -312,6 +319,19 @@ message UserSignature {
   string email = 2;
 }
 
+message SilentMode {
+  // disable webhooks for this execution
+  bool webhooks = 1;
+  // exclude from insights and analytics dashboards
+  bool insights = 2;
+  // exclude from health and flakiness calculations
+  bool health = 3;
+  // exclude from prometheus metrics
+  bool metrics = 4;
+  // disable CDEvents for this execution
+  bool cdevents = 5;
+}
+
 message ScheduleRequest {
   // Test Workflow details
   repeated ScheduleExecution executions = 2;
@@ -331,6 +351,9 @@ message ScheduleRequest {
 
   // Test Workflow resolved spec
   bytes resolvedWorkflow = 11;
+
+  // Silent mode settings
+  optional SilentMode silent_mode = 12;
 }
 
 message ScheduleResponse {
@@ -746,4 +769,87 @@ message TestTriggerUpdate {
   google.protobuf.Timestamp timestamp = 2;
   UpdateType type = 3;
   bytes resource = 4; // TestTrigger
+}
+
+// CRD Synchronisation -- Webhooks
+
+message GetWebhookRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetWebhookResponse {
+  bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message WebhookListItem {
+  bytes webhook = 1; // Webhook
+}
+
+message ListWebhookLabelsRequest {
+  string namespace = 1;
+}
+
+message ListWebhookLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateWebhookRequest {
+  bytes webhook = 1; // Webhook
+}
+
+message CreateWebhookResponse {
+  bytes webhook = 1; // Webhook
+}
+
+message UpdateWebhookRequest {
+  bytes webhook = 1; // Webhook
+}
+
+message UpdateWebhookResponse {
+  bytes webhook = 1; // Webhook
+}
+
+message DeleteWebhookRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteWebhookResponse {}
+
+message DeleteAllWebhooksRequest {
+  string namespace = 1;
+}
+
+message DeleteAllWebhooksResponse {
+  uint32 count = 1;
+}
+
+message DeleteWebhooksByLabelsRequest {
+  map<string, string> labels = 1;
+}
+
+message DeleteWebhooksByLabelsResponse {
+  uint32 count = 1;
+}
+
+message WatchWebhookUpdatesRequest {
+  bool include_initial_data = 1;
+  string namespace = 2;
+}
+
+message WebhookUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // Webhook
 }

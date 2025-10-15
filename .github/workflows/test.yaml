@@ -16,7 +16,7 @@ permissions:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -71,18 +71,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Send coverage report to Codecov
-        if: always()
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.out
-          flags: unittests
-          name: codecov-testkube-unit-tests
-          verbose: true
-
   integration-tests:
     name: Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
 
     services:
       mongo:
@@ -161,12 +152,3 @@ jobs:
           path: integration-coverage.out
           if-no-files-found: error
           retention-days: 1
-
-      - name: Send coverage report to Codecov
-        if: always()
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./integration-coverage.out
-          flags: integrationtests
-          name: codecov-testkube-integration-tests
-          verbose: true
