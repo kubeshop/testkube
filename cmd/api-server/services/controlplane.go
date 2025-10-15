@@ -9,11 +9,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
-	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
-	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -25,14 +23,12 @@ import (
 	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
-	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
 	commons.ExitOnError("Getting kubernetes config", err)
@@ -54,7 +50,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	var factory repository.RepositoryFactory
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient, features)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient)
 	}
 	if cfg.APIPostgresDSN != "" {
 		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
@@ -116,7 +112,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 }
 
 func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
-	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) (repository.RepositoryFactory, error) {
+	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client) (repository.RepositoryFactory, error) {
 	var outputRepository *minioresult.MinioRepository
 	// Init logs storage
 	if cfg.LogsStorage == "minio" {
