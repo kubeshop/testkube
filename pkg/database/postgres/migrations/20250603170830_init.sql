@@ -121,6 +121,8 @@ CREATE TABLE test_workflows (
 
     created TIMESTAMP WITH TIME ZONE,
     updated TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(execution_id, workflow_type)
 );
 
