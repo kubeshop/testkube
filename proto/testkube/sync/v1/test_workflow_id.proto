@@ -1,0 +1,10 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// TestWorkflowId is the information required to
+// uniquely identify a TestWorkflow object.
+message TestWorkflowId {
+  // Id is the unique ID string for a TestWorkflow.
+  string id = 1;
+}
