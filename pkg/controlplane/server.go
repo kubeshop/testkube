@@ -26,7 +26,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 const (
