@@ -10,7 +10,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
@@ -31,7 +30,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
@@ -106,28 +104,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 
-	executor := testworkflowexecutor.New(
-		nil,
-		"",
-		cfg.CDEventsTarget,
-		emitter,
-		runner,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowsClient,
-		metrics,
-		secretManager,
-		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeDashboardURI,
-		common.StandaloneOrganization,
-		common.StandaloneOrganizationSlug,
-		common.StandaloneEnvironment,
-		func(string) string { return common.StandaloneEnvironmentSlug },
-		common.StandaloneRunner,
-		cfg.FeatureNewArchitecture,
-	)
-
 	return controlplane.New(controlplane.Config{
 		Port:                             cfg.GRPCServerPort,
 		Logger:                           log.DefaultLogger,
@@ -135,7 +111,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, enqueuer, scheduler, executionController, executionQuerier, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+	}, enqueuer, scheduler, executionController, executionQuerier, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 

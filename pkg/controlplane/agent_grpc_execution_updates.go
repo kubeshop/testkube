@@ -13,7 +13,7 @@ import (
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 )
 
-func (s *Server) GetExecutionUpdates(ctx context.Context, req *executionv1.GetExecutionUpdatesRequest) (*executionv1.GetExecutionUpdatesResponse, error) {
+func (s *Server) GetExecutionUpdates(ctx context.Context, _ *executionv1.GetExecutionUpdatesRequest) (*executionv1.GetExecutionUpdatesResponse, error) {
 	info := scheduling.RunnerInfo{
 		Id:            common.StandaloneRunner,
 		Name:          common.StandaloneRunnerName,
