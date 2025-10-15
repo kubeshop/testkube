@@ -6,7 +6,6 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -51,14 +50,9 @@ func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName st
 		testWorkflowName, cronName,
 	)
 
-	resp := s.testWorkflowExecutor.Execute(ctx, common.StandaloneEnvironment, request)
-	results := make([]testkube.TestWorkflowExecution, 0)
-	for v := range resp.Channel() {
-		results = append(results, *v)
-	}
-
-	if resp.Error() != nil {
-		s.logger.Errorw(fmt.Sprintf("cron job scheduler: executor component: error executing testworkflow for cron %s/%s", testWorkflowName, cronName), "error", resp.Error())
+	results, err := s.testWorkflowExecutor.Execute(ctx, request)
+	if err != nil {
+		s.logger.Errorw(fmt.Sprintf("cron job scheduler: executor component: error executing testworkflow for cron %s/%s", testWorkflowName, cronName), "error", err)
 		return
 	}
 
