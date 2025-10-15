@@ -23,15 +23,61 @@ func (s *Server) GetExecutionUpdates(ctx context.Context, req *executionv1.GetEx
 	// To ensure that the response goes out even if the update OR scheduling fails, then we call
 	// separate functions that do not error (logging is doing a lot of heavy lifting here).
 	log := log2.DefaultLogger.With("runner id", info.Id, "runner name", info.Name)
-	update := s.getExecutionUpdates(ctx, log, info)
+	update := s.getExecutionUpdates(ctx, log)
 	start := s.getNextExecution(ctx, log, info)
 
 	return &executionv1.GetExecutionUpdatesResponse{Update: update, Start: start}, nil
 }
 
-// TODO
-func (s *Server) getExecutionUpdates(ctx context.Context, log *zap.SugaredLogger, info scheduling.RunnerInfo) []*executionv1.ExecutionStateTransition {
-	return []*executionv1.ExecutionStateTransition{}
+func (s *Server) getExecutionUpdates(ctx context.Context, log *zap.SugaredLogger) []*executionv1.ExecutionStateTransition {
+	var updates []*executionv1.ExecutionStateTransition
+
+	for exe, err := range s.executionQuerier.Pausing(ctx) {
+		if err != nil {
+			log.Errorw("Error retrieving pausing executions",
+				"err", err)
+			continue
+		}
+		updates = append(updates, &executionv1.ExecutionStateTransition{
+			ExecutionId:  common.Ptr(exe.Id),
+			TransitionTo: common.Ptr(executionv1.ExecutionState_EXECUTION_STATE_PAUSED),
+		})
+	}
+	for exe, err := range s.executionQuerier.Resuming(ctx) {
+		if err != nil {
+			log.Errorw("Error retrieving resuming executions",
+				"err", err)
+			continue
+		}
+		updates = append(updates, &executionv1.ExecutionStateTransition{
+			ExecutionId:  common.Ptr(exe.Id),
+			TransitionTo: common.Ptr(executionv1.ExecutionState_EXECUTION_STATE_RUNNING),
+		})
+	}
+	for exe, err := range s.executionQuerier.Aborting(ctx) {
+		if err != nil {
+			log.Errorw("Error retrieving aborting executions",
+				"err", err)
+			continue
+		}
+		updates = append(updates, &executionv1.ExecutionStateTransition{
+			ExecutionId:  common.Ptr(exe.Id),
+			TransitionTo: common.Ptr(executionv1.ExecutionState_EXECUTION_STATE_ABORTED),
+		})
+	}
+	for exe, err := range s.executionQuerier.Cancelling(ctx) {
+		if err != nil {
+			log.Errorw("Error retrieving cancelling executions",
+				"err", err)
+			continue
+		}
+		updates = append(updates, &executionv1.ExecutionStateTransition{
+			ExecutionId:  common.Ptr(exe.Id),
+			TransitionTo: common.Ptr(executionv1.ExecutionState_EXECUTION_STATE_CANCELLED),
+		})
+	}
+
+	return updates
 }
 
 func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, info scheduling.RunnerInfo) []*executionv1.ExecutionStart {

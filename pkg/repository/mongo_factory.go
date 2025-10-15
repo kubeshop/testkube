@@ -118,6 +118,11 @@ func (f *MongoDBFactory) NewExecutionController() scheduling.Controller {
 	return scheduling.NewMongoExecutionController(executionsCollection)
 }
 
+func (f *MongoDBFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
+	executionsCollection := f.db.Collection(testresultmongo.CollectionName)
+	return scheduling.NewMongoExecutionQuerier(executionsCollection)
+}
+
 func (f *MongoDBFactory) NewSequenceRepository() sequence.Repository {
 	return f.sequenceRepo
 }

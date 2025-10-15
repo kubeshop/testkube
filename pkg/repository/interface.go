@@ -35,8 +35,9 @@ type RepositoryFactory interface {
 	// TestWorkflow Execution Scheduler
 	NewScheduler() scheduling.Scheduler
 
-	// TestWorkflow Execution Controller (Pausing, Aborting, etc)
+	// TestWorkflow Execution Querier & Controller (Pausing, Aborting, etc)
 	NewExecutionController() scheduling.Controller
+	NewExecutionQuerier() scheduling.ExecutionQuerier
 
 	// Utility methods
 	GetDatabaseType() DatabaseType
