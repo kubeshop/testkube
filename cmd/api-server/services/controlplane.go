@@ -80,6 +80,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository)
 	scheduler := factory.NewScheduler()
 	executionController := factory.NewExecutionController()
+	executionQuerier := factory.NewExecutionQuerier()
 
 	// Ensure the buckets exist
 	if cfg.StorageBucket != "" {
@@ -134,7 +135,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, enqueuer, scheduler, executionController, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+	}, enqueuer, scheduler, executionController, executionQuerier, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
