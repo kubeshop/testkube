@@ -12,9 +12,6 @@ type APIConfig struct {
 	APIServerPort     int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig   string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
-
-	// GraphQL
-	GraphqlPort int `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 }
 
 type OSSControlPlaneConfig struct {
