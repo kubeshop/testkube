@@ -22,11 +22,9 @@ const (
 	ConfigSizeLimit = 3 * 1024 * 1024
 )
 
-type TestWorkflowExecutionStream Stream[*testkube.TestWorkflowExecution]
-
-//go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
+//go:generate mockgen -destination=./executor_mock.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream
+	Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error)
 }
 
 type executor struct {
@@ -59,10 +57,8 @@ func New(
 	}
 }
 
-func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
-	if environmentId == "" {
-		environmentId = e.defaultEnvironmentId
-	}
+func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+	environmentId := e.defaultEnvironmentId
 
 	ch := make(chan *testkube.TestWorkflowExecution)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
@@ -74,8 +70,7 @@ func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud
 	resultStream := NewStream(ch)
 	if err != nil {
 		close(ch)
-		resultStream.addError(err)
-		return resultStream
+		return nil, err
 	}
 	go func() {
 		defer close(ch)
@@ -97,5 +92,15 @@ func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud
 			ch <- &r
 		}
 	}()
-	return resultStream
+
+	results := make([]testkube.TestWorkflowExecution, 0)
+	for v := range resultStream.Channel() {
+		results = append(results, *v)
+	}
+
+	if resultStream.Error() != nil {
+		return nil, resultStream.Error()
+	}
+
+	return results, nil
 }
