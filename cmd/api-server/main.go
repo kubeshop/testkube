@@ -34,6 +34,7 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/controller"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/crdstorage"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -729,7 +730,14 @@ func main() {
 		deprecatedSystem.API.Init(httpServer)
 	}
 
+	isStandalone := mode == common.ModeStandalone
+	var executionController scheduling.Controller
+	if isStandalone && controlPlane != nil {
+		executionController = controlPlane.ExecutionController
+	}
 	api := apiv1.NewTestkubeAPI(
+		isStandalone,
+		executionController,
 		deprecatedClients,
 		clusterId,
 		cfg.TestkubeNamespace,
