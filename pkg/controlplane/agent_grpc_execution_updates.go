@@ -93,7 +93,7 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 	}
 
 	// Mark the execution as starting
-	if err := s.executionController.StartExecution(ctx, exe.Id); err != nil {
+	if err := s.ExecutionController.StartExecution(ctx, exe.Id); err != nil {
 		log.Warnw("error marking execution as starting", "err", err)
 	}
 
@@ -107,19 +107,25 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 		// For some reason we store ancestor execution IDs as a path rather than an array.
 		ancestorIds = strings.Split(exe.RunningContext.Actor.ExecutionPath, "/")
 	}
+
+	variableOverrides := make(map[string]string)
+	if exe.Runtime != nil {
+		variableOverrides = exe.Runtime.Variables
+	}
+
 	return []*executionv1.ExecutionStart{
 		{
-			ExecutionId:     common.Ptr(exe.Id),
-			GroupId:         common.Ptr(exe.GroupId),
-			Name:            common.Ptr(exe.Name),
-			Number:          common.Ptr(exe.Number),
-			QueuedAt:        timestamppb.New(exe.ScheduledAt),
-			DisableWebhooks: common.Ptr(exe.DisableWebhooks),
-			EnvironmentId:   common.Ptr(info.EnvironmentId),
-			//ExecutionToken:       common.Ptr(token), TODO currently build-in control plane is insecure. Add auth and generate execution tokens.
+			ExecutionId:          common.Ptr(exe.Id),
+			GroupId:              common.Ptr(exe.GroupId),
+			Name:                 common.Ptr(exe.Name),
+			Number:               common.Ptr(exe.Number),
+			QueuedAt:             timestamppb.New(exe.ScheduledAt),
+			DisableWebhooks:      common.Ptr(exe.DisableWebhooks),
+			EnvironmentId:        common.Ptr(info.EnvironmentId),
+			ExecutionToken:       common.Ptr(""), //TODO currently build-in control plane is insecure. Add auth and generate execution tokens.
 			AncestorExecutionIds: ancestorIds,
 			WorkflowName:         common.Ptr(workflowName),
-			VariableOverrides:    exe.Runtime.Variables,
+			VariableOverrides:    variableOverrides,
 		},
 	}
 }
