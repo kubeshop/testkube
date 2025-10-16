@@ -13,3 +13,5 @@ spec:
   events:
   - cronjob:
       cron: "45 01,13 * * *" # twice a day at 01:45 and 13:45
+
+
