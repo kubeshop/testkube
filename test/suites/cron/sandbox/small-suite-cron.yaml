@@ -10,6 +10,8 @@ spec:
   - execute:
       workflows:
       - name: tw-suite-small-smoke
+      - name: pytest-workflow-smoke-junit-mixed-failures
+      - name: pytest-workflow-smoke-junit-random-failures
   events:
   - cronjob:
       cron: "15 */2 * * *" # every 2 hours
