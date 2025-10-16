@@ -109,17 +109,17 @@ func (f *MongoDBFactory) NewTestWorkflowRepository() testworkflow.Repository {
 }
 
 func (f *MongoDBFactory) NewScheduler() scheduling.Scheduler {
-	executionsCollection := f.db.Collection(testresultmongo.CollectionName)
+	executionsCollection := f.db.Collection(testworkflowmongo.CollectionName)
 	return scheduling.NewMongoScheduler(executionsCollection)
 }
 
 func (f *MongoDBFactory) NewExecutionController() scheduling.Controller {
-	executionsCollection := f.db.Collection(testresultmongo.CollectionName)
+	executionsCollection := f.db.Collection(testworkflowmongo.CollectionName)
 	return scheduling.NewMongoExecutionController(executionsCollection)
 }
 
 func (f *MongoDBFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
-	executionsCollection := f.db.Collection(testresultmongo.CollectionName)
+	executionsCollection := f.db.Collection(testworkflowmongo.CollectionName)
 	return scheduling.NewMongoExecutionQuerier(executionsCollection)
 }
 

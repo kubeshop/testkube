@@ -138,6 +138,7 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	grpcServer := grpc.NewServer(opts...)
 
 	cloud.RegisterTestKubeCloudAPIServer(grpcServer, s)
+	executionv1.RegisterTestWorkflowExecutionServiceServer(grpcServer, s)
 	s.server = grpcServer
 	go func() {
 		<-ctx.Done()

@@ -266,7 +266,7 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 		return status.Error(codes.Internal, "cannot enqueue execution")
 	}
 
-	for execution := range executions {
+	for _, execution := range executions {
 		v, err := json.Marshal(execution)
 		if err != nil {
 			return err
