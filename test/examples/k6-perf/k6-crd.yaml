@@ -3,6 +3,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test
+  labels:
+    category: performance-testing
 spec:
   content:
     git:
@@ -43,6 +45,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-gcp
+  labels:
+    category: performance-testing
 spec:
   content:
     git:
@@ -82,6 +86,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -127,6 +133,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers-gcp
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -172,6 +180,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers-gcp-discard-response-bodies
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -217,6 +227,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers-prometheus
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -268,6 +280,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-gcp-workers-prometheus
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}

@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: jmeter-report
   labels:
+    category: performance-testing
     artifacts: "true"
 spec:
   content:

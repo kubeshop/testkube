@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows
     tool: k6
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -49,6 +50,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
 spec:
   container:
     resources:
@@ -83,6 +85,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
 spec:
   content:
     git:
@@ -118,6 +121,7 @@ metadata:
     core-tests: workflows
     tool: k6
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     files:
@@ -156,6 +160,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
 spec:
   content:
     git:
@@ -187,6 +192,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
 spec:
   content:
     git:
@@ -218,6 +224,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 2}

@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -44,6 +45,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -86,6 +88,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
     junit: "true"
 spec:
   content:
@@ -133,6 +136,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -195,6 +199,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -237,6 +242,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -278,6 +284,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    category: e2e-ui-testing
     artifacts: "true"
 spec:
   content:
@@ -317,6 +324,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -352,6 +360,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    category: e2e-ui-testing
 spec:
   container:
     resources:
@@ -388,6 +397,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    category: e2e-ui-testing
 spec:
   container:
     resources:
@@ -427,6 +437,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -469,6 +480,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -526,6 +538,7 @@ metadata:
     tool: cypress
     artifacts: "true"
     junit: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:

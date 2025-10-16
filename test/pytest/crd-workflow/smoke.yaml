@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: pytest
+    category: unit-component-testing
 spec:
   content:
     git:
@@ -36,6 +37,7 @@ metadata:
     tool: pytest
     artifacts: "true"
     junit: "true"
+    category: unit-component-testing
 spec:
   content:
     git:
@@ -71,6 +73,7 @@ metadata:
     tool: pytest
     artifacts: "true"
     junit: "true"
+    category: unit-component-testing
 spec:
   content:
     git:
@@ -106,6 +109,7 @@ metadata:
     tool: pytest
     artifacts: "true"
     junit: "true"
+    category: unit-component-testing
 spec:
   content:
     git:
