@@ -503,10 +503,7 @@ func main() {
 	}
 
 	// Initialize event handlers
-	// NOTE(emil): where the various loaders are registered with the emitter
-	websocketLoader := ws.NewWebsocketLoader()
-	// TODO(emil): need a feature flag on the pro context to move this to the control plane
-	if !cfg.DisableWebhooks {
+	if !cfg.DisableWebhooks && !cfg.EnableCloudWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksClient,
@@ -521,6 +518,7 @@ func main() {
 			webhook.WithProContext(&proContext))
 		eventsEmitter.RegisterLoader(webhookLoader)
 	}
+	websocketLoader := ws.NewWebsocketLoader()
 	eventsEmitter.RegisterLoader(websocketLoader)
 	eventsEmitter.RegisterLoader(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
