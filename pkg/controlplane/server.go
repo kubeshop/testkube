@@ -36,12 +36,15 @@ const (
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 	executionv1.UnimplementedTestWorkflowExecutionServiceServer
-	cfg                         Config
-	server                      *grpc.Server
-	commands                    map[cloudexecutor.Command]CommandHandler
-	enqueuer                    scheduling.Enqueuer
-	scheduler                   scheduling.Scheduler
-	executionController         scheduling.Controller
+	cfg       Config
+	server    *grpc.Server
+	commands  map[cloudexecutor.Command]CommandHandler
+	enqueuer  scheduling.Enqueuer
+	scheduler scheduling.Scheduler
+
+	// note: encapsulation is broken here because the HTTP Server cannot yet be pulled into the build-in control plane
+	//       until the commercial control plane becomes its own source of truth.
+	ExecutionController         scheduling.Controller
 	executionQuerier            scheduling.ExecutionQuerier
 	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
@@ -84,7 +87,7 @@ func New(
 		cfg:                         cfg,
 		enqueuer:                    enqueuer,
 		scheduler:                   scheduler,
-		executionController:         executionController,
+		ExecutionController:         executionController,
 		executionQuerier:            executionQuerier,
 		commands:                    commands,
 		storageClient:               storageClient,

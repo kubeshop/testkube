@@ -403,6 +403,14 @@ func (s *TestkubeAPI) GetTestWorkflowExecutionLogsHandler() fiber.Handler {
 }
 
 func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
+	if !s.isStandalone {
+		return s.abortTestWorkflowExecutionHandlerPro() //nolint
+	}
+	return s.AbortTestWorkflowExecutionHandlerStandalone()
+}
+
+// Deprecated: remove me once commercial control plane is source of truth.
+func (s *TestkubeAPI) abortTestWorkflowExecutionHandlerPro() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -435,6 +443,40 @@ func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 
 		c.Status(http.StatusNoContent)
 
+		return nil
+	}
+}
+
+func (s *TestkubeAPI) AbortTestWorkflowExecutionHandlerStandalone() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if name == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
+		}
+
+		// Abort the Test Workflow
+		err = s.executionController.AbortExecution(ctx, execution.Id)
+		if err != nil {
+			return s.ClientError(c, "aborting test workflow execution", err)
+		}
+		s.Metrics.IncAbortTestWorkflow()
+
+		c.Status(http.StatusNoContent)
 		return nil
 	}
 }
@@ -512,6 +554,14 @@ func (s *TestkubeAPI) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 }
 
 func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
+	if !s.isStandalone {
+		return s.abortAllTestWorkflowExecutionsHandlerPro()
+	}
+	return s.abortAllTestWorkflowExecutionsHandlerStandalone()
+}
+
+// Deprecated: remove me once commercial control plane is source of truth.
+func (s *TestkubeAPI) abortAllTestWorkflowExecutionsHandlerPro() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -532,6 +582,39 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 			err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: execution.Namespace,
 			})
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+			s.Metrics.IncAbortTestWorkflow()
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
+func (s *TestkubeAPI) abortAllTestWorkflowExecutionsHandlerStandalone() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to abort test workflow executions '%s'", name)
+
+		// Fetch executions
+		executions, err := s.TestWorkflowResults.GetExecutions(ctx, testworkflow2.FilterImpl{
+			FName:     name,
+			FStatuses: testkube.TestWorkflowExecutingStatus,
+		})
+		if err != nil {
+			if apiutils.IsNotFound(err) {
+				c.Status(http.StatusNoContent)
+				return nil
+			}
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		for _, execution := range executions {
+			err = s.executionController.AbortExecution(ctx, execution.Id)
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
 			}
