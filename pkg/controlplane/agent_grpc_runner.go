@@ -138,7 +138,15 @@ func (s *Server) UpdateExecutionOutput(ctx context.Context, req *cloud.UpdateExe
 }
 
 func (s *Server) SaveExecutionLogsPresigned(ctx context.Context, req *cloud.SaveExecutionLogsPresignedRequest) (*cloud.SaveExecutionLogsPresignedResponse, error) {
-	url, err := s.outputRepository.PresignSaveLog(ctx, req.Id, "")
+	exec, err := s.resultsRepository.Get(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("getting execution: %w", err)
+	}
+	workflowName := ""
+	if exec.Workflow != nil {
+		workflowName = exec.Workflow.Name
+	}
+	url, err := s.outputRepository.PresignSaveLog(ctx, req.Id, workflowName)
 	if err != nil {
 		return nil, err
 	}
