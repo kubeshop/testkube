@@ -6,5 +6,5 @@ export default function () {
   check(res, {
     "status is 200": (r) => r.status === 200,
   });
-  sleep(2);
+  sleep(1);
 }
