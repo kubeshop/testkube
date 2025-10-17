@@ -43,7 +43,6 @@ type RuntimeConfig struct {
 type Client interface {
 	IsSuperAgent() bool
 	IsRunner() bool
-	IsLegacy() bool
 
 	ExecutionClient
 	ExecutionSelfClient
@@ -69,8 +68,4 @@ func (c *client) IsSuperAgent() bool {
 
 func (c *client) IsRunner() bool {
 	return strings.HasPrefix(c.proContext.APIKey, AgentRunnerPrefix+"_")
-}
-
-func (c *client) IsLegacy() bool {
-	return c.IsSuperAgent() && !c.proContext.NewArchitecture
 }

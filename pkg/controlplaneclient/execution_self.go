@@ -6,12 +6,9 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
@@ -27,9 +24,6 @@ type ExecutionSelfClient interface {
 }
 
 func (c *client) AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error {
-	if c.IsLegacy() {
-		return c.legacyAppendExecutionReport(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report)
-	}
 	req := cloud.AppendExecutionReportRequest{
 		Id:       executionId,
 		Step:     stepRef,
@@ -40,34 +34,7 @@ func (c *client) AppendExecutionReport(ctx context.Context, environmentId, execu
 	return err
 }
 
-// Deprecated
-func (c *client) legacyAppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionsAddReportRequest{
-		ID:           executionId,
-		WorkflowName: legacyWorkflowName,
-		WorkflowStep: stepRef,
-		Filepath:     filePath,
-		Report:       report,
-	})
-	if err != nil {
-		return err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionAddReport),
-		Payload: &s,
-	}
-	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
-	return err
-}
-
 func (c *client) SaveExecutionArtifactGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType string) (string, error) {
-	if c.IsLegacy() {
-		return c.legacySaveExecutionArtifactGetPresignedURL(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType)
-	}
 	req := cloud.SaveExecutionArtifactPresignedRequest{
 		Id:          executionId,
 		Step:        stepRef,
@@ -81,38 +48,7 @@ func (c *client) SaveExecutionArtifactGetPresignedURL(ctx context.Context, envir
 	return res.Url, nil
 }
 
-// Deprecated
-func (c *client) legacySaveExecutionArtifactGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType string) (string, error) {
-	jsonPayload, err := json.Marshal(artifact.PutObjectSignedURLRequest{
-		ExecutionID:      executionId,
-		TestWorkflowName: legacyWorkflowName,
-		Object:           filePath,
-		ContentType:      contentType,
-	})
-	if err != nil {
-		return "", err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return "", err
-	}
-	req := cloud.CommandRequest{
-		Command: string(artifact.CmdScraperPutObjectSignedURL),
-		Payload: &s,
-	}
-	cmdResponse, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
-	if err != nil {
-		return "", err
-	}
-	var response artifact.PutObjectSignedURLResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	return response.URL, err
-}
-
 func (c *client) ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader {
-	if c.IsLegacy() {
-		return channels.NewError[testkube.TestWorkflowExecution](ErrNotSupported)
-	}
 	if c.opts.ExecutionID != "" {
 		request.RunningContext = &cloud.RunningContext{
 			Name: c.opts.WorkflowName,
