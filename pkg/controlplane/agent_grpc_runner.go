@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -18,6 +19,7 @@ import (
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
@@ -159,10 +161,47 @@ func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecution
 	if err != nil {
 		return nil, err
 	}
-	err = s.resultsRepository.UpdateResult(ctx, req.Id, &result)
-	if err != nil {
-		return nil, err
+	if !result.IsFinished() {
+		s := string(*result.Status)
+		log.Infow("FinishExecution: invalid status", "id", req.Id, "status", s)
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("unexpected state: %s", s))
 	}
+
+	execution, err := s.resultsRepository.GetWithRunner(ctx, req.Id, common.StandaloneRunner)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "execution not found")
+	}
+
+	updated, err := s.resultsRepository.FinishResultStrict(ctx, req.Id, common.StandaloneRunner, &result)
+	switch {
+	case utils.IsNotFound(err):
+		return nil, status.Error(codes.NotFound, "execution not found")
+	case err != nil || !updated:
+		// This happens if we were in an incorrect state and cannot transition.
+		// However, we risk never finishing if this is not retried which is why we error.
+		// This is probably a good case for "Unknown" status.
+		log.Errorw("FinishExecution: unexpected unmodified document", "id", req.Id, "status", result.Status)
+		return nil, status.Error(codes.Internal, "unexpected cannot update execution")
+	}
+
+	// Update in-memory properties which we know has been updated by the query.
+	execution.StatusAt = result.FinishedAt
+	execution.Result = &result
+
+	switch {
+	case execution.Result.IsPassed():
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
+	case execution.Result.IsAborted():
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
+	case execution.Result.IsCanceled():
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
+	default:
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+	}
+	if execution.Result.IsNotPassed() {
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
+	}
+
 	return &cloud.FinishExecutionResponse{}, nil
 }
 

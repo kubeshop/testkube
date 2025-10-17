@@ -145,21 +145,6 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 			return err
 		}
-		if !a.proContext.NewArchitecture {
-			switch {
-			case execution.Result.IsPassed():
-				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-			case execution.Result.IsAborted():
-				a.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			case execution.Result.IsCanceled():
-				a.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(execution))
-			default:
-				a.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-			}
-			if execution.Result.IsNotPassed() {
-				a.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(execution))
-			}
-		}
 		return nil
 	})
 	if err != nil {

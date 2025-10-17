@@ -41,7 +41,6 @@ func TestAgentLoop_Start_SimpleReconnectionDelay(t *testing.T) {
 
 	// Create control plane client
 	mockClient := controlplaneclient.New(grpcClient, config.ProContext{
-		NewArchitecture: true,
 		Agent: config.ProContextAgent{
 			ID: "test-agent",
 		},
@@ -70,7 +69,6 @@ func TestAgentLoop_Start_SimpleReconnectionDelay(t *testing.T) {
 		mockClient,
 		testworkflowconfig.ControlPlaneConfig{},
 		config.ProContext{
-			NewArchitecture: true,
 			Agent: config.ProContextAgent{
 				ID: "test-agent",
 			},
@@ -108,7 +106,6 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 	testTimeout := time.Second
 
 	mockClient := controlplaneclient.New(grpcClient, config.ProContext{
-		NewArchitecture: true,
 		Agent: config.ProContextAgent{
 			ID: "test-agent",
 		},
@@ -138,7 +135,6 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 		mockClient,
 		testworkflowconfig.ControlPlaneConfig{},
 		config.ProContext{
-			NewArchitecture: true,
 			Agent: config.ProContextAgent{
 				ID: "test-agent",
 			},
@@ -180,7 +176,6 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 	testTimeout := time.Second
 
 	mockClient := controlplaneclient.New(grpcClient, config.ProContext{
-		NewArchitecture: true,
 		Agent: config.ProContextAgent{
 			ID: "test-agent",
 		},
@@ -210,7 +205,6 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 		mockClient,
 		testworkflowconfig.ControlPlaneConfig{},
 		config.ProContext{
-			NewArchitecture: true,
 			Agent: config.ProContextAgent{
 				ID: "test-agent",
 			},
