@@ -380,7 +380,7 @@ func main() {
 	}
 	if cfg.GlobalWorkflowTemplateInline != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateInline(cfg.GlobalWorkflowTemplateInline)
-	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
+	} else if cfg.GlobalWorkflowTemplateName != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
 	runner := runner2.New(
@@ -436,7 +436,7 @@ func main() {
 			if !runnerClient.IsSupported(supportedCtx, proContext.EnvID) {
 				cancel()
 				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
-				return runnerService.Start(ctx, proContext.NewArchitecture)
+				return runnerService.Start(ctx, true)
 			}
 			cancel()
 			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
