@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendpostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -68,6 +69,18 @@ func (f *PostgreSQLFactory) NewTestWorkflowRepository() testworkflow.Repository 
 		)
 	}
 	return f.testWorkflowRepo
+}
+
+func (f *PostgreSQLFactory) NewScheduler() scheduling.Scheduler {
+	return scheduling.NewPostgresScheduler()
+}
+
+func (f *PostgreSQLFactory) NewExecutionController() scheduling.Controller {
+	return scheduling.NewPostgresExecutionController()
+}
+
+func (f *PostgreSQLFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
+	return scheduling.NewPostgresExecutionQuerier()
 }
 
 func (f *PostgreSQLFactory) GetDatabaseType() DatabaseType {

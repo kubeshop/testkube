@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	FeatureFlagNewArchitecture = "exec"
-	FeatureFlagCloudStorage    = "tw-storage"
+	FeatureFlagCloudStorage = "tw-storage"
 )
 
 type InternalConfig struct {
