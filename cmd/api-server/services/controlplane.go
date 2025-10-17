@@ -105,7 +105,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		Logger:                           log.DefaultLogger,
 		Verbose:                          false,
 		StorageBucket:                    cfg.StorageBucket,
-		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
 	}, enqueuer, scheduler, executionController, executionQuerier, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)

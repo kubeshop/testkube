@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
@@ -52,6 +53,7 @@ type Server struct {
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
 	repositoryManager           repository.DatabaseRepository
+	emitter                     event.Emitter
 }
 
 type Config struct {
@@ -59,7 +61,6 @@ type Config struct {
 	Verbose                          bool
 	Logger                           *zap.SugaredLogger
 	StorageBucket                    string
-	FeatureNewArchitecture           bool
 	FeatureTestWorkflowsCloudStorage bool
 }
 

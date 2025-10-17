@@ -315,8 +315,6 @@ spec:
               value: "false"
             - name: "NATS_EMBEDDED"
               value: "true"
-            - name: "FEATURE_NEW_ARCHITECTURE"
-              value: "true"
             {{- if .Values.listener.enabled }}
             - name: "TEST_TRIGGER_CONTROL_PLANE"
               value: "true"
