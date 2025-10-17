@@ -26,6 +26,7 @@ var _ testworkflow.Repository = (*MongoRepository)(nil)
 const (
 	CollectionName       = "testworkflowresults"
 	configParamSizeLimit = 100
+	MaxExecutionTagsDocs = 30000
 )
 
 var (
@@ -861,7 +862,7 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 	pipeline = append(pipeline, bson.M{"$sort": bson.M{"scheduledAt": -1}})
 
 	// Limit to last 30k executions to avoid scanning millions of documents
-	pipeline = append(pipeline, bson.M{"$limit": 30000})
+	pipeline = append(pipeline, bson.M{"$limit": MaxExecutionTagsDocs})
 
 	// Filter out documents without tags
 	pipeline = append(pipeline, bson.M{"$match": bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}})
