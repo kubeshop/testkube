@@ -380,7 +380,7 @@ func main() {
 	}
 	if cfg.GlobalWorkflowTemplateInline != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateInline(cfg.GlobalWorkflowTemplateInline)
-	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
+	} else if cfg.GlobalWorkflowTemplateName != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
 	runner := runner2.New(
@@ -434,7 +434,7 @@ func main() {
 			// This check should be removed once TLS is enforced across deployments.
 			if !runnerClient.IsSupported(ctx, proContext.EnvID) {
 				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
-				return runnerService.Start(ctx, proContext.NewArchitecture)
+				return runnerService.Start(ctx, true)
 			}
 			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
 			// If the client is supported then start both services/clients.

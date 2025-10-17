@@ -26,13 +26,12 @@ type ExecutionSaver interface {
 }
 
 type executionSaver struct {
-	id                     string
-	organizationId         string
-	environmentId          string
-	runnerId               string
-	client                 controlplaneclient.Client
-	logs                   ExecutionLogsWriter
-	newArchitectureEnabled bool
+	id             string
+	organizationId string
+	environmentId  string
+	runnerId       string
+	client         controlplaneclient.Client
+	logs           ExecutionLogsWriter
 
 	// Intermediate data
 	output       []testkube.TestWorkflowOutput
@@ -55,23 +54,21 @@ func NewExecutionSaver(
 	environmentId string,
 	runnerId string,
 	logs ExecutionLogsWriter,
-	newArchitectureEnabled bool,
 ) (ExecutionSaver, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	outputSaved := atomic.Bool{}
 	outputSaved.Store(true)
 	saver := &executionSaver{
-		id:                     id,
-		organizationId:         organizationId,
-		environmentId:          environmentId,
-		runnerId:               runnerId,
-		client:                 grpcClient,
-		logs:                   logs,
-		newArchitectureEnabled: newArchitectureEnabled,
-		resultUpdate:           store.NewUpdate(),
-		outputSaved:            &outputSaved,
-		ctx:                    ctx,
-		ctxCancel:              cancel,
+		id:             id,
+		organizationId: organizationId,
+		environmentId:  environmentId,
+		runnerId:       runnerId,
+		client:         grpcClient,
+		logs:           logs,
+		resultUpdate:   store.NewUpdate(),
+		outputSaved:    &outputSaved,
+		ctx:            ctx,
+		ctxCancel:      cancel,
 	}
 	go saver.watchResultUpdates()
 
