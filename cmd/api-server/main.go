@@ -167,8 +167,6 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	lazyRunner := runner2.LazyExecute()
-
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
@@ -454,7 +452,6 @@ func main() {
 			return eg.Wait()
 		})
 	}
-	lazyRunner.Set(runnerService)
 
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,
