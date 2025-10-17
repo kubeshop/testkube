@@ -851,21 +851,21 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 	}
 
 	pipeline := []bson.M{}
-	
+
 	// Apply workflow filter first if specified
 	if len(initialMatch) > 0 {
 		pipeline = append(pipeline, bson.M{"$match": initialMatch})
 	}
-	
+
 	// Sort by scheduledAt descending to get most recent executions
 	pipeline = append(pipeline, bson.M{"$sort": bson.M{"scheduledAt": -1}})
-	
+
 	// Limit to last 30k executions to avoid scanning millions of documents
 	pipeline = append(pipeline, bson.M{"$limit": 30000})
-	
+
 	// Filter out documents without tags
 	pipeline = append(pipeline, bson.M{"$match": bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}})
-	
+
 	// Extract and aggregate tags
 	pipeline = append(pipeline,
 		bson.M{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
