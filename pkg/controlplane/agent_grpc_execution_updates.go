@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	log2 "github.com/kubeshop/testkube/pkg/log"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
@@ -92,11 +93,6 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 		return nil
 	}
 
-	// Mark the execution as starting
-	if err := s.ExecutionController.StartExecution(ctx, exe.Id); err != nil {
-		log.Warnw("error marking execution as starting", "err", err)
-	}
-
 	// Populate some possibly missing values and avoid nil pointer issues.
 	var workflowName string
 	var ancestorIds []string
@@ -112,6 +108,14 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 	if exe.Runtime != nil {
 		variableOverrides = exe.Runtime.Variables
 	}
+
+	// Mark the execution as starting
+	if err := s.ExecutionController.StartExecution(ctx, exe.Id); err != nil {
+		log.Warnw("error marking execution as starting", "err", err)
+	}
+
+	// Dispatch event for WebHooks and friends
+	s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exe))
 
 	return []*executionv1.ExecutionStart{
 		{

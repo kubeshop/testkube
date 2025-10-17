@@ -19,9 +19,8 @@ import (
 )
 
 func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProContextResponse, error) {
-	caps := make([]*cloud.Capability, 0)
-	if s.cfg.FeatureNewArchitecture {
-		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityNewArchitecture), Enabled: true})
+	caps := []*cloud.Capability{
+		{Name: string(capabilities.CapabilityNewArchitecture), Enabled: true},
 	}
 	if s.cfg.FeatureTestWorkflowsCloudStorage {
 		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityCloudStorage), Enabled: true})

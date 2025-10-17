@@ -349,7 +349,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
 		DashboardURI:                        cfg.TestkubeDashboardURI,
-		NewArchitecture:                     false,
 		CloudStorage:                        false,
 		CloudStorageSupportedInControlPlane: false,
 	}
@@ -423,10 +422,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 				proContext.EnvSlug = env.Slug
 			}
 		}
-	}
-
-	if cfg.FeatureNewArchitecture && capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
-		proContext.NewArchitecture = true
 	}
 
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
