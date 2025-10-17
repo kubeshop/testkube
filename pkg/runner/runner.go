@@ -283,36 +283,6 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(err, "failed to save execution '%s' data", execution.Id)
 	}
 
-	// Try to substitute execution data
-	execution.Output = nil
-	execution.Result = lastResult
-	execution.StatusAt = lastResult.FinishedAt
-
-	// Emit data, if the Control Plane doesn't support informing about status by itself
-	if !r.proContext.NewArchitecture {
-		// Reload latest saved execution to sync data not availabe when monitor was started
-		savedExecution, err := r.client.GetExecution(ctx, environmentId, execution.Id)
-		if err == nil {
-			execution.Signature = savedExecution.Signature
-		} else {
-			log.DefaultLogger.Errorw("failed to get TestWorkflow execution", "id", execution.Id, "error", err)
-		}
-
-		switch {
-		case lastResult.IsPassed():
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
-		case lastResult.IsAborted():
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-		case lastResult.IsCanceled():
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
-		default:
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
-		}
-		if lastResult.IsNotPassed() {
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
-		}
-	}
-
 	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
 	if err != nil {
 		// TODO: what to do on error?
@@ -579,11 +549,6 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 
 	if err = r.Abort(executionID); err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
-	}
-
-	// Emit data, if the Control Plane doesn't support informing about status by itself
-	if !r.proContext.NewArchitecture {
-		r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
 	}
 
 	return nil

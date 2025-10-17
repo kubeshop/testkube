@@ -28,23 +28,21 @@ const (
 )
 
 type ProContext struct {
-	APIKey               string
-	URL                  string
-	TLSInsecure          bool
-	WorkerCount          int
-	LogStreamWorkerCount int
-	SkipVerify           bool
-	EnvID                string
-	EnvSlug              string
-	EnvName              string
-	OrgID                string
-	OrgSlug              string
-	OrgName              string
-	Migrate              string
-	ConnectionTimeout    int
-	DashboardURI         string
-	// Deprecated: remove me!
-	NewArchitecture                     bool
+	APIKey                              string
+	URL                                 string
+	TLSInsecure                         bool
+	WorkerCount                         int
+	LogStreamWorkerCount                int
+	SkipVerify                          bool
+	EnvID                               string
+	EnvSlug                             string
+	EnvName                             string
+	OrgID                               string
+	OrgSlug                             string
+	OrgName                             string
+	Migrate                             string
+	ConnectionTimeout                   int
+	DashboardURI                        string
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
 	Agent                               ProContextAgent
