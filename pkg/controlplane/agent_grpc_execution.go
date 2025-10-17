@@ -19,5 +19,6 @@ func (s *Server) SaveExecutionArtifactPresigned(ctx context.Context, req *cloud.
 }
 
 func (s *Server) AppendExecutionReport(_ context.Context, _ *cloud.AppendExecutionReportRequest) (*cloud.AppendExecutionReportResponse, error) {
+	// This is currently only used for CapabilityJUnitReports which is unsupported by OSS.
 	return nil, status.Error(codes.Unimplemented, "not supported in the standalone version")
 }
