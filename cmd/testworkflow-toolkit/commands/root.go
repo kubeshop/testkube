@@ -21,6 +21,7 @@ func init() {
 	RootCmd.AddCommand(NewTarballCmd())
 	RootCmd.AddCommand(NewTransferCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
+	RootCmd.AddCommand(NewOciCmd())
 
 	// Pro functionalities
 	RootCmd.AddCommand(commands.NewExecuteCmd())

@@ -12,6 +12,7 @@ func NewOpenSource(inspector imageinspector.Inspector) testworkflowprocessor.Pro
 		Register(testworkflowprocessor.ProcessContentFiles).
 		Register(testworkflowprocessor.ProcessContentGit).
 		Register(testworkflowprocessor.ProcessContentTarball).
+		Register(testworkflowprocessor.ProcessContentOci).
 		Register(testworkflowprocessor.StubServices).
 		Register(testworkflowprocessor.ProcessNestedSetupSteps).
 		Register(testworkflowprocessor.ProcessRunCommand).
@@ -28,6 +29,7 @@ func NewPro(inspector imageinspector.Inspector) testworkflowprocessor.Processor 
 		Register(testworkflowprocessor.ProcessContentFiles).
 		Register(testworkflowprocessor.ProcessContentGit).
 		Register(testworkflowprocessor.ProcessContentTarball).
+		Register(testworkflowprocessor.ProcessContentOci).
 		Register(testworkflowprocessortcl.ProcessServicesStart).
 		Register(testworkflowprocessor.ProcessNestedSetupSteps).
 		Register(testworkflowprocessor.ProcessRunCommand).
