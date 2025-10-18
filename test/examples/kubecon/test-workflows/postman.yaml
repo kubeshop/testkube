@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: postman-test
   labels:
+    category: api-testing
     core-tests: workflows
 spec:
   content:

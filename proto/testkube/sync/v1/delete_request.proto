@@ -1,0 +1,30 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+import "testkube/sync/v1/test_trigger_id.proto";
+import "testkube/sync/v1/test_workflow_id.proto";
+import "testkube/sync/v1/test_workflow_template_id.proto";
+import "testkube/sync/v1/webhook_id.proto";
+import "testkube/sync/v1/webhook_template_id.proto";
+
+// DeleteRequest is the message sent by a client when
+// requesting the deletion of an object.
+message DeleteRequest {
+  // Id is the unique identifier for the object that
+  // has been deleted from the Agent's observable scope.
+  // The Id that is used determines which type of object
+  // is identified as deleted.
+  oneof id {
+    // test_trigger indicates the object is a TestTrigger
+    TestTriggerId test_trigger = 1;
+    // test_workflow indicates the object is a TestWorkflow
+    TestWorkflowId test_workflow = 2;
+    // test_workflow_template indicates the object is a TestWorkflowTemplate
+    TestWorkflowTemplateId test_workflow_template = 3;
+    // webhook indicates the object is a Webhook
+    WebhookId webhook = 4;
+    // webhook_template indicates the object is a WebhookTemplate
+    WebhookTemplateId webhook_template = 5;
+  }
+}

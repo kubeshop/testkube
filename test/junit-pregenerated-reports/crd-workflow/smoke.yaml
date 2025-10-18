@@ -3,6 +3,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: junit-report-high-level-failure
   labels:
+    category: unit-component-testing
     core-tests: junit-pregenerated
     junit: "true"
 spec:
@@ -27,6 +28,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: junit-report-high-level-without-testcases
   labels:
+    category: unit-component-testing
     core-tests: junit-pregenerated
     junit: "true"
 spec:
@@ -51,6 +53,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: junit-report-high-level-testcase-both-error-and-failure
   labels:
+    category: unit-component-testing
     core-tests: junit-pregenerated
     junit: "true"
 spec:

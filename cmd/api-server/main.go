@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -180,15 +181,12 @@ func main() {
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
 		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
+
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
+		commons.ExitOnError("cannot listen to gRPC port", err)
 		g.Go(func() error {
-			return controlPlane.Start(ctx)
+			return controlPlane.Start(ctx, ln)
 		})
-
-		// Wait a bit for the control plane to start
-		time.Sleep(2 * time.Second)
-
-		log.DefaultLogger.Info("connecting to embedded Control Plane...")
-		var err error
 		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", log.DefaultLogger, cfg.TracingEnabled)
 		commons.ExitOnError("connecting to embedded Control Plane", err)
 		log.DefaultLogger.Infow("connected to embedded control plane successfully", "port", cfg.GRPCServerPort)
