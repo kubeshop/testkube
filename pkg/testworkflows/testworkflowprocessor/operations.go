@@ -279,6 +279,64 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container st
 	return stage, nil
 }
 
+func ProcessContentOci(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Content == nil || step.Content.Oci == nil {
+		return nil, nil
+	}
+	selfContainer := container.CreateChild()
+	stage := stage.NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Get OCI artifact")
+
+	// Compute mount path
+	mountPath := step.Content.Oci.MountPath
+	if mountPath == "" {
+		mountPath = filepath.Join(constants.DefaultDataPath, "repo")
+	}
+
+	// Build volume pair and share with all siblings
+	volumeMount := layer.AddEmptyDirVolume(nil, mountPath)
+	container.AppendVolumeMounts(volumeMount)
+
+	selfContainer.
+		SetWorkingDir("/").
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "oci").
+		EnableToolkit(stage.Ref())
+
+	args := []string{step.Content.Oci.Image, mountPath}
+
+	// Provide registry username
+	if step.Content.Oci.UsernameFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_OCI_USERNAME", ValueFrom: step.Content.Oci.UsernameFrom})
+		args = append(args, "-u", "{{env.TK_OCI_USERNAME}}")
+	} else if step.Content.Oci.Username != "" {
+		args = append(args, "-u", step.Content.Oci.Username)
+	}
+
+	// Provide registry token
+	if step.Content.Oci.TokenFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_OCI_TOKEN", ValueFrom: step.Content.Oci.TokenFrom})
+		args = append(args, "-t", "{{env.TK_OCI_TOKEN}}")
+	} else if step.Content.Oci.Token != "" {
+		args = append(args, "-t", step.Content.Oci.Token)
+	}
+
+	// Provide path to extract the artifact content from artifact root
+	if step.Content.Oci.Path != "" {
+		args = append(args, "--path", step.Content.Oci.Path)
+	}
+
+	// Provide registry
+	if step.Content.Oci.Registry != "" {
+		args = append(args, "-r", step.Content.Oci.Registry)
+	}
+
+	selfContainer.SetArgs(args...)
+	return stage, nil
+}
+
 func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil

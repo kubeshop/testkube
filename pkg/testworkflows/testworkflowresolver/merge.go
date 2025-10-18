@@ -202,6 +202,15 @@ func MergeContentGit(dst, include *testworkflowsv1.ContentGit) *testworkflowsv1.
 	return include
 }
 
+func MergeContentOci(dst, include *testworkflowsv1.ContentOci) *testworkflowsv1.ContentOci {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	return include
+}
+
 func MergeCapabilities(dst, include *corev1.Capabilities) *corev1.Capabilities {
 	if dst == nil {
 		return include
@@ -300,6 +309,7 @@ func MergeContent(dst, include *testworkflowsv1.Content) *testworkflowsv1.Conten
 	dst.Files = append(dst.Files, include.Files...)
 	dst.Git = MergeContentGit(dst.Git, include.Git)
 	dst.Tarball = append(dst.Tarball, include.Tarball...)
+	dst.Oci = MergeContentOci(dst.Oci, include.Oci)
 	return dst
 }
 

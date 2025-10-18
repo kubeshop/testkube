@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
@@ -126,7 +124,7 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 	}
 
 	// Copy files to destination
-	if err := copyRepositoryContents(tmpPath, destinationPath); err != nil {
+	if err := copyDirContents(tmpPath, destinationPath); err != nil {
 		return fmt.Errorf("error copying files to destination: %w", err)
 	}
 
@@ -359,67 +357,4 @@ func isCommitHash(s string) bool {
 		}
 	}
 	return true
-}
-
-// copyRepositoryContents copies repository contents from source to destination
-func copyRepositoryContents(src, dest string) error {
-	fmt.Printf("📥 Moving the contents to %s...\n", dest)
-
-	return copy.Copy(src, dest, copy.Options{
-		OnError: func(srcPath, destPath string, err error) error {
-			if err != nil {
-				// Ignore chmod errors on mounted directories
-				if srcPath == src && strings.Contains(err.Error(), "chmod") {
-					return nil
-				}
-				fmt.Printf("warn: copying to %s: %s\n", destPath, err.Error())
-			}
-			return nil
-		},
-	})
-}
-
-// adjustFilePermissions ensures files have appropriate permissions
-func adjustFilePermissions(path string) error {
-	fmt.Printf("📥 Adjusting access permissions...\n")
-
-	return filepath.WalkDir(path, func(filePath string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-
-		mode := info.Mode()
-		// Ensure group has read/write permissions
-		if mode.Perm()&0o060 != 0o060 {
-			if err := os.Chmod(filePath, mode|0o060); err != nil {
-				// Log but don't fail on permission errors
-				fmt.Printf("warn: chmod %s: %s\n", filePath, err.Error())
-			}
-		}
-		return nil
-	})
-}
-
-// listDirectoryContents displays the contents of a directory
-func listDirectoryContents(path string) error {
-	fmt.Printf("🔎 Destination folder contains following files ...\n")
-
-	return filepath.Walk(path, func(name string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Bold directory names
-		if info.IsDir() {
-			fmt.Printf("\x1b[1m%s\x1b[0m\n", name)
-		} else {
-			fmt.Println(name)
-		}
-		return nil
-	})
 }

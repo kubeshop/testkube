@@ -54,6 +54,25 @@ type ContentTarball struct {
 	Mount *bool `json:"mount,omitempty" expr:"ignore"`
 }
 
+type ContentOci struct {
+	// OCI image reference (e.g., registry.example.com/org/repo:tag)
+	Image string `json:"image,omitempty" expr:"template"`
+	// where to mount the fetched content (defaults to "oci" directory in the data volume)
+	MountPath string `json:"mountPath,omitempty" expr:"template"`
+	// path to extract the artifact content to (relative to mount path)
+	Path string `json:"path,omitempty" expr:"template"`
+	// registry username
+	Username string `json:"username,omitempty" expr:"template"`
+	// external registry username
+	UsernameFrom *corev1.EnvVarSource `json:"usernameFrom,omitempty" expr:"force"`
+	// registry token
+	Token string `json:"token,omitempty" expr:"template"`
+	// external registry token
+	TokenFrom *corev1.EnvVarSource `json:"tokenFrom,omitempty" expr:"force"`
+	// registry address
+	Registry string `json:"registry,omitempty" expr:"template"`
+}
+
 type Content struct {
 	// git repository details
 	Git *ContentGit `json:"git,omitempty" expr:"include"`
@@ -61,4 +80,6 @@ type Content struct {
 	Files []ContentFile `json:"files,omitempty" expr:"include"`
 	// tarballs to unpack
 	Tarball []ContentTarball `json:"tarball,omitempty" expr:"include"`
+	// OCI artifact details
+	Oci *ContentOci `json:"oci,omitempty" expr:"include"`
 }
