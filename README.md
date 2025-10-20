@@ -61,7 +61,7 @@ To get started with the open source agent:
 Check out the [Testkube Open Source Overview](https://docs.testkube.io/articles/open-source) to learn
 more about the open source deployment architecture.
 
-### Getting Started with Commercial Control Plane
+### Getting Started with the Commercial Control Plane
 
 Looking for more than single environment test execution? Do you need orchestration accross clusters, support for different trigger points, and high level reporting and artifact collection? Enterprise may be for your team - there are several ways to get started:
 
