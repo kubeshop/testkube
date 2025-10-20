@@ -50,7 +50,18 @@ The Testkube Agent (this repo) is **100% Open-Source** and can be deployed stand
 - **Works with your tools**: Integrate with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks) and the [Testkube REST API](https://docs.testkube.io/openapi/overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
 - **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
 
-### Getting Started with Enterprise
+### Getting Started with Open Source
+
+To get started with the open source agent:
+
+- The [Helm or CLI Installation](https://docs.testkube.io/articles/install/standalone-agent#installing-the-standalone-agent) will make it easy to deploy the agent into your target cluster.
+- The [Quickstart](https://docs.testkube.io/articles/getting-started-with-open-source) is the easiest way to set up 
+  Testkube and run your first tests.
+
+Check out the [Testkube Open Source Overview](https://docs.testkube.io/articles/open-source) to learn
+more about the open source deployment architecture.
+
+### Getting Started with Commercial Control Plane
 
 Looking for more than single environment test execution? Do you need orchestration accross clusters, support for different trigger points, and high level reporting and artifact collection? Enterprise may be for your team - there are several ways to get started:
 
