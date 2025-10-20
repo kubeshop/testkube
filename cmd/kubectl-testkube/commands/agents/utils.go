@@ -128,22 +128,6 @@ func GetControlPlaneEnvironments(cmd *cobra.Command) (map[string]cloudclient.Env
 	return envsMap, nil
 }
 
-func EnableNewArchitecture(cmd *cobra.Command, env cloudclient.Environment) error {
-	_, _, err := common2.GetClient(cmd)
-	if err != nil {
-		return errors.Wrap(err, "connecting to cloud")
-	}
-	cfg, err := config.Load()
-	if err != nil {
-		return errors.Wrap(err, "loading config")
-	}
-	if cfg.CloudContext.ApiKey == "" {
-		return errors.New("no api key found in config")
-	}
-
-	return common2.EnableNewArchitecture(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, env)
-}
-
 func GetControlPlaneAgents(cmd *cobra.Command, includeDeleted bool) ([]cloudclient.Agent, error) {
 	_, _, err := common2.GetClient(cmd)
 	if err != nil {
@@ -614,12 +598,8 @@ func UiCreateAgent(cmd *cobra.Command, name string, labelPairs []string, environ
 			ui.Failf("unknown environment: %s", envId)
 		}
 		if !env.NewArchitecture {
-			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture.", env.Name, env.Id))
-			if !ui.Confirm("do you want to enable it?") {
-				os.Exit(1)
-			}
-			err := EnableNewArchitecture(cmd, env)
-			ui.ExitOnError("enabling new architecture", err)
+			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture. Please upgrade your control plane.", env.Name, env.Id))
+			os.Exit(1)
 		}
 	}
 
