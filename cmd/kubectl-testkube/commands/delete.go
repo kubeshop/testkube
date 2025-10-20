@@ -39,6 +39,7 @@ func NewDeleteCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
+	cmd.PersistentFlags().Bool("ignore-not-found", false, "ignore 'not found' errors and non-zero exit code if the specified resource does not exist")
 
 	cmd.AddCommand(tests.NewDeleteTestsCmd())
 	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
