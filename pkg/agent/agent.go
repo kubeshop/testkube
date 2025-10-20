@@ -30,14 +30,12 @@ import (
 )
 
 const (
-	clusterIDMeta          = "cluster-id"
-	cloudMigrateMeta       = "migrate"
-	orgIdMeta              = "organization-id"
-	envIdMeta              = "environment-id"
-	healthcheckCommand     = "healthcheck"
-	dockerImageVersionMeta = "docker-image-version"
-	// Deprecated: remove me
-	newArchitectureMeta     = "exec"
+	clusterIDMeta           = "cluster-id"
+	cloudMigrateMeta        = "migrate"
+	orgIdMeta               = "organization-id"
+	envIdMeta               = "environment-id"
+	healthcheckCommand      = "healthcheck"
+	dockerImageVersionMeta  = "docker-image-version"
 	testWorkflowStorageMeta = "tw-storage"
 	reconnectionLoopDelay   = 5 * time.Second
 
@@ -292,7 +290,6 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
-	ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
 
 	if ag.proContext.CloudStorage {
 		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
