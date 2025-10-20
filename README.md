@@ -71,7 +71,7 @@ Looking for more than single environment test execution? Do you need orchestrati
 - The [Feature Comparison](https://docs.testkube.io/articles/install/feature-comparison) page details the differences between Enterprise and Open Source. 
 
 Check out the [Installation Overview](https://docs.testkube.io/articles/install/overview) to learn
-more about different ways to deploy and run Testkube.
+more about different ways to deploy and run the Testkube Control Plane.
 
 ### Documentation
 
