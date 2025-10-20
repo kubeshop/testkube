@@ -37,6 +37,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/crdstorage"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutionmetrics"
@@ -51,7 +52,6 @@ import (
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
-	cronjobclient "github.com/kubeshop/testkube/pkg/operator/cronjob/client"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
@@ -887,7 +887,7 @@ func main() {
 	if scheduler != nil {
 		// Remove any remaining legacy cronjobs.
 		// TODO: Remove this section once we are happy that users are not migrating from legacy cronjobs (next Major version?)
-		resources := []string{cronjobclient.TestResourceURI, cronjobclient.TestSuiteResourceURI, cronjobclient.TestWorkflowResourceURI}
+		resources := []string{cronjob.TestResourceURI, cronjob.TestSuiteResourceURI, cronjob.TestWorkflowResourceURI}
 		for _, resource := range resources {
 			reqs, err := labels.ParseToRequirements("testkube=" + resource)
 			if err != nil {
