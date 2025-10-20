@@ -14,9 +14,3 @@ spec:
   testSelector:
     name: tw-suite-small-smoke
     namespace: testkube-agent
-
-
-
-
-
-
