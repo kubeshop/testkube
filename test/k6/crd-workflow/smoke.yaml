@@ -28,7 +28,7 @@ spec:
     steps:
     - shell: mkdir /data/artifacts
     - run:
-        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 30s
         env:
         - name: K6_SYSTEM_ENV
           value: K6_SYSTEM_ENV_value
@@ -148,7 +148,7 @@ spec:
             value: 'true'
           - name: K6_WEB_DASHBOARD_EXPORT
             value: k6-test-report.html
-        shell: k6 run k6-test.js
+        shell: k6 run k6-test.js --duration 30s
       artifacts:
         paths:
           - k6-test-report.html
