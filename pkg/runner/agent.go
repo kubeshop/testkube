@@ -387,6 +387,7 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			EnvironmentId:    environmentId,
 			EnvironmentSlug:  a.proContext.GetEnvSlug(environmentId),
 			ParentIds:        parentIds,
+			RunningContext:   execution.RunningContext,
 		},
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?

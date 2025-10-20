@@ -6,6 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
 func GetBaseTestWorkflowMachine() expressions.Machine {
@@ -15,6 +16,8 @@ func GetBaseTestWorkflowMachine() expressions.Machine {
 		wd = "/"
 	}
 	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
-	GetState() // load state
-	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
+	state := GetState() // load state
+	executionCfg := state.InternalConfig.Execution
+	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionCfg)
+	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine, executionMachine)
 }
