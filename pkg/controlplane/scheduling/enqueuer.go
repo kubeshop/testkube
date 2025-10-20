@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/event"
 	testworkflows2 "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
@@ -25,6 +26,7 @@ type Enqueuer struct {
 	workflowRepository  testworkflowclient.TestWorkflowClient
 	templateRepository  testworkflowtemplateclient.TestWorkflowTemplateClient
 	executionRepository testworkflow.Repository
+	emitter             *event.Emitter
 }
 
 func NewEnqueuer(
@@ -32,12 +34,14 @@ func NewEnqueuer(
 	workflowRepository testworkflowclient.TestWorkflowClient,
 	templateRepository testworkflowtemplateclient.TestWorkflowTemplateClient,
 	executionRepository testworkflow.Repository,
+	emitter *event.Emitter,
 ) Enqueuer {
 	return Enqueuer{
 		logger:              logger,
 		workflowRepository:  workflowRepository,
 		templateRepository:  templateRepository,
 		executionRepository: executionRepository,
+		emitter:             emitter,
 	}
 }
 
@@ -125,7 +129,7 @@ func (e *Enqueuer) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 		return nil, err
 	}
 
-	// TODO WITO: Should Standalone agents dispatch events over embedded NATS?
+	e.dispatchExecutionEvents(executions)
 
 	return executions, nil
 }
@@ -338,6 +342,28 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 	}
 
 	return result, nil
+}
+
+// dispatchExecutionEvents dispatches events related to queueing.
+func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExecution) {
+	for _, execution := range executions {
+		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
+
+		switch {
+		case execution.Result.IsPassed():
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
+		case execution.Result.IsAborted():
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
+		case execution.Result.IsCanceled():
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
+		default:
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+		}
+
+		if execution.Result.IsNotPassed() {
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
+		}
+	}
 }
 
 func countMapBytes(m map[string]string) int {

@@ -167,12 +167,22 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
+	log.DefaultLogger.Info("connecting to NATS...")
+	nc := commons.MustCreateNATSConnection(cfg)
+	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
+
+	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features)
+		controlPlane = services.CreateControlPlane(ctx, cfg, features, eventsEmitter)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -278,16 +288,6 @@ func main() {
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, &proContext)
-
-	log.DefaultLogger.Info("connecting to NATS...")
-	nc := commons.MustCreateNATSConnection(cfg)
-	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
-
-	eventBus := bus.NewNATSBus(nc)
-	if cfg.Trace {
-		eventBus.TraceEvents()
-	}
-	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
