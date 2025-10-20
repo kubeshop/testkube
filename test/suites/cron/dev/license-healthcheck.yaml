@@ -12,12 +12,6 @@ spec:
     activeDeadlineSeconds: 180
   container:
     image: alpine:3.22.2
-    env:
-      - name: apiToken
-        valueFrom:
-          secretKeyRef:
-            name: testkube-agent-secrets
-            key: TESTKUBE-CLOUD-TEST-BASIC-RUN-TOKEN-FOR-DEV
   events:
   - cronjob:
       cron: "*/15 * * * *" # every 15 minutes
