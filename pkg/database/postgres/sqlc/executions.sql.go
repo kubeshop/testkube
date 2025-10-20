@@ -1835,39 +1835,32 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 }
 
 const getTestWorkflowExecutionTags = `-- name: GetTestWorkflowExecutionTags :many
-WITH recent_executions AS (
-    SELECT e.id, w.name as workflow_name, e.tags
-    FROM test_workflow_executions e
-    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-    WHERE e.organization_id = $1 AND e.environment_id = $2
-        AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
-    ORDER BY e.scheduled_at DESC
-    LIMIT 30000
-),
-tag_extracts AS (
+WITH tag_extracts AS (
     SELECT 
-        re.id,
-        re.workflow_name,
+        e.id,
+        w.name as workflow_name,
         tag_pair.key as tag_key,
         tag_pair.value as tag_value
-    FROM recent_executions re
-    CROSS JOIN LATERAL jsonb_each_text(re.tags) AS tag_pair(key, value)
-    WHERE re.tags IS NOT NULL
-        AND re.tags != '{}'::jsonb
-        AND jsonb_typeof(re.tags) = 'object'
+    FROM test_workflow_executions e
+    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+    CROSS JOIN LATERAL jsonb_each_text(e.tags) AS tag_pair(key, value)
+    WHERE e.tags IS NOT NULL AND (e.organization_id = $2 AND e.environment_id = $3)
+        AND e.tags != '{}'::jsonb
+        AND jsonb_typeof(e.tags) = 'object'
 )
 SELECT 
     tag_key::text,
     array_agg(DISTINCT tag_value ORDER BY tag_value)::text[] as values
 FROM tag_extracts
+WHERE (COALESCE($1::text, '') = '' OR workflow_name = $1::text)
 GROUP BY tag_key
 ORDER BY tag_key
 `
 
 type GetTestWorkflowExecutionTagsParams struct {
+	WorkflowName   string `db:"workflow_name" json:"workflow_name"`
 	OrganizationID string `db:"organization_id" json:"organization_id"`
 	EnvironmentID  string `db:"environment_id" json:"environment_id"`
-	WorkflowName   string `db:"workflow_name" json:"workflow_name"`
 }
 
 type GetTestWorkflowExecutionTagsRow struct {
@@ -1876,7 +1869,7 @@ type GetTestWorkflowExecutionTagsRow struct {
 }
 
 func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, arg GetTestWorkflowExecutionTagsParams) ([]GetTestWorkflowExecutionTagsRow, error) {
-	rows, err := q.db.Query(ctx, getTestWorkflowExecutionTags, arg.OrganizationID, arg.EnvironmentID, arg.WorkflowName)
+	rows, err := q.db.Query(ctx, getTestWorkflowExecutionTags, arg.WorkflowName, arg.OrganizationID, arg.EnvironmentID)
 	if err != nil {
 		return nil, err
 	}
