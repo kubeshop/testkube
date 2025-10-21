@@ -19,7 +19,6 @@ type Client interface {
 	ConfigAPI
 	TestSourceAPI
 	CopyFileAPI
-	TemplateAPI
 	TestWorkflowAPI
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
@@ -74,16 +73,6 @@ type TestTriggerAPI interface {
 	ListTestTriggers(selector string) (testTriggers []testkube.TestTrigger, err error)
 	DeleteTestTrigger(name string) (err error)
 	DeleteTestTriggers(selector string) (err error)
-}
-
-// TemplateAPI describes template api methods
-type TemplateAPI interface {
-	CreateTemplate(options CreateTemplateOptions) (template testkube.Template, err error)
-	UpdateTemplate(options UpdateTemplateOptions) (template testkube.Template, err error)
-	GetTemplate(name string) (template testkube.Template, err error)
-	ListTemplates(selector string) (templates testkube.Templates, err error)
-	DeleteTemplate(name string) (err error)
-	DeleteTemplates(selector string) (err error)
 }
 
 // ConfigAPI describes config api methods
