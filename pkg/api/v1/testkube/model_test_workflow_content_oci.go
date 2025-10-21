@@ -10,18 +10,18 @@
 package testkube
 
 type TestWorkflowContentOci struct {
-	// OCI image reference (e.g., registry.example.com/org/repo:tag)
+	// OCI image reference to fetch the artifact from
 	Image string `json:"image,omitempty"`
-	// Where to mount the fetched content (defaults to "oci" directory in the data volume)
+	// where to mount the fetched content (defaults to \"repo\" directory in the data volume)
 	MountPath string `json:"mountPath,omitempty"`
-	// Path to extract the artifact content to (relative to mount path)
+	// path to extract the artifact content to (relative to mount path)
 	Path string `json:"path,omitempty"`
-	// Registry username
-	Username     string        `json:"username,omitempty"`
+	// registry username
+	Username string `json:"username,omitempty"`
 	UsernameFrom *EnvVarSource `json:"usernameFrom,omitempty"`
-	// Registry token
-	Token     string        `json:"token,omitempty"`
+	// registry token
+	Token string `json:"token,omitempty"`
 	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
-	// Registry address
+	// registry address
 	Registry string `json:"registry,omitempty"`
 }

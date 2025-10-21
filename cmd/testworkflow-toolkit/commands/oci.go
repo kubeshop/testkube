@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -16,13 +15,6 @@ import (
 	"github.com/regclient/regclient/types/manifest"
 	"github.com/regclient/regclient/types/ref"
 	"github.com/spf13/cobra"
-)
-
-const (
-	// OciRetryOnFailureMaxAttempts defines maximum retry attempts for OCI operations
-	OciRetryOnFailureMaxAttempts = 5
-	// OciRetryOnFailureBaseDelay defines base delay between retries
-	OciRetryOnFailureBaseDelay = 100 * time.Millisecond
 )
 
 // OciOptions encapsulates all options for the OCI command
