@@ -55,9 +55,9 @@ type ContentTarball struct {
 }
 
 type ContentOci struct {
-	// OCI image reference (e.g., registry.example.com/org/repo:tag)
+	// OCI image reference to fetch the artifact from
 	Image string `json:"image,omitempty" expr:"template"`
-	// where to mount the fetched content (defaults to "oci" directory in the data volume)
+	// where to mount the fetched content (defaults to "repo" directory in the data volume)
 	MountPath string `json:"mountPath,omitempty" expr:"template"`
 	// path to extract the artifact content to (relative to mount path)
 	Path string `json:"path,omitempty" expr:"template"`
