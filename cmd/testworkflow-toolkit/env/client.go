@@ -232,7 +232,7 @@ func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
 		// TODO(dejan): now metrics are scrapped on each workflow exetucution and we get an error when connecting to Control Plane even with publicly trusted certificates.
 		// Until a better solution is implemented, TLS verification will be skipped.
 		cfg.SkipVerify = true
-		cloudConn, err = agentclient.NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", logger, false, agentclient.IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis)
+		cloudConn, err = agentclient.NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(context.Background(), cfg.TlsInsecure, cfg.Url, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect with Cloud: %w", err)
 		}
