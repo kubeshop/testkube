@@ -22,18 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-type yesIReallyDoWantToUseAnInsecureConnectionOption int
-
-const (
-	defaultSecure yesIReallyDoWantToUseAnInsecureConnectionOption = iota
-	// IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis
-	// means what it says because apparently calling a variable `InsecureSkipVerify` with a doc comment that states:
-	// 		In this mode, TLS is susceptible to machine-in-the-middle attacks unless custom verification is used.
-	// 		This should be used only for testing or in combination with VerifyConnection or VerifyPeerCertificate.
-	// still isn't enough to make people pay attention to connection security. So here we are.
-	IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis
-)
-
 const (
 	connectionTimeout          = 10 * time.Second
 	apiKeyMeta                 = "api-key"
@@ -54,6 +42,25 @@ const (
 	GRPCKeepaliveTimeout             = GRPCKeepaliveTime / 2
 	GRPCKeepalivePermitWithoutStream = true
 )
+
+// Build dial options
+var dialOpts = []grpc.DialOption{
+	grpc.WithUserAgent(version.Version + "/" + version.Commit),
+	grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		Time:                GRPCKeepaliveTime,
+		Timeout:             GRPCKeepaliveTimeout,
+		PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
+	}),
+	grpc.WithConnectParams(grpc.ConnectParams{
+		Backoff: backoff.Config{
+			BaseDelay:  backoffDelay,
+			Multiplier: backoffMultiplier,
+			Jitter:     backoffJitter,
+			MaxDelay:   backoffMaxDelay,
+		},
+		MinConnectTimeout: connectionTimeout,
+	}),
+}
 
 // NewGRPCConnection keeps backward compatibility, tracing disabled by default.
 func NewGRPCConnection(
@@ -77,43 +84,16 @@ func NewGRPCConnectionWithTracing(
 	logger *zap.SugaredLogger,
 	enableTracing bool,
 ) (*grpc.ClientConn, error) {
-	return NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(ctx, isInsecure, skipVerify, server, caFile, logger, enableTracing, defaultSecure)
-}
-
-func NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(
-	ctx context.Context,
-	isInsecure bool,
-	skipVerify bool,
-	server string,
-	caFile string,
-	logger *zap.SugaredLogger,
-	enableTracing bool,
-	doNotWarnMeAboutInsecureConnections yesIReallyDoWantToUseAnInsecureConnectionOption,
-) (*grpc.ClientConn, error) {
 	// Build dial options
-	opts := []grpc.DialOption{
-		grpc.WithUserAgent(version.Version + "/" + version.Commit),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                GRPCKeepaliveTime,
-			Timeout:             GRPCKeepaliveTimeout,
-			PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
-		}),
-		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff: backoff.Config{
-				BaseDelay:  backoffDelay,
-				Multiplier: backoffMultiplier,
-				Jitter:     backoffJitter,
-				MaxDelay:   backoffMaxDelay,
-			},
-			MinConnectTimeout: connectionTimeout,
-		}),
+	opts := append(dialOpts,
 		grpc.WithChainStreamInterceptor(
 			grpczap.StreamClientInterceptor(logger.Desugar()),
 		),
 		grpc.WithChainUnaryInterceptor(
 			grpczap.UnaryClientInterceptor(logger.Desugar()),
 		),
-	}
+	)
+
 	// Conditionally add OpenTelemetry (non-deprecated) stats handler
 	if enableTracing {
 		opts = append(opts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
@@ -177,9 +157,7 @@ func NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(
 		client, err = attemptConnection(ctx, server, skipVerifyDialOptions...)
 		// WARNING, checking for no error to early return with an insecure (MitM is possible with skip verify) client before descending further into madness.
 		if err == nil {
-			if doNotWarnMeAboutInsecureConnections != IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis {
-				logger.Error("Using TLS with no certificate verification for gRPC connection")
-			}
+			logger.Error("Using TLS with no certificate verification for gRPC connection")
 			return client, nil
 		}
 	}
@@ -188,9 +166,7 @@ func NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(
 		client, err = attemptConnection(ctx, server, insecureDialOptions...)
 		// WARNING, checking for no error to early return with an insecure client, this is madness.
 		if err == nil {
-			if doNotWarnMeAboutInsecureConnections != IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis {
-				logger.Error("Using insecure gRPC connection")
-			}
+			logger.Error("Using insecure gRPC connection")
 			return client, nil
 		}
 	}
@@ -236,4 +212,41 @@ func AddMetadata(ctx context.Context, apiKey, orgID, envID, agentID string) cont
 		agentIdMetadataName, agentID,
 	)
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+// NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing
+// creates an insecure gRPC connection to a server. By default it will create a TLS connection
+// that will perform no certificate verification, whilst this probably looks kind of like
+// a TLS connection it actually provides no security whatsoever.
+// Optionally you can choose to make your gRPC connection even less secure by setting the
+// isInsecure flag to true. In this mode the gRPC connection won't even have an unverified
+// TLS configuration and all communication will be in the clear.
+// DO NOT USE THIS FUNCTION!
+func NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(
+	ctx context.Context,
+	isInsecure bool,
+	server string,
+	logger *zap.SugaredLogger,
+) (*grpc.ClientConn, error) {
+	// Build dial options
+	opts := append(dialOpts,
+		grpc.WithChainStreamInterceptor(
+			grpczap.StreamClientInterceptor(logger.Desugar()),
+		),
+		grpc.WithChainUnaryInterceptor(
+			grpczap.UnaryClientInterceptor(logger.Desugar()),
+		),
+	)
+
+	creds := credentials.NewTLS(&tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: true,
+	})
+	if isInsecure {
+		creds = insecure.NewCredentials()
+	}
+
+	insecureDialOptions := append(opts, grpc.WithTransportCredentials(creds))
+
+	return attemptConnection(ctx, server, insecureDialOptions...)
 }
