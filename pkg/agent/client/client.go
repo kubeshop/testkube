@@ -22,6 +22,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
+type yesIReallyDoWantToUseAnInsecureConnectionOption int
+
+const (
+	defaultSecure yesIReallyDoWantToUseAnInsecureConnectionOption = iota
+	// IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis
+	// means what it says because apparently calling a variable `InsecureSkipVerify` with a doc comment that states:
+	// 		In this mode, TLS is susceptible to machine-in-the-middle attacks unless custom verification is used.
+	// 		This should be used only for testing or in combination with VerifyConnection or VerifyPeerCertificate.
+	// still isn't enough to make people pay attention to connection security. So here we are.
+	IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis
+)
+
 const (
 	connectionTimeout          = 10 * time.Second
 	apiKeyMeta                 = "api-key"
@@ -64,6 +76,19 @@ func NewGRPCConnectionWithTracing(
 	caFile string,
 	logger *zap.SugaredLogger,
 	enableTracing bool,
+) (*grpc.ClientConn, error) {
+	return NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(ctx, isInsecure, skipVerify, server, caFile, logger, enableTracing, defaultSecure)
+}
+
+func NewGRPCConnectionWithTracingAndVeryInsecureClientOperationOption(
+	ctx context.Context,
+	isInsecure bool,
+	skipVerify bool,
+	server string,
+	caFile string,
+	logger *zap.SugaredLogger,
+	enableTracing bool,
+	doNotWarnMeAboutInsecureConnections yesIReallyDoWantToUseAnInsecureConnectionOption,
 ) (*grpc.ClientConn, error) {
 	// Build dial options
 	opts := []grpc.DialOption{
@@ -152,7 +177,9 @@ func NewGRPCConnectionWithTracing(
 		client, err = attemptConnection(ctx, server, skipVerifyDialOptions...)
 		// WARNING, checking for no error to early return with an insecure (MitM is possible with skip verify) client before descending further into madness.
 		if err == nil {
-			logger.Error("Using TLS with no certificate verification for gRPC connection")
+			if doNotWarnMeAboutInsecureConnections != IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis {
+				logger.Error("Using TLS with no certificate verification for gRPC connection")
+			}
 			return client, nil
 		}
 	}
@@ -161,7 +188,9 @@ func NewGRPCConnectionWithTracing(
 		client, err = attemptConnection(ctx, server, insecureDialOptions...)
 		// WARNING, checking for no error to early return with an insecure client, this is madness.
 		if err == nil {
-			logger.Error("Using insecure gRPC connection")
+			if doNotWarnMeAboutInsecureConnections != IHaveFullyReadUpOnTheConsequencesOfEnablingAnInsecureGRPCConnectionAndTripleCheckedThatIReallyDefinitelyWantToDoThis {
+				logger.Error("Using insecure gRPC connection")
+			}
 			return client, nil
 		}
 	}
