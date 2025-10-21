@@ -28,6 +28,17 @@ RUN adduser -D -s /bin/sh -u 1001 mcpuser
 
 # Copy the binary
 COPY --from=build /app/kubectl-testkube /bin/kubectl-testkube
+
+# MCP Registry validation labels
+LABEL io.modelcontextprotocol.server.name="io.github.kubeshop/testkube-mcp"
+LABEL io.github.kubeshop.testkube-mcp.name="testkube-mcp"
+LABEL org.opencontainers.image.title="Testkube MCP Server"
+LABEL org.opencontainers.image.description="Model Context Protocol server for Testkube - Execute and analyze test workflows via AI assistants"
+LABEL org.opencontainers.image.url="https://github.com/kubeshop/testkube"
+LABEL org.opencontainers.image.source="https://github.com/kubeshop/testkube"
+LABEL org.opencontainers.image.vendor="Kubeshop"
+LABEL org.opencontainers.image.licenses="MIT"
+
 RUN chmod +x /bin/kubectl-testkube
 
 # Create symbolic links for convenience
