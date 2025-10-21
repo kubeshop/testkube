@@ -245,6 +245,7 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 			OrganizationId:  e.organizationId,
 			EnvironmentId:   environmentId,
 			ParentIds:       parentIds,
+			RunningContext:  execution.RunningContext,
 		},
 		Secrets:      secrets,
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),

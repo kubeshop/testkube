@@ -396,7 +396,7 @@ func NewExecuteCmd() *cobra.Command {
 
 			// Initialize internal machine
 			credMachine := credentials.NewCredentialMachine(data.Credentials())
-			baseMachine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), credMachine)
+			baseMachine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), data.ExecutionMachine(), credMachine)
 
 			// Initialize transfer server
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)

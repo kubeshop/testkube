@@ -307,6 +307,7 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		EnvironmentId:    environmentId,
 		EnvironmentSlug:  environmentSlug,
 		ParentIds:        strings.Join(parentExecutionIds, "/"),
+		RunningContext:   e.execution.RunningContext,
 	})
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
 		Id:     e.execution.Id,
