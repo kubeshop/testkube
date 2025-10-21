@@ -26,7 +26,6 @@ var _ testworkflow.Repository = (*MongoRepository)(nil)
 const (
 	CollectionName       = "testworkflowresults"
 	configParamSizeLimit = 100
-	MaxExecutionTagsDocs = 30000
 )
 
 var (
@@ -845,35 +844,18 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
-	// Build initial match to filter by workflow name if provided
-	initialMatch := bson.M{}
+	query := bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}
 	if testWorkflowName != "" {
-		initialMatch["workflow.name"] = testWorkflowName
+		query["workflow.name"] = testWorkflowName
 	}
 
-	pipeline := []bson.M{}
-
-	// Apply workflow filter first if specified
-	if len(initialMatch) > 0 {
-		pipeline = append(pipeline, bson.M{"$match": initialMatch})
+	pipeline := []bson.M{
+		{"$match": query},
+		{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
+		{"$unwind": "$tags"},
+		{"$group": bson.M{"_id": "$tags.k", "values": bson.M{"$addToSet": "$tags.v"}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id", "values": 1}},
 	}
-
-	// Sort by scheduledAt descending to get most recent executions
-	pipeline = append(pipeline, bson.M{"$sort": bson.M{"scheduledAt": -1}})
-
-	// Limit to last 30k executions to avoid scanning millions of documents
-	pipeline = append(pipeline, bson.M{"$limit": MaxExecutionTagsDocs})
-
-	// Filter out documents without tags
-	pipeline = append(pipeline, bson.M{"$match": bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}})
-
-	// Extract and aggregate tags
-	pipeline = append(pipeline,
-		bson.M{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
-		bson.M{"$unwind": "$tags"},
-		bson.M{"$group": bson.M{"_id": "$tags.k", "values": bson.M{"$addToSet": "$tags.v"}}},
-		bson.M{"$project": bson.M{"_id": 0, "name": "$_id", "values": 1}},
-	)
 
 	opts := options.Aggregate()
 	if r.allowDiskUse {
