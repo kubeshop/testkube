@@ -16,8 +16,12 @@ func GetBaseTestWorkflowMachine() expressions.Machine {
 		wd = "/"
 	}
 	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
-	state := GetState() // load state
+	GetState() // load state
+	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
+}
+
+func ExecutionMachine() expressions.Machine {
+	state := GetState()
 	executionCfg := state.InternalConfig.Execution
-	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionCfg)
-	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine, executionMachine)
+	return testworkflowconfig.CreateExecutionMachine(&executionCfg)
 }
