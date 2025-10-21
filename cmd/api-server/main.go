@@ -924,14 +924,6 @@ func main() {
 		return httpServer.Run(ctx)
 	})
 
-	if deprecatedSystem != nil {
-		if deprecatedSystem.Reconciler != nil {
-			g.Go(func() error {
-				return deprecatedSystem.Reconciler.Run(ctx)
-			})
-		}
-	}
-
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
