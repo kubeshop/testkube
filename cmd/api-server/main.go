@@ -432,21 +432,18 @@ func main() {
 		g.Go(func() error {
 			// Check if the new client is supported by the control plane.
 			// If not then just start up the existing implementation.
-			// Here we are using a context with a timeout because the client and/or server may not have TLS implemented as it was
-			// not previously enforced, however it is required with the new client implementation to secure authentication tokens.
+			// Here we are not using capabilities because the client and/or server may not have TLS implemented as it was not previously
+			// enforced, however it is required with the new client implementation to secure authentication tokens.
 			// gRPC does not provide a specific error for an attempt to transmit credentials over an unencrypted connection so to
-			// prevent the fallback to the previous insecure behaviour we must instead wait to see whether connectivity can be
+			// prevent the fallback to the previous insecure behaviour we must instead check to see whether connectivity can be
 			// established. The repercussions of this is that the agent will eagerly fallback to the insecure and legacy behaviour
 			// and so bringing up an agent before networking with the Control Plane has been established, or during a Control Plane
 			// outage will cause a fallback to the previous behaviour.
-			// This timeout should be removed once TLS is enforced across deployments.
-			supportedCtx, cancel := context.WithTimeout(ctx, time.Minute)
-			if !runnerClient.IsSupported(supportedCtx, proContext.EnvID) {
-				cancel()
+			// This check should be removed once TLS is enforced across deployments.
+			if !runnerClient.IsSupported(ctx, proContext.EnvID) {
 				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
 				return runnerService.Start(ctx, proContext.NewArchitecture)
 			}
-			cancel()
 			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
 			// If the client is supported then start both services/clients.
 			var eg errgroup.Group
