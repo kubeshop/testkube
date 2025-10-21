@@ -6,11 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
@@ -35,10 +31,6 @@ func NewUpdateCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		}}
 
-	cmd.AddCommand(tests.NewUpdateTestsCmd())
-	cmd.AddCommand(testsuites.UpdateTestSuitesCmd())
-	cmd.AddCommand(testsources.UpdateTestSourceCmd())
-	cmd.AddCommand(executors.UpdateExecutorCmd())
 	cmd.AddCommand(webhooks.UpdateWebhookCmd())
 	cmd.AddCommand(webhooktemplates.UpdateWebhookTemplateCmd())
 	cmd.AddCommand(templates.UpdateTemplateCmd())

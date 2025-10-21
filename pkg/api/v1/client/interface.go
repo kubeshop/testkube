@@ -12,9 +12,7 @@ import (
 type Client interface {
 	TestAPI
 	ExecutionAPI
-	TestSuiteAPI
 	TestSuiteExecutionAPI
-	ExecutorAPI
 	WebhookAPI
 	WebhookTemplateAPI
 	ServiceAPI
@@ -31,63 +29,21 @@ type Client interface {
 
 // TestAPI describes test api methods
 type TestAPI interface {
-	GetTest(id string) (test testkube.Test, err error)
 	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
-	CreateTest(options UpsertTestOptions) (test testkube.Test, err error)
-	UpdateTest(options UpdateTestOptions) (test testkube.Test, err error)
-	DeleteTest(name string) error
-	DeleteTests(selector string) error
-	ListTests(selector string) (tests testkube.Tests, err error)
-	ListTestWithExecutionSummaries(selector string) (tests testkube.TestWithExecutionSummaries, err error)
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
-	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
-	Logs(id string) (logs chan output.Output, err error)
-	LogsV2(id string) (logs chan events.Log, err error)
 }
 
 // ExecutionAPI describes execution api methods
 type ExecutionAPI interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
-	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
-	AbortExecution(test string, id string) error
-	AbortExecutions(test string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
-	DownloadArchive(executionID, destination string, masks []string) (archive string, err error)
-}
-
-// TestSuiteAPI describes test suite api methods
-type TestSuiteAPI interface {
-	CreateTestSuite(options UpsertTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	UpdateTestSuite(options UpdateTestSuiteOptions) (testSuite testkube.TestSuite, err error)
-	GetTestSuite(id string) (testSuite testkube.TestSuite, err error)
-	GetTestSuiteWithExecution(id string) (testSuite testkube.TestSuiteWithExecution, err error)
-	ListTestSuites(selector string) (testSuites testkube.TestSuites, err error)
-	ListTestSuiteWithExecutionSummaries(selector string) (testSuitesWithExecutionSummaries testkube.TestSuiteWithExecutionSummaries, err error)
-	DeleteTestSuite(name string) error
-	DeleteTestSuites(selector string) error
-	ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (executions testkube.TestSuiteExecution, err error)
-	ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error)
 }
 
 // TestSuiteExecutionAPI describes test suite execution api methods
 type TestSuiteExecutionAPI interface {
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
-	WatchTestSuiteExecution(executionID string) (resp chan testkube.WatchTestSuiteExecutionResponse)
-	AbortTestSuiteExecution(executionID string) error
-	AbortTestSuiteExecutions(testSuiteName string) error
 	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
-}
-
-// ExecutorAPI describes executor api methods
-type ExecutorAPI interface {
-	CreateExecutor(options UpsertExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	UpdateExecutor(options UpdateExecutorOptions) (executor testkube.ExecutorDetails, err error)
-	GetExecutor(name string) (executor testkube.ExecutorDetails, err error)
-	ListExecutors(selector string) (executors testkube.ExecutorsDetails, err error)
-	DeleteExecutor(name string) (err error)
-	DeleteExecutors(selector string) (err error)
 }
 
 // WebhookAPI describes webhook api methods
@@ -206,27 +162,9 @@ type CopyFileAPI interface {
 	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
 }
 
-// TODO consider replacing below types by testkube.*
-
-// UpsertTestSuiteOptions - mapping to OpenAPI schema for creating testsuite
-type UpsertTestSuiteOptions testkube.TestSuiteUpsertRequest
-
-// UpdateTestSuiteOptions - mapping to OpenAPI schema for changing testsuite
-type UpdateTestSuiteOptions testkube.TestSuiteUpdateRequest
-
 // UpsertTestOptions - is mapping for now to OpenAPI schema for creating test
 // if needed can be extended to custom struct
 type UpsertTestOptions testkube.TestUpsertRequest
-
-// UpdateTestOptions - is mapping for now to OpenAPI schema for changing test
-// if needed can be extended to custom struct
-type UpdateTestOptions testkube.TestUpdateRequest
-
-// UpsertExecutorOptions - is mapping for now to OpenAPI schema for creating executor request
-type UpsertExecutorOptions testkube.ExecutorUpsertRequest
-
-// UpdateExecutorOptions - is mapping for now to OpenAPI schema for changing executor request
-type UpdateExecutorOptions testkube.ExecutorUpdateRequest
 
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
