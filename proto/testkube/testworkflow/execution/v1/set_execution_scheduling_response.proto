@@ -2,7 +2,7 @@ edition = "2023";
 
 package testkube.testworkflow.execution.v1;
 
-// GetExecutionUpdatesRequest is currently empty but remains reserved for future usage
+// SetExecutionSchedulingResponse is currently empty but remains reserved for future usage
 // without breaking backwards proto compatibility.
 // https://buf.build/docs/best-practices/style-guide/#rpc-use-empty
 message SetExecutionSchedulingResponse {}

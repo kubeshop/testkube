@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -32,6 +33,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -62,6 +64,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -92,6 +95,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:
@@ -117,47 +121,13 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke-cron-trigger-test
-  labels:
-    core-tests: workflows
-    tool: postman
-spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/postman/postman-executor-smoke.postman_collection.json
-  container:
-    resources:
-      requests:
-        cpu: 256m
-        memory: 128Mi
-    workingDir: /data/repo/test/postman
-  job:
-    activeDeadlineSeconds:  180
-  steps:
-  - name: Run test
-    run:
-      image: postman/newman:6-alpine
-      args:
-      - run
-      - postman-executor-smoke.postman_collection.json
-      - "--env-var"
-      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
-  events:
-  - cronjob:
-      cron: "*/5 * * * *"
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
   name: postman-workflow-smoke-junit
   labels:
     core-tests: workflows
     tool: postman
     artifacts: "true"
     junit: "true"
+    category: api-testing
 spec:
   content:
     git:
@@ -188,6 +158,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    category: api-testing
 spec:
   content:
     git:

@@ -7,6 +7,7 @@ metadata:
     tool: nunit
     artifacts: "true"
     junit: "true"
+    category: unit-component-testing
 spec:
   content:
     git:

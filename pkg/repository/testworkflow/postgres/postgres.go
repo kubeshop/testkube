@@ -26,6 +26,7 @@ var _ testworkflow.Repository = (*PostgresRepository)(nil)
 
 const (
 	configParamSizeLimit = 100
+	MaxExecutionTagsDocs = 30000
 )
 
 type PostgresRepository struct {

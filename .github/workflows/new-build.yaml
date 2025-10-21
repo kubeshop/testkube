@@ -1,14 +1,14 @@
-name: New Docker images builds for API; tk-init and tk-toolkit services
+name: Build
 on:
   push:
     tags:
-      - '[0-9].[0-9]+.[0-9]+'
-      - '[0-9].[0-9]+.[0-9]+-preview.[0-9]+'
-      - '[0-9].[0-9]+.[0-9]+-rc.[0-9]+'
-      - '[0-9].[0-9]+.[0-9]+-dev.[0-9]+'
-      - '[0-9].[0-9]+.[0-9]+-beta.[0-9]+'
+      - "[0-9].[0-9]+.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-preview.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-rc.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-dev.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-beta.[0-9]+"
     branches:
-      - main
+      - "*"
 env:
   ALPINE_IMAGE: alpine:3.20.6
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -48,7 +48,7 @@ jobs:
         id: api-meta
         uses: docker/metadata-action@v5
         with:
-          bake-target: 'api-meta'
+          bake-target: "api-meta"
           images: |
             kubeshop/testkube-api-server
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/api-server
@@ -60,7 +60,7 @@ jobs:
         id: cli-meta
         uses: docker/metadata-action@v5
         with:
-          bake-target: 'cli-meta'
+          bake-target: "cli-meta"
           images: |
             kubeshop/testkube-cli
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/cli
@@ -72,7 +72,7 @@ jobs:
         id: tw-init
         uses: docker/metadata-action@v5
         with:
-          bake-target: 'tw-init'
+          bake-target: "tw-init"
           images: |
             kubeshop/testkube-tw-init
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-init
@@ -84,10 +84,21 @@ jobs:
         id: tw-toolkit
         uses: docker/metadata-action@v5
         with:
-          bake-target: 'tw-toolkit'
+          bake-target: "tw-toolkit"
           images: |
             kubeshop/testkube-tw-toolkit
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-toolkit
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=
+
+      - name: Create Docker tags and metadata for mcp-server
+        id: mcp-meta
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: "mcp-server-meta"
+          images: |
+            kubeshop/testkube-mcp-server
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
@@ -101,7 +112,8 @@ jobs:
             ${{ steps.tw-toolkit.outputs.bake-file }}
             ${{ steps.tw-init.outputs.bake-file }}
             ${{ steps.cli-meta.outputs.bake-file }}
-          targets: api,tw-toolkit,tw-init
+            ${{ steps.mcp-meta.outputs.bake-file }}
+          targets: api,tw-toolkit,tw-init,mcp-server,cli
           provenance: mode=max
           sbom: true
           # Only tags are pushed, pushes to branches test whether app can be built.
@@ -160,9 +172,9 @@ jobs:
         run: |
           REGISTRY=registry-1.docker.io
           REGISTRY_GAR=${{ env.GAR_LOCATION }}-docker.pkg.dev
-          
+
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login ${REGISTRY} --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-          
+
           # testkube chart
           helm dependency build k8s/helm/testkube
           helm package k8s/helm/testkube

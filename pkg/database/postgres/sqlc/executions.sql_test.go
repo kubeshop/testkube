@@ -1028,7 +1028,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionTags(t *testin
 	ctx := context.Background()
 
 	expectedQuery := `WITH tag_extracts AS \(
-SELECT 
+    SELECT 
         e.id,
         w.name as workflow_name,
         tag_pair.key as tag_key,
