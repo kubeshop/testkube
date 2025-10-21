@@ -16,7 +16,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -531,7 +530,7 @@ func handleWatchMode(
 		ec := uiWatch(*execution, pServiceName, opts.ServiceIndex, pParallelStepName, opts.ParallelStepIndex, client)
 		ui.NL()
 		if opts.DownloadOptions.Enabled {
-			tests.DownloadTestWorkflowArtifacts(execution.Id, opts.DownloadOptions.Dir,
+			common.DownloadTestWorkflowArtifacts(execution.Id, opts.DownloadOptions.Dir,
 				opts.DownloadOptions.Format, opts.DownloadOptions.Masks, client, outputPretty)
 		}
 		return ec
@@ -549,7 +548,7 @@ func handleWatchMode(
 			ec := uiWatch(*exec, pServiceName, opts.ServiceIndex, pParallelStepName, opts.ParallelStepIndex, client, options...)
 			ui.NL()
 			if opts.DownloadOptions.Enabled {
-				tests.DownloadTestWorkflowArtifacts(exec.Id, opts.DownloadOptions.Dir,
+				common.DownloadTestWorkflowArtifacts(exec.Id, opts.DownloadOptions.Dir,
 					opts.DownloadOptions.Format, opts.DownloadOptions.Masks, client, outputPretty)
 			}
 

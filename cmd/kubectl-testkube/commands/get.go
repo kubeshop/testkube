@@ -8,11 +8,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/context"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
@@ -42,15 +38,9 @@ func NewGetCmd() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(tests.NewGetTestsCmd())
-	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
 	cmd.AddCommand(webhooks.NewGetWebhookCmd())
 	cmd.AddCommand(webhooktemplates.NewGetWebhookTemplateCmd())
-	cmd.AddCommand(executors.NewGetExecutorCmd())
-	cmd.AddCommand(tests.NewGetExecutionCmd())
 	cmd.AddCommand(artifacts.NewListArtifactsCmd())
-	cmd.AddCommand(testsuites.NewTestSuiteExecutionCmd())
-	cmd.AddCommand(testsources.NewGetTestSourceCmd())
 	cmd.AddCommand(context.NewGetContextCmd())
 	cmd.AddCommand(templates.NewGetTemplateCmd())
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowsCmd())
