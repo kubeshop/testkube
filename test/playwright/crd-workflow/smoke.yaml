@@ -17,7 +17,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.53.2
+    image: mcr.microsoft.com/playwright:v1.56.1
     resources:
       requests:
         cpu: 1500m
@@ -70,14 +70,14 @@ spec:
   steps:
   - name: Install dependencies
     run:
-      image: mcr.microsoft.com/playwright:v1.53.2 # image on step level
+      image: mcr.microsoft.com/playwright:v1.56.1 # image on step level
       command:
       - npm
       args:
       - ci
   - name: Run tests
     run:
-      image: mcr.microsoft.com/playwright:v1.53.2
+      image: mcr.microsoft.com/playwright:v1.56.1
       command:
         - "npx"
       args:
@@ -125,7 +125,7 @@ spec:
       name: official/playwright/v1
       config:
         # params: --workers 4
-        version: v1.53.2
+        version: v1.56.1
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -144,7 +144,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.53.2
+    image: mcr.microsoft.com/playwright:v1.56.1
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -192,7 +192,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.53.2
+    image: mcr.microsoft.com/playwright:v1.56.1
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
