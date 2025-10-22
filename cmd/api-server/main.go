@@ -864,23 +864,11 @@ func main() {
 		})
 	}
 
-	var executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
-	var executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
-	if deprecatedSystem != nil && deprecatedSystem.Scheduler != nil {
-		executeTestFn = deprecatedSystem.Scheduler.ExecuteTest
-		executeTestSuiteFn = deprecatedSystem.Scheduler.ExecuteTestSuite
-	}
-
 	scheduler := commons.CreateCronJobScheduler(cfg,
-		kubeClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
-		deprecatedClients,
-		executeTestFn,
-		executeTestSuiteFn,
 		log.DefaultLogger,
-		kubeConfig,
 		&proContext,
 	)
 	if scheduler != nil {

@@ -52,20 +52,6 @@ func (mr *MockInterfaceMockRecorder) Reconcile(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockInterface)(nil).Reconcile), ctx)
 }
 
-// ReconcileTestSuites mocks base method.
-func (m *MockInterface) ReconcileTestSuites(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileTestSuites", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReconcileTestSuites indicates an expected call of ReconcileTestSuites.
-func (mr *MockInterfaceMockRecorder) ReconcileTestSuites(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileTestSuites", reflect.TypeOf((*MockInterface)(nil).ReconcileTestSuites), ctx)
-}
-
 // ReconcileTestWorkflowTemplates mocks base method.
 func (m *MockInterface) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -92,18 +78,4 @@ func (m *MockInterface) ReconcileTestWorkflows(ctx context.Context) error {
 func (mr *MockInterfaceMockRecorder) ReconcileTestWorkflows(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileTestWorkflows", reflect.TypeOf((*MockInterface)(nil).ReconcileTestWorkflows), ctx)
-}
-
-// ReconcileTests mocks base method.
-func (m *MockInterface) ReconcileTests(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileTests", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReconcileTests indicates an expected call of ReconcileTests.
-func (mr *MockInterfaceMockRecorder) ReconcileTests(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileTests", reflect.TypeOf((*MockInterface)(nil).ReconcileTests), ctx)
 }
