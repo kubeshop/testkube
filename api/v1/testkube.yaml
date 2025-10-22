@@ -10002,6 +10002,8 @@ components:
       properties:
         git:
           $ref: "#/components/schemas/TestWorkflowContentGit"
+        oci:
+          $ref: "#/components/schemas/TestWorkflowContentOCI"
         files:
           type: array
           items:
@@ -10048,6 +10050,32 @@ components:
           description: paths to fetch for the sparse checkout
           items:
             type: string
+    
+    TestWorkflowContentOCI:
+      type: object
+      properties:
+        image:
+          type: string
+          description: OCI image reference to fetch the artifact from
+        mountPath:
+          type: string
+          description: where to mount the fetched content (defaults to "repo" directory in the data volume)
+        path:
+          type: string
+          description: path to extract the artifact content to (relative to mount path)
+        username:
+          type: string
+          description: registry username
+        usernameFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        token:
+          type: string
+          description: registry token
+        tokenFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        registry:
+          type: string
+          description: registry address
 
     TestWorkflowContentFile:
       type: object

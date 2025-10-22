@@ -318,11 +318,24 @@ func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkf
 	}
 }
 
+func MapContentOciAPIToKube(v testkube.TestWorkflowContentOci) testworkflowsv1.ContentOci {
+	return testworkflowsv1.ContentOci{
+		Image:        v.Image,
+		MountPath:    v.MountPath,
+		Username:     v.Username,
+		UsernameFrom: common.MapPtr(v.UsernameFrom, MapEnvVarSourceAPIToKube),
+		Token:        v.Token,
+		TokenFrom:    common.MapPtr(v.TokenFrom, MapEnvVarSourceAPIToKube),
+		Registry:     v.Registry,
+	}
+}
+
 func MapContentAPIToKube(v testkube.TestWorkflowContent) testworkflowsv1.Content {
 	return testworkflowsv1.Content{
 		Git:     common.MapPtr(v.Git, MapContentGitAPIToKube),
 		Files:   common.MapSlice(v.Files, MapContentFileAPIToKube),
 		Tarball: common.MapSlice(v.Tarball, MapContentTarballAPIToKube),
+		Oci:     common.MapPtr(v.Oci, MapContentOciAPIToKube),
 	}
 }
 
