@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -156,7 +157,6 @@ func main() {
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
-	// TODO(emil): what is this lazy emitter for?
 	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
@@ -210,27 +210,23 @@ func main() {
 	}
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
-	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
+	// Agents should be able to make an initial registration with their
+	// registration token and subsequent registrations with their API key to
+	// enable them to update their set of capabilities.
+	// To transition super agents to the new capabilities based registration,
+	// the charts have been changed to set the old super agent API key value as
+	// their registration token and registration has been enabled with the use
+	// of the API key. After intial self registration the super agent will be
+	// able to use the API key in the generated secret to reregister.
+	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 		runnerName := cfg.RunnerName
 		if runnerName == "" {
 			// Fallback to a set name, but this is unlikely to be unique.
+			// Note, that the runner name for a super agent will be overriden
+			// on the backend to make sure it is unique within the org.
 			runnerName = cfg.APIServerFullname
 		}
 		log.DefaultLogger.Infow("registering runner", "runner_name", runnerName)
-
-		// Check for required fields.
-		if cfg.TestkubeProOrgID == "" {
-			log.DefaultLogger.Fatalw("cannot register runner without org id", "error", "org id must be set to register a runner")
-		}
-		if cfg.SelfRegistrationSecret == "" {
-			log.DefaultLogger.Fatalw("cannot register runner without self registration secret", "error", "self registration secret must be set to register a runner")
-		}
-		// If not configured to store secrets then registering the runner could cause severe issues such as
-		// the runner registering on every restart creating new runner IDs in the Control Plane.
-		if !cfg.EnableSecretsEndpoint || cfg.DisableSecretCreation {
-			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
-		}
 
 		// Build capabilities based on enabled features
 		capabilities := []cloud.AgentCapability{}
@@ -242,14 +238,22 @@ func main() {
 		}
 		if !cfg.DisableWebhooks {
 			if cfg.EnableCloudWebhooks {
+				// The presence of an agent with this capability within an
+				// environment toggles Webhooks for the environment from
+				// being emitted by the agent to being emitted by the
+				// control plane.
 				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_CLOUD_WEBHOOKS)
 			} else {
 				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
 			}
 		}
 
+		registrationToken := cfg.TestkubeProAgentRegToken
+		if cfg.TestkubeProAPIKey != "" {
+			registrationToken = cfg.TestkubeProAPIKey
+		}
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
-			RegistrationToken: cfg.TestkubeProAgentRegToken,
+			RegistrationToken: registrationToken,
 			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
@@ -258,18 +262,39 @@ func main() {
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
 		}
+		log.DefaultLogger.Infow("registered runner", "runner_name", runnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
 
 		// Add the new values to the current configuration.
 		cfg.TestkubeProAPIKey = res.RunnerKey
 		cfg.TestkubeProAgentID = res.RunnerId
+		cfg.TestkubeProOrgID = res.OrganizationId
 
 		// Attempt to store the values in a Kubernetes secret for consumption next startup.
-		if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
-			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
-			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
-		}, secretmanager.CreateOptions{}); err != nil {
-			log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
-			log.DefaultLogger.Warn("runner will re-register on restart")
+		if cfg.SelfRegistrationSecret == "" {
+			log.DefaultLogger.Warnw("unable to save api key from registration with the self registration secret unspecified, will reuse registration token for subsequent deployments")
+		} else if cfg.DisableSecretCreation {
+			log.DefaultLogger.Warnw("unable to save api key from registration with secrets disabled, will reuse registration token for subsequent deployments")
+		} else {
+			// Create or update the existing secret
+			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret)
+			secretData := map[string]string{
+				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
+				"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
+				"TESTKUBE_PRO_ORG_ID":   res.OrganizationId,
+			}
+			if errors.Is(err, secretmanager.ErrNotFound) {
+				if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.CreateOptions{Bypass: true}); err != nil {
+					log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
+				} else {
+					log.DefaultLogger.Infow("saved registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+				}
+			} else {
+				if _, err := secretManager.Update(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.UpdateOptions{Bypass: true}); err != nil {
+					log.DefaultLogger.Errorw("error updating self-register runner secret", "error", err.Error())
+				} else {
+					log.DefaultLogger.Infow("updated registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+				}
+			}
 		}
 	}
 

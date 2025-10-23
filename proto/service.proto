@@ -386,6 +386,7 @@ message RegisterRequest {
 message RegisterResponse {
   string runner_id = 1;
   string runner_key = 2;
+  string organization_id = 3;
 }
 
 enum RunnerRequestType {
