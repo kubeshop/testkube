@@ -71,7 +71,7 @@ func CreateDeprecatedSystem(
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
 
 	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, cfg.TestkubeProAPIKey)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, proContext)
 
 	defaultExecutors, images, err := commons.ReadDefaultExecutors(cfg)
 	commons.ExitOnError("Parsing default executors", err)
