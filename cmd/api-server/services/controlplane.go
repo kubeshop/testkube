@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
+	database "github.com/kubeshop/testkube/pkg/database/postgres"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -107,7 +108,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		Verbose:                          false,
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, enqueuer, scheduler, executionController, executionQuerier, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+	}, enqueuer, scheduler, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
@@ -141,8 +142,14 @@ func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Datab
 }
 
 func CreatePostgresFactory(db *pgxpool.Pool) (repository.RepositoryFactory, error) {
+	schedulerDb, err := database.NewForScheduler(db)
+	if err != nil {
+		return nil, err
+	}
+
 	factory, err := repository.NewFactoryBuilder().WithPostgreSQL(repository.PostgreSQLFactoryConfig{
-		Database: db,
+		Database:    db,
+		SchedulerDb: schedulerDb,
 	}).Build()
 	if err != nil {
 		return nil, err

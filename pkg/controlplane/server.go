@@ -53,7 +53,7 @@ type Server struct {
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
 	repositoryManager           repository.DatabaseRepository
-	emitter                     event.Emitter
+	emitter                     *event.Emitter
 }
 
 type Config struct {
@@ -70,6 +70,7 @@ func New(
 	scheduler scheduling.Scheduler,
 	executionController scheduling.Controller,
 	executionQuerier scheduling.ExecutionQuerier,
+	eventEmitter *event.Emitter,
 	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -97,6 +98,7 @@ func New(
 		resultsRepository:           resultsRepository,
 		outputRepository:            outputRepository,
 		repositoryManager:           repositoryManager,
+		emitter:                     eventEmitter,
 	}
 }
 

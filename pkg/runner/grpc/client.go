@@ -113,6 +113,7 @@ func (c Client) IsSupported(ctx context.Context, environmentId string) bool {
 	code, ok := status.FromError(err)
 	switch {
 	case ok && code.Code() == codes.Unimplemented:
+		c.logger.Warnw("code not implemented!?", "error", err)
 		// Server does not have the implementation for this client.
 		return false
 	case err != nil:

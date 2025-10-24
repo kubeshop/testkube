@@ -31,6 +31,10 @@ func New() *zap.SugaredLogger {
 	}
 
 	zapCfg := zap.NewProductionConfig()
+	if loggerJsonStr := os.Getenv("LOGGER_JSON"); loggerJsonStr == "true" {
+		zapCfg = zap.NewDevelopmentConfig()
+	}
+
 	zapCfg.Level = atomicLevel
 	zapCfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 

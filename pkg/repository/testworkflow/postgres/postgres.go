@@ -1246,7 +1246,7 @@ func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerI
 }
 
 func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerId string, result *testkube.TestWorkflowResult) (updated bool, err error) {
-	if result.IsFinished() {
+	if !result.IsFinished() {
 		return false, errors.New("invalid state")
 	}
 
