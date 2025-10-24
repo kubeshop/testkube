@@ -1250,9 +1250,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
-    )
-ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+    );
 
 -- name: GetTestWorkflowExecutionWithRunner :one
 SELECT 

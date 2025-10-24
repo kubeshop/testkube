@@ -194,8 +194,6 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($21::jsonb)
         )
     )
-ORDER BY e.scheduled_at DESC
-LIMIT $23 OFFSET $22
 `
 
 type CountTestWorkflowExecutionsParams struct {
@@ -220,8 +218,6 @@ type CountTestWorkflowExecutionsParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
-	Fst                int32              `db:"fst" json:"fst"`
-	Lmt                int32              `db:"lmt" json:"lmt"`
 }
 
 func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error) {
@@ -247,8 +243,6 @@ func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTest
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
-		arg.Fst,
-		arg.Lmt,
 	)
 	var count int64
 	err := row.Scan(&count)
