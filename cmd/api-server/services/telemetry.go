@@ -28,21 +28,27 @@ func HandleTelemetryHeartbeat(ctx context.Context, clusterId string, configMapCo
 	}
 
 	ticker := time.NewTicker(heartbeatInterval)
+	defer ticker.Stop()
+
 	for {
-		telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
-		if telemetryEnabled {
-			l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-			host, err := os.Hostname()
-			if err != nil {
-				l.Debugw("getting hostname error", "hostname", host, "error", err)
-			}
-			out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
-			if err != nil {
-				l.Debugw("sending heartbeat telemetry event error", "error", err)
-			} else {
-				l.Debugw("sending heartbeat telemetry event", "output", out)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
+			if telemetryEnabled {
+				l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+				host, err := os.Hostname()
+				if err != nil {
+					l.Debugw("getting hostname error", "hostname", host, "error", err)
+				}
+				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
+				if err != nil {
+					l.Debugw("sending heartbeat telemetry event error", "error", err)
+				} else {
+					l.Debugw("sending heartbeat telemetry event", "output", out)
+				}
 			}
 		}
-		<-ticker.C
 	}
 }

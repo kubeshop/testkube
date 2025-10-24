@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -35,6 +36,7 @@ import (
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/controller"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/coordination/leader"
 	"github.com/kubeshop/testkube/pkg/crdstorage"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
@@ -206,6 +208,15 @@ func main() {
 		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
 	}
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	var leaderLeaseBackend leasebackend.Repository
+	if controlPlane != nil {
+		leaderLeaseBackend = controlPlane.GetRepositoryManager().LeaseBackend()
+	} else {
+		leaderLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
+	}
+
+	leaderTasks := make([]leader.Task, 0)
 
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
@@ -544,155 +555,188 @@ func main() {
 		commons.ExitOnError("connecting to k8s Webhooks storage", err)
 
 		if cfg.GitOpsSyncCloudToKubernetesEnabled && cfg.FeatureCloudStorage {
-			// Test Workflows - Continuous Sync (eventual) - Cloud -> Kubernetes
-			g.Go(func() error {
-				for {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					watcher := testWorkflowsCloudStorage.Watch(ctx)
-					for obj := range watcher.Channel() {
-						err := testWorkflowsKubernetesStorage.Process(ctx, obj)
-						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name)
-						} else {
-							log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
+			leaderTasks = append(leaderTasks, leader.Task{
+				Name: "gitops-cloud-to-kubernetes",
+				Start: func(taskCtx context.Context) error {
+					eg, egCtx := errgroup.WithContext(taskCtx)
+
+					eg.Go(func() error {
+						for {
+							if err := egCtx.Err(); err != nil {
+								return err
+							}
+							watcher := testWorkflowsCloudStorage.Watch(egCtx)
+							for obj := range watcher.Channel() {
+								if err := testWorkflowsKubernetesStorage.Process(egCtx, obj); err == nil {
+									log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name)
+								} else {
+									log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
+								}
+							}
+							if err := watcher.Err(); err != nil {
+								log.DefaultLogger.Errorw("failed to watch TestWorkflows in Control Plane", "error", err)
+							}
+
+							select {
+							case <-egCtx.Done():
+								return egCtx.Err()
+							case <-time.After(200 * time.Millisecond):
+							}
 						}
-					}
-					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch TestWorkflows in Kubernetes", "error", watcher.Err())
-					}
+					})
 
-					time.Sleep(200 * time.Millisecond)
-				}
-			})
+					eg.Go(func() error {
+						for {
+							if err := egCtx.Err(); err != nil {
+								return err
+							}
+							watcher := testWorkflowTemplatesCloudStorage.Watch(egCtx)
+							for obj := range watcher.Channel() {
+								if err := testWorkflowTemplatesKubernetesStorage.Process(egCtx, obj); err == nil {
+									log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name)
+								} else {
+									log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
+								}
+							}
+							if err := watcher.Err(); err != nil {
+								log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Control Plane", "error", err)
+							}
 
-			// Test Workflow Templates - Continuous Sync (eventual) - Cloud -> Kubernetes
-			g.Go(func() error {
-				for {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					watcher := testWorkflowTemplatesCloudStorage.Watch(ctx)
-					for obj := range watcher.Channel() {
-						err := testWorkflowTemplatesKubernetesStorage.Process(ctx, obj)
-						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name)
-						} else {
-							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
+							select {
+							case <-egCtx.Done():
+								return egCtx.Err()
+							case <-time.After(200 * time.Millisecond):
+							}
 						}
-					}
-					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Control Plane", "error", watcher.Err())
-					}
+					})
 
-					time.Sleep(200 * time.Millisecond)
-				}
-			})
+					eg.Go(func() error {
+						for {
+							if err := egCtx.Err(); err != nil {
+								return err
+							}
+							watcher := webhooksCloudStorage.Watch(egCtx)
+							for obj := range watcher.Channel() {
+								if err := webhooksKubernetesStorage.Process(egCtx, obj); err == nil {
+									log.DefaultLogger.Infow("synced Webhook from Control Plane in Kubernetes", "name", obj.Resource.Name)
+								} else {
+									log.DefaultLogger.Errorw("failed to include Webhook in Kubernetes", "error", err)
+								}
+							}
+							if err := watcher.Err(); err != nil {
+								log.DefaultLogger.Errorw("failed to watch Webhooks in Control Plane", "error", err)
+							}
 
-			// Webhooks - Continuous Sync (eventual) - Cloud -> Kubernetes
-			g.Go(func() error {
-				for {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					watcher := webhooksCloudStorage.Watch(ctx)
-					for obj := range watcher.Channel() {
-						err := webhooksKubernetesStorage.Process(ctx, obj)
-						if err == nil {
-							log.DefaultLogger.Infow("synced Webhook from Control Plane in Kubernetes", "name", obj.Resource.Name)
-						} else {
-							log.DefaultLogger.Errorw("failed to include Webhook in Kubernetes", "error", err)
+							select {
+							case <-egCtx.Done():
+								return egCtx.Err()
+							case <-time.After(200 * time.Millisecond):
+							}
 						}
-					}
-					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch Webhooks in Control Plane", "error", watcher.Err())
-					}
+					})
 
-					time.Sleep(200 * time.Millisecond)
-				}
+					return eg.Wait()
+				},
 			})
 		}
 
 		if cfg.GitOpsSyncKubernetesToCloudEnabled {
-			// Test Workflows - Continuous Sync (eventual) - Kubernetes -> Cloud
-			g.Go(func() error {
-				for {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					watcher := testWorkflowsKubernetesStorage.Watch(ctx)
-					for obj := range watcher.Channel() {
-						err := testWorkflowsCloudStorage.Process(ctx, obj)
-						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name)
-						} else {
-							log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
+			leaderTasks = append(leaderTasks, leader.Task{
+				Name: "gitops-kubernetes-to-cloud",
+				Start: func(taskCtx context.Context) error {
+					eg, egCtx := errgroup.WithContext(taskCtx)
+
+					eg.Go(func() error {
+						for {
+							if err := egCtx.Err(); err != nil {
+								return err
+							}
+							watcher := testWorkflowsKubernetesStorage.Watch(egCtx)
+							for obj := range watcher.Channel() {
+								if err := testWorkflowsCloudStorage.Process(egCtx, obj); err == nil {
+									log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name)
+								} else {
+									log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
+								}
+							}
+							if err := watcher.Err(); err != nil {
+								log.DefaultLogger.Errorw("failed to watch TestWorkflows in Kubernetes", "error", err)
+							}
+
+							select {
+							case <-egCtx.Done():
+								return egCtx.Err()
+							case <-time.After(200 * time.Millisecond):
+							}
 						}
-					}
-					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch TestWorkflows in Kubernetes", "error", watcher.Err())
-					}
+					})
 
-					time.Sleep(200 * time.Millisecond)
-				}
-			})
+					eg.Go(func() error {
+						for {
+							if err := egCtx.Err(); err != nil {
+								return err
+							}
+							watcher := testWorkflowTemplatesKubernetesStorage.Watch(egCtx)
+							for obj := range watcher.Channel() {
+								if err := testWorkflowTemplatesCloudStorage.Process(egCtx, obj); err == nil {
+									log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name)
+								} else {
+									log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
+								}
+							}
+							if err := watcher.Err(); err != nil {
+								log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Kubernetes", "error", err)
+							}
 
-			// Test Workflow Templates - Continuous Sync (eventual) - Kubernetes -> Cloud
-			g.Go(func() error {
-				for {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					watcher := testWorkflowTemplatesKubernetesStorage.Watch(ctx)
-					for obj := range watcher.Channel() {
-						err := testWorkflowTemplatesCloudStorage.Process(ctx, obj)
-						if err == nil {
-							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name)
-						} else {
-							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
+							select {
+							case <-egCtx.Done():
+								return egCtx.Err()
+							case <-time.After(200 * time.Millisecond):
+							}
 						}
-					}
-					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Kubernetes", "error", watcher.Err())
-					}
+					})
 
-					time.Sleep(200 * time.Millisecond)
-				}
-			})
+					eg.Go(func() error {
+						for {
+							if err := egCtx.Err(); err != nil {
+								return err
+							}
+							watcher := webhooksKubernetesStorage.Watch(egCtx)
+							for obj := range watcher.Channel() {
+								if err := webhooksCloudStorage.Process(egCtx, obj); err == nil {
+									log.DefaultLogger.Infow("synced Webhook from Kubernetes into Control Plane", "name", obj.Resource.Name)
+								} else {
+									log.DefaultLogger.Errorw("failed to include Webhook in Control Plane", "error", err)
+								}
+							}
+							if err := watcher.Err(); err != nil {
+								log.DefaultLogger.Errorw("failed to watch Webhooks in Kubernetes", "error", err)
+							}
 
-			// Webhooks - Continuous Sync (eventual) - Kubernetes -> Cloud
-			g.Go(func() error {
-				for {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					watcher := webhooksKubernetesStorage.Watch(ctx)
-					for obj := range watcher.Channel() {
-						err := webhooksCloudStorage.Process(ctx, obj)
-						if err == nil {
-							log.DefaultLogger.Infow("synced Webhook from Kubernetes into Control Plane", "name", obj.Resource.Name)
-						} else {
-							log.DefaultLogger.Errorw("failed to include Webhook in Control Plane", "error", err)
+							select {
+							case <-egCtx.Done():
+								return egCtx.Err()
+							case <-time.After(200 * time.Millisecond):
+							}
 						}
-					}
-					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch Webhooks in Kubernetes", "error", watcher.Err())
-					}
+					})
 
-					time.Sleep(200 * time.Millisecond)
-				}
+					return eg.Wait()
+				},
 			})
 		}
 	}
 
-	log.DefaultLogger.Info("starting event system...")
-	eventsEmitter.Listen(ctx)
-	g.Go(func() error {
-		eventsEmitter.Reconcile(ctx)
-		return nil
+	log.DefaultLogger.Info("preparing event system...")
+	leaderTasks = append(leaderTasks, leader.Task{
+		Name: "event-system",
+		Start: func(taskCtx context.Context) error {
+			eventsEmitter.Listen(taskCtx)
+			eventsEmitter.Reconcile(taskCtx)
+			return nil
+		},
 	})
-	log.DefaultLogger.Info("event system started successfully")
+	log.DefaultLogger.Info("event system ready")
 
 	// Create Kubernetes Operators/Controllers
 	if cfg.EnableK8sControllers {
@@ -798,10 +842,15 @@ func main() {
 			eventsEmitter,
 		)
 		commons.ExitOnError("starting agent", err)
-		g.Go(func() error {
-			err = agentHandle.Run(ctx)
-			commons.ExitOnError("running agent", err)
-			return nil
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.Run(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent", err)
+				}
+				return err
+			},
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
@@ -855,9 +904,12 @@ func main() {
 	}
 
 	// telemetry based functions
-	g.Go(func() error {
-		services.HandleTelemetryHeartbeat(ctx, clusterId, configMapConfig)
-		return nil
+	leaderTasks = append(leaderTasks, leader.Task{
+		Name: "telemetry-heartbeat",
+		Start: func(taskCtx context.Context) error {
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig)
+			return nil
+		},
 	})
 
 	log.DefaultLogger.Infow(
@@ -929,9 +981,12 @@ func main() {
 		}
 
 		// Start the new scheduler.
-		g.Go(func() error {
-			scheduler.Reconcile(ctx)
-			return nil
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "cron-scheduler",
+			Start: func(taskCtx context.Context) error {
+				scheduler.Reconcile(taskCtx)
+				return nil
+			},
 		})
 	}
 
@@ -942,8 +997,11 @@ func main() {
 
 	if deprecatedSystem != nil {
 		if deprecatedSystem.Reconciler != nil {
-			g.Go(func() error {
-				return deprecatedSystem.Reconciler.Run(ctx)
+			leaderTasks = append(leaderTasks, leader.Task{
+				Name: "deprecated-reconciler",
+				Start: func(taskCtx context.Context) error {
+					return deprecatedSystem.Reconciler.Run(taskCtx)
+				},
 			})
 		}
 
@@ -952,6 +1010,38 @@ func main() {
 				return deprecatedSystem.API.RunGraphQLServer(ctx)
 			})
 		}
+	}
+
+	if len(leaderTasks) > 0 {
+		leaderIdentifier := cfg.RunnerName
+		if leaderIdentifier == "" {
+			leaderIdentifier = cfg.APIServerFullname
+		}
+		if leaderIdentifier == "" {
+			if host, err := os.Hostname(); err == nil {
+				leaderIdentifier = host
+			}
+		}
+		if leaderIdentifier == "" {
+			leaderIdentifier = "testkube-core"
+		}
+
+		leaderClusterID := clusterId
+		if leaderClusterID == "" {
+			leaderClusterID = "testkube-core"
+		} else {
+			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
+		}
+
+		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
+		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
+		for _, task := range leaderTasks {
+			leaderCoordinator.Register(task)
+		}
+
+		g.Go(func() error {
+			return leaderCoordinator.Run(ctx)
+		})
 	}
 
 	if err := g.Wait(); err != nil {

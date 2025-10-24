@@ -199,7 +199,6 @@ func TestService_Run(t *testing.T) {
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),
-		WithLeaseCheckerInterval(50*time.Millisecond),
 	)
 
 	go s.Run(ctx)
