@@ -39,7 +39,7 @@ func Test_executeTestWorkflow(t *testing.T) {
 		},
 	}
 
-	mockTestWorkflowExecutor.EXPECT().Execute(ctx, mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}).Times(1)
+	mockTestWorkflowExecutor.EXPECT().Execute(ctx, mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}, nil).Times(1)
 
 	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger)
 

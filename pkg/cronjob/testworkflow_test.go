@@ -44,7 +44,7 @@ func Test_ReconcileTestWorkflow(t *testing.T) {
 		},
 	}
 
-	mockTestWorkflowExecutor.EXPECT().Execute(ctx, mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}).AnyTimes()
+	mockTestWorkflowExecutor.EXPECT().Execute(ctx, mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}, nil).AnyTimes()
 
 	result := channels.NewWatcher[testworkflowclient.Update]()
 	mockTestWorkflowsClient.EXPECT().WatchUpdates(ctx, "", gomock.Any()).Return(result).AnyTimes()
