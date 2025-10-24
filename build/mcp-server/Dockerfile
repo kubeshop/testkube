@@ -21,6 +21,9 @@ RUN cd cmd/kubectl-testkube && \
 
 # Final stage
 FROM ${ALPINE_IMAGE}
+ARG VERSION=1.0.0
+ARG GIT_SHA=unknown
+
 RUN apk --no-cache add ca-certificates
 
 # Create non-root user
@@ -36,8 +39,11 @@ LABEL org.opencontainers.image.title="Testkube MCP Server"
 LABEL org.opencontainers.image.description="Model Context Protocol server for Testkube - Execute and analyze test workflows via AI assistants"
 LABEL org.opencontainers.image.url="https://github.com/kubeshop/testkube"
 LABEL org.opencontainers.image.source="https://github.com/kubeshop/testkube"
+LABEL org.opencontainers.image.documentation="https://docs.testkube.io/articles/mcp-overview"
 LABEL org.opencontainers.image.vendor="Kubeshop"
 LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
 
 RUN chmod +x /bin/kubectl-testkube
 
