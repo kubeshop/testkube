@@ -28,6 +28,8 @@ import (
 
 func TestCommandExecution(t *testing.T) {
 	url := "localhost:9999"
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 
 	go func() {
 		lis, err := net.Listen("tcp", url)
@@ -37,7 +39,7 @@ func TestCommandExecution(t *testing.T) {
 
 		var opts []grpc.ServerOption
 		grpcServer := grpc.NewServer(opts...)
-		cloud.RegisterTestKubeCloudAPIServer(grpcServer, newServer(t.Context()))
+		cloud.RegisterTestKubeCloudAPIServer(grpcServer, newServer(ctx))
 		grpcServer.Serve(lis)
 	}()
 
@@ -64,13 +66,13 @@ func TestCommandExecution(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-	defer cancel()
 	g, groupCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return agent.Run(groupCtx)
 	})
 
+	time.Sleep(100 * time.Millisecond)
+	cancel()
 	g.Wait()
 
 	assert.True(t, msgCnt > 0)
