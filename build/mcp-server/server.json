@@ -16,7 +16,7 @@
   "homepage": "https://testkube.io",
   "documentation": "https://docs.testkube.io/articles/mcp-overview",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "tags": [
     "testing",
     "kubernetes",
@@ -36,7 +36,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "docker.io/testkube/mcp-server:test",
+      "identifier": "docker.io/kubeshop/mcp-server:latest",
       "transport": {
         "type": "stdio"
       },
