@@ -109,9 +109,46 @@ func mapPgTestWorkflow(r sqlc.TestWorkflow) testkube.TestWorkflow {
 	}
 }
 
-// TODO: nested hierarchy. SQL stores ParentID while API lists children. Build the tree.
-func mapPgTestWorkflowAllSignatures(_ []sqlc.TestWorkflowSignature) []testkube.TestWorkflowSignature {
-	return []testkube.TestWorkflowSignature{}
+// mapPgTestWorkflowAllSignatures transforms flat list of signatures with parent IDs into tree structure with children
+func mapPgTestWorkflowAllSignatures(signatures []sqlc.TestWorkflowSignature) []testkube.TestWorkflowSignature {
+	if len(signatures) == 0 {
+		return []testkube.TestWorkflowSignature{}
+	}
+
+	// Create a map for fast lookup by ID
+	signatureMap := make(map[int32]*testkube.TestWorkflowSignature)
+	
+	// First pass: create all signature objects and populate the map
+	for _, sig := range signatures {
+		signature := &testkube.TestWorkflowSignature{
+			Ref:      sig.Ref.String,
+			Name:     sig.Name.String,
+			Category: sig.Category.String,
+			Optional: sig.Optional.Bool,
+			Negative: sig.Negative.Bool,
+			Children: []testkube.TestWorkflowSignature{},
+		}
+		signatureMap[sig.ID] = signature
+	}
+
+	// Second pass: build the tree by adding children to their parents
+	var roots []testkube.TestWorkflowSignature
+	for _, sig := range signatures {
+		signature := signatureMap[sig.ID]
+		
+		// If this signature has a parent, add it as a child to the parent
+		if sig.ParentID.Valid {
+			parent, exists := signatureMap[sig.ParentID.Int32]
+			if exists {
+				parent.Children = append(parent.Children, *signature)
+			}
+		} else {
+			// No parent means this is a root node
+			roots = append(roots, *signature)
+		}
+	}
+
+	return roots
 }
 
 func mapPgTestWorkflowAllOutputs(outputs []sqlc.TestWorkflowOutput) []testkube.TestWorkflowOutput {
