@@ -3,6 +3,7 @@ package scheduling
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -85,31 +86,68 @@ func (s *PostgresScheduler) ScheduleExecution(ctx context.Context, info RunnerIn
 
 // We need everything because the event dispatcher and listeners expect the full execution.
 func (s *PostgresScheduler) getFullExecution(ctx context.Context, exec sqlc.TestWorkflowExecution, result sqlc.TestWorkflowResult) (testkube.TestWorkflowExecution, error) {
-	// TODO fetch in parallel.
-	// TODO better handle NoRows found.
-	workflow, err := s.db.GetExecutionWorkflow(ctx, exec.ID)
-	if err != nil && err != pgx.ErrNoRows {
-		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution workflow: %w", err)
+	// TODO handle NoRows better?
+	var workflow sqlc.TestWorkflow
+	var resolvedWorkflow sqlc.TestWorkflow
+	var outputs []sqlc.TestWorkflowOutput
+	var signatures []sqlc.TestWorkflowSignature
+	var reports []sqlc.TestWorkflowReport
+	var aggregation sqlc.TestWorkflowResourceAggregation
+
+	var workflowErr, resolvedWorkflowErr, outputsErr, signaturesErr, reportsErr, aggregationErr error
+
+	var wg sync.WaitGroup
+	wg.Add(6)
+
+	go func() {
+		defer wg.Done()
+		workflow, workflowErr = s.db.GetExecutionWorkflow(ctx, exec.ID)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resolvedWorkflow, resolvedWorkflowErr = s.db.GetExecutionResolvedWorkflow(ctx, exec.ID)
+	}()
+
+	go func() {
+		defer wg.Done()
+		outputs, outputsErr = s.db.GetExecutionOutputs(ctx, exec.ID)
+	}()
+
+	go func() {
+		defer wg.Done()
+		signatures, signaturesErr = s.db.GetExecutionSignatures(ctx, exec.ID)
+	}()
+
+	go func() {
+		defer wg.Done()
+		reports, reportsErr = s.db.GetExecutionReports(ctx, exec.ID)
+	}()
+
+	go func() {
+		defer wg.Done()
+		aggregation, aggregationErr = s.db.GetExecutionAggregation(ctx, exec.ID)
+	}()
+
+	wg.Wait()
+
+	if workflowErr != nil && workflowErr != pgx.ErrNoRows {
+		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution workflow: %w", workflowErr)
 	}
-	resolvedWorkflow, err := s.db.GetExecutionResolvedWorkflow(ctx, exec.ID)
-	if err != nil && err != pgx.ErrNoRows {
-		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution resolved workflow: %w", err)
+	if resolvedWorkflowErr != nil && resolvedWorkflowErr != pgx.ErrNoRows {
+		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution resolved workflow: %w", resolvedWorkflowErr)
 	}
-	outputs, err := s.db.GetExecutionOutputs(ctx, exec.ID)
-	if err != nil && err != pgx.ErrNoRows {
-		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution outputs: %w", err)
+	if outputsErr != nil && outputsErr != pgx.ErrNoRows {
+		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution outputs: %w", outputsErr)
 	}
-	signatures, err := s.db.GetExecutionSignatures(ctx, exec.ID)
-	if err != nil && err != pgx.ErrNoRows {
-		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution signatures: %w", err)
+	if signaturesErr != nil && signaturesErr != pgx.ErrNoRows {
+		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution signatures: %w", signaturesErr)
 	}
-	reports, err := s.db.GetExecutionReports(ctx, exec.ID)
-	if err != nil && err != pgx.ErrNoRows {
-		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution reports: %w", err)
+	if reportsErr != nil && reportsErr != pgx.ErrNoRows {
+		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution reports: %w", reportsErr)
 	}
-	aggregation, err := s.db.GetExecutionAggregation(ctx, exec.ID)
-	if err != nil && err != pgx.ErrNoRows {
-		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution aggregation: %w", err)
+	if aggregationErr != nil && aggregationErr != pgx.ErrNoRows {
+		return testkube.TestWorkflowExecution{}, fmt.Errorf("cannot fetch execution aggregation: %w", aggregationErr)
 	}
 
 	return mapPgTestWorkflowExecution(exec, result, workflow, resolvedWorkflow, signatures, reports, outputs, aggregation), nil
