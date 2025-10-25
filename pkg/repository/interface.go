@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -30,6 +31,13 @@ type RepositoryFactory interface {
 
 	// TestWorkflow Repository (Test Workflow Executions)
 	NewTestWorkflowRepository() testworkflow.Repository
+
+	// TestWorkflow Execution Scheduler
+	NewScheduler() scheduling.Scheduler
+
+	// TestWorkflow Execution Querier & Controller (Pausing, Aborting, etc)
+	NewExecutionController() scheduling.Controller
+	NewExecutionQuerier() scheduling.ExecutionQuerier
 
 	// Utility methods
 	GetDatabaseType() DatabaseType

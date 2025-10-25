@@ -12,9 +12,6 @@ type APIConfig struct {
 	APIServerPort     int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig   string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
-
-	// GraphQL
-	GraphqlPort int `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 }
 
 type OSSControlPlaneConfig struct {
@@ -228,12 +225,11 @@ type Config struct {
 	TransferEnvVariables            []string `envconfig:"TRANSFER_ENV_VARS" default:"GRPC_ENFORCE_ALPN_ENABLED"`
 	EnableK8sEvents                 bool     `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
-	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
+	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"true"`
 	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 
-	FeatureNewArchitecture  bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
 	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
 }

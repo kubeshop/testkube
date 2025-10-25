@@ -392,20 +392,6 @@ func (mr *MockClientMockRecorder) InitExecution(ctx, environmentId, executionId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitExecution", reflect.TypeOf((*MockClient)(nil).InitExecution), ctx, environmentId, executionId, signature, namespace)
 }
 
-// IsLegacy mocks base method.
-func (m *MockClient) IsLegacy() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsLegacy")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsLegacy indicates an expected call of IsLegacy.
-func (mr *MockClientMockRecorder) IsLegacy() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLegacy", reflect.TypeOf((*MockClient)(nil).IsLegacy))
-}
-
 // IsRunner mocks base method.
 func (m *MockClient) IsRunner() bool {
 	m.ctrl.T.Helper()

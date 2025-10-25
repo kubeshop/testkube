@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -20,7 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
-func Test_execuuteTestWorkflow(t *testing.T) {
+func Test_executeTestWorkflow(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -39,11 +39,7 @@ func Test_execuuteTestWorkflow(t *testing.T) {
 		},
 	}
 
-	executionsCh := make(chan *testkube.TestWorkflowExecution, 1)
-	executionsCh <- &testkube.TestWorkflowExecution{}
-	close(executionsCh)
-	executionsStream := testworkflowexecutor.NewStream(executionsCh)
-	mockTestWorkflowExecutor.EXPECT().Execute(ctx, "", mockTestWorkflowExecutionRequest).Return(executionsStream).Times(1)
+	mockTestWorkflowExecutor.EXPECT().Execute(ctx, mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}, nil).Times(1)
 
 	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger)
 

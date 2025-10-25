@@ -15,3 +15,103 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+          - column: "blub.bar"
+            go_type:
+              type: "Bar"
+              slice: true
+  # Use SQLC for jsonb parsing instead of doing it all manually
+  - engine: "postgresql"
+    queries: "pkg/controlplane/scheduling/sqlc/*.sql"
+    schema: "pkg/database/postgres/migrations"
+    gen:
+      go:
+        package: "sqlc"
+        out: "pkg/controlplane/scheduling/sqlc"
+        emit_db_tags: true
+        emit_json_tags: true
+        sql_package: "pgx/v5"
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          # section for test_workflow_executions
+          - column: "test_workflow_executions.runner_target"
+            go_type:
+              type: "ExecutionTarget"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          - column: "test_workflow_executions.runner_original_target"
+            go_type:
+              type: "ExecutionTarget"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          - column: "test_workflow_executions.tags"
+            go_type:
+              type: "map[string]string"
+          - column: "test_workflow_executions.running_context"
+            go_type:
+              type: "TestWorkflowRunningContext"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          - column: "test_workflow_executions.config_params"
+            go_type:
+              # Hacky - can only be used in tandem with another column that does the import.
+              type: "map[string]testkube.TestWorkflowExecutionConfigValue"
+          - column: "test_workflow_executions.runtime"
+            go_type:
+              type: "TestWorkflowExecutionRuntime"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          # section for test_workflows
+          - column: "test_workflows.labels"
+            go_type:
+              type: "map[string]string"
+          - column: "test_workflows.annotations"
+            go_type:
+              type: "map[string]string"
+          - column: "test_workflows.spec"
+            go_type:
+              type: "TestWorkflowSpec"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          - column: "test_workflows.status"
+            go_type:
+              type: "TestWorkflowStatusSummary"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          # section for test_workflow_results
+          - column: "test_workflow_results.pauses"
+            go_type:
+              type: "TestWorkflowPause"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              slice: true
+          - column: "test_workflow_results.initialization"
+            go_type:
+              type: "TestWorkflowStepResult"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          - column: "test_workflow_results.steps"
+            go_type:
+              # Hacky - can only be used in tandem with another column that does the import.
+              type: "map[string]testkube.TestWorkflowStepResult"
+          # section for test_workflow_outputs
+          - column: "test_workflow_outputs.value"
+            go_type:
+              type: "map[string]interface{}"
+          # section for test_workflow_reports
+          - column: "test_workflow_reports.summary"
+            go_type:
+              type: "TestWorkflowReportSummary"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
+          # section for test_workflow_resource_aggregations
+          - column: "test_workflow_resource_aggregations.global"
+            go_type:
+              # Hacky - can only be used in tandem with another column that does the import.
+              type: "map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations"
+          - column: "test_workflow_resource_aggregations.step"
+            go_type:
+              type: "TestWorkflowExecutionStepResourceAggregations"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              slice: true
