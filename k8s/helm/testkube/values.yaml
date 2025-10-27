@@ -942,7 +942,6 @@ testkube-api:
 
   # MongoDB parameters
   mongodb:
-    enabled: true
     # -- MongoDB DSN
     dsn: "mongodb://testkube-mongodb:27017"
     # secretName: testkube-secrets
