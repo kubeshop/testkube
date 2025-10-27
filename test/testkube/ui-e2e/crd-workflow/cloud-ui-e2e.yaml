@@ -31,7 +31,7 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.44.1-focal
+    image: mcr.microsoft.com/playwright:v1.55.1-noble
     env:
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'
@@ -47,7 +47,7 @@ spec:
       value: 'testkube-agent-e2e'
   steps:
   - name: Install dependencies
-    shell: npm install --save-dev @playwright/test@1.44.1 && npm ci
+    shell: npm ci
   - name: Run tests
     shell: npx playwright test --retries=1
     artifacts:
@@ -87,7 +87,7 @@ spec:
     SHARDS: {type: integer, default: 10}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.44.1-focal
+    image: mcr.microsoft.com/playwright:v1.55.1-noble
     env:
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'
@@ -103,7 +103,7 @@ spec:
       value: 'testkube-agent-e2e'
   steps:
   - name: Install dependencies
-    shell: npm install --save-dev @playwright/test@1.44.1 && npm ci
+    shell: npm ci
   - name: Run tests
     parallel:
       description: "Shard: {{ index + 1 }}/{{ count }}"
