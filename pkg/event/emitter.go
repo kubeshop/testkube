@@ -126,7 +126,7 @@ func (e *Emitter) eventHandler(event testkube.Event) error {
 			return nil
 		}
 		// Event type fanout
-		// NOTE(emil): This fanout behavior is old, but kept in tact because it
+		// NOTE(emil): This fanout behavior is old, but kept intact because it
 		// is not of priority - can an event even match multiple event types?
 		// and even if it does should it fire multiple events for the same
 		// listener? even then does this fanout logic not belong in the

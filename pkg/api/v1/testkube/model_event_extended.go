@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/kubeshop/testkube/internal/common"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -140,6 +141,8 @@ func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowSuccess,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -148,6 +151,8 @@ func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowFailed,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -156,6 +161,8 @@ func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowAborted,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -164,6 +171,8 @@ func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowCanceled,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -172,6 +181,8 @@ func NewEventEndTestWorkflowNotPassed(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowNotPassed,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 

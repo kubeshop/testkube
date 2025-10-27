@@ -370,7 +370,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	log.Debugw("got webhook send result", "response", responseStr)
+	log.Infow("webhook send result", "response", responseStr)
 	result = testkube.NewSuccessEventResult(event.Id, responseStr)
 	return
 }
