@@ -1,0 +1,52 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: robotframework-browser-smoke
+  labels:
+    tool: robotframework-browser
+    category: e2e-ui-testing
+    junit: "true"
+    artifacts: "true"
+spec:
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - robotframework-project/tests
+  container:
+    image: python:3.14-slim
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1000Mi
+    workingDir: /data/repo/robotframework-project/tests
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+    - name: Install dependencies
+      shell: |
+        apt-get update && apt-get install -y curl gnupg wget \
+          libglib2.0-0 libnss3 libgdk-pixbuf2.0-0 libxss1 \
+          libasound2 libatk-bridge2.0-0 libgtk-3-0 && \
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+        apt-get install -y nodejs && \
+        pip install -r ../requirements.txt && \
+        rfbrowser init
+    - name: Run Robot Framework tests
+      run:
+        shell: |
+          mkdir -p /data/artifacts && \
+          robot --outputdir /data/artifacts \
+                --xunit /data/artifacts/junit.xml \
+                homepage.robot additional-cases.robot
+        env:
+          - name: ROBOT_SYSLOG_FILE
+            value: /data/artifacts/robot-syslog.txt
+    - name: Save artifacts
+      artifacts:
+        workingDir: /data/artifacts/
+        paths:
+          - '**/*'
