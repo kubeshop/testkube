@@ -13,19 +13,23 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProContextResponse, error) {
-	caps := make([]*cloud.Capability, 0)
-	if s.cfg.FeatureNewArchitecture {
-		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityNewArchitecture), Enabled: true})
-	}
+	caps := []*cloud.Capability{{Name: string(capabilities.CapabilityNewArchitecture), Enabled: true}} //nolint
 	if s.cfg.FeatureTestWorkflowsCloudStorage {
 		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityCloudStorage), Enabled: true})
 	}
-	return &cloud.ProContextResponse{Capabilities: caps}, nil
+	return &cloud.ProContextResponse{
+		Capabilities: caps,
+		OrgId:        common.StandaloneOrganization,
+		OrgName:      common.StandaloneOrganization,
+		OrgSlug:      common.StandaloneOrganizationSlug,
+		EnvId:        common.StandaloneEnvironment,
+	}, nil
 }
 
 // Send is called on agent client, returning from this method closes the connection
@@ -254,21 +258,19 @@ func (s *Server) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) e
 }
 
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	resp := s.executor.Execute(srv.Context(), "", req)
-	for execution := range resp.Channel() {
-		// Send the data
-		// TODO: Use protobuf struct?
+	executions, err := s.enqueuer.Execute(srv.Context(), req)
+	if err != nil {
+		return status.Error(codes.Internal, "cannot enqueue execution")
+	}
+
+	for _, execution := range executions {
 		v, err := json.Marshal(execution)
 		if err != nil {
 			return err
 		}
 		if err = srv.Send(&cloud.ScheduleResponse{Execution: v}); err != nil {
-			// TODO: retry?
 			return err
 		}
-	}
-	if resp.Error() != nil {
-		return resp.Error()
 	}
 	return nil
 }

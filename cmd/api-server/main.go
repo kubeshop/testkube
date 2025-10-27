@@ -34,8 +34,10 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/controller"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/crdstorage"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutionmetrics"
@@ -50,7 +52,6 @@ import (
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
-	cronjobclient "github.com/kubeshop/testkube/pkg/operator/cronjob/client"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
@@ -97,13 +98,15 @@ func main() {
 	cfg := commons.MustGetConfig()
 	features := commons.MustGetFeatureFlags()
 
+	mode := common.ModeAgent
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
+		mode = common.ModeStandalone
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+	}
+
 	log.DefaultLogger.Infow("configuration loaded",
-		"mode", func() string {
-			if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
-				return "agent"
-			}
-			return "standalone"
-		}(),
+		"mode", mode,
 		"namespace", cfg.TestkubeNamespace,
 		"apiServerPort", cfg.APIServerPort,
 		"grpcPort", cfg.GRPCServerPort,
@@ -121,14 +124,6 @@ func main() {
 	defer func() { _ = shutdownTracing(context.Background()) }()
 
 	// Determine the running mode
-
-	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
-		mode = common.ModeAgent
-	} else {
-		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
-		cfg.TestkubeProTLSInsecure = true
-	}
 
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -156,7 +151,6 @@ func main() {
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
-	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -172,14 +166,22 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	lazyRunner := runner2.LazyExecute()
+	log.DefaultLogger.Info("connecting to NATS...")
+	nc := commons.MustCreateNATSConnection(cfg)
+	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
+
+	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, features, eventsEmitter)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -286,16 +288,6 @@ func main() {
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, &proContext)
 
-	log.DefaultLogger.Info("connecting to NATS...")
-	nc := commons.MustCreateNATSConnection(cfg)
-	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
-
-	eventBus := bus.NewNATSBus(nc)
-	if cfg.Trace {
-		eventBus.TraceEvents()
-	}
-	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
-
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify: cfg.StorageSkipVerify,
@@ -375,8 +367,7 @@ func main() {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
-		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
-		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
+		testworkflowconfig.FeatureFlagCloudStorage: fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	}, commonEnvVariables, true, defaultExecutionNamespace)
 
 	runnerOpts := runner2.Options{
@@ -387,7 +378,7 @@ func main() {
 	}
 	if cfg.GlobalWorkflowTemplateInline != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateInline(cfg.GlobalWorkflowTemplateInline)
-	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
+	} else if cfg.GlobalWorkflowTemplateName != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
 	runner := runner2.New(
@@ -441,7 +432,7 @@ func main() {
 			// This check should be removed once TLS is enforced across deployments.
 			if !runnerClient.IsSupported(ctx, proContext.EnvID) {
 				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
-				return runnerService.Start(ctx, proContext.NewArchitecture)
+				return runnerService.Start(ctx, true)
 			}
 			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
 			// If the client is supported then start both services/clients.
@@ -456,28 +447,15 @@ func main() {
 			return eg.Wait()
 		})
 	}
-	lazyRunner.Set(runnerService)
 
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,
 		cfg.TestkubeProAPIKey,
-		cfg.CDEventsTarget,
 		eventsEmitter,
 		runnerService,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowsClient,
-		metrics,
-		secretManager,
-		cfg.GlobalWorkflowTemplateName,
-		proContext.DashboardURI,
 		proContext.OrgID,
-		proContext.OrgSlug,
 		proContext.EnvID,
-		proContext.GetEnvSlug,
 		proContext.Agent.ID,
-		proContext.NewArchitecture,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -747,7 +725,14 @@ func main() {
 		deprecatedSystem.API.Init(httpServer)
 	}
 
+	isStandalone := mode == common.ModeStandalone
+	var executionController scheduling.Controller
+	if isStandalone && controlPlane != nil {
+		executionController = controlPlane.ExecutionController
+	}
 	api := apiv1.NewTestkubeAPI(
+		isStandalone,
+		executionController,
 		deprecatedClients,
 		clusterId,
 		cfg.TestkubeNamespace,
@@ -901,7 +886,7 @@ func main() {
 	if scheduler != nil {
 		// Remove any remaining legacy cronjobs.
 		// TODO: Remove this section once we are happy that users are not migrating from legacy cronjobs (next Major version?)
-		resources := []string{cronjobclient.TestResourceURI, cronjobclient.TestSuiteResourceURI, cronjobclient.TestWorkflowResourceURI}
+		resources := []string{cronjob.TestResourceURI, cronjob.TestSuiteResourceURI, cronjob.TestWorkflowResourceURI}
 		for _, resource := range resources {
 			reqs, err := labels.ParseToRequirements("testkube=" + resource)
 			if err != nil {

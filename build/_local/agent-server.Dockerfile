@@ -22,16 +22,15 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.25.0-alpine AS debug
+FROM golang:1.25 AS debug
 
 ENV GOTRACEBACK=all
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.1
-
-RUN apk --no-cache --update add ca-certificates && (rm -rf /var/cache/apk/* || 0)
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.2
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/build/_local/agent-server /testkube/
 
+EXPOSE 8080 8088 8089 56268
 ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/testkube/agent-server"]
 
 ###################################
@@ -42,5 +41,5 @@ FROM gcr.io/distroless/static AS dist
 COPY LICENSE /testkube/
 COPY --from=builder /app/build/_local/agent-server /testkube/
 
-EXPOSE 8080
+EXPOSE 8080 8088 8089
 ENTRYPOINT ["/testkube/agent-server"]

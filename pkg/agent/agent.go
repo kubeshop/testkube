@@ -30,12 +30,16 @@ import (
 )
 
 const (
-	clusterIDMeta           = "cluster-id"
-	cloudMigrateMeta        = "migrate"
-	orgIdMeta               = "organization-id"
-	envIdMeta               = "environment-id"
-	healthcheckCommand      = "healthcheck"
-	dockerImageVersionMeta  = "docker-image-version"
+	clusterIDMeta          = "cluster-id"
+	cloudMigrateMeta       = "migrate"
+	orgIdMeta              = "organization-id"
+	envIdMeta              = "environment-id"
+	healthcheckCommand     = "healthcheck"
+	dockerImageVersionMeta = "docker-image-version"
+
+	// Deprecated: NewArchitecture is always enabled since November 2025.
+	// This is kept for backwards compatibility with older agents.
+	// Feel free to permanently delete this after 2026Q1.
 	newArchitectureMeta     = "exec"
 	testWorkflowStorageMeta = "tw-storage"
 	reconnectionLoopDelay   = 5 * time.Second
@@ -151,9 +155,7 @@ func (ag *Agent) Run(ctx context.Context) error {
 	wg.Go(reconnectionLoop("worker loop", ag.runWorkers(ag.workerCount)))
 	wg.Go(reconnectionLoop("event loop", ag.runEventLoop))
 
-	if ag.proContext.NewArchitecture {
-		wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
-	}
+	wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
 
 	if !ag.features.LogsV2 {
 		wg.Go(reconnectionLoop("log stream loop", ag.runLogStreamLoop))
@@ -293,10 +295,8 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
+	ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true") //nolint
 
-	if ag.proContext.NewArchitecture {
-		ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
-	}
 	if ag.proContext.CloudStorage {
 		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
 	}

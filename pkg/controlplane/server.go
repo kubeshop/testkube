@@ -19,13 +19,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 const (
@@ -36,16 +37,23 @@ const (
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 	executionv1.UnimplementedTestWorkflowExecutionServiceServer
-	cfg                         Config
-	server                      *grpc.Server
-	commands                    map[cloudexecutor.Command]CommandHandler
-	executor                    testworkflowexecutor.TestWorkflowExecutor
+	cfg       Config
+	server    *grpc.Server
+	commands  map[cloudexecutor.Command]CommandHandler
+	enqueuer  scheduling.Enqueuer
+	scheduler scheduling.Scheduler
+
+	// note: encapsulation is broken here because the HTTP Server cannot yet be pulled into the build-in control plane
+	//       until the commercial control plane becomes its own source of truth.
+	ExecutionController         scheduling.Controller
+	executionQuerier            scheduling.ExecutionQuerier
 	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
 	repositoryManager           repository.DatabaseRepository
+	emitter                     *event.Emitter
 }
 
 type Config struct {
@@ -53,13 +61,16 @@ type Config struct {
 	Verbose                          bool
 	Logger                           *zap.SugaredLogger
 	StorageBucket                    string
-	FeatureNewArchitecture           bool
 	FeatureTestWorkflowsCloudStorage bool
 }
 
 func New(
 	cfg Config,
-	executor testworkflowexecutor.TestWorkflowExecutor,
+	enqueuer scheduling.Enqueuer,
+	scheduler scheduling.Scheduler,
+	executionController scheduling.Controller,
+	executionQuerier scheduling.ExecutionQuerier,
+	eventEmitter *event.Emitter,
 	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -76,7 +87,10 @@ func New(
 	}
 	return &Server{
 		cfg:                         cfg,
-		executor:                    executor,
+		enqueuer:                    enqueuer,
+		scheduler:                   scheduler,
+		ExecutionController:         executionController,
+		executionQuerier:            executionQuerier,
 		commands:                    commands,
 		storageClient:               storageClient,
 		testWorkflowsClient:         testWorkflowsClient,
@@ -84,6 +98,7 @@ func New(
 		resultsRepository:           resultsRepository,
 		outputRepository:            outputRepository,
 		repositoryManager:           repositoryManager,
+		emitter:                     eventEmitter,
 	}
 }
 
@@ -129,6 +144,7 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	grpcServer := grpc.NewServer(opts...)
 
 	cloud.RegisterTestKubeCloudAPIServer(grpcServer, s)
+	executionv1.RegisterTestWorkflowExecutionServiceServer(grpcServer, s)
 	s.server = grpcServer
 	go func() {
 		<-ctx.Done()
@@ -141,7 +157,6 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	return nil
 }
 
-// TODO: Use this when context is down
 func (s *Server) Shutdown() {
 	if s.server != nil {
 		s.server.GracefulStop()

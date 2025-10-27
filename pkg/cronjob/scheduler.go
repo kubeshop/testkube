@@ -24,6 +24,15 @@ type scheduleEntry struct {
 }
 
 const (
+	// TestResourceURI is test resource uri for cron job call
+	TestResourceURI = "tests"
+	// TestSuiteResourceURI is test suite resource uri for cron job call
+	TestSuiteResourceURI = "test-suites"
+	// TestWorkflowResourceURI is test workflow resource uri for cron job call
+	TestWorkflowResourceURI = "test-workflows"
+)
+
+const (
 	watcherDelay = 200 * time.Millisecond
 )
 
