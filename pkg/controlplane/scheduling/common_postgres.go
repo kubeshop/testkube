@@ -117,7 +117,7 @@ func mapPgTestWorkflowAllSignatures(signatures []sqlc.TestWorkflowSignature) []t
 
 	// Create a map for fast lookup by ID
 	signatureMap := make(map[int32]*testkube.TestWorkflowSignature)
-	
+
 	// First pass: create all signature objects and populate the map
 	for _, sig := range signatures {
 		signature := &testkube.TestWorkflowSignature{
@@ -135,7 +135,7 @@ func mapPgTestWorkflowAllSignatures(signatures []sqlc.TestWorkflowSignature) []t
 	var roots []testkube.TestWorkflowSignature
 	for _, sig := range signatures {
 		signature := signatureMap[sig.ID]
-		
+
 		// If this signature has a parent, add it as a child to the parent
 		if sig.ParentID.Valid {
 			parent, exists := signatureMap[sig.ParentID.Int32]
