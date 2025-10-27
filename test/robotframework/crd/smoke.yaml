@@ -8,33 +8,22 @@ metadata:
     junit: "true"
     artifacts: "true"
 spec:
-  system:
-    pureByDefault: true
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-4436/robot-framework
+      revision: main
       paths:
         - test/robotframework/robotframework-project
   container:
-    image: marketsquare/robotframework-browser:19.10
+    image: marketsquare/robotframework-browser:19.10 # image recommended in robotframework docs
     resources:
       requests:
         cpu: 1000m
         memory: 1000Mi
     workingDir: /data/repo/test/robotframework/robotframework-project
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 180
   steps:
-    # - name: Install dependencies
-    #   shell: |
-    #     apt-get update && apt-get install -y curl gnupg wget \
-    #       libglib2.0-0 libnss3 libgdk-pixbuf-xlib-2.0-0 libxss1 \
-    #       libasound2 libatk-bridge2.0-0 libgtk-3-0 && \
-    #     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    #     apt-get install -y nodejs && \
-    #     pip install -r requirements.txt && \
-    #     rfbrowser init
     - name: Run Robot Framework tests
       run:
         shell: |
