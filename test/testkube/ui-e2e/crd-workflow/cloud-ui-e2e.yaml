@@ -47,7 +47,7 @@ spec:
       value: 'testkube-agent-e2e'
   steps:
   - name: Install dependencies
-    shell: npm ci
+    shell: npm install
   - name: Run tests
     shell: npx playwright test --retries=1
     artifacts:
@@ -103,7 +103,7 @@ spec:
       value: 'testkube-agent-e2e'
   steps:
   - name: Install dependencies
-    shell: npm ci
+    shell: npm install
   - name: Run tests
     parallel:
       description: "Shard: {{ index + 1 }}/{{ count }}"
