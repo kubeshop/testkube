@@ -99,7 +99,7 @@ func main() {
 	features := commons.MustGetFeatureFlags()
 
 	mode := common.ModeAgent
-	if cfg.TestkubeProAPIKey == "" || cfg.TestkubeProAgentRegToken == "" {
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
 		mode = common.ModeStandalone
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
 		cfg.TestkubeProTLSInsecure = true
@@ -209,7 +209,7 @@ func main() {
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
-	if cfg.TestkubeProAPIKey == "" || cfg.TestkubeProAgentRegToken != "" {
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
 		runnerName := cfg.RunnerName
 		if runnerName == "" {
 			// Fallback to a set name, but this is unlikely to be unique.
