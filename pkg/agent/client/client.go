@@ -129,7 +129,7 @@ func NewGRPCConnectionWithTracing(
 		}
 	}
 
-	//Attempt to use a TLS connection.
+	// Attempt to use a TLS connection.
 	tlsDialOptions := append(opts, grpc.WithTransportCredentials(creds))
 	client, err := attemptConnection(ctx, server, tlsDialOptions...)
 	// WARNING, checking for no error to early return with a secure client before attempting with local client.
