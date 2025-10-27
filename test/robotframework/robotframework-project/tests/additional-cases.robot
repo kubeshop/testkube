@@ -11,7 +11,7 @@ Test Case 6
     Should Be Equal    1    1
 
 Test Case 7
-    Sleep    10s
+    Sleep    1s
     Should Be Equal    1    1
 
 Test Case 8

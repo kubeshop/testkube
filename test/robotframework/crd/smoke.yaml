@@ -15,26 +15,26 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: TKC-4436/robot-framework
       paths:
-        - robotframework-project/tests
+        - test/robotframework/robotframework-project
   container:
-    image: python:3.14-slim
+    image: marketsquare/robotframework-browser:19.10
     resources:
       requests:
         cpu: 1000m
         memory: 1000Mi
-    workingDir: /data/repo/robotframework-project
+    workingDir: /data/repo/test/robotframework/robotframework-project
   job:
     activeDeadlineSeconds: 600
   steps:
-    - name: Install dependencies
-      shell: |
-        apt-get update && apt-get install -y curl gnupg wget \
-          libglib2.0-0 libnss3 libgdk-pixbuf-xlib-2.0-0 libxss1 \
-          libasound2 libatk-bridge2.0-0 libgtk-3-0 && \
-        curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-        apt-get install -y nodejs && \
-        pip install -r requirements.txt && \
-        rfbrowser init
+    # - name: Install dependencies
+    #   shell: |
+    #     apt-get update && apt-get install -y curl gnupg wget \
+    #       libglib2.0-0 libnss3 libgdk-pixbuf-xlib-2.0-0 libxss1 \
+    #       libasound2 libatk-bridge2.0-0 libgtk-3-0 && \
+    #     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    #     apt-get install -y nodejs && \
+    #     pip install -r requirements.txt && \
+    #     rfbrowser init
     - name: Run Robot Framework tests
       run:
         shell: |
