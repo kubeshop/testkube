@@ -13,7 +13,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      revision: TKC-4436/robot-framework
       paths:
         - robotframework-project/tests
   container:
@@ -22,26 +22,27 @@ spec:
       requests:
         cpu: 1000m
         memory: 1000Mi
-    workingDir: /data/repo/robotframework-project/tests
+    workingDir: /data/repo/robotframework-project
   job:
     activeDeadlineSeconds: 600
   steps:
     - name: Install dependencies
       shell: |
         apt-get update && apt-get install -y curl gnupg wget \
-          libglib2.0-0 libnss3 libgdk-pixbuf2.0-0 libxss1 \
+          libglib2.0-0 libnss3 libgdk-pixbuf-xlib-2.0-0 libxss1 \
           libasound2 libatk-bridge2.0-0 libgtk-3-0 && \
         curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
         apt-get install -y nodejs && \
-        pip install -r ../requirements.txt && \
+        pip install -r requirements.txt && \
         rfbrowser init
     - name: Run Robot Framework tests
       run:
         shell: |
           mkdir -p /data/artifacts && \
           robot --outputdir /data/artifacts \
-                --xunit /data/artifacts/junit.xml \
-                homepage.robot additional-cases.robot
+            --xunit /data/artifacts/junit.xml \
+            --exclude negative \
+            tests/
         env:
           - name: ROBOT_SYSLOG_FILE
             value: /data/artifacts/robot-syslog.txt
