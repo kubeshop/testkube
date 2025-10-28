@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: maven
+    category: build-integration
 spec:
   content:
     git:
@@ -36,6 +37,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: maven
+    category: build-integration
 spec:
   content:
     git:

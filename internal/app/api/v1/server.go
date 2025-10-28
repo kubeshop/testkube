@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -27,6 +28,8 @@ import (
 )
 
 func NewTestkubeAPI(
+	isStandalone bool,
+	executionController scheduling.Controller,
 	deprecatedClients commons.DeprecatedClients,
 	clusterId string,
 	namespace string,
@@ -56,6 +59,8 @@ func NewTestkubeAPI(
 ) TestkubeAPI {
 
 	return TestkubeAPI{
+		isStandalone:                   isStandalone,
+		executionController:            executionController,
 		ClusterID:                      clusterId,
 		Log:                            log.DefaultLogger,
 		DeprecatedClients:              deprecatedClients,
@@ -116,6 +121,20 @@ type TestkubeAPI struct {
 	ServiceAccountNames            map[string]string
 	dockerImageVersion             string
 	testWorkflowExecutor           testworkflowexecutor.TestWorkflowExecutor
+
+	// In a world where the control plane is the source of truth, the agent should no
+	// longer need an HTTP Server and therefore this HTTP Server would purely become a part
+	// of the standalone deployment's build-in control plane.
+	// However(!), until the superagent ran its migration to push all data to the control plane,
+	// then the control plane can still proxy requests using gRPC `ExecuteAsync` which will in turn
+	// make calls on this HTTP Server to do and fetch stuff.
+	// This flag allows to evolve the build-in Standalone HTTP Server, while keeping the old behaviour intact
+	// until we can remove it after the 2025 November release.
+	// note: the execution scheduling's behaviour is special; as this will _not_ keep the old behaviour.
+	// It now always schedules executions on the control plane instead of being able to incorrectly bypass it.
+	isStandalone bool
+
+	executionController scheduling.Controller
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {

@@ -5,6 +5,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
+	database "github.com/kubeshop/testkube/pkg/database/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendpostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -18,6 +20,7 @@ import (
 // PostgreSQL Factory Implementation
 type PostgreSQLFactory struct {
 	db               *pgxpool.Pool
+	schedulerDb      *database.DB
 	leaseBackendRepo leasebackend.Repository
 	resultRepo       result.Repository
 	testResultRepo   testresult.Repository
@@ -25,12 +28,14 @@ type PostgreSQLFactory struct {
 }
 
 type PostgreSQLFactoryConfig struct {
-	Database *pgxpool.Pool
+	Database    *pgxpool.Pool
+	SchedulerDb *database.DB
 }
 
 func NewPostgreSQLFactory(config PostgreSQLFactoryConfig) *PostgreSQLFactory {
 	factory := &PostgreSQLFactory{
-		db: config.Database,
+		db:          config.Database,
+		schedulerDb: config.SchedulerDb,
 	}
 
 	return factory
@@ -68,6 +73,18 @@ func (f *PostgreSQLFactory) NewTestWorkflowRepository() testworkflow.Repository 
 		)
 	}
 	return f.testWorkflowRepo
+}
+
+func (f *PostgreSQLFactory) NewScheduler() scheduling.Scheduler {
+	return scheduling.NewPostgresScheduler(f.schedulerDb)
+}
+
+func (f *PostgreSQLFactory) NewExecutionController() scheduling.Controller {
+	return scheduling.NewPostgresExecutionController(f.schedulerDb)
+}
+
+func (f *PostgreSQLFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
+	return scheduling.NewPostgresExecutionQuerier(f.schedulerDb)
 }
 
 func (f *PostgreSQLFactory) GetDatabaseType() DatabaseType {

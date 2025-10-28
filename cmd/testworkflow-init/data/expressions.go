@@ -151,6 +151,6 @@ var RefNotFailedMachine = expressions.NewMachine().
 	})
 
 func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
-	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
+	m = append(m, AliasMachine, GetBaseTestWorkflowMachine(), ExecutionMachine())
 	return expressions.EvalExpression(expr, m...)
 }

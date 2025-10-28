@@ -73,7 +73,6 @@ func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runne
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
 
 		// Feature flags
-		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
 		{Name: "FEATURE_CLOUD_STORAGE", Value: "true"},
 	}
 	return r.pod.Create(ctx, &corev1.Pod{

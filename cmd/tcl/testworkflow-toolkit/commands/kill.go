@@ -38,7 +38,7 @@ func NewKillCmd() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 			credMachine := credentials.NewCredentialMachine(data.Credentials())
-			machine := expressions.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine(), credMachine)
+			machine := expressions.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine(), data.ExecutionMachine(), credMachine)
 			groupRef := args[0]
 
 			conditions := make(map[string]expressions.Expression)

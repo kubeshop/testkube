@@ -3,7 +3,6 @@ package controlplaneclient
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"sync"
 	"time"
@@ -12,11 +11,9 @@ import (
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
@@ -32,9 +29,6 @@ type RunnerClient interface {
 }
 
 func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
-	if c.IsLegacy() {
-		return c.legacyGetRunnerOngoingExecutions(ctx)
-	}
 	res, err := call(ctx, c.metadata().GRPC(), c.client.GetUnfinishedExecutions, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
@@ -65,46 +59,6 @@ func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.Unfin
 
 		result = append(result, exec)
 	}
-}
-
-// Deprecated
-func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionGetRunningRequest{})
-	if err != nil {
-		return nil, err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return nil, err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionGetRunning),
-		Payload: &s,
-	}
-	cmdResponse, err := call(ctx, c.metadata().GRPC(), c.client.Call, &req)
-	if err != nil {
-		return nil, err
-	}
-	var response cloudtestworkflow.ExecutionGetRunningResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*cloud.UnfinishedExecution, 0)
-	for i := range response.WorkflowExecutions {
-		// Ignore if it's not assigned to any runner
-		if response.WorkflowExecutions[i].RunnerId == "" && len(response.WorkflowExecutions[i].Signature) == 0 {
-			continue
-		}
-
-		// Ignore if it's assigned to a different runner
-		if response.WorkflowExecutions[i].RunnerId != c.proContext.Agent.ID {
-			continue
-		}
-
-		result = append(result, &cloud.UnfinishedExecution{EnvironmentId: c.proContext.EnvID, Id: response.WorkflowExecutions[i].Id})
-	}
-	return result, err
 }
 
 func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {

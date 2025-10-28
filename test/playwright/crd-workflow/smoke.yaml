@@ -8,6 +8,7 @@ metadata:
     artifacts: "true"
     junit: "true"
     playwright-traces: "on"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -16,7 +17,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.53.2
+    image: mcr.microsoft.com/playwright:v1.56.1
     resources:
       requests:
         cpu: 1500m
@@ -50,6 +51,7 @@ metadata:
     core-tests: workflows
     tool: playwright
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -68,14 +70,14 @@ spec:
   steps:
   - name: Install dependencies
     run:
-      image: mcr.microsoft.com/playwright:v1.53.2 # image on step level
+      image: mcr.microsoft.com/playwright:v1.56.1 # image on step level
       command:
       - npm
       args:
       - ci
   - name: Run tests
     run:
-      image: mcr.microsoft.com/playwright:v1.53.2
+      image: mcr.microsoft.com/playwright:v1.56.1
       command:
         - "npx"
       args:
@@ -100,6 +102,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
+    category: e2e-ui-testing
 spec:
   container:
     resources:
@@ -122,7 +125,7 @@ spec:
       name: official/playwright/v1
       config:
         # params: --workers 4
-        version: v1.53.2
+        version: v1.56.1
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -132,6 +135,7 @@ metadata:
     core-tests: workflows
     tool: playwright
     artifacts: "true"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -140,7 +144,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.53.2
+    image: mcr.microsoft.com/playwright:v1.56.1
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -178,6 +182,7 @@ metadata:
     tool: playwright
     artifacts: "true"
     junit: "true"
+    category: e2e-ui-testing
 description: "Distributed Playwright with `--shard` - 2 browsers/projects, so it may *seem* things are executed twice"
 spec:
   content:
@@ -187,7 +192,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.53.2
+    image: mcr.microsoft.com/playwright:v1.56.1
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600

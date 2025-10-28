@@ -21,7 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
-//go:generate mockgen -destination=./mock_deprecatedclients.go -package=commons "github.com/kubeshop/testkube/cmd/api-server/commons" DeprecatedClients
+//go:generate go tool mockgen -destination=./mock_deprecatedclients.go -package=commons "github.com/kubeshop/testkube/cmd/api-server/commons" DeprecatedClients
 type DeprecatedClients interface {
 	Executors() executorsclientv1.Interface
 	Tests() testsclientv3.Interface
@@ -83,7 +83,7 @@ func CreateDeprecatedClients(kubeClient client.Client, namespace string) Depreca
 	}
 }
 
-//go:generate mockgen -destination=./mock_deprecatedrepositories.go -package=commons "github.com/kubeshop/testkube/cmd/api-server/commons" DeprecatedRepositories
+//go:generate go tool mockgen -destination=./mock_deprecatedrepositories.go -package=commons "github.com/kubeshop/testkube/cmd/api-server/commons" DeprecatedRepositories
 type DeprecatedRepositories interface {
 	TestResults() result.Repository
 	TestSuiteResults() testresult.Repository

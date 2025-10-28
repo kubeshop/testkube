@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: artillery
+    category: performance-testing
 spec:
   content:
     git:
@@ -32,6 +33,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: artillery
+    category: performance-testing
 spec:
   content:
     git:
@@ -59,6 +61,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: artillery
+    category: performance-testing
 spec:
   container:
     resources:
@@ -91,6 +94,7 @@ metadata:
     core-tests: workflows
     tool: artillery
     artifacts: "true"
+    category: performance-testing
 spec:
   config:
     arrivalRatePerWorker:

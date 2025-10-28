@@ -16,7 +16,7 @@ type ListOptions struct {
 	Limit      uint32
 }
 
-//go:generate mockgen -destination=./mock_interface.go -package=testtriggerclient "github.com/kubeshop/testkube/pkg/newclients/testtriggerclient" TestTriggerClient
+//go:generate go tool mockgen -destination=./mock_interface.go -package=testtriggerclient "github.com/kubeshop/testkube/pkg/newclients/testtriggerclient" TestTriggerClient
 type TestTriggerClient interface {
 	Get(ctx context.Context, environmentId string, name string, namespace string) (*testkube.TestTrigger, error)
 	GetKubernetesObjectUID(ctx context.Context, environmentId string, name string, namespace string) (types.UID, error)

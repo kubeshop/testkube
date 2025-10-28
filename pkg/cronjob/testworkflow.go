@@ -177,11 +177,11 @@ func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if _, ok := s.testWorklows[testWorkflowName]; !ok {
-		s.testWorklows[testWorkflowName] = make(map[string]cron.EntryID, 0)
+	if _, ok := s.testWorkflows[testWorkflowName]; !ok {
+		s.testWorkflows[testWorkflowName] = make(map[string]cron.EntryID, 0)
 	}
 
-	if _, ok := s.testWorklows[testWorkflowName][cronJobName]; !ok {
+	if _, ok := s.testWorkflows[testWorkflowName][cronJobName]; !ok {
 		cronName := cronJob.Cron
 		if cronJob.Timezone != nil {
 			cronName = fmt.Sprintf("CRON_TZ=%s %s", cronJob.Timezone.Value, cronJob.Cron)
@@ -193,7 +193,7 @@ func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName
 			return fmt.Errorf("adding cron %q for workflow %q to service: %w", cronJobName, testWorkflowName, err)
 		}
 
-		s.testWorklows[testWorkflowName][cronJobName] = entryID
+		s.testWorkflows[testWorkflowName][cronJobName] = entryID
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func (s *Scheduler) changeTestWorkflowCronJobs(ctx context.Context, testWorkflow
 
 			s.lock.RLock()
 			found := false
-			if cronJobNames, ok := s.testWorklows[testWorkflowName]; ok {
+			if cronJobNames, ok := s.testWorkflows[testWorkflowName]; ok {
 				if _, ok = cronJobNames[cronJobName]; ok {
 					found = true
 				}
@@ -237,11 +237,11 @@ func (s *Scheduler) changeTestWorkflowCronJobs(ctx context.Context, testWorkflow
 	}
 
 	s.lock.Lock()
-	if cronJobNames, ok := s.testWorklows[testWorkflowName]; ok {
+	if cronJobNames, ok := s.testWorkflows[testWorkflowName]; ok {
 		for cronJobName, entryID := range cronJobNames {
 			if _, ok := currentCronJobNames[cronJobName]; !ok {
 				s.cronService.Remove(entryID)
-				delete(s.testWorklows[testWorkflowName], cronJobName)
+				delete(s.testWorkflows[testWorkflowName], cronJobName)
 			}
 		}
 	}
@@ -254,12 +254,12 @@ func (s *Scheduler) removeTestWorkflowCronJobs(testWorkflowName string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if cronJobNames, ok := s.testWorklows[testWorkflowName]; ok {
+	if cronJobNames, ok := s.testWorkflows[testWorkflowName]; ok {
 		for _, entryID := range cronJobNames {
 			s.cronService.Remove(entryID)
 		}
 
-		delete(s.testWorklows, testWorkflowName)
+		delete(s.testWorkflows, testWorkflowName)
 	}
 }
 

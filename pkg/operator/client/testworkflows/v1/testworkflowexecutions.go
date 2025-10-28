@@ -9,7 +9,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
-//go:generate mockgen -destination=./mock_testworkflowexecutions.go -package=v1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1" TestWorkflowExecutionsInterface
+//go:generate go tool mockgen -destination=./mock_testworkflowexecutions.go -package=v1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1" TestWorkflowExecutionsInterface
 type TestWorkflowExecutionsInterface interface {
 	Get(name string) (*testworkflowsv1.TestWorkflowExecution, error)
 	Create(testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) (*testworkflowsv1.TestWorkflowExecution, error)

@@ -319,6 +319,19 @@ message UserSignature {
   string email = 2;
 }
 
+message SilentMode {
+  // disable webhooks for this execution
+  bool webhooks = 1;
+  // exclude from insights and analytics dashboards
+  bool insights = 2;
+  // exclude from health and flakiness calculations
+  bool health = 3;
+  // exclude from prometheus metrics
+  bool metrics = 4;
+  // disable CDEvents for this execution
+  bool cdevents = 5;
+}
+
 message ScheduleRequest {
   // Test Workflow details
   repeated ScheduleExecution executions = 2;
@@ -338,6 +351,9 @@ message ScheduleRequest {
 
   // Test Workflow resolved spec
   bytes resolvedWorkflow = 11;
+
+  // Silent mode settings
+  optional SilentMode silent_mode = 12;
 }
 
 message ScheduleResponse {

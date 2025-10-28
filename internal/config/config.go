@@ -12,9 +12,6 @@ type APIConfig struct {
 	APIServerPort     int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig   string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
-
-	// GraphQL
-	GraphqlPort int `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 }
 
 type OSSControlPlaneConfig struct {
@@ -238,7 +235,6 @@ type Config struct {
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 
-	FeatureNewArchitecture  bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
 	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
 }

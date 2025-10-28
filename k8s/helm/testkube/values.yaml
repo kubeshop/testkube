@@ -108,11 +108,11 @@ mongodb:
   # Currently Bitnami doesn't support ARM: https://github.com/bitnami/charts/issues/7305
   image:
     # -- MongoDB image registry
-    registry: docker.io
+    registry: us-east1-docker.pkg.dev
     # -- MongoDB image repository
-    repository: zcube/bitnami-compat-mongodb
+    repository: testkube-cloud-372110/testkube/mongodb
     # -- MongoDB image tag
-    tag: 6.0.5-debian-11-r64
+    tag: 8.0.13
     # -- MongoDB image pull Secret
     pullSecrets: []
   # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
@@ -253,11 +253,11 @@ postgresql:
   # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
   image:
     # -- PostgreSQL image registry
-    registry: docker.io
+    registry: us-east1-docker.pkg.dev
     # -- PostgreSQL image repository
-    repository: zcube/bitnami-compat-postgresql
+    repository: testkube-cloud-372110/testkube/postgresql
     # -- PostgreSQL image tag
-    tag: 15.2.0-debian-11-r64
+    tag: 18-debian-12
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 

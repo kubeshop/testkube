@@ -71,7 +71,7 @@ type ContainerMutations[T any] interface {
 	EnableToolkit(ref string) T
 }
 
-//go:generate mockgen -destination=./mock_container.go -package=stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage" Container
+//go:generate go tool mockgen -destination=./mock_container.go -package=stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage" Container
 type Container interface {
 	ContainerComposition
 	ContainerAccessors

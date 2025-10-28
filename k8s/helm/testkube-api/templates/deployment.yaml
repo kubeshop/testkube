@@ -239,8 +239,6 @@ spec:
               value: "{{ .Values.dockerImageVersion }}"
             {{- end }}
             {{- if .Values.next.enabled }}
-            - name: FEATURE_NEW_ARCHITECTURE
-              value: "true"
             - name: FEATURE_CLOUD_STORAGE
               value: "{{ .Values.next.cloudStorage }}"
             - name: DISABLE_TEST_TRIGGERS

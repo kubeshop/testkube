@@ -10,7 +10,7 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
-//go:generate mockgen -destination=./mock_testtriggers.go -package=v1 "github.com/kubeshop/testkube/pkg/operator/client/testtriggers/v1" Interface
+//go:generate go tool mockgen -destination=./mock_testtriggers.go -package=v1 "github.com/kubeshop/testkube/pkg/operator/client/testtriggers/v1" Interface
 type Interface interface {
 	List(selector, namespace string) (*testtriggersv1.TestTriggerList, error)
 	Get(name, namespace string) (*testtriggersv1.TestTrigger, error)

@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/operator/configmap" Interface
+//go:generate go tool mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/operator/configmap" Interface
 type Interface interface {
 	Get(ctx context.Context, name, namespace string) (map[string]string, error)
 	ListAll(ctx context.Context, selector, namespace string) (*corev1.ConfigMapList, error)

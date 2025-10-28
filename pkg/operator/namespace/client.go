@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate mockgen -destination=./mock_client.go -package=namespace "github.com/kubeshop/testkube/pkg/operator/namespace" Interface
+//go:generate go tool mockgen -destination=./mock_client.go -package=namespace "github.com/kubeshop/testkube/pkg/operator/namespace" Interface
 type Interface interface {
 	ListAll(ctx context.Context, selector string) (*corev1.NamespaceList, error)
 }

@@ -43,6 +43,25 @@ const (
 	GRPCKeepalivePermitWithoutStream = true
 )
 
+// Build dial options
+var dialOpts = []grpc.DialOption{
+	grpc.WithUserAgent(version.Version + "/" + version.Commit),
+	grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		Time:                GRPCKeepaliveTime,
+		Timeout:             GRPCKeepaliveTimeout,
+		PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
+	}),
+	grpc.WithConnectParams(grpc.ConnectParams{
+		Backoff: backoff.Config{
+			BaseDelay:  backoffDelay,
+			Multiplier: backoffMultiplier,
+			Jitter:     backoffJitter,
+			MaxDelay:   backoffMaxDelay,
+		},
+		MinConnectTimeout: connectionTimeout,
+	}),
+}
+
 // NewGRPCConnection keeps backward compatibility, tracing disabled by default.
 func NewGRPCConnection(
 	ctx context.Context,
@@ -66,29 +85,15 @@ func NewGRPCConnectionWithTracing(
 	enableTracing bool,
 ) (*grpc.ClientConn, error) {
 	// Build dial options
-	opts := []grpc.DialOption{
-		grpc.WithUserAgent(version.Version + "/" + version.Commit),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                GRPCKeepaliveTime,
-			Timeout:             GRPCKeepaliveTimeout,
-			PermitWithoutStream: GRPCKeepalivePermitWithoutStream,
-		}),
-		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff: backoff.Config{
-				BaseDelay:  backoffDelay,
-				Multiplier: backoffMultiplier,
-				Jitter:     backoffJitter,
-				MaxDelay:   backoffMaxDelay,
-			},
-			MinConnectTimeout: connectionTimeout,
-		}),
+	opts := append(dialOpts,
 		grpc.WithChainStreamInterceptor(
 			grpczap.StreamClientInterceptor(logger.Desugar()),
 		),
 		grpc.WithChainUnaryInterceptor(
 			grpczap.UnaryClientInterceptor(logger.Desugar()),
 		),
-	}
+	)
+
 	// Conditionally add OpenTelemetry (non-deprecated) stats handler
 	if enableTracing {
 		opts = append(opts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
@@ -207,4 +212,41 @@ func AddMetadata(ctx context.Context, apiKey, orgID, envID, agentID string) cont
 		agentIdMetadataName, agentID,
 	)
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+// NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing
+// creates an insecure gRPC connection to a server. By default it will create a TLS connection
+// that will perform no certificate verification, whilst this probably looks kind of like
+// a TLS connection it actually provides no security whatsoever.
+// Optionally you can choose to make your gRPC connection even less secure by setting the
+// isInsecure flag to true. In this mode the gRPC connection won't even have an unverified
+// TLS configuration and all communication will be in the clear.
+// DO NOT USE THIS FUNCTION!
+func NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(
+	ctx context.Context,
+	isInsecure bool,
+	server string,
+	logger *zap.SugaredLogger,
+) (*grpc.ClientConn, error) {
+	// Build dial options
+	opts := append(dialOpts,
+		grpc.WithChainStreamInterceptor(
+			grpczap.StreamClientInterceptor(logger.Desugar()),
+		),
+		grpc.WithChainUnaryInterceptor(
+			grpczap.UnaryClientInterceptor(logger.Desugar()),
+		),
+	)
+
+	creds := credentials.NewTLS(&tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: true,
+	})
+	if isInsecure {
+		creds = insecure.NewCredentials()
+	}
+
+	insecureDialOptions := append(opts, grpc.WithTransportCredentials(creds))
+
+	return attemptConnection(ctx, server, insecureDialOptions...)
 }

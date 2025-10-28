@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows
     tool: locust
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -40,6 +41,7 @@ metadata:
     core-tests: workflows
     tool: locust
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -74,6 +76,7 @@ metadata:
     core-tests: workflows
     tool: locust
     artifacts: "true"
+    category: performance-testing
 spec:
   content:
     git:
@@ -107,6 +110,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: locust
+    category: performance-testing
 spec:
   config:
     workers: {type: integer, default: 2}

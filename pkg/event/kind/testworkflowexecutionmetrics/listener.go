@@ -64,6 +64,12 @@ func (l *testWorkflowExecutionMetricsListener) Notify(event testkube.Event) test
 	if event.TestWorkflowExecution == nil {
 		return testkube.NewSuccessEventResult(event.Id, "ignored")
 	}
+
+	// Check if metrics are silenced for this execution
+	if event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Metrics {
+		return testkube.NewSuccessEventResult(event.Id, "metrics silenced for test workflow execution")
+	}
+
 	l.metrics.IncAndObserveExecuteTestWorkflow(*event.TestWorkflowExecution, l.dashboardURI)
 	return testkube.NewSuccessEventResult(event.Id, "monitored")
 }

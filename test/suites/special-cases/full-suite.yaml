@@ -24,6 +24,7 @@ spec:
       - name: playwright-workflow-suite
       - name: postman-workflow-suite
       - name: pytest-workflow-suite
+      - name: robotframework-workflow-suite
       - name: selenium-workflow-suite
       - name: soapui-workflow-suite
       - name: xunit-workflow-suite

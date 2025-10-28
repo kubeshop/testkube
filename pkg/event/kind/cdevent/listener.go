@@ -66,6 +66,12 @@ func (l *CDEventListener) Match(event testkube.Event) bool {
 }
 
 func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	// Check if CDEvents are silenced for test workflow executions
+	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Cdevents {
+		l.Log.With("event", event.Id).Debug("CDEvents silenced for test workflow execution")
+		return testkube.NewSuccessEventResult(event.Id, "CDEvents silenced for test workflow execution")
+	}
+
 	// Create the base event
 	namespace := l.defaultNamespace
 	if event.TestExecution != nil {

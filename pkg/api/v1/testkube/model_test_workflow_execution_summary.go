@@ -37,4 +37,5 @@ type TestWorkflowExecutionSummary struct {
 	// generated reports from the steps, like junit
 	Reports              []TestWorkflowReport                             `json:"reports,omitempty"`
 	ResourceAggregations *TestWorkflowExecutionResourceAggregationsReport `json:"resourceAggregations,omitempty"`
+	SilentMode           *SilentMode                                      `json:"silentMode,omitempty"`
 }

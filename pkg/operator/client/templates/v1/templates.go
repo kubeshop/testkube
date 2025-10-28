@@ -11,7 +11,7 @@ import (
 	templatev1 "github.com/kubeshop/testkube/api/template/v1"
 )
 
-//go:generate mockgen -destination=./mock_templates.go -package=templates "github.com/kubeshop/testkube/pkg/operator/client/templates/v1" Interface
+//go:generate go tool mockgen -destination=./mock_templates.go -package=templates "github.com/kubeshop/testkube/pkg/operator/client/templates/v1" Interface
 type Interface interface {
 	List(selector string) (*templatev1.TemplateList, error)
 	Get(name string) (*templatev1.Template, error)

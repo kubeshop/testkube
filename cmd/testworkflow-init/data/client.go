@@ -28,7 +28,7 @@ func CloudClient() controlplaneclient.Client {
 		cfg := GetState().InternalConfig
 		conn := cfg.Worker.Connection
 		logger := log.NewSilent()
-		grpcConn, err := agentclient.NewGRPCConnection(context.Background(), conn.TlsInsecure, conn.SkipVerify, conn.Url, "", logger)
+		grpcConn, err := agentclient.NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(context.Background(), conn.TlsInsecure, conn.Url, logger)
 		if err != nil {
 			output.ExitErrorf(constants.CodeInternal, "failed to connect with the Control Plane: %s", err.Error())
 		}

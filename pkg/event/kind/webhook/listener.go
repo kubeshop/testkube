@@ -228,7 +228,8 @@ func (l *WebhookListener) Match(event testkube.Event) bool {
 	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
 		return false
-	case event.TestWorkflowExecution != nil && event.TestWorkflowExecution.DisableWebhooks:
+	case event.TestWorkflowExecution != nil && (event.TestWorkflowExecution.DisableWebhooks ||
+		(event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Webhooks)):
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
 		return false
 	default:
@@ -556,6 +557,5 @@ func getSliceHashedMetadata[T any](slice []T) (string, error) {
 
 // getTextHashedMetadata returns text hashed metadata
 func getTextHashedMetadata(result []byte) string {
-
 	return fmt.Sprintf("%x", sha256.Sum256(result))
 }

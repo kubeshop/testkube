@@ -23,7 +23,7 @@ type Update struct {
 
 type WatcherUpdate common.Watcher[Update]
 
-//go:generate mockgen -source=./rest.go -destination=./mock_rest.go -package=v3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3" RESTInterface
+//go:generate go tool mockgen -source=./rest.go -destination=./mock_rest.go -package=v3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3" RESTInterface
 type RESTInterface interface {
 	WatchUpdates(ctx context.Context, environmentId string, includeInitialData bool) WatcherUpdate
 }

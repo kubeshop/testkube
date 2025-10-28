@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
@@ -51,17 +50,6 @@ func (s *stream[T]) Error() error {
 
 func (s *stream[T]) Channel() <-chan T {
 	return s.ch
-}
-
-func retry(count int, delayBase time.Duration, fn func() error) (err error) {
-	for i := 0; i < count; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		time.Sleep(time.Duration(i) * delayBase)
-	}
-	return err
 }
 
 func GetNewRunningContext(legacy *testkube.TestWorkflowRunningContext, parentExecutionIds []string) (runningContext *cloud.RunningContext, untrustedUser *cloud.UserSignature) {

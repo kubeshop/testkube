@@ -157,6 +157,11 @@ func (e *IntermediateExecution) SetDisabledWebhooks(disabled bool) *Intermediate
 	return e
 }
 
+func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *IntermediateExecution {
+	e.execution.SilentMode = silentMode
+	return e
+}
+
 func (e *IntermediateExecution) SetRunningContext(runningContext *testkube.TestWorkflowRunningContext) *IntermediateExecution {
 	e.execution.RunningContext = runningContext
 	return e
@@ -302,6 +307,7 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		EnvironmentId:    environmentId,
 		EnvironmentSlug:  environmentSlug,
 		ParentIds:        strings.Join(parentExecutionIds, "/"),
+		RunningContext:   e.execution.RunningContext,
 	})
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
 		Id:     e.execution.Id,

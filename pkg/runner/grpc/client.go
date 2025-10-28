@@ -57,6 +57,25 @@ type Client struct {
 // NewClient creates a client for retrieving updates about executions.
 func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runner, apiToken, organisationId string, controlPlane testworkflowconfig.ControlPlaneConfig, workflows workflowStore) Client {
 	client := executionv1.NewTestWorkflowExecutionServiceClient(conn)
+
+	opts := []grpc.CallOption{
+		// In the event of a transient failure on the server wait for it to come back rather than
+		// failing immediately.
+		grpc.WaitForReady(true),
+	}
+
+	// Standalone deployment does not have an API Token for now
+	if apiToken != "" {
+		// Note: This requires TLS to be correctly configured, otherwise the gRPC library will
+		// abort the connection. It is not secure to send authentication tokens over an
+		// unencrypted connection so this is appropriate behaviour.
+		grpc.PerRPCCredentials(oauth.TokenSource{
+			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
+				AccessToken: apiToken,
+			}),
+		})
+	}
+
 	return Client{
 		OrganisationId:     organisationId,
 		ControlPlaneConfig: controlPlane,
@@ -64,22 +83,10 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 		client:        client,
 		logger:        logger,
 		workflowStore: workflows,
-		callOpts: []grpc.CallOption{
-			// Note: This requires TLS to be correctly configured, otherwise the gRPC library will
-			// abort the connection. It is not secure to send authentication tokens over an
-			// unencrypted connection so this is appropriate behaviour.
-			grpc.PerRPCCredentials(oauth.TokenSource{
-				TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
-					AccessToken: apiToken,
-				}),
-			}),
-			// In the event of a transient failure on the server wait for it to come back rather than
-			// failing immediately.
-			grpc.WaitForReady(true),
-		},
-		callTimeout:  defaultCallTimeout,
-		runner:       r,
-		pollInterval: defaultPollInterval,
+		callOpts:      opts,
+		callTimeout:   defaultCallTimeout,
+		runner:        r,
+		pollInterval:  defaultPollInterval,
 	}
 }
 
@@ -89,45 +96,33 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 // supports this client.
 // Or it receives an "Unimplemented" response, returning false and indicating that the server does not support
 // this client and a fallback should be used instead.
-// In the event of any other error, such as an authentication failure or a network failure, it will continue
-// to loop, using a backoff mechanism, until one of the above cases is satisfied.
+// In the event of any other error, such as an authentication failure or a network failure, it will also fail
+// after logging a message indicating that an error occurred.
 func (c Client) IsSupported(ctx context.Context, environmentId string) bool {
-	b := backoff.New(backoff.DefaultMaxDuration, c.pollInterval)
-	ticker := time.Tick(c.pollInterval)
-	for {
-		select {
-		case <-ctx.Done():
-			return false
-		case <-ticker:
-			// Execute with our own call timeout context to prevent stalling out.
-			callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
-			// Add metadata to the call.
-			// Environment ID should only be sent in some instances so it should be omitted
-			// if it is not set to any specific value.
-			callCtx = metadata.AppendToOutgoingContext(callCtx, "organisation-id", c.OrganisationId)
-			if environmentId != "" {
-				callCtx = metadata.AppendToOutgoingContext(callCtx, "environment-id", environmentId)
-			}
-			_, err := c.client.GetExecutionUpdates(callCtx, &executionv1.GetExecutionUpdatesRequest{}, c.callOpts...)
-			cancel()
-			code, ok := status.FromError(err)
-			switch {
-			case ok && code.Code() == codes.Unimplemented:
-				// Server does not have the implementation for this client.
-				return false
-			case err != nil:
-				c.logger.Warnw("Failed to check if server supports polling execution updates, backing off before retrying.",
-					"backoff", b.Duration(),
-					"error", err)
-				// In the event of an error wait for backoff before trying again.
-				<-time.After(b.Duration())
-				continue
-			}
-
-			// Server has implementation.
-			return true
-		}
+	// Execute with our own call timeout context to prevent stalling out.
+	callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
+	defer cancel()
+	// Add metadata to the call.
+	// Environment ID should only be sent in some instances so it should be omitted
+	// if it is not set to any specific value.
+	callCtx = metadata.AppendToOutgoingContext(callCtx, "organisation-id", c.OrganisationId)
+	if environmentId != "" {
+		callCtx = metadata.AppendToOutgoingContext(callCtx, "environment-id", environmentId)
 	}
+	_, err := c.client.GetExecutionUpdates(callCtx, &executionv1.GetExecutionUpdatesRequest{}, c.callOpts...)
+	code, ok := status.FromError(err)
+	switch {
+	case ok && code.Code() == codes.Unimplemented:
+		// Server does not have the implementation for this client.
+		return false
+	case err != nil:
+		c.logger.Warnw("Failed to check if server supports polling execution updates.",
+			"error", err)
+		return false
+	}
+
+	// Server has implementation.
+	return true
 }
 
 // Start begins polling the control plane for updates to executions for this runner and passes

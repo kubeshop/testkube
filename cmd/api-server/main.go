@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -34,8 +35,10 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/controller"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/crdstorage"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutionmetrics"
@@ -50,7 +53,6 @@ import (
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
-	cronjobclient "github.com/kubeshop/testkube/pkg/operator/cronjob/client"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
@@ -97,13 +99,15 @@ func main() {
 	cfg := commons.MustGetConfig()
 	features := commons.MustGetFeatureFlags()
 
+	mode := common.ModeAgent
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
+		mode = common.ModeStandalone
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+	}
+
 	log.DefaultLogger.Infow("configuration loaded",
-		"mode", func() string {
-			if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
-				return "agent"
-			}
-			return "standalone"
-		}(),
+		"mode", mode,
 		"namespace", cfg.TestkubeNamespace,
 		"apiServerPort", cfg.APIServerPort,
 		"grpcPort", cfg.GRPCServerPort,
@@ -122,14 +126,6 @@ func main() {
 
 	// Determine the running mode
 
-	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
-		mode = common.ModeAgent
-	} else {
-		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
-		cfg.TestkubeProTLSInsecure = true
-	}
-
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -138,7 +134,6 @@ func main() {
 	g.Go(commons.HandleCancelSignal(ctx))
 
 	commons.MustFreePort(cfg.APIServerPort)
-	commons.MustFreePort(cfg.GraphqlPort)
 	commons.MustFreePort(cfg.GRPCServerPort)
 
 	log.DefaultLogger.Info("initializing...")
@@ -157,7 +152,6 @@ func main() {
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
-	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -173,23 +167,30 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	lazyRunner := runner2.LazyExecute()
+	log.DefaultLogger.Info("connecting to NATS...")
+	nc := commons.MustCreateNATSConnection(cfg)
+	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
+
+	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+	// TODO(emil): do we need a mongo/postgres backend for leases?
+	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent", cfg.TestkubeNamespace)
+	eventsEmitter = event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName)
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, features, eventsEmitter)
+
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
+		commons.ExitOnError("cannot listen to gRPC port", err)
 		g.Go(func() error {
-			return controlPlane.Start(ctx)
+			return controlPlane.Start(ctx, ln)
 		})
-
-		// Wait a bit for the control plane to start
-		time.Sleep(2 * time.Second)
-
-		log.DefaultLogger.Info("connecting to embedded Control Plane...")
-		var err error
 		grpcConn, err = agentclient.NewGRPCConnectionWithTracing(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", log.DefaultLogger, cfg.TracingEnabled)
 		commons.ExitOnError("connecting to embedded Control Plane", err)
 		log.DefaultLogger.Infow("connected to embedded control plane successfully", "port", cfg.GRPCServerPort)
@@ -323,19 +324,6 @@ func main() {
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, &proContext)
 
-	log.DefaultLogger.Info("connecting to NATS...")
-	nc := commons.MustCreateNATSConnection(cfg)
-	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
-
-	eventBus := bus.NewNATSBus(nc)
-	if cfg.Trace {
-		eventBus.TraceEvents()
-	}
-
-	// TODO(emil): do we need a mongo/postgres backend for leases?
-	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent", cfg.TestkubeNamespace)
-	eventsEmitter = event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName)
-
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify: cfg.StorageSkipVerify,
@@ -415,8 +403,7 @@ func main() {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
-		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
-		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
+		testworkflowconfig.FeatureFlagCloudStorage: fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	}, commonEnvVariables, true, defaultExecutionNamespace)
 
 	runnerOpts := runner2.Options{
@@ -427,7 +414,7 @@ func main() {
 	}
 	if cfg.GlobalWorkflowTemplateInline != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateInline(cfg.GlobalWorkflowTemplateInline)
-	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
+	} else if cfg.GlobalWorkflowTemplateName != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
 	runner := runner2.New(
@@ -471,21 +458,18 @@ func main() {
 		g.Go(func() error {
 			// Check if the new client is supported by the control plane.
 			// If not then just start up the existing implementation.
-			// Here we are using a context with a timeout because the client and/or server may not have TLS implemented as it was
-			// not previously enforced, however it is required with the new client implementation to secure authentication tokens.
+			// Here we are not using capabilities because the client and/or server may not have TLS implemented as it was not previously
+			// enforced, however it is required with the new client implementation to secure authentication tokens.
 			// gRPC does not provide a specific error for an attempt to transmit credentials over an unencrypted connection so to
-			// prevent the fallback to the previous insecure behaviour we must instead wait to see whether connectivity can be
+			// prevent the fallback to the previous insecure behaviour we must instead check to see whether connectivity can be
 			// established. The repercussions of this is that the agent will eagerly fallback to the insecure and legacy behaviour
 			// and so bringing up an agent before networking with the Control Plane has been established, or during a Control Plane
 			// outage will cause a fallback to the previous behaviour.
-			// This timeout should be removed once TLS is enforced across deployments.
-			supportedCtx, cancel := context.WithTimeout(ctx, time.Minute)
-			if !runnerClient.IsSupported(supportedCtx, proContext.EnvID) {
-				cancel()
+			// This check should be removed once TLS is enforced across deployments.
+			if !runnerClient.IsSupported(ctx, proContext.EnvID) {
 				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
-				return runnerService.Start(ctx, proContext.NewArchitecture)
+				return runnerService.Start(ctx, true)
 			}
-			cancel()
 			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
 			// If the client is supported then start both services/clients.
 			var eg errgroup.Group
@@ -499,28 +483,15 @@ func main() {
 			return eg.Wait()
 		})
 	}
-	lazyRunner.Set(runnerService)
 
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,
 		cfg.TestkubeProAPIKey,
-		cfg.CDEventsTarget,
 		eventsEmitter,
 		runnerService,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowsClient,
-		metrics,
-		secretManager,
-		cfg.GlobalWorkflowTemplateName,
-		proContext.DashboardURI,
 		proContext.OrgID,
-		proContext.OrgSlug,
 		proContext.EnvID,
-		proContext.GetEnvSlug,
 		proContext.Agent.ID,
-		proContext.NewArchitecture,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -797,7 +768,14 @@ func main() {
 		deprecatedSystem.API.Init(httpServer)
 	}
 
+	isStandalone := mode == common.ModeStandalone
+	var executionController scheduling.Controller
+	if isStandalone && controlPlane != nil {
+		executionController = controlPlane.ExecutionController
+	}
 	api := apiv1.NewTestkubeAPI(
+		isStandalone,
+		executionController,
 		deprecatedClients,
 		clusterId,
 		cfg.TestkubeNamespace,
@@ -861,7 +839,7 @@ func main() {
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 		commons.ExitOnError("creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
-		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
+		// testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 
 		var triggersLeaseBackend leasebackend.Repository
 		if controlPlane != nil {
@@ -918,11 +896,7 @@ func main() {
 		"version", version.Version,
 		"startupTime", time.Since(startTime),
 	)
-	log.DefaultLogger.Infow("api endpoints ready",
-		"httpPort", cfg.APIServerPort,
-		"grpcPort", cfg.GRPCServerPort,
-		"graphqlPort", cfg.GraphqlPort,
-	)
+	log.DefaultLogger.Infow("api endpoints ready", "httpPort", cfg.APIServerPort, "grpcPort", cfg.GRPCServerPort)
 
 	if cfg.EnableDebugServer {
 		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
@@ -933,29 +907,17 @@ func main() {
 		})
 	}
 
-	var executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
-	var executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
-	if deprecatedSystem != nil && deprecatedSystem.Scheduler != nil {
-		executeTestFn = deprecatedSystem.Scheduler.ExecuteTest
-		executeTestSuiteFn = deprecatedSystem.Scheduler.ExecuteTestSuite
-	}
-
 	scheduler := commons.CreateCronJobScheduler(cfg,
-		kubeClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
-		deprecatedClients,
-		executeTestFn,
-		executeTestSuiteFn,
 		log.DefaultLogger,
-		kubeConfig,
 		&proContext,
 	)
 	if scheduler != nil {
 		// Remove any remaining legacy cronjobs.
 		// TODO: Remove this section once we are happy that users are not migrating from legacy cronjobs (next Major version?)
-		resources := []string{cronjobclient.TestResourceURI, cronjobclient.TestSuiteResourceURI, cronjobclient.TestWorkflowResourceURI}
+		resources := []string{cronjob.TestResourceURI, cronjob.TestSuiteResourceURI, cronjob.TestWorkflowResourceURI}
 		for _, resource := range resources {
 			reqs, err := labels.ParseToRequirements("testkube=" + resource)
 			if err != nil {
@@ -988,20 +950,6 @@ func main() {
 		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
 		return httpServer.Run(ctx)
 	})
-
-	if deprecatedSystem != nil {
-		if deprecatedSystem.Reconciler != nil {
-			g.Go(func() error {
-				return deprecatedSystem.Reconciler.Run(ctx)
-			})
-		}
-
-		if deprecatedSystem.API != nil {
-			g.Go(func() error {
-				return deprecatedSystem.API.RunGraphQLServer(ctx, eventBus)
-			})
-		}
-	}
 
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)

@@ -104,12 +104,10 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	output.PrintLogf(
 		"%s Uploading artifacts using Remote Storage Uploader (timeout:%ds, agentInsecure:%v, agentSkipVerify: %v, url: %s, scraperSkipVerify: %v)",
 		ui.IconCheckMark, params.ProConnectionTimeoutSec, params.ProAPITLSInsecure, params.ProAPISkipVerify, params.ProAPIURL, params.SkipVerify)
-	grpcConn, err := agentclient.NewGRPCConnection(
+	grpcConn, err := agentclient.NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(
 		ctxTimeout,
 		params.ProAPITLSInsecure,
-		params.ProAPISkipVerify,
 		params.ProAPIURL,
-		params.ProAPICAFile,
 		log.DefaultLogger,
 	)
 	if err != nil {

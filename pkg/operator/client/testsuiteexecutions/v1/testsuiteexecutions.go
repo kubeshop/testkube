@@ -9,7 +9,7 @@ import (
 	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 )
 
-//go:generate mockgen -destination=./mock_testsuiteexecutions.go -package=testsuiteexecutions "github.com/kubeshop/testkube/pkg/operator/client/testsuiteexecutions/v1" Interface
+//go:generate go tool mockgen -destination=./mock_testsuiteexecutions.go -package=testsuiteexecutions "github.com/kubeshop/testkube/pkg/operator/client/testsuiteexecutions/v1" Interface
 type Interface interface {
 	Get(name string) (*testsuiteexecutionv1.TestSuiteExecution, error)
 	Create(testSuiteExecution *testsuiteexecutionv1.TestSuiteExecution) (*testsuiteexecutionv1.TestSuiteExecution, error)

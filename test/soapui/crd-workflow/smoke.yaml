@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: soapui
+    category: api-testing
 spec:
   content:
     git:

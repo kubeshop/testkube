@@ -33,7 +33,7 @@ type Update struct {
 
 type Watcher channels.Watcher[Update]
 
-//go:generate mockgen -destination=./mock_interface.go -package=testworkflowclient "github.com/kubeshop/testkube/pkg/newclients/testworkflowclient" TestWorkflowClient
+//go:generate go tool mockgen -destination=./mock_interface.go -package=testworkflowclient "github.com/kubeshop/testkube/pkg/newclients/testworkflowclient" TestWorkflowClient
 type TestWorkflowClient interface {
 	Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error)
 	GetKubernetesObjectUID(ctx context.Context, environmentId string, name string) (types.UID, error)

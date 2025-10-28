@@ -16,7 +16,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -77,6 +76,7 @@ type RunOptions struct {
 	Config                   map[string]string
 	Variables                []string
 	WatchEnabled             bool
+	Silent                   bool
 	DisableWebhooks          bool
 	DownloadArtifactsEnabled bool
 	DownloadDir              string
@@ -149,7 +149,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&opts.Config, "config", "", map[string]string{}, "configuration variables in a form of name1=val1 passed to executor")
 	cmd.Flags().StringArrayVarP(&opts.Variables, "variable", "v", []string{}, "execution variable passed to executor")
 	cmd.Flags().BoolVarP(&opts.WatchEnabled, "watch", "f", false, "watch for changes after start")
-	cmd.Flags().BoolVar(&opts.DisableWebhooks, "disable-webhooks", false, "disable webhooks for this execution")
+
+	cmd.Flags().BoolVar(&opts.Silent, "silent", false, "run test workflow silently (disables webhooks, insights, health, metrics, cdevents)")
+	cmd.Flags().BoolVar(&opts.DisableWebhooks, "disable-webhooks", false, "disable webhooks for this execution (deprecated: use --silent)")
+	cmd.Flags().MarkDeprecated("disable-webhooks", "use --silent flag instead")
 	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
 	cmd.Flags().StringVar(&opts.DownloadDir, "download-dir", opts.DownloadDir, "download dir")
 	cmd.Flags().BoolVarP(&opts.DownloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
@@ -196,8 +199,23 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 		variables, cliErr := parseVariables(opts.Variables)
 		common.HandleCLIError(cliErr)
 
+		var silentMode *testkube.SilentMode
+		if opts.Silent {
+			silentMode = &testkube.SilentMode{
+				Webhooks: true,
+				Insights: true,
+				Health:   true,
+				Metrics:  true,
+				Cdevents: true,
+			}
+		} else if opts.DisableWebhooks {
+			silentMode = &testkube.SilentMode{
+				Webhooks: true,
+			}
+		}
+
 		request, cliErr := buildExecutionRequest(cfg, runContext, interfaceType, opts.ExecutionName, opts.Config,
-			variables, opts.DisableWebhooks, opts.Tags, targetOpts)
+			variables, silentMode, opts.Tags, targetOpts)
 		common.HandleCLIError(cliErr)
 
 		executions, err := executeWorkflows(client, args, opts.Selectors, request)
@@ -299,7 +317,7 @@ func buildExecutionRequest(
 	executionName string,
 	config map[string]string,
 	variables map[string]string,
-	disableWebhooks bool,
+	silentMode *testkube.SilentMode,
 	tags map[string]string,
 	targetOpts TargetOptions,
 ) (testkube.TestWorkflowExecutionRequest, *common.CLIError) {
@@ -310,12 +328,17 @@ func buildExecutionRequest(
 	}
 
 	request := testkube.TestWorkflowExecutionRequest{
-		Name:            executionName,
-		Config:          config,
-		DisableWebhooks: disableWebhooks,
-		Tags:            tags,
-		RunningContext:  runningContext,
-		Target:          &testkube.ExecutionTarget{},
+		Name:           executionName,
+		Config:         config,
+		SilentMode:     silentMode,
+		Tags:           tags,
+		RunningContext: runningContext,
+		Target:         &testkube.ExecutionTarget{},
+	}
+
+	// Backward compatibility: set DisableWebhooks if silent webhooks is enabled
+	if silentMode != nil && silentMode.Webhooks {
+		request.DisableWebhooks = true
 	}
 
 	if len(variables) > 0 {
@@ -507,7 +530,7 @@ func handleWatchMode(
 		ec := uiWatch(*execution, pServiceName, opts.ServiceIndex, pParallelStepName, opts.ParallelStepIndex, client)
 		ui.NL()
 		if opts.DownloadOptions.Enabled {
-			tests.DownloadTestWorkflowArtifacts(execution.Id, opts.DownloadOptions.Dir,
+			common.DownloadTestWorkflowArtifacts(execution.Id, opts.DownloadOptions.Dir,
 				opts.DownloadOptions.Format, opts.DownloadOptions.Masks, client, outputPretty)
 		}
 		return ec
@@ -525,7 +548,7 @@ func handleWatchMode(
 			ec := uiWatch(*exec, pServiceName, opts.ServiceIndex, pParallelStepName, opts.ParallelStepIndex, client, options...)
 			ui.NL()
 			if opts.DownloadOptions.Enabled {
-				tests.DownloadTestWorkflowArtifacts(exec.Id, opts.DownloadOptions.Dir,
+				common.DownloadTestWorkflowArtifacts(exec.Id, opts.DownloadOptions.Dir,
 					opts.DownloadOptions.Format, opts.DownloadOptions.Masks, client, outputPretty)
 			}
 

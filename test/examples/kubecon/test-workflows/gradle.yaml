@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: gradle-java-test
   labels:
+    category: build-integration
     core-tests: workflows
 spec:
   content:
