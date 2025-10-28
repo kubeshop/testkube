@@ -26,7 +26,7 @@ var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 // WebhookLoaderOption is an option for NewWebhookLoader
 type WebhookLoaderOption func(*WebhooksLoader)
 
-//go:generate mockgen -destination=./mock_webhook_client.go -package=webhook "github.com/kubeshop/testkube/pkg/event/kind/webhook" WebhookClient
+//go:generate go tool mockgen -destination=./mock_webhook_client.go -package=webhook "github.com/kubeshop/testkube/pkg/event/kind/webhook" WebhookClient
 type WebhookClient interface {
 	List(selector string) (*executorv1.WebhookList, error)
 }
