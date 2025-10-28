@@ -291,8 +291,8 @@ spec:
     workingDir: /data/repo/test/k6
     resources:
       requests:
-        cpu: 256m
-        memory: 256Mi
+        cpu: 1000m
+        memory: 1Gi
   job:
     activeDeadlineSeconds: 300
   steps:
