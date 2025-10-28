@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	coordv1 "k8s.io/api/coordination/v1"
@@ -23,6 +22,7 @@ import (
 // - Otherwise, acquisition fails (returns leased=false)
 type K8sLeaseBackend struct {
 	client        kubernetes.Interface
+	name          string
 	namespace     string
 	leaseDuration time.Duration
 }
@@ -35,9 +35,10 @@ func WithLeaseDuration(d time.Duration) Option {
 }
 
 // NewK8sLeaseBackend creates a K8s-backed lease backend using coordination.k8s.io Leases in the given namespace.
-func NewK8sLeaseBackend(client kubernetes.Interface, namespace string, opts ...Option) *K8sLeaseBackend {
+func NewK8sLeaseBackend(client kubernetes.Interface, name, namespace string, opts ...Option) *K8sLeaseBackend {
 	b := &K8sLeaseBackend{
 		client:        client,
+		name:          name,
 		namespace:     namespace,
 		leaseDuration: leasebackend.DefaultMaxLeaseDuration,
 	}
@@ -126,5 +127,5 @@ func (b *K8sLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) 
 }
 
 func (b *K8sLeaseBackend) leaseName(clusterID string) string {
-	return fmt.Sprintf("testkube-triggers-lease-%s", clusterID)
+	return b.name + "-" + clusterID
 }

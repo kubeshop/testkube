@@ -11,6 +11,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -19,14 +21,17 @@ const (
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, subjectRoot string, clusterName string) *Emitter {
+func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
+	instanceId := utils.RandAlphanum(10)
 	return &Emitter{
-		loader:      NewLoader(),
-		log:         log.DefaultLogger,
-		bus:         eventBus,
-		subjectRoot: subjectRoot,
-		listeners:   make(common.Listeners, 0),
-		clusterName: clusterName,
+		loader:       NewLoader(),
+		log:          log.DefaultLogger.With("instance_id", instanceId),
+		bus:          eventBus,
+		instanceId:   instanceId,
+		leaseBackend: leaseBackend,
+		subjectRoot:  subjectRoot,
+		listeners:    make(common.Listeners, 0),
+		clusterName:  clusterName,
 	}
 }
 
@@ -38,12 +43,14 @@ type Interface interface {
 type Emitter struct {
 	*loader
 
-	log         *zap.SugaredLogger
-	listeners   common.Listeners
-	mutex       sync.RWMutex
-	bus         bus.Bus
-	subjectRoot string
-	clusterName string
+	log          *zap.SugaredLogger
+	listeners    common.Listeners
+	mutex        sync.RWMutex
+	bus          bus.Bus
+	instanceId   string
+	leaseBackend leasebackend.Repository
+	subjectRoot  string
+	clusterName  string
 }
 
 // Register adds new listener
@@ -85,30 +92,102 @@ func (e *Emitter) eventTopic(event testkube.Event) string {
 	return e.subjectRoot + "." + string(*event.Resource) + "." + event.ResourceId
 }
 
-// Listen runs emitter workers responsible for sending HTTP requests
+const (
+	leaseCheckInterval        = 5 * time.Second
+	leaseClusterID     string = "event-emitters"
+)
+
+// TODO(emil): integrate this into listen
+func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
+	e.log.Info("event emitter waiting for lease")
+	e.leaseCheck(ctx, leaseChan)
+	ticker := time.NewTicker(leaseCheckInterval)
+	for {
+		select {
+		case <-ctx.Done():
+			e.log.Info("event emitter stopped lease checks")
+			return
+		case <-ticker.C:
+			e.leaseCheck(ctx, leaseChan)
+		}
+	}
+}
+
+func (e *Emitter) leaseCheck(ctx context.Context, leaseChan chan<- bool) {
+	leased, err := e.leaseBackend.TryAcquire(ctx, leaseClusterID+"-"+e.instanceId, leaseClusterID)
+	if err != nil {
+		e.log.Errorw("error while trying to acquire lease", "error", err)
+	}
+	leaseChan <- leased
+}
+
+// Listen checks for lease holding and starts/stops workers processing event
+// notifications.
 func (e *Emitter) Listen(ctx context.Context) {
-	// clean after closing Emitter
+	e.log.Info("event emitter starting")
+	// Clean up
 	go func() {
 		<-ctx.Done()
-		e.log.Warn("closing event bus")
+		e.log.Info("event emitter closing event bus")
+		err := e.bus.Close()
+		if err != nil {
+			e.log.Errorw("error while closing event bus", "error", err)
+		} else {
+			e.log.Info("event emitter closed event bus")
+		}
+	}()
+
+	// Start lease check loop
+	leaseChan := make(chan bool)
+	go e.leaseCheckLoop(ctx, leaseChan)
+
+	// Current lease status
+	var leaderCancel context.CancelFunc
+	for {
+		select {
+		case <-ctx.Done():
+			e.log.Error("event emitter stopping")
+			return
+		case leased := <-leaseChan:
+			if !leased && leaderCancel != nil {
+				// Lost leadership
+				e.log.Info("event emitter no longer leader stop listening")
+				leaderCancel()
+				leaderCancel = nil
+			} else if leased && leaderCancel == nil {
+				// Became leader
+				e.log.Info("event emitter becoming leader")
+				var leaderCtx context.Context
+				leaderCtx, leaderCancel = context.WithCancel(ctx)
+				go e.leaderLoop(leaderCtx)
+			}
+		}
+	}
+}
+
+func (e *Emitter) leaderLoop(ctx context.Context) {
+	// Clean up
+	go func() {
+		<-ctx.Done()
+		e.log.Info("event emitter leader unsubscribing from emitted events")
 
 		err := e.bus.Unsubscribe(eventEmitterQueueName)
 		if err != nil {
 			e.log.Warnw("error while unsubscribing from emitted events", "error", err)
 		}
-
-		err = e.bus.Close()
-		if err != nil {
-			e.log.Warnw("error while closing event bus", "error", err)
-		}
-		e.log.Debug("closed event bus")
+		e.log.Info("event emitter leader unsubscribed from emitted events")
 	}()
 
+	// Recocile loop
+	go e.leaderReconcileLoop(ctx)
+
+	// Subscribe and handle events
+	e.log.Infow("event emitter leader subscribing to events")
 	err := e.bus.SubscribeTopic(e.subjectRoot+".>", eventEmitterQueueName, e.eventHandler)
 	if err != nil {
 		e.log.Errorw("error while starting to listen for events", "error", err)
 	}
-	e.log.Infow("started listening for events")
+	e.log.Infow("event emitter leader subscribed to events")
 }
 
 func (e *Emitter) eventHandler(event testkube.Event) error {
@@ -145,13 +224,15 @@ func (e *Emitter) eventHandler(event testkube.Event) error {
 	return nil
 }
 
-// Reconcile reloads listeners from all registered reconcilers
-func (e *Emitter) Reconcile(ctx context.Context) {
+// leaderReconcileLoop reloads listeners from all registered reconcilers should
+// only be ran by the leader.
+func (e *Emitter) leaderReconcileLoop(ctx context.Context) {
+	e.log.Info("event emitter leader started reconciler")
 	ticker := time.NewTicker(reconcileInterval)
 	for {
 		select {
 		case <-ctx.Done():
-			e.log.Info("stopping reconciler")
+			e.log.Info("event emitter leader stopped reconciler")
 			return
 		case <-ticker.C:
 			listeners := e.loader.Reconcile()

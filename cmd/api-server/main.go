@@ -331,7 +331,10 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
-	eventsEmitter = event.NewEmitter(eventBus, "agentevents", cfg.TestkubeClusterName)
+
+	// TODO(emil): do we need a mongo/postgres backend for leases?
+	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent", cfg.TestkubeNamespace)
+	eventsEmitter = event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName)
 
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
@@ -735,13 +738,10 @@ func main() {
 		}
 	}
 
-	log.DefaultLogger.Info("starting event system...")
-	eventsEmitter.Listen(ctx)
 	g.Go(func() error {
-		eventsEmitter.Reconcile(ctx)
+		eventsEmitter.Listen(ctx)
 		return nil
 	})
-	log.DefaultLogger.Info("event system started successfully")
 
 	// Create Kubernetes Operators/Controllers
 	if cfg.EnableK8sControllers {
@@ -863,12 +863,12 @@ func main() {
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 
-		var lb leasebackend.Repository
+		var triggersLeaseBackend leasebackend.Repository
 		if controlPlane != nil {
-			lb = controlPlane.GetRepositoryManager().LeaseBackend()
+			triggersLeaseBackend = controlPlane.GetRepositoryManager().LeaseBackend()
 		} else {
 			// Fallback: Kubernetes Lease-based coordination (no external DB required)
-			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
+			triggersLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-triggers-lease", cfg.TestkubeNamespace)
 		}
 
 		triggerService := triggers.NewService(
@@ -878,7 +878,7 @@ func main() {
 			testkubeClientset,
 			testWorkflowsClient,
 			testTriggersClient,
-			lb,
+			triggersLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
 			eventBus,
