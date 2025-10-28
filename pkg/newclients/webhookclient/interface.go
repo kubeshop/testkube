@@ -33,7 +33,7 @@ type Update struct {
 
 type Watcher channels.Watcher[Update]
 
-//go:generate mockgen -destination=./mock_interface.go -package=webhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient" WebhookClient
+//go:generate go tool mockgen -destination=./mock_interface.go -package=webhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient" WebhookClient
 type WebhookClient interface {
 	Get(ctx context.Context, environmentId string, name string) (*testkube.Webhook, error)
 	GetKubernetesObjectUID(ctx context.Context, environmentId string, name string) (types.UID, error)

@@ -55,7 +55,7 @@ type RunnerExecute interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 }
 
-//go:generate mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
+//go:generate go tool mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
 type Runner interface {
 	RunnerExecute
 	Monitor(ctx context.Context, organizationId, environmentId, id string) error

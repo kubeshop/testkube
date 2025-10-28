@@ -13,7 +13,7 @@ const (
 	StopSubject  = "agentevents.logs.stop"
 )
 
-//go:generate mockgen -destination=./mock_stream.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" Stream
+//go:generate go tool mockgen -destination=./mock_stream.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" Stream
 type Stream interface {
 	StreamInitializer
 	StreamPusher
@@ -23,13 +23,13 @@ type Stream interface {
 	StreamNamer
 }
 
-//go:generate mockgen -destination=./mock_initializedstreampusher.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" InitializedStreamPusher
+//go:generate go tool mockgen -destination=./mock_initializedstreampusher.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" InitializedStreamPusher
 type InitializedStreamPusher interface {
 	StreamInitializer
 	StreamPusher
 }
 
-//go:generate mockgen -destination=./mock_initializedstreamgetter.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" InitializedStreamGetter
+//go:generate go tool mockgen -destination=./mock_initializedstreamgetter.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" InitializedStreamGetter
 type InitializedStreamGetter interface {
 	StreamInitializer
 	StreamGetter
@@ -56,7 +56,7 @@ type StreamFinisher interface {
 	Finish(ctx context.Context, id string) error
 }
 
-//go:generate mockgen -destination=./mock_namer.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" StreamNamer
+//go:generate go tool mockgen -destination=./mock_namer.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" StreamNamer
 type StreamNamer interface {
 	// Name returns stream name based on possible name groups
 	Name(parts ...string) string
@@ -64,7 +64,7 @@ type StreamNamer interface {
 
 // StreamGetter interface for getting logs stream channel
 //
-//go:generate mockgen -destination=./mock_streamgetter.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" StreamGetter
+//go:generate go tool mockgen -destination=./mock_streamgetter.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" StreamGetter
 type StreamGetter interface {
 	// Init creates or updates stream on demand
 	Get(ctx context.Context, id string) (chan events.LogResponse, error)

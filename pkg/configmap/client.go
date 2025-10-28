@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-//go:generate mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
+//go:generate go tool mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
 type Interface interface {
 	Get(ctx context.Context, id string, namespace ...string) (map[string]string, error)
 	Create(ctx context.Context, id string, stringData map[string]string) error

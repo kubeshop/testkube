@@ -13,7 +13,7 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-//go:generate mockgen -destination=./mock_webhook.go -package=webhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook" WebhookRepository
+//go:generate go tool mockgen -destination=./mock_webhook.go -package=webhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook" WebhookRepository
 type WebhookRepository interface {
 	CollectExecutionResult(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error
 }

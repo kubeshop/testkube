@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-//go:generate mockgen -destination=./mock_filesystem.go -package=filesystem "github.com/kubeshop/testkube/pkg/filesystem" FileSystem
+//go:generate go tool mockgen -destination=./mock_filesystem.go -package=filesystem "github.com/kubeshop/testkube/pkg/filesystem" FileSystem
 type FileSystem interface {
 	Stat(name string) (os.FileInfo, error)
 	Walk(root string, walkFn filepath.WalkFunc) error

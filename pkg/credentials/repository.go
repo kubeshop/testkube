@@ -27,7 +27,7 @@ func getIterationDelay(iteration int) time.Duration {
 	return 5 * time.Second
 }
 
-//go:generate mockgen -destination=./mock_repository.go -package=credentials "github.com/kubeshop/testkube/pkg/credentials" CredentialRepository
+//go:generate go tool mockgen -destination=./mock_repository.go -package=credentials "github.com/kubeshop/testkube/pkg/credentials" CredentialRepository
 type CredentialRepository interface {
 	Get(ctx context.Context, name string) ([]byte, error)
 }

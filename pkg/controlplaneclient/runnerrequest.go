@@ -76,7 +76,7 @@ type RunnerRequestData interface {
 	SendError(err error) error
 }
 
-//go:generate mockgen -destination=./mock_runnerrequest.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" RunnerRequest
+//go:generate go tool mockgen -destination=./mock_runnerrequest.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" RunnerRequest
 type RunnerRequest interface {
 	RunnerRequestData
 	Ping() RunnerRequestOK

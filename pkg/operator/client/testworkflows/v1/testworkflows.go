@@ -10,7 +10,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
-//go:generate mockgen -destination=./mock_testworkflows.go -package=v1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1" Interface
+//go:generate go tool mockgen -destination=./mock_testworkflows.go -package=v1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1" Interface
 type Interface interface {
 	List(selector string) (*testworkflowsv1.TestWorkflowList, error)
 	ListLabels() (map[string][]string, error)
