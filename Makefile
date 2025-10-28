@@ -134,13 +134,11 @@ SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
-MOCKGEN_VERSION := v0.6.0
 
 # Tool binaries
 GOTESTSUM ?= $(LOCALBIN_TOOLING)/gotestsum
 GORELEASER ?= $(LOCALBIN_TOOLING)/goreleaser
 GOLANGCI_LINT ?= $(LOCALBIN_TOOLING)/golangci-lint
-MOCKGEN ?= $(LOCALBIN_TOOLING)/mockgen
 # swagger-codegen is installed globally via brew/package manager
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 SQLC = sqlc
@@ -425,7 +423,7 @@ generate-openapi: swagger-codegen-check ## Generate OpenAPI models
 .PHONY: generate-mocks
 generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, and ./pkg
 	@echo "Generating mock files..."
-	find ./cmd ./internal ./pkg -type f -name "*.go" -exec grep -q '//go:generate mockgen' {} \; -exec sh -c 'echo "Generating mocks for {}" && PATH=$(LOCALBIN_TOOLING) $(GO) generate {}' \;
+	@go generate -run mockgen -x ./...
 
 .PHONY: generate-sqlc
 generate-sqlc: ## Generate sqlc package with sql queries
@@ -541,7 +539,7 @@ clean-all: clean clean-tools ## Deep clean including Go cache and tools
 ##@ Tools
 
 .PHONY: install-tools
-install-tools: gotestsum golangci-lint mockgen ## Install all required tools
+install-tools: gotestsum golangci-lint ## Install all required tools
 
 # Tool installation targets
 .PHONY: gotestsum
@@ -558,11 +556,6 @@ $(GORELEASER): $(LOCALBIN_TOOLING)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
 $(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
 	test -s $(GOLANGCI_LINT) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-
-.PHONY: mockgen
-mockgen: $(MOCKGEN) ## Download mockgen locally if necessary
-$(MOCKGEN): $(LOCALBIN_TOOLING)
-	test -s $(MOCKGEN) || GOBIN=$(LOCALBIN_TOOLING) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
 
 .PHONY: swagger-codegen-check
 swagger-codegen-check: ## Check if swagger-codegen is installed
