@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -72,7 +73,7 @@ func Test_ReconcileTestWorkflow(t *testing.T) {
 		cancel()
 	}()
 
-	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger)
+	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger, &intconfig.ProContext{})
 
 	err := scheduler.ReconcileTestWorkflows(ctx)
 	assert.EqualError(t, err, context.Canceled.Error())

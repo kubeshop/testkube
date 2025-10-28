@@ -864,23 +864,11 @@ func main() {
 		})
 	}
 
-	var executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
-	var executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
-	if deprecatedSystem != nil && deprecatedSystem.Scheduler != nil {
-		executeTestFn = deprecatedSystem.Scheduler.ExecuteTest
-		executeTestSuiteFn = deprecatedSystem.Scheduler.ExecuteTestSuite
-	}
-
 	scheduler := commons.CreateCronJobScheduler(cfg,
-		kubeClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
-		deprecatedClients,
-		executeTestFn,
-		executeTestSuiteFn,
 		log.DefaultLogger,
-		kubeConfig,
 		&proContext,
 	)
 	if scheduler != nil {
@@ -919,14 +907,6 @@ func main() {
 		log.DefaultLogger.Infow("http server starting...", "port", cfg.APIServerPort)
 		return httpServer.Run(ctx)
 	})
-
-	if deprecatedSystem != nil {
-		if deprecatedSystem.Reconciler != nil {
-			g.Go(func() error {
-				return deprecatedSystem.Reconciler.Run(ctx)
-			})
-		}
-	}
 
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)

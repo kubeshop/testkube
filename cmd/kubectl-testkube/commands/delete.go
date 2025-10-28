@@ -6,11 +6,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
@@ -40,13 +35,8 @@ func NewDeleteCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
-	cmd.AddCommand(tests.NewDeleteTestsCmd())
-	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
 	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
 	cmd.AddCommand(webhooktemplates.NewDeleteWebhookTemplateCmd())
-	cmd.AddCommand(executors.NewDeleteExecutorCmd())
-	cmd.AddCommand(testsources.NewDeleteTestSourceCmd())
-	cmd.AddCommand(templates.NewDeleteTemplateCmd())
 	cmd.AddCommand(testworkflows.NewDeleteTestWorkflowCmd())
 	cmd.AddCommand(testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd())
 	cmd.AddCommand(agents.NewDeleteAgentCommand())

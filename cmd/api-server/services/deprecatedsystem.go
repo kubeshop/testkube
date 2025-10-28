@@ -28,7 +28,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
-	"github.com/kubeshop/testkube/pkg/reconciler"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -41,7 +40,6 @@ type DeprecatedSystem struct {
 	Clients      commons.DeprecatedClients
 	Repositories commons.DeprecatedRepositories
 	Scheduler    *scheduler.Scheduler
-	Reconciler   *reconciler.Client
 	JobExecutor  client.Executor
 	API          *deprecatedapiv1.DeprecatedTestkubeAPI
 	StreamLogs   func(ctx context.Context, executionID string) (chan output.Output, error)
@@ -217,18 +215,10 @@ func CreateDeprecatedSystem(
 		storageParams,
 	)
 
-	var reconcilerClient *reconciler.Client
-	if !cfg.DisableReconciler {
-		reconcilerClient = reconciler.NewClient(clientset, deprecatedRepositories, deprecatedClients, log.DefaultLogger)
-	} else {
-		log.DefaultLogger.Info("reconciler is disabled")
-	}
-
 	return &DeprecatedSystem{
 		Clients:      deprecatedClients,
 		Repositories: deprecatedRepositories,
 		Scheduler:    sched,
-		Reconciler:   reconcilerClient,
 		API:          &deprecatedApi,
 		StreamLogs:   deprecatedApi.GetLogsStream,
 	}
