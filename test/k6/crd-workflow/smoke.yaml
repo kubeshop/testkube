@@ -302,8 +302,6 @@ spec:
       run:
         shell: |
           k6 run k6-browser-smoke-test.js --out json=/data/artifacts/k6-browser-result.json --tag test_type=browser
-    - name: Save artifacts
-      workingDir: /data/artifacts
       artifacts:
         paths:
           - '*'
