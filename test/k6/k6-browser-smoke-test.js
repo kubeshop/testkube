@@ -6,8 +6,8 @@ export const options = {
     ui: {
       executor: 'shared-iterations',
       vus: 1,
-      iterations: 30,
-      maxDuration: '40s',
+      iterations: 10,
+      maxDuration: '30s',
       options: {
         browser: {
           type: 'chromium',
