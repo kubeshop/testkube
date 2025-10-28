@@ -12,12 +12,12 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
-type testTriggerStore interface {
+type TestTriggerStore interface {
 	UpdateOrCreateTestTrigger(context.Context, testtriggersv1.TestTrigger) error
 	DeleteTestTrigger(context.Context, string) error
 }
 
-func NewTestTriggerSyncController(mgr ctrl.Manager, store testTriggerStore) error {
+func NewTestTriggerSyncController(mgr ctrl.Manager, store TestTriggerStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testtriggersv1.TestTrigger{}).
 		Complete(testTriggerSyncReconciler(mgr.GetClient(), store)); err != nil {
@@ -26,7 +26,7 @@ func NewTestTriggerSyncController(mgr ctrl.Manager, store testTriggerStore) erro
 	return nil
 }
 
-func testTriggerSyncReconciler(client client.Reader, store testTriggerStore) reconcile.Reconciler {
+func testTriggerSyncReconciler(client client.Reader, store TestTriggerStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var trigger testtriggersv1.TestTrigger
 		err := client.Get(ctx, req.NamespacedName, &trigger)

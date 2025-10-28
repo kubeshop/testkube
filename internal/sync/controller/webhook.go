@@ -12,12 +12,12 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 )
 
-type webhookStore interface {
+type WebhookStore interface {
 	UpdateOrCreateWebhook(context.Context, executorv1.Webhook) error
 	DeleteWebhook(context.Context, string) error
 }
 
-func NewWebhookSyncController(mgr ctrl.Manager, store webhookStore) error {
+func NewWebhookSyncController(mgr ctrl.Manager, store WebhookStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&executorv1.Webhook{}).
 		Complete(webhookSyncReconciler(mgr.GetClient(), store)); err != nil {
@@ -26,7 +26,7 @@ func NewWebhookSyncController(mgr ctrl.Manager, store webhookStore) error {
 	return nil
 }
 
-func webhookSyncReconciler(client client.Reader, store webhookStore) reconcile.Reconciler {
+func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var webhook executorv1.Webhook
 		err := client.Get(ctx, req.NamespacedName, &webhook)

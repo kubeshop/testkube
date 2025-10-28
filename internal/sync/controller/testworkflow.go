@@ -12,12 +12,12 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
-type testWorkflowStore interface {
+type TestWorkflowStore interface {
 	UpdateOrCreateTestWorkflow(context.Context, testworkflowsv1.TestWorkflow) error
 	DeleteTestWorkflow(context.Context, string) error
 }
 
-func NewTestWorkflowSyncController(mgr ctrl.Manager, store testWorkflowStore) error {
+func NewTestWorkflowSyncController(mgr ctrl.Manager, store TestWorkflowStore) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflow{}).
 		Complete(testWorkflowSyncReconciler(mgr.GetClient(), store)); err != nil {
@@ -26,7 +26,7 @@ func NewTestWorkflowSyncController(mgr ctrl.Manager, store testWorkflowStore) er
 	return nil
 }
 
-func testWorkflowSyncReconciler(client client.Reader, store testWorkflowStore) reconcile.Reconciler {
+func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		var workflow testworkflowsv1.TestWorkflow
 		err := client.Get(ctx, req.NamespacedName, &workflow)
