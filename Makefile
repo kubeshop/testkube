@@ -134,14 +134,15 @@ SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
+SQLC_VERSION := v1.29.0
 
 # Tool binaries
 GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
-GORELEASER ?= $(LOCALBIN_TOOLING)/goreleaser
+GORELEASER = go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
 GOLANGCI_LINT ?= $(LOCALBIN_TOOLING)/golangci-lint
+SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 # swagger-codegen is installed globally via brew/package manager
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
-SQLC = sqlc
 
 # ==================== Environment Configuration ====================
 DASHBOARD_URI ?= https://demo.testkube.io
@@ -462,7 +463,7 @@ generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
 docker-build: docker-build-api docker-build-cli ## Build all Docker images
 
 .PHONY: docker-build-api
-docker-build-api: goreleaser ## Build API server Docker image
+docker-build-api: ## Build API server Docker image
 	@echo "Building API server Docker image..."
 	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
 		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
@@ -472,7 +473,7 @@ docker-build-api: goreleaser ## Build API server Docker image
 		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
 
 .PHONY: docker-build-cli
-docker-build-cli: goreleaser ## Build CLI Docker image
+docker-build-cli: ## Build CLI Docker image
 	@echo "Building CLI Docker image..."
 	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
 		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
@@ -542,11 +543,6 @@ clean-all: clean clean-tools ## Deep clean including Go cache and tools
 install-tools: golangci-lint ## Install all required tools
 
 # Tool installation targets
-.PHONY: goreleaser
-goreleaser: $(GORELEASER) ## Download goreleaser locally if necessary
-$(GORELEASER): $(LOCALBIN_TOOLING)
-	test -s $(GORELEASER) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
-
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
 $(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
