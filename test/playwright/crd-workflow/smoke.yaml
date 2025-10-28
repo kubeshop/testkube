@@ -55,6 +55,7 @@ metadata:
     junit: "true"
     playwright-traces: "on"
     category: e2e-ui-testing
+description: "Playwright project with video recording enabled (in playwright config)"
 spec:
   content:
     git:
