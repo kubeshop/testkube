@@ -136,7 +136,7 @@ GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
 
 # Tool binaries
-GOTESTSUM ?= $(LOCALBIN_TOOLING)/gotestsum
+GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 GORELEASER ?= $(LOCALBIN_TOOLING)/goreleaser
 GOLANGCI_LINT ?= $(LOCALBIN_TOOLING)/golangci-lint
 # swagger-codegen is installed globally via brew/package manager
@@ -367,13 +367,13 @@ dev: run-mongo run-nats run-api ## Start development environment
 test: unit-tests ## Run all tests
 
 .PHONY: unit-tests
-unit-tests: gotestsum ## Run unit tests with coverage
+unit-tests: ## Run unit tests with coverage
 	@echo "Running unit tests..."
 	@$(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
 		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
 
 .PHONY: integration-tests
-integration-tests: gotestsum build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
+integration-tests: build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
 	@echo "Running integration tests (only tests ending with _Integration)..."
 	@INTEGRATION="true" \
 		TESTKUBE_PROJECT_ROOT="$(PWD)" \
@@ -539,14 +539,9 @@ clean-all: clean clean-tools ## Deep clean including Go cache and tools
 ##@ Tools
 
 .PHONY: install-tools
-install-tools: gotestsum golangci-lint ## Install all required tools
+install-tools: golangci-lint ## Install all required tools
 
 # Tool installation targets
-.PHONY: gotestsum
-gotestsum: $(GOTESTSUM) ## Download gotestsum locally if necessary
-$(GOTESTSUM): $(LOCALBIN_TOOLING)
-	test -s $(GOTESTSUM) || GOBIN=$(LOCALBIN_TOOLING) go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
-
 .PHONY: goreleaser
 goreleaser: $(GORELEASER) ## Download goreleaser locally if necessary
 $(GORELEASER): $(LOCALBIN_TOOLING)
