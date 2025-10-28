@@ -11,10 +11,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
-const (
-	concurrencyLevel = 10
-)
-
 func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName string, cron *testkube.TestWorkflowCronJobConfig) {
 	var targets []*cloud.ExecutionTarget
 	if cron.Target != nil {
