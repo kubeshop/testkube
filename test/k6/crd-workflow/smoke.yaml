@@ -283,7 +283,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-3928/k6-browser # TODO: replace before merge
+      revision: main
       paths:
         - test/k6/k6-browser-smoke-test.js
   container:
