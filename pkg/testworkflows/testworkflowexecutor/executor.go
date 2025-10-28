@@ -22,7 +22,7 @@ const (
 	ConfigSizeLimit = 3 * 1024 * 1024
 )
 
-//go:generate mockgen -destination=./executor_mock.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
+//go:generate go tool mockgen -destination=./executor_mock.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
 	Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error)
 }

@@ -16,7 +16,7 @@ import (
 
 const testkubeTestSecretLabel = "tests-secrets"
 
-//go:generate mockgen -destination=./mock_client.go -package=secret "github.com/kubeshop/testkube/pkg/secret" Interface
+//go:generate go tool mockgen -destination=./mock_client.go -package=secret "github.com/kubeshop/testkube/pkg/secret" Interface
 type Interface interface {
 	Get(id string, namespace ...string) (map[string]string, error)
 	GetObject(id string) (*v1.Secret, error)

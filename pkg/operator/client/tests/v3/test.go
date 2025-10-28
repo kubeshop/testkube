@@ -36,7 +36,7 @@ var testSecretDefaultLabels = map[string]string{
 	"createdBy":          "testkube",
 }
 
-//go:generate mockgen -source=./test.go -destination=./mock_tests.go -package=tests "github.com/kubeshop/testkube/pkg/operator/client/tests/v3" Interface
+//go:generate go tool mockgen -source=./test.go -destination=./mock_tests.go -package=tests "github.com/kubeshop/testkube/pkg/operator/client/tests/v3" Interface
 type Interface interface {
 	List(selector string) (*testsv3.TestList, error)
 	ListLabels() (map[string][]string, error)

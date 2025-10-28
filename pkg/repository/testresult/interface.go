@@ -27,7 +27,7 @@ type Filter interface {
 	Selector() string
 }
 
-//go:generate mockgen -destination=./mock_repository.go -package=testresult "github.com/kubeshop/testkube/pkg/repository/testresult" Repository
+//go:generate go tool mockgen -destination=./mock_repository.go -package=testresult "github.com/kubeshop/testkube/pkg/repository/testresult" Repository
 type Repository interface {
 	Sequences
 	// Get gets execution result by id or name

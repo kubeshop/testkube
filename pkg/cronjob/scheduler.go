@@ -27,7 +27,7 @@ const (
 	watcherDelay = 200 * time.Millisecond
 )
 
-//go:generate mockgen -destination=./mock_scheduler.go -package=cronjob "github.com/kubeshop/testkube/pkg/cronjob" Interface
+//go:generate go tool mockgen -destination=./mock_scheduler.go -package=cronjob "github.com/kubeshop/testkube/pkg/cronjob" Interface
 type Interface interface {
 	Reconcile(ctx context.Context)
 	ReconcileTestWorkflows(ctx context.Context) error

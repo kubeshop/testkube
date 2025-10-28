@@ -39,7 +39,7 @@ type RuntimeConfig struct {
 	Namespace string
 }
 
-//go:generate mockgen -destination=./mock_client.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" Client
+//go:generate go tool mockgen -destination=./mock_client.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" Client
 type Client interface {
 	IsSuperAgent() bool
 	IsRunner() bool

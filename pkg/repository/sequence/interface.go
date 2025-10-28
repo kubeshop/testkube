@@ -12,7 +12,7 @@ const (
 	ExecutionTypeTestWorkflow ExecutionType = "tw"
 )
 
-//go:generate mockgen -destination=./mock_repository.go -package=sequence "github.com/kubeshop/testkube/pkg/repository/sequence" Repository
+//go:generate go tool mockgen -destination=./mock_repository.go -package=sequence "github.com/kubeshop/testkube/pkg/repository/sequence" Repository
 type Repository interface {
 	// GetNextExecutionNumber gets next execution number by name and type
 	GetNextExecutionNumber(ctx context.Context, name string, executionType ExecutionType) (number int32, err error)

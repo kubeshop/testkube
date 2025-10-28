@@ -12,7 +12,7 @@ import (
 
 // Client is storage client abstraction
 //
-//go:generate mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" Client
+//go:generate go tool mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" Client
 type Client interface {
 	ClientBucket
 	ClientImplicitBucket

@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate mockgen -destination=./mock_webhooktemplates.go -package=executors "github.com/kubeshop/testkube/pkg/operator/client/executors/v1" WebhookTemplatesInterface
+//go:generate go tool mockgen -destination=./mock_webhooktemplates.go -package=executors "github.com/kubeshop/testkube/pkg/operator/client/executors/v1" WebhookTemplatesInterface
 type WebhookTemplatesInterface interface {
 	List(selector string) (*executorsv1.WebhookTemplateList, error)
 	Get(name string) (*executorsv1.WebhookTemplate, error)
