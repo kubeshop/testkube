@@ -15,18 +15,17 @@ export const options = {
 };
 
 export default async function () {
-  const page = browser.newPage();
+  const context = browser.newContext();
+  const page = context.newPage();
 
-  try {
-    await page.goto('https://testkube-test-page-lipsum.pages.dev/');
-    await page.waitForTimeout(3000); // increase test duration
+  await page.goto('https://testkube-test-page-lipsum.pages.dev/');
+  await page.waitForTimeout(3000);
 
-    const title = await page.title();
+  const title = await page.title();
 
-    check(title, {
-      'title contains "Testkube"': (t) => /Testkube/.test(t),
-    });
-  } finally {
-    page.close();
-  }
+  check(title, {
+    'Validate page title': (t) => t === 'Testkube test page - Lorem Ipsum',
+  });
+
+  await context.close();
 }
