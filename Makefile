@@ -91,11 +91,6 @@ LOCALBIN ?= $(PWD)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-# LOCALBIN_TOOLING refers to the directory where tooling binaries are installed
-LOCALBIN_TOOLING ?= $(LOCALBIN)/tooling
-$(LOCALBIN_TOOLING):
-	mkdir -p $(LOCALBIN_TOOLING)
-
 # LOCALBIN_APP refers to the directory where application binaries are installed
 LOCALBIN_APP ?= $(LOCALBIN)/app
 $(LOCALBIN_APP):
@@ -139,7 +134,7 @@ SQLC_VERSION := v1.29.0
 # Tool binaries
 GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 GORELEASER = go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
-GOLANGCI_LINT ?= $(LOCALBIN_TOOLING)/golangci-lint
+GOLANGCI_LINT = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 # swagger-codegen is installed globally via brew/package manager
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
@@ -212,9 +207,6 @@ help: ## Show this help message
 
 # ==================== Quick Start ====================
 ##@ Quick Start
-
-.PHONY: setup
-setup: install-tools ## Initial project setup
 
 .PHONY: all
 all: clean build test ## Clean, build, and test everything
@@ -393,14 +385,14 @@ cover: unit-tests ## Generate and open test coverage report
 ##@ Linting
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint
+lint: ## Run golangci-lint
 	@echo "Running golangci-lint..."
-	@$(GOLANGCI_LINT) run ./cmd/... ./internal/... ./pkg/... ./test/integration/components/... --timeout 10m
+	@$(GOLANGCI_LINT) run ./... --timeout 10m
 
 .PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
+lint-fix: ## Run golangci-lint with automatic fixes
 	@echo "Running golangci-lint with fixes..."
-	@$(GOLANGCI_LINT) run ./cmd/... ./internal/... ./pkg/... ./test/integration/components/... --timeout 10m --fix
+	@$(GOLANGCI_LINT) run ./... --timeout 10m --fix
 
 # ==================== Code Generation ====================
 ##@ Code Generation
@@ -524,14 +516,8 @@ clean: ## Clean build artifacts
 	@rm -f integration-tests.xml integration-tests.json
 	@echo "Clean complete"
 
-.PHONY: clean-tools
-clean-tools: ## Clean installed tools
-	@echo "Cleaning tools..."
-	@rm -rf $(LOCALBIN_TOOLING)
-	@echo "Tools cleaned"
-
 .PHONY: clean-all
-clean-all: clean clean-tools ## Deep clean including Go cache and tools
+clean-all: clean ## Deep clean including Go cache
 	@echo "Performing deep clean..."
 	@go clean -cache -testcache -modcache
 	@echo "Deep clean complete"
@@ -539,15 +525,7 @@ clean-all: clean clean-tools ## Deep clean including Go cache and tools
 # ==================== Tool Installation ====================
 ##@ Tools
 
-.PHONY: install-tools
-install-tools: golangci-lint ## Install all required tools
-
 # Tool installation targets
-.PHONY: golangci-lint
-golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
-$(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
-	test -s $(GOLANGCI_LINT) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-
 .PHONY: swagger-codegen-check
 swagger-codegen-check: ## Check if swagger-codegen is installed
 ifndef SWAGGER_CODEGEN
