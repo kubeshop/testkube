@@ -27,7 +27,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gabriel-vasile/mimetype v1.4.6
 	github.com/go-errors/errors v1.5.1
-	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/contrib/otelfiber v1.0.10
@@ -66,7 +65,6 @@ require (
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/prometheus/client_golang v1.22.0
 	github.com/pterm/pterm v0.12.79
-	github.com/robfig/cron v1.2.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savioxavier/termlink v1.4.1
 	github.com/segmentio/analytics-go/v3 v3.2.1
@@ -184,6 +182,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -342,5 +341,6 @@ require (
 
 tool (
 	github.com/mikefarah/yq/v4
+	go.uber.org/mock/mockgen
 	sigs.k8s.io/controller-tools/cmd/controller-gen
 )
