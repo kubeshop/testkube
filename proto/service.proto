@@ -225,6 +225,7 @@ message WebsocketData {
 message CredentialRequest {
   string name = 1;
   string execution_id = 2;
+  string source = 3; // "credential" or "vault"
 }
 
 message CredentialResponse {
