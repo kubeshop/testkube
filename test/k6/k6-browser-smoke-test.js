@@ -1,10 +1,13 @@
 import { browser } from 'k6/browser';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
 
 export const options = {
   scenarios: {
     ui: {
       executor: 'shared-iterations',
+      vus: 1,
+      iterations: 30,
+      maxDuration: '40s',
       options: {
         browser: {
           type: 'chromium',
@@ -15,17 +18,21 @@ export const options = {
 };
 
 export default async function () {
-  const context = browser.newContext();
-  const page = context.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
-  await page.goto('https://testkube-test-page-lipsum.pages.dev/');
-  await page.waitForTimeout(3000);
+  const res = await page.goto('https://testkube-test-page-lipsum.pages.dev/');
+
+  check(res, {
+    'status is 200': (r) => r.status() === 200,
+  });
 
   const title = await page.title();
 
   check(title, {
-    'Validate page title': (t) => t === 'Testkube test page - Lorem Ipsum',
+    'title is correct': (t) => t === 'Testkube test page - Lorem Ipsum',
   });
 
+  await page.waitForTimeout(1000);
   await context.close();
 }
