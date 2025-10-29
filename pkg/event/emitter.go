@@ -234,7 +234,6 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 }
 
 func (e *Emitter) leaderEventHandler(event testkube.Event) error {
-	e.log.Infof("handling event: %v", event.TestExecution.Labels)
 	// Current set of listeners
 	e.mutex.Lock()
 	listeners := make([]common.Listener, len(e.listeners))
