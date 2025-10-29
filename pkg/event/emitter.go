@@ -24,14 +24,15 @@ const (
 func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
 	instanceId := utils.RandAlphanum(10)
 	return &Emitter{
-		loader:       NewLoader(),
-		log:          log.DefaultLogger.With("instance_id", instanceId),
-		bus:          eventBus,
-		instanceId:   instanceId,
-		leaseBackend: leaseBackend,
-		subjectRoot:  subjectRoot,
-		listeners:    make(common.Listeners, 0),
-		clusterName:  clusterName,
+		loader:         NewLoader(),
+		log:            log.DefaultLogger.With("instance_id", instanceId),
+		bus:            eventBus,
+		instanceId:     instanceId,
+		leaseBackend:   leaseBackend,
+		subjectRoot:    subjectRoot,
+		listeners:      make(common.Listeners, 0),
+		listenerExists: make(map[string]map[string]struct{}),
+		clusterName:    clusterName,
 	}
 }
 
@@ -43,22 +44,40 @@ type Interface interface {
 type Emitter struct {
 	*loader
 
-	log          *zap.SugaredLogger
-	listeners    common.Listeners
-	mutex        sync.RWMutex
-	bus          bus.Bus
-	instanceId   string
-	leaseBackend leasebackend.Repository
-	subjectRoot  string
-	clusterName  string
+	log            *zap.SugaredLogger
+	listeners      common.Listeners
+	listenerExists map[string]map[string]struct{}
+	mutex          sync.RWMutex
+	bus            bus.Bus
+	instanceId     string
+	leaseBackend   leasebackend.Repository
+	subjectRoot    string
+	clusterName    string
+}
+
+// appendUniqueListeners appends only listeners unique by kind and name.
+// Should be called after acquiring e.mutex.
+func (e *Emitter) appendUniqueListeners(listeners ...common.Listener) {
+	for i := range listeners {
+		kind := listeners[i].Kind()
+		name := listeners[i].Name()
+		if e.listenerExists[kind] == nil {
+			e.listenerExists[kind] = make(map[string]struct{})
+		}
+		if _, exists := e.listenerExists[kind][name]; !exists {
+			// Mark as existing and append to listeners array
+			e.listenerExists[kind][name] = struct{}{}
+			e.listeners = append(e.listeners, listeners[i])
+			e.log.Infof("added unique listener: %s, number of listeners: %d", name, len(e.listeners))
+		}
+	}
 }
 
 // Register adds new listener
 func (e *Emitter) Register(listener common.Listener) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-
-	e.listeners = append(e.listeners, listener)
+	e.appendUniqueListeners(listener)
 }
 
 // Notify notifies emitter with webhook
@@ -146,7 +165,10 @@ func (e *Emitter) Listen(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			e.log.Error("event emitter stopping")
+			e.log.Info("event emitter stopping")
+			if leaderCancel != nil {
+				leaderCancel()
+			}
 			return
 		case leased := <-leaseChan:
 			if !leased && leaderCancel != nil {
@@ -165,6 +187,9 @@ func (e *Emitter) Listen(ctx context.Context) {
 	}
 }
 
+// leaderLoop reloads listeners from all registered reconcilers should
+// only be ran by the leader.
+// After the first reconcilation it starts subscribing and handling events.
 func (e *Emitter) leaderLoop(ctx context.Context) {
 	// Clean up
 	go func() {
@@ -177,20 +202,40 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 		}
 		e.log.Info("event emitter leader unsubscribed from emitted events")
 	}()
-
-	// Recocile loop
-	go e.leaderReconcileLoop(ctx)
-
+	// First reconcilation to avoid waiting for first tick
+	listeners := e.loader.Reconcile()
+	e.mutex.Lock()
+	e.appendUniqueListeners(listeners...)
+	e.mutex.Unlock()
+	log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 	// Subscribe and handle events
 	e.log.Infow("event emitter leader subscribing to events")
-	err := e.bus.SubscribeTopic(e.subjectRoot+".>", eventEmitterQueueName, e.eventHandler)
+	err := e.bus.SubscribeTopic(e.subjectRoot+".>", eventEmitterQueueName, e.leaderEventHandler)
 	if err != nil {
 		e.log.Errorw("error while starting to listen for events", "error", err)
 	}
 	e.log.Infow("event emitter leader subscribed to events")
+	// Reconcilation loop
+	e.log.Info("event emitter leader started reconciler")
+	ticker := time.NewTicker(reconcileInterval)
+	for {
+		select {
+		case <-ctx.Done():
+			e.log.Info("event emitter leader stopped reconciler")
+			return
+		case <-ticker.C:
+			// Reconcile listeners
+			listeners := e.loader.Reconcile()
+			e.mutex.Lock()
+			e.appendUniqueListeners(listeners...)
+			e.mutex.Unlock()
+			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
+		}
+	}
 }
 
-func (e *Emitter) eventHandler(event testkube.Event) error {
+func (e *Emitter) leaderEventHandler(event testkube.Event) error {
+	e.log.Infof("handling event: %v", event.TestExecution.Labels)
 	// Current set of listeners
 	e.mutex.Lock()
 	listeners := make([]common.Listener, len(e.listeners))
@@ -202,7 +247,7 @@ func (e *Emitter) eventHandler(event testkube.Event) error {
 		logger := e.log.With("listen-on", l.Events(), "selector", l.Selector(), "metadata", l.Metadata())
 		if !l.Match(event) {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
-			return nil
+			continue
 		}
 		// Event type fanout
 		// NOTE(emil): This fanout behavior is old, but kept intact because it
@@ -222,26 +267,6 @@ func (e *Emitter) eventHandler(event testkube.Event) error {
 		}
 	}
 	return nil
-}
-
-// leaderReconcileLoop reloads listeners from all registered reconcilers should
-// only be ran by the leader.
-func (e *Emitter) leaderReconcileLoop(ctx context.Context) {
-	e.log.Info("event emitter leader started reconciler")
-	ticker := time.NewTicker(reconcileInterval)
-	for {
-		select {
-		case <-ctx.Done():
-			e.log.Info("event emitter leader stopped reconciler")
-			return
-		case <-ticker.C:
-			listeners := e.loader.Reconcile()
-			e.mutex.Lock()
-			e.listeners = listeners
-			e.mutex.Unlock()
-			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
-		}
-	}
 }
 
 // ListenersDump dumps all the currently reconciled listeners in an array for debugging.

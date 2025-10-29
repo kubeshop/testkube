@@ -31,7 +31,6 @@ type Listener interface {
 type ListenerLoader interface {
 	// Load listeners from configuration
 	Load() (listeners Listeners, err error)
-	// Kind of listener
 }
 
 type Listeners []Listener

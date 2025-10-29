@@ -96,13 +96,6 @@ type WebhookListener struct {
 // WebhookListenerOption is a functional option for WebhookListener
 type WebhookListenerOption func(*WebhookListener)
 
-// listenerWithLogger configures the logger for the webhook listener.
-func listenerWithLogger(log *zap.SugaredLogger) WebhookListenerOption {
-	return func(wl *WebhookListener) {
-		wl.Log = log
-	}
-}
-
 // listenerWithTestWorkflowResultsRepository configures the test workflow results repository for the webhook listener.
 func listenerWithTestWorkflowResultsRepository(repo testworkflow.Repository) WebhookListenerOption {
 	return func(wl *WebhookListener) {

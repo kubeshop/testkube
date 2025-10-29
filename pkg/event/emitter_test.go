@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
 
 func init() {
@@ -32,7 +34,10 @@ func TestEmitter_Register(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "")
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
@@ -50,7 +55,13 @@ func TestEmitter_Listen(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "")
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matic selector
@@ -61,12 +72,12 @@ func TestEmitter_Listen(t *testing.T) {
 		emitter.Register(listener2)
 
 		// listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(50 * time.Millisecond)
 
 		// events
 		event1 := newExampleTestEvent1()
@@ -104,7 +115,13 @@ func TestEmitter_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "")
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l3"}
@@ -115,9 +132,9 @@ func TestEmitter_Notify(t *testing.T) {
 		emitter.Register(listener2)
 
 		// and listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 
 		time.Sleep(time.Millisecond * 50)
 
@@ -138,7 +155,13 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "")
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
@@ -151,9 +174,9 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 		emitter.Register(listener2)
 
 		// and listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 
 		time.Sleep(time.Millisecond * 50)
 
@@ -167,40 +190,38 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 	})
 }
 
-func TestEmitter_Reconcile(t *testing.T) {
+func TestEmitter_Listen_reconciliation(t *testing.T) {
 	t.Parallel()
 
-	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
+	t.Run("emitter refresh listeners in reconcile loop", func(t *testing.T) {
 		t.Parallel()
 		// given first reconciler loop was done
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "")
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1"})
+		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy2"})
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
 
-		go emitter.Reconcile(ctx)
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
 
-		time.Sleep(100 * time.Millisecond)
 		assert.Len(t, emitter.getListeners(), 4)
 
-		cancel()
-
 		// and we'll add additional new loader
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"}) // existing one
-		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy3"})
-
-		ctx, cancel = context.WithCancel(context.Background())
-
-		// when
-		go emitter.Reconcile(ctx)
+		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1"}) // should be ignored
+		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy3"})
 
 		// then each reconciler (3 reconcilers) should load 2 listeners
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(2 * time.Second)
 		assert.Len(t, emitter.getListeners(), 6)
-
-		cancel()
 	})
 
 }
@@ -229,70 +250,14 @@ func newExampleTestEvent5() testkube.Event {
 	}
 }
 
-func TestEmitter_updateListeners(t *testing.T) {
-	t.Parallel()
-
-	t.Run("add, update and delete new listeners", func(t *testing.T) {
-		t.Parallel()
-		// given
-		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "")
-		// given listener with matching selector
-		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
-		// and listener with second matching selector
-		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=listener2"}
-		// and listener with third matching selector
-		listener3 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener3"}
-		// and listener with different kind
-		listener4 := &FakeListener{name: "l4"}
-		// and listener with different kind
-		listener5 := &FakeListener{name: "l5"}
-
-		// when listeners are added
-		emitter.updateListeners(common.Listeners{listener1, listener2})
-
-		// then should have 2 listeners
-		assert.Len(t, emitter.listeners, 2)
-
-		// when listeners are deleted
-		emitter.updateListeners(common.Listeners{listener1})
-		assert.Equal(t, "type=listener1", emitter.listeners[0].Selector())
-
-		// then should have 1 listener
-		assert.Len(t, emitter.listeners, 1)
-
-		// when listeners are updated
-		emitter.updateListeners(common.Listeners{listener3})
-
-		// then should have 1 listener
-		assert.Len(t, emitter.listeners, 1)
-		assert.Equal(t, "type=listener3", emitter.listeners[0].Selector())
-
-		// when listeners are added
-		emitter.updateListeners(common.Listeners{listener3, listener2})
-
-		// then should have 2 listeners
-		assert.Len(t, emitter.listeners, 2)
-
-		// when listeners are added
-		emitter.updateListeners(common.Listeners{listener4})
-
-		// then should have 1 listeners
-		assert.Len(t, emitter.listeners, 1)
-
-		// when listeners are added
-		emitter.updateListeners(common.Listeners{listener4, listener5})
-
-		// then should have 4 listeners
-		assert.Len(t, emitter.listeners, 2)
-	})
-
-}
-
 var _ common.Listener = (*FakeListener)(nil)
 
 type FakeListener struct {
 	name string
+}
+
+func (l *FakeListener) Match(event testkube.Event) bool {
+	return true
 }
 
 func (l *FakeListener) Notify(event testkube.Event) testkube.EventResult {
@@ -317,4 +282,40 @@ func (l *FakeListener) Kind() string {
 
 func (l *FakeListener) Metadata() map[string]string {
 	return map[string]string{}
+}
+
+func TestEmitter_eventTopic(t *testing.T) {
+	t.Parallel()
+
+	emitter := NewEmitter(nil, nil, "agentevents", "")
+
+	t.Run("should return events topic if explicitly set", func(t *testing.T) {
+		t.Parallel()
+
+		evt := testkube.Event{Type_: testkube.EventEndTestWorkflowSuccess, StreamTopic: "topic"}
+		assert.Equal(t, "topic", emitter.eventTopic(evt))
+	})
+
+	t.Run("should return events topic if not resource set", func(t *testing.T) {
+		t.Parallel()
+
+		evt := testkube.Event{Type_: testkube.EventEndTestWorkflowSuccess, Resource: nil}
+		assert.Equal(t, "agentevents.all", emitter.eventTopic(evt))
+	})
+
+	t.Run("should return event topic with resource name and id if set", func(t *testing.T) {
+		t.Parallel()
+
+		evt := testkube.Event{Type_: testkube.EventEndTestWorkflowSuccess,
+			Resource: testkube.EventResourceTestWorkflowExecution, ResourceId: "123"}
+		assert.Equal(t, "agentevents.testworkflowexecution.123", emitter.eventTopic(evt))
+	})
+
+	t.Run("should return event topic with resource name when id not set", func(t *testing.T) {
+		t.Parallel()
+
+		evt := testkube.Event{Type_: testkube.EventEndTestWorkflowSuccess,
+			Resource: testkube.EventResourceTestWorkflowExecution}
+		assert.Equal(t, "agentevents.testworkflowexecution", emitter.eventTopic(evt))
+	})
 }

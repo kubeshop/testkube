@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/logs/config"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,8 @@ func GetTestNATSEmitter() *Emitter {
 	if err != nil {
 		panic(err)
 	}
-	return NewEmitter(bus.NewNATSBus(nc), "")
+	mockLeaseRepository := leasebackend.NewMockRepository(nil)
+	return NewEmitter(bus.NewNATSBus(nc), mockLeaseRepository, "agentevents", "")
 }
 
 func TestEmitter_NATS_Register_Integration(t *testing.T) {
