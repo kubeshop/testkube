@@ -20,7 +20,6 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
@@ -104,7 +103,7 @@ func listenerWithTestWorkflowResultsRepository(repo testworkflow.Repository) Web
 }
 
 // listenerWithWebhookResultsRepository sets the repository used for collecting webhook results
-func listenerWithWebhookResultsRepository(repo webhook.WebhookRepository) WebhookListenerOption {
+func listenerWithWebhookResultsRepository(repo cloudwebhook.WebhookRepository) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.webhookResultsRepository = repo
 	}
@@ -265,7 +264,6 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}()
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
-		// NOTE(emil): this makes queries for the previous state
 		became, err := l.hasBecomeState(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)

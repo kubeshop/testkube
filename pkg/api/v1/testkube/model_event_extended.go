@@ -4,8 +4,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/kubeshop/testkube/internal/common"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/kubeshop/testkube/internal/common"
 )
 
 const (

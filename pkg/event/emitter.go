@@ -203,7 +203,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 		e.log.Info("event emitter leader unsubscribed from emitted events")
 	}()
 	// First reconcilation to avoid waiting for first tick
-	listeners := e.loader.Reconcile()
+	listeners := e.Reconcile()
 	e.mutex.Lock()
 	e.appendUniqueListeners(listeners...)
 	e.mutex.Unlock()
@@ -225,7 +225,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			// Reconcile listeners
-			listeners := e.loader.Reconcile()
+			listeners := e.Reconcile()
 			e.mutex.Lock()
 			e.appendUniqueListeners(listeners...)
 			e.mutex.Unlock()
@@ -250,12 +250,6 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			continue
 		}
 		// Event type fanout
-		// NOTE(emil): This fanout behavior is old, but kept intact because it
-		// is not of priority - can an event even match multiple event types?
-		// and even if it does should it fire multiple events for the same
-		// listener? even then does this fanout logic not belong in the
-		// listener notify implementation where each one might decide to handle
-		// this differently?
 		matchedEventTypes, _ := event.Valid(l.Selector(), l.Events())
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]

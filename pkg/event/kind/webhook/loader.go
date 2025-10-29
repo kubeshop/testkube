@@ -11,7 +11,6 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	log "github.com/kubeshop/testkube/pkg/log"
@@ -74,7 +73,7 @@ func WithTestWorkflowResultsRepository(repo testworkflow.Repository) WebhookLoad
 }
 
 // WithWebhookResultsRepository sets the repository used for collecting webhook results
-func WithWebhookResultsRepository(repo webhook.WebhookRepository) WebhookLoaderOption {
+func WithWebhookResultsRepository(repo cloudwebhook.WebhookRepository) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
 		loader.webhookResultsRepository = repo
 	}
