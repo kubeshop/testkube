@@ -69,11 +69,11 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 		// Note: This requires TLS to be correctly configured, otherwise the gRPC library will
 		// abort the connection. It is not secure to send authentication tokens over an
 		// unencrypted connection so this is appropriate behaviour.
-		grpc.PerRPCCredentials(oauth.TokenSource{
+		opts = append(opts, grpc.PerRPCCredentials(oauth.TokenSource{
 			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
 				AccessToken: apiToken,
 			}),
-		})
+		}))
 	}
 
 	return Client{
