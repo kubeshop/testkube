@@ -68,7 +68,6 @@ func (e *Emitter) appendUniqueListeners(listeners ...common.Listener) {
 			// Mark as existing and append to listeners array
 			e.listenerExists[kind][name] = struct{}{}
 			e.listeners = append(e.listeners, listeners[i])
-			e.log.Infof("added unique listener: %s, number of listeners: %d", name, len(e.listeners))
 		}
 	}
 }
