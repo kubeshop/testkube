@@ -269,3 +269,39 @@ spec:
         env:
         - name: K6_SYSTEM_ENV
           value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-browser-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: k6-browser
+    artifacts: "true"
+    category: performance-testing
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/k6/k6-browser-smoke-test.js
+  container:
+    image: grafana/k6:1.3.0-with-browser
+    workingDir: /data/repo/test/k6
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Create artifacts directory
+      shell: mkdir -p /data/artifacts
+    - name: Run test
+      run:
+        shell: |
+          k6 run k6-browser-smoke-test.js --out json=/data/artifacts/k6-browser-result.json --tag test_type=browser
+      artifacts:
+        paths:
+          - '*'
