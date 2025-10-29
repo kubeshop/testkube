@@ -82,9 +82,7 @@ func (e *Emitter) Register(listener common.Listener) {
 
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
-	// TODO(emil): what does specifying cluster name do here? is this used anywhere? does this have signficance to nats?
 	event.ClusterName = e.clusterName
-	// TODO(emil): log a warning if the topic is not matching the subscribe topic for the emitter
 	err := e.bus.PublishTopic(e.eventTopic(event), event)
 	if err != nil {
 		e.log.Errorw("error publishing event", append(event.Log(), "error", err))
@@ -95,7 +93,9 @@ func (e *Emitter) Notify(event testkube.Event) {
 
 // eventTopic returns topic to publish a particular evnet.
 func (e *Emitter) eventTopic(event testkube.Event) string {
-	// TODO(emil): is even necessary only used in tests, it does not makes sense to allow an override here considering where we are subscribed to
+	// TODO(emil): only used in tests, it does not makes sense to allow an
+	// override here because we need the topic to be prefixed a certain way for
+	// our subscription to handle it
 	if event.StreamTopic != "" {
 		return event.StreamTopic
 	}
@@ -243,7 +243,6 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 	e.mutex.Unlock()
 	// Find listeners that match the event
 	for _, l := range e.listeners {
-		// TODO(emil): this logging should be moved to listener
 		logger := e.log.With("listen-on", l.Events(), "selector", l.Selector(), "metadata", l.Metadata())
 		if !l.Match(event) {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
@@ -254,7 +253,9 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]
 			go func(notifyEvent testkube.Event, notifyLogger *zap.SugaredLogger) {
-				// TODO(emil): note these results are just logged, not sure there is much point even returning them, can just log in the listener and all this can be simplified also
+				// TODO(emil): note these results are just logged, not sure
+				// there is much point even returning them, can just log in the
+				// listener and all this can be simplified.
 				result := l.Notify(notifyEvent)
 				log.Tracew(notifyLogger, "listener notified", append(notifyEvent.Log(), "result", result)...)
 			}(event, logger)

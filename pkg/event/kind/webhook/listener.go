@@ -43,9 +43,8 @@ func NewWebhookListener(
 	opts ...WebhookListenerOption,
 ) *WebhookListener {
 	wl := &WebhookListener{
-		name: name,
-		Uri:  uri,
-		// TODO(emil): add some fields to this logger by default
+		name:               name,
+		Uri:                uri,
 		Log:                log.DefaultLogger,
 		HttpClient:         thttp.NewClient(),
 		selector:           selector,
@@ -67,7 +66,7 @@ func NewWebhookListener(
 
 type WebhookListener struct {
 	name string
-	// TODO(emil): check if these fields really need to be exported
+	// TODO(emil): check if all these fields need to be exported
 	Uri                string
 	Log                *zap.SugaredLogger
 	HttpClient         *http.Client
@@ -238,7 +237,10 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	event.Envs = l.envs
 
 	defer func() {
-		// TODO(emil): this is a really strange/unreadable pattern, just wrap all this instead of doing this crap
+		// TODO(emil): using this deferred is a really strange/unreadable
+		// pattern to process the results; simply wrap the inside logic to make
+		// this more readable
+
 		// Webhook metrics
 		var eventType, res string
 		if event.Type_ != nil {

@@ -21,7 +21,6 @@ type loader struct {
 }
 
 // RegisterLoader registers new loader
-// TODO(emil): check usage of this, it seems there are cases where this is not needed as we are loading a static set in that case it is better to use register directly on the emitter
 func (s *loader) RegisterLoader(loader common.ListenerLoader) {
 	s.Loaders = append(s.Loaders, loader)
 }
