@@ -171,16 +171,8 @@ next:
   # - tkcagnt_*** - Super Agent
   # - tkcsync_*** - GitOps Agent
   gitops:
-    ## Should it copy data from Control Plane to Kubernetes
-    syncCloudToKubernetes: false
     ## Should it copy data from Kubernetes to Control Plane
     syncKubernetesToCloud: false
-    ## Define the naming patterns for resources in different sources
-    namePatterns:
-      ## Name pattern for resources in the Control Plane
-      cloud: "<name>"
-      ## Name pattern for resources in the Kubernetes cluster
-      kubernetes: "<name>"
 
   # Configure the legacy Tests and Test Suites execution
   # - tkcagnt_*** - Super Agent
