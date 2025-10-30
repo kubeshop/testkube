@@ -5,6 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/kubeshop/testkube/internal/common"
 )
 
 const (
@@ -140,6 +142,8 @@ func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowSuccess,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -148,6 +152,8 @@ func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowFailed,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -156,6 +162,8 @@ func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowAborted,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -164,6 +172,8 @@ func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowCanceled,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -172,6 +182,8 @@ func NewEventEndTestWorkflowNotPassed(execution *TestWorkflowExecution) Event {
 		Id:                    uuid.NewString(),
 		Type_:                 EventEndTestWorkflowNotPassed,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -227,7 +239,6 @@ func (e Event) Log() []any {
 		"executionName", name,
 		"executionId", id,
 		"labels", labelsStr,
-		"topic", e.Topic(),
 	}
 }
 
@@ -276,24 +287,6 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 	}
 
 	return
-}
-
-// Topic returns topic for event based on resource and resource id
-// or fallback to global "events" topic
-func (e Event) Topic() string {
-	if e.StreamTopic != "" {
-		return e.StreamTopic
-	}
-
-	if e.Resource == nil {
-		return "agentevents.all"
-	}
-
-	if e.ResourceId == "" {
-		return "agentevents." + string(*e.Resource)
-	}
-
-	return "agentevents." + string(*e.Resource) + "." + e.ResourceId
 }
 
 // GetResourceId implmenents generic event trigger

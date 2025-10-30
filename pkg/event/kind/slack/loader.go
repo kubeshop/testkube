@@ -40,7 +40,9 @@ func (r *SlackLoader) Kind() string {
 
 // Load returns single listener for slack (as we don't have any sophisticated config yet)
 func (r *SlackLoader) Load() (listeners common.Listeners, err error) {
-
+	// TODO(emil): this loader is not necessary this ready is just in the
+	// constructor of the notifier, can just use the register command to avoid
+	// calling this on every reconcilation
 	if r.slackNotifier.Ready {
 		return common.Listeners{NewSlackListener("slack", "", r.events, r.slackNotifier)}, nil
 	}

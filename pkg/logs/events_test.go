@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -18,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
 
 var waitTime = time.Second
@@ -146,7 +148,10 @@ func TestLogs_EventsFlow(t *testing.T) {
 		ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 		assert.NoError(t, err)
 		eventBus := bus.NewNATSBus(ec)
-		emitter := event.NewEmitter(eventBus, "test-cluster")
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		emitter := event.NewEmitter(eventBus, mockLeaseRepository, "agentevents", "test-cluster")
 
 		// and stream client
 		stream, err := client.NewNatsLogStream(nc)

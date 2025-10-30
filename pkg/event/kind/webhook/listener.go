@@ -32,61 +32,117 @@ import (
 
 var _ common.Listener = (*WebhookListener)(nil)
 
-func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
-	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	deprecatedRepositories commons.DeprecatedRepositories,
-	testWorkflowExecutionResults testworkflow.Repository,
-	metrics v1.Metrics,
-	webhookRepository cloudwebhook.WebhookRepository,
-	secretClient secret.Interface,
-	proContext *config.ProContext,
-	envs map[string]string,
+func NewWebhookListener(
+	name, uri, selector string,
+	events []testkube.EventType,
+	payloadObjectField, payloadTemplate string,
+	headers map[string]string,
+	disabled bool,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
+	opts ...WebhookListenerOption,
 ) *WebhookListener {
-	return &WebhookListener{
-		name:                         name,
-		Uri:                          uri,
-		Log:                          log.DefaultLogger,
-		HttpClient:                   thttp.NewClient(),
-		selector:                     selector,
-		events:                       events,
-		payloadObjectField:           payloadObjectField,
-		payloadTemplate:              payloadTemplate,
-		headers:                      headers,
-		disabled:                     disabled,
-		deprecatedRepositories:       deprecatedRepositories,
-		testWorkflowExecutionResults: testWorkflowExecutionResults,
-		metrics:                      metrics,
-		webhookRepository:            webhookRepository,
-		secretClient:                 secretClient,
-		proContext:                   proContext,
-		envs:                         envs,
-		config:                       config,
-		parameters:                   parameters,
+	wl := &WebhookListener{
+		name:               name,
+		Uri:                uri,
+		Log:                log.DefaultLogger,
+		HttpClient:         thttp.NewClient(),
+		selector:           selector,
+		events:             events,
+		payloadObjectField: payloadObjectField,
+		payloadTemplate:    payloadTemplate,
+		headers:            headers,
+		disabled:           disabled,
+		config:             config,
+		parameters:         parameters,
 	}
+
+	for _, opt := range opts {
+		opt(wl)
+	}
+
+	return wl
 }
 
 type WebhookListener struct {
-	name                         string
-	Uri                          string
-	Log                          *zap.SugaredLogger
-	HttpClient                   *http.Client
-	events                       []testkube.EventType
-	selector                     string
-	payloadObjectField           string
-	payloadTemplate              string
-	headers                      map[string]string
-	disabled                     bool
-	deprecatedRepositories       commons.DeprecatedRepositories
-	testWorkflowExecutionResults testworkflow.Repository
-	metrics                      v1.Metrics
-	webhookRepository            cloudwebhook.WebhookRepository
-	secretClient                 secret.Interface
-	proContext                   *config.ProContext
-	envs                         map[string]string
-	config                       map[string]executorv1.WebhookConfigValue
-	parameters                   []executorv1.WebhookParameterSchema
+	name string
+	// TODO(emil): check if all these fields need to be exported
+	Uri                string
+	Log                *zap.SugaredLogger
+	HttpClient         *http.Client
+	selector           string
+	events             []testkube.EventType
+	payloadObjectField string
+	payloadTemplate    string
+	headers            map[string]string
+	disabled           bool
+	config             map[string]executorv1.WebhookConfigValue
+	parameters         []executorv1.WebhookParameterSchema
+
+	// Optional fields
+	testWorkflowResultsRepository testworkflow.Repository
+	webhookResultsRepository      cloudwebhook.WebhookRepository
+	secretClient                  secret.Interface
+	metrics                       v1.Metrics
+	envs                          map[string]string
+	proContext                    *config.ProContext
+
+	// Deprecated fields
+	deprecatedRepositories commons.DeprecatedRepositories
+}
+
+// WebhookListenerOption is a functional option for WebhookListener
+type WebhookListenerOption func(*WebhookListener)
+
+// listenerWithTestWorkflowResultsRepository configures the test workflow results repository for the webhook listener.
+func listenerWithTestWorkflowResultsRepository(repo testworkflow.Repository) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.testWorkflowResultsRepository = repo
+	}
+}
+
+// listenerWithWebhookResultsRepository sets the repository used for collecting webhook results
+func listenerWithWebhookResultsRepository(repo cloudwebhook.WebhookRepository) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.webhookResultsRepository = repo
+	}
+}
+
+// listenerWithSecretClient configures the secret client for the webhook listener.
+func listenerWithSecretClient(secretClient secret.Interface) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.secretClient = secretClient
+	}
+}
+
+// listenerWithMetrics configures the metrics for the webhook listener.
+func listenerWithMetrics(metrics v1.Metrics) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.metrics = metrics
+	}
+}
+
+// listenerWithEnvs sets the agent's environment variables to be used in templates.
+func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.envs = envs
+	}
+}
+
+// listenerWithProContext sets the "pro context" for the connection to the
+// control plane to be used in templates.
+func listenerWithProContext(proContext *config.ProContext) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.proContext = proContext
+	}
+}
+
+// listenerWithDeprecatedRepositories configures the deprecated repositories for the webhook listener.
+// Deprecated: test and test suites are deprecated.
+func listenerWithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.deprecatedRepositories = deprecatedRepositories
+	}
 }
 
 func (l *WebhookListener) Name() string {
@@ -100,6 +156,7 @@ func (l *WebhookListener) Selector() string {
 func (l *WebhookListener) Events() []testkube.EventType {
 	return l.events
 }
+
 func (l *WebhookListener) Metadata() map[string]string {
 	headers, err := getMapHashedMetadata(l.headers)
 	if err != nil {
@@ -146,6 +203,31 @@ func (l *WebhookListener) Disabled() bool {
 	return l.disabled
 }
 
+func (l *WebhookListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Selector(), l.Events())
+	if !valid {
+		return false
+	}
+	// Handle disabled Webhooks
+	switch {
+	case l.disabled:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
+		return false
+	case event.TestExecution != nil && event.TestExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test execution")
+		return false
+	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
+		return false
+	case event.TestWorkflowExecution != nil && (event.TestWorkflowExecution.DisableWebhooks ||
+		(event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Webhooks)):
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
+		return false
+	default:
+		return true
+	}
+}
+
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var statusCode int
 	var err error
@@ -155,46 +237,33 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	event.Envs = l.envs
 
 	defer func() {
+		// TODO(emil): using this deferred is a really strange/unreadable
+		// pattern to process the results; simply wrap the inside logic to make
+		// this more readable
+
+		// Webhook metrics
 		var eventType, res string
 		if event.Type_ != nil {
 			eventType = string(*event.Type_)
 		}
-
 		res = "success"
 		if result.Error() != "" {
 			res = "error"
 		}
-
 		l.metrics.IncWebhookEventCount(l.name, eventType, res)
+
+		// Webhook telemetry
+		if l.webhookResultsRepository == nil {
+			return
+		}
 		errorMessage := ""
 		if err != nil {
 			errorMessage = err.Error()
 		}
-
-		if err = l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
+		if err = l.webhookResultsRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
 			log.Errorw("webhook collecting execution result error", "error", err)
 		}
 	}()
-
-	switch {
-	case l.disabled:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled")
-		return
-	case event.TestExecution != nil && event.TestExecution.DisableWebhooks:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test execution")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test execution")
-		return
-	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test suite execution")
-		return
-	case event.TestWorkflowExecution != nil && (event.TestWorkflowExecution.DisableWebhooks ||
-		(event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Webhooks)):
-		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
-		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test workflow execution")
-		return
-	}
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
 		became, err := l.hasBecomeState(event)
@@ -295,7 +364,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	log.Debugw("got webhook send result", "response", responseStr)
+	log.Infow("webhook send result", "response", responseStr)
 	result = testkube.NewSuccessEventResult(event.Id, responseStr)
 	return
 }
@@ -327,6 +396,10 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		}
 
 		if val.Secret != nil {
+			if l.secretClient == nil {
+				log.Errorw("secret references are unsupported in webhooks", "name", val.Secret.Name)
+				return nil, errors.New("secret references are unsupported in webhooks")
+			}
 			var ns []string
 			if val.Secret.Namespace != "" {
 				ns = append(ns, val.Secret.Namespace)
@@ -385,7 +458,12 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
-	if l.deprecatedRepositories != nil && event.TestExecution != nil && event.Type_ != nil {
+	if event.TestExecution != nil && event.Type_ != nil {
+		if l.deprecatedRepositories == nil {
+			log.Warn("unable to determine become state, test execution results queries not supported")
+			return false, nil
+
+		}
 		prevStatus, err := l.deprecatedRepositories.TestResults().GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
 		if err != nil {
 			return false, err
@@ -399,7 +477,12 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if l.deprecatedRepositories != nil && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
+	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
+		if l.deprecatedRepositories == nil {
+			log.Warn("unable to determine become state, testsuite execution results queries not supported")
+			return false, nil
+
+		}
 		prevStatus, err := l.deprecatedRepositories.TestSuiteResults().GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
 			return false, err
@@ -414,7 +497,11 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	}
 
 	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil && event.Type_ != nil {
-		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
+		if l.testWorkflowResultsRepository == nil {
+			log.Warn("unable to determine become state, testworkflow execution results queries not supported")
+			return false, nil
+		}
+		prevStatus, err := l.testWorkflowResultsRepository.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
 		if err != nil {
 			return false, err
 		}
@@ -463,6 +550,5 @@ func getSliceHashedMetadata[T any](slice []T) (string, error) {
 
 // getTextHashedMetadata returns text hashed metadata
 func getTextHashedMetadata(result []byte) string {
-
 	return fmt.Sprintf("%x", sha256.Sum256(result))
 }

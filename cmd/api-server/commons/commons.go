@@ -493,7 +493,8 @@ func CreateCronJobScheduler(cfg *config.Config,
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	logger *zap.SugaredLogger,
-	proContext *config.ProContext) cronjob.Interface {
+	proContext *config.ProContext,
+) cronjob.Interface {
 	enableCronJobs := cfg.EnableCronJobs
 	if enableCronJobs == "" {
 		var err error

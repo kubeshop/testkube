@@ -102,10 +102,10 @@ func (d *deprecatedRepositories) TestSuiteResults() testresult.Repository {
 	return d.testSuiteResults
 }
 
-func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClient, apiKey string) DeprecatedRepositories {
+func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClient, proContext *config.ProContext) DeprecatedRepositories {
 	return &deprecatedRepositories{
-		testResults:      cloudresult.NewCloudResultRepository(grpcClient, apiKey),
-		testSuiteResults: cloudtestresult.NewCloudRepository(grpcClient, apiKey),
+		testResults:      cloudresult.NewCloudResultRepository(grpcClient, proContext),
+		testSuiteResults: cloudtestresult.NewCloudRepository(grpcClient, proContext),
 	}
 }
 

@@ -30,6 +30,7 @@ import (
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube/pkg/operator/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -72,7 +73,8 @@ func TestExecute(t *testing.T) {
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
-	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "")
+	mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), mockLeaseRepository, "agentevents", "")
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},

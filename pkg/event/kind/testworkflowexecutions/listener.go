@@ -60,6 +60,11 @@ func (l *testWorkflowExecutionListener) Metadata() map[string]string {
 	}
 }
 
+func (l *testWorkflowExecutionListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Selector(), l.Events())
+	return valid
+}
+
 func (l *testWorkflowExecutionListener) Notify(event testkube.Event) testkube.EventResult {
 	if event.TestWorkflowExecution == nil || event.TestWorkflowExecution.TestWorkflowExecutionName == "" {
 		return testkube.NewSuccessEventResult(event.Id, "ignored")

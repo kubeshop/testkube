@@ -324,35 +324,3 @@ func TestEvent_IsSuccess(t *testing.T) {
 	})
 
 }
-
-func TestEvent_Topic(t *testing.T) {
-	t.Parallel()
-
-	t.Run("should return events topic if explicitly set", func(t *testing.T) {
-		t.Parallel()
-
-		evt := Event{Type_: EventStartTest, StreamTopic: "topic"}
-		assert.Equal(t, "topic", evt.Topic())
-	})
-
-	t.Run("should return events topic if not resource set", func(t *testing.T) {
-		t.Parallel()
-
-		evt := Event{Type_: EventStartTest, Resource: nil}
-		assert.Equal(t, "agentevents.all", evt.Topic())
-	})
-
-	t.Run("should return event topic with resource name and id if set", func(t *testing.T) {
-		t.Parallel()
-
-		evt := Event{Type_: EventStartTest, Resource: EventResourceExecutor, ResourceId: "a12"}
-		assert.Equal(t, "agentevents.executor.a12", evt.Topic())
-	})
-
-	t.Run("should return event topic with resource name when id not set", func(t *testing.T) {
-		t.Parallel()
-
-		evt := Event{Type_: EventStartTest, Resource: EventResourceExecutor}
-		assert.Equal(t, "agentevents.executor", evt.Topic())
-	})
-}

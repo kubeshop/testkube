@@ -43,6 +43,7 @@ type CreateOptions struct {
 type UpdateOptions struct {
 	Labels map[string]string
 	Owner  *metav1.OwnerReference
+	Bypass bool
 }
 
 type secretManager struct {
@@ -209,7 +210,7 @@ func (s *secretManager) Create(ctx context.Context, namespace, name string, data
 }
 
 func (s *secretManager) Update(ctx context.Context, namespace, name string, data map[string]string, opts UpdateOptions) (testkube.Secret, error) {
-	if !s.config.Modify {
+	if !s.config.Modify && !opts.Bypass {
 		return testkube.Secret{}, ErrModifyDisabled
 	}
 

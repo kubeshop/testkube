@@ -6,7 +6,6 @@ import (
 	"math"
 	"time"
 
-	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
 
@@ -19,7 +18,7 @@ import (
 const logStreamRetryCount = 10
 
 func (ag *Agent) runLogStreamLoop(ctx context.Context) error {
-	ctx = agentclient.AddAPIKeyMeta(ctx, ag.apiKey)
+	ctx = ag.outgoingContext(ctx)
 
 	ag.logger.Infow("initiating log streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

@@ -616,6 +616,9 @@ func (m Metrics) IncTestTriggerEventCount(name, resource, eventType string, caus
 }
 
 func (m Metrics) IncWebhookEventCount(name, eventType, result string) {
+	if m.WebhookEventCount == nil {
+		return
+	}
 	m.WebhookEventCount.With(map[string]string{
 		"name":      name,
 		"eventType": eventType,
