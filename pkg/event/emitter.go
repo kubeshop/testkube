@@ -115,7 +115,6 @@ const (
 	leaseClusterID     string = "event-emitters"
 )
 
-// TODO(emil): integrate this into listen
 func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
 	e.log.Info("event emitter waiting for lease")
 	e.leaseCheck(ctx, leaseChan)
