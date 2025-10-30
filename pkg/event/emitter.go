@@ -56,8 +56,9 @@ type Emitter struct {
 }
 
 // appendUniqueListeners appends only listeners unique by kind and name.
-// Should be called after acquiring e.mutex.
 func (e *Emitter) appendUniqueListeners(listeners ...common.Listener) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
 	for i := range listeners {
 		kind := listeners[i].Kind()
 		name := listeners[i].Name()
@@ -74,8 +75,6 @@ func (e *Emitter) appendUniqueListeners(listeners ...common.Listener) {
 
 // Register adds new listener
 func (e *Emitter) Register(listener common.Listener) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
 	e.appendUniqueListeners(listener)
 }
 
@@ -202,9 +201,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 	}()
 	// First reconcilation to avoid waiting for first tick
 	listeners := e.Reconcile()
-	e.mutex.Lock()
 	e.appendUniqueListeners(listeners...)
-	e.mutex.Unlock()
 	log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 	// Subscribe and handle events
 	e.log.Infow("event emitter leader subscribing to events")
@@ -224,9 +221,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 		case <-ticker.C:
 			// Reconcile listeners
 			listeners := e.Reconcile()
-			e.mutex.Lock()
 			e.appendUniqueListeners(listeners...)
-			e.mutex.Unlock()
 			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 		}
 	}
