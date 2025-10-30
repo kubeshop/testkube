@@ -7,10 +7,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
+const (
+	SourceCredential = "credential"
+	SourceVault      = "vault"
+)
+
 func NewCredentialMachine(repository CredentialRepository, observers ...func(name string, value string)) expressions.Machine {
-	// Helper function to handle credential fetching logic
-	fetchCredential := func(name string, computed bool) (interface{}, error) {
-		value, err := repository.Get(context.Background(), name)
+	fetchCredentialWithSource := func(name string, computed bool, source string) (interface{}, error) {
+		value, err := repository.GetWithSource(context.Background(), name, source)
 		if err != nil {
 			return nil, err
 		}
@@ -46,55 +50,16 @@ func NewCredentialMachine(repository CredentialRepository, observers ...func(nam
 			}
 
 			name, _ := values[0].StringValue()
-			result, err := fetchCredential(name, computed)
-			return result, true, err
-		}).
-		RegisterFunction("encrypted", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-			computed := false
-			if len(values) == 2 {
-				if values[1].IsBool() {
-					computed, _ = values[1].BoolValue()
-				} else {
-					return nil, true, fmt.Errorf(`"encrypted" function expects 2nd argument to be boolean, %s provided`, values[1].String())
-				}
-			} else if len(values) != 1 {
-				return nil, true, fmt.Errorf(`"encrypted" function expects 1-2 arguments, %d provided`, len(values))
-			}
-
-			name, _ := values[0].StringValue()
-			result, err := fetchCredential(name, computed)
-			return result, true, err
-		}).
-		RegisterFunction("variable", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-			computed := false
-			if len(values) == 2 {
-				if values[1].IsBool() {
-					computed, _ = values[1].BoolValue()
-				} else {
-					return nil, true, fmt.Errorf(`"variable" function expects 2nd argument to be boolean, %s provided`, values[1].String())
-				}
-			} else if len(values) != 1 {
-				return nil, true, fmt.Errorf(`"variable" function expects 1-2 arguments, %d provided`, len(values))
-			}
-
-			name, _ := values[0].StringValue()
-			result, err := fetchCredential(name, computed)
+			result, err := fetchCredentialWithSource(name, computed, SourceCredential)
 			return result, true, err
 		}).
 		RegisterFunction("vault", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-			computed := false
-			if len(values) == 2 {
-				if values[1].IsBool() {
-					computed, _ = values[1].BoolValue()
-				} else {
-					return nil, true, fmt.Errorf(`"vault" function expects 2nd argument to be boolean, %s provided`, values[1].String())
-				}
-			} else if len(values) != 1 {
-				return nil, true, fmt.Errorf(`"vault" function expects 1-2 arguments, %d provided`, len(values))
+			if len(values) != 1 {
+				return nil, true, fmt.Errorf(`"vault" function expects 1 argument, %d provided`, len(values))
 			}
 
-			name, _ := values[0].StringValue()
-			result, err := fetchCredential(name, computed)
+			path, _ := values[0].StringValue()
+			result, err := fetchCredentialWithSource(path, false, SourceVault)
 			return result, true, err
 		})
 }

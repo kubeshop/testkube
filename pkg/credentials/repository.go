@@ -30,6 +30,7 @@ func getIterationDelay(iteration int) time.Duration {
 //go:generate mockgen -destination=./mock_repository.go -package=credentials "github.com/kubeshop/testkube/pkg/credentials" CredentialRepository
 type CredentialRepository interface {
 	Get(ctx context.Context, name string) ([]byte, error)
+	GetWithSource(ctx context.Context, name, source string) ([]byte, error)
 }
 
 type credentialRepository struct {
@@ -43,10 +44,14 @@ func NewCredentialRepository(getClient func() controlplaneclient.Client, environ
 }
 
 func (c *credentialRepository) Get(ctx context.Context, name string) ([]byte, error) {
+	return c.GetWithSource(ctx, name, SourceCredential)
+}
+
+func (c *credentialRepository) GetWithSource(ctx context.Context, name, source string) ([]byte, error) {
 	var err error
 	var result []byte
 	for i := 0; i < GetCredentialRetryCount; i++ {
-		result, err = c.getClient().GetCredential(ctx, c.environmentId, c.executionId, name)
+		result, err = c.getClient().GetCredentialWithSource(ctx, c.environmentId, c.executionId, name, source)
 		if err == nil {
 			return result, nil
 		}
