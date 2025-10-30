@@ -230,11 +230,11 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 	// Current set of listeners
 	e.mutex.Lock()
-	listeners := make([]common.Listener, len(e.listeners))
-	copy(listeners, e.listeners)
+	listenersSnapshot := make([]common.Listener, len(e.listeners))
+	copy(listenersSnapshot, e.listeners)
 	e.mutex.Unlock()
 	// Find listeners that match the event
-	for _, l := range e.listeners {
+	for _, l := range listenersSnapshot {
 		logger := e.log.With("listen-on", l.Events(), "selector", l.Selector(), "metadata", l.Metadata())
 		if !l.Match(event) {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
@@ -244,16 +244,18 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 		matchedEventTypes, _ := event.Valid(l.Selector(), l.Events())
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]
-			go func(notifyEvent testkube.Event, notifyLogger *zap.SugaredLogger) {
-				// TODO(emil): note these results are just logged, not sure
-				// there is much point even returning them, can just log in the
-				// listener and all this can be simplified.
-				result := l.Notify(notifyEvent)
-				log.Tracew(notifyLogger, "listener notified", append(notifyEvent.Log(), "result", result)...)
-			}(event, logger)
+			go notifyListener(logger, l, event)
 		}
 	}
 	return nil
+}
+
+func notifyListener(logger *zap.SugaredLogger, listener common.Listener, event testkube.Event) {
+	// TODO(emil): Held over from old implementation. These results are just
+	// logged, not sure there is much point even returning them, can just log
+	// in the listener and all this can be simplified to use Notify.
+	result := listener.Notify(event)
+	log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 }
 
 // ListenersDump dumps all the currently reconciled listeners in an array for debugging.
