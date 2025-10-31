@@ -1091,7 +1091,7 @@ LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'wo
 WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
     AND \(\$4::integer = 0 OR e\.scheduled_at >= NOW\(\) - \(\$4::integer \|\| ' days'\)::interval\)
 ORDER BY e\.scheduled_at DESC
-LIMIT \$5`
+LIMIT NULLIF\(\$5, 0\)`
 
 	params := GetTestWorkflowMetricsParams{
 		WorkflowName:   "test-workflow",

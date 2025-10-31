@@ -1748,7 +1748,29 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		return 0, err
 	}
 
-	return r.queries.CountTestWorkflowExecutions(ctx, sqlc.CountTestWorkflowExecutionsParams(params))
+	return r.queries.CountTestWorkflowExecutions(ctx, sqlc.CountTestWorkflowExecutionsParams{
+		OrganizationID:     params.OrganizationID,
+		EnvironmentID:      params.EnvironmentID,
+		WorkflowName:       params.WorkflowName,
+		WorkflowNames:      params.WorkflowNames,
+		TextSearch:         params.TextSearch,
+		StartDate:          params.StartDate,
+		EndDate:            params.EndDate,
+		LastNDays:          params.LastNDays,
+		Statuses:           params.Statuses,
+		RunnerID:           params.RunnerID,
+		Assigned:           params.Assigned,
+		ActorName:          params.ActorName,
+		ActorType:          params.ActorType,
+		GroupID:            params.GroupID,
+		Initialized:        params.Initialized,
+		TagKeys:            params.TagKeys,
+		TagConditions:      params.TagConditions,
+		LabelKeys:          params.LabelKeys,
+		LabelConditions:    params.LabelConditions,
+		SelectorKeys:       params.SelectorKeys,
+		SelectorConditions: params.SelectorConditions,
+	})
 }
 
 // Helper functions for building query parameters and converting rows
