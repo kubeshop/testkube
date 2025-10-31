@@ -769,7 +769,6 @@ func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNam
 	return
 }
 
-// TODO: Avoid calculating for all executions in memory (same for tests/test suites)
 // GetTestWorkflowMetrics returns test executions metrics
 func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
 	query := bson.M{"workflow.name": name}
@@ -778,9 +777,14 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 		query["scheduledat"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
 	}
 
+	if limit == 0 {
+		limit = 100
+	}
+
 	pipeline := []bson.M{
 		{"$sort": bson.M{"scheduledat": -1}},
 		{"$match": query},
+		{"$limit": limit},
 		{"$project": bson.M{
 			"_id":         0,
 			"executionid": "$id",
@@ -812,9 +816,6 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 	}
 
 	metrics = common.CalculateMetrics(executions)
-	if limit > 0 && limit < len(metrics.Executions) {
-		metrics.Executions = metrics.Executions[:limit]
-	}
 
 	return metrics, nil
 }
