@@ -91,11 +91,6 @@ LOCALBIN ?= $(PWD)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-# LOCALBIN_TOOLING refers to the directory where tooling binaries are installed
-LOCALBIN_TOOLING ?= $(LOCALBIN)/tooling
-$(LOCALBIN_TOOLING):
-	mkdir -p $(LOCALBIN_TOOLING)
-
 # LOCALBIN_APP refers to the directory where application binaries are installed
 LOCALBIN_APP ?= $(LOCALBIN)/app
 $(LOCALBIN_APP):
@@ -134,14 +129,15 @@ SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
+SQLC_VERSION := v1.29.0
 
 # Tool binaries
-GOTESTSUM ?= $(LOCALBIN_TOOLING)/gotestsum
-GORELEASER ?= $(LOCALBIN_TOOLING)/goreleaser
-GOLANGCI_LINT ?= $(LOCALBIN_TOOLING)/golangci-lint
+GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
+GORELEASER = go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
+GOLANGCI_LINT = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 # swagger-codegen is installed globally via brew/package manager
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
-SQLC = sqlc
 
 # ==================== Environment Configuration ====================
 DASHBOARD_URI ?= https://demo.testkube.io
@@ -211,9 +207,6 @@ help: ## Show this help message
 
 # ==================== Quick Start ====================
 ##@ Quick Start
-
-.PHONY: setup
-setup: install-tools ## Initial project setup
 
 .PHONY: all
 all: clean build test ## Clean, build, and test everything
@@ -367,13 +360,13 @@ dev: run-mongo run-nats run-api ## Start development environment
 test: unit-tests ## Run all tests
 
 .PHONY: unit-tests
-unit-tests: gotestsum ## Run unit tests with coverage
+unit-tests: ## Run unit tests with coverage
 	@echo "Running unit tests..."
 	@$(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
 		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
 
 .PHONY: integration-tests
-integration-tests: gotestsum build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
+integration-tests: build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
 	@echo "Running integration tests (only tests ending with _Integration)..."
 	@INTEGRATION="true" \
 		TESTKUBE_PROJECT_ROOT="$(PWD)" \
@@ -392,14 +385,14 @@ cover: unit-tests ## Generate and open test coverage report
 ##@ Linting
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint
+lint: ## Run golangci-lint
 	@echo "Running golangci-lint..."
-	@$(GOLANGCI_LINT) run ./cmd/... ./internal/... ./pkg/... ./test/integration/components/... --timeout 10m
+	@$(GOLANGCI_LINT) run ./... --timeout 10m
 
 .PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
+lint-fix: ## Run golangci-lint with automatic fixes
 	@echo "Running golangci-lint with fixes..."
-	@$(GOLANGCI_LINT) run ./cmd/... ./internal/... ./pkg/... ./test/integration/components/... --timeout 10m --fix
+	@$(GOLANGCI_LINT) run ./... --timeout 10m --fix
 
 # ==================== Code Generation ====================
 ##@ Code Generation
@@ -462,7 +455,7 @@ generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
 docker-build: docker-build-api docker-build-cli ## Build all Docker images
 
 .PHONY: docker-build-api
-docker-build-api: goreleaser ## Build API server Docker image
+docker-build-api: ## Build API server Docker image
 	@echo "Building API server Docker image..."
 	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
 		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
@@ -472,7 +465,7 @@ docker-build-api: goreleaser ## Build API server Docker image
 		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
 
 .PHONY: docker-build-cli
-docker-build-cli: goreleaser ## Build CLI Docker image
+docker-build-cli: ## Build CLI Docker image
 	@echo "Building CLI Docker image..."
 	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
 		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
@@ -523,14 +516,8 @@ clean: ## Clean build artifacts
 	@rm -f integration-tests.xml integration-tests.json
 	@echo "Clean complete"
 
-.PHONY: clean-tools
-clean-tools: ## Clean installed tools
-	@echo "Cleaning tools..."
-	@rm -rf $(LOCALBIN_TOOLING)
-	@echo "Tools cleaned"
-
 .PHONY: clean-all
-clean-all: clean clean-tools ## Deep clean including Go cache and tools
+clean-all: clean ## Deep clean including Go cache
 	@echo "Performing deep clean..."
 	@go clean -cache -testcache -modcache
 	@echo "Deep clean complete"
@@ -538,25 +525,7 @@ clean-all: clean clean-tools ## Deep clean including Go cache and tools
 # ==================== Tool Installation ====================
 ##@ Tools
 
-.PHONY: install-tools
-install-tools: gotestsum golangci-lint ## Install all required tools
-
 # Tool installation targets
-.PHONY: gotestsum
-gotestsum: $(GOTESTSUM) ## Download gotestsum locally if necessary
-$(GOTESTSUM): $(LOCALBIN_TOOLING)
-	test -s $(GOTESTSUM) || GOBIN=$(LOCALBIN_TOOLING) go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
-
-.PHONY: goreleaser
-goreleaser: $(GORELEASER) ## Download goreleaser locally if necessary
-$(GORELEASER): $(LOCALBIN_TOOLING)
-	test -s $(GORELEASER) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
-
-.PHONY: golangci-lint
-golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
-$(GOLANGCI_LINT): $(LOCALBIN_TOOLING)
-	test -s $(GOLANGCI_LINT) || GOBIN=$(LOCALBIN_TOOLING) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-
 .PHONY: swagger-codegen-check
 swagger-codegen-check: ## Check if swagger-codegen is installed
 ifndef SWAGGER_CODEGEN
