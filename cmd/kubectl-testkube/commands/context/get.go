@@ -13,6 +13,10 @@ func NewGetContextCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "context <value>",
 		Short: "Set context for Testkube Pro",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			// Override parent's PersistentPreRun to skip version check
+			// get context only displays local config and doesn't need network connectivity
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()

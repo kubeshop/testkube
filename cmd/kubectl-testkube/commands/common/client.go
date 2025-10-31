@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -75,7 +76,12 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 			}
 			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
 			if err != nil {
-				// Error: failed refreshing, go thru login flow
+				// Check if this is a network connectivity error
+				if isNetworkError(err) {
+					return nil, "", fmt.Errorf("unable to connect to Testkube Cloud (no network connectivity): %w\nPlease check your internet connection and try again", err)
+				}
+
+				// For authentication errors, go through login flow
 				port := config.CallbackPort
 				if cfg.CloudContext.CallbackPort != 0 {
 					port = cfg.CloudContext.CallbackPort
@@ -108,4 +114,30 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 
 func userAgent() string {
 	return fmt.Sprintf("%s/%s (%s; %s) Go/%s", UserAgentCLI, Version, runtime.GOOS, runtime.GOARCH, runtime.Version())
+}
+
+// isNetworkError checks if an error is related to network connectivity issues
+func isNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	// Check for common network-related error messages
+	networkErrors := []string{
+		"no such host",
+		"connection refused",
+		"connection timed out",
+		"network is unreachable",
+		"i/o timeout",
+		"dial tcp",
+		"context deadline exceeded",
+		"TLS handshake timeout",
+	}
+
+	for _, netErr := range networkErrors {
+		if strings.Contains(strings.ToLower(errStr), strings.ToLower(netErr)) {
+			return true
+		}
+	}
+	return false
 }
