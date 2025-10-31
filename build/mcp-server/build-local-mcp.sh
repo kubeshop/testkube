@@ -38,6 +38,8 @@ docker buildx build \
   --file build/mcp-server/Dockerfile \
   --build-arg VERSION="$VERSION" \
   --build-arg GIT_SHA="$GIT_SHA" \
+  --label "org.opencontainers.image.version=$VERSION" \
+  --label "org.opencontainers.image.revision=$GIT_SHA" \
   --tag "$TAG" \
   --load \
   .
