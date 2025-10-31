@@ -454,7 +454,7 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: GetTestWorkflowExecutionsTotals :many
 SELECT 
@@ -687,7 +687,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
@@ -853,7 +853,7 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
     AND (@last_n_days::integer = 0 OR e.scheduled_at >= NOW() - (@last_n_days::integer || ' days')::interval)
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt;
+LIMIT NULLIF(@lmt, 0);
 
 -- name: GetPreviousFinishedState :one
 SELECT r.status
@@ -1161,7 +1161,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: CountTestWorkflowExecutions :one
 SELECT COUNT(*)

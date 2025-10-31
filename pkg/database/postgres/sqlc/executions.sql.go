@@ -592,7 +592,7 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $23 OFFSET $22
+LIMIT NULLIF($23, 0) OFFSET $22
 `
 
 type GetFinishedTestWorkflowExecutionsParams struct {
@@ -618,7 +618,7 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
-	Lmt                int32              `db:"lmt" json:"lmt"`
+	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
 
 type GetFinishedTestWorkflowExecutionsRow struct {
@@ -2222,7 +2222,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $23 OFFSET $22
+LIMIT NULLIF($23, 0) OFFSET $22
 `
 
 type GetTestWorkflowExecutionsParams struct {
@@ -2248,7 +2248,7 @@ type GetTestWorkflowExecutionsParams struct {
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
-	Lmt                int32              `db:"lmt" json:"lmt"`
+	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
 
 type GetTestWorkflowExecutionsRow struct {
@@ -2554,7 +2554,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $23 OFFSET $22
+LIMIT NULLIF($23, 0) OFFSET $22
 `
 
 type GetTestWorkflowExecutionsSummaryParams struct {
@@ -2580,7 +2580,7 @@ type GetTestWorkflowExecutionsSummaryParams struct {
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
-	Lmt                int32              `db:"lmt" json:"lmt"`
+	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
 
 type GetTestWorkflowExecutionsSummaryRow struct {
@@ -2923,15 +2923,15 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
     AND ($4::integer = 0 OR e.scheduled_at >= NOW() - ($4::integer || ' days')::interval)
 ORDER BY e.scheduled_at DESC
-LIMIT $5
+LIMIT NULLIF($5, 0)
 `
 
 type GetTestWorkflowMetricsParams struct {
-	WorkflowName   string `db:"workflow_name" json:"workflow_name"`
-	OrganizationID string `db:"organization_id" json:"organization_id"`
-	EnvironmentID  string `db:"environment_id" json:"environment_id"`
-	LastNDays      int32  `db:"last_n_days" json:"last_n_days"`
-	Lmt            int32  `db:"lmt" json:"lmt"`
+	WorkflowName   string      `db:"workflow_name" json:"workflow_name"`
+	OrganizationID string      `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string      `db:"environment_id" json:"environment_id"`
+	LastNDays      int32       `db:"last_n_days" json:"last_n_days"`
+	Lmt            interface{} `db:"lmt" json:"lmt"`
 }
 
 type GetTestWorkflowMetricsRow struct {
