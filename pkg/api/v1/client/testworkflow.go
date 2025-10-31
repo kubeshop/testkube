@@ -206,6 +206,7 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		"tagSelector": options.TagSelector,
 		"actorName":   options.ActorName,
 		"actorType":   string(options.ActorType),
+		"status":      options.Status,
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }

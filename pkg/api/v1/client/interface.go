@@ -250,6 +250,7 @@ type FilterTestWorkflowExecutionOptions struct {
 	TagSelector string
 	ActorName   string
 	ActorType   testkube.TestWorkflowRunningContextActorType
+	Status      string
 }
 
 // Gettable is an interface of gettable objects
