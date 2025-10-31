@@ -242,6 +242,7 @@ metadata:
     core-tests: workflows
     tool: cypress
     artifacts: "true"
+    artifacts-video: "true"
     category: e2e-ui-testing
 spec:
   content:

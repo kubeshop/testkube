@@ -12,6 +12,7 @@ spec:
       parallelism: 2
       workflows:
       - name: playwright-workflow-smoke
+      - name: playwright-workflow-smoke-video-recording
       - name: playwright-workflow-smoke-command-args
       - name: playwright-workflow-smoke-template
       - name: distributed-playwright-workflow-smoke
