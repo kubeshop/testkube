@@ -81,11 +81,3 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 
 	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar")
 }
-
-func TestIsSupported(t *testing.T) {
-	client := startGRPCTestConnection(t, &testSrv{})
-
-	if !client.IsSupported(t.Context()) {
-		t.Errorf("client should be supported")
-	}
-}

@@ -173,10 +173,7 @@ type RunnerConfig struct {
 }
 
 type GitOpsSyncConfig struct {
-	GitOpsSyncKubernetesToCloudEnabled bool   `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
-	GitOpsSyncCloudToKubernetesEnabled bool   `envconfig:"GITOPS_CLOUD_TO_KUBERNETES_ENABLED" default:"false"`
-	GitOpsSyncCloudNamePattern         string `envconfig:"GITOPS_CLOUD_NAME_PATTERN" default:"<name>"`
-	GitOpsSyncKubernetesNamePattern    string `envconfig:"GITOPS_KUBERNETES_NAME_PATTERN" default:"<name>"`
+	GitOpsSyncKubernetesToCloudEnabled bool `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
 }
 
 type CronJobConfig struct {
