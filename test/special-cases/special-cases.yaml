@@ -28,6 +28,16 @@ spec:
       shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
 ---
 apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: special-cases-template-with-env
+spec:
+  container:
+    env:
+      - name: TEMPLATE_GLOBAL_ENV
+        value: "template-global-env-value"
+---
+apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: special-cases-step-env-override
@@ -35,6 +45,8 @@ metadata:
     core-tests: special-cases
 description: "ENV override - container ENV vs expression ENV in steps, services and parallel"
 spec:
+  use:
+    - name: special-cases-template-with-env
   container:
     image: alpine:3.22.0
     env:
@@ -86,6 +98,21 @@ spec:
                 echo "Parallel Literal: $EXAMPLE_ENV"
                 echo "Parallel Expression: {{ env.EXAMPLE_ENV }}"
                 [ "$EXAMPLE_ENV" = "parallel-override" ] && [ "{{ env.EXAMPLE_ENV }}" = "parallel-override" ] && echo OK || (echo FAIL && exit 1)
+    - name: Check global ENV from template
+      run:
+        shell: |
+          echo "TEMPLATE ENV Literal: $TEMPLATE_GLOBAL_ENV"
+          echo "TEMPLATE ENV Expression: {{ env.TEMPLATE_GLOBAL_ENV }}"
+          [ "$TEMPLATE_GLOBAL_ENV" = "template-global-env-value" ] && [ "{{ env.TEMPLATE_GLOBAL_ENV }}" = "template-global-env-value" ] && echo OK || (echo FAIL && exit 1)
+    - name: Override global ENV from template
+      run:
+        env:
+          - name: TEMPLATE_GLOBAL_ENV
+            value: "template-global-env-override"
+        shell: |
+          echo "TEMPLATE ENV Literal: $TEMPLATE_GLOBAL_ENV"
+          echo "TEMPLATE ENV Expression: {{ env.TEMPLATE_GLOBAL_ENV }}"
+          [ "$TEMPLATE_GLOBAL_ENV" = "template-global-env-override" ] && [ "{{ env.TEMPLATE_GLOBAL_ENV }}" = "template-global-env-override" ] && echo OK || (echo FAIL && exit 1)
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
