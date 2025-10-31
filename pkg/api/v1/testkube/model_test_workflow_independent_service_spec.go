@@ -25,6 +25,12 @@ type TestWorkflowIndependentServiceSpec struct {
 	SecurityContext *SecurityContext       `json:"securityContext,omitempty"`
 	// volumes to mount to the container
 	VolumeMounts []VolumeMount `json:"volumeMounts,omitempty"`
+	Count        *BoxedString  `json:"count,omitempty"`
+	MaxCount     *BoxedString  `json:"maxCount,omitempty"`
+	// matrix of parameters to spawn instances
+	Matrix map[string]interface{} `json:"matrix,omitempty"`
+	// parameters that should be distributed across sharded instances
+	Shards map[string]interface{} `json:"shards,omitempty"`
 	// service description to display
 	Description string `json:"description,omitempty"`
 	// maximum time until reaching readiness
@@ -37,10 +43,4 @@ type TestWorkflowIndependentServiceSpec struct {
 	RestartPolicy  string                             `json:"restartPolicy,omitempty"`
 	ReadinessProbe *Probe                             `json:"readinessProbe,omitempty"`
 	Pvcs           map[string]TestWorkflowPvcConfig   `json:"pvcs,omitempty"`
-	Count          *BoxedString                       `json:"count,omitempty"`
-	MaxCount       *BoxedString                       `json:"maxCount,omitempty"`
-	// matrix of parameters to spawn instances
-	Matrix map[string]interface{} `json:"matrix,omitempty"`
-	// parameters that should be distributed across sharded instances
-	Shards map[string]interface{} `json:"shards,omitempty"`
 }
