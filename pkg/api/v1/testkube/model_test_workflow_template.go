@@ -27,4 +27,5 @@ type TestWorkflowTemplate struct {
 	Created     time.Time                 `json:"created,omitempty"`
 	Updated     time.Time                 `json:"updated,omitempty"`
 	Spec        *TestWorkflowTemplateSpec `json:"spec,omitempty"`
+	Sync        *Syncable                 `json:"sync,omitempty"`
 }

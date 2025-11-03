@@ -30,4 +30,5 @@ type TestWorkflow struct {
 	// if test workflow is offline and cannot be executed
 	ReadOnly bool                       `json:"readOnly,omitempty"`
 	Status   *TestWorkflowStatusSummary `json:"status,omitempty"`
+	Sync     *Syncable                  `json:"sync,omitempty"`
 }
