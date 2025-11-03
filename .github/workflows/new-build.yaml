@@ -98,7 +98,7 @@ jobs:
         with:
           bake-target: "mcp-server-meta"
           images: |
-            kubeshop/testkube-mcp-server
+            kubeshop/mcp-server
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
