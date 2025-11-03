@@ -32,5 +32,6 @@ type TestTriggerUpsertRequest struct {
 	TestSelector      *TestTriggerSelector            `json:"testSelector"`
 	ConcurrencyPolicy *TestTriggerConcurrencyPolicies `json:"concurrencyPolicy,omitempty"`
 	// whether test trigger is disabled
-	Disabled bool `json:"disabled,omitempty"`
+	Disabled bool      `json:"disabled,omitempty"`
+	Sync     *Syncable `json:"sync,omitempty"`
 }

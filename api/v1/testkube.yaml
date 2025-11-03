@@ -7780,6 +7780,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7848,6 +7850,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookParameterSchema"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     Event:
       description: Event data
@@ -8118,6 +8122,8 @@ components:
           example:
             - true
             - false
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     LocalObjectReference:
       description: Reference to Kubernetes object
@@ -8648,6 +8654,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -9304,6 +9312,8 @@ components:
           example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     TestWorkflowStepParallel:
       type: object
@@ -11770,6 +11780,25 @@ components:
           type: string
       required:
         - name
+
+    Source:
+      description: synchronisation sources
+      type: string
+      enum:
+        - kubernetes
+
+    Syncable:
+      description: |
+        source information about resources that may have been synced from multiple sources.
+        An empty source indicates that the source was the UI/API for backwards compatibility.
+      type: object
+      properties:
+        creationSource:
+          description: the original source from which the resource was created
+          $ref: "#/components/schemas/Source"
+        lastModificationSource:
+          description: the source from which the last modification of the resource originated
+          $ref: "#/components/schemas/Source"
 
     #
     # Errors
