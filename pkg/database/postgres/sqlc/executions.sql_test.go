@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/assert"
@@ -1144,7 +1145,8 @@ RETURNING test_workflow_signatures\.id`
 		ParentID:    pgtype.UUID{Valid: false},
 	}
 
-	rows := mock.NewRows([]string{"id"}).AddRow(int32(1))
+	id := uuid.New()
+	rows := mock.NewRows([]string{"id"}).AddRow(pgtype.UUID{Valid: true, Bytes: id})
 	mock.ExpectQuery(expectedQuery).WithArgs(
 		params.ExecutionID,
 		params.Ref,
@@ -1160,7 +1162,7 @@ RETURNING test_workflow_signatures\.id`
 
 	// Assertions
 	assert.NoError(t, err)
-	assert.Equal(t, int32(1), result)
+	assert.Equal(t, pgtype.UUID{Valid: true, Bytes: id}, result)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
