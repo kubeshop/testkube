@@ -5,6 +5,7 @@
 package sqlc
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -28,7 +29,6 @@ type Lease struct {
 }
 
 type TestWorkflow struct {
-	ID           int32              `db:"id" json:"id"`
 	ExecutionID  string             `db:"execution_id" json:"execution_id"`
 	WorkflowType string             `db:"workflow_type" json:"workflow_type"`
 	Name         pgtype.Text        `db:"name" json:"name"`
@@ -41,6 +41,7 @@ type TestWorkflow struct {
 	Status       []byte             `db:"status" json:"status"`
 	Created      pgtype.Timestamptz `db:"created" json:"created"`
 	Updated      pgtype.Timestamptz `db:"updated" json:"updated"`
+	ID           uuid.UUID          `db:"id" json:"id"`
 }
 
 type TestWorkflowExecution struct {
@@ -68,22 +69,22 @@ type TestWorkflowExecution struct {
 }
 
 type TestWorkflowOutput struct {
-	ID          int32              `db:"id" json:"id"`
 	ExecutionID string             `db:"execution_id" json:"execution_id"`
 	Ref         pgtype.Text        `db:"ref" json:"ref"`
 	Name        pgtype.Text        `db:"name" json:"name"`
 	Value       []byte             `db:"value" json:"value"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	ID          uuid.UUID          `db:"id" json:"id"`
 }
 
 type TestWorkflowReport struct {
-	ID          int32              `db:"id" json:"id"`
 	ExecutionID string             `db:"execution_id" json:"execution_id"`
 	Ref         pgtype.Text        `db:"ref" json:"ref"`
 	Kind        pgtype.Text        `db:"kind" json:"kind"`
 	File        pgtype.Text        `db:"file" json:"file"`
 	Summary     []byte             `db:"summary" json:"summary"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	ID          uuid.UUID          `db:"id" json:"id"`
 }
 
 type TestWorkflowResourceAggregation struct {
@@ -114,13 +115,13 @@ type TestWorkflowResult struct {
 }
 
 type TestWorkflowSignature struct {
-	ID          int32              `db:"id" json:"id"`
 	ExecutionID string             `db:"execution_id" json:"execution_id"`
-	ParentID    pgtype.Int4        `db:"parent_id" json:"parent_id"`
 	Ref         pgtype.Text        `db:"ref" json:"ref"`
 	Name        pgtype.Text        `db:"name" json:"name"`
 	Category    pgtype.Text        `db:"category" json:"category"`
 	Optional    pgtype.Bool        `db:"optional" json:"optional"`
 	Negative    pgtype.Bool        `db:"negative" json:"negative"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	ID          pgtype.UUID        `db:"id" json:"id"`
+	ParentID    pgtype.UUID        `db:"parent_id" json:"parent_id"`
 }

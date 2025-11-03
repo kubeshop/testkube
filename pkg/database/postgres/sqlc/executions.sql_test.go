@@ -1141,7 +1141,7 @@ RETURNING test_workflow_signatures\.id`
 		Category:    pgtype.Text{String: "test", Valid: true},
 		Optional:    pgtype.Bool{Bool: false, Valid: true},
 		Negative:    pgtype.Bool{Bool: false, Valid: true},
-		ParentID:    pgtype.Int4{Valid: false},
+		ParentID:    pgtype.UUID{Valid: false},
 	}
 
 	rows := mock.NewRows([]string{"id"}).AddRow(int32(1))

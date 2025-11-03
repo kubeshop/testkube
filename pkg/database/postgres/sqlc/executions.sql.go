@@ -3472,10 +3472,10 @@ type InsertTestWorkflowSignatureParams struct {
 	Category    pgtype.Text `db:"category" json:"category"`
 	Optional    pgtype.Bool `db:"optional" json:"optional"`
 	Negative    pgtype.Bool `db:"negative" json:"negative"`
-	ParentID    pgtype.Int4 `db:"parent_id" json:"parent_id"`
+	ParentID    pgtype.UUID `db:"parent_id" json:"parent_id"`
 }
 
-func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (int32, error) {
+func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, insertTestWorkflowSignature,
 		arg.ExecutionID,
 		arg.Ref,
@@ -3485,7 +3485,7 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 		arg.Negative,
 		arg.ParentID,
 	)
-	var id int32
+	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
 }

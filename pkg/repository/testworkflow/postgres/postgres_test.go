@@ -89,9 +89,9 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowExecution(
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) (int32, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) (pgtype.UUID, error) {
 	args := m.Called(ctx, arg)
-	return int32(args.Int(0)), args.Error(1)
+	return args.Get(0).(pgtype.UUID), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResult(ctx context.Context, arg sqlc.InsertTestWorkflowResultParams) error {
