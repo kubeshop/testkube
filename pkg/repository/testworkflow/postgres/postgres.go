@@ -333,11 +333,11 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 	}
 
 	// Convert to map for easier processing
-	sigMap := make(map[int32]*testkube.TestWorkflowSignature)
-	parentChildMap := make(map[int32][]int32)
+	sigMap := make(map[string]*testkube.TestWorkflowSignature)
+	parentChildMap := make(map[string][]string)
 
 	for _, sig := range signatures {
-		id := int32(sig["id"].(float64))
+		id := sig["id"].(string)
 
 		twSig := &testkube.TestWorkflowSignature{
 			Ref:      getStringFromMap(sig, "ref"),
@@ -349,14 +349,14 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		sigMap[id] = twSig
 
 		if parentID, ok := sig["parent_id"]; ok && parentID != nil {
-			parentInt := int32(parentID.(float64))
-			parentChildMap[parentInt] = append(parentChildMap[parentInt], id)
+			parentStr := parentID.(string)
+			parentChildMap[parentStr] = append(parentChildMap[parentStr], id)
 		}
 	}
 
 	// Build tree structure
-	var buildChildren func(parentId int32) []testkube.TestWorkflowSignature
-	buildChildren = func(parentId int32) []testkube.TestWorkflowSignature {
+	var buildChildren func(parentId string) []testkube.TestWorkflowSignature
+	buildChildren = func(parentId string) []testkube.TestWorkflowSignature {
 		var children []testkube.TestWorkflowSignature
 		for _, childId := range parentChildMap[parentId] {
 			child := *sigMap[childId]
@@ -369,7 +369,7 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 	// Find root signatures (those without parents)
 	var roots []testkube.TestWorkflowSignature
 	for _, sig := range signatures {
-		id := int32(sig["id"].(float64))
+		id := sig["id"].(string)
 		if _, hasParent := sig["parent_id"]; !hasParent || sig["parent_id"] == nil {
 			root := *sigMap[id]
 			root.Children = buildChildren(id)
@@ -379,6 +379,7 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 
 	return roots
 }
+
 func (r *PostgresRepository) convertOutputsFromJSON(outputs []map[string]interface{}) []testkube.TestWorkflowOutput {
 	result := make([]testkube.TestWorkflowOutput, len(outputs))
 	for i, output := range outputs {
@@ -1628,7 +1629,15 @@ func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkf
 		return fmt.Errorf("failed to init test workflow execution: %w", err)
 	}
 
-	if err := qtx.UpdateTestWorkflowExecutionResult(ctx, sqlc.UpdateTestWorkflowExecutionResultParams{
+	if err = r.deleteSignatures(ctx, qtx, id); err != nil {
+		return err
+	}
+
+	if err = r.insertSignatures(ctx, qtx, id, data.Signature, pgtype.UUID{}); err != nil {
+		return err
+	}
+
+	if err := qtx.UpdateExecutionStatus(ctx, sqlc.UpdateExecutionStatusParams{
 		ExecutionID: id,
 		Status:      toPgText(string(testkube.SCHEDULING_TestWorkflowStatus)),
 	}); err != nil {

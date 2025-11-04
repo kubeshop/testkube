@@ -153,6 +153,10 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionR
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatus(ctx context.Context, arg sqlc.UpdateExecutionStatusParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
 
 func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflowOutputs(ctx context.Context, executionID string) error {
 	args := m.Called(ctx, executionID)

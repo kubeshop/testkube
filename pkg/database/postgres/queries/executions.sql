@@ -786,6 +786,12 @@ SET
     steps = @steps
 WHERE execution_id = @execution_id;
 
+-- name: UpdateExecutionStatus :exec
+UPDATE test_workflow_results 
+SET 
+    status = @status
+WHERE execution_id = @execution_id;
+
 -- name: UpdateExecutionStatusAt :exec
 UPDATE test_workflow_executions 
 SET status_at = @status_at

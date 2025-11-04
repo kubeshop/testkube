@@ -3490,6 +3490,23 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 	return id, err
 }
 
+const updateExecutionStatus = `-- name: UpdateExecutionStatus :exec
+UPDATE test_workflow_results 
+SET 
+    status = $1
+WHERE execution_id = $2
+`
+
+type UpdateExecutionStatusParams struct {
+	Status      pgtype.Text `db:"status" json:"status"`
+	ExecutionID string      `db:"execution_id" json:"execution_id"`
+}
+
+func (q *Queries) UpdateExecutionStatus(ctx context.Context, arg UpdateExecutionStatusParams) error {
+	_, err := q.db.Exec(ctx, updateExecutionStatus, arg.Status, arg.ExecutionID)
+	return err
+}
+
 const updateExecutionStatusAt = `-- name: UpdateExecutionStatusAt :exec
 UPDATE test_workflow_executions 
 SET status_at = $1
