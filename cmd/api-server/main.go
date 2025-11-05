@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -48,6 +49,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/coordination/leader"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -97,6 +99,7 @@ func main() {
 
 	cfg := commons.MustGetConfig()
 	features := commons.MustGetFeatureFlags()
+	// Determine the running mode
 
 	mode := common.ModeAgent
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
@@ -123,8 +126,6 @@ func main() {
 	commons.ExitOnError("initializing tracing", err)
 	defer func() { _ = shutdownTracing(context.Background()) }()
 
-	// Determine the running mode
-
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -150,8 +151,6 @@ func main() {
 
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
-	var eventsEmitter *event.Emitter
-
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
 		Prefix:     cfg.SecretCreationPrefix,
@@ -174,7 +173,7 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
-	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
@@ -207,6 +206,19 @@ func main() {
 		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
 	}
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	var leaderLeaseBackend leasebackend.Repository
+	if controlPlane != nil {
+		leaderLeaseBackend = controlPlane.GetRepositoryManager().LeaseBackend()
+	} else {
+		leaderLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(
+			clientset,
+			cfg.TestkubeNamespace,
+			leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
+		)
+	}
+
+	leaderTasks := make([]leader.Task, 0)
 
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
@@ -287,7 +299,6 @@ func main() {
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, &proContext)
-
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify: cfg.StorageSkipVerify,
@@ -565,9 +576,8 @@ func main() {
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
 		}
 
-		// Create Execution Controllers
+		// Initialise controllers
 		if cfg.EnableK8sControllers {
-			// Initialise controllers
 			err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
 			commons.ExitOnError("creating TestWorkflowExecution controller", err)
 
@@ -600,6 +610,7 @@ func main() {
 	if isStandalone && controlPlane != nil {
 		executionController = controlPlane.ExecutionController
 	}
+
 	api := apiv1.NewTestkubeAPI(
 		isStandalone,
 		executionController,
@@ -652,10 +663,15 @@ func main() {
 			eventsEmitter,
 		)
 		commons.ExitOnError("starting agent", err)
-		g.Go(func() error {
-			err = agentHandle.Run(ctx)
-			commons.ExitOnError("running agent", err)
-			return nil
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.Run(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent", err)
+				}
+				return err
+			},
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
@@ -673,7 +689,11 @@ func main() {
 			lb = controlPlane.GetRepositoryManager().LeaseBackend()
 		} else {
 			// Fallback: Kubernetes Lease-based coordination (no external DB required)
-			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
+			lb = leasebackendk8s.NewK8sLeaseBackend(
+				clientset,
+				cfg.TestkubeNamespace,
+				leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
+			)
 		}
 
 		triggerService := triggers.NewService(
@@ -709,9 +729,12 @@ func main() {
 	}
 
 	// telemetry based functions
-	g.Go(func() error {
-		services.HandleTelemetryHeartbeat(ctx, clusterId, configMapConfig)
-		return nil
+	leaderTasks = append(leaderTasks, leader.Task{
+		Name: "telemetry-heartbeat",
+		Start: func(taskCtx context.Context) error {
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig)
+			return nil
+		},
 	})
 
 	log.DefaultLogger.Infow(
@@ -723,7 +746,10 @@ func main() {
 		"version", version.Version,
 		"startupTime", time.Since(startTime),
 	)
-	log.DefaultLogger.Infow("api endpoints ready", "httpPort", cfg.APIServerPort, "grpcPort", cfg.GRPCServerPort)
+	log.DefaultLogger.Infow("api endpoints ready",
+		"httpPort", cfg.APIServerPort,
+		"grpcPort", cfg.GRPCServerPort,
+	)
 
 	if cfg.EnableDebugServer {
 		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
@@ -734,7 +760,8 @@ func main() {
 		})
 	}
 
-	scheduler := commons.CreateCronJobScheduler(cfg,
+	scheduler := commons.CreateCronJobScheduler(
+		cfg,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
@@ -767,9 +794,12 @@ func main() {
 		}
 
 		// Start the new scheduler.
-		g.Go(func() error {
-			scheduler.Reconcile(ctx)
-			return nil
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "cron-scheduler",
+			Start: func(taskCtx context.Context) error {
+				scheduler.Reconcile(taskCtx)
+				return nil
+			},
 		})
 	}
 
@@ -778,7 +808,40 @@ func main() {
 		return httpServer.Run(ctx)
 	})
 
+	if len(leaderTasks) > 0 {
+		leaderIdentifier := resolveLeaderIdentifier()
+
+		leaderClusterID := clusterId
+		if leaderClusterID == "" {
+			leaderClusterID = "testkube-core"
+		} else {
+			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
+		}
+
+		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
+		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
+		for _, task := range leaderTasks {
+			leaderCoordinator.Register(task)
+		}
+
+		g.Go(func() error {
+			return leaderCoordinator.Run(ctx)
+		})
+	}
+
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
+}
+
+func resolveLeaderIdentifier() string {
+	if podName := os.Getenv("POD_NAME"); podName != "" {
+		return podName
+	}
+
+	if host, err := os.Hostname(); err == nil && host != "" {
+		return host
+	}
+
+	return fmt.Sprintf("testkube-core-%d", time.Now().UnixNano())
 }

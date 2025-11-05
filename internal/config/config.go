@@ -203,6 +203,7 @@ type Config struct {
 	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
