@@ -29,12 +29,11 @@ roleRef:
 
 ---
 
-# Apply triggers lease access role
-{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+# Apply agent lease access role
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
 metadata:
-  name: "triggers-lease-access-rb-{{ .Release.Name }}"
+  name: "agent-lease-access-rb-{{ .Release.Name }}"
   namespace: "{{ .Release.Namespace }}"
   labels:
     {{- if .Values.global.labels }}
@@ -55,8 +54,7 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: "triggers-lease-access-{{ .Release.Name }}"
-{{- end }}
+  name: "agent-lease-access-{{ .Release.Name }}"
 
 ---
 
