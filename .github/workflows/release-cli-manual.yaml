@@ -55,9 +55,17 @@ jobs:
             ${{ runner.os }}-go-
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
+        run: |
+          # Find tag pointing to current commit
+          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "Error: No tag found"
+            exit 1
+          fi
+          # Strip 'v' prefix if present
+          TAG_STRIPPED=${TAG#v}
+          echo "tag=$TAG_STRIPPED" >> $GITHUB_OUTPUT
+          echo "Found tag: $TAG (stripped: $TAG_STRIPPED)"
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -190,9 +198,17 @@ jobs:
 
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
+        run: |
+          # Find tag pointing to current commit
+          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "Error: No tag found"
+            exit 1
+          fi
+          # Strip 'v' prefix if present
+          TAG_STRIPPED=${TAG#v}
+          echo "tag=$TAG_STRIPPED" >> $GITHUB_OUTPUT
+          echo "Found tag: $TAG (stripped: $TAG_STRIPPED)"
 
       - name: Get release
         id: get_release
@@ -266,9 +282,17 @@ jobs:
 
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
+        run: |
+          # Find tag pointing to current commit
+          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "Error: No tag found"
+            exit 1
+          fi
+          # Strip 'v' prefix if present
+          TAG_STRIPPED=${TAG#v}
+          echo "tag=$TAG_STRIPPED" >> $GITHUB_OUTPUT
+          echo "Found tag: $TAG (stripped: $TAG_STRIPPED)"
 
       - name: Publish package
         env:
