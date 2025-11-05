@@ -1,0 +1,290 @@
+name: Manual CLI Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Are you sure you want to proceed with CLI release?'
+        type: choice
+        required: true
+        options:
+          - 'no'
+          - 'yes'
+
+permissions:
+  id-token: write # needed for keyless signing
+  contents: write
+
+env:
+  TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
+  ALPINE_IMAGE: alpine:3.21.3
+  BUSYBOX_IMAGE: busybox:1.36.1-musl
+
+jobs:
+  pre_build:
+    name: Pre-build
+    runs-on: depot-ubuntu-22.04
+    if: ${{ inputs.confirm == 'yes' }}
+    strategy:
+      matrix:
+        include:
+          - name: "linux"
+            path: .builds-linux.goreleaser.yml
+          - name: "windows"
+            path: .builds-windows.goreleaser.yml
+          - name: "darwin"
+            path: .builds-darwin.goreleaser.yml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser-pro
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
+          args: release -f ${{ matrix.path }} --skip=publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          KEYGEN_PUBLIC_KEY: "${{secrets.KEYGEN_PUBLIC_KEY}}"
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: testkube_${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
+          retention-days: 1
+
+  release:
+    name: Create and upload release-artifacts
+    needs: pre_build
+    runs-on: depot-ubuntu-22.04
+    if: ${{ inputs.confirm == 'yes' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - uses: sigstore/cosign-installer@v3.8.2
+      - uses: anchore/sbom-action/download-syft@v0.19.0
+      - name: Download Artifacts for Linux
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_linux
+          path: linux
+      - name: Download Artifacts for Windows
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_windows
+          path: windows
+      - name: Download Artifacts for Darwin
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_darwin
+          path: darwin
+      # Added as a workaround since files lose their permissions when being moved from one stage to another in GH. A bug was reported
+      # and will be fixed in the next release of GoReleaser, thus we will be able to remove this code.
+      - name: Add executable mode
+        run: chmod -R +x linux/ darwin/
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser-pro
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
+          args: release -f .goreleaser.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          SLACK_BOT_CLIENT_ID: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}"
+          SLACK_BOT_CLIENT_SECRET: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}"
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      - name: Store Intermediate Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: bin-artifacts
+          path: dist
+          retention-days: 1
+
+  build-and-publish-windows-installer:
+    needs: release
+    runs-on: windows-latest
+    if: ${{ inputs.confirm == 'yes' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Get Intermediate Artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_windows
+          path: windows
+
+      - name: Create and Sign MSI
+        run: |
+          Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
+          Copy-Item 'build\installer\windows\testkube.wxs' '.\testkube.wxs'
+          Copy-Item 'build\installer\windows\tk.bat' '.\tk.bat'
+          Copy-Item 'build\installer\windows\testkube.bat' '.\testkube.bat'
+          & "$env:WIX\bin\candle.exe" *.wxs
+          & "$env:WIX\bin\light.exe" *.wixobj
+
+      - name: Sign Artifact with CodeSignTool
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: testkube.msi
+          output_path: ${GITHUB_WORKSPACE}\artifacts
+          malware_block: false
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Calculate Checksum
+        id: checksum
+        run: |
+          $installer_name = $env:MSI_NAME
+          $installer_path = $env:MSI_PATH
+          $hash=Get-FileHash $installer_path
+          $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
+          echo "::set-output name=INSTALLER_NAME::${installer_name}"
+          echo "::set-output name=INSTALLER_PATH::${installer_path}"
+
+          #export MSI hash to environment
+          $hashsum = $hash.Hash
+          echo "::set-output name=CHECKSUM::${hashsum}"
+
+          #copy MSI to choco directory to build a nuget package
+          Copy-Item -Path "$installer_path" -Destination ".\choco\tools\$env:MSI_NAME.msi"
+        env:
+          MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
+          MSI_PATH: D:\a\testkube\testkube\artifacts\testkube.msi
+
+      - name: Upload release binary
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ${{steps.checksum.outputs.INSTALLER_PATH}}
+          asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}.msi
+          asset_content_type: application/octet-stream
+
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: msi_checksum.txt
+          asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}_checksum.txt
+          asset_content_type: text/plain
+
+      - name: Update checksum in chocolateyInstall.ps1 file
+        working-directory: ./choco
+        run: |
+          $file_content  = Get-Content .\tools\chocolateyInstall.ps1 -Raw
+          $update_version = $file_content -replace "(?i)(\schecksum\s*=\s*)('.*')", "`$1'${{steps.checksum.outputs.CHECKSUM}}'"
+          Set-Content -Path .\tools\chocolateyInstall.ps1 -Value $update_version -NoNewline
+
+      - name: Bump versions and push package to chocolatey repo
+        working-directory: ./choco
+        run: |
+          ./update.ps1 ${{steps.tag.outputs.tag}} ${{ secrets.COMMOM_CHOCO_API_KEY }} ${{ env.TESTKUBE_CHOCO_REPO }}
+
+  build-and-publish-linux-installer:
+    needs: release
+    runs-on: depot-ubuntu-22.04
+    if: ${{ inputs.confirm == 'yes' }}
+
+    steps:
+      - name: Get Intermediate Artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: bin-artifacts
+          path: dist
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
+      - name: Publish package
+        env:
+          USERNAME: "aptly"
+          PASSWORD: ${{ secrets.APTLY_PASSWORD }}
+          APTLY_URL: "repo.testkube.io:8080"
+          VERSION: ${{steps.tag.outputs.tag}}
+        run: |
+          ### Upload files
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
+
+          ### Add file to repo
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
+
+          ### Create snapshot
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots
+
+          ### Publish repo
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
