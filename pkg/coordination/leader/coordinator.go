@@ -171,6 +171,11 @@ func (c *Coordinator) release() {
 
 	c.logger.Infow("leader coordinator: releasing lease", "identifier", c.identifier, "clusterId", c.clusterID)
 
+	if group == nil {
+		c.logger.Warnw("leader coordinator: release called without active task group", "identifier", c.identifier, "clusterId", c.clusterID)
+		return
+	}
+
 	group.cancel()
 	group.wg.Wait()
 }
