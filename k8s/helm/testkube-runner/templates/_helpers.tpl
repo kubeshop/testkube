@@ -32,12 +32,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagsuffix -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagsuffix -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagsuffix -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end }}
 
