@@ -1483,24 +1483,24 @@ func TestProcessArtifactsWithStepCondition(t *testing.T) {
 	for i, s := range sig {
 		t.Logf("  Sig[%d]: ref=%s, category=%s", i, s.Ref(), s.Category())
 	}
-	
+
 	// Verify that artifacts has "true" condition (simplified from "always") in the actions
 	actions := res.LiteActions()
-	
+
 	foundShellWithStepCondition := false
 	foundArtifactsWithAlwaysCondition := false
-	
+
 	for _, actionGroup := range actions {
 		for _, action := range actionGroup {
 			if action.Type() == lite.ActionTypeDeclare {
 				declare := action.Declare
 				t.Logf("Found Declare with ref=%s, condition=%s", declare.Ref, declare.Condition)
-				
+
 				// Look for shell step (Run shell command) - should have step condition
 				if strings.Contains(declare.Condition, "env.TEST") {
 					foundShellWithStepCondition = true
 				}
-				
+
 				// Look for artifacts step - should have "true" (simplified from "always")
 				// The artifacts declare should NOT have env.TEST in its condition
 				if declare.Condition == "true" && declare.Ref != "root" {
@@ -1509,7 +1509,7 @@ func TestProcessArtifactsWithStepCondition(t *testing.T) {
 			}
 		}
 	}
-	
+
 	// The key assertions:
 	// 1. Shell command should have the step's condition
 	assert.True(t, foundShellWithStepCondition, "Shell step should have the step condition 'env.TEST'")
