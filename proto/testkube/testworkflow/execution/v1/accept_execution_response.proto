@@ -2,9 +2,7 @@ edition = "2023";
 
 package testkube.testworkflow.execution.v1;
 
-// SetExecutionSchedulingResponse is currently empty but remains reserved for future usage
+// AcceptExecutionResponse is currently empty but remains reserved for future usage
 // without breaking backwards proto compatibility.
 // https://buf.build/docs/best-practices/style-guide/#rpc-use-empty
-message SetExecutionSchedulingResponse {
-  option deprecated = true;
-}
+message AcceptExecutionResponse {}
