@@ -77,6 +77,7 @@ Define API image
 {{- $registryName := .Values.image.registry -}}
 {{- $repositoryName := .Values.image.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.image.tag | toString -}}
+{{- $tagSuffix := .Values.image.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.image.digest }}
     {{- $separator = "@" -}}
@@ -84,12 +85,12 @@ Define API image
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
@@ -365,6 +366,7 @@ Define Test Workflows Toolkit Image
 {{- $registryName := .Values.imageTwToolkit.registry -}}
 {{- $repositoryName := .Values.imageTwToolkit.repository -}}
 {{- $tag := default .Chart.AppVersion (default .Values.image.tag .Values.imageTwToolkit.tag) | toString -}}
+{{- $tagSuffix := .Values.imageTwToolkit.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.imageTwToolkit.digest }}
     {{- $separator = "@" -}}
@@ -372,12 +374,12 @@ Define Test Workflows Toolkit Image
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
@@ -389,6 +391,7 @@ Define Test Workflows Init Image
 {{- $registryName := .Values.imageTwInit.registry -}}
 {{- $repositoryName := .Values.imageTwInit.repository -}}
 {{- $tag := default .Chart.AppVersion (default .Values.image.tag .Values.imageTwInit.tag) | toString -}}
+{{- $tagSuffix := .Values.imageTwInit.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.imageTwInit.digest }}
     {{- $separator = "@" -}}
@@ -396,12 +399,12 @@ Define Test Workflows Init Image
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
