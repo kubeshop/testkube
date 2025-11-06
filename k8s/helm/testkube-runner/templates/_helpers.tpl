@@ -24,6 +24,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $registryName := .Values.images.agent.registry -}}
 {{- $repositoryName := .Values.images.agent.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.images.agent.tag | toString -}}
+{{- $tagSuffix := .Values.images.agent.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.images.agent.digest }}
     {{- $separator = "@" -}}
@@ -31,12 +32,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagsuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagsuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagsuffix -}}
 {{- end -}}
 {{- end }}
 
@@ -44,6 +45,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $registryName := .Values.images.toolkit.registry -}}
 {{- $repositoryName := .Values.images.toolkit.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.images.toolkit.tag | toString -}}
+{{- $tagSuffix := .Values.images.toolkit.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.images.toolkit.digest }}
     {{- $separator = "@" -}}
@@ -51,12 +53,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end }}
 
@@ -64,6 +66,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $registryName := .Values.images.init.registry -}}
 {{- $repositoryName := .Values.images.init.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.images.init.tag | toString -}}
+{{- $tagSuffix := .Values.images.init.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.images.init.digest }}
     {{- $separator = "@" -}}
@@ -71,12 +74,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- if .Values.global }}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end }}
 
