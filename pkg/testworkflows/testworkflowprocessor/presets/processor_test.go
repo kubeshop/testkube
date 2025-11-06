@@ -1503,7 +1503,8 @@ func TestProcessArtifactsWithStepCondition(t *testing.T) {
 
 				// Look for artifacts step - should have "true" (simplified from "always")
 				// The artifacts declare should NOT have env.TEST in its condition
-				if declare.Condition == "true" && declare.Ref != "root" {
+				// Skip the root stage as it always has condition "true"
+				if declare.Condition == "true" && declare.Ref != constants.RootOperationName {
 					foundArtifactsWithAlwaysCondition = true
 				}
 			}
