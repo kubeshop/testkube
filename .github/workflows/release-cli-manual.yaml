@@ -102,7 +102,7 @@ jobs:
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
-          app-id: 253113
+          app-id: 2071908
           private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
       - name: Get GitHub App User ID
         id: get-user-id
