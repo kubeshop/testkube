@@ -354,11 +354,16 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		}
 	}
 
-	// Build tree structure
+	// Build tree structure, preserving order
 	var buildChildren func(parentId string) []testkube.TestWorkflowSignature
 	buildChildren = func(parentId string) []testkube.TestWorkflowSignature {
-		var children []testkube.TestWorkflowSignature
-		for _, childId := range parentChildMap[parentId] {
+		childIds := parentChildMap[parentId]
+		if len(childIds) == 0 {
+			return nil
+		}
+
+		children := make([]testkube.TestWorkflowSignature, 0, len(childIds))
+		for _, childId := range childIds {
 			child := *sigMap[childId]
 			child.Children = buildChildren(childId)
 			children = append(children, child)
@@ -366,8 +371,8 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		return children
 	}
 
-	// Find root signatures (those without parents)
-	var roots []testkube.TestWorkflowSignature
+	// Find root signatures (those without parents), preserving order
+	roots := make([]testkube.TestWorkflowSignature, 0)
 	for _, sig := range signatures {
 		id := sig["id"].(string)
 		if _, hasParent := sig["parent_id"]; !hasParent || sig["parent_id"] == nil {
