@@ -103,6 +103,11 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
 
+      - uses: benjlevesque/short-sha@v3.0
+        id: short-sha
+        with:
+          length: 7
+
       - name: Build
         uses: depot/bake-action@v1
         with:
