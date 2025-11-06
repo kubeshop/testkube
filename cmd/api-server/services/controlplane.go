@@ -9,9 +9,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
-	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/controlplane"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
+	database "github.com/kubeshop/testkube/pkg/database/postgres"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -24,15 +25,12 @@ import (
 	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
-	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, eventsEmitter *event.Emitter) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
 	commons.ExitOnError("Getting kubernetes config", err)
@@ -54,7 +52,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	var factory repository.RepositoryFactory
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient, features)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient)
 	}
 	if cfg.APIPostgresDSN != "" {
 		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
@@ -74,6 +72,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(repoManager)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.DisableDeprecatedTests, cfg.StorageBucket, deprecatedRepositories, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
+
+	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter)
+	scheduler := factory.NewScheduler()
+	executionController := factory.NewExecutionController()
+	executionQuerier := factory.NewExecutionQuerier()
 
 	// Ensure the buckets exist
 	if cfg.StorageBucket != "" {
@@ -99,41 +102,18 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 
-	executor := testworkflowexecutor.New(
-		nil,
-		"",
-		cfg.CDEventsTarget,
-		emitter,
-		runner,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowsClient,
-		metrics,
-		secretManager,
-		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeDashboardURI,
-		"",
-		"",
-		"",
-		nil,
-		"",
-		cfg.FeatureNewArchitecture,
-	)
-
 	return controlplane.New(controlplane.Config{
 		Port:                             cfg.GRPCServerPort,
 		Logger:                           log.DefaultLogger,
 		Verbose:                          false,
 		StorageBucket:                    cfg.StorageBucket,
-		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+	}, enqueuer, scheduler, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
 func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
-	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) (repository.RepositoryFactory, error) {
+	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client) (repository.RepositoryFactory, error) {
 	var outputRepository *minioresult.MinioRepository
 	// Init logs storage
 	if cfg.LogsStorage == "minio" {
@@ -162,8 +142,14 @@ func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Datab
 }
 
 func CreatePostgresFactory(db *pgxpool.Pool) (repository.RepositoryFactory, error) {
+	schedulerDb, err := database.NewForScheduler(db)
+	if err != nil {
+		return nil, err
+	}
+
 	factory, err := repository.NewFactoryBuilder().WithPostgreSQL(repository.PostgreSQLFactoryConfig{
-		Database: db,
+		Database:    db,
+		SchedulerDb: schedulerDb,
 	}).Build()
 	if err != nil {
 		return nil, err

@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-//go:generate mockgen -destination=./mock_inspector.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" Inspector
+//go:generate go tool mockgen -destination=./mock_inspector.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" Inspector
 type Inspector interface {
 	Inspect(ctx context.Context, registry, image string, pullPolicy corev1.PullPolicy, pullSecretNames []string) (*Info, error)
 	ResolveName(registry, image string) string
@@ -23,18 +23,18 @@ type Storage interface {
 	Get(ctx context.Context, request RequestBase) (*Info, error)
 }
 
-//go:generate mockgen -destination=./mock_storage.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" StorageWithTransfer
+//go:generate go tool mockgen -destination=./mock_storage.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" StorageWithTransfer
 type StorageWithTransfer interface {
 	StorageTransfer
 	Storage
 }
 
-//go:generate mockgen -destination=./mock_secretfetcher.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" SecretFetcher
+//go:generate go tool mockgen -destination=./mock_secretfetcher.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" SecretFetcher
 type SecretFetcher interface {
 	Get(ctx context.Context, name string) (*corev1.Secret, error)
 }
 
-//go:generate mockgen -destination=./mock_infofetcher.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" InfoFetcher
+//go:generate go tool mockgen -destination=./mock_infofetcher.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" InfoFetcher
 type InfoFetcher interface {
 	Fetch(ctx context.Context, registry, image string, pullSecrets []corev1.Secret) (*Info, error)
 }

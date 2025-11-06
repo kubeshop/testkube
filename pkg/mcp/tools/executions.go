@@ -76,8 +76,8 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 				params.PageSize = pageSize
 			}
 		}
-		if pageStr := request.GetString("page", "1"); pageStr != "" {
-			if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
+		if pageStr := request.GetString("page", "0"); pageStr != "" {
+			if page, err := strconv.Atoi(pageStr); err == nil && page >= 0 {
 				params.Page = page
 			}
 		}
@@ -174,55 +174,36 @@ func isValidExecutionName(executionName string) bool {
 }
 
 func extractExecutionIdFromResponse(responseJSON string, targetExecutionName string) (string, error) {
-	var executionGroups []map[string]any
-	if err := json.Unmarshal([]byte(responseJSON), &executionGroups); err != nil {
+	var resultObject map[string]any
+	if err := json.Unmarshal([]byte(responseJSON), &resultObject); err != nil {
 		return "", fmt.Errorf("failed to parse response JSON: %v", err)
 	}
 
-	if len(executionGroups) == 0 {
+	results, ok := resultObject["results"].([]any)
+	if !ok || len(results) == 0 {
 		return "", fmt.Errorf("no execution found with name \"%s\"", targetExecutionName)
 	}
 
-	// Find matching execution
-	matchingExecution := findMatchingExecution(executionGroups, targetExecutionName)
-	if matchingExecution == nil {
-		return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
-	}
-
-	if executionID, ok := matchingExecution["id"].(string); ok && executionID != "" {
-		return executionID, nil
-	}
-
-	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
-}
-
-func findMatchingExecution(executionGroups []map[string]any, targetExecutionName string) map[string]any {
-	for _, group := range executionGroups {
-		executions, ok := group["executions"].([]any)
-		if !ok {
-			continue
-		}
-
-		if len(executions) > 1 {
-			// Find exact match by name
-			for _, exec := range executions {
-				if execution, ok := exec.(map[string]any); ok {
-					if name, nameOk := execution["name"].(string); nameOk && name == targetExecutionName {
-						return execution
-					}
+	for _, result := range results {
+		if execution, ok := result.(map[string]any); ok {
+			if name, nameOk := execution["name"].(string); nameOk && name == targetExecutionName {
+				if executionID, idOk := execution["id"].(string); idOk && executionID != "" {
+					return executionID, nil
 				}
 			}
 		}
+	}
 
-		// If there's only one execution in the group, return it
-		if len(executions) == 1 {
-			if execution, ok := executions[0].(map[string]any); ok {
-				return execution
+	// Fallback to single result for backwards compatibility
+	if len(results) == 1 {
+		if execution, ok := results[0].(map[string]any); ok {
+			if executionID, idOk := execution["id"].(string); idOk && executionID != "" {
+				return executionID, nil
 			}
 		}
 	}
 
-	return nil
+	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
 }
 
 type WorkflowExecutionAborter interface {

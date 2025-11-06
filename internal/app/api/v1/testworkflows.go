@@ -459,7 +459,6 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-// TODO: Add metrics
 func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
@@ -516,7 +515,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleExecution.Config = request.Config
 		}
 
-		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+		results, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,
@@ -526,13 +525,8 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			User:                 user,
 		})
 
-		results := make([]testkube.TestWorkflowExecution, 0)
-		for v := range resp.Channel() {
-			results = append(results, *v)
-		}
-
-		if resp.Error() != nil {
-			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		if err != nil {
+			return s.InternalError(c, errPrefix, "execution error", err)
 		}
 
 		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
@@ -548,7 +542,6 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-// TODO: Add metrics
 func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
@@ -557,7 +550,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		errPrefix := "failed to rerun test workflow execution"
 
-		// Load the running comtext
+		// Load the running context
 		var twrContext testkube.TestWorkflowRunningContext
 		err = c.BodyParser(&twrContext)
 		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
@@ -632,7 +625,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 				EnvVars: request.Runtime.Variables,
 			}
 		}
-		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+		results, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:    request.DisableWebhooks,
 			Tags:               request.Tags,
@@ -642,13 +635,8 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			ResolvedWorkflow:   workflow,
 		})
 
-		results := make([]testkube.TestWorkflowExecution, 0)
-		for v := range resp.Channel() {
-			results = append(results, *v)
-		}
-
-		if resp.Error() != nil {
-			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		if err != nil {
+			return s.InternalError(c, errPrefix, "execution error", err)
 		}
 
 		s.Log.Debugw("rerunning test workflow execution", "id", executionID)

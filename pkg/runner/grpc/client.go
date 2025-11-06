@@ -57,6 +57,25 @@ type Client struct {
 // NewClient creates a client for retrieving updates about executions.
 func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runner, apiToken, organisationId string, controlPlane testworkflowconfig.ControlPlaneConfig, workflows workflowStore) Client {
 	client := executionv1.NewTestWorkflowExecutionServiceClient(conn)
+
+	opts := []grpc.CallOption{
+		// In the event of a transient failure on the server wait for it to come back rather than
+		// failing immediately.
+		grpc.WaitForReady(true),
+	}
+
+	// Standalone deployment does not have an API Token for now
+	if apiToken != "" {
+		// Note: This requires TLS to be correctly configured, otherwise the gRPC library will
+		// abort the connection. It is not secure to send authentication tokens over an
+		// unencrypted connection so this is appropriate behaviour.
+		opts = append(opts, grpc.PerRPCCredentials(oauth.TokenSource{
+			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
+				AccessToken: apiToken,
+			}),
+		}))
+	}
+
 	return Client{
 		OrganisationId:     organisationId,
 		ControlPlaneConfig: controlPlane,
@@ -64,22 +83,10 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 		client:        client,
 		logger:        logger,
 		workflowStore: workflows,
-		callOpts: []grpc.CallOption{
-			// Note: This requires TLS to be correctly configured, otherwise the gRPC library will
-			// abort the connection. It is not secure to send authentication tokens over an
-			// unencrypted connection so this is appropriate behaviour.
-			grpc.PerRPCCredentials(oauth.TokenSource{
-				TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
-					AccessToken: apiToken,
-				}),
-			}),
-			// In the event of a transient failure on the server wait for it to come back rather than
-			// failing immediately.
-			grpc.WaitForReady(true),
-		},
-		callTimeout:  defaultCallTimeout,
-		runner:       r,
-		pollInterval: defaultPollInterval,
+		callOpts:      opts,
+		callTimeout:   defaultCallTimeout,
+		runner:        r,
+		pollInterval:  defaultPollInterval,
 	}
 }
 

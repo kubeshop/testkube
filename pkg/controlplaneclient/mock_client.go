@@ -273,6 +273,21 @@ func (mr *MockClientMockRecorder) GetCredential(ctx, environmentId, executionId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredential", reflect.TypeOf((*MockClient)(nil).GetCredential), ctx, environmentId, executionId, name)
 }
 
+// GetCredentialWithSource mocks base method.
+func (m *MockClient) GetCredentialWithSource(ctx context.Context, environmentId, executionId, name, source string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCredentialWithSource", ctx, environmentId, executionId, name, source)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCredentialWithSource indicates an expected call of GetCredentialWithSource.
+func (mr *MockClientMockRecorder) GetCredentialWithSource(ctx, environmentId, executionId, name, source any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredentialWithSource", reflect.TypeOf((*MockClient)(nil).GetCredentialWithSource), ctx, environmentId, executionId, name, source)
+}
+
 // GetExecution mocks base method.
 func (m *MockClient) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
@@ -390,20 +405,6 @@ func (m *MockClient) InitExecution(ctx context.Context, environmentId, execution
 func (mr *MockClientMockRecorder) InitExecution(ctx, environmentId, executionId, signature, namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitExecution", reflect.TypeOf((*MockClient)(nil).InitExecution), ctx, environmentId, executionId, signature, namespace)
-}
-
-// IsLegacy mocks base method.
-func (m *MockClient) IsLegacy() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsLegacy")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsLegacy indicates an expected call of IsLegacy.
-func (mr *MockClientMockRecorder) IsLegacy() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLegacy", reflect.TypeOf((*MockClient)(nil).IsLegacy))
 }
 
 // IsRunner mocks base method.

@@ -44,26 +44,24 @@ var (
 	internalProContext     config3.ProContext
 	proContext             *cloud.ProContextResponse
 	proContextLoaded       bool
-	isNewArchitectureCache *bool
 	isExternalStorageCache *bool
 )
 
 func loadDefaultProContext() {
 	cfg := config2.Config()
 	internalProContext = config3.ProContext{
-		APIKey:          cfg.Worker.Connection.ApiKey,
-		URL:             cfg.Worker.Connection.Url,
-		TLSInsecure:     cfg.Worker.Connection.TlsInsecure,
-		SkipVerify:      cfg.Worker.Connection.SkipVerify,
-		EnvID:           cfg.Execution.EnvironmentId,
-		EnvName:         cfg.Execution.EnvironmentId,
-		EnvSlug:         cfg.Execution.EnvironmentId,
-		OrgID:           cfg.Execution.OrganizationId,
-		OrgName:         cfg.Execution.OrganizationId,
-		OrgSlug:         cfg.Execution.OrganizationId,
-		DashboardURI:    cfg.ControlPlane.DashboardUrl,
-		NewArchitecture: false,
-		CloudStorage:    false,
+		APIKey:       cfg.Worker.Connection.ApiKey,
+		URL:          cfg.Worker.Connection.Url,
+		TLSInsecure:  cfg.Worker.Connection.TlsInsecure,
+		SkipVerify:   cfg.Worker.Connection.SkipVerify,
+		EnvID:        cfg.Execution.EnvironmentId,
+		EnvName:      cfg.Execution.EnvironmentId,
+		EnvSlug:      cfg.Execution.EnvironmentId,
+		OrgID:        cfg.Execution.OrganizationId,
+		OrgName:      cfg.Execution.OrganizationId,
+		OrgSlug:      cfg.Execution.OrganizationId,
+		DashboardURI: cfg.ControlPlane.DashboardUrl,
+		CloudStorage: false,
 		Agent: config3.ProContextAgent{
 			ID:   cfg.Worker.Connection.AgentID,
 			Name: cfg.Worker.Connection.AgentID,
@@ -85,21 +83,17 @@ func loadProContext() error {
 
 	defer func() {
 		loadDefaultProContext()
-		internalProContext.NewArchitecture = *isNewArchitectureCache
 		internalProContext.CloudStorage = *isExternalStorageCache
 	}()
 
 	// Block if the instance doesn't support that
 	cfg := config2.Config()
-	if isNewArchitectureCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewArchitecture] != "true" {
-		isNewArchitectureCache = common.Ptr(false)
-	}
 	if isExternalStorageCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagCloudStorage] != "true" {
 		isExternalStorageCache = common.Ptr(false)
 	}
 
 	// Do not check Cloud support if its already predefined
-	if isNewArchitectureCache != nil && isExternalStorageCache != nil {
+	if isExternalStorageCache != nil {
 		return nil
 	}
 
@@ -122,23 +116,14 @@ func loadProContext() error {
 		proContextLoaded = true
 	}
 	if proContext != nil {
-		if isNewArchitectureCache == nil {
-			isNewArchitectureCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewArchitecture))
-		}
 		if isExternalStorageCache == nil {
 			isExternalStorageCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityCloudStorage))
 		}
 	} else {
-		isNewArchitectureCache = common.Ptr(false)
 		isExternalStorageCache = common.Ptr(false)
 	}
 
 	return nil
-}
-
-func IsNewArchitecture() bool {
-	loadProContext()
-	return *isNewArchitectureCache
 }
 
 func IsExternalStorage() bool {
@@ -232,7 +217,7 @@ func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
 		// TODO(dejan): now metrics are scrapped on each workflow exetucution and we get an error when connecting to Control Plane even with publicly trusted certificates.
 		// Until a better solution is implemented, TLS verification will be skipped.
 		cfg.SkipVerify = true
-		cloudConn, err = agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", logger)
+		cloudConn, err = agentclient.NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(context.Background(), cfg.TlsInsecure, cfg.Url, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect with Cloud: %w", err)
 		}

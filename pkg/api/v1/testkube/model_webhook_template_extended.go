@@ -9,7 +9,11 @@
  */
 package testkube
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/kubeshop/testkube/pkg/utils"
+)
 
 type WebhookTemplates []WebhookTemplate
 
@@ -77,4 +81,33 @@ func (w *WebhookTemplate) QuoteTextFields() {
 
 		w.Parameters[key] = value
 	}
+}
+
+func (w *WebhookTemplate) ConvertDots(fn func(string) string) *WebhookTemplate {
+	if w == nil {
+		return w
+	}
+
+	if w.Labels != nil {
+		w.Labels = convertDotsInMap(w.Labels, fn)
+	}
+	if w.Annotations != nil {
+		w.Annotations = convertDotsInMap(w.Annotations, fn)
+	}
+	if w.Headers != nil {
+		w.Headers = convertDotsInMap(w.Headers, fn)
+	}
+	if w.Config != nil {
+		w.Config = convertDotsInMap(w.Config, fn)
+	}
+
+	return w
+}
+
+func (w *WebhookTemplate) EscapeDots() *WebhookTemplate {
+	return w.ConvertDots(utils.EscapeDots)
+}
+
+func (w *WebhookTemplate) UnscapeDots() *WebhookTemplate {
+	return w.ConvertDots(utils.UnescapeDots)
 }

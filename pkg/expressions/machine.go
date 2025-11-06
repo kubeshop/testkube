@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -destination=./mock_machine.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Machine
+//go:generate go tool mockgen -destination=./mock_machine.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Machine
 type Machine interface {
 	Get(name string) (Expression, bool, error)
 	Call(name string, args []CallArgument) (Expression, bool, error)

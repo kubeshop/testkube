@@ -43,7 +43,6 @@ type ProContext struct {
 	Migrate                             string
 	ConnectionTimeout                   int
 	DashboardURI                        string
-	NewArchitecture                     bool
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
 	Agent                               ProContextAgent

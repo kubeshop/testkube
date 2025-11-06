@@ -23,8 +23,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
-	kubeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -47,15 +45,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
-	testsclientv3 "github.com/kubeshop/testkube/pkg/operator/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube/pkg/operator/client/testsuites/v3"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func ExitOnError(title string, err error) {
@@ -349,9 +344,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
 		DashboardURI:                        cfg.TestkubeDashboardURI,
-		NewArchitecture:                     grpcClient == nil,
-		CloudStorage:                        grpcClient == nil,
-		CloudStorageSupportedInControlPlane: grpcClient == nil,
+		CloudStorage:                        false,
+		CloudStorageSupportedInControlPlane: false,
 	}
 	proContext.Agent.ID = cfg.TestkubeProAgentID
 	proContext.Agent.Name = cfg.TestkubeProAgentID
@@ -362,16 +356,15 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
 
-	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
-		return proContext, nil
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-		"api-key":         proContext.APIKey,
-		"organization-id": proContext.OrgID,
-		"agent-id":        proContext.Agent.ID,
-	}))
+
+	if proContext.APIKey != "" {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
+			"api-key":         proContext.APIKey,
+			"organization-id": proContext.OrgID,
+			"agent-id":        proContext.Agent.ID,
+		}))
+	}
 	defer cancel()
 	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -424,10 +417,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 				proContext.EnvSlug = env.Slug
 			}
 		}
-	}
-
-	if cfg.FeatureNewArchitecture && capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
-		proContext.NewArchitecture = true
 	}
 
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
@@ -500,15 +489,10 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 }
 
 func CreateCronJobScheduler(cfg *config.Config,
-	kubeClient kubeclient.Client,
 	testWorkflowClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	deprecatedClients DeprecatedClients,
-	executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution],
-	executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution],
 	logger *zap.SugaredLogger,
-	kubeConfig *rest.Config,
 	proContext *config.ProContext) cronjob.Interface {
 	enableCronJobs := cfg.EnableCronJobs
 	if enableCronJobs == "" {
@@ -532,30 +516,11 @@ func CreateCronJobScheduler(cfg *config.Config,
 		return nil
 	}
 
-	var testClient testsclientv3.Interface
-	var testSuiteClient testsuitesclientv3.Interface
-	var testRESTClient testsclientv3.RESTInterface
-	var testSuiteRESTClient testsuitesclientv3.RESTInterface
-	if deprecatedClients != nil {
-		testClient = deprecatedClients.Tests()
-		testSuiteClient = deprecatedClients.TestSuites()
-		testRESTClient, err = testsclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("creating cron job scheduler test rest client", err)
-		testSuiteRESTClient, err = testsuitesclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("creating cron job scheduler test suite rest client", err)
-	}
-
 	scheduler := cronjob.New(testWorkflowClient,
 		testWorkflowTemplateClient,
 		testWorkflowExecutor,
 		logger,
-		cronjob.WithProContext(proContext),
-		cronjob.WithTestClient(testClient),
-		cronjob.WithTestSuiteClient(testSuiteClient),
-		cronjob.WithExecuteTestFn(executeTestFn),
-		cronjob.WithExecuteTestSuiteFn(executeTestSuiteFn),
-		cronjob.WithTestRESTClient(testRESTClient),
-		cronjob.WithTestSuiteRESTClient(testSuiteRESTClient),
+		proContext,
 	)
 
 	return scheduler

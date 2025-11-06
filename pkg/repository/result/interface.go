@@ -30,7 +30,7 @@ type Filter interface {
 	Type() string
 }
 
-//go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" Repository
+//go:generate go tool mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" Repository
 type Repository interface {
 	Sequences
 	// Get gets execution result by id or name
@@ -92,7 +92,7 @@ type ExecutionOutput struct {
 	Output        string `json:"output"`
 }
 
-//go:generate mockgen -destination=./mock_output_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" OutputRepository
+//go:generate go tool mockgen -destination=./mock_output_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" OutputRepository
 type OutputRepository interface {
 	// GetOutput gets execution output by id or name
 	GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error)

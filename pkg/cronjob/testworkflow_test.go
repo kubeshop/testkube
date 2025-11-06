@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -44,11 +45,7 @@ func Test_ReconcileTestWorkflow(t *testing.T) {
 		},
 	}
 
-	executionsCh := make(chan *testkube.TestWorkflowExecution, 1)
-	executionsCh <- &testkube.TestWorkflowExecution{}
-	close(executionsCh)
-	executionsStream := testworkflowexecutor.NewStream(executionsCh)
-	mockTestWorkflowExecutor.EXPECT().Execute(ctx, "", mockTestWorkflowExecutionRequest).Return(executionsStream).AnyTimes()
+	mockTestWorkflowExecutor.EXPECT().Execute(ctx, mockTestWorkflowExecutionRequest).Return([]testkube.TestWorkflowExecution{}, nil).AnyTimes()
 
 	result := channels.NewWatcher[testworkflowclient.Update]()
 	mockTestWorkflowsClient.EXPECT().WatchUpdates(ctx, "", gomock.Any()).Return(result).AnyTimes()
@@ -76,7 +73,7 @@ func Test_ReconcileTestWorkflow(t *testing.T) {
 		cancel()
 	}()
 
-	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger)
+	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger, &intconfig.ProContext{})
 
 	err := scheduler.ReconcileTestWorkflows(ctx)
 	assert.EqualError(t, err, context.Canceled.Error())

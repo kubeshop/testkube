@@ -21,14 +21,14 @@ spec:
   steps:
   - name: Install dependencies
     run:
-      image: mcr.microsoft.com/playwright:v1.53.2
+      image: mcr.microsoft.com/playwright:v1.56.1
       command:
       - npm
       args:
       - ci
   - name: Run tests
     run:
-      image: mcr.microsoft.com/playwright:v1.53.2
+      image: mcr.microsoft.com/playwright:v1.56.1
       shell: npx playwright test
   - name: Save artifacts
     workingDir: /data/repo/test/playwright/playwright-project

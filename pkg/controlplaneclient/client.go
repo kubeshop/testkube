@@ -39,11 +39,10 @@ type RuntimeConfig struct {
 	Namespace string
 }
 
-//go:generate mockgen -destination=./mock_client.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" Client
+//go:generate go tool mockgen -destination=./mock_client.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" Client
 type Client interface {
 	IsSuperAgent() bool
 	IsRunner() bool
-	IsLegacy() bool
 
 	ExecutionClient
 	ExecutionSelfClient
@@ -69,8 +68,4 @@ func (c *client) IsSuperAgent() bool {
 
 func (c *client) IsRunner() bool {
 	return strings.HasPrefix(c.proContext.APIKey, AgentRunnerPrefix+"_")
-}
-
-func (c *client) IsLegacy() bool {
-	return c.IsSuperAgent() && !c.proContext.NewArchitecture
 }

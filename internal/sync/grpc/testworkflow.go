@@ -31,7 +31,7 @@ func (c Client) UpdateOrCreateTestWorkflow(ctx context.Context, obj testworkflow
 				Payload: jsonEncodedObj,
 			},
 		},
-	}); err != nil {
+	}, c.callOpts...); err != nil {
 		return fmt.Errorf("send request to update or create testworkflow: %w", err)
 	}
 
@@ -53,7 +53,7 @@ func (c Client) DeleteTestWorkflow(ctx context.Context, name string) error {
 				Id: &name,
 			},
 		},
-	}); err != nil {
+	}, c.callOpts...); err != nil {
 		return fmt.Errorf("send request to delete testworkflow: %w", err)
 	}
 
