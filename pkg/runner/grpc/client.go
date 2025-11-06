@@ -249,6 +249,24 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				c.logger.Errorw("Failed to start execution.",
 					"executionId", start.GetExecutionId(),
 					"error", err)
+				// Execute with our own call timeout context to prevent stalling out.
+				callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
+				// Add required metadata to the call.
+				callCtx = metadata.AppendToOutgoingContext(callCtx,
+					"organisation-id", c.OrganisationId,
+					"environment-id", start.GetEnvironmentId())
+				// Report the error to the control plane to prevent getting the execution on
+				// subsequent calls.
+				_, callErr := c.client.DeclineExecution(callCtx, &executionv1.DeclineExecutionRequest{
+					ExecutionId: start.ExecutionId,
+				})
+				cancel()
+				if callErr != nil {
+					c.logger.Errorw("Failed to report execution start error.",
+						"executionId", start.GetExecutionId(),
+						"error", callErr)
+					return
+				}
 				return
 			}
 
@@ -264,7 +282,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				"organisation-id", c.OrganisationId,
 				"environment-id", start.GetEnvironmentId())
 			// Update the control plane that the execution is awaiting scheduling by Kubernetes.
-			_, err = c.client.SetExecutionScheduling(callCtx, &executionv1.SetExecutionSchedulingRequest{
+			_, err = c.client.AcceptExecution(callCtx, &executionv1.AcceptExecutionRequest{
 				ExecutionId: start.ExecutionId,
 				Namespace:   &result.Namespace,
 				Signature:   translateSignature(result.Signature),
@@ -274,6 +292,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				c.logger.Errorw("Failed to set execution scheduling",
 					"executionId", start.GetExecutionId(),
 					"error", err)
+				return
 			}
 		})
 	}
