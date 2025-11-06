@@ -53,8 +53,8 @@ jobs:
             kubeshop/testkube-api-server
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/api-server
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=short,prefix=
 
       - name: Create Docker tags and metadata for the API
         id: cli-meta
@@ -65,8 +65,8 @@ jobs:
             kubeshop/testkube-cli
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/cli
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=short,prefix=
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
@@ -77,8 +77,8 @@ jobs:
             kubeshop/testkube-tw-init
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-init
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=short,prefix=
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit
@@ -89,8 +89,8 @@ jobs:
             kubeshop/testkube-tw-toolkit
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-toolkit
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=short,prefix=
 
       - name: Create Docker tags and metadata for mcp-server
         id: mcp-meta
@@ -100,8 +100,8 @@ jobs:
           images: |
             kubeshop/mcp-server
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=short,prefix=
 
       - uses: benjlevesque/short-sha@v3.0
         id: short-sha
