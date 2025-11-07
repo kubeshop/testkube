@@ -20,7 +20,7 @@ message UpdateOrCreateRequest {
     // test_trigger indicates the object is a TestTrigger
     TestTrigger test_trigger = 1;
     // test_workflow indicates the object is a TestWorkflow
-    .testkube.testworkflow.execution.v1.TestWorkflow test_workflow = 2;
+    .testkube.testworkflow.v1.TestWorkflow test_workflow = 2;
     // test_workflow_template indicates the object is a TestWorkflowTemplate
     TestWorkflowTemplate test_workflow_template = 3;
     // webhook indicates the object is a Webhook

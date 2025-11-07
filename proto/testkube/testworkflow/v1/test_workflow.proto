@@ -1,6 +1,6 @@
 edition = "2023";
 
-package testkube.testworkflow.execution.v1;
+package testkube.testworkflow.v1;
 
 // TestWorkflow represents a test workflow resource in protobuf.
 message TestWorkflow {

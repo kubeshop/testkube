@@ -8,6 +8,8 @@ import "testkube/testworkflow/execution/v1/decline_execution_request.proto";
 import "testkube/testworkflow/execution/v1/decline_execution_response.proto";
 import "testkube/testworkflow/execution/v1/get_execution_updates_request.proto";
 import "testkube/testworkflow/execution/v1/get_execution_updates_response.proto";
+import "testkube/testworkflow/execution/v1/get_execution_workflow_request.proto";
+import "testkube/testworkflow/execution/v1/get_execution_workflow_response.proto";
 import "testkube/testworkflow/execution/v1/set_execution_scheduling_request.proto";
 import "testkube/testworkflow/execution/v1/set_execution_scheduling_response.proto";
 
@@ -33,4 +35,10 @@ service TestWorkflowExecutionService {
   // In the event of transient errors, clients are expected to retry themselves before declining
   // an execution.
   rpc DeclineExecution(DeclineExecutionRequest) returns (DeclineExecutionResponse);
+  // GetExecutionWorkflow can be used to retrieve the workflow for an execution. This is a
+  // separate RPC from other GetWorkflow RPCs because it specifically retrieves the workflow
+  // that should be used to execute a particular execution. The server may wish to enrich
+  // the underlying workflow with additional information or transformations that apply to the
+  // specific execution for which it will be used.
+  rpc GetExecutionWorkflow(GetExecutionWorkflowRequest) returns (GetExecutionWorkflowResponse);
 }
