@@ -230,9 +230,12 @@ jobs:
 
       - name: Get release
         id: get_release
-        uses: bruceadams/get-release@v1.3.2
+        shell: bash
+        run: |
+          UPLOAD_URL=$(gh api repos/kubeshop/testkube/releases/tags/${{ steps.tag.outputs.tag }} --jq .upload_url)
+          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Calculate Checksum
         id: checksum
