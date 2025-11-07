@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -214,13 +215,12 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 		}
 	}
 	for _, start := range response.GetStart() {
-		// Grab the full workflow before passing it futher on.
-		workflow, err := c.workflowStore.Get(ctx, start.GetEnvironmentId(), start.GetWorkflowName())
-		if err != nil {
+		// Deserialise the workflow before passing it further on.
+		var workflow testworkflowsv1.TestWorkflow
+		if err := json.Unmarshal(start.GetWorkflow().GetJson(), &workflow); err != nil {
 			// We cannot process this request as we do not know about the workflow to be executed.
-			c.logger.Errorw("Failed to retrieve workflow for execution, this execution will not be started.",
+			c.logger.Errorw("Failed to unmarshal workflow for execution, this execution will not be started.",
 				"executionId", start.GetExecutionId(),
-				"workflow name", start.GetWorkflowName(),
 				"error", err)
 			continue
 		}
@@ -242,7 +242,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 					EnvironmentId:   start.GetEnvironmentId(),
 					ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
 				},
-				Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*workflow),
+				Workflow:     workflow,
 				ControlPlane: c.ControlPlaneConfig,
 			})
 			if err != nil {
