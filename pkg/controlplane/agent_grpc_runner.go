@@ -22,7 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
+func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) { //nolint:staticcheck
 	_, err := s.AcceptExecution(ctx, &executionv1.AcceptExecutionRequest{
 		ExecutionId: req.ExecutionId,
 		Namespace:   req.Namespace,

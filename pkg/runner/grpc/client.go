@@ -259,7 +259,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				// subsequent calls.
 				_, callErr := c.client.DeclineExecution(callCtx, &executionv1.DeclineExecutionRequest{
 					ExecutionId: start.ExecutionId,
-				})
+				}, c.callOpts...)
 				cancel()
 				if callErr != nil {
 					c.logger.Errorw("Failed to report execution start error.",
