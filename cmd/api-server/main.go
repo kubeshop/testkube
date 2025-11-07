@@ -640,17 +640,14 @@ func main() {
 			)
 		}
 
-		var deprecatedSystem *services.DeprecatedSystem
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
-			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
 			testTriggersClient,
 			lb,
 			log.DefaultLogger,
-			configMapConfig,
 			eventBus,
 			metrics,
 			executionWorker,
@@ -660,7 +657,6 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
 			triggers.WithEventLabels(cfg.EventLabels),
 		)

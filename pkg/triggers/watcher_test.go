@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -23,7 +22,6 @@ import (
 
 func newWatcherTestService(clientset *fake.Clientset, testKubeClientset *faketestkube.Clientset, namespace string) *Service {
 	return &Service{
-		deprecatedSystem:  &services.DeprecatedSystem{},
 		triggerStatus:     make(map[statusKey]*triggerStatus),
 		clientset:         clientset,
 		testKubeClientset: testKubeClientset,

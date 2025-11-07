@@ -84,7 +84,6 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -164,7 +163,6 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -240,7 +238,6 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:          &services.DeprecatedSystem{},
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -310,7 +307,6 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:          &services.DeprecatedSystem{},
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -416,7 +412,6 @@ func TestService_match(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
@@ -470,7 +465,6 @@ func TestService_matchRegex(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
@@ -524,11 +518,10 @@ func TestService_noMatch(t *testing.T) {
 		return nil
 	}
 	s := &Service{
-		deprecatedSystem: &services.DeprecatedSystem{},
-		triggerExecutor:  testExecutorF,
-		triggerStatus:    map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
-		logger:           log.DefaultLogger,
-		metrics:          metrics.NewMetrics(),
+		triggerExecutor: testExecutorF,
+		triggerStatus:   map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
+		logger:          log.DefaultLogger,
+		metrics:         metrics.NewMetrics(),
 	}
 
 	err := s.match(context.Background(), e)
