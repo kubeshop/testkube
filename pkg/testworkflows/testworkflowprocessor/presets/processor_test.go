@@ -1458,6 +1458,14 @@ func TestProcess_MergingActions(t *testing.T) {
 	assert.Equal(t, res.Job.Spec.Template.Spec.Containers[0].Image, "custom-image:1.2.3")
 }
 
+// TestProcessArtifactsWithStepCondition verifies that artifacts get an "always" condition
+// instead of inheriting the step's condition. This ensures artifacts are uploaded regardless
+// of whether the step passes or fails.
+//
+// NOTE: This test only validates the structure at build time. It does NOT test runtime
+// condition evaluation. The original issue (kubeshop/testkube#6817) reported that BOTH
+// shell and artifacts were skipped when env.TEST should have been true, which suggests
+// a runtime evaluation issue that this test doesn't cover.
 func TestProcessArtifactsWithStepCondition(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
@@ -1516,4 +1524,38 @@ func TestProcessArtifactsWithStepCondition(t *testing.T) {
 	assert.True(t, foundShellWithStepCondition, "Shell step should have the step condition 'env.TEST'")
 	// 2. Artifacts should have "true" condition (simplified from "always"), not the step condition
 	assert.True(t, foundArtifactsWithAlwaysCondition, "Artifacts step should have 'true' condition (simplified from 'always'), not env.TEST")
+}
+
+func TestProcessSingleOperationWithCondition(t *testing.T) {
+wf := &testworkflowsv1.TestWorkflow{
+Spec: testworkflowsv1.TestWorkflowSpec{
+Steps: []testworkflowsv1.Step{
+{
+StepMeta: testworkflowsv1.StepMeta{Condition: "env.TEST"},
+StepOperations: testworkflowsv1.StepOperations{
+Shell: "echo test",
+},
+},
+},
+},
+}
+
+res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+assert.NoError(t, err)
+
+sig := res.Signature
+t.Logf("Number of signatures: %d", len(sig))
+for i, s := range sig {
+t.Logf("  Sig[%d]: ref=%s, category=%s", i, s.Ref(), s.Category())
+}
+
+actions := res.LiteActions()
+for _, actionGroup := range actions {
+for _, action := range actionGroup {
+if action.Type() == lite.ActionTypeDeclare {
+declare := action.Declare
+t.Logf("Found Declare with ref=%s, condition=%s", declare.Ref, declare.Condition)
+}
+}
+}
 }
