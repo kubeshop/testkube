@@ -7,10 +7,8 @@ import (
 	"go.uber.org/zap"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
@@ -22,8 +20,7 @@ import (
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
-	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, deprecatedClients commons.DeprecatedClients,
-	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
+	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, testWorkflowExecutionResults testworkflow.Repository,
 	secretClient secret.Interface, metrics v1.Metrics, webhookRepository cloudwebhook.WebhookRepository,
 	proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
@@ -31,8 +28,6 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.W
 		log:                          log,
 		WebhooksClient:               webhooksClient,
 		WebhookTemplatesClient:       webhookTemplatesClient,
-		deprecatedClients:            deprecatedClients,
-		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		secretClient:                 secretClient,
 		metrics:                      metrics,
@@ -46,8 +41,6 @@ type WebhooksLoader struct {
 	log                          *zap.SugaredLogger
 	WebhooksClient               executorsclientv1.WebhooksInterface
 	WebhookTemplatesClient       executorsclientv1.WebhookTemplatesInterface
-	deprecatedClients            commons.DeprecatedClients
-	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
 	secretClient                 secret.Interface
 	metrics                      v1.Metrics
@@ -86,20 +79,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		payloadTemplate := ""
 		if webhook.Spec.PayloadTemplateReference != "" {
-			if r.deprecatedClients == nil {
-				r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template", webhook.Spec.PayloadTemplateReference)
-				continue
-			}
-			template, err := r.deprecatedClients.Templates().Get(webhook.Spec.PayloadTemplateReference)
-			if err != nil {
-				return listeners, err
-			}
-
-			if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.WEBHOOK_TemplateType {
-				payloadTemplate = template.Spec.Body
-			} else {
-				r.log.Warnw("not matching template type", "template", webhook.Spec.PayloadTemplateReference)
-			}
+			r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template", webhook.Spec.PayloadTemplateReference)
 		}
 
 		if webhook.Spec.PayloadTemplate != "" {
@@ -114,7 +94,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			NewWebhookListener(
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-				r.deprecatedRepositories, r.testWorkflowExecutionResults,
+				r.testWorkflowExecutionResults,
 				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
 			),
 		)

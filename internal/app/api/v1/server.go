@@ -30,7 +30,6 @@ import (
 func NewTestkubeAPI(
 	isStandalone bool,
 	executionController scheduling.Controller,
-	deprecatedClients commons.DeprecatedClients,
 	clusterId string,
 	namespace string,
 	testWorkflowResults testworkflow.Repository,
@@ -63,7 +62,6 @@ func NewTestkubeAPI(
 		executionController:            executionController,
 		ClusterID:                      clusterId,
 		Log:                            log.DefaultLogger,
-		DeprecatedClients:              deprecatedClients,
 		TestWorkflowResults:            testWorkflowResults,
 		TestWorkflowOutput:             testWorkflowOutput,
 		SecretManager:                  secretManager,
@@ -99,7 +97,6 @@ type TestkubeAPI struct {
 	Executor                       client.Executor
 	ContainerExecutor              client.Executor
 	ExecutionWorkerClient          executionworkertypes.Worker
-	DeprecatedClients              commons.DeprecatedClients
 	SecretManager                  secretmanager.SecretManager
 	WebhooksClient                 executorsclientv1.WebhooksInterface
 	WebhookTemplatesClient         executorsclientv1.WebhookTemplatesInterface

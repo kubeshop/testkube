@@ -75,7 +75,6 @@ import (
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
-	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -85,7 +84,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func init() {
@@ -340,28 +338,7 @@ func main() {
 	}
 
 	var deprecatedSystem *services.DeprecatedSystem
-	if !cfg.DisableDeprecatedTests {
-		log.DefaultLogger.Info("initializing deprecated test system...")
-		log.DefaultLogger.Info("  - connecting to MongoDB and other storage backends...")
-		deprecatedSystem = services.CreateDeprecatedSystem(
-			ctx,
-			mode,
-			cfg,
-			features,
-			metrics,
-			configMapConfig,
-			secretConfig,
-			grpcClient,
-			nc,
-			eventsEmitter,
-			eventBus,
-			inspector,
-			&proContext,
-		)
-		log.DefaultLogger.Info("deprecated test system initialized successfully")
-	} else {
-		log.DefaultLogger.Info("deprecated test system is disabled")
-	}
+	log.DefaultLogger.Info("deprecated test system is disabled")
 
 	// Transfer common environment variables
 	commonEnvVariables := make([]corev1.EnvVar, 0)
@@ -469,18 +446,11 @@ func main() {
 		proContext.Agent.ID,
 	)
 
-	var deprecatedClients commons.DeprecatedClients
-	var deprecatedRepositories commons.DeprecatedRepositories
-	if deprecatedSystem != nil {
-		deprecatedClients = deprecatedSystem.Clients
-		deprecatedRepositories = deprecatedSystem.Repositories
-	}
-
 	// Initialize event handlers
 	websocketLoader := ws.NewWebsocketLoader()
 	if !cfg.DisableWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
+		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient,
 			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
 	}
 	eventsEmitter.Loader.Register(websocketLoader)
@@ -580,14 +550,6 @@ func main() {
 		if cfg.EnableK8sControllers {
 			err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
 			commons.ExitOnError("creating TestWorkflowExecution controller", err)
-
-			// Legacy controllers
-			testExecutor := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](scheduler.DefaultConcurrencyLevel)
-			err = controller.NewTestExecutionExecutorController(mgr, testExecutor, deprecatedSystem)
-			commons.ExitOnError("creating TestExecution controller", err)
-			testSuiteExecutor := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](scheduler.DefaultConcurrencyLevel)
-			err = controller.NewTestSuiteExecutionExecutorController(mgr, testSuiteExecutor, deprecatedSystem)
-			commons.ExitOnError("creating TestSuiteExecution controller", err)
 		}
 
 		// Finally start the manager.
@@ -601,10 +563,6 @@ func main() {
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
 
-	if deprecatedSystem != nil && deprecatedSystem.API != nil {
-		deprecatedSystem.API.Init(httpServer)
-	}
-
 	isStandalone := mode == common.ModeStandalone
 	var executionController scheduling.Controller
 	if isStandalone && controlPlane != nil {
@@ -614,7 +572,6 @@ func main() {
 	api := apiv1.NewTestkubeAPI(
 		isStandalone,
 		executionController,
-		deprecatedClients,
 		clusterId,
 		cfg.TestkubeNamespace,
 		testWorkflowResultsRepository,
@@ -645,16 +602,11 @@ func main() {
 
 	log.DefaultLogger.Info("starting agent service")
 
-	getDeprecatedLogStream := agent.GetDeprecatedLogStream
-	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
-		getDeprecatedLogStream = deprecatedSystem.StreamLogs
-	}
 	if !cfg.DisableDefaultAgent {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
 			grpcClient,
-			getDeprecatedLogStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			features,

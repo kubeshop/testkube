@@ -132,8 +132,6 @@ type DeprecatedControlPlaneConfig struct {
 	TestkubeCloudTLSInsecure bool `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
 	// DEPRECATED: Use TestkubeProWorkerCount instead
 	TestkubeCloudWorkerCount int `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
-	// DEPRECATED: Use TestkubeProLogStreamWorkerCount instead
-	TestkubeCloudLogStreamWorkerCount int `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
 	// DEPRECATED: Use TestkubeProEnvID instead
 	TestkubeCloudEnvID string `envconfig:"TESTKUBE_CLOUD_ENV_ID" default:""`
 	// DEPRECATED: Use TestkubeProOrgID instead
@@ -205,7 +203,6 @@ type Config struct {
 	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
 	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
-	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
 	TestkubeProRunnerCustomCASecret string   `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
 	CDEventsTarget                  string   `envconfig:"CDEVENTS_TARGET" default:""`
@@ -280,9 +277,6 @@ func Get() (*Config, error) {
 	}
 	if c.TestkubeProWorkerCount == 0 && deprecated.TestkubeCloudWorkerCount != 0 {
 		c.TestkubeProWorkerCount = deprecated.TestkubeCloudWorkerCount
-	}
-	if c.TestkubeProLogStreamWorkerCount == 0 && deprecated.TestkubeCloudLogStreamWorkerCount != 0 {
-		c.TestkubeProLogStreamWorkerCount = deprecated.TestkubeCloudLogStreamWorkerCount
 	}
 	if c.TestkubeProEnvID == "" && deprecated.TestkubeCloudEnvID != "" {
 		c.TestkubeProEnvID = deprecated.TestkubeCloudEnvID

@@ -4,15 +4,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 
 	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
-	templatesclientv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
 )
 
 func TestWebhookLoader(t *testing.T) {
@@ -21,7 +19,6 @@ func TestWebhookLoader(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
 	mockWebhooksClient := executorsclientv1.NewMockWebhooksInterface(mockCtrl)
 	mockWebhookTemplatesClient := executorsclientv1.NewMockWebhookTemplatesInterface(mockCtrl)
 	mockWebhooksClient.EXPECT().List(gomock.Any()).Return(&executorsv1.WebhookList{
@@ -29,11 +26,9 @@ func TestWebhookLoader(t *testing.T) {
 			{Spec: executorsv1.WebhookSpec{Uri: "http://localhost:3333", Events: []executorsv1.EventType{"start-test"}, PayloadObjectField: "text", PayloadTemplate: "{{ .Id }}", Headers: map[string]string{"Content-Type": "application/xml"}}},
 		},
 	}, nil).AnyTimes()
-	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
-	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
-	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
+	mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, nil, nil, v1.NewMetrics(), mockWebhookRepository, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))
@@ -46,7 +41,6 @@ func TestWebhookTemplateLoader(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
 	mockWebhooksClient := executorsclientv1.NewMockWebhooksInterface(mockCtrl)
 	mockWebhookTemplatesClient := executorsclientv1.NewMockWebhookTemplatesInterface(mockCtrl)
 	mockWebhooksClient.EXPECT().List(gomock.Any()).Return(&executorsv1.WebhookList{
@@ -60,11 +54,9 @@ func TestWebhookTemplateLoader(t *testing.T) {
 		},
 	}, nil).AnyTimes()
 
-	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
-	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
-	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
+	mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, nil, nil, v1.NewMetrics(), mockWebhookRepository, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

@@ -25,7 +25,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 )
 
@@ -61,11 +60,6 @@ type Agent struct {
 	requestBuffer  chan *cloud.ExecuteRequest
 	responseBuffer chan *cloud.ExecuteResponse
 
-	logStreamWorkerCount    int
-	logStreamRequestBuffer  chan *cloud.LogsStreamRequest
-	logStreamResponseBuffer chan *cloud.LogsStreamResponse
-	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
-
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -73,7 +67,6 @@ type Agent struct {
 
 	clusterID          string
 	clusterName        string
-	features           featureflags.FeatureFlags
 	dockerImageVersion string
 
 	proContext *config.ProContext
@@ -84,7 +77,6 @@ type Agent struct {
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
-	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	clusterID string,
 	clusterName string,
 	features featureflags.FeatureFlags,
@@ -93,27 +85,22 @@ func NewAgent(logger *zap.SugaredLogger,
 	eventEmitter event.Interface,
 ) (*Agent, error) {
 	return &Agent{
-		handler:                 handler,
-		logger:                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                  proContext.APIKey,
-		client:                  client,
-		events:                  make(chan testkube.Event),
-		workerCount:             proContext.WorkerCount,
-		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:          5 * time.Minute,
-		sendTimeout:             30 * time.Second,
-		healthcheckInterval:     30 * time.Second,
-		logStreamWorkerCount:    proContext.LogStreamWorkerCount,
-		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamFunc:           logStreamFunc,
-		clusterID:               clusterID,
-		clusterName:             clusterName,
-		features:                features,
-		proContext:              proContext,
-		dockerImageVersion:      dockerImageVersion,
-		eventEmitter:            eventEmitter,
+		handler:             handler,
+		logger:              logger.With("service", "Agent", "environmentId", proContext.EnvID),
+		apiKey:              proContext.APIKey,
+		client:              client,
+		events:              make(chan testkube.Event),
+		workerCount:         proContext.WorkerCount,
+		requestBuffer:       make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:      make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:      5 * time.Minute,
+		sendTimeout:         30 * time.Second,
+		healthcheckInterval: 30 * time.Second,
+		clusterID:           clusterID,
+		clusterName:         clusterName,
+		proContext:          proContext,
+		dockerImageVersion:  dockerImageVersion,
+		eventEmitter:        eventEmitter,
 	}, nil
 }
 
@@ -156,12 +143,6 @@ func (ag *Agent) Run(ctx context.Context) error {
 	wg.Go(reconnectionLoop("event loop", ag.runEventLoop))
 
 	wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
-
-	if !ag.features.LogsV2 {
-		wg.Go(reconnectionLoop("log stream loop", ag.runLogStreamLoop))
-		wg.Go(reconnectionLoop("log stream worker loop", ag.runLogStreamWorker(ag.logStreamWorkerCount)))
-	}
-
 	wg.Wait()
 
 	// We can only return here if the context has been cancelled.

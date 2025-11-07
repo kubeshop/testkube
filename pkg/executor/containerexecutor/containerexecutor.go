@@ -30,8 +30,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/k8sclient"
-	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -53,68 +51,6 @@ const (
 
 type EventEmitter interface {
 	Notify(event testkube.Event)
-}
-
-// TODO: remove duplicated code that was done when created container executor
-
-// NewContainerExecutor creates new job executor
-func NewContainerExecutor(
-	deprecatedRepositories commons.DeprecatedRepositories,
-	deprecatedClients commons.DeprecatedClients,
-	images executor.Images,
-	templates executor.Templates,
-	imageInspector imageinspector.Inspector,
-	serviceAccountNames map[string]string,
-	metrics ExecutionMetric,
-	emiter EventEmitter,
-	configMap config.Repository,
-	registry string,
-	podStartTimeout time.Duration,
-	clusterID string,
-	dashboardURI string,
-	apiURI string,
-	natsUri string,
-	debug bool,
-	logsStream logsclient.Stream,
-	features featureflags.FeatureFlags,
-	defaultStorageClassName string,
-	whitelistedContainers []string,
-	imageCredentialsCacheTTL time.Duration,
-) (client *ContainerExecutor, err error) {
-	clientSet, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		return client, err
-	}
-
-	if serviceAccountNames == nil {
-		serviceAccountNames = make(map[string]string)
-	}
-
-	return &ContainerExecutor{
-		clientSet:                clientSet,
-		deprecatedRepositories:   deprecatedRepositories,
-		deprecatedClients:        deprecatedClients,
-		log:                      log.DefaultLogger,
-		images:                   images,
-		templates:                templates,
-		imageInspector:           imageInspector,
-		configMap:                configMap,
-		serviceAccountNames:      serviceAccountNames,
-		metrics:                  metrics,
-		emitter:                  emiter,
-		registry:                 registry,
-		podStartTimeout:          podStartTimeout,
-		clusterID:                clusterID,
-		dashboardURI:             dashboardURI,
-		apiURI:                   apiURI,
-		natsURI:                  natsUri,
-		debug:                    debug,
-		logsStream:               logsStream,
-		features:                 features,
-		defaultStorageClassName:  defaultStorageClassName,
-		whitelistedContainers:    whitelistedContainers,
-		imageCredentialsCacheTTL: imageCredentialsCacheTTL,
-	}, nil
 }
 
 type ExecutionMetric interface {
