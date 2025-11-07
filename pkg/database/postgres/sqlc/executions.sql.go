@@ -476,7 +476,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -808,7 +808,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1017,7 +1017,7 @@ SELECT DISTINCT ON (w.name)
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1255,7 +1255,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1461,7 +1461,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1654,7 +1654,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1907,7 +1907,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -2106,7 +2106,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -2438,7 +2438,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -3005,7 +3005,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json  as signatures_json,
@@ -3458,9 +3458,9 @@ func (q *Queries) InsertTestWorkflowResult(ctx context.Context, arg InsertTestWo
 
 const insertTestWorkflowSignature = `-- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id
+    execution_id, ref, name, category, optional, negative, parent_id, step_order
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING test_workflow_signatures.id
 `
@@ -3473,6 +3473,7 @@ type InsertTestWorkflowSignatureParams struct {
 	Optional    pgtype.Bool `db:"optional" json:"optional"`
 	Negative    pgtype.Bool `db:"negative" json:"negative"`
 	ParentID    pgtype.UUID `db:"parent_id" json:"parent_id"`
+	StepOrder   int32       `db:"step_order" json:"step_order"`
 }
 
 func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (pgtype.UUID, error) {
@@ -3484,6 +3485,7 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 		arg.Optional,
 		arg.Negative,
 		arg.ParentID,
+		arg.StepOrder,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)

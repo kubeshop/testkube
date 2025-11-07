@@ -23,7 +23,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -84,7 +84,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -145,7 +145,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -214,7 +214,7 @@ SELECT DISTINCT ON (w.name)
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -276,7 +276,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -338,7 +338,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -571,7 +571,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -702,9 +702,9 @@ INSERT INTO test_workflow_executions (
 
 -- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id
+    execution_id, ref, name, category, optional, negative, parent_id, step_order
 ) VALUES (
-    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id
+    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id, @step_order
 )
 RETURNING test_workflow_signatures.id;
 
@@ -941,7 +941,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json  as signatures_json,
@@ -1051,7 +1051,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1283,7 +1283,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
