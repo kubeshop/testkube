@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 // Client is the Testkube API client abstraction
@@ -281,8 +279,6 @@ type Transport[A All] interface {
 	Delete(uri, selector string, isContentExpected bool) error
 	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
-	GetLogs(uri string, logs chan output.Output) error
-	GetLogsV2(uri string, logs chan events.Log) error
 	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 	GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error)

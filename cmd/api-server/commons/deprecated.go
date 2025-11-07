@@ -1,8 +1,6 @@
 package commons
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	templatesclientv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
 	testexecutionsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/testexecutions/v1"
@@ -30,57 +28,6 @@ type DeprecatedClients interface {
 	TestExecutions() testexecutionsclientv1.Interface
 	TestSuiteExecutions() testsuiteexecutionsv1.Interface
 	Templates() templatesclientv1.Interface
-}
-
-type deprecatedClients struct {
-	executors           executorsclientv1.Interface
-	tests               testsclientv3.Interface
-	testSuites          testsuitesclientv3.Interface
-	testSources         testsourcesclientv1.Interface
-	testExecutions      testexecutionsclientv1.Interface
-	testSuiteExecutions testsuiteexecutionsv1.Interface
-	templates           templatesclientv1.Interface
-}
-
-func (d *deprecatedClients) Executors() executorsclientv1.Interface {
-	return d.executors
-}
-
-func (d *deprecatedClients) Tests() testsclientv3.Interface {
-	return d.tests
-}
-
-func (d *deprecatedClients) TestSuites() testsuitesclientv3.Interface {
-	return d.testSuites
-}
-
-func (d *deprecatedClients) TestSources() testsourcesclientv1.Interface {
-	return d.testSources
-}
-
-func (d *deprecatedClients) TestExecutions() testexecutionsclientv1.Interface {
-	return d.testExecutions
-}
-
-func (d *deprecatedClients) TestSuiteExecutions() testsuiteexecutionsv1.Interface {
-	return d.testSuiteExecutions
-}
-
-func (d *deprecatedClients) Templates() templatesclientv1.Interface {
-	return d.templates
-}
-
-// TODO: Move Templates() out of Deprecation, as it's used by Webhook Payload (?)
-func CreateDeprecatedClients(kubeClient client.Client, namespace string) DeprecatedClients {
-	return &deprecatedClients{
-		executors:           executorsclientv1.NewClient(kubeClient, namespace),
-		tests:               testsclientv3.NewClient(kubeClient, namespace),
-		testSuites:          testsuitesclientv3.NewClient(kubeClient, namespace),
-		testSources:         testsourcesclientv1.NewClient(kubeClient, namespace),
-		testExecutions:      testexecutionsclientv1.NewClient(kubeClient, namespace),
-		testSuiteExecutions: testsuiteexecutionsv1.NewClient(kubeClient, namespace),
-		templates:           templatesclientv1.NewClient(kubeClient, namespace),
-	}
 }
 
 //go:generate go tool mockgen -destination=./mock_deprecatedrepositories.go -package=commons "github.com/kubeshop/testkube/cmd/api-server/commons" DeprecatedRepositories

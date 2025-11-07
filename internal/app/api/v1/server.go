@@ -9,7 +9,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
@@ -90,8 +89,6 @@ type TestkubeAPI struct {
 	Log                            *zap.SugaredLogger
 	TestWorkflowResults            testworkflow.Repository
 	TestWorkflowOutput             testworkflow.OutputRepository
-	Executor                       client.Executor
-	ContainerExecutor              client.Executor
 	ExecutionWorkerClient          executionworkertypes.Worker
 	SecretManager                  secretmanager.SecretManager
 	WebhooksClient                 executorsclientv1.WebhooksInterface
