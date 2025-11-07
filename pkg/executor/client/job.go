@@ -40,7 +40,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	templatesv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
@@ -88,8 +87,6 @@ type JobExecutor struct {
 	apiURI                  string
 	natsURI                 string
 	debug                   bool
-	logsStream              logsclient.Stream
-	features                featureflags.FeatureFlags
 	defaultStorageClassName string
 	// whitelistedContainers is a list of containers from which logs are allowed to be streamed.
 	whitelistedContainers []string

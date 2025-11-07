@@ -60,7 +60,7 @@ func TestParseRunnerOutput(t *testing.T) {
 		t.Parallel()
 
 		invalidOutput := []byte(`{not a json}`)
-		result, err := ParseRunnerOutput(invalidOutput, true)
+		result, err := ParseRunnerOutput(invalidOutput)
 		expectedOutput := "{not a json}\n"
 		expectedErrMessage := "wrong log type was found as last log: {not a json}"
 
@@ -86,7 +86,7 @@ func TestParseRunnerOutput(t *testing.T) {
 {"type":"line","content":"\n  #  failure         detail                                                          \n                                                                                     \n 1.  Error                                                                           \n                     connect ECONNREFUSED 127.0.0.1:8088                             \n                     at request                                                      \n                     inside \"Health\"                                                 \n                                                                                     \n 2.  AssertionError  Status code is 200                                              \n                     expected { Object (id, _details, ...) } to have property 'code' \n                     at assertion:0 in test-script                                   \n                     inside \"Health\"                                                 \n"}
 {"type":"result","result":{"status":"failed","startTime":"2021-10-29T11:35:35.759Z","endTime":"2021-10-29T11:35:36.771Z","output":"newman\n\nLocal-API-Health\n\n→ Health\n  GET http://localhost:8088/health [errored]\n     connect ECONNREFUSED 127.0.0.1:8088\n  2. Status code is 200\n\n┌─────────────────────────┬──────────┬──────────┐\n│                         │ executed │   failed │\n├─────────────────────────┼──────────┼──────────┤\n│              iterations │        1 │        0 │\n├─────────────────────────┼──────────┼──────────┤\n│                requests │        1 │        1 │\n├─────────────────────────┼──────────┼──────────┤\n│            test-scripts │        1 │        0 │\n├─────────────────────────┼──────────┼──────────┤\n│      prerequest-scripts │        0 │        0 │\n├─────────────────────────┼──────────┼──────────┤\n│              assertions │        1 │        1 │\n├─────────────────────────┴──────────┴──────────┤\n│ total run duration: 1012ms                    │\n├───────────────────────────────────────────────┤\n│ total data received: 0B (approx)              │\n└───────────────────────────────────────────────┘\n\n  #  failure         detail                                                          \n                                                                                     \n 1.  Error                                                                           \n                     connect ECONNREFUSED 127.0.0.1:8088                             \n                     at request                                                      \n                     inside \"Health\"                                                 \n                                                                                     \n 2.  AssertionError  Status code is 200                                              \n                     expected { Object (id, _details, ...) } to have property 'code' \n                     at assertion:0 in test-script                                   \n                     inside \"Health\"                                                 \n","outputType":"text/plain","errorMessage":"process error: exit status 1","steps":[{"name":"Health","duration":"0s","status":"failed","assertionResults":[{"name":"Status code is 200","status":"failed","errorMessage":"expected { Object (id, _details, ...) } to have property 'code'"}]}]}}
 `)
-		result, err := ParseRunnerOutput(exampleOutput, true)
+		result, err := ParseRunnerOutput(exampleOutput)
 
 		assert.Len(t, result.Output, 4510)
 		assert.NoError(t, err)
@@ -136,7 +136,7 @@ func TestParseRunnerOutput(t *testing.T) {
 {"type":"line","content":"✅ Got Newman result successfully","time":"2023-07-18T19:12:46.126116248Z"} 
 {"type":"line","content":"✅ Mapped Newman result successfully","time":"2023-07-18T19:12:46.126152021Z"} 
 {"type":"result","result":{"status":"passed","output":"newman\n\nCore App Tests - WebPlayer\n\n→ core-eks-test.poppcore.co client=testdb sign=testct1 company=41574150-b952-413b-898b-dc5336b4bd12\n  GET https://na.com/v6-wplt/?client=testdb\u0026sign=testct1\u0026company=41574150-b952-413b-898b-dc5336b4bd12 [200 OK, 33.9kB, 326ms]\n  ✓  Status code is 200\n\n┌─────────────────────────┬────────────────────┬───────────────────┐\n│                         │           executed │            failed │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│              iterations │                  1 │      0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│                requests │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│            test-scripts │                  1 │                 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│      prerequest-scripts │                  0 │ 0 │\n├─────────────────────────┼────────────────────┼───────────────────┤\n│              assertions │                  1 │                 0 │\n├─────────────────────────┴────────────────────┴───────────────────┤\n│ total run duration: 429ms                                        │\n├──────────────────────────────────────────────────────────────────┤\n│ total data received: 33.45kB (approx)                            │\n├──────────────────────────────────────────────────────────────────┤\n│ average response time: 326ms [min: 326ms, max: 326ms, s.d.: 0µs] │\n└──────────────────────────────────────────────────────────────────┘\n","outputType":"text/plain","steps":[{"name":"na.com client=testdb sign=testct1 company=41574150-b952-413b-898b-dc5336b4bd12","duration":"326ms","status":"passed","assertionResults":[{"name":"Status code is 200","status":"passed"}]}]},"time":"2023-07-18T19:12:46.12615853Z"}`)
-		result, err := ParseRunnerOutput(exampleOutput, true)
+		result, err := ParseRunnerOutput(exampleOutput)
 
 		assert.Len(t, result.Output, 7304)
 		assert.NoError(t, err)
@@ -189,7 +189,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 running test [63c6bec1790802b7e3e57048]
 🚚 Preparing for test run
 `
-		result, err := ParseRunnerOutput(unorderedOutput, true)
+		result, err := ParseRunnerOutput(unorderedOutput)
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
@@ -207,7 +207,7 @@ running test [63c6bec1790802b7e3e57048]
 Running [ ./zap-api-scan.py [-t https://www.example.com/openapi.json -f openapi -c examples/zap-api.conf -d -D 5 -I -l INFO -n examples/context.config -S -T 60 -U anonymous -O https://www.example.com -z -config aaa=bbb -r api-test-report.html]]
 could not start process: fork/exec ./zap-api-scan.py: no such file or directory
 `
-		result, err := ParseRunnerOutput(output, true)
+		result, err := ParseRunnerOutput(output)
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
@@ -262,7 +262,7 @@ running test [63c960287104b0fa0b7a45ef]
 can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
 `
 
-		result, err := ParseRunnerOutput(output, true)
+		result, err := ParseRunnerOutput(output)
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
@@ -329,7 +329,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
 `
 
-		result, err := ParseRunnerOutput(output, true)
+		result, err := ParseRunnerOutput(output)
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
@@ -384,7 +384,7 @@ running test [63ca8c8988564860327a16b5]
 ❌ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
 `
 
-		result, err := ParseRunnerOutput(output, true)
+		result, err := ParseRunnerOutput(output)
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
@@ -409,7 +409,7 @@ test execution finished [66670568584fa9f32faebb41]
 {"level":"warn","ts":1718027789.4272137,"caller":"scraper/filesystem_extractor.go:228","msg":"skipping directory /data/repo/cypress/screenshots because it does not exist"}
 {"level":"info","ts":1718027789.4272206,"caller":"scraper/filesystem_extractor.go:225","msg":"scraping artifacts in directory: /data/repo/cypress/screenshots"}
 `
-		result, err := ParseRunnerOutput(output, true)
+		result, err := ParseRunnerOutput(output)
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)

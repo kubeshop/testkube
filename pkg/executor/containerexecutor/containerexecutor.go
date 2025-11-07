@@ -30,7 +30,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -77,8 +76,6 @@ type ContainerExecutor struct {
 	apiURI                  string
 	natsURI                 string
 	debug                   bool
-	logsStream              logsclient.Stream
-	features                featureflags.FeatureFlags
 	defaultStorageClassName string
 	// whitelistedContainers is a list of containers from which logs are allowed to be streamed.
 	whitelistedContainers []string
@@ -434,11 +431,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 			execution.ExecutionResult = executionResult
 		}
 
-		// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
-		attachLogs := !c.features.LogsV2
-		if attachLogs {
-			execution.ExecutionResult.Output = output
-		}
+		execution.ExecutionResult.Output = output
 	}
 
 	if execution.ExecutionResult.IsFailed() {
