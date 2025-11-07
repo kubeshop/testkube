@@ -40,9 +40,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	templatesv1 "github.com/kubeshop/testkube/pkg/operator/client/templates/v1"
@@ -51,14 +49,6 @@ import (
 )
 
 const (
-	// GitUsernameSecretName is git username secret name
-	GitUsernameSecretName = "git-username"
-	// GitUsernameEnvVarName is git username environment var name
-	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
-	// GitTokenSecretName is git token secret name
-	GitTokenSecretName = "git-token"
-	// GitTokenEnvVarName is git token environment var name
-	GitTokenEnvVarName = "RUNNER_GITTOKEN"
 	// SecretTest is a test secret
 	SecretTest = "secrets"
 	// SecretSource is a source secret
@@ -73,58 +63,6 @@ const (
 
 	logsStreamBuffer = 1000
 )
-
-// NewJobExecutor creates new job executor
-func NewJobExecutor(
-	deprecatedRepositories commons.DeprecatedRepositories,
-	deprecatedClients commons.DeprecatedClients,
-	images executor.Images,
-	templates executor.Templates,
-	serviceAccountNames map[string]string,
-	metrics ExecutionMetric,
-	emiter *event.Emitter,
-	configMap config.Repository,
-	clientset kubernetes.Interface,
-	registry string,
-	podStartTimeout time.Duration,
-	clusterID string,
-	dashboardURI string,
-	apiURI string,
-	natsURI string,
-	debug bool,
-	logsStream logsclient.Stream,
-	features featureflags.FeatureFlags,
-	defaultStorageClassName string,
-	whitelistedContainers []string,
-) (client *JobExecutor, err error) {
-	if serviceAccountNames == nil {
-		serviceAccountNames = make(map[string]string)
-	}
-
-	return &JobExecutor{
-		ClientSet:               clientset,
-		deprecatedRepositories:  deprecatedRepositories,
-		deprecatedClients:       deprecatedClients,
-		Log:                     log.DefaultLogger,
-		images:                  images,
-		templates:               templates,
-		serviceAccountNames:     serviceAccountNames,
-		metrics:                 metrics,
-		Emitter:                 emiter,
-		configMap:               configMap,
-		registry:                registry,
-		podStartTimeout:         podStartTimeout,
-		clusterID:               clusterID,
-		dashboardURI:            dashboardURI,
-		apiURI:                  apiURI,
-		natsURI:                 natsURI,
-		debug:                   debug,
-		logsStream:              logsStream,
-		features:                features,
-		defaultStorageClassName: defaultStorageClassName,
-		whitelistedContainers:   whitelistedContainers,
-	}, nil
-}
 
 type ExecutionMetric interface {
 	IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string)
@@ -238,8 +176,6 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 		return result.Err(err), err
 	}
 
-	c.streamLog(ctx, execution.Id, events.NewLog("created kubernetes job").WithSource(events.SourceJobExecutor))
-
 	if !options.Sync {
 		go c.MonitorJobForTimeout(ctx, execution.Id, execution.TestNamespace)
 	}
@@ -255,8 +191,6 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	}
 
 	l := c.Log.With("executionID", execution.Id, "type", "async")
-
-	c.streamLog(ctx, execution.Id, events.NewLog("waiting for pod to spin up").WithSource(events.SourceJobExecutor))
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
@@ -380,7 +314,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	// save stop time and final state
 	defer func() {
 		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, isNegativeTest); err != nil {
-			c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
 			l.Errorw("error stopping execution after updating results from pod", "error", err)
 		}
 
@@ -391,7 +324,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 
 	// wait for pod to be loggable
 	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, execution.TestNamespace)); err != nil {
-		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't start test job pod")))
 		l.Errorw("waiting for pod started error", "error", err)
 	}
 
@@ -399,7 +331,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	// wait for pod
 	if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.ClientSet, pod.Name, execution.TestNamespace)); err != nil {
 		// continue on poll err and try to get logs later
-		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't read data from pod, pod was not completed")))
 		l.Errorw("waiting for pod complete error", "error", err)
 	}
 
@@ -408,22 +339,16 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}
 	l.Debug("poll immediate end")
 
-	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artifacts"))
-
 	logs, err := executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod, execution.Id, c.whitelistedContainers)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
-		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
 	}
 
-	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
-	attachLogs := !c.features.LogsV2
 	if len(logs) != 0 {
 		// parse job output log (JSON stream)
-		execution.ExecutionResult, err = output.ParseRunnerOutput(logs, attachLogs)
+		execution.ExecutionResult, err = output.ParseRunnerOutput(logs)
 		if err != nil {
 			l.Errorw("parse output error", "error", err)
-			c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't get test execution job output")))
 			return execution.ExecutionResult, err
 		}
 	}
@@ -435,10 +360,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		}
 
 		execution.ExecutionResult.ErrorMessage = errorMessage
-
-		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "test execution finished with failed state")))
-	} else {
-		c.streamLog(ctx, execution.Id, events.NewLog("test execution finshed").WithMetadataEntry("status", string(*execution.ExecutionResult.Status)))
 	}
 
 	// saving result in the defer function
@@ -452,15 +373,9 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		return err
 	}
 
-	logEvent := events.NewLog().WithSource(events.SourceJobExecutor)
-
 	l.Debugw("stopping execution", "executionId", execution.Id, "status", result.Status, "executionStatus", execution.ExecutionResult.Status, "savedExecutionStatus", savedExecution.ExecutionResult.Status)
 
-	c.streamLog(ctx, execution.Id, logEvent.WithContent("stopping execution"))
-	defer c.streamLog(ctx, execution.Id, logEvent.WithContent("execution stopped"))
-
 	if savedExecution.IsAborted() || savedExecution.IsCanceled() || savedExecution.IsTimeout() {
-		c.streamLog(ctx, execution.Id, logEvent.WithContent("execution is cancelled"))
 		return nil
 	}
 
@@ -797,8 +712,6 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 		return
 	}
 
-	c.streamLog(ctx, execution.Id, events.NewLog("execution took too long, pod deadline exceeded"))
-
 	result = &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusTimeout,
 	}
@@ -807,12 +720,6 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 	}
 
 	return
-}
-
-func (c *JobExecutor) streamLog(ctx context.Context, id string, log *events.Log) {
-	if c.features.LogsV2 {
-		c.logsStream.Push(ctx, id, log)
-	}
 }
 
 // NewJobSpec is a method to create new job spec
@@ -1018,7 +925,6 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			jobOptions.EnvConfigMaps,
 			jobOptions.EnvSecrets,
 			int(jobOptions.ActiveDeadlineSeconds),
-			testkube.Features(options.Features),
 			natsURI,
 			images.LogSidecar,
 			jobOptions.RunnerCustomCASecret,

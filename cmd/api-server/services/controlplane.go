@@ -14,7 +14,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	database "github.com/kubeshop/testkube/pkg/database/postgres"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
@@ -30,7 +29,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, eventsEmitter *event.Emitter) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *event.Emitter) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
 	commons.ExitOnError("Getting kubernetes config", err)
@@ -43,15 +42,10 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	storageClient := commons.MustGetMinioClient(cfg)
 
-	var logGrpcClient logsclient.StreamGetter
-	if !cfg.DisableDeprecatedTests && features.LogsV2 {
-		logGrpcClient = commons.MustGetLogsV2Client(cfg)
-		commons.ExitOnError("Creating logs streaming client", err)
-	}
-
 	var factory repository.RepositoryFactory
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
+		var logGrpcClient logsclient.StreamGetter // TODO WITO REMOVE ME
 		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient)
 	}
 	if cfg.APIPostgresDSN != "" {

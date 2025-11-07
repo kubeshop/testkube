@@ -96,7 +96,6 @@ func main() {
 	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
 
 	cfg := commons.MustGetConfig()
-	features := commons.MustGetFeatureFlags()
 	// Determine the running mode
 
 	mode := common.ModeAgent
@@ -178,7 +177,7 @@ func main() {
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features, eventsEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -336,9 +335,6 @@ func main() {
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
-
-	var deprecatedSystem *services.DeprecatedSystem
-	log.DefaultLogger.Info("deprecated test system is disabled")
 
 	// Transfer common environment variables
 	commonEnvVariables := make([]corev1.EnvVar, 0)
@@ -592,7 +588,6 @@ func main() {
 		websocketLoader,
 		metrics,
 		&proContext,
-		features,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
@@ -609,7 +604,6 @@ func main() {
 			grpcClient,
 			clusterId,
 			cfg.TestkubeClusterName,
-			features,
 			&proContext,
 			cfg.TestkubeDockerImageVersion,
 			eventsEmitter,
@@ -633,8 +627,6 @@ func main() {
 		commons.ExitOnError("getting k8s client config", err)
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 		commons.ExitOnError("creating TestKube Clientset", err)
-		// TODO: Check why this simpler options is not working
-		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 
 		var lb leasebackend.Repository
 		if controlPlane != nil {
@@ -648,6 +640,7 @@ func main() {
 			)
 		}
 
+		var deprecatedSystem *services.DeprecatedSystem
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
 			deprecatedSystem,

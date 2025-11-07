@@ -58,7 +58,7 @@ func GetLogEntry(b []byte) (out Output) {
 // {"type": "line", "message": "runner execution started  ------------", "time": "..."}
 // {"type": "line", "message": "GET /results", "time": "..."}
 // {"type": "result", "result": {"id": "2323", "output": "-----"}, "time": "..."}
-func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, error) {
+func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
 	result := &testkube.ExecutionResult{}
 	logs, err := parseLogs(b)
 	if err != nil {
@@ -87,9 +87,7 @@ func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, er
 		result.Err(fmt.Errorf("wrong log type was found as last log: %v", log))
 	}
 
-	if attachLogs {
-		result.Output = sanitizeLogs(logs)
-	}
+	result.Output = sanitizeLogs(logs)
 
 	return result, nil
 }

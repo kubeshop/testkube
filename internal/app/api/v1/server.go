@@ -3,7 +3,6 @@ package v1
 import (
 	"go.uber.org/zap"
 
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -11,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
@@ -50,7 +48,6 @@ func NewTestkubeAPI(
 	websocketLoader *ws.WebsocketLoader,
 	metrics metrics.Metrics,
 	proContext *config.ProContext,
-	ff featureflags.FeatureFlags,
 	helmchartVersion string,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
@@ -81,7 +78,6 @@ func NewTestkubeAPI(
 		ArtifactsStorage:               artifactsStorage,
 		helmchartVersion:               helmchartVersion,
 		secretConfig:                   secretConfig,
-		featureFlags:                   ff,
 		ServiceAccountNames:            serviceAccountNames,
 		dockerImageVersion:             dockerImageVersion,
 		proContext:                     proContext,
@@ -113,7 +109,6 @@ type TestkubeAPI struct {
 	ArtifactsStorage               storage.ArtifactsStorage
 	helmchartVersion               string
 	secretConfig                   testkube.SecretConfig
-	featureFlags                   featureflags.FeatureFlags
 	proContext                     *config.ProContext
 	ServiceAccountNames            map[string]string
 	dockerImageVersion             string

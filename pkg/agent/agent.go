@@ -25,7 +25,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 )
 
 const (
@@ -60,10 +59,9 @@ type Agent struct {
 	requestBuffer  chan *cloud.ExecuteRequest
 	responseBuffer chan *cloud.ExecuteResponse
 
-	events              chan testkube.Event
-	sendTimeout         time.Duration
-	receiveTimeout      time.Duration
-	healthcheckInterval time.Duration
+	events         chan testkube.Event
+	sendTimeout    time.Duration
+	receiveTimeout time.Duration
 
 	clusterID          string
 	clusterName        string
@@ -79,28 +77,26 @@ func NewAgent(logger *zap.SugaredLogger,
 	client cloud.TestKubeCloudAPIClient,
 	clusterID string,
 	clusterName string,
-	features featureflags.FeatureFlags,
 	proContext *config.ProContext,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
 ) (*Agent, error) {
 	return &Agent{
-		handler:             handler,
-		logger:              logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:              proContext.APIKey,
-		client:              client,
-		events:              make(chan testkube.Event),
-		workerCount:         proContext.WorkerCount,
-		requestBuffer:       make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:      make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:      5 * time.Minute,
-		sendTimeout:         30 * time.Second,
-		healthcheckInterval: 30 * time.Second,
-		clusterID:           clusterID,
-		clusterName:         clusterName,
-		proContext:          proContext,
-		dockerImageVersion:  dockerImageVersion,
-		eventEmitter:        eventEmitter,
+		handler:            handler,
+		logger:             logger.With("service", "Agent", "environmentId", proContext.EnvID),
+		apiKey:             proContext.APIKey,
+		client:             client,
+		events:             make(chan testkube.Event),
+		workerCount:        proContext.WorkerCount,
+		requestBuffer:      make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:     make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:     5 * time.Minute,
+		sendTimeout:        30 * time.Second,
+		clusterID:          clusterID,
+		clusterName:        clusterName,
+		proContext:         proContext,
+		dockerImageVersion: dockerImageVersion,
+		eventEmitter:       eventEmitter,
 	}, nil
 }
 
