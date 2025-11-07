@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/common"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	sequencepostgres "github.com/kubeshop/testkube/pkg/repository/sequence/postgres"
@@ -332,6 +333,8 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		return nil
 	}
 
+	log.DefaultLogger.Infow("original signatures", "sigs", signatures)
+
 	// Convert to map for easier processing
 	sigMap := make(map[string]*testkube.TestWorkflowSignature)
 	parentChildMap := make(map[string][]string)
@@ -378,6 +381,9 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		if _, hasParent := sig["parent_id"]; !hasParent || sig["parent_id"] == nil {
 			root := *sigMap[id]
 			root.Children = buildChildren(id)
+
+			log.DefaultLogger.Infow("root signatures", "root", root)
+
 			roots = append(roots, root)
 		}
 	}
