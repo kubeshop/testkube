@@ -341,13 +341,16 @@ jobs:
           ### Clean temporary file directory first (in case of re-runs)
           curl -u ${USERNAME}:${PASSWORD} -X DELETE http://${APTLY_URL}/api/files/testkube || true
 
+          ### Remove existing packages from the repository (ignore errors if they don't exist)
+          curl -u ${USERNAME}:${PASSWORD} -X DELETE "http://${APTLY_URL}/api/repos/testkube/packages?q=testkube+%28%3D+${VERSION}%29" || true
+
           ### Upload files for all architectures
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_386.deb http://${APTLY_URL}/api/files/testkube
 
-          ### Add file to repo (forceReplace=1 replaces existing packages)
-          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
+          ### Add file to repo
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube
 
           ### Create snapshot with timestamp to avoid conflicts on re-runs
           SNAPSHOT_NAME="testkube-${VERSION}-$(date +%s)"
