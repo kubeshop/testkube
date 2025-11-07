@@ -207,7 +207,7 @@ func (q *Queries) GetExecutionResolvedWorkflow(ctx context.Context, executionID 
 }
 
 const getExecutionSignatures = `-- name: GetExecutionSignatures :many
-SELECT execution_id, ref, name, category, optional, negative, created_at, id, parent_id
+SELECT execution_id, ref, name, category, optional, negative, created_at, step_order, id, parent_id
 FROM test_workflow_signatures
 WHERE execution_id = $1::text
 `
@@ -229,6 +229,7 @@ func (q *Queries) GetExecutionSignatures(ctx context.Context, executionID string
 			&i.Optional,
 			&i.Negative,
 			&i.CreatedAt,
+			&i.StepOrder,
 			&i.ID,
 			&i.ParentID,
 		); err != nil {

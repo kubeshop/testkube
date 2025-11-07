@@ -123,6 +123,7 @@ type TestWorkflowSignature struct {
 	Optional    pgtype.Bool        `db:"optional" json:"optional"`
 	Negative    pgtype.Bool        `db:"negative" json:"negative"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	StepOrder   int32              `db:"step_order" json:"step_order"`
 	ID          pgtype.UUID        `db:"id" json:"id"`
 	ParentID    pgtype.UUID        `db:"parent_id" json:"parent_id"`
 }

@@ -22,8 +22,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -84,8 +83,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -146,8 +144,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -216,8 +213,7 @@ SELECT DISTINCT ON (w.name)
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -279,8 +275,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -342,8 +337,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -576,8 +570,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -947,8 +940,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -1058,8 +1050,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
@@ -1291,8 +1282,7 @@ SELECT
                 'category', s.category,
                 'optional', s.optional,
                 'negative', s.negative,
-                'parent_id', s.parent_id,
-                'step_order', s.step_order
+                'parent_id', s.parent_id
             ) ORDER BY s.step_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
