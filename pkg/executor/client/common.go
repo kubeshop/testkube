@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"fmt"
-	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -14,12 +13,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/utils"
-)
-
-const (
-	WatchInterval = time.Second
 )
 
 type ExecuteOptions struct {
@@ -39,7 +33,6 @@ type ExecuteOptions struct {
 	// AgentAPITLSSecret is a secret name that contains TLS certificate for Agent (gRPC) API
 	AgentAPITLSSecret    string
 	ImagePullSecretNames []string
-	Features             featureflags.FeatureFlags
 }
 
 type PVCOptions struct {

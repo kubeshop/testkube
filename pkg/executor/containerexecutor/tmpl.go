@@ -125,13 +125,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
 
-	// envs needed for logs sidecar
-	if options.Features.LogsV2 {
-		envs = append(envs, corev1.EnvVar{Name: "ID", Value: options.Name})
-		envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
-		envs = append(envs, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
-	}
-
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
 	}
@@ -235,14 +228,6 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
 	jobOptions.ScraperImage = images.Scraper
-
-	// options needed for Log sidecar
-	if options.Features.LogsV2 {
-		// TODO pass them from some config? we dont' have any in this context?
-		jobOptions.Debug = debug
-		jobOptions.NatsUri = natsUri
-		jobOptions.LogSidecarImage = images.LogSidecar
-	}
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = templates.Job

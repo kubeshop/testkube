@@ -96,8 +96,6 @@ func main() {
 	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
 
 	cfg := commons.MustGetConfig()
-	// Determine the running mode
-
 	mode := common.ModeAgent
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
 		mode = common.ModeStandalone
@@ -217,7 +215,7 @@ func main() {
 
 	leaderTasks := make([]leader.Task, 0)
 
-	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
+	// If we don't have an API key, but we do have a token for registration then attempt to register the runner.
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
 		runnerName := cfg.RunnerName
 		if runnerName == "" {
@@ -283,12 +281,6 @@ func main() {
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
-
-	var (
-		testWorkflowsClient         testworkflowclient.TestWorkflowClient
-		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
-		testTriggersClient          testtriggerclient.TestTriggerClient
-	)
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
@@ -306,6 +298,11 @@ func main() {
 		RecvTimeout: cfg.TestkubeProRecvTimeout,
 	}, log.DefaultLogger)
 
+	var (
+		testWorkflowsClient         testworkflowclient.TestWorkflowClient
+		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+		testTriggersClient          testtriggerclient.TestTriggerClient
+	)
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)

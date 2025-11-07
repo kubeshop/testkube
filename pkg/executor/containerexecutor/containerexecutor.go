@@ -11,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -127,7 +126,6 @@ type JobOptions struct {
 	LogSidecarImage           string
 	NatsUri                   string
 	APIURI                    string
-	Features                  featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -659,7 +657,6 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ExecutionNumber:           options.Request.Number,
 		ContextType:               contextType,
 		ContextData:               contextData,
-		Features:                  options.Features,
 	}
 }
 

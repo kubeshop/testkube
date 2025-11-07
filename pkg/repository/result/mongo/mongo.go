@@ -98,7 +98,6 @@ type MongoRepository struct {
 	logGrpcClient      logsclient.StreamGetter
 	allowDiskUse       bool
 	isDocDb            bool
-	features           featureflags.FeatureFlags
 	log                *zap.SugaredLogger
 	sequenceRepository sequence.Repository
 }
@@ -108,18 +107,6 @@ type MongoRepositoryOpt func(*MongoRepository)
 func WithLogsClient(client logsclient.StreamGetter) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.logGrpcClient = client
-	}
-}
-
-func WithFeatureFlags(features featureflags.FeatureFlags) MongoRepositoryOpt {
-	return func(r *MongoRepository) {
-		r.features = features
-	}
-}
-
-func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepositoryOpt {
-	return func(r *MongoRepository) {
-		r.ResultsColl = collection
 	}
 }
 
@@ -171,7 +158,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 }
 
 func (r *MongoRepository) attachOutput(ctx context.Context, result *testkube.Execution) (err error) {
-	if len(result.ExecutionResult.Output) == 0 && !r.features.LogsV2 {
+	if len(result.ExecutionResult.Output) == 0 {
 		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 		if err == mongo.ErrNoDocuments {
 			err = nil
@@ -589,9 +576,7 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution)
 		return
 	}
 
-	if !r.features.LogsV2 {
-		err = r.OutputRepository.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
-	}
+	err = r.OutputRepository.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
@@ -604,9 +589,7 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 		return
 	}
 
-	if !r.features.LogsV2 {
-		err = r.OutputRepository.UpdateOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
-	}
+	err = r.OutputRepository.UpdateOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
 	return
 }
 
@@ -637,9 +620,7 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result te
 		return err
 	}
 
-	if !r.features.LogsV2 {
-		err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
-	}
+	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
 	return
 }
 

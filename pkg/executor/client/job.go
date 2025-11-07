@@ -129,7 +129,6 @@ type JobOptions struct {
 	LogSidecarImage       string
 	APIURI                string
 	SlavePodTemplate      string
-	Features              featureflags.FeatureFlags
 	PvcTemplate           string
 	PvcTemplateExtensions string
 }
@@ -549,7 +548,6 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ExecutionNumber:       options.Request.Number,
 		ContextType:           contextType,
 		ContextData:           contextData,
-		Features:              options.Features,
 		PvcTemplateExtensions: options.Request.PvcTemplate,
 	}
 }
@@ -826,15 +824,6 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
 	jobOptions.TestName = execution.TestName
-	jobOptions.Features = options.Features
-
-	// options needed for Log sidecar
-	if options.Features.LogsV2 {
-		// TODO pass them from some config? we dont' have any in this context?
-		jobOptions.Debug = debug
-		jobOptions.NatsUri = natsURI
-		jobOptions.LogSidecarImage = images.LogSidecar
-	}
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = templates.Job

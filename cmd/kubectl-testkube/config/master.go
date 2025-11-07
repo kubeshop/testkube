@@ -1,21 +1,18 @@
 package config
 
-import "github.com/kubeshop/testkube/pkg/featureflags"
-
 type Master struct {
-	AgentToken     string                    `json:"agentToken,omitempty"`
-	IdToken        string                    `json:"idToken,omitempty"`
-	OrgId          string                    `json:"orgId,omitempty"`
-	EnvId          string                    `json:"envId,omitempty"`
-	Insecure       bool                      `json:"insecure,omitempty"`
-	UiUrlPrefix    string                    `json:"uiUrlPrefix,omitempty"`
-	AgentUrlPrefix string                    `json:"agentUrlPrefix,omitempty"`
-	LogsUrlPrefix  string                    `json:"logsUrlPrefix,omitempty"`
-	ApiUrlPrefix   string                    `json:"apiUrlPrefix,omitempty"`
-	RootDomain     string                    `json:"rootDomain,omitempty"`
-	CustomAuth     bool                      `json:"customAuth,omitempty"`
-	CallbackPort   int                       `json:"callbackPort,omitempty"`
-	Features       featureflags.FeatureFlags `json:"features,omitempty"`
+	AgentToken     string `json:"agentToken,omitempty"`
+	IdToken        string `json:"idToken,omitempty"`
+	OrgId          string `json:"orgId,omitempty"`
+	EnvId          string `json:"envId,omitempty"`
+	Insecure       bool   `json:"insecure,omitempty"`
+	UiUrlPrefix    string `json:"uiUrlPrefix,omitempty"`
+	AgentUrlPrefix string `json:"agentUrlPrefix,omitempty"`
+	LogsUrlPrefix  string `json:"logsUrlPrefix,omitempty"`
+	ApiUrlPrefix   string `json:"apiUrlPrefix,omitempty"`
+	RootDomain     string `json:"rootDomain,omitempty"`
+	CustomAuth     bool   `json:"customAuth,omitempty"`
+	CallbackPort   int    `json:"callbackPort,omitempty"`
 
 	URIs MasterURIs `json:"uris,omitempty"`
 }

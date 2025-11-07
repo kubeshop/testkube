@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,7 +115,6 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
-		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -142,7 +141,6 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		ActiveDeadlineSeconds:     100,
 		Envs:                      map[string]string{"key": "value"},
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
-		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 
@@ -214,7 +212,6 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
-		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
