@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	TestWorkflowExecutionService_GetExecutionUpdates_FullMethodName    = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/GetExecutionUpdates"
 	TestWorkflowExecutionService_SetExecutionScheduling_FullMethodName = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/SetExecutionScheduling"
+	TestWorkflowExecutionService_AcceptExecution_FullMethodName        = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/AcceptExecution"
+	TestWorkflowExecutionService_DeclineExecution_FullMethodName       = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/DeclineExecution"
 )
 
 // TestWorkflowExecutionServiceClient is the client API for TestWorkflowExecutionService service.
@@ -33,11 +35,21 @@ type TestWorkflowExecutionServiceClient interface {
 	// Executions that are understood by the Control Plane to be under the control of the
 	// calling client.
 	GetExecutionUpdates(ctx context.Context, in *GetExecutionUpdatesRequest, opts ...grpc.CallOption) (*GetExecutionUpdatesResponse, error)
-	// SetExecutionScheduling informs the server that the client has transitioned an execution
-	// to a SCHEDULING state. This should be initiated by a client immediately after an execution
-	// has been successfully applied to Kubernetes in order to prevent the execution from being
-	// sent in subsequent calls to GetExecutionUpdates.
+	// Deprecated: Do not use.
+	// SetExecutionScheduling is deprecated, clients and servers should transition to AcceptExecution.
 	SetExecutionScheduling(ctx context.Context, in *SetExecutionSchedulingRequest, opts ...grpc.CallOption) (*SetExecutionSchedulingResponse, error)
+	// AcceptExecution informs the server that the execution has been successfully applied to
+	// Kubernetes. This should be initiated by a client immediately after an execution has been
+	// successfully applied to Kubernetes in order to prevent the execution from being sent in
+	// subsequent calls to GetExecutionUpdates.
+	AcceptExecution(ctx context.Context, in *AcceptExecutionRequest, opts ...grpc.CallOption) (*AcceptExecutionResponse, error)
+	// DeclineExecution informs the server that the client has decided not to execution the workflow.
+	// How this is handled by the server is dependent on server implementation but the expectation
+	// from the client is that it should not be passed this execution to attempt again, as the issue
+	// is not transient.
+	// In the event of transient errors, clients are expected to retry themselves before declining
+	// an execution.
+	DeclineExecution(ctx context.Context, in *DeclineExecutionRequest, opts ...grpc.CallOption) (*DeclineExecutionResponse, error)
 }
 
 type testWorkflowExecutionServiceClient struct {
@@ -58,10 +70,31 @@ func (c *testWorkflowExecutionServiceClient) GetExecutionUpdates(ctx context.Con
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testWorkflowExecutionServiceClient) SetExecutionScheduling(ctx context.Context, in *SetExecutionSchedulingRequest, opts ...grpc.CallOption) (*SetExecutionSchedulingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetExecutionSchedulingResponse)
 	err := c.cc.Invoke(ctx, TestWorkflowExecutionService_SetExecutionScheduling_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testWorkflowExecutionServiceClient) AcceptExecution(ctx context.Context, in *AcceptExecutionRequest, opts ...grpc.CallOption) (*AcceptExecutionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcceptExecutionResponse)
+	err := c.cc.Invoke(ctx, TestWorkflowExecutionService_AcceptExecution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testWorkflowExecutionServiceClient) DeclineExecution(ctx context.Context, in *DeclineExecutionRequest, opts ...grpc.CallOption) (*DeclineExecutionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeclineExecutionResponse)
+	err := c.cc.Invoke(ctx, TestWorkflowExecutionService_DeclineExecution_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -78,11 +111,21 @@ type TestWorkflowExecutionServiceServer interface {
 	// Executions that are understood by the Control Plane to be under the control of the
 	// calling client.
 	GetExecutionUpdates(context.Context, *GetExecutionUpdatesRequest) (*GetExecutionUpdatesResponse, error)
-	// SetExecutionScheduling informs the server that the client has transitioned an execution
-	// to a SCHEDULING state. This should be initiated by a client immediately after an execution
-	// has been successfully applied to Kubernetes in order to prevent the execution from being
-	// sent in subsequent calls to GetExecutionUpdates.
+	// Deprecated: Do not use.
+	// SetExecutionScheduling is deprecated, clients and servers should transition to AcceptExecution.
 	SetExecutionScheduling(context.Context, *SetExecutionSchedulingRequest) (*SetExecutionSchedulingResponse, error)
+	// AcceptExecution informs the server that the execution has been successfully applied to
+	// Kubernetes. This should be initiated by a client immediately after an execution has been
+	// successfully applied to Kubernetes in order to prevent the execution from being sent in
+	// subsequent calls to GetExecutionUpdates.
+	AcceptExecution(context.Context, *AcceptExecutionRequest) (*AcceptExecutionResponse, error)
+	// DeclineExecution informs the server that the client has decided not to execution the workflow.
+	// How this is handled by the server is dependent on server implementation but the expectation
+	// from the client is that it should not be passed this execution to attempt again, as the issue
+	// is not transient.
+	// In the event of transient errors, clients are expected to retry themselves before declining
+	// an execution.
+	DeclineExecution(context.Context, *DeclineExecutionRequest) (*DeclineExecutionResponse, error)
 	mustEmbedUnimplementedTestWorkflowExecutionServiceServer()
 }
 
@@ -98,6 +141,12 @@ func (UnimplementedTestWorkflowExecutionServiceServer) GetExecutionUpdates(conte
 }
 func (UnimplementedTestWorkflowExecutionServiceServer) SetExecutionScheduling(context.Context, *SetExecutionSchedulingRequest) (*SetExecutionSchedulingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetExecutionScheduling not implemented")
+}
+func (UnimplementedTestWorkflowExecutionServiceServer) AcceptExecution(context.Context, *AcceptExecutionRequest) (*AcceptExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcceptExecution not implemented")
+}
+func (UnimplementedTestWorkflowExecutionServiceServer) DeclineExecution(context.Context, *DeclineExecutionRequest) (*DeclineExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeclineExecution not implemented")
 }
 func (UnimplementedTestWorkflowExecutionServiceServer) mustEmbedUnimplementedTestWorkflowExecutionServiceServer() {
 }
@@ -157,6 +206,42 @@ func _TestWorkflowExecutionService_SetExecutionScheduling_Handler(srv interface{
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestWorkflowExecutionService_AcceptExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestWorkflowExecutionServiceServer).AcceptExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestWorkflowExecutionService_AcceptExecution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestWorkflowExecutionServiceServer).AcceptExecution(ctx, req.(*AcceptExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestWorkflowExecutionService_DeclineExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeclineExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestWorkflowExecutionServiceServer).DeclineExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestWorkflowExecutionService_DeclineExecution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestWorkflowExecutionServiceServer).DeclineExecution(ctx, req.(*DeclineExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestWorkflowExecutionService_ServiceDesc is the grpc.ServiceDesc for TestWorkflowExecutionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -171,6 +256,14 @@ var TestWorkflowExecutionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetExecutionScheduling",
 			Handler:    _TestWorkflowExecutionService_SetExecutionScheduling_Handler,
+		},
+		{
+			MethodName: "AcceptExecution",
+			Handler:    _TestWorkflowExecutionService_AcceptExecution_Handler,
+		},
+		{
+			MethodName: "DeclineExecution",
+			Handler:    _TestWorkflowExecutionService_DeclineExecution_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -24,25 +24,35 @@ var File_testkube_testworkflow_execution_v1_test_workflow_execution_service_prot
 
 const file_testkube_testworkflow_execution_v1_test_workflow_execution_service_proto_rawDesc = "" +
 	"\n" +
-	"Htestkube/testworkflow/execution/v1/test_workflow_execution_service.proto\x12\"testkube.testworkflow.execution.v1\x1aFtestkube/testworkflow/execution/v1/get_execution_updates_request.proto\x1aGtestkube/testworkflow/execution/v1/get_execution_updates_response.proto\x1aItestkube/testworkflow/execution/v1/set_execution_scheduling_request.proto\x1aJtestkube/testworkflow/execution/v1/set_execution_scheduling_response.proto2\xd9\x02\n" +
+	"Htestkube/testworkflow/execution/v1/test_workflow_execution_service.proto\x12\"testkube.testworkflow.execution.v1\x1aAtestkube/testworkflow/execution/v1/accept_execution_request.proto\x1aBtestkube/testworkflow/execution/v1/accept_execution_response.proto\x1aBtestkube/testworkflow/execution/v1/decline_execution_request.proto\x1aCtestkube/testworkflow/execution/v1/decline_execution_response.proto\x1aFtestkube/testworkflow/execution/v1/get_execution_updates_request.proto\x1aGtestkube/testworkflow/execution/v1/get_execution_updates_response.proto\x1aItestkube/testworkflow/execution/v1/set_execution_scheduling_request.proto\x1aJtestkube/testworkflow/execution/v1/set_execution_scheduling_response.proto2\xfb\x04\n" +
 	"\x1cTestWorkflowExecutionService\x12\x96\x01\n" +
-	"\x13GetExecutionUpdates\x12>.testkube.testworkflow.execution.v1.GetExecutionUpdatesRequest\x1a?.testkube.testworkflow.execution.v1.GetExecutionUpdatesResponse\x12\x9f\x01\n" +
-	"\x16SetExecutionScheduling\x12A.testkube.testworkflow.execution.v1.SetExecutionSchedulingRequest\x1aB.testkube.testworkflow.execution.v1.SetExecutionSchedulingResponseB\xcd\x02\n" +
+	"\x13GetExecutionUpdates\x12>.testkube.testworkflow.execution.v1.GetExecutionUpdatesRequest\x1a?.testkube.testworkflow.execution.v1.GetExecutionUpdatesResponse\x12\xa4\x01\n" +
+	"\x16SetExecutionScheduling\x12A.testkube.testworkflow.execution.v1.SetExecutionSchedulingRequest\x1aB.testkube.testworkflow.execution.v1.SetExecutionSchedulingResponse\"\x03\x88\x02\x01\x12\x8a\x01\n" +
+	"\x0fAcceptExecution\x12:.testkube.testworkflow.execution.v1.AcceptExecutionRequest\x1a;.testkube.testworkflow.execution.v1.AcceptExecutionResponse\x12\x8d\x01\n" +
+	"\x10DeclineExecution\x12;.testkube.testworkflow.execution.v1.DeclineExecutionRequest\x1a<.testkube.testworkflow.execution.v1.DeclineExecutionResponseB\xcd\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B!TestWorkflowExecutionServiceProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var file_testkube_testworkflow_execution_v1_test_workflow_execution_service_proto_goTypes = []any{
 	(*GetExecutionUpdatesRequest)(nil),     // 0: testkube.testworkflow.execution.v1.GetExecutionUpdatesRequest
 	(*SetExecutionSchedulingRequest)(nil),  // 1: testkube.testworkflow.execution.v1.SetExecutionSchedulingRequest
-	(*GetExecutionUpdatesResponse)(nil),    // 2: testkube.testworkflow.execution.v1.GetExecutionUpdatesResponse
-	(*SetExecutionSchedulingResponse)(nil), // 3: testkube.testworkflow.execution.v1.SetExecutionSchedulingResponse
+	(*AcceptExecutionRequest)(nil),         // 2: testkube.testworkflow.execution.v1.AcceptExecutionRequest
+	(*DeclineExecutionRequest)(nil),        // 3: testkube.testworkflow.execution.v1.DeclineExecutionRequest
+	(*GetExecutionUpdatesResponse)(nil),    // 4: testkube.testworkflow.execution.v1.GetExecutionUpdatesResponse
+	(*SetExecutionSchedulingResponse)(nil), // 5: testkube.testworkflow.execution.v1.SetExecutionSchedulingResponse
+	(*AcceptExecutionResponse)(nil),        // 6: testkube.testworkflow.execution.v1.AcceptExecutionResponse
+	(*DeclineExecutionResponse)(nil),       // 7: testkube.testworkflow.execution.v1.DeclineExecutionResponse
 }
 var file_testkube_testworkflow_execution_v1_test_workflow_execution_service_proto_depIdxs = []int32{
 	0, // 0: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.GetExecutionUpdates:input_type -> testkube.testworkflow.execution.v1.GetExecutionUpdatesRequest
 	1, // 1: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.SetExecutionScheduling:input_type -> testkube.testworkflow.execution.v1.SetExecutionSchedulingRequest
-	2, // 2: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.GetExecutionUpdates:output_type -> testkube.testworkflow.execution.v1.GetExecutionUpdatesResponse
-	3, // 3: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.SetExecutionScheduling:output_type -> testkube.testworkflow.execution.v1.SetExecutionSchedulingResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	2, // 2: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.AcceptExecution:input_type -> testkube.testworkflow.execution.v1.AcceptExecutionRequest
+	3, // 3: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.DeclineExecution:input_type -> testkube.testworkflow.execution.v1.DeclineExecutionRequest
+	4, // 4: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.GetExecutionUpdates:output_type -> testkube.testworkflow.execution.v1.GetExecutionUpdatesResponse
+	5, // 5: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.SetExecutionScheduling:output_type -> testkube.testworkflow.execution.v1.SetExecutionSchedulingResponse
+	6, // 6: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.AcceptExecution:output_type -> testkube.testworkflow.execution.v1.AcceptExecutionResponse
+	7, // 7: testkube.testworkflow.execution.v1.TestWorkflowExecutionService.DeclineExecution:output_type -> testkube.testworkflow.execution.v1.DeclineExecutionResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -53,6 +63,10 @@ func file_testkube_testworkflow_execution_v1_test_workflow_execution_service_pro
 	if File_testkube_testworkflow_execution_v1_test_workflow_execution_service_proto != nil {
 		return
 	}
+	file_testkube_testworkflow_execution_v1_accept_execution_request_proto_init()
+	file_testkube_testworkflow_execution_v1_accept_execution_response_proto_init()
+	file_testkube_testworkflow_execution_v1_decline_execution_request_proto_init()
+	file_testkube_testworkflow_execution_v1_decline_execution_response_proto_init()
 	file_testkube_testworkflow_execution_v1_get_execution_updates_request_proto_init()
 	file_testkube_testworkflow_execution_v1_get_execution_updates_response_proto_init()
 	file_testkube_testworkflow_execution_v1_set_execution_scheduling_request_proto_init()
