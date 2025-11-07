@@ -1000,9 +1000,10 @@ spec:
                                       type: string
                                   type: object
                                 matrix:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
                                   anyOf:
                                     - type: integer
@@ -1013,13 +1014,20 @@ spec:
                                   description: test name to run
                                   type: string
                                 shards:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: parameters that should be distributed across sharded instances
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 tarball:
                                   additionalProperties:
+                                    properties:
+                                      files:
+                                        description: file patterns to pack
+                                        type: dynamicList
+                                      from:
+                                        description: path to load the files from
+                                        type: string
                                     type: object
-                                    x-kubernetes-preserve-unknown-fields: true
                                   description: pack some data from the original file system to serve them down
                                   type: object
                               type: object
@@ -1049,9 +1057,10 @@ spec:
                                   description: unique execution name to use
                                   type: string
                                 matrix:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
                                   anyOf:
                                     - type: integer
@@ -1089,13 +1098,20 @@ spec:
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 shards:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: parameters that should be distributed across sharded instances
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 tarball:
                                   additionalProperties:
+                                    properties:
+                                      files:
+                                        description: file patterns to pack
+                                        type: dynamicList
+                                      from:
+                                        description: path to load the files from
+                                        type: string
                                     type: object
-                                    x-kubernetes-preserve-unknown-fields: true
                                   description: pack some data from the original file system to serve them down
                                   type: object
                                 target:
@@ -1489,9 +1505,10 @@ spec:
                                           type: string
                                       type: object
                                     matrix:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
                                       anyOf:
                                         - type: integer
@@ -1502,13 +1519,20 @@ spec:
                                       description: test name to run
                                       type: string
                                     shards:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: parameters that should be distributed across sharded instances
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     tarball:
                                       additionalProperties:
+                                        properties:
+                                          files:
+                                            description: file patterns to pack
+                                            type: dynamicList
+                                          from:
+                                            description: path to load the files from
+                                            type: string
                                         type: object
-                                        x-kubernetes-preserve-unknown-fields: true
                                       description: pack some data from the original file system to serve them down
                                       type: object
                                   type: object
@@ -1538,9 +1562,10 @@ spec:
                                       description: unique execution name to use
                                       type: string
                                     matrix:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
                                       anyOf:
                                         - type: integer
@@ -1578,13 +1603,20 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     shards:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: parameters that should be distributed across sharded instances
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     tarball:
                                       additionalProperties:
+                                        properties:
+                                          files:
+                                            description: file patterns to pack
+                                            type: dynamicList
+                                          from:
+                                            description: path to load the files from
+                                            type: string
                                         type: object
-                                        x-kubernetes-preserve-unknown-fields: true
                                       description: pack some data from the original file system to serve them down
                                       type: object
                                     target:
@@ -1616,10 +1648,19 @@ spec:
                           fetch:
                             description: instructions for fetching files back
                             items:
+                              properties:
+                                files:
+                                  description: file patterns to pack
+                                  type: dynamicList
+                                from:
+                                  description: path to load the files from
+                                  type: string
+                                to:
+                                  description: path where the tarball should be extracted
+                                  type: string
                               required:
                                 - from
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             type: array
                           job:
                             description: configuration for the scheduled job
@@ -1628,9 +1669,10 @@ spec:
                             description: should save logs for the parallel step (true if not specified)
                             type: string
                           matrix:
+                            additionalProperties:
+                              type: dynamicList
                             description: matrix of parameters to spawn instances (static)
                             type: object
-                            x-kubernetes-preserve-unknown-fields: true
                           maxCount:
                             anyOf:
                               - type: integer
@@ -1931,9 +1973,10 @@ spec:
                             description: steps for setting up the workflow
                             x-kubernetes-preserve-unknown-fields: true
                           shards:
+                            additionalProperties:
+                              type: dynamicList
                             description: parameters that should be distributed across sharded instances
                             type: object
-                            x-kubernetes-preserve-unknown-fields: true
                           shell:
                             description: script to run in a default shell for the container
                             type: string
@@ -1966,10 +2009,22 @@ spec:
                           transfer:
                             description: instructions for transferring files
                             items:
+                              properties:
+                                files:
+                                  description: file patterns to pack
+                                  type: dynamicList
+                                from:
+                                  description: path to load the files from
+                                  type: string
+                                mount:
+                                  description: should it mount a new volume there
+                                  type: boolean
+                                to:
+                                  description: path where the tarball should be extracted
+                                  type: string
                               required:
                                 - from
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             type: array
                           use:
                             description: templates to include at a top-level of workflow
@@ -2757,9 +2812,10 @@ spec:
                               description: should save logs for the service (false if not specified)
                               type: string
                             matrix:
+                              additionalProperties:
+                                type: dynamicList
                               description: matrix of parameters to spawn instances (static)
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             maxCount:
                               anyOf:
                                 - type: integer
@@ -3252,9 +3308,10 @@ spec:
                                   type: object
                               type: object
                             shards:
+                              additionalProperties:
+                                type: dynamicList
                               description: parameters that should be distributed across sharded instances
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             shell:
                               description: script to run in a default shell for the container
                               type: string
@@ -3264,10 +3321,22 @@ spec:
                             transfer:
                               description: instructions for transferring files
                               items:
+                                properties:
+                                  files:
+                                    description: file patterns to pack
+                                    type: dynamicList
+                                  from:
+                                    description: path to load the files from
+                                    type: string
+                                  mount:
+                                    description: should it mount a new volume there
+                                    type: boolean
+                                  to:
+                                    description: path where the tarball should be extracted
+                                    type: string
                                 required:
                                   - from
                                 type: object
-                                x-kubernetes-preserve-unknown-fields: true
                               type: array
                             use:
                               description: multiple templates to include in this step
@@ -5014,9 +5083,10 @@ spec:
                         description: should save logs for the service (false if not specified)
                         type: string
                       matrix:
+                        additionalProperties:
+                          type: dynamicList
                         description: matrix of parameters to spawn instances (static)
                         type: object
-                        x-kubernetes-preserve-unknown-fields: true
                       maxCount:
                         anyOf:
                           - type: integer
@@ -5509,9 +5579,10 @@ spec:
                             type: object
                         type: object
                       shards:
+                        additionalProperties:
+                          type: dynamicList
                         description: parameters that should be distributed across sharded instances
                         type: object
-                        x-kubernetes-preserve-unknown-fields: true
                       shell:
                         description: script to run in a default shell for the container
                         type: string
@@ -5521,10 +5592,22 @@ spec:
                       transfer:
                         description: instructions for transferring files
                         items:
+                          properties:
+                            files:
+                              description: file patterns to pack
+                              type: dynamicList
+                            from:
+                              description: path to load the files from
+                              type: string
+                            mount:
+                              description: should it mount a new volume there
+                              type: boolean
+                            to:
+                              description: path where the tarball should be extracted
+                              type: string
                           required:
                             - from
                           type: object
-                          x-kubernetes-preserve-unknown-fields: true
                         type: array
                       use:
                         description: multiple templates to include in this step
@@ -6532,9 +6615,10 @@ spec:
                                       type: string
                                   type: object
                                 matrix:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
                                   anyOf:
                                     - type: integer
@@ -6545,13 +6629,20 @@ spec:
                                   description: test name to run
                                   type: string
                                 shards:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: parameters that should be distributed across sharded instances
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 tarball:
                                   additionalProperties:
+                                    properties:
+                                      files:
+                                        description: file patterns to pack
+                                        type: dynamicList
+                                      from:
+                                        description: path to load the files from
+                                        type: string
                                     type: object
-                                    x-kubernetes-preserve-unknown-fields: true
                                   description: pack some data from the original file system to serve them down
                                   type: object
                               type: object
@@ -6581,9 +6672,10 @@ spec:
                                   description: unique execution name to use
                                   type: string
                                 matrix:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
                                   anyOf:
                                     - type: integer
@@ -6621,13 +6713,20 @@ spec:
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 shards:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: parameters that should be distributed across sharded instances
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 tarball:
                                   additionalProperties:
+                                    properties:
+                                      files:
+                                        description: file patterns to pack
+                                        type: dynamicList
+                                      from:
+                                        description: path to load the files from
+                                        type: string
                                     type: object
-                                    x-kubernetes-preserve-unknown-fields: true
                                   description: pack some data from the original file system to serve them down
                                   type: object
                                 target:
@@ -7021,9 +7120,10 @@ spec:
                                           type: string
                                       type: object
                                     matrix:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
                                       anyOf:
                                         - type: integer
@@ -7034,13 +7134,20 @@ spec:
                                       description: test name to run
                                       type: string
                                     shards:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: parameters that should be distributed across sharded instances
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     tarball:
                                       additionalProperties:
+                                        properties:
+                                          files:
+                                            description: file patterns to pack
+                                            type: dynamicList
+                                          from:
+                                            description: path to load the files from
+                                            type: string
                                         type: object
-                                        x-kubernetes-preserve-unknown-fields: true
                                       description: pack some data from the original file system to serve them down
                                       type: object
                                   type: object
@@ -7070,9 +7177,10 @@ spec:
                                       description: unique execution name to use
                                       type: string
                                     matrix:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
                                       anyOf:
                                         - type: integer
@@ -7110,13 +7218,20 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     shards:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: parameters that should be distributed across sharded instances
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     tarball:
                                       additionalProperties:
+                                        properties:
+                                          files:
+                                            description: file patterns to pack
+                                            type: dynamicList
+                                          from:
+                                            description: path to load the files from
+                                            type: string
                                         type: object
-                                        x-kubernetes-preserve-unknown-fields: true
                                       description: pack some data from the original file system to serve them down
                                       type: object
                                     target:
@@ -7148,10 +7263,19 @@ spec:
                           fetch:
                             description: instructions for fetching files back
                             items:
+                              properties:
+                                files:
+                                  description: file patterns to pack
+                                  type: dynamicList
+                                from:
+                                  description: path to load the files from
+                                  type: string
+                                to:
+                                  description: path where the tarball should be extracted
+                                  type: string
                               required:
                                 - from
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             type: array
                           job:
                             description: configuration for the scheduled job
@@ -7160,9 +7284,10 @@ spec:
                             description: should save logs for the parallel step (true if not specified)
                             type: string
                           matrix:
+                            additionalProperties:
+                              type: dynamicList
                             description: matrix of parameters to spawn instances (static)
                             type: object
-                            x-kubernetes-preserve-unknown-fields: true
                           maxCount:
                             anyOf:
                               - type: integer
@@ -7463,9 +7588,10 @@ spec:
                             description: steps for setting up the workflow
                             x-kubernetes-preserve-unknown-fields: true
                           shards:
+                            additionalProperties:
+                              type: dynamicList
                             description: parameters that should be distributed across sharded instances
                             type: object
-                            x-kubernetes-preserve-unknown-fields: true
                           shell:
                             description: script to run in a default shell for the container
                             type: string
@@ -7498,10 +7624,22 @@ spec:
                           transfer:
                             description: instructions for transferring files
                             items:
+                              properties:
+                                files:
+                                  description: file patterns to pack
+                                  type: dynamicList
+                                from:
+                                  description: path to load the files from
+                                  type: string
+                                mount:
+                                  description: should it mount a new volume there
+                                  type: boolean
+                                to:
+                                  description: path where the tarball should be extracted
+                                  type: string
                               required:
                                 - from
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             type: array
                           use:
                             description: templates to include at a top-level of workflow
@@ -8289,9 +8427,10 @@ spec:
                               description: should save logs for the service (false if not specified)
                               type: string
                             matrix:
+                              additionalProperties:
+                                type: dynamicList
                               description: matrix of parameters to spawn instances (static)
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             maxCount:
                               anyOf:
                                 - type: integer
@@ -8784,9 +8923,10 @@ spec:
                                   type: object
                               type: object
                             shards:
+                              additionalProperties:
+                                type: dynamicList
                               description: parameters that should be distributed across sharded instances
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             shell:
                               description: script to run in a default shell for the container
                               type: string
@@ -8796,10 +8936,22 @@ spec:
                             transfer:
                               description: instructions for transferring files
                               items:
+                                properties:
+                                  files:
+                                    description: file patterns to pack
+                                    type: dynamicList
+                                  from:
+                                    description: path to load the files from
+                                    type: string
+                                  mount:
+                                    description: should it mount a new volume there
+                                    type: boolean
+                                  to:
+                                    description: path where the tarball should be extracted
+                                    type: string
                                 required:
                                   - from
                                 type: object
-                                x-kubernetes-preserve-unknown-fields: true
                               type: array
                             use:
                               description: multiple templates to include in this step
@@ -9861,9 +10013,10 @@ spec:
                                       type: string
                                   type: object
                                 matrix:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
                                   anyOf:
                                     - type: integer
@@ -9874,13 +10027,20 @@ spec:
                                   description: test name to run
                                   type: string
                                 shards:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: parameters that should be distributed across sharded instances
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 tarball:
                                   additionalProperties:
+                                    properties:
+                                      files:
+                                        description: file patterns to pack
+                                        type: dynamicList
+                                      from:
+                                        description: path to load the files from
+                                        type: string
                                     type: object
-                                    x-kubernetes-preserve-unknown-fields: true
                                   description: pack some data from the original file system to serve them down
                                   type: object
                               type: object
@@ -9910,9 +10070,10 @@ spec:
                                   description: unique execution name to use
                                   type: string
                                 matrix:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: matrix of parameters to spawn instances (static)
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 maxCount:
                                   anyOf:
                                     - type: integer
@@ -9950,13 +10111,20 @@ spec:
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 shards:
+                                  additionalProperties:
+                                    type: dynamicList
                                   description: parameters that should be distributed across sharded instances
                                   type: object
-                                  x-kubernetes-preserve-unknown-fields: true
                                 tarball:
                                   additionalProperties:
+                                    properties:
+                                      files:
+                                        description: file patterns to pack
+                                        type: dynamicList
+                                      from:
+                                        description: path to load the files from
+                                        type: string
                                     type: object
-                                    x-kubernetes-preserve-unknown-fields: true
                                   description: pack some data from the original file system to serve them down
                                   type: object
                                 target:
@@ -10350,9 +10518,10 @@ spec:
                                           type: string
                                       type: object
                                     matrix:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
                                       anyOf:
                                         - type: integer
@@ -10363,13 +10532,20 @@ spec:
                                       description: test name to run
                                       type: string
                                     shards:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: parameters that should be distributed across sharded instances
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     tarball:
                                       additionalProperties:
+                                        properties:
+                                          files:
+                                            description: file patterns to pack
+                                            type: dynamicList
+                                          from:
+                                            description: path to load the files from
+                                            type: string
                                         type: object
-                                        x-kubernetes-preserve-unknown-fields: true
                                       description: pack some data from the original file system to serve them down
                                       type: object
                                   type: object
@@ -10399,9 +10575,10 @@ spec:
                                       description: unique execution name to use
                                       type: string
                                     matrix:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: matrix of parameters to spawn instances (static)
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     maxCount:
                                       anyOf:
                                         - type: integer
@@ -10439,13 +10616,20 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     shards:
+                                      additionalProperties:
+                                        type: dynamicList
                                       description: parameters that should be distributed across sharded instances
                                       type: object
-                                      x-kubernetes-preserve-unknown-fields: true
                                     tarball:
                                       additionalProperties:
+                                        properties:
+                                          files:
+                                            description: file patterns to pack
+                                            type: dynamicList
+                                          from:
+                                            description: path to load the files from
+                                            type: string
                                         type: object
-                                        x-kubernetes-preserve-unknown-fields: true
                                       description: pack some data from the original file system to serve them down
                                       type: object
                                     target:
@@ -10477,10 +10661,19 @@ spec:
                           fetch:
                             description: instructions for fetching files back
                             items:
+                              properties:
+                                files:
+                                  description: file patterns to pack
+                                  type: dynamicList
+                                from:
+                                  description: path to load the files from
+                                  type: string
+                                to:
+                                  description: path where the tarball should be extracted
+                                  type: string
                               required:
                                 - from
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             type: array
                           job:
                             description: configuration for the scheduled job
@@ -10489,9 +10682,10 @@ spec:
                             description: should save logs for the parallel step (true if not specified)
                             type: string
                           matrix:
+                            additionalProperties:
+                              type: dynamicList
                             description: matrix of parameters to spawn instances (static)
                             type: object
-                            x-kubernetes-preserve-unknown-fields: true
                           maxCount:
                             anyOf:
                               - type: integer
@@ -10792,9 +10986,10 @@ spec:
                             description: steps for setting up the workflow
                             x-kubernetes-preserve-unknown-fields: true
                           shards:
+                            additionalProperties:
+                              type: dynamicList
                             description: parameters that should be distributed across sharded instances
                             type: object
-                            x-kubernetes-preserve-unknown-fields: true
                           shell:
                             description: script to run in a default shell for the container
                             type: string
@@ -10827,10 +11022,22 @@ spec:
                           transfer:
                             description: instructions for transferring files
                             items:
+                              properties:
+                                files:
+                                  description: file patterns to pack
+                                  type: dynamicList
+                                from:
+                                  description: path to load the files from
+                                  type: string
+                                mount:
+                                  description: should it mount a new volume there
+                                  type: boolean
+                                to:
+                                  description: path where the tarball should be extracted
+                                  type: string
                               required:
                                 - from
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             type: array
                           use:
                             description: templates to include at a top-level of workflow
@@ -11618,9 +11825,10 @@ spec:
                               description: should save logs for the service (false if not specified)
                               type: string
                             matrix:
+                              additionalProperties:
+                                type: dynamicList
                               description: matrix of parameters to spawn instances (static)
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             maxCount:
                               anyOf:
                                 - type: integer
@@ -12113,9 +12321,10 @@ spec:
                                   type: object
                               type: object
                             shards:
+                              additionalProperties:
+                                type: dynamicList
                               description: parameters that should be distributed across sharded instances
                               type: object
-                              x-kubernetes-preserve-unknown-fields: true
                             shell:
                               description: script to run in a default shell for the container
                               type: string
@@ -12125,10 +12334,22 @@ spec:
                             transfer:
                               description: instructions for transferring files
                               items:
+                                properties:
+                                  files:
+                                    description: file patterns to pack
+                                    type: dynamicList
+                                  from:
+                                    description: path to load the files from
+                                    type: string
+                                  mount:
+                                    description: should it mount a new volume there
+                                    type: boolean
+                                  to:
+                                    description: path where the tarball should be extracted
+                                    type: string
                                 required:
                                   - from
                                 type: object
-                                x-kubernetes-preserve-unknown-fields: true
                               type: array
                             use:
                               description: multiple templates to include in this step
