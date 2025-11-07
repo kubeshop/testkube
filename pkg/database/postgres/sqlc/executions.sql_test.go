@@ -47,7 +47,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	                'optional', s\.optional,
 	                'negative', s\.negative,
 	                'parent_id', s\.parent_id
-	            \) ORDER BY s\.id
+	            \) ORDER BY s\.step_order
 	        \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
 	        '\[\]'::json
 	    \)::json as signatures_json,
@@ -158,7 +158,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
                 'optional', s\.optional,
                 'negative', s\.negative,
                 'parent_id', s\.parent_id
-            \) ORDER BY s\.id
+            \) ORDER BY s\.step_order
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as signatures_json,
@@ -321,7 +321,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
                 'optional', s\.optional,
                 'negative', s\.negative,
                 'parent_id', s\.parent_id
-            \) ORDER BY s\.id
+            \) ORDER BY s\.step_order
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as signatures_json,
@@ -433,7 +433,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
                 'optional', s\.optional,
                 'negative', s\.negative,
                 'parent_id', s\.parent_id
-            \) ORDER BY s\.id
+            \) ORDER BY s\.step_order
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as signatures_json,
@@ -1131,7 +1131,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowSignature(t *testing
 	expectedQuery := `INSERT INTO test_workflow_signatures \(
     execution_id, ref, name, category, optional, negative, parent_id, step_order
 \) VALUES \(
-    \$1, \$2, \$3, \$4, \$5, \$6, \$7
+    \$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8
 \)
 RETURNING test_workflow_signatures\.id`
 
