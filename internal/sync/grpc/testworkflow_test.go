@@ -41,7 +41,7 @@ func TestUpdateOrCreateTestWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(expect, srv.TestWorkflow.GetPayload()) {
-		t.Errorf("expect %v, got %v", expect, srv.TestWorkflow.GetPayload())
+	if !bytes.Equal(expect, srv.TestWorkflow.GetJson()) {
+		t.Errorf("expect %v, got %v", expect, srv.TestWorkflow.GetJson())
 	}
 }
