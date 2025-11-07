@@ -9,6 +9,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	syncv1 "github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1"
+	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
 )
 
 // UpdateOrCreateTestWorkflow sends a request to the Control Plane informing that an change has occurred
@@ -27,8 +28,8 @@ func (c Client) UpdateOrCreateTestWorkflow(ctx context.Context, obj testworkflow
 
 	if _, err := c.client.UpdateOrCreate(callCtx, &syncv1.UpdateOrCreateRequest{
 		Payload: &syncv1.UpdateOrCreateRequest_TestWorkflow{
-			TestWorkflow: &syncv1.TestWorkflow{
-				Payload: jsonEncodedObj,
+			TestWorkflow: &testworkflowv1.TestWorkflow{
+				Json: jsonEncodedObj,
 			},
 		},
 	}, c.callOpts...); err != nil {
