@@ -4,7 +4,7 @@
 // 	protoc        (unknown)
 // source: testkube/testworkflow/v1/test_workflow.proto
 
-package executionv1
+package testworkflowv1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -86,10 +86,10 @@ var File_testkube_testworkflow_v1_test_workflow_proto protoreflect.FileDescripto
 
 const file_testkube_testworkflow_v1_test_workflow_proto_rawDesc = "" +
 	"\n" +
-	",testkube/testworkflow/v1/test_workflow.proto\x12\"testkube.testworkflow.execution.v1\"\"\n" +
+	",testkube/testworkflow/v1/test_workflow.proto\x12\x18testkube.testworkflow.v1\"\"\n" +
 	"\fTestWorkflow\x12\x12\n" +
-	"\x04json\x18\x01 \x01(\fR\x04jsonB\xb3\x02\n" +
-	"&com.testkube.testworkflow.execution.v1B\x11TestWorkflowProtoP\x01ZKgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
+	"\x04json\x18\x01 \x01(\fR\x04jsonB\x83\x02\n" +
+	"\x1ccom.testkube.testworkflow.v1B\x11TestWorkflowProtoP\x01ZNgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1;testworkflowv1\xa2\x02\x03TTX\xaa\x02\x18Testkube.Testworkflow.V1\xca\x02\x18Testkube\\Testworkflow\\V1\xe2\x02$Testkube\\Testworkflow\\V1\\GPBMetadata\xea\x02\x1aTestkube::Testworkflow::V1b\beditionsp\xe8\a"
 
 var (
 	file_testkube_testworkflow_v1_test_workflow_proto_rawDescOnce sync.Once
@@ -105,7 +105,7 @@ func file_testkube_testworkflow_v1_test_workflow_proto_rawDescGZIP() []byte {
 
 var file_testkube_testworkflow_v1_test_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_testkube_testworkflow_v1_test_workflow_proto_goTypes = []any{
-	(*TestWorkflow)(nil), // 0: testkube.testworkflow.execution.v1.TestWorkflow
+	(*TestWorkflow)(nil), // 0: testkube.testworkflow.v1.TestWorkflow
 }
 var file_testkube_testworkflow_v1_test_workflow_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

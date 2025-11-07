@@ -23,6 +23,7 @@ const (
 	TestWorkflowExecutionService_SetExecutionScheduling_FullMethodName = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/SetExecutionScheduling"
 	TestWorkflowExecutionService_AcceptExecution_FullMethodName        = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/AcceptExecution"
 	TestWorkflowExecutionService_DeclineExecution_FullMethodName       = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/DeclineExecution"
+	TestWorkflowExecutionService_GetExecutionWorkflow_FullMethodName   = "/testkube.testworkflow.execution.v1.TestWorkflowExecutionService/GetExecutionWorkflow"
 )
 
 // TestWorkflowExecutionServiceClient is the client API for TestWorkflowExecutionService service.
@@ -50,6 +51,12 @@ type TestWorkflowExecutionServiceClient interface {
 	// In the event of transient errors, clients are expected to retry themselves before declining
 	// an execution.
 	DeclineExecution(ctx context.Context, in *DeclineExecutionRequest, opts ...grpc.CallOption) (*DeclineExecutionResponse, error)
+	// GetExecutionWorkflow can be used to retrieve the workflow for an execution. This is a
+	// separate RPC from other GetWorkflow RPCs because it specifically retrieves the workflow
+	// that should be used to execute a particular execution. The server may wish to enrich
+	// the underlying workflow with additional information or transformations that apply to the
+	// specific execution for which it will be used.
+	GetExecutionWorkflow(ctx context.Context, in *GetExecutionWorkflowRequest, opts ...grpc.CallOption) (*GetExecutionWorkflowResponse, error)
 }
 
 type testWorkflowExecutionServiceClient struct {
@@ -101,6 +108,16 @@ func (c *testWorkflowExecutionServiceClient) DeclineExecution(ctx context.Contex
 	return out, nil
 }
 
+func (c *testWorkflowExecutionServiceClient) GetExecutionWorkflow(ctx context.Context, in *GetExecutionWorkflowRequest, opts ...grpc.CallOption) (*GetExecutionWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetExecutionWorkflowResponse)
+	err := c.cc.Invoke(ctx, TestWorkflowExecutionService_GetExecutionWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestWorkflowExecutionServiceServer is the server API for TestWorkflowExecutionService service.
 // All implementations must embed UnimplementedTestWorkflowExecutionServiceServer
 // for forward compatibility.
@@ -126,6 +143,12 @@ type TestWorkflowExecutionServiceServer interface {
 	// In the event of transient errors, clients are expected to retry themselves before declining
 	// an execution.
 	DeclineExecution(context.Context, *DeclineExecutionRequest) (*DeclineExecutionResponse, error)
+	// GetExecutionWorkflow can be used to retrieve the workflow for an execution. This is a
+	// separate RPC from other GetWorkflow RPCs because it specifically retrieves the workflow
+	// that should be used to execute a particular execution. The server may wish to enrich
+	// the underlying workflow with additional information or transformations that apply to the
+	// specific execution for which it will be used.
+	GetExecutionWorkflow(context.Context, *GetExecutionWorkflowRequest) (*GetExecutionWorkflowResponse, error)
 	mustEmbedUnimplementedTestWorkflowExecutionServiceServer()
 }
 
@@ -147,6 +170,9 @@ func (UnimplementedTestWorkflowExecutionServiceServer) AcceptExecution(context.C
 }
 func (UnimplementedTestWorkflowExecutionServiceServer) DeclineExecution(context.Context, *DeclineExecutionRequest) (*DeclineExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeclineExecution not implemented")
+}
+func (UnimplementedTestWorkflowExecutionServiceServer) GetExecutionWorkflow(context.Context, *GetExecutionWorkflowRequest) (*GetExecutionWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExecutionWorkflow not implemented")
 }
 func (UnimplementedTestWorkflowExecutionServiceServer) mustEmbedUnimplementedTestWorkflowExecutionServiceServer() {
 }
@@ -242,6 +268,24 @@ func _TestWorkflowExecutionService_DeclineExecution_Handler(srv interface{}, ctx
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestWorkflowExecutionService_GetExecutionWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExecutionWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestWorkflowExecutionServiceServer).GetExecutionWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestWorkflowExecutionService_GetExecutionWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestWorkflowExecutionServiceServer).GetExecutionWorkflow(ctx, req.(*GetExecutionWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestWorkflowExecutionService_ServiceDesc is the grpc.ServiceDesc for TestWorkflowExecutionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -264,6 +308,10 @@ var TestWorkflowExecutionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeclineExecution",
 			Handler:    _TestWorkflowExecutionService_DeclineExecution_Handler,
+		},
+		{
+			MethodName: "GetExecutionWorkflow",
+			Handler:    _TestWorkflowExecutionService_GetExecutionWorkflow_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

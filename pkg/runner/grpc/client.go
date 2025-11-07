@@ -215,12 +215,25 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 		}
 	}
 	for _, start := range response.GetStart() {
-		// Deserialise the workflow before passing it further on.
-		var workflow testworkflowsv1.TestWorkflow
-		if err := json.Unmarshal(start.GetWorkflow().GetJson(), &workflow); err != nil {
+		// Grab the full workflow.
+		workflowResponse, err := c.client.GetExecutionWorkflow(ctx, &executionv1.GetExecutionWorkflowRequest{
+			ExecutionId:   start.ExecutionId,
+			EnvironmentId: start.EnvironmentId,
+		}, c.callOpts...)
+		if err != nil {
 			// We cannot process this request as we do not know about the workflow to be executed.
+			c.logger.Errorw("Failed to retrieve workflow for execution, this execution will not be started.",
+				"executionId", start.GetExecutionId(),
+				"workflow name", start.GetWorkflowName(),
+				"error", err)
+			continue
+		}
+		// Deserialise the workflow.
+		var workflow testworkflowsv1.TestWorkflow
+		if err := json.Unmarshal(workflowResponse.GetWorkflow().GetJson(), &workflow); err != nil {
 			c.logger.Errorw("Failed to unmarshal workflow for execution, this execution will not be started.",
 				"executionId", start.GetExecutionId(),
+				"workflow name", start.GetWorkflowName(),
 				"error", err)
 			continue
 		}
