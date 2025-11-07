@@ -335,9 +335,12 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 	// Convert to map for easier processing
 	sigMap := make(map[string]*testkube.TestWorkflowSignature)
 	parentChildMap := make(map[string][]string)
+	// Track original order
+	orderMap := make(map[string]int32)
 
 	for _, sig := range signatures {
 		id := sig["id"].(string)
+		orderMap[id] = int32(sig["step_order"].(float64))
 
 		twSig := &testkube.TestWorkflowSignature{
 			Ref:      getStringFromMap(sig, "ref"),
@@ -733,7 +736,8 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	// Insert related data
-	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}); err != nil {
+	stepOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &stepOrder); err != nil {
 		return err
 	}
 
@@ -826,8 +830,9 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 	})
 }
 
-func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId pgtype.UUID) error {
+func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId pgtype.UUID, stepOrder *int32) error {
 	for _, sig := range signatures {
+		*stepOrder += 1
 		id, err := qtx.InsertTestWorkflowSignature(ctx, sqlc.InsertTestWorkflowSignatureParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(sig.Ref),
@@ -836,6 +841,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 			Optional:    toPgBool(sig.Optional),
 			Negative:    toPgBool(sig.Negative),
 			ParentID:    parentId,
+			StepOrder:   *stepOrder,
 		})
 		if err != nil {
 			return err
@@ -846,7 +852,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 		if len(sig.Children) > 0 {
 			// TODO: Implement recursive insertion for children
 			// This would require getting the ID of the just inserted signature
-			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id); err != nil {
+			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id, stepOrder); err != nil {
 				return err
 			}
 		}
@@ -1104,7 +1110,8 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	// Re-insert all related data
-	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}); err != nil {
+	stepOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &stepOrder); err != nil {
 		return err
 	}
 
@@ -1633,7 +1640,8 @@ func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkf
 		return err
 	}
 
-	if err = r.insertSignatures(ctx, qtx, id, data.Signature, pgtype.UUID{}); err != nil {
+	stepOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, id, data.Signature, pgtype.UUID{}, &stepOrder); err != nil {
 		return err
 	}
 
