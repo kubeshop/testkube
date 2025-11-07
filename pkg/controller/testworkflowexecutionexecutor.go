@@ -62,12 +62,15 @@ func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRe
 			return ctrl.Result{}, fmt.Errorf("updating status before execution: %w", err)
 		}
 
-		// Re-get the object to ensure we have the latest state after status update
+		// Re-get the object to ensure we have the latest state after status update.
+		// This is necessary because the fake client (used in tests) with status subresource
+		// enabled may clear spec fields when updating status. In production, this is a no-op
+		// since the status update doesn't affect the spec.
 		if err := client.Get(ctx, req.NamespacedName, &twe); err != nil {
 			return ctrl.Result{}, fmt.Errorf("re-getting object after status update: %w", err)
 		}
 
-		// Ensure ExecutionRequest is still initialized (in case it was cleared)
+		// Ensure ExecutionRequest is still initialized after re-get
 		if twe.Spec.ExecutionRequest == nil {
 			twe.Spec.ExecutionRequest = &testworkflowsv1.TestWorkflowExecutionRequest{}
 		}
