@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"strings"
 	"time"
 
@@ -337,12 +336,9 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 	// Convert to map for easier processing
 	sigMap := make(map[string]*testkube.TestWorkflowSignature)
 	parentChildMap := make(map[string][]string)
-	// Track original order
-	orderMap := make(map[string]int32)
 
 	for _, sig := range signatures {
 		id := sig["id"].(string)
-		orderMap[id] = int32(sig["step_order"].(float64))
 
 		twSig := &testkube.TestWorkflowSignature{
 			Ref:      getStringFromMap(sig, "ref"),
@@ -359,14 +355,7 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		}
 	}
 
-	// Sort children by their original order
-	for _, childIds := range parentChildMap {
-		sort.Slice(childIds, func(i, j int) bool {
-			return orderMap[childIds[i]] < orderMap[childIds[j]]
-		})
-	}
-
-	// Build tree structure, preserving order
+	// Build tree structure - order is preserved from input
 	var buildChildren func(parentId string) []testkube.TestWorkflowSignature
 	buildChildren = func(parentId string) []testkube.TestWorkflowSignature {
 		childIds := parentChildMap[parentId]
@@ -383,7 +372,7 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		return children
 	}
 
-	// Find root signatures (those without parents), preserving order
+	// Find root signatures (those without parents) - order is preserved from input
 	roots := make([]testkube.TestWorkflowSignature, 0)
 	for _, sig := range signatures {
 		id := sig["id"].(string)

@@ -1129,7 +1129,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowSignature(t *testing
 	ctx := context.Background()
 
 	expectedQuery := `INSERT INTO test_workflow_signatures \(
-    execution_id, ref, name, category, optional, negative, parent_id
+    execution_id, ref, name, category, optional, negative, parent_id, step_order
 \) VALUES \(
     \$1, \$2, \$3, \$4, \$5, \$6, \$7
 \)
@@ -1143,6 +1143,7 @@ RETURNING test_workflow_signatures\.id`
 		Optional:    pgtype.Bool{Bool: false, Valid: true},
 		Negative:    pgtype.Bool{Bool: false, Valid: true},
 		ParentID:    pgtype.UUID{Valid: false},
+		StepOrder:   0,
 	}
 
 	id := uuid.New()
@@ -1155,6 +1156,7 @@ RETURNING test_workflow_signatures\.id`
 		params.Optional,
 		params.Negative,
 		params.ParentID,
+		params.StepOrder,
 	).WillReturnRows(rows)
 
 	// Execute query
