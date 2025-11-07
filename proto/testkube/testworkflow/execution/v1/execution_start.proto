@@ -4,6 +4,8 @@ package testkube.testworkflow.execution.v1;
 
 import "google/protobuf/timestamp.proto";
 
+import "testkube/testworkflow/v1/test_workflow.proto";
+
 // ExecutionStart contains fields used to initially start an Execution.
 message ExecutionStart {
   // execution_id is the unique identifier of the execution to be started.
@@ -32,9 +34,15 @@ message ExecutionStart {
   // It can be used to obtain the full workflow either from kubernetes directly or
   // via the Control Plane if the workflow is in a different location inaccessible
   // to the client.
-  string workflow_name = 10;
+  // This is no longer recommended, instead the workflow to be executed should be
+  // passed directly in the workflow field.
+  string workflow_name = 10 [deprecated = true];
   // variable_overrides indicates values that should be used to override pre-set variables when executing
   // this instance of the workflow execution. Keys may refer to known variables, and the values to the
   // override values. Unknown keys may be ignored.
   map<string, string> variable_overrides = 11;
+  // workflow is the TestWorkflow which should be executed. The server may apply
+  // additional information and so it may not be safe to source the workflow
+  // directly from an available store.
+  TestWorkflow workflow = 12;
 }
