@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -283,7 +284,7 @@ func TestWorkflowExecutionExecutorStatusUpdate(t *testing.T) {
 			if test.expectError != "" {
 				if err == nil {
 					t.Errorf("expected error containing %q, got nil", test.expectError)
-				} else if !contains(err.Error(), test.expectError) {
+				} else if !strings.Contains(err.Error(), test.expectError) {
 					t.Errorf("expected error containing %q, got %q", test.expectError, err.Error())
 				}
 			}
@@ -316,17 +317,4 @@ func TestWorkflowExecutionExecutorStatusUpdate(t *testing.T) {
 			}
 		})
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || (len(s) > 0 && len(substr) > 0 && hasSubstring(s, substr)))
-}
-
-func hasSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
