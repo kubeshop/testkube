@@ -54,6 +54,8 @@ type TestWorkflowExecutionStatus struct {
 	LatestExecution *TestWorkflowExecutionDetails `json:"latestExecution,omitempty"`
 	// test workflow execution generation
 	Generation int64 `json:"generation,omitempty"`
+	// error message if execution scheduling failed
+	LastError string `json:"lastError,omitempty"`
 }
 
 // TestWorkflowExecutionDetails contains the details of TestWorkflowExecution

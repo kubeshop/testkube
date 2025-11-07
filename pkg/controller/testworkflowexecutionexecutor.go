@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"k8s.io/client-go/tools/record"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	testkubev1 "github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -22,16 +24,17 @@ type TestWorkflowExecutor interface {
 }
 
 func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkflowExecutor) error {
+	recorder := mgr.GetEventRecorderFor("testworkflowexecution-controller")
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowExecution{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), exec)); err != nil {
+		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), recorder, exec)); err != nil {
 		return fmt.Errorf("create new controller for TestWorkflowExecution: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecutor) reconcile.Reconciler {
+func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRecorder, exec TestWorkflowExecutor) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		// Get and validate the TestWorkflowExecution.
 		var twe testworkflowsv1.TestWorkflowExecution
@@ -45,7 +48,27 @@ func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecut
 			return ctrl.Result{}, nil
 		case twe.Generation == twe.Status.Generation:
 			return ctrl.Result{}, nil
-		case twe.Spec.ExecutionRequest == nil:
+		}
+
+		// Ensure ExecutionRequest is initialized
+		if twe.Spec.ExecutionRequest == nil {
+			twe.Spec.ExecutionRequest = &testworkflowsv1.TestWorkflowExecutionRequest{}
+		}
+
+		// Update status to indicate we're processing this generation
+		twe.Status.Generation = twe.Generation
+		twe.Status.LastError = ""
+		if err := client.Status().Update(ctx, &twe); err != nil {
+			return ctrl.Result{}, fmt.Errorf("updating status before execution: %w", err)
+		}
+
+		// Re-get the object to ensure we have the latest state after status update
+		if err := client.Get(ctx, req.NamespacedName, &twe); err != nil {
+			return ctrl.Result{}, fmt.Errorf("re-getting object after status update: %w", err)
+		}
+
+		// Ensure ExecutionRequest is still initialized (in case it was cleared)
+		if twe.Spec.ExecutionRequest == nil {
 			twe.Spec.ExecutionRequest = &testworkflowsv1.TestWorkflowExecutionRequest{}
 		}
 
@@ -93,8 +116,22 @@ func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecut
 		})
 
 		if err != nil {
+			// Record warning event
+			recorder.Event(&twe, corev1.EventTypeWarning, "ExecutionFailed",
+				fmt.Sprintf("Failed to execute test workflow: %v", err))
+
+			// Update status with error
+			twe.Status.LastError = err.Error()
+			if updateErr := client.Status().Update(ctx, &twe); updateErr != nil {
+				return ctrl.Result{}, fmt.Errorf("updating status after execution failure: %w", updateErr)
+			}
+
 			return ctrl.Result{}, fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, err)
 		}
+
+		// Record success event
+		recorder.Event(&twe, corev1.EventTypeNormal, "ExecutionStarted",
+			fmt.Sprintf("Successfully started test workflow %s", twe.Spec.TestWorkflow.Name))
 
 		log := ctrl.LoggerFrom(ctx)
 		log.Info("executed test workflow", "name", twe.Spec.TestWorkflow.Name)
