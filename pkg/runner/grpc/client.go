@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -214,11 +215,23 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 		}
 	}
 	for _, start := range response.GetStart() {
-		// Grab the full workflow before passing it futher on.
-		workflow, err := c.workflowStore.Get(ctx, start.GetEnvironmentId(), start.GetWorkflowName())
+		// Grab the full workflow.
+		workflowResponse, err := c.client.GetExecutionWorkflow(ctx, &executionv1.GetExecutionWorkflowRequest{
+			ExecutionId:   start.ExecutionId,
+			EnvironmentId: start.EnvironmentId,
+		}, c.callOpts...)
 		if err != nil {
 			// We cannot process this request as we do not know about the workflow to be executed.
 			c.logger.Errorw("Failed to retrieve workflow for execution, this execution will not be started.",
+				"executionId", start.GetExecutionId(),
+				"workflow name", start.GetWorkflowName(),
+				"error", err)
+			continue
+		}
+		// Deserialise the workflow.
+		var workflow testworkflowsv1.TestWorkflow
+		if err := json.Unmarshal(workflowResponse.GetWorkflow().GetJson(), &workflow); err != nil {
+			c.logger.Errorw("Failed to unmarshal workflow for execution, this execution will not be started.",
 				"executionId", start.GetExecutionId(),
 				"workflow name", start.GetWorkflowName(),
 				"error", err)
@@ -242,13 +255,32 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 					EnvironmentId:   start.GetEnvironmentId(),
 					ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
 				},
-				Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*workflow),
+				Workflow:     workflow,
 				ControlPlane: c.ControlPlaneConfig,
 			})
 			if err != nil {
 				c.logger.Errorw("Failed to start execution.",
 					"executionId", start.GetExecutionId(),
 					"error", err)
+				// Execute with our own call timeout context to prevent stalling out.
+				callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
+				// Add required metadata to the call.
+				callCtx = metadata.AppendToOutgoingContext(callCtx,
+					"organisation-id", c.OrganisationId,
+					"environment-id", start.GetEnvironmentId())
+				// Report the error to the control plane to prevent getting the execution on
+				// subsequent calls.
+				_, callErr := c.client.DeclineExecution(callCtx, &executionv1.DeclineExecutionRequest{
+					ExecutionId: start.ExecutionId,
+				}, c.callOpts...)
+				cancel()
+				if callErr != nil {
+					c.logger.Errorw("Failed to report execution start error.",
+						"executionId", start.GetExecutionId(),
+						"error", callErr)
+					return
+				}
+				return
 			}
 
 			if result.Redundant {
@@ -263,7 +295,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				"organisation-id", c.OrganisationId,
 				"environment-id", start.GetEnvironmentId())
 			// Update the control plane that the execution is awaiting scheduling by Kubernetes.
-			_, err = c.client.SetExecutionScheduling(callCtx, &executionv1.SetExecutionSchedulingRequest{
+			_, err = c.client.AcceptExecution(callCtx, &executionv1.AcceptExecutionRequest{
 				ExecutionId: start.ExecutionId,
 				Namespace:   &result.Namespace,
 				Signature:   translateSignature(result.Signature),
@@ -273,6 +305,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				c.logger.Errorw("Failed to set execution scheduling",
 					"executionId", start.GetExecutionId(),
 					"error", err)
+				return
 			}
 		})
 	}

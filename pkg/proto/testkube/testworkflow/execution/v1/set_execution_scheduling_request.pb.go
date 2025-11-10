@@ -22,10 +22,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// SetExecutionSchedulingRequest is a request to the Control Plane to indicate that a
-// Test Workflow Execution has been sent to Kubernetes and is awaiting scheduling by
-// the Kubernetes scheduler. It includes fields that are relevant for the Control Plane
+// SetExecutionSchedulingRequest is a request to the Control Plane to indicate that a Test
+// Workflow Execution has been sent to Kubernetes and is awaiting scheduling by the
+// Kubernetes scheduler. It includes fields that are relevant for the Control Plane
 // but which could not have been known before this point in time.
+//
+// Deprecated: Marked as deprecated in testkube/testworkflow/execution/v1/set_execution_scheduling_request.proto.
 type SetExecutionSchedulingRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// execution_id is the unique identifier of the execution that is scheduling.
@@ -95,11 +97,11 @@ var File_testkube_testworkflow_execution_v1_set_execution_scheduling_request_pro
 
 const file_testkube_testworkflow_execution_v1_set_execution_scheduling_request_proto_rawDesc = "" +
 	"\n" +
-	"Itestkube/testworkflow/execution/v1/set_execution_scheduling_request.proto\x12\"testkube.testworkflow.execution.v1\x1a2testkube/testworkflow/signature/v1/signature.proto\"\xad\x01\n" +
+	"Itestkube/testworkflow/execution/v1/set_execution_scheduling_request.proto\x12\"testkube.testworkflow.execution.v1\x1a2testkube/testworkflow/signature/v1/signature.proto\"\xb1\x01\n" +
 	"\x1dSetExecutionSchedulingRequest\x12!\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12K\n" +
-	"\tsignature\x18\x03 \x03(\v2-.testkube.testworkflow.signature.v1.SignatureR\tsignatureB\xce\x02\n" +
+	"\tsignature\x18\x03 \x03(\v2-.testkube.testworkflow.signature.v1.SignatureR\tsignature:\x02\x18\x01B\xce\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B\"SetExecutionSchedulingRequestProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (
