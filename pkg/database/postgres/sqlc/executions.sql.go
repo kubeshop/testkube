@@ -476,7 +476,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -487,7 +487,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -499,7 +499,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -808,7 +808,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -819,7 +819,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -831,7 +831,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -1017,7 +1017,7 @@ SELECT DISTINCT ON (w.name)
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1028,7 +1028,7 @@ SELECT DISTINCT ON (w.name)
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1040,7 +1040,7 @@ SELECT DISTINCT ON (w.name)
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -1255,7 +1255,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1266,7 +1266,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1278,7 +1278,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -1461,7 +1461,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1472,7 +1472,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1484,7 +1484,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -1654,7 +1654,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1665,7 +1665,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1677,7 +1677,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -1907,7 +1907,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1918,7 +1918,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1930,7 +1930,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -2106,7 +2106,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -2117,7 +2117,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -2129,7 +2129,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -2438,7 +2438,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -2449,7 +2449,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -2461,7 +2461,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -3005,7 +3005,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.step_order
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json  as signatures_json,
@@ -3016,7 +3016,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json  as outputs_json,
@@ -3028,7 +3028,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json  as reports_json,
@@ -3329,8 +3329,8 @@ func (q *Queries) InsertTestWorkflowExecution(ctx context.Context, arg InsertTes
 }
 
 const insertTestWorkflowOutput = `-- name: InsertTestWorkflowOutput :exec
-INSERT INTO test_workflow_outputs (execution_id, ref, name, value)
-VALUES ($1, $2, $3, $4)
+INSERT INTO test_workflow_outputs (execution_id, ref, name, value, out_order)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type InsertTestWorkflowOutputParams struct {
@@ -3338,6 +3338,7 @@ type InsertTestWorkflowOutputParams struct {
 	Ref         pgtype.Text `db:"ref" json:"ref"`
 	Name        pgtype.Text `db:"name" json:"name"`
 	Value       []byte      `db:"value" json:"value"`
+	OutOrder    int32       `db:"out_order" json:"out_order"`
 }
 
 func (q *Queries) InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWorkflowOutputParams) error {
@@ -3346,13 +3347,14 @@ func (q *Queries) InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWo
 		arg.Ref,
 		arg.Name,
 		arg.Value,
+		arg.OutOrder,
 	)
 	return err
 }
 
 const insertTestWorkflowReport = `-- name: InsertTestWorkflowReport :exec
-INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, rep_order)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertTestWorkflowReportParams struct {
@@ -3361,6 +3363,7 @@ type InsertTestWorkflowReportParams struct {
 	Kind        pgtype.Text `db:"kind" json:"kind"`
 	File        pgtype.Text `db:"file" json:"file"`
 	Summary     []byte      `db:"summary" json:"summary"`
+	RepOrder    int32       `db:"rep_order" json:"rep_order"`
 }
 
 func (q *Queries) InsertTestWorkflowReport(ctx context.Context, arg InsertTestWorkflowReportParams) error {
@@ -3370,6 +3373,7 @@ func (q *Queries) InsertTestWorkflowReport(ctx context.Context, arg InsertTestWo
 		arg.Kind,
 		arg.File,
 		arg.Summary,
+		arg.RepOrder,
 	)
 	return err
 }
@@ -3458,7 +3462,7 @@ func (q *Queries) InsertTestWorkflowResult(ctx context.Context, arg InsertTestWo
 
 const insertTestWorkflowSignature = `-- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id, step_order
+    execution_id, ref, name, category, optional, negative, parent_id, sig_order
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
@@ -3473,7 +3477,7 @@ type InsertTestWorkflowSignatureParams struct {
 	Optional    pgtype.Bool `db:"optional" json:"optional"`
 	Negative    pgtype.Bool `db:"negative" json:"negative"`
 	ParentID    pgtype.UUID `db:"parent_id" json:"parent_id"`
-	StepOrder   int32       `db:"step_order" json:"step_order"`
+	SigOrder    int32       `db:"sig_order" json:"sig_order"`
 }
 
 func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (pgtype.UUID, error) {
@@ -3485,7 +3489,7 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 		arg.Optional,
 		arg.Negative,
 		arg.ParentID,
-		arg.StepOrder,
+		arg.SigOrder,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
@@ -3627,30 +3631,6 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 		arg.ID,
 		arg.OrganizationID,
 		arg.EnvironmentID,
-	)
-	return err
-}
-
-const updateTestWorkflowExecutionReport = `-- name: UpdateTestWorkflowExecutionReport :exec
-INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
-VALUES ($1, $2, $3, $4, $5)
-`
-
-type UpdateTestWorkflowExecutionReportParams struct {
-	ExecutionID string      `db:"execution_id" json:"execution_id"`
-	Ref         pgtype.Text `db:"ref" json:"ref"`
-	Kind        pgtype.Text `db:"kind" json:"kind"`
-	File        pgtype.Text `db:"file" json:"file"`
-	Summary     []byte      `db:"summary" json:"summary"`
-}
-
-func (q *Queries) UpdateTestWorkflowExecutionReport(ctx context.Context, arg UpdateTestWorkflowExecutionReportParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionReport,
-		arg.ExecutionID,
-		arg.Ref,
-		arg.Kind,
-		arg.File,
-		arg.Summary,
 	)
 	return err
 }
