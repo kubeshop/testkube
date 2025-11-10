@@ -14,10 +14,10 @@ import (
 
 // DebugMiddleware creates a middleware that automatically collects debug information
 // when debug mode is enabled
-func DebugMiddleware(enabled bool) server.ToolHandlerMiddleware {
+func DebugMiddleware(cfg *MCPServerConfig) server.ToolHandlerMiddleware {
 	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
 		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			if !enabled {
+			if !cfg.Debug {
 				return next(ctx, request)
 			}
 
