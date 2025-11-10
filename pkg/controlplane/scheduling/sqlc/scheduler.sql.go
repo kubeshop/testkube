@@ -113,7 +113,7 @@ func (q *Queries) GetExecutionAggregation(ctx context.Context, executionID strin
 }
 
 const getExecutionOutputs = `-- name: GetExecutionOutputs :many
-SELECT execution_id, ref, name, value, created_at, id
+SELECT execution_id, ref, name, value, created_at, out_order, id
 FROM test_workflow_outputs
 WHERE execution_id = $1::text
 `
@@ -133,6 +133,7 @@ func (q *Queries) GetExecutionOutputs(ctx context.Context, executionID string) (
 			&i.Name,
 			&i.Value,
 			&i.CreatedAt,
+			&i.OutOrder,
 			&i.ID,
 		); err != nil {
 			return nil, err
@@ -146,7 +147,7 @@ func (q *Queries) GetExecutionOutputs(ctx context.Context, executionID string) (
 }
 
 const getExecutionReports = `-- name: GetExecutionReports :many
-SELECT execution_id, ref, kind, file, summary, created_at, id
+SELECT execution_id, ref, kind, file, summary, created_at, rep_order, id
 FROM test_workflow_reports
 WHERE execution_id = $1::text
 `
@@ -167,6 +168,7 @@ func (q *Queries) GetExecutionReports(ctx context.Context, executionID string) (
 			&i.File,
 			&i.Summary,
 			&i.CreatedAt,
+			&i.RepOrder,
 			&i.ID,
 		); err != nil {
 			return nil, err
@@ -207,7 +209,7 @@ func (q *Queries) GetExecutionResolvedWorkflow(ctx context.Context, executionID 
 }
 
 const getExecutionSignatures = `-- name: GetExecutionSignatures :many
-SELECT execution_id, ref, name, category, optional, negative, created_at, step_order, id, parent_id
+SELECT execution_id, ref, name, category, optional, negative, created_at, sig_order, id, parent_id
 FROM test_workflow_signatures
 WHERE execution_id = $1::text
 `
@@ -229,7 +231,7 @@ func (q *Queries) GetExecutionSignatures(ctx context.Context, executionID string
 			&i.Optional,
 			&i.Negative,
 			&i.CreatedAt,
-			&i.StepOrder,
+			&i.SigOrder,
 			&i.ID,
 			&i.ParentID,
 		); err != nil {

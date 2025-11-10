@@ -75,6 +75,7 @@ type TestWorkflowOutput struct {
 	Name        pgtype.Text            `db:"name" json:"name"`
 	Value       map[string]interface{} `db:"value" json:"value"`
 	CreatedAt   pgtype.Timestamptz     `db:"created_at" json:"created_at"`
+	OutOrder    int32                  `db:"out_order" json:"out_order"`
 	ID          uuid.UUID              `db:"id" json:"id"`
 }
 
@@ -85,6 +86,7 @@ type TestWorkflowReport struct {
 	File        pgtype.Text                         `db:"file" json:"file"`
 	Summary     *testkube.TestWorkflowReportSummary `db:"summary" json:"summary"`
 	CreatedAt   pgtype.Timestamptz                  `db:"created_at" json:"created_at"`
+	RepOrder    int32                               `db:"rep_order" json:"rep_order"`
 	ID          uuid.UUID                           `db:"id" json:"id"`
 }
 
@@ -123,7 +125,7 @@ type TestWorkflowSignature struct {
 	Optional    pgtype.Bool        `db:"optional" json:"optional"`
 	Negative    pgtype.Bool        `db:"negative" json:"negative"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	StepOrder   int32              `db:"step_order" json:"step_order"`
+	SigOrder    int32              `db:"sig_order" json:"sig_order"`
 	ID          pgtype.UUID        `db:"id" json:"id"`
 	ParentID    pgtype.UUID        `db:"parent_id" json:"parent_id"`
 }

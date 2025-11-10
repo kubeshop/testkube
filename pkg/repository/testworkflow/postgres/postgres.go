@@ -1876,6 +1876,15 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
+	// Health filters
+	if filter.MinHealthDefined() {
+		params.MinHealth = filter.MinHealth()
+	}
+
+	if filter.MaxHealthDefined() {
+		params.MaxHealth = filter.MaxHealth()
+	}
+
 	if filter.Selector() != "" {
 		keys, conditions := r.parseSelector(filter.Selector())
 		params.SelectorKeys, err = json.Marshal(keys)

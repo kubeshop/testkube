@@ -481,6 +481,22 @@ func (m *MockFilter) AssignedDefined() bool {
 	return m.Called().Bool(0)
 }
 
+func (m *MockFilter) MinHealth() float64 {
+	return m.Called().Get(0).(float64)
+}
+
+func (m *MockFilter) MinHealthDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) MaxHealth() float64 {
+	return m.Called().Get(0).(float64)
+}
+
+func (m *MockFilter) MaxHealthDefined() bool {
+	return m.Called().Bool(0)
+}
+
 // Helper functions for tests
 func createTestExecution() *testkube.TestWorkflowExecution {
 	status := testkube.PASSED_TestWorkflowStatus
@@ -524,6 +540,8 @@ func createTestFilter() *MockFilter {
 	filter.On("ActorTypeDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
+	filter.On("MinHealthDefined").Return(false)
+	filter.On("MaxHealthDefined").Return(false)
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))
