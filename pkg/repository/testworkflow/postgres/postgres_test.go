@@ -541,6 +541,8 @@ func createTestFilter() *MockFilter {
 	filter.On("ActorTypeDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
+	filter.On("MinHealthDefined").Return(false)
+	filter.On("MaxHealthDefined").Return(false)
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))
