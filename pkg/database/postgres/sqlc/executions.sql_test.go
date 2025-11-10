@@ -47,7 +47,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	                'optional', s\.optional,
 	                'negative', s\.negative,
 	                'parent_id', s\.parent_id
-	            \) ORDER BY s\.step_order
+	            \) ORDER BY s\.sig_order
 	        \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
 	        '\[\]'::json
 	    \)::json as signatures_json,
@@ -58,7 +58,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	                'ref', o\.ref,
 	                'name', o\.name,
 	                'value', o\.value
-	            \) ORDER BY o\.id
+	            \) ORDER BY o\.out_order
 	        \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
 	        '\[\]'::json
 	    \)::json as outputs_json,
@@ -70,7 +70,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T)
 	                'kind', rep\.kind,
 	                'file', rep\.file,
 	                'summary', rep\.summary
-	            \) ORDER BY rep\.id
+	            \) ORDER BY rep\.rep_order
 	        \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
 	        '\[\]'::json
 	    \)::json as reports_json,
@@ -158,7 +158,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
                 'optional', s\.optional,
                 'negative', s\.negative,
                 'parent_id', s\.parent_id
-            \) ORDER BY s\.step_order
+            \) ORDER BY s\.sig_order
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as signatures_json,
@@ -169,7 +169,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
                 'ref', o\.ref,
                 'name', o\.name,
                 'value', o\.value
-            \) ORDER BY o\.id
+            \) ORDER BY o\.out_order
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as outputs_json,
@@ -181,7 +181,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestW
                 'kind', rep\.kind,
                 'file', rep\.file,
                 'summary', rep\.summary
-            \) ORDER BY rep\.id
+            \) ORDER BY rep\.rep_order
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as reports_json,
@@ -321,7 +321,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
                 'optional', s\.optional,
                 'negative', s\.negative,
                 'parent_id', s\.parent_id
-            \) ORDER BY s\.step_order
+            \) ORDER BY s\.sig_order
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as signatures_json,
@@ -332,7 +332,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
                 'ref', o\.ref,
                 'name', o\.name,
                 'value', o\.value
-            \) ORDER BY o\.id
+            \) ORDER BY o\.out_order
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as outputs_json,
@@ -344,7 +344,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionsByTestW
                 'kind', rep\.kind,
                 'file', rep\.file,
                 'summary', rep\.summary
-            \) ORDER BY rep\.id
+            \) ORDER BY rep\.rep_order
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as reports_json,
@@ -433,7 +433,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
                 'optional', s\.optional,
                 'negative', s\.negative,
                 'parent_id', s\.parent_id
-            \) ORDER BY s\.step_order
+            \) ORDER BY s\.sig_order
         \) FROM test_workflow_signatures s WHERE s\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as signatures_json,
@@ -444,7 +444,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
                 'ref', o\.ref,
                 'name', o\.name,
                 'value', o\.value
-            \) ORDER BY o\.id
+            \) ORDER BY o\.out_order
         \) FROM test_workflow_outputs o WHERE o\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as outputs_json,
@@ -456,7 +456,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *te
                 'kind', rep\.kind,
                 'file', rep\.file,
                 'summary', rep\.summary
-            \) ORDER BY rep\.id
+            \) ORDER BY rep\.rep_order
         \) FROM test_workflow_reports rep WHERE rep\.execution_id = e\.id\),
         '\[\]'::json
     \)::json as reports_json,
@@ -1129,7 +1129,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowSignature(t *testing
 	ctx := context.Background()
 
 	expectedQuery := `INSERT INTO test_workflow_signatures \(
-    execution_id, ref, name, category, optional, negative, parent_id, step_order
+    execution_id, ref, name, category, optional, negative, parent_id, sig_order
 \) VALUES \(
     \$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8
 \)
@@ -1143,7 +1143,7 @@ RETURNING test_workflow_signatures\.id`
 		Optional:    pgtype.Bool{Bool: false, Valid: true},
 		Negative:    pgtype.Bool{Bool: false, Valid: true},
 		ParentID:    pgtype.UUID{Valid: false},
-		StepOrder:   0,
+		SigOrder:    0,
 	}
 
 	id := uuid.New()
@@ -1156,7 +1156,7 @@ RETURNING test_workflow_signatures\.id`
 		params.Optional,
 		params.Negative,
 		params.ParentID,
-		params.StepOrder,
+		params.SigOrder,
 	).WillReturnRows(rows)
 
 	// Execute query

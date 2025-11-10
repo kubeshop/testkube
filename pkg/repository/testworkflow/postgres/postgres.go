@@ -738,8 +738,8 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	// Insert related data
-	stepOrder := int32(0)
-	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &stepOrder); err != nil {
+	sigOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &sigOrder); err != nil {
 		return err
 	}
 
@@ -832,9 +832,9 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 	})
 }
 
-func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId pgtype.UUID, stepOrder *int32) error {
+func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId pgtype.UUID, sigOrder *int32) error {
 	for _, sig := range signatures {
-		*stepOrder += 1
+		*sigOrder += 1
 		id, err := qtx.InsertTestWorkflowSignature(ctx, sqlc.InsertTestWorkflowSignatureParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(sig.Ref),
@@ -843,7 +843,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 			Optional:    toPgBool(sig.Optional),
 			Negative:    toPgBool(sig.Negative),
 			ParentID:    parentId,
-			StepOrder:   *stepOrder,
+			SigOrder:    *sigOrder,
 		})
 		if err != nil {
 			return err
@@ -854,7 +854,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 		if len(sig.Children) > 0 {
 			// TODO: Implement recursive insertion for children
 			// This would require getting the ID of the just inserted signature
-			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id, stepOrder); err != nil {
+			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id, sigOrder); err != nil {
 				return err
 			}
 		}
@@ -905,7 +905,7 @@ func (r *PostgresRepository) insertResult(ctx context.Context, qtx sqlc.TestWork
 }
 
 func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, outputs []testkube.TestWorkflowOutput) error {
-	for _, output := range outputs {
+	for i, output := range outputs {
 		value, err := toJSONB(output.Value)
 		if err != nil {
 			return err
@@ -916,6 +916,7 @@ func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx sqlc.TestWor
 			Ref:         toPgText(output.Ref),
 			Name:        toPgText(output.Name),
 			Value:       value,
+			OutOrder:    int32(i + 1),
 		})
 		if err != nil {
 			return err
@@ -977,7 +978,7 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 }
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
-	for _, report := range reports {
+	for i, report := range reports {
 		summary, err := toJSONB(report.Summary)
 		if err != nil {
 			return err
@@ -989,6 +990,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			Kind:        toPgText(report.Kind),
 			File:        toPgText(report.File),
 			Summary:     summary,
+			RepOrder:    int32(i + 1),
 		})
 		if err != nil {
 			return err
@@ -1112,8 +1114,8 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	// Re-insert all related data
-	stepOrder := int32(0)
-	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &stepOrder); err != nil {
+	sigOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &sigOrder); err != nil {
 		return err
 	}
 
@@ -1404,20 +1406,29 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 	return nil
 }
 
-// UpdateReport adds a report
+// UpdateReport updates a report
 func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) error {
-	summary, err := toJSONB(report.Summary)
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Delete existing reports
+	err = qtx.DeleteTestWorkflowReports(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	return r.queries.UpdateTestWorkflowExecutionReport(ctx, sqlc.UpdateTestWorkflowExecutionReportParams{
-		ExecutionID: id,
-		Ref:         toPgText(report.Ref),
-		Kind:        toPgText(report.Kind),
-		File:        toPgText(report.File),
-		Summary:     summary,
-	})
+	// Insert new reports
+	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // UpdateOutput replaces all outputs
@@ -1642,8 +1653,8 @@ func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkf
 		return err
 	}
 
-	stepOrder := int32(0)
-	if err = r.insertSignatures(ctx, qtx, id, data.Signature, pgtype.UUID{}, &stepOrder); err != nil {
+	sigOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, id, data.Signature, pgtype.UUID{}, &sigOrder); err != nil {
 		return err
 	}
 
