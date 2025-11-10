@@ -70,7 +70,7 @@ func TelemetryMiddleware(cfg *MCPServerConfig) server.ToolHandlerMiddleware {
 					}
 
 					// Use the determined context for telemetry
-					telemetry.SendMCPToolEventWithContext(toolName, duration, hasError, common.Version, runContext)
+					telemetry.SendMCPToolEventWithContext(toolName, duration, hasError, common.Version, runContext, cfg.Source)
 				}()
 			}
 
