@@ -34,5 +34,6 @@ func (r K8sEventLoader) Kind() string {
 
 // Load returns single listener for k8s event
 func (r *K8sEventLoader) Load() (listeners common.Listeners, err error) {
+	// TODO(emil): this is a static list it does not seem to need a loader, it can just use a Register
 	return common.Listeners{NewK8sEventListener("k8sevent", "", r.defaultNamespace, r.events, r.clientset)}, nil
 }

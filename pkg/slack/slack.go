@@ -52,6 +52,9 @@ func NewNotifier(template, clusterName, dashboardURI string, config []Notificati
 		notifier.client = slack.New(token, slack.OptionDebug(true))
 		notifier.Ready = true
 	} else {
+		// TODO(emil): this slack integration is depercated and this warning
+		// should be removed as it confuses users; instead a warning should be
+		// put in the clause above if someone is using this integration still
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
 	return &notifier

@@ -7,26 +7,26 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func NewLoader() *Loader {
-	return &Loader{
+func NewLoader() *loader {
+	return &loader{
 		Log:     log.DefaultLogger,
 		Loaders: make([]common.ListenerLoader, 0),
 	}
 }
 
-// Loader updates list of available listeners in the background as we don't want to load them on each event
-type Loader struct {
+// loader updates list of available listeners in the background as we don't want to load them on each event
+type loader struct {
 	Log     *zap.SugaredLogger
 	Loaders []common.ListenerLoader
 }
 
-// Register registers new listener reconciler
-func (s *Loader) Register(loader common.ListenerLoader) {
+// RegisterLoader registers new loader
+func (s *loader) RegisterLoader(loader common.ListenerLoader) {
 	s.Loaders = append(s.Loaders, loader)
 }
 
 // Reconcile loop for reconciling listeners from different sources
-func (s *Loader) Reconcile() (listeners common.Listeners) {
+func (s *loader) Reconcile() (listeners common.Listeners) {
 	listeners = make(common.Listeners, 0)
 	for _, loader := range s.Loaders {
 		l, err := loader.Load()

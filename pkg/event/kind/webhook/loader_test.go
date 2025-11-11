@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
-	"go.uber.org/zap"
 
 	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
@@ -33,7 +32,13 @@ func TestWebhookLoader(t *testing.T) {
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
 	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
+	webhooksLoader := NewWebhookLoader(
+		mockWebhooksClient,
+		WithWebhookTemplateClient(mockWebhookTemplatesClient),
+		WithDeprecatedClients(mockDeprecatedClients),
+		WithMetrics(v1.NewMetrics()),
+		WithWebhookResultsRepository(mockWebhooRepository),
+	)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))
@@ -64,7 +69,13 @@ func TestWebhookTemplateLoader(t *testing.T) {
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
 	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
+	webhooksLoader := NewWebhookLoader(
+		mockWebhooksClient,
+		WithWebhookTemplateClient(mockWebhookTemplatesClient),
+		WithDeprecatedClients(mockDeprecatedClients),
+		WithMetrics(v1.NewMetrics()),
+		WithWebhookResultsRepository(mockWebhooRepository),
+	)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

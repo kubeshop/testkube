@@ -99,17 +99,21 @@ Define API environment in agent mode
 */}}
 {{- define "testkube-api.env-agent-mode" -}}
 {{- if .Values.cloud.key -}}
-- name: TESTKUBE_PRO_API_KEY
+- name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
   value:  "{{ .Values.cloud.key }}"
 - name: TESTKUBE_PRO_AGENT_ID
   value: "{{ .Values.cloud.agentId }}"
 {{- else if .Values.cloud.existingSecret.key -}}
-- name: TESTKUBE_PRO_API_KEY
+- name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
   valueFrom:
     secretKeyRef:
       key: {{ .Values.cloud.existingSecret.key }}
       name: {{ .Values.cloud.existingSecret.name }}
-{{- end -}}
+{{- end }}
+- name: SELF_REGISTRATION_SECRET
+  value: "self-registration"
+- name: SECRET_CREATION_PREFIX
+  value: "{{ include "testkube-api.fullname" . }}-"
 {{- if .Values.cloud.url }}
 - name: TESTKUBE_CLOUD_URL
   value:  {{ tpl .Values.cloud.url $ | quote }}
