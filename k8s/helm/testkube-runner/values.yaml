@@ -38,6 +38,15 @@ runner:
     token: ""
     ## Whether to register as a Floating runner
     floating: false
+    ## Whether to register with mode Global
+    global: false
+    ## Whether to register with mode Group, global must be disabled
+    # groupName: ""
+    ## Label key prefix to filter the ones that will be used for the runner, example: runner.testkube.io/env: testing --> env=testing
+    labelPrefix: runner.testkube.io/
+    ## Whether to register with labels
+    # labels:
+    #   env: testing
 
 ## Global TestWorkflowTemplate that will be automatically included for all executions
 globalTemplate:
