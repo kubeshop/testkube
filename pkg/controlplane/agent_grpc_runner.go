@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
+	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -67,6 +68,30 @@ func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSi
 		})
 	}
 	return ret
+}
+
+func (s *Server) GetExecutionWorkflow(ctx context.Context, req *executionv1.GetExecutionWorkflowRequest) (*executionv1.GetExecutionWorkflowResponse, error) {
+	execution, err := s.resultsRepository.Get(ctx, req.GetExecutionId())
+	if err != nil {
+		return nil, errors.Join(
+			status.Error(codes.FailedPrecondition, "could not get execution"),
+			fmt.Errorf("get execution: %w", err),
+		)
+	}
+
+	data, err := json.Marshal(execution.ResolvedWorkflow)
+	if err != nil {
+		return nil, errors.Join(
+			status.Error(codes.FailedPrecondition, "could not marshal workflow execution"),
+			fmt.Errorf("marshal workflow execution: %w", err),
+		)
+	}
+
+	return &executionv1.GetExecutionWorkflowResponse{
+		Workflow: &testworkflowv1.TestWorkflow{
+			Json: data,
+		},
+	}, nil
 }
 
 func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (*cloud.RegisterResponse, error) {
