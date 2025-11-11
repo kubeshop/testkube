@@ -23,6 +23,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 		testWorkflowName, actorName, actorType string
 		logsOnly                               bool
 		tags                                   []string
+		status                                 string
 	)
 
 	cmd := &cobra.Command{
@@ -56,6 +57,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 					TagSelector: strings.Join(tags, ","),
 					ActorName:   actorName,
 					ActorType:   testkube.TestWorkflowRunningContextActorType(actorType),
+					Status:      status,
 				}
 				executions, err := client.ListTestWorkflowExecutions(testWorkflowName, limit, options)
 				ui.ExitOnError("getting test workflow executions list", err)
@@ -95,6 +97,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&tags, "tag", "", nil, "tag key value pair: --tag key1=value1")
 	cmd.Flags().StringVarP(&actorName, "actor-name", "", "", "test workflow running context actor name")
 	cmd.Flags().StringVarP(&actorType, "actor-type", "", "", "test workflow running context actor type one of cron|testtrigger|user|testworkfow|testworkflowexecution|program")
+	cmd.Flags().StringVarP(&status, "status", "", "", "test workflow execution status filter, supports comma-separated list of statuses (e.g., 'running', 'passed,failed')")
 
 	return cmd
 }

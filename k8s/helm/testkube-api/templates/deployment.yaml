@@ -251,12 +251,6 @@ spec:
               value: "{{ not .Values.next.legacyTests.enabled }}"
             - name: GITOPS_KUBERNETES_TO_CLOUD_ENABLED
               value: "{{ .Values.next.gitops.syncKubernetesToCloud }}"
-            - name: GITOPS_CLOUD_TO_KUBERNETES_ENABLED
-              value: "{{ .Values.next.gitops.syncCloudToKubernetes }}"
-            - name: GITOPS_CLOUD_NAME_PATTERN
-              value: "{{ .Values.next.gitops.namePatterns.cloud }}"
-            - name: GITOPS_KUBERNETES_NAME_PATTERN
-              value: "{{ .Values.next.gitops.namePatterns.kubernetes }}"
             - name: DISABLE_DEFAULT_AGENT
               value: "{{ not .Values.next.legacyAgent.enabled }}"
             - name: ENABLE_CRON_JOBS

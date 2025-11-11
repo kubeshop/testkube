@@ -22,7 +22,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
+func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) { //nolint:staticcheck
+	_, err := s.AcceptExecution(ctx, &executionv1.AcceptExecutionRequest{
+		ExecutionId: req.ExecutionId,
+		Namespace:   req.Namespace,
+		Signature:   req.Signature,
+	})
+	return &executionv1.SetExecutionSchedulingResponse{}, err //nolint:staticcheck
+}
+
+func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExecutionRequest) (*executionv1.AcceptExecutionResponse, error) {
 	execution, err := s.resultsRepository.Get(ctx, req.GetExecutionId())
 	if err != nil {
 		return nil, errors.Join(
@@ -42,7 +51,7 @@ func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.Se
 		)
 	}
 
-	return &executionv1.SetExecutionSchedulingResponse{}, nil
+	return &executionv1.AcceptExecutionResponse{}, nil
 }
 
 func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {

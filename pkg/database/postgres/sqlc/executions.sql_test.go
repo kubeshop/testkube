@@ -542,9 +542,11 @@ WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
     AND \(COALESCE\(\$15, NULL\) IS NULL OR 
          \(\$15::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
          \(\$15::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
+    AND \(COALESCE\(\$16::double precision, NULL\) IS NULL OR \(w.status->>'health'\)::jsonb->>'overallHealth' IS NOT NULL AND \(\(w.status->>'health'\)::jsonb->>'overallHealth'\)::double precision >= \$16::double precision\)
+    AND \(COALESCE\(\$17::double precision, NULL\) IS NULL OR \(w.status->>'health'\)::jsonb->>'overallHealth' IS NOT NULL AND \(\(w.status->>'health'\)::jsonb->>'overallHealth'\)::double precision <= \$17::double precision\)
     AND \(     
-        \(COALESCE\(\$16::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$16::jsonb\) AS key_condition
+        \(COALESCE\(\$18::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$18::jsonb\) AS key_condition
                 WHERE 
                 CASE 
                     WHEN key_condition->>'operator' = 'not_exists' THEN
@@ -552,33 +554,12 @@ WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
                     ELSE
                         e.tags \? \(key_condition->>'key'\)
                 END
-            \) = jsonb_array_length\(\$16::jsonb\)
+            \) = jsonb_array_length\(\$18::jsonb\)
         \)
         AND
-        \(COALESCE\(\$17::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$17::jsonb\) AS condition
-                WHERE e.tags->>\(condition->>'key'\) = ANY\(
-                    SELECT jsonb_array_elements_text\(condition->'values'\)
-                \)
-            \) > 0
-        \)
-    \)
-    AND \(
-        \(COALESCE\(\$18::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$18::jsonb\) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT \(w.labels \? \(key_condition->>'key'\)\)
-                    ELSE
-                        w.labels \? \(key_condition->>'key'\)
-                END
-            \) > 0
-        \)
-        OR
         \(COALESCE\(\$19::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
             \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$19::jsonb\) AS condition
-                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                WHERE e.tags->>\(condition->>'key'\) = ANY\(
                     SELECT jsonb_array_elements_text\(condition->'values'\)
                 \)
             \) > 0
@@ -594,15 +575,36 @@ WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
                     ELSE
                         w.labels \? \(key_condition->>'key'\)
                 END
-            \) = jsonb_array_length\(\$20::jsonb\)
+            \) > 0
         \)
-        AND
+        OR
         \(COALESCE\(\$21::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
             \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$21::jsonb\) AS condition
                 WHERE w.labels->>\(condition->>'key'\) = ANY\(
                     SELECT jsonb_array_elements_text\(condition->'values'\)
                 \)
-            \) = jsonb_array_length\(\$21::jsonb\)
+            \) > 0
+        \)
+    \)
+    AND \(
+        \(COALESCE\(\$22::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$22::jsonb\) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT \(w.labels \? \(key_condition->>'key'\)\)
+                    ELSE
+                        w.labels \? \(key_condition->>'key'\)
+                END
+            \) = jsonb_array_length\(\$22::jsonb\)
+        \)
+        AND
+        \(COALESCE\(\$23::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$23::jsonb\) AS condition
+                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                    SELECT jsonb_array_elements_text\(condition->'values'\)
+                \)
+            \) = jsonb_array_length\(\$23::jsonb\)
         \)
     \)
 GROUP BY r\.status`
@@ -626,6 +628,8 @@ GROUP BY r\.status`
 		ActorType:          "",
 		GroupID:            "",
 		Initialized:        pgtype.Bool{Valid: false},
+		MinHealth:          0,
+		MaxHealth:          0,
 		TagKeys:            []byte{},
 		TagConditions:      []byte{},
 		LabelKeys:          []byte{},
@@ -652,6 +656,8 @@ GROUP BY r\.status`
 		params.ActorType,
 		params.GroupID,
 		params.Initialized,
+		params.MinHealth,
+		params.MaxHealth,
 		params.TagKeys,
 		params.TagConditions,
 		params.LabelKeys,

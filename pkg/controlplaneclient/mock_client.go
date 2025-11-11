@@ -273,6 +273,21 @@ func (mr *MockClientMockRecorder) GetCredential(ctx, environmentId, executionId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredential", reflect.TypeOf((*MockClient)(nil).GetCredential), ctx, environmentId, executionId, name)
 }
 
+// GetCredentialWithSource mocks base method.
+func (m *MockClient) GetCredentialWithSource(ctx context.Context, environmentId, executionId, name, source string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCredentialWithSource", ctx, environmentId, executionId, name, source)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCredentialWithSource indicates an expected call of GetCredentialWithSource.
+func (mr *MockClientMockRecorder) GetCredentialWithSource(ctx, environmentId, executionId, name, source any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredentialWithSource", reflect.TypeOf((*MockClient)(nil).GetCredentialWithSource), ctx, environmentId, executionId, name, source)
+}
+
 // GetExecution mocks base method.
 func (m *MockClient) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()

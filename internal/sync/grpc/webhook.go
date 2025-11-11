@@ -31,7 +31,7 @@ func (c Client) UpdateOrCreateWebhook(ctx context.Context, obj executorv1.Webhoo
 				Payload: jsonEncodedObj,
 			},
 		},
-	}); err != nil {
+	}, c.callOpts...); err != nil {
 		return fmt.Errorf("send request to update or create webhook: %w", err)
 	}
 
@@ -53,7 +53,7 @@ func (c Client) DeleteWebhook(ctx context.Context, name string) error {
 				Id: &name,
 			},
 		},
-	}); err != nil {
+	}, c.callOpts...); err != nil {
 		return fmt.Errorf("send request to delete webhook: %w", err)
 	}
 

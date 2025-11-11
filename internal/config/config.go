@@ -173,10 +173,7 @@ type RunnerConfig struct {
 }
 
 type GitOpsSyncConfig struct {
-	GitOpsSyncKubernetesToCloudEnabled bool   `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
-	GitOpsSyncCloudToKubernetesEnabled bool   `envconfig:"GITOPS_CLOUD_TO_KUBERNETES_ENABLED" default:"false"`
-	GitOpsSyncCloudNamePattern         string `envconfig:"GITOPS_CLOUD_NAME_PATTERN" default:"<name>"`
-	GitOpsSyncKubernetesNamePattern    string `envconfig:"GITOPS_KUBERNETES_NAME_PATTERN" default:"<name>"`
+	GitOpsSyncKubernetesToCloudEnabled bool `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
 }
 
 type CronJobConfig struct {
@@ -212,6 +209,7 @@ type Config struct {
 	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`

@@ -89,6 +89,10 @@ type Filter interface {
 	AssignedDefined() bool
 	Initialized() bool
 	InitializedDefined() bool
+	MinHealth() float64
+	MinHealthDefined() bool
+	MaxHealth() float64
+	MaxHealthDefined() bool
 }
 
 //go:generate go tool mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository

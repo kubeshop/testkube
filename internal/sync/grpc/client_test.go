@@ -13,13 +13,14 @@ import (
 
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
 	syncv1 "github.com/kubeshop/testkube/pkg/proto/testkube/sync/v1"
+	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
 )
 
 type testSrv struct {
 	syncv1.UnimplementedSyncServiceServer
 
 	TestTrigger          *syncv1.TestTrigger
-	TestWorkflow         *syncv1.TestWorkflow
+	TestWorkflow         *testworkflowv1.TestWorkflow
 	TestWorkflowTemplate *syncv1.TestWorkflowTemplate
 	Webhook              *syncv1.Webhook
 	WebhookTemplate      *syncv1.WebhookTemplate
@@ -80,12 +81,4 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 	}
 
 	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar")
-}
-
-func TestIsSupported(t *testing.T) {
-	client := startGRPCTestConnection(t, &testSrv{})
-
-	if !client.IsSupported(t.Context()) {
-		t.Errorf("client should be supported")
-	}
 }

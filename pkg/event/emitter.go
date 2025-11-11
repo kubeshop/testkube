@@ -114,6 +114,7 @@ const (
 	leaseClusterID     string = "event-emitters"
 )
 
+// TODO(emil): convert to using new common coordinator package for lease acquisition
 func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
 	e.log.Info("event emitter waiting for lease")
 	e.leaseCheck(ctx, leaseChan)
