@@ -195,7 +195,6 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 
 	t.Run("emitter refresh listeners in reconcile loop", func(t *testing.T) {
 		t.Parallel()
-		// given first reconciler loop was done
 		eventBus := bus.NewEventBusMock()
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
@@ -220,13 +219,12 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy3"})
 
 		// then each reconciler (3 reconcilers) should load 2 listeners
-		time.Sleep(2 * time.Second)
+		time.Sleep(1100 * time.Millisecond)
 		assert.Len(t, emitter.getListeners(), 6)
 	})
 
 	t.Run("emitter updates listeners in reconcile loop", func(t *testing.T) {
 		t.Parallel()
-		// given first reconciler loop was done
 		eventBus := bus.NewEventBusMock()
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
@@ -247,9 +245,10 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		assert.Equal(t, "v1", emitter.getListeners()[0].Selector())
 
 		// This loader should overwrite the items loaded from the first loader
+		// on next reconiliation loop
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v2"})
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(1100 * time.Millisecond)
 		assert.Len(t, emitter.getListeners(), 2)
 		assert.Equal(t, "v2", emitter.getListeners()[0].Selector())
 	})
