@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/logs/config"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/utils/test"
+	"go.uber.org/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -22,7 +24,7 @@ var (
 
 // tests based on real NATS event bus
 
-func GetTestNATSEmitter() *Emitter {
+func GetTestNATSEmitter(mockCtrl *gomock.Controller) *Emitter {
 	os.Setenv("DEBUG", "true")
 	// configure NATS event bus
 	nc, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
@@ -32,20 +34,26 @@ func GetTestNATSEmitter() *Emitter {
 	if err != nil {
 		panic(err)
 	}
-	return NewEmitter(bus.NewNATSBus(nc), "")
+	mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+	mockLeaseRepository.EXPECT().
+		TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(true, nil).AnyTimes()
+	return NewEmitter(bus.NewNATSBus(nc), mockLeaseRepository, "agentevents", "")
 }
 
 func TestEmitter_NATS_Register_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("Register adds new listener", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
 		// then
-		assert.Equal(t, 1, len(emitter.Listeners))
+		assert.Equal(t, 1, len(emitter.listeners))
 
 		t.Log("T1 completed")
 	})
@@ -55,8 +63,10 @@ func TestEmitter_NATS_Listen_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("listener handles only given events based on selectors", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=OnlyMe"}
 		// and listener with non-matching selector
@@ -67,10 +77,10 @@ func TestEmitter_NATS_Listen_Integration(t *testing.T) {
 		emitter.Register(listener2)
 
 		// listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 
@@ -97,8 +107,10 @@ func TestEmitter_NATS_Notify_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("notifies listeners in queue groups", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l3", NotificationCount: 0}
@@ -109,10 +121,10 @@ func TestEmitter_NATS_Notify_Integration(t *testing.T) {
 		emitter.Register(listener2)
 
 		// and listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 
@@ -130,8 +142,10 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matic selector
@@ -142,10 +156,10 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 		emitter.Register(listener2)
 
 		// listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 

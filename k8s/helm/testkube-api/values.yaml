@@ -207,7 +207,7 @@ cloud:
   uiUrl: ""
   ## Public Agent ID
   agentId: ""
-  ## Agent Token / Secret Key
+  ## Legacy Agent Token / Secret Key value now used as registration token
   key: ""
   ## Organization ID
   orgId: ""
@@ -239,7 +239,7 @@ cloud:
   existingSecret:
     ## Name of the secret. If set, this will be used instead of the above values
     name: ""
-    ## Key for the License Key
+    ## Key for the legacy Agent Token / Secret Key value now used as registration token
     key: ""
     ## Key for the Organization ID
     orgId: ""

@@ -1876,13 +1876,20 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
-	// Health filters
-	if filter.MinHealthDefined() {
-		params.MinHealth = filter.MinHealth()
-	}
-
-	if filter.MaxHealthDefined() {
-		params.MaxHealth = filter.MaxHealth()
+	// Health filters - convert [][2]float64 to JSONB array
+	if filter.HealthRangesDefined() {
+		ranges := filter.HealthRanges()
+		jsonRanges := make([]map[string]float64, len(ranges))
+		for i, rng := range ranges {
+			jsonRanges[i] = map[string]float64{
+				"min": rng[0],
+				"max": rng[1],
+			}
+		}
+		params.HealthRanges, err = json.Marshal(jsonRanges)
+		if err != nil {
+			return params, err
+		}
 	}
 
 	if filter.Selector() != "" {

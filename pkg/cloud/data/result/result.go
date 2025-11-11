@@ -7,7 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 
-	intconfig "github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 
 	"github.com/pkg/errors"
@@ -25,13 +25,7 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	// Create a minimal proContext for this repository
-	proContext := &intconfig.ProContext{
-		APIKey: apiKey,
-		OrgID:  "",
-		EnvID:  "",
-	}
+func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, proContext *config.ProContext) *CloudRepository {
 	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, proContext)}
 }
 

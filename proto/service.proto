@@ -388,6 +388,8 @@ enum AgentCapability {
   AGENT_CAPABILITY_RUNNER = 1;
   AGENT_CAPABILITY_LISTENER = 2;
   AGENT_CAPABILITY_GITOPS = 3;
+  AGENT_CAPABILITY_WEBHOOKS = 4;
+  AGENT_CAPABILITY_CLOUD_WEBHOOKS = 5;
 }
 
 message RegisterRequest {
@@ -401,6 +403,7 @@ message RegisterRequest {
 message RegisterResponse {
   string runner_id = 1;
   string runner_key = 2;
+  string organization_id = 3;
 }
 
 enum RunnerRequestType {

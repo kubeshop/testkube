@@ -23,7 +23,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		"testkube-mcp",
 		cfg.Version,
 		server.WithToolCapabilities(true),
-		server.WithToolHandlerMiddleware(DebugMiddleware(cfg.Debug)),
+		server.WithToolHandlerMiddleware(DebugMiddleware(&cfg)),
 		server.WithToolHandlerMiddleware(TelemetryMiddleware(&cfg)),
 	)
 

@@ -481,19 +481,11 @@ func (m *MockFilter) AssignedDefined() bool {
 	return m.Called().Bool(0)
 }
 
-func (m *MockFilter) MinHealth() float64 {
-	return m.Called().Get(0).(float64)
+func (m *MockFilter) HealthRanges() [][2]float64 {
+	return m.Called().Get(0).([][2]float64)
 }
 
-func (m *MockFilter) MinHealthDefined() bool {
-	return m.Called().Bool(0)
-}
-
-func (m *MockFilter) MaxHealth() float64 {
-	return m.Called().Get(0).(float64)
-}
-
-func (m *MockFilter) MaxHealthDefined() bool {
+func (m *MockFilter) HealthRangesDefined() bool {
 	return m.Called().Bool(0)
 }
 
@@ -540,8 +532,7 @@ func createTestFilter() *MockFilter {
 	filter.On("ActorTypeDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
-	filter.On("MinHealthDefined").Return(false)
-	filter.On("MaxHealthDefined").Return(false)
+	filter.On("HealthRangesDefined").Return(false)
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))
