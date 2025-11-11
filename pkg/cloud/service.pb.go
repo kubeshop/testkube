@@ -2983,11 +2983,25 @@ func (x *RegisterRequest) GetCapabilities() []AgentCapability {
 	return nil
 }
 
-func (x *RegisterRequest) GetRunnerMode() string {
+func (x *RegisterRequest) GetRunnerGroup() string {
 	if x != nil {
-		return x.RunnerMode
+		return x.RunnerGroup
 	}
 	return ""
+}
+
+func (x *RegisterRequest) RunnerIsGlobal() bool {
+	if x != nil {
+		return x.IsGlobal
+	}
+	return false
+}
+
+func (x *RegisterRequest) GetRunnerLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return map[string]string{};
 }
 
 type RegisterResponse struct {
