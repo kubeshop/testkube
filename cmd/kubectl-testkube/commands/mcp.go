@@ -202,7 +202,7 @@ func runEnvironmentMode(debug bool, transport, shttpHost string, shttpPort int, 
 	displayConfiguration(configData, "environment variable")
 
 	// Start the MCP server
-	if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile); err != nil {
+	if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-env"); err != nil {
 		if ui.IsVerbose() {
 			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
 		}
@@ -270,7 +270,7 @@ func runDefaultMode(debug bool, transport, shttpHost string, shttpPort int, shtt
 	displayConfiguration(configData, "default")
 
 	// Start the MCP server
-	if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile); err != nil {
+	if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-direct"); err != nil {
 		if ui.IsVerbose() {
 			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
 		}
@@ -283,7 +283,7 @@ func runDefaultMode(debug bool, transport, shttpHost string, shttpPort int, shtt
 	}
 }
 
-func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) error {
+func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string, source string) error {
 	// Load config to check telemetry settings
 	cfg, err := config.Load()
 	telemetryEnabled := true
@@ -311,6 +311,7 @@ func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, deb
 		EnvId:            envID,
 		Debug:            debug,
 		TelemetryEnabled: telemetryEnabled,
+		Source:           source,
 		SHTTPConfig: mcp.SHTTPConfig{
 			Host:      shttpHost,
 			Port:      shttpPort,

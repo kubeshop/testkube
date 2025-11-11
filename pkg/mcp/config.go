@@ -44,6 +44,9 @@ type MCPServerConfig struct {
 	// TelemetryEnabled enables telemetry collection for MCP tool usage
 	TelemetryEnabled bool
 
+	// Source identifies how MCP is being accessed (e.g., "cli", "http-endpoint")
+	Source string
+
 	// SHTTP-specific configuration
 	SHTTPConfig SHTTPConfig
 }
@@ -108,6 +111,7 @@ func LoadConfigFromEnv() MCPServerConfig {
 		EnvId:            os.Getenv("TK_ENV_ID"),
 		Debug:            os.Getenv("TK_DEBUG") == "true",
 		TelemetryEnabled: os.Getenv("TK_TELEMETRY_ENABLED") != "false", // Default to true unless explicitly disabled
+		Source:           "unknown",                                    // Source should be set by caller, not from env
 		SHTTPConfig:      shttpConfig,
 	}
 }

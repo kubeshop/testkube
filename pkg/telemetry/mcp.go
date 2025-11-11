@@ -8,13 +8,13 @@ import (
 )
 
 // SendMCPToolEventWithContext sends telemetry for MCP tool execution with explicit context
-func SendMCPToolEventWithContext(toolName string, duration time.Duration, hasError bool, version string, runContext RunContext) (string, error) {
-	payload := NewMCPToolPayloadWithContext(toolName, "testkube_mcp_tool_execution", duration, version, hasError, runContext)
+func SendMCPToolEventWithContext(toolName string, duration time.Duration, hasError bool, version string, runContext RunContext, source string) (string, error) {
+	payload := NewMCPToolPayloadWithContext(toolName, "testkube_mcp_tool_execution", duration, version, hasError, runContext, source)
 	return sendData(senders, payload)
 }
 
 // NewMCPToolPayloadWithContext creates a payload for MCP tool telemetry events with custom context
-func NewMCPToolPayloadWithContext(toolName, eventName string, duration time.Duration, version string, hasError bool, runContext RunContext) Payload {
+func NewMCPToolPayloadWithContext(toolName, eventName string, duration time.Duration, version string, hasError bool, runContext RunContext, source string) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: machineID,
@@ -41,6 +41,7 @@ func NewMCPToolPayloadWithContext(toolName, eventName string, duration time.Dura
 				ToolName:   toolName,
 				DurationMs: int32(duration.Milliseconds()),
 				CliContext: GetCliRunContext(),
+				Source:     source,
 			},
 		}},
 	}
