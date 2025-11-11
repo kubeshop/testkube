@@ -183,6 +183,11 @@ type CronJobConfig struct {
 	EnableCronJobs string `envconfig:"ENABLE_CRON_JOBS" default:""`
 }
 
+type WebhookConfig struct {
+	DisableWebhooks     bool `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	EnableCloudWebhooks bool `envconfig:"ENABLE_CLOUD_WEBHOOKS" default:"false"`
+}
+
 type Config struct {
 	APIConfig
 	OSSControlPlaneConfig
@@ -197,6 +202,7 @@ type Config struct {
 	ImageInspectorConfig
 	GitOpsSyncConfig
 	CronJobConfig
+	WebhookConfig
 	// Tracing
 	TracingEnabled                  bool     `envconfig:"TRACING_ENABLED" default:"false"`
 	OTLPEndpoint                    string   `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
@@ -227,7 +233,6 @@ type Config struct {
 	EnableK8sEvents                 bool     `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
 	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
-	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 

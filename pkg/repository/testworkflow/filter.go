@@ -26,8 +26,7 @@ type FilterImpl struct {
 	FRunnerID      string
 	FInitialized   *bool
 	FAssigned      *bool
-	FMinHealth     *float64
-	FMaxHealth     *float64
+	FHealthRanges  [][2]float64
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -133,9 +132,8 @@ func (f *FilterImpl) WithAssigned(assigned bool) *FilterImpl {
 	return f
 }
 
-func (f *FilterImpl) WithHealthRange(min, max float64) *FilterImpl {
-	f.FMinHealth = &min
-	f.FMaxHealth = &max
+func (f *FilterImpl) WithHealthRanges(ranges [][2]float64) *FilterImpl {
+	f.FHealthRanges = ranges
 	return f
 }
 
@@ -280,24 +278,10 @@ func (f FilterImpl) Assigned() bool {
 	return *f.FAssigned
 }
 
-func (f FilterImpl) MinHealthDefined() bool {
-	return f.FMinHealth != nil
+func (f FilterImpl) HealthRangesDefined() bool {
+	return len(f.FHealthRanges) > 0
 }
 
-func (f FilterImpl) MinHealth() float64 {
-	if f.FMinHealth == nil {
-		return 0
-	}
-	return *f.FMinHealth
-}
-
-func (f FilterImpl) MaxHealthDefined() bool {
-	return f.FMaxHealth != nil
-}
-
-func (f FilterImpl) MaxHealth() float64 {
-	if f.FMaxHealth == nil {
-		return 0
-	}
-	return *f.FMaxHealth
+func (f FilterImpl) HealthRanges() [][2]float64 {
+	return f.FHealthRanges
 }

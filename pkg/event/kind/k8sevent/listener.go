@@ -56,6 +56,11 @@ func (l *K8sEventListener) Metadata() map[string]string {
 	}
 }
 
+func (l *K8sEventListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Selector(), l.Events())
+	return valid
+}
+
 func (l *K8sEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	ev := k8sevents.MapAPIToCRD(event, l.defaultNamespace, time.Now())
 	eventsClient := l.clientset.CoreV1().Events(l.defaultNamespace)

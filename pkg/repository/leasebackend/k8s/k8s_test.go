@@ -2,8 +2,8 @@ package k8s
 
 import "testing"
 
-func TestLeaseName_Default(t *testing.T) {
-	b := NewK8sLeaseBackend(nil, "")
+func TestLeaseName_Prefix(t *testing.T) {
+	b := NewK8sLeaseBackend(nil, "testkube-triggers-lease", "")
 
 	name := b.leaseName("cluster-a")
 
@@ -13,7 +13,7 @@ func TestLeaseName_Default(t *testing.T) {
 }
 
 func TestLeaseName_Override(t *testing.T) {
-	b := NewK8sLeaseBackend(nil, "", WithLeaseName("custom-lease"))
+	b := NewK8sLeaseBackend(nil, "lease-prefix", "", WithLeaseName("custom-lease"))
 
 	name := b.leaseName("cluster-b")
 
