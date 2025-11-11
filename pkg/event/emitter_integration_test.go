@@ -6,14 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/logs/config"
-	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
-	"github.com/kubeshop/testkube/pkg/utils/test"
-	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
+	"github.com/kubeshop/testkube/pkg/logs/config"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 var (
