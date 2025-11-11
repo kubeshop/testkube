@@ -274,7 +274,7 @@ func main() {
 		if cfg.TestkubeProAPIKey != "" {
 			registrationToken = cfg.TestkubeProAPIKey
 		}
-    
+
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
 			RegistrationToken: registrationToken,
 			RunnerName:        runnerName,
