@@ -53,6 +53,7 @@ type Params struct {
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
 	Email                      string     `json:"email,omitempty"`
+	Source                     string     `json:"source,omitempty"`
 }
 
 type Event struct {
