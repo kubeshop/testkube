@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
@@ -79,7 +80,8 @@ func (s *Server) GetExecutionWorkflow(ctx context.Context, req *executionv1.GetE
 		)
 	}
 
-	data, err := json.Marshal(execution.ResolvedWorkflow)
+	workflow := testworkflowmappers.MapAPIToKube(execution.ResolvedWorkflow)
+	data, err := json.Marshal(workflow)
 	if err != nil {
 		return nil, errors.Join(
 			status.Error(codes.FailedPrecondition, "could not marshal workflow execution"),
