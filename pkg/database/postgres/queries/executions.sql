@@ -390,12 +390,14 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@min_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= @min_health::double precision)
-    AND (COALESCE(@max_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= @max_health::double precision)
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -487,12 +489,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@min_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= @min_health::double precision)
-    AND (COALESCE(@max_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= @max_health::double precision)
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -635,12 +639,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@min_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= @min_health::double precision)
-    AND (COALESCE(@max_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= @max_health::double precision)
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -1115,12 +1121,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@min_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= @min_health::double precision)
-    AND (COALESCE(@max_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= @max_health::double precision)
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -1212,12 +1220,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@min_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= @min_health::double precision)
-    AND (COALESCE(@max_health::double precision, NULL) IS NULL OR 
-         (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL AND 
-         ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= @max_health::double precision)
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
