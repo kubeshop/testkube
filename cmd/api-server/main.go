@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/zapr"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -261,16 +263,27 @@ func main() {
 			}
 		}
 
+		// Get all labels that matches with prefix
+		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
+		runnerLabels["registration"] = "self"
+
+		// Debug labels found
+		log.DefaultLogger.Debugw("labels to be configured", runnerLabels)
+
 		registrationToken := cfg.TestkubeProAgentRegToken
 		if cfg.TestkubeProAPIKey != "" {
 			registrationToken = cfg.TestkubeProAPIKey
 		}
+
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
 			RegistrationToken: registrationToken,
 			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
 			Capabilities:      capabilities,
+			RunnerGroup:       cfg.RunnerGroup,
+			IsGlobal:          cfg.IsGlobal,
+			Labels:            runnerLabels,
 		})
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
@@ -887,4 +900,28 @@ func resolveLeaderIdentifier() string {
 	}
 
 	return fmt.Sprintf("testkube-core-%d", time.Now().UnixNano())
+}
+
+func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {
+	if deploymentName == "" {
+		return nil
+	}
+
+	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
+	if err != nil {
+		log.DefaultLogger.Warnw("cannot read deployment labels", "deployment", deploymentName, "error", err.Error())
+		return nil
+	}
+
+	// clone to avoid sharing internal maps
+	labels := make(map[string]string, len(deploy.Labels))
+	for k, v := range deploy.Labels {
+		if strings.HasPrefix(k, labelPrefix) {
+			shortKey := strings.TrimPrefix(k, labelPrefix)
+			if shortKey != "" {
+				labels[shortKey] = v
+			}
+		}
+	}
+	return labels
 }
