@@ -10,8 +10,13 @@ const (
 	ListenerKindWebhook   string = "webhook"
 )
 
+// Listener can be uniquely identified by combining the Kind, Group, and Name fields.
 type Listener interface {
-	// Name uniquely identifies listener
+	// Kind of listener
+	Kind() string
+	// Group of listener
+	Group() string
+	// Name of listener
 	Name() string
 	// Match determines whether an event should be sent to the listener
 	Match(event testkube.Event) bool
