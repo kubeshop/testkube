@@ -30,7 +30,7 @@ type TestWorkflowExecutionQueriesInterface interface {
 	// Insert operations
 	InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error
 	InsertTestWorkflowResult(ctx context.Context, arg InsertTestWorkflowResultParams) error
-	InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (int32, error)
+	InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (pgtype.UUID, error)
 	InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWorkflowOutputParams) error
 	InsertTestWorkflowReport(ctx context.Context, arg InsertTestWorkflowReportParams) error
 	InsertTestWorkflowResourceAggregations(ctx context.Context, arg InsertTestWorkflowResourceAggregationsParams) error
@@ -40,10 +40,10 @@ type TestWorkflowExecutionQueriesInterface interface {
 	UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTestWorkflowExecutionParams) error
 	UpdateTestWorkflowExecutionResult(ctx context.Context, arg UpdateTestWorkflowExecutionResultParams) error
 	UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecutionStatusAtParams) error
-	UpdateTestWorkflowExecutionReport(ctx context.Context, arg UpdateTestWorkflowExecutionReportParams) error
 	UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error
 	UpdateExecutionStatusAtStrict(ctx context.Context, arg UpdateExecutionStatusAtStrictParams) error
 	UpdateTestWorkflowExecutionResultStrict(ctx context.Context, arg UpdateTestWorkflowExecutionResultStrictParams) (string, error)
+	UpdateExecutionStatus(ctx context.Context, arg UpdateExecutionStatusParams) error
 
 	// Delete operations
 	DeleteTestWorkflowSignatures(ctx context.Context, executionID string) error
