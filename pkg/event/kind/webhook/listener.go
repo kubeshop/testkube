@@ -18,7 +18,6 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
@@ -85,7 +84,9 @@ type WebhookListener struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
-	proContext                    *config.ProContext
+	dashboardURI                  string
+	orgID                         string
+	envID                         string
 
 	// Deprecated fields
 	deprecatedRepositories commons.DeprecatedRepositories
@@ -129,11 +130,27 @@ func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
 	}
 }
 
-// listenerWithProContext sets the "pro context" for the connection to the
+// listenerWithDashboardURI sets the dashboard URI for the connection to the
 // control plane to be used in templates.
-func listenerWithProContext(proContext *config.ProContext) WebhookListenerOption {
+func listenerWithDashboardURI(dashboardURI string) WebhookListenerOption {
 	return func(wl *WebhookListener) {
-		wl.proContext = proContext
+		wl.dashboardURI = dashboardURI
+	}
+}
+
+// listenerWithOrgID sets the organization ID for the connection to the
+// control plane to be used in templates.
+func listenerWithOrgID(orgID string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.orgID = orgID
+	}
+}
+
+// listenerWithEnvID sets the environment ID for the connection to the
+// control plane to be used in templates.
+func listenerWithEnvID(envID string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.envID = envID
 	}
 }
 
@@ -447,7 +464,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, config)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.dashboardURI, l.orgID, l.envID, config)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}

@@ -9,7 +9,6 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
@@ -58,7 +57,9 @@ type WebhooksLoader struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
-	proContext                    *config.ProContext
+	dashboardURI string
+	orgID        string
+	envID        string
 
 	// Deprecated fields
 	deprecatedClients      commons.DeprecatedClients
@@ -107,11 +108,27 @@ func WithEnvs(envs map[string]string) WebhookLoaderOption {
 	}
 }
 
-// WithProContext sets the "pro context" for the connection to the control plane
+// WithDashboardURI sets the dashboard URI for the connection to the control plane
 // to be used in templates
-func WithProContext(proContext *config.ProContext) WebhookLoaderOption {
+func WithDashboardURI(dashboardURI string) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
-		loader.proContext = proContext
+		loader.dashboardURI = dashboardURI
+	}
+}
+
+// WithOrgID sets the organization ID for the connection to the control plane
+// to be used in templates
+func WithOrgID(orgID string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.orgID = orgID
+	}
+}
+
+// WithEnvID sets the environment ID for the connection to the control plane
+// to be used in templates
+func WithEnvID(envID string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.envID = envID
 	}
 }
 
@@ -201,7 +218,9 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				listenerWithMetrics(r.metrics),
 				listenerWithSecretClient(r.secretClient),
 				listenerWithEnvs(r.envs),
-				listenerWithProContext(r.proContext),
+				listenerWithDashboardURI(r.dashboardURI),
+				listenerWithOrgID(r.orgID),
+				listenerWithEnvID(r.envID),
 			),
 		)
 	}
