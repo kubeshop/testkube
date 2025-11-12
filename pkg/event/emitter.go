@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -58,23 +59,15 @@ type Emitter struct {
 // uniqueListeners keeps a unique set of listeners by kind and name.
 // The last listeners for each kind and name combination takes precedence.
 func uniqueListeners(listeners []common.Listener) []common.Listener {
-	exists := make(map[string]map[string]common.Listener)
-
-	// Determine latest version for each listener by kind and name
-	for i := range listeners {
-		kind := listeners[i].Kind()
-		name := listeners[i].Name()
-		if exists[kind] == nil {
-			exists[kind] = make(map[string]common.Listener)
-		}
-		exists[kind][name] = listeners[i]
-	}
-	// Generate unique listeners slice
+	set := make(map[string]struct{})
 	unique := make(common.Listeners, 0, len(listeners))
-	for _, kindMap := range exists {
-		for _, listener := range kindMap {
-			unique = append(unique, listener)
+	for _, listener := range slices.Backward(listeners) {
+		key := listener.Kind() + "/" + listener.Name()
+		if _, exists := set[key]; exists {
+			continue
 		}
+		set[key] = struct{}{}
+		unique = append(unique, listener)
 	}
 	return unique
 }
