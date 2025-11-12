@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -24,15 +25,15 @@ const (
 func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
 	instanceId := utils.RandAlphanum(10)
 	return &Emitter{
-		loader:         NewLoader(),
-		log:            log.DefaultLogger.With("instance_id", instanceId),
-		bus:            eventBus,
-		instanceId:     instanceId,
-		leaseBackend:   leaseBackend,
-		subjectRoot:    subjectRoot,
-		listeners:      make(common.Listeners, 0),
-		listenerExists: make(map[string]map[string]struct{}),
-		clusterName:    clusterName,
+		loader:              NewLoader(),
+		log:                 log.DefaultLogger.With("instance_id", instanceId),
+		bus:                 eventBus,
+		instanceId:          instanceId,
+		leaseBackend:        leaseBackend,
+		subjectRoot:         subjectRoot,
+		registeredListeners: make(common.Listeners, 0),
+		listeners:           make(common.Listeners, 0),
+		clusterName:         clusterName,
 	}
 }
 
@@ -44,38 +45,49 @@ type Interface interface {
 type Emitter struct {
 	*loader
 
-	log            *zap.SugaredLogger
-	listeners      common.Listeners
-	listenerExists map[string]map[string]struct{}
-	mutex          sync.RWMutex
-	bus            bus.Bus
-	instanceId     string
-	leaseBackend   leasebackend.Repository
-	subjectRoot    string
-	clusterName    string
+	log                 *zap.SugaredLogger
+	registeredListeners common.Listeners
+	listeners           common.Listeners
+	mutex               sync.RWMutex
+	bus                 bus.Bus
+	instanceId          string
+	leaseBackend        leasebackend.Repository
+	subjectRoot         string
+	clusterName         string
 }
 
-// appendUniqueListeners appends only listeners unique by kind and name.
-func (e *Emitter) appendUniqueListeners(listeners ...common.Listener) {
+// uniqueListeners keeps a unique set of listeners by kind and name.
+// The last listener for each kind and name combination takes precedence.
+func uniqueListeners(listeners []common.Listener) []common.Listener {
+	set := make(map[string]struct{})
+	unique := make(common.Listeners, 0, len(listeners))
+	for _, listener := range slices.Backward(listeners) {
+		key := listener.Kind() + "/" + listener.Name()
+		if _, exists := set[key]; exists {
+			continue
+		}
+		set[key] = struct{}{}
+		unique = append(unique, listener)
+	}
+	return unique
+}
+
+func (e *Emitter) registerListener(listener common.Listener) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-	for i := range listeners {
-		kind := listeners[i].Kind()
-		name := listeners[i].Name()
-		if e.listenerExists[kind] == nil {
-			e.listenerExists[kind] = make(map[string]struct{})
-		}
-		if _, exists := e.listenerExists[kind][name]; !exists {
-			// Mark as existing and append to listeners array
-			e.listenerExists[kind][name] = struct{}{}
-			e.listeners = append(e.listeners, listeners[i])
-		}
-	}
+	e.registeredListeners = uniqueListeners(append(e.registeredListeners, listener))
+	e.listeners = uniqueListeners(append(e.listeners, e.registeredListeners...))
+}
+
+func (e *Emitter) loadListeners(loadedListeners []common.Listener) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.listeners = uniqueListeners(append(loadedListeners, e.registeredListeners...))
 }
 
 // Register adds new listener
 func (e *Emitter) Register(listener common.Listener) {
-	e.appendUniqueListeners(listener)
+	e.registerListener(listener)
 }
 
 // Notify notifies emitter with webhook
@@ -201,8 +213,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 		e.log.Info("event emitter leader unsubscribed from emitted events")
 	}()
 	// First reconcilation to avoid waiting for first tick
-	listeners := e.Reconcile()
-	e.appendUniqueListeners(listeners...)
+	e.loadListeners(e.Reconcile())
 	log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 	// Subscribe and handle events
 	e.log.Infow("event emitter leader subscribing to events")
@@ -221,8 +232,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			// Reconcile listeners
-			listeners := e.Reconcile()
-			e.appendUniqueListeners(listeners...)
+			e.loadListeners(e.Reconcile())
 			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 		}
 	}
