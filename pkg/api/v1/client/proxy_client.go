@@ -15,8 +15,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
 

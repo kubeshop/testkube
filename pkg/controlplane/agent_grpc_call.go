@@ -14,8 +14,6 @@ import (
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
@@ -173,22 +171,6 @@ func CreateCommands(storageBucket string, storageClient domainstorage.Client, te
 
 func mapTestWorkflowFilters(s []*testworkflow.FilterImpl) []testworkflow.Filter {
 	v := make([]testworkflow.Filter, len(s))
-	for i := range s {
-		v[i] = s[i]
-	}
-	return v
-}
-
-func mapTestFilters(s []*result.FilterImpl) []result.Filter {
-	v := make([]result.Filter, len(s))
-	for i := range s {
-		v[i] = s[i]
-	}
-	return v
-}
-
-func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
-	v := make([]testresult.Filter, len(s))
 	for i := range s {
 		v[i] = s[i]
 	}
