@@ -233,6 +233,9 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
 		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
+			testkube.BECOME_TESTWORKFLOW_UP_EventType}}
+		emitter.Register(registeredListener)
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v1"})
 
 		ctx, cancel := context.WithCancel(t.Context())
@@ -241,16 +244,52 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		go emitter.Listen(ctx)
 		time.Sleep(50 * time.Millisecond)
 
-		assert.Len(t, emitter.getListeners(), 2)
-		assert.Equal(t, "v1", emitter.getListeners()[0].Selector())
+		assert.Len(t, emitter.getListeners(), 3)
+		assert.Equal(t, "v1", emitter.getListeners()[1].Selector())
 
 		// This loader should overwrite the items loaded from the first loader
 		// on next reconiliation loop
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v2"})
 
 		time.Sleep(1100 * time.Millisecond)
-		assert.Len(t, emitter.getListeners(), 2)
-		assert.Equal(t, "v2", emitter.getListeners()[0].Selector())
+		assert.Len(t, emitter.getListeners(), 3)
+		assert.Equal(t, "v2", emitter.getListeners()[1].Selector())
+	})
+
+	t.Run("emitter remove listeners in reconcile loop", func(t *testing.T) {
+		t.Parallel()
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		loader := &dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v1"}
+		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
+			testkube.BECOME_TESTWORKFLOW_UP_EventType}}
+		emitter.Register(registeredListener)
+		emitter.RegisterLoader(loader)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		assert.Len(t, emitter.getListeners(), 3)
+		assert.Equal(t, "v1", emitter.getListeners()[1].Selector())
+
+		// Override the listeners in the loader to return an empty set of
+		// listeners to test deletion
+		loader.ListenersOverride = []common.Listener{}
+
+		// Wait to next reconcillation loop
+		time.Sleep(1100 * time.Millisecond)
+		// Only the registered listener should remain
+		assert.Len(t, emitter.getListeners(), 1)
+		assert.Equal(t, "registered", emitter.getListeners()[0].Name())
 	})
 
 }

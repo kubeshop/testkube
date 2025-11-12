@@ -24,15 +24,15 @@ const (
 func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
 	instanceId := utils.RandAlphanum(10)
 	return &Emitter{
-		loader:         NewLoader(),
-		log:            log.DefaultLogger.With("instance_id", instanceId),
-		bus:            eventBus,
-		instanceId:     instanceId,
-		leaseBackend:   leaseBackend,
-		subjectRoot:    subjectRoot,
-		listeners:      make(common.Listeners, 0),
-		listenerExists: make(map[string]map[string]common.Listener),
-		clusterName:    clusterName,
+		loader:              NewLoader(),
+		log:                 log.DefaultLogger.With("instance_id", instanceId),
+		bus:                 eventBus,
+		instanceId:          instanceId,
+		leaseBackend:        leaseBackend,
+		subjectRoot:         subjectRoot,
+		registeredListeners: make(common.Listeners, 0),
+		listeners:           make(common.Listeners, 0),
+		clusterName:         clusterName,
 	}
 }
 
@@ -44,43 +44,57 @@ type Interface interface {
 type Emitter struct {
 	*loader
 
-	log            *zap.SugaredLogger
-	listeners      common.Listeners
-	listenerExists map[string]map[string]common.Listener
-	mutex          sync.RWMutex
-	bus            bus.Bus
-	instanceId     string
-	leaseBackend   leasebackend.Repository
-	subjectRoot    string
-	clusterName    string
+	log                 *zap.SugaredLogger
+	registeredListeners common.Listeners
+	listeners           common.Listeners
+	mutex               sync.RWMutex
+	bus                 bus.Bus
+	instanceId          string
+	leaseBackend        leasebackend.Repository
+	subjectRoot         string
+	clusterName         string
 }
 
-// keepUniqueListeners keeps and updates a unique set of listeners by kind and name.
-func (e *Emitter) keepUniqueListeners(listeners ...common.Listener) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+// uniqueListeners keeps a unique set of listeners by kind and name.
+// The last listeners for each kind and name combination takes precedence.
+func uniqueListeners(listeners []common.Listener) []common.Listener {
+	exists := make(map[string]map[string]common.Listener)
+
 	// Determine latest version for each listener by kind and name
 	for i := range listeners {
 		kind := listeners[i].Kind()
 		name := listeners[i].Name()
-		if e.listenerExists[kind] == nil {
-			e.listenerExists[kind] = make(map[string]common.Listener)
+		if exists[kind] == nil {
+			exists[kind] = make(map[string]common.Listener)
 		}
-		e.listenerExists[kind][name] = listeners[i]
+		exists[kind][name] = listeners[i]
 	}
-	// Regenerate the listeners slice
-	oldNumberOfListeners := len(e.listeners)
-	e.listeners = make(common.Listeners, 0, oldNumberOfListeners)
-	for _, kindMap := range e.listenerExists {
+	// Generate unique listeners slice
+	unique := make(common.Listeners, 0, len(listeners))
+	for _, kindMap := range exists {
 		for _, listener := range kindMap {
-			e.listeners = append(e.listeners, listener)
+			unique = append(unique, listener)
 		}
 	}
+	return unique
+}
+
+func (e *Emitter) registerListener(listener common.Listener) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.registeredListeners = uniqueListeners(append(e.registeredListeners, listener))
+	e.listeners = uniqueListeners(append(e.listeners, e.registeredListeners...))
+}
+
+func (e *Emitter) loadListeners(loadedListeners []common.Listener) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.listeners = uniqueListeners(append(loadedListeners, e.registeredListeners...))
 }
 
 // Register adds new listener
 func (e *Emitter) Register(listener common.Listener) {
-	e.keepUniqueListeners(listener)
+	e.registerListener(listener)
 }
 
 // Notify notifies emitter with webhook
@@ -206,7 +220,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 		e.log.Info("event emitter leader unsubscribed from emitted events")
 	}()
 	// First reconcilation to avoid waiting for first tick
-	e.keepUniqueListeners(e.Reconcile()...)
+	e.loadListeners(e.Reconcile())
 	log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 	// Subscribe and handle events
 	e.log.Infow("event emitter leader subscribing to events")
@@ -225,7 +239,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			// Reconcile listeners
-			e.keepUniqueListeners(e.Reconcile()...)
+			e.loadListeners(e.Reconcile())
 			log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 		}
 	}

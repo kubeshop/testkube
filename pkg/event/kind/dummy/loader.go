@@ -7,9 +7,10 @@ import (
 )
 
 type DummyLoader struct {
-	IdPrefix       string
-	Err            error
-	SelectorString string
+	IdPrefix          string
+	Err               error
+	SelectorString    string
+	ListenersOverride []common.Listener
 }
 
 func (r DummyLoader) Kind() string {
@@ -19,6 +20,9 @@ func (r DummyLoader) Kind() string {
 func (r *DummyLoader) Load() (common.Listeners, error) {
 	if r.Err != nil {
 		return nil, r.Err
+	}
+	if r.ListenersOverride != nil {
+		return r.ListenersOverride, nil
 	}
 	return common.Listeners{
 		&DummyListener{Id: r.name(1), SelectorString: r.SelectorString},
