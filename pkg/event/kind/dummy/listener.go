@@ -22,6 +22,11 @@ func (l *DummyListener) GetNotificationCount() int {
 	return int(cnt)
 }
 
+func (l *DummyListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Selector(), l.Events())
+	return valid
+}
+
 func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
 	log.DefaultLogger.Infow("DummyListener notified", "listenerId", l.Id, "event", event)
 	atomic.AddInt32(&l.NotificationCount, 1)

@@ -132,6 +132,8 @@ type DeprecatedControlPlaneConfig struct {
 	TestkubeCloudTLSInsecure bool `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
 	// DEPRECATED: Use TestkubeProWorkerCount instead
 	TestkubeCloudWorkerCount int `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
+	// DEPRECATED: Use TestkubeProLogStreamWorkerCount instead
+	TestkubeCloudLogStreamWorkerCount int `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
 	// DEPRECATED: Use TestkubeProEnvID instead
 	TestkubeCloudEnvID string `envconfig:"TESTKUBE_CLOUD_ENV_ID" default:""`
 	// DEPRECATED: Use TestkubeProOrgID instead
@@ -178,6 +180,11 @@ type CronJobConfig struct {
 	EnableCronJobs string `envconfig:"ENABLE_CRON_JOBS" default:""`
 }
 
+type WebhookConfig struct {
+	DisableWebhooks     bool `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	EnableCloudWebhooks bool `envconfig:"ENABLE_CLOUD_WEBHOOKS" default:"false"`
+}
+
 type Config struct {
 	APIConfig
 	OSSControlPlaneConfig
@@ -192,6 +199,7 @@ type Config struct {
 	ImageInspectorConfig
 	GitOpsSyncConfig
 	CronJobConfig
+	WebhookConfig
 	// Tracing
 	TracingEnabled                  bool     `envconfig:"TRACING_ENABLED" default:"false"`
 	OTLPEndpoint                    string   `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
@@ -203,6 +211,7 @@ type Config struct {
 	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
 	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
+	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
 	TestkubeProRunnerCustomCASecret string   `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
 	CDEventsTarget                  string   `envconfig:"CDEVENTS_TARGET" default:""`
@@ -220,7 +229,7 @@ type Config struct {
 	TransferEnvVariables            []string `envconfig:"TRANSFER_ENV_VARS" default:"GRPC_ENFORCE_ALPN_ENABLED"`
 	EnableK8sEvents                 bool     `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
-	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 
@@ -249,6 +258,7 @@ func Get() (*Config, error) {
 
 	if strings.HasPrefix(c.TestkubeProAgentID, "tkcrun_") {
 		c.DisableWebhooks = true
+		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
@@ -256,6 +266,7 @@ func Get() (*Config, error) {
 		c.EnableK8sControllers = false
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
 		c.DisableWebhooks = true
+		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
@@ -274,6 +285,9 @@ func Get() (*Config, error) {
 	}
 	if c.TestkubeProWorkerCount == 0 && deprecated.TestkubeCloudWorkerCount != 0 {
 		c.TestkubeProWorkerCount = deprecated.TestkubeCloudWorkerCount
+	}
+	if c.TestkubeProLogStreamWorkerCount == 0 && deprecated.TestkubeCloudLogStreamWorkerCount != 0 {
+		c.TestkubeProLogStreamWorkerCount = deprecated.TestkubeCloudLogStreamWorkerCount
 	}
 	if c.TestkubeProEnvID == "" && deprecated.TestkubeCloudEnvID != "" {
 		c.TestkubeProEnvID = deprecated.TestkubeCloudEnvID

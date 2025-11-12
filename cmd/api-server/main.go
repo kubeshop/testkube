@@ -168,7 +168,9 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+	// TODO(emil): do we need a mongo/postgres backend for leases like for test triggers?
+	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent-"+cfg.APIServerFullname, cfg.TestkubeNamespace)
+	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName)
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
@@ -208,6 +210,7 @@ func main() {
 	} else {
 		leaderLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(
 			clientset,
+			"testkube-core",
 			cfg.TestkubeNamespace,
 			leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
 		)
@@ -215,27 +218,23 @@ func main() {
 
 	leaderTasks := make([]leader.Task, 0)
 
-	// If we don't have an API key, but we do have a token for registration then attempt to register the runner.
-	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
+	// Agents should be able to make an initial registration with their
+	// registration token and subsequent registrations with their API key to
+	// enable them to update their set of capabilities.
+	// To transition super agents to the new capabilities based registration,
+	// the charts have been changed to set the old super agent API key value as
+	// their registration token and registration has been enabled with the use
+	// of the API key. After intial self registration the super agent will be
+	// able to use the API key in the generated secret to reregister.
+	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 		runnerName := cfg.RunnerName
 		if runnerName == "" {
 			// Fallback to a set name, but this is unlikely to be unique.
+			// Note, that the runner name for a super agent will be overriden
+			// on the backend to make sure it is unique within the org.
 			runnerName = cfg.APIServerFullname
 		}
 		log.DefaultLogger.Infow("registering runner", "runner_name", runnerName)
-
-		// Check for required fields.
-		if cfg.TestkubeProOrgID == "" {
-			log.DefaultLogger.Fatalw("cannot register runner without org id", "error", "org id must be set to register a runner")
-		}
-		if cfg.SelfRegistrationSecret == "" {
-			log.DefaultLogger.Fatalw("cannot register runner without self registration secret", "error", "self registration secret must be set to register a runner")
-		}
-		// If not configured to store secrets then registering the runner could cause severe issues such as
-		// the runner registering on every restart creating new runner IDs in the Control Plane.
-		if !cfg.EnableSecretsEndpoint || cfg.DisableSecretCreation {
-			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
-		}
 
 		// Build capabilities based on enabled features
 		capabilities := []cloud.AgentCapability{}
@@ -245,9 +244,24 @@ func main() {
 		if !cfg.DisableTestTriggers {
 			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
 		}
+		if !cfg.DisableWebhooks {
+			if cfg.EnableCloudWebhooks {
+				// The presence of an agent with this capability within an
+				// environment toggles Webhooks for the environment from
+				// being emitted by the agent to being emitted by the
+				// control plane.
+				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_CLOUD_WEBHOOKS)
+			} else {
+				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
+			}
+		}
 
+		registrationToken := cfg.TestkubeProAgentRegToken
+		if cfg.TestkubeProAPIKey != "" {
+			registrationToken = cfg.TestkubeProAPIKey
+		}
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
-			RegistrationToken: cfg.TestkubeProAgentRegToken,
+			RegistrationToken: registrationToken,
 			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
@@ -256,18 +270,39 @@ func main() {
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
 		}
+		log.DefaultLogger.Infow("registered runner", "runner_name", runnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
 
 		// Add the new values to the current configuration.
 		cfg.TestkubeProAPIKey = res.RunnerKey
 		cfg.TestkubeProAgentID = res.RunnerId
+		cfg.TestkubeProOrgID = res.OrganizationId
 
 		// Attempt to store the values in a Kubernetes secret for consumption next startup.
-		if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
-			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
-			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
-		}, secretmanager.CreateOptions{}); err != nil {
-			log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
-			log.DefaultLogger.Warn("runner will re-register on restart")
+		if cfg.SelfRegistrationSecret == "" {
+			log.DefaultLogger.Warnw("unable to save api key from registration with the self registration secret unspecified, will reuse registration token for subsequent deployments")
+		} else if cfg.DisableSecretCreation {
+			log.DefaultLogger.Warnw("unable to save api key from registration with secrets disabled, will reuse registration token for subsequent deployments")
+		} else {
+			// Create or update the existing secret
+			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret)
+			secretData := map[string]string{
+				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
+				"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
+				"TESTKUBE_PRO_ORG_ID":   res.OrganizationId,
+			}
+			if errors.Is(err, secretmanager.ErrNotFound) {
+				if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.CreateOptions{Bypass: true}); err != nil {
+					log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
+				} else {
+					log.DefaultLogger.Infow("saved registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+				}
+			} else {
+				if _, err := secretManager.Update(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.UpdateOptions{Bypass: true}); err != nil {
+					log.DefaultLogger.Errorw("error updating self-register runner secret", "error", err.Error())
+				} else {
+					log.DefaultLogger.Infow("updated registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+				}
+			}
 		}
 	}
 
@@ -440,43 +475,48 @@ func main() {
 	)
 
 	// Initialize event handlers
-	websocketLoader := ws.NewWebsocketLoader()
-	if !cfg.DisableWebhooks {
+	if !cfg.DisableWebhooks && !cfg.EnableCloudWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient,
-			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
+		webhookLoader := webhook.NewWebhookLoader(
+			webhooksClient,
+			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
+			webhook.WithWebhookResultsRepository(webhookRepository),
+			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
+			webhook.WithSecretClient(secretClient),
+			webhook.WithMetrics(metrics),
+			webhook.WithEnvs(envs),
+			webhook.WithProContext(&proContext))
+		eventsEmitter.RegisterLoader(webhookLoader)
 	}
-	eventsEmitter.Loader.Register(websocketLoader)
-	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
+	websocketLoader := ws.NewWebsocketLoader()
+	eventsEmitter.RegisterLoader(websocketLoader)
+	eventsEmitter.RegisterLoader(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
 		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {
-			eventsEmitter.Loader.Register(cdeventLoader)
+			eventsEmitter.RegisterLoader(cdeventLoader)
 		} else {
 			log.DefaultLogger.Debugw("cdevents init error", "error", err.Error())
 		}
 	}
 	if cfg.EnableK8sEvents {
-		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
+		eventsEmitter.RegisterLoader(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
 	}
 
 	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
+	eventsEmitter.RegisterLoader(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
-	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
+	eventsEmitter.RegisterLoader(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
 
 	// Update TestWorkflowExecution Kubernetes resource objects on status change
-	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
+	eventsEmitter.RegisterLoader(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
-	log.DefaultLogger.Info("starting event system...")
-	eventsEmitter.Listen(ctx)
 	g.Go(func() error {
-		eventsEmitter.Reconcile(ctx)
+		eventsEmitter.Listen(ctx)
 		return nil
 	})
-	log.DefaultLogger.Info("event system started successfully")
 
 	/////////////////////////////////
 	// KUBERNETES CONTROLLER SETUP
@@ -616,7 +656,7 @@ func main() {
 				return err
 			},
 		})
-		eventsEmitter.Loader.Register(agentHandle)
+		eventsEmitter.Register(agentHandle)
 	}
 
 	if !cfg.DisableTestTriggers {
@@ -624,14 +664,17 @@ func main() {
 		commons.ExitOnError("getting k8s client config", err)
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 		commons.ExitOnError("creating TestKube Clientset", err)
+		// TODO: Check why this simpler options is not working
+		// testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 
-		var lb leasebackend.Repository
+		var triggersLeaseBackend leasebackend.Repository
 		if controlPlane != nil {
-			lb = controlPlane.GetRepositoryManager().LeaseBackend()
+			triggersLeaseBackend = controlPlane.GetRepositoryManager().LeaseBackend()
 		} else {
 			// Fallback: Kubernetes Lease-based coordination (no external DB required)
-			lb = leasebackendk8s.NewK8sLeaseBackend(
+			triggersLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(
 				clientset,
+				"testkube-triggers-lease",
 				cfg.TestkubeNamespace,
 				leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
 			)
@@ -643,7 +686,7 @@ func main() {
 			testkubeClientset,
 			testWorkflowsClient,
 			testTriggersClient,
-			lb,
+			triggersLeaseBackend,
 			log.DefaultLogger,
 			eventBus,
 			metrics,

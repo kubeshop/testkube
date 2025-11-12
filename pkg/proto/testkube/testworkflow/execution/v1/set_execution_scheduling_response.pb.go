@@ -24,6 +24,8 @@ const (
 // SetExecutionSchedulingResponse is currently empty but remains reserved for future usage
 // without breaking backwards proto compatibility.
 // https://buf.build/docs/best-practices/style-guide/#rpc-use-empty
+//
+// Deprecated: Marked as deprecated in testkube/testworkflow/execution/v1/set_execution_scheduling_response.proto.
 type SetExecutionSchedulingResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -64,8 +66,8 @@ var File_testkube_testworkflow_execution_v1_set_execution_scheduling_response_pr
 
 const file_testkube_testworkflow_execution_v1_set_execution_scheduling_response_proto_rawDesc = "" +
 	"\n" +
-	"Jtestkube/testworkflow/execution/v1/set_execution_scheduling_response.proto\x12\"testkube.testworkflow.execution.v1\" \n" +
-	"\x1eSetExecutionSchedulingResponseB\xcf\x02\n" +
+	"Jtestkube/testworkflow/execution/v1/set_execution_scheduling_response.proto\x12\"testkube.testworkflow.execution.v1\"$\n" +
+	"\x1eSetExecutionSchedulingResponse:\x02\x18\x01B\xcf\x02\n" +
 	"&com.testkube.testworkflow.execution.v1B#SetExecutionSchedulingResponseProtoP\x01ZUgithub.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1;executionv1\xa2\x02\x03TTE\xaa\x02\"Testkube.Testworkflow.Execution.V1\xca\x02\"Testkube\\Testworkflow\\Execution\\V1\xe2\x02.Testkube\\Testworkflow\\Execution\\V1\\GPBMetadata\xea\x02%Testkube::Testworkflow::Execution::V1b\beditionsp\xe8\a"
 
 var (

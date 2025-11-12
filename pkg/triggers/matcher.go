@@ -30,7 +30,6 @@ var (
 	ErrProbeTimeout     = errors.New("timed-out waiting for trigger probes")
 )
 
-// TODO(emil): rewrite this to be more readable it is overly complicated
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
 		t := status.testTrigger
@@ -101,7 +100,6 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 		}
 
-		// TODO(emil): why is this needed it this is using the same trigger as above to seemingly get the same status
 		status := s.getStatusForTrigger(t)
 		if t.Spec.ConcurrencyPolicy == testtriggersv1.TestTriggerConcurrencyPolicyForbid {
 			if status.hasActiveTests() {
@@ -187,8 +185,6 @@ func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespa
 			return false
 		}
 
-		// TODO(emil): label selector is mutually exlusive with the
-		// name/namespace selectors as implemented
 		return k8sSelector.Matches(resourceLabelSet)
 	}
 

@@ -1,11 +1,10 @@
 edition = "2023";
 
-package testkube.sync.v1;
+package testkube.testworkflow.v1;
 
-// TestWorkflow contains a protobuf encoded representation of a
-// TestWorkflow object.
+// TestWorkflow represents a test workflow resource in protobuf.
 message TestWorkflow {
-  // payload contains the following Go struct as JSON encoded data:
+  // json contains the following Go struct as JSON encoded data:
   //   github.com/kubeshop/testkube/api/testworkflows/v1.TestWorkflow
   // WARNING: A mismatch in versions between Agent and Control Plane
   // may result in a failed or partial marshaling of this data in
@@ -19,5 +18,5 @@ message TestWorkflow {
   // loose data format will be used until CRD definition is moved
   // to a single source from which all required usages can be
   // automatically generated to ensure compatibility.
-  bytes payload = 1;
+  bytes json = 1;
 }

@@ -32,6 +32,7 @@ const (
 	cloudMigrateMeta       = "migrate"
 	orgIdMeta              = "organization-id"
 	envIdMeta              = "environment-id"
+	agentIdMeta            = "agent-id"
 	healthcheckCommand     = "healthcheck"
 	dockerImageVersionMeta = "docker-image-version"
 
@@ -145,15 +146,31 @@ func (ag *Agent) Run(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
+func (ag *Agent) outgoingContext(ctx context.Context) context.Context {
+	if ag.proContext == nil {
+		return ctx
+	}
+	// Auth related metadata
 	if ag.proContext.APIKey != "" {
 		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
 	}
-
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, agentIdMeta, ag.proContext.Agent.ID)
+	// Other metadata
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
 	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
+	if ag.proContext.CloudStorage {
+		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
+	}
+	// Deprecated: always enabled
+	ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
+	return ctx
+}
+
+func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
+	ctx = ag.outgoingContext(ctx)
 
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
@@ -247,7 +264,6 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 
 		cmd = resp.resp
 		err := resp.err
-
 		if err != nil {
 			ag.logger.Errorf("agent stream receive: %v", err)
 			return nil, err
@@ -263,20 +279,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	if ag.proContext.APIKey != "" {
-		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-	}
-
-	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
-	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
-	ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true") //nolint
-
-	if ag.proContext.CloudStorage {
-		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
-	}
+	ctx = ag.outgoingContext(ctx)
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

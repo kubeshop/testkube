@@ -58,6 +58,10 @@ var _ Listener = (*NilListener)(nil)
 type NilListener struct {
 }
 
+func (l *NilListener) Match(event testkube.Event) bool {
+	return true
+}
+
 func (l *NilListener) Notify(event testkube.Event) testkube.EventResult {
 	return testkube.EventResult{Id: event.Id}
 }
@@ -87,6 +91,10 @@ var _ Listener = (*FakeListener)(nil)
 type FakeListener struct {
 	field1 string
 	field2 string
+}
+
+func (l *FakeListener) Match(event testkube.Event) bool {
+	return true
 }
 
 func (l *FakeListener) Notify(event testkube.Event) testkube.EventResult {

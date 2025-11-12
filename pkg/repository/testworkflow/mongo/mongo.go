@@ -698,6 +698,21 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 		query = bson.M{"$and": bson.A{query, q}}
 	}
 
+	if filter.HealthRangesDefined() {
+		orConditions := bson.A{}
+		for _, rng := range filter.HealthRanges() {
+			orConditions = append(orConditions, bson.M{
+				"workflow.status.health.overallhealth": bson.M{
+					"$gte": rng[0],
+					"$lte": rng[1],
+				},
+			})
+		}
+		if len(orConditions) > 0 {
+			query = bson.M{"$and": bson.A{query, bson.M{"$or": orConditions}}}
+		}
+	}
+
 	if filter.GroupIDDefined() {
 		query = bson.M{"$and": bson.A{
 			bson.M{"$expr": bson.M{"$or": bson.A{

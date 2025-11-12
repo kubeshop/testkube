@@ -1,0 +1,10 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+// DeclineExecutionRequest is a request to the Control Plane to indicate that a
+// Runner has declined to start a Test Workflow Execution.
+message DeclineExecutionRequest {
+  // execution_id is the unique identifier of the execution that has failed.
+  string execution_id = 1;
+}
