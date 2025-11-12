@@ -74,3 +74,7 @@ func (l *K8sEventListener) Notify(event testkube.Event) (result testkube.EventRe
 func (l *K8sEventListener) Kind() string {
 	return "k8sevent"
 }
+
+func (l *K8sEventListener) Group() string {
+	return "default-group"
+}

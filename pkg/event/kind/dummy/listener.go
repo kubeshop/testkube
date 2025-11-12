@@ -56,6 +56,10 @@ func (l *DummyListener) Kind() string {
 	return "dummy"
 }
 
+func (l *DummyListener) Group() string {
+	return "default-group"
+}
+
 func (l *DummyListener) Metadata() map[string]string {
 	return map[string]string{
 		"id":       l.Name(),

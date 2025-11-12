@@ -38,6 +38,10 @@ func (l *testWorkflowExecutionMetricsListener) Kind() string {
 	return "TestWorkflowExecutionMetrics"
 }
 
+func (l *testWorkflowExecutionMetricsListener) Group() string {
+	return "default-group"
+}
+
 func (l *testWorkflowExecutionMetricsListener) Events() []testkube.EventType {
 	return []testkube.EventType{
 		testkube.END_TESTWORKFLOW_SUCCESS_EventType,

@@ -56,13 +56,13 @@ type Emitter struct {
 	clusterName         string
 }
 
-// uniqueListeners keeps a unique set of listeners by kind and name.
-// The last listener for each kind and name combination takes precedence.
+// uniqueListeners keeps a unique set of listeners by kind, group and name.
+// The last listener for each kind, group and name combination takes precedence.
 func uniqueListeners(listeners []common.Listener) []common.Listener {
 	set := make(map[string]struct{})
 	unique := make(common.Listeners, 0, len(listeners))
 	for _, listener := range slices.Backward(listeners) {
-		key := listener.Kind() + "/" + listener.Name()
+		key := listener.Kind() + "/" + listener.Group() + "/" + listener.Name()
 		if _, exists := set[key]; exists {
 			continue
 		}

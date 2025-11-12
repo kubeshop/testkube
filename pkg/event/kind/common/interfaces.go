@@ -11,14 +11,16 @@ const (
 )
 
 type Listener interface {
-	// Name uniquely identifies listener
+	// Kind of listener
+	Kind() string
+	// Group, name, and kind uniquely identifies a listener
+	Group() string
+	// Name identifies the listener
 	Name() string
 	// Match determines whether an event should be sent to the listener
 	Match(event testkube.Event) bool
 	// Notify sends event to listener
 	Notify(event testkube.Event) testkube.EventResult
-	// Kind of listener
-	Kind() string
 	// Selector is used to filter events
 	Selector() string
 	// Event is used to filter events

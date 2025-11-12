@@ -42,6 +42,10 @@ func (l *testWorkflowExecutionListener) Kind() string {
 	return "TestWorkflowExecution"
 }
 
+func (l *testWorkflowExecutionListener) Group() string {
+	return "default-group"
+}
+
 func (l *testWorkflowExecutionListener) Events() []testkube.EventType {
 	return []testkube.EventType{
 		testkube.QUEUE_TESTWORKFLOW_EventType,

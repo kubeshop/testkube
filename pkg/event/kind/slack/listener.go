@@ -67,3 +67,7 @@ func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResul
 func (l *SlackListener) Kind() string {
 	return "slack"
 }
+
+func (l *SlackListener) Group() string {
+	return "default-group"
+}
