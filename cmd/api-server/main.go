@@ -268,7 +268,7 @@ func main() {
 		runnerLabels["registration"] = "self"
 
 		// Debug labels found
-		log.DefaultLogger.Debugw("labels to be configured", runnerLabels)
+		log.DefaultLogger.Debugw("labels to be configured", "labels", runnerLabels)
 
 		registrationToken := cfg.TestkubeProAgentRegToken
 		if cfg.TestkubeProAPIKey != "" {
@@ -912,9 +912,8 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 		log.DefaultLogger.Warnw("cannot read deployment labels", "deployment", deploymentName, "error", err.Error())
 		return nil
 	}
-
-	// clone to avoid sharing internal maps
-	labels := make(map[string]string, len(deploy.Labels))
+	log.DefaultLogger.Debugw("deployment found", "deployment_name", deploymentName, "deployment_labels", deploy.Labels)
+	labels := map[string]string{}
 	for k, v := range deploy.Labels {
 		if strings.HasPrefix(k, labelPrefix) {
 			shortKey := strings.TrimPrefix(k, labelPrefix)
