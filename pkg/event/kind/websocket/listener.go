@@ -87,3 +87,7 @@ func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventR
 func (l *WebsocketListener) Kind() string {
 	return "websocket"
 }
+
+func (l *WebsocketListener) Group() string {
+	return "default-group"
+}

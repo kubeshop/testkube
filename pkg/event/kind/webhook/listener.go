@@ -378,6 +378,13 @@ func (l *WebhookListener) Kind() string {
 	return "webhook"
 }
 
+func (l *WebhookListener) Group() string {
+	if l.envID != "" {
+		return l.envID
+	}
+	return "default-group"
+}
+
 func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {
 	log := l.Log.With(event.Log()...)
 

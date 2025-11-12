@@ -29,6 +29,10 @@ func (ag *Agent) Load() (listeners common.Listeners, err error) {
 	return listeners, nil
 }
 
+func (ag *Agent) Group() string {
+	return "default-group"
+}
+
 func (ag *Agent) Name() string {
 	return "agent"
 }

@@ -82,6 +82,10 @@ func (l *NilListener) Kind() string {
 	return ""
 }
 
+func (l *NilListener) Group() string {
+	return "default-group"
+}
+
 func (l *NilListener) Metadata() map[string]string {
 	return nil
 }
@@ -115,6 +119,10 @@ func (l FakeListener) Selector() string {
 
 func (l *FakeListener) Kind() string {
 	return ""
+}
+
+func (l *FakeListener) Group() string {
+	return "default-group"
 }
 
 func (l *FakeListener) Metadata() map[string]string {

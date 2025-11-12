@@ -107,6 +107,10 @@ func (l *CDEventListener) Kind() string {
 	return "cdevent"
 }
 
+func (l *CDEventListener) Group() string {
+	return "default-group"
+}
+
 func (l *CDEventListener) sendCDEvent(ev cdevents.CDEventReader) error {
 	ce, err := cdevents.AsCloudEvent(ev)
 	if err != nil {
