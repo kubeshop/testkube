@@ -2,10 +2,10 @@ package triggers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/coordination/leader"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
@@ -80,6 +81,7 @@ type Service struct {
 	testTriggerControlPlane       bool
 	eventLabels                   map[string]string
 	Agent                         watcherAgent
+	coordinator                   *leader.Coordinator
 }
 
 type Option func(*Service)
@@ -147,8 +149,24 @@ func NewService(
 		s.Agent.Labels = s.proContext.Agent.Labels
 	}
 
-	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	coordinatorLogger := logger.With("component", "trigger-service", "identifier", s.identifier)
+	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger)
 
+	s.coordinator.Register(leader.Task{
+		Name: "trigger-watcher",
+		Start: func(taskCtx context.Context) error {
+			s.runWatcher(taskCtx)
+			return nil
+		},
+	})
+
+	s.coordinator.Register(leader.Task{
+		Name: "trigger-scraper",
+		Start: func(taskCtx context.Context) error {
+			s.runExecutionScraper(taskCtx)
+			return nil
+		},
+	})
 	return s
 }
 
@@ -170,18 +188,6 @@ func WithHostnameIdentifier() Option {
 func WithClusterID(id string) Option {
 	return func(s *Service) {
 		s.clusterID = id
-	}
-}
-
-func WithWatchFromDate(from time.Time) Option {
-	return func(s *Service) {
-		s.watchFromDate = from
-	}
-}
-
-func WithLeaseCheckerInterval(interval time.Duration) Option {
-	return func(s *Service) {
-		s.leaseCheckInterval = interval
 	}
 }
 
@@ -234,23 +240,16 @@ func WithEventLabels(eventLabels map[string]string) Option {
 }
 
 func (s *Service) Run(ctx context.Context) {
-	leaseChan := make(chan bool)
+	if s.coordinator == nil {
+		<-ctx.Done()
+		return
+	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		s.runLeaseChecker(ctx, leaseChan)
-		wg.Done()
-	}()
-	go func() {
-		s.runWatcher(ctx, leaseChan)
-		wg.Done()
-	}()
-	go func() {
-		s.runExecutionScraper(ctx)
-		wg.Done()
-	}()
-	wg.Wait()
+	if err := s.coordinator.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		if s.logger != nil {
+			s.logger.Errorw("trigger service: coordinator stopped unexpectedly", "error", err)
+		}
+	}
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
