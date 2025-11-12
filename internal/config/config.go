@@ -173,6 +173,9 @@ type RunnerConfig struct {
 	RunnerName                string            `envconfig:"RUNNER_NAME" default:""`
 	FloatingRunner            bool              `envconfig:"FLOATING_RUNNER" default:"false"`
 	EventLabels               map[string]string `envconfig:"EVENT_LABELS" default:""`
+	IsGlobal                  bool              `envconfig:"RUNNER_IS_GLOBAL" default:"false"`
+	RunnerGroup               string            `envconfig:"RUNNER_GROUP" default:""`
+	RunnerLabelsPrefix        string            `envconfig:"RUNNER_LABELS_PREFIX" default:"runner.testkube.io/"`
 }
 
 type GitOpsSyncConfig struct {

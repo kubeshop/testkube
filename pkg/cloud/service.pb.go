@@ -2911,6 +2911,9 @@ type RegisterRequest struct {
 	OrganizationId    string            `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Floating          bool              `protobuf:"varint,4,opt,name=floating,proto3" json:"floating,omitempty"`
 	Capabilities      []AgentCapability `protobuf:"varint,5,rep,packed,name=capabilities,proto3,enum=cloud.AgentCapability" json:"capabilities,omitempty"`
+	RunnerGroup		  string			`protobuf:"bytes,6,opt,name=group,json=group,proto3" json:"group,omitempty"`
+	IsGlobal		  bool			    `protobuf:"varint,7,opt,name=is_global,json=isGlobal,proto3" json:"is_global,omitempty"`
+	Labels            map[string]string `protobuf:"bytes,8,opt,name=labels,json=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *RegisterRequest) Reset() {
@@ -2978,6 +2981,27 @@ func (x *RegisterRequest) GetCapabilities() []AgentCapability {
 		return x.Capabilities
 	}
 	return nil
+}
+
+func (x *RegisterRequest) GetRunnerGroup() string {
+	if x != nil {
+		return x.RunnerGroup
+	}
+	return ""
+}
+
+func (x *RegisterRequest) RunnerIsGlobal() bool {
+	if x != nil {
+		return x.IsGlobal
+	}
+	return false
+}
+
+func (x *RegisterRequest) GetRunnerLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return map[string]string{};
 }
 
 type RegisterResponse struct {
