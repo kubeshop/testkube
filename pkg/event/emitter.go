@@ -57,7 +57,7 @@ type Emitter struct {
 }
 
 // uniqueListeners keeps a unique set of listeners by kind and name.
-// The last listeners for each kind and name combination takes precedence.
+// The last listener for each kind and name combination takes precedence.
 func uniqueListeners(listeners []common.Listener) []common.Listener {
 	set := make(map[string]struct{})
 	unique := make(common.Listeners, 0, len(listeners))
