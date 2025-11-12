@@ -97,8 +97,8 @@ func mapPgTestWorkflowResult(r sqlc.TestWorkflowResult) testkube.TestWorkflowRes
 func mapPgTestWorkflow(r sqlc.TestWorkflow) testkube.TestWorkflow {
 	return testkube.TestWorkflow{
 		Name:        r.Name.String,
-		Created:     r.CreatedAt.Time,
-		Updated:     r.UpdatedAt.Time,
+		Created:     r.Created.Time,
+		Updated:     r.Updated.Time,
 		Namespace:   r.Namespace.String,
 		Description: r.Description.String,
 		ReadOnly:    r.ReadOnly.Bool,
@@ -116,7 +116,7 @@ func mapPgTestWorkflowAllSignatures(signatures []sqlc.TestWorkflowSignature) []t
 	}
 
 	// Create a map for fast lookup by ID
-	signatureMap := make(map[int32]*testkube.TestWorkflowSignature)
+	signatureMap := make(map[string]*testkube.TestWorkflowSignature)
 
 	// First pass: create all signature objects and populate the map
 	for _, sig := range signatures {
@@ -128,17 +128,17 @@ func mapPgTestWorkflowAllSignatures(signatures []sqlc.TestWorkflowSignature) []t
 			Negative: sig.Negative.Bool,
 			Children: []testkube.TestWorkflowSignature{},
 		}
-		signatureMap[sig.ID] = signature
+		signatureMap[sig.ID.String()] = signature
 	}
 
 	// Second pass: build the tree by adding children to their parents
 	var roots []testkube.TestWorkflowSignature
 	for _, sig := range signatures {
-		signature := signatureMap[sig.ID]
+		signature := signatureMap[sig.ID.String()]
 
 		// If this signature has a parent, add it as a child to the parent
 		if sig.ParentID.Valid {
-			parent, exists := signatureMap[sig.ParentID.Int32]
+			parent, exists := signatureMap[sig.ParentID.String()]
 			if exists {
 				parent.Children = append(parent.Children, *signature)
 			}
