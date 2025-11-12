@@ -63,9 +63,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(repoManager)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
-	commands := controlplane.CreateCommands(cfg.DisableDeprecatedTests, cfg.StorageBucket, deprecatedRepositories, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
+	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
 	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter)
 	scheduler := factory.NewScheduler()

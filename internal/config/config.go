@@ -220,7 +220,6 @@ type Config struct {
 	TransferEnvVariables            []string `envconfig:"TRANSFER_ENV_VARS" default:"GRPC_ENFORCE_ALPN_ENABLED"`
 	EnableK8sEvents                 bool     `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
-	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
@@ -250,7 +249,6 @@ func Get() (*Config, error) {
 
 	if strings.HasPrefix(c.TestkubeProAgentID, "tkcrun_") {
 		c.DisableWebhooks = true
-		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
@@ -258,7 +256,6 @@ func Get() (*Config, error) {
 		c.EnableK8sControllers = false
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
 		c.DisableWebhooks = true
-		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there

@@ -8,13 +8,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
-	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -39,7 +36,7 @@ func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*clou
 	return nil, CommandNotImplementedError(request.Command)
 }
 
-func CreateCommands(disableDeprecatedTests bool, storageBucket string, deprecatedRepositories commons.DeprecatedRepositories, storageClient domainstorage.Client, testWorkflowOutputRepository *miniorepo.MinioRepository, testWorkflowResultsRepository testworkflow.Repository, artifactStorage *minio.ArtifactClient) []CommandHandlers {
+func CreateCommands(storageBucket string, storageClient domainstorage.Client, testWorkflowOutputRepository *miniorepo.MinioRepository, testWorkflowResultsRepository testworkflow.Repository, artifactStorage *minio.ArtifactClient) []CommandHandlers {
 	// Set up "Config" commands
 	configCommands := CommandHandlers{
 		cloudconfig.CmdConfigGetOrganizationPlan: Handler(func(ctx context.Context, data checktcl.GetOrganizationPlanRequest) (r checktcl.GetOrganizationPlanResponse, err error) {
@@ -50,150 +47,6 @@ func CreateCommands(disableDeprecatedTests bool, storageBucket string, deprecate
 	// Set up "Webhook commands
 	webhoookCommands := CommandHandlers{
 		cloudwebhook.CmdWebhookExecutionCollectResult: Handler(func(ctx context.Context, data cloudwebhook.WebhookExecutionCollectResultRequest) (r cloudwebhook.WebhookExecutionCollectResultResponse, err error) {
-			return
-		}),
-	}
-
-	// Set up "Tests - Executions" commands
-	deprecatedTestExecutionsCommands := CommandHandlers{
-		cloudresult.CmdResultGet: Handler(func(ctx context.Context, data cloudresult.GetRequest) (r cloudresult.GetResponse, err error) {
-			r.Execution, err = deprecatedRepositories.TestResults().Get(ctx, data.ID)
-			return
-		}),
-		cloudresult.CmdResultGetByNameAndTest: Handler(func(ctx context.Context, data cloudresult.GetByNameAndTestRequest) (r cloudresult.GetByNameAndTestResponse, err error) {
-			r.Execution, err = deprecatedRepositories.TestResults().GetByNameAndTest(ctx, data.Name, data.TestName)
-			return
-		}),
-		cloudresult.CmdResultGetLatestByTest: Handler(func(ctx context.Context, data cloudresult.GetLatestByTestRequest) (r cloudresult.GetLatestByTestResponse, err error) {
-			ex, err := deprecatedRepositories.TestResults().GetLatestByTest(ctx, data.TestName)
-			if ex != nil {
-				r.Execution = *ex
-			}
-			return
-		}),
-		cloudresult.CmdResultGetLatestByTests: Handler(func(ctx context.Context, data cloudresult.GetLatestByTestsRequest) (r cloudresult.GetLatestByTestsResponse, err error) {
-			r.Executions, err = deprecatedRepositories.TestResults().GetLatestByTests(ctx, data.TestNames)
-			return
-		}),
-		cloudresult.CmdResultGetExecutionTotals: Handler(func(ctx context.Context, data cloudresult.GetExecutionTotalsRequest) (r cloudresult.GetExecutionTotalsResponse, err error) {
-			r.Result, err = deprecatedRepositories.TestResults().GetExecutionTotals(ctx, data.Paging, mapTestFilters(data.Filter)...)
-			return
-		}),
-		cloudresult.CmdResultGetExecutions: Handler(func(ctx context.Context, data cloudresult.GetExecutionsRequest) (r cloudresult.GetExecutionsResponse, err error) {
-			r.Executions, err = deprecatedRepositories.TestResults().GetExecutions(ctx, data.Filter)
-			return
-		}),
-		cloudresult.CmdResultGetPreviousFinishedState: Handler(func(ctx context.Context, data cloudresult.GetPreviousFinishedStateRequest) (r cloudresult.GetPreviousFinishedStateResponse, err error) {
-			r.Result, err = deprecatedRepositories.TestResults().GetPreviousFinishedState(ctx, data.TestName, data.Date)
-			return
-		}),
-		cloudresult.CmdResultInsert: Handler(func(ctx context.Context, data cloudresult.InsertRequest) (r cloudresult.InsertResponse, err error) {
-			return r, deprecatedRepositories.TestResults().Insert(ctx, data.Result)
-		}),
-		cloudresult.CmdResultUpdate: Handler(func(ctx context.Context, data cloudresult.UpdateRequest) (r cloudresult.UpdateResponse, err error) {
-			return r, deprecatedRepositories.TestResults().Update(ctx, data.Result)
-		}),
-		cloudresult.CmdResultUpdateResult: Handler(func(ctx context.Context, data cloudresult.UpdateResultInExecutionRequest) (r cloudresult.UpdateResultInExecutionResponse, err error) {
-			return r, deprecatedRepositories.TestResults().UpdateResult(ctx, data.ID, data.Execution)
-		}),
-		cloudresult.CmdResultStartExecution: Handler(func(ctx context.Context, data cloudresult.StartExecutionRequest) (r cloudresult.StartExecutionResponse, err error) {
-			return r, deprecatedRepositories.TestResults().StartExecution(ctx, data.ID, data.StartTime)
-		}),
-		cloudresult.CmdResultEndExecution: Handler(func(ctx context.Context, data cloudresult.EndExecutionRequest) (r cloudresult.EndExecutionResponse, err error) {
-			return r, deprecatedRepositories.TestResults().EndExecution(ctx, data.Execution)
-		}),
-		cloudresult.CmdResultGetLabels: Handler(func(ctx context.Context, data cloudresult.GetLabelsRequest) (r cloudresult.GetLabelsResponse, err error) {
-			r.Labels, err = deprecatedRepositories.TestResults().GetLabels(ctx)
-			return
-		}),
-		cloudresult.CmdResultDeleteByTest: Handler(func(ctx context.Context, data cloudresult.DeleteByTestRequest) (r cloudresult.DeleteByTestResponse, err error) {
-			return r, deprecatedRepositories.TestResults().DeleteByTest(ctx, data.TestName)
-		}),
-		cloudresult.CmdResultDeleteByTestSuite: Handler(func(ctx context.Context, data cloudresult.DeleteByTestSuiteRequest) (r cloudresult.DeleteByTestSuiteResponse, err error) {
-			return r, deprecatedRepositories.TestResults().DeleteByTestSuite(ctx, data.TestSuiteName)
-		}),
-		cloudresult.CmdResultDeleteAll: Handler(func(ctx context.Context, data cloudresult.DeleteAllRequest) (r cloudresult.DeleteAllResponse, err error) {
-			return r, deprecatedRepositories.TestResults().DeleteAll(ctx)
-		}),
-		cloudresult.CmdResultDeleteByTests: Handler(func(ctx context.Context, data cloudresult.DeleteByTestsRequest) (r cloudresult.DeleteByTestsResponse, err error) {
-			return r, deprecatedRepositories.TestResults().DeleteByTests(ctx, data.TestNames)
-		}),
-		cloudresult.CmdResultDeleteByTestSuites: Handler(func(ctx context.Context, data cloudresult.DeleteByTestSuitesRequest) (r cloudresult.DeleteByTestSuitesResponse, err error) {
-			return r, deprecatedRepositories.TestResults().DeleteByTestSuites(ctx, data.TestSuiteNames)
-		}),
-		cloudresult.CmdResultDeleteForAllTestSuites: Handler(func(ctx context.Context, data cloudresult.DeleteForAllTestSuitesRequest) (r cloudresult.DeleteForAllTestSuitesResponse, err error) {
-			return r, deprecatedRepositories.TestResults().DeleteForAllTestSuites(ctx)
-		}),
-		cloudresult.CmdResultGetTestMetrics: Handler(func(ctx context.Context, data cloudresult.GetTestMetricsRequest) (r cloudresult.GetTestMetricsResponse, err error) {
-			r.Metrics, err = deprecatedRepositories.TestResults().GetTestMetrics(ctx, data.Name, data.Limit, data.Last)
-			return
-		}),
-		cloudresult.CmdResultGetNextExecutionNumber: Handler(func(ctx context.Context, data cloudresult.NextExecutionNumberRequest) (r cloudresult.NextExecutionNumberResponse, err error) {
-			r.TestNumber, err = deprecatedRepositories.TestResults().GetNextExecutionNumber(ctx, data.TestName)
-			return
-		}),
-	}
-
-	// Set up "Test Suites - Executions" commands
-	deprecatedTestSuiteExecutionsCommands := CommandHandlers{
-		cloudtestresult.CmdTestResultGet: Handler(func(ctx context.Context, data cloudtestresult.GetRequest) (r cloudtestresult.GetResponse, err error) {
-			r.TestSuiteExecution, err = deprecatedRepositories.TestSuiteResults().Get(ctx, data.ID)
-			return
-		}),
-		cloudtestresult.CmdTestResultGetByNameAndTestSuite: Handler(func(ctx context.Context, data cloudtestresult.GetByNameAndTestSuiteRequest) (r cloudtestresult.GetByNameAndTestSuiteResponse, err error) {
-			r.TestSuiteExecution, err = deprecatedRepositories.TestSuiteResults().GetByNameAndTestSuite(ctx, data.Name, data.TestSuiteName)
-			return
-		}),
-		cloudtestresult.CmdTestResultGetLatestByTestSuite: Handler(func(ctx context.Context, data cloudtestresult.GetLatestByTestSuiteRequest) (r cloudtestresult.GetLatestByTestSuiteResponse, err error) {
-			ex, err := deprecatedRepositories.TestSuiteResults().GetLatestByTestSuite(ctx, data.TestSuiteName)
-			if ex != nil {
-				r.TestSuiteExecution = *ex
-			}
-			return
-		}),
-		cloudtestresult.CmdTestResultGetLatestByTestSuites: Handler(func(ctx context.Context, data cloudtestresult.GetLatestByTestSuitesRequest) (r cloudtestresult.GetLatestByTestSuitesResponse, err error) {
-			r.TestSuiteExecutions, err = deprecatedRepositories.TestSuiteResults().GetLatestByTestSuites(ctx, data.TestSuiteNames)
-			return
-		}),
-		cloudtestresult.CmdTestResultGetExecutionsTotals: Handler(func(ctx context.Context, data cloudtestresult.GetExecutionsTotalsRequest) (r cloudtestresult.GetExecutionsTotalsResponse, err error) {
-			r.ExecutionsTotals, err = deprecatedRepositories.TestSuiteResults().GetExecutionsTotals(ctx, mapTestSuiteFilters(data.Filter)...)
-			return
-		}),
-		cloudtestresult.CmdTestResultGetExecutions: Handler(func(ctx context.Context, data cloudtestresult.GetExecutionsRequest) (r cloudtestresult.GetExecutionsResponse, err error) {
-			r.TestSuiteExecutions, err = deprecatedRepositories.TestSuiteResults().GetExecutions(ctx, data.Filter)
-			return
-		}),
-		cloudtestresult.CmdTestResultGetPreviousFinishedState: Handler(func(ctx context.Context, data cloudtestresult.GetPreviousFinishedStateRequest) (r cloudtestresult.GetPreviousFinishedStateResponse, err error) {
-			r.Result, err = deprecatedRepositories.TestSuiteResults().GetPreviousFinishedState(ctx, data.TestSuiteName, data.Date)
-			return
-		}),
-		cloudtestresult.CmdTestResultInsert: Handler(func(ctx context.Context, data cloudtestresult.InsertRequest) (r cloudtestresult.InsertResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().Insert(ctx, data.TestSuiteExecution)
-		}),
-		cloudtestresult.CmdTestResultUpdate: Handler(func(ctx context.Context, data cloudtestresult.UpdateRequest) (r cloudtestresult.UpdateResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().Update(ctx, data.TestSuiteExecution)
-		}),
-		cloudtestresult.CmdTestResultStartExecution: Handler(func(ctx context.Context, data cloudtestresult.StartExecutionRequest) (r cloudtestresult.StartExecutionResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().StartExecution(ctx, data.ID, data.StartTime)
-		}),
-		cloudtestresult.CmdTestResultEndExecution: Handler(func(ctx context.Context, data cloudtestresult.EndExecutionRequest) (r cloudtestresult.EndExecutionResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().EndExecution(ctx, data.Execution)
-		}),
-		cloudtestresult.CmdTestResultDeleteByTestSuite: Handler(func(ctx context.Context, data cloudtestresult.DeleteByTestSuiteRequest) (r cloudtestresult.DeleteByTestSuiteResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().DeleteByTestSuite(ctx, data.TestSuiteName)
-		}),
-		cloudtestresult.CmdTestResultDeleteAll: Handler(func(ctx context.Context, data cloudtestresult.DeleteAllTestResultsRequest) (r cloudtestresult.DeleteAllTestResultsResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().DeleteAll(ctx)
-		}),
-		cloudtestresult.CmdTestResultDeleteByTestSuites: Handler(func(ctx context.Context, data cloudtestresult.DeleteByTestSuitesRequest) (r cloudtestresult.DeleteByTestSuitesResponse, err error) {
-			return r, deprecatedRepositories.TestSuiteResults().DeleteByTestSuites(ctx, data.TestSuiteNames)
-		}),
-		cloudtestresult.CmdTestResultGetTestSuiteMetrics: Handler(func(ctx context.Context, data cloudtestresult.GetTestSuiteMetricsRequest) (r cloudtestresult.GetTestSuiteMetricsResponse, err error) {
-			r.Metrics, err = deprecatedRepositories.TestSuiteResults().GetTestSuiteMetrics(ctx, data.Name, data.Limit, data.Last)
-			return
-		}),
-		cloudtestresult.CmdTestResultGetNextExecutionNumber: Handler(func(ctx context.Context, data cloudtestresult.NextExecutionNumberRequest) (r cloudtestresult.NextExecutionNumberResponse, err error) {
-			r.TestSuiteNumber, err = deprecatedRepositories.TestSuiteResults().GetNextExecutionNumber(ctx, data.TestSuiteName)
 			return
 		}),
 	}
@@ -315,12 +168,7 @@ func CreateCommands(disableDeprecatedTests bool, storageBucket string, deprecate
 		}),
 	}
 
-	// Select commands to use
-	commands := []CommandHandlers{configCommands, testWorkflowExecutionsCommands, testWorkflowsOutputCommands, artifactsCommands, webhoookCommands}
-	if !disableDeprecatedTests {
-		commands = append(commands, deprecatedTestExecutionsCommands, deprecatedTestSuiteExecutionsCommands)
-	}
-	return commands
+	return []CommandHandlers{configCommands, testWorkflowExecutionsCommands, testWorkflowsOutputCommands, artifactsCommands, webhoookCommands}
 }
 
 func mapTestWorkflowFilters(s []*testworkflow.FilterImpl) []testworkflow.Filter {
