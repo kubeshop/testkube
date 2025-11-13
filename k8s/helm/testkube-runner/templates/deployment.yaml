@@ -9,6 +9,11 @@ metadata:
     {{- if .Values.deployment.labels }}
     {{- include "global.tplvalues.render" ( dict "value" .Values.deployment.labels "context" $ ) | nindent 4 }}
     {{- end }}
+    {{- if .Values.runner.register.labels }}
+    {{- range $key, $value := .Values.runner.register.labels }}
+    {{ $.Values.runner.register.labelPrefix }}{{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{- end }}
   annotations:
     {{- if .Values.global.annotations }}
     {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
@@ -354,6 +359,12 @@ spec:
               value: "{{ include "testkube-runner.fullname" . }}-"
             - name: FLOATING_RUNNER
               value: "{{ .Values.runner.register.floating }}"
+            - name: RUNNER_IS_GLOBAL
+              value: "{{ .Values.runner.register.global }}"
+            {{- if .Values.runner.register.groupName }}
+            - name: RUNNER_GROUP
+              value: "{{ .Values.runner.register.groupName }}"
+            {{- end }}
           envFrom:
             - secretRef:
                 name: "{{ include "testkube-runner.fullname" . }}-self-registration"

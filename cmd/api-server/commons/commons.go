@@ -18,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +31,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	postgresmigrations "github.com/kubeshop/testkube/pkg/database/postgres/migrations"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -40,14 +38,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
-	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func ExitOnError(title string, err error) {
@@ -402,13 +397,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	)
 }
 
-func CreateCronJobScheduler(cfg *config.Config,
-	testWorkflowClient testworkflowclient.TestWorkflowClient,
-	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
-	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	logger *zap.SugaredLogger,
-	proContext *config.ProContext,
-) cronjob.Interface {
+func CronJobsEnabled(cfg *config.Config) bool {
 	enableCronJobs := cfg.EnableCronJobs
 	if enableCronJobs == "" {
 		var err error
@@ -417,26 +406,19 @@ func CreateCronJobScheduler(cfg *config.Config,
 			"enable-cron-jobs",
 			"enable cron jobs",
 		)
-		ExitOnError("creating cron job scheduler config loading", err)
+		if err != nil {
+			return false
+		}
 	}
 
 	if enableCronJobs == "" {
-		return nil
+		return false
 	}
 
 	result, err := strconv.ParseBool(enableCronJobs)
-	ExitOnError("creating cron job scheduler config parsing", err)
-
-	if !result {
-		return nil
+	if err != nil {
+		return false
 	}
 
-	scheduler := cronjob.New(testWorkflowClient,
-		testWorkflowTemplateClient,
-		testWorkflowExecutor,
-		logger,
-		proContext,
-	)
-
-	return scheduler
+	return result
 }

@@ -66,23 +66,45 @@ service TestKubeCloudAPI {
     // -- Test Triggers
     rpc GetTestTrigger(GetTestTriggerRequest) returns (GetTestTriggerResponse);
     rpc ListTestTriggers(ListTestTriggersRequest) returns (stream TestTriggerListItem);
-    rpc ListTestTriggerLabels(ListTestTriggerLabelsRequest) returns (ListTestTriggerLabelsResponse);
+    rpc ListTestTriggerLabels(ListTestTriggerLabelsRequest) returns (ListTestTriggerLabelsResponse) {
+      option deprecated = true;
+    };
     rpc CreateTestTrigger(CreateTestTriggerRequest) returns (CreateTestTriggerResponse);
     rpc UpdateTestTrigger(UpdateTestTriggerRequest) returns (UpdateTestTriggerResponse);
     rpc DeleteTestTrigger(DeleteTestTriggerRequest) returns (DeleteTestTriggerResponse);
     rpc DeleteAllTestTriggers(DeleteAllTestTriggersRequest) returns (DeleteAllTestTriggersResponse);
     rpc DeleteTestTriggersByLabels(DeleteTestTriggersByLabelsRequest) returns (DeleteTestTriggersByLabelsResponse);
-    rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate);
+    rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate) {
+      option deprecated = true;
+    };
     // -- Webhook
-    rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse);
-    rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem);
-    rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse);
-    rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse);
-    rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse);
-    rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse);
-    rpc DeleteAllWebhooks(DeleteAllWebhooksRequest) returns (DeleteAllWebhooksResponse);
-    rpc DeleteWebhooksByLabels(DeleteWebhooksByLabelsRequest) returns (DeleteWebhooksByLabelsResponse);
-    rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate);
+    rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem) {
+      option deprecated = true;
+    };
+    rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteAllWebhooks(DeleteAllWebhooksRequest) returns (DeleteAllWebhooksResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteWebhooksByLabels(DeleteWebhooksByLabelsRequest) returns (DeleteWebhooksByLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate) {
+      option deprecated = true;
+    };
 }
 
 enum LogsStreamRequestType {
@@ -716,10 +738,12 @@ message TestTriggerListItem {
 }
 
 message ListTestTriggerLabelsRequest {
+  option deprecated = true;
   string namespace = 1;
 }
 
 message ListTestTriggerLabelsResponse {
+  option deprecated = true;
   repeated LabelListItem labels = 1;
 }
 
@@ -764,11 +788,13 @@ message DeleteTestTriggersByLabelsResponse {
 }
 
 message WatchTestTriggerUpdatesRequest {
+  option deprecated = true;
   bool include_initial_data = 1;
   string namespace = 2;
 }
 
 message TestTriggerUpdate {
+  option deprecated = true;
   bool ping = 1;
   google.protobuf.Timestamp timestamp = 2;
   UpdateType type = 3;
@@ -778,15 +804,18 @@ message TestTriggerUpdate {
 // CRD Synchronisation -- Webhooks
 
 message GetWebhookRequest {
+  option deprecated = true;
   string name = 1;
   string namespace = 2;
 }
 
 message GetWebhookResponse {
+  option deprecated = true;
   bytes webhook = 1; // Webhook
 }
 
 message ListWebhooksRequest {
+  option deprecated = true;
   uint32 offset = 1;
   uint32 limit = 2;
   map<string, string> labels = 3;
@@ -796,62 +825,78 @@ message ListWebhooksRequest {
 }
 
 message WebhookListItem {
+  option deprecated = true;
   bytes webhook = 1; // Webhook
 }
 
 message ListWebhookLabelsRequest {
+  option deprecated = true;
   string namespace = 1;
 }
 
 message ListWebhookLabelsResponse {
+  option deprecated = true;
   repeated LabelListItem labels = 1;
 }
 
 message CreateWebhookRequest {
+  option deprecated = true;
   bytes webhook = 1; // Webhook
 }
 
 message CreateWebhookResponse {
+  option deprecated = true;
   bytes webhook = 1; // Webhook
 }
 
 message UpdateWebhookRequest {
+  option deprecated = true;
   bytes webhook = 1; // Webhook
 }
 
 message UpdateWebhookResponse {
+  option deprecated = true;
   bytes webhook = 1; // Webhook
 }
 
 message DeleteWebhookRequest {
+  option deprecated = true;
   string name = 1;
   string namespace = 2;
 }
 
-message DeleteWebhookResponse {}
+message DeleteWebhookResponse {
+  option deprecated = true;
+}
 
 message DeleteAllWebhooksRequest {
+  option deprecated = true;
   string namespace = 1;
 }
 
 message DeleteAllWebhooksResponse {
+  option deprecated = true;
   uint32 count = 1;
 }
 
 message DeleteWebhooksByLabelsRequest {
+  option deprecated = true;
   map<string, string> labels = 1;
 }
 
 message DeleteWebhooksByLabelsResponse {
+  option deprecated = true;
   uint32 count = 1;
 }
 
 message WatchWebhookUpdatesRequest {
+  option deprecated = true;
   bool include_initial_data = 1;
   string namespace = 2;
 }
 
 message WebhookUpdate {
+  option deprecated = true;
   bool ping = 1;
   google.protobuf.Timestamp timestamp = 2;
   UpdateType type = 3;

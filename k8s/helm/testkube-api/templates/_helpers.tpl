@@ -114,6 +114,8 @@ Define API environment in agent mode
   value: "self-registration"
 - name: SECRET_CREATION_PREFIX
   value: "{{ include "testkube-api.fullname" . }}-"
+- name: RUNNER_IS_GLOBAL
+  value: "true"
 {{- if .Values.cloud.url }}
 - name: TESTKUBE_CLOUD_URL
   value:  {{ tpl .Values.cloud.url $ | quote }}
