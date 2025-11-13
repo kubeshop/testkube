@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,7 +30,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 			err := json.NewDecoder(r.Body).Decode(&event)
 			// then
 			assert.NoError(t, err)
-			assert.Equal(t, executionID, event.TestExecution.Id)
+			assert.Equal(t, executionID, event.TestWorkflowExecution.Id)
 		})
 
 		svr := httptest.NewServer(testHandler)
@@ -44,8 +44,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:         testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		assert.Equal(t, "", r.Error())
@@ -70,8 +70,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:         testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
@@ -91,8 +91,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := s.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:         testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
@@ -105,8 +105,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body := bytes.NewBuffer([]byte{})
 			err := json.NewEncoder(body).Encode(testkube.Event{
-				Type_:         testkube.EventStartTest,
-				TestExecution: exampleExecution(),
+				Type_:         testkube.EventStartTestWorkflow,
+				TestWorkflowExecution: exampleExecution(),
 			})
 			assert.NoError(t, err)
 
@@ -128,8 +128,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:         testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		assert.Equal(t, "", r.Error())
@@ -160,8 +160,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 		// when
 		r := l.Notify(testkube.Event{
 			Id:            "12345",
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:         testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		assert.Equal(t, "", r.Error())
@@ -180,8 +180,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		match := s.Match(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:         testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
@@ -189,7 +189,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	})
 }
 
-func exampleExecution() *testkube.Execution {
+func exampleExecution() *testkube.TestWorkflowExecution {
 	execution := testkube.NewQueuedExecution()
 	execution.Id = executionID
 	return execution

@@ -15,8 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
-var _ testresult.Repository = (*CloudRepository)(nil)
-
 type CloudRepository struct {
 	executor executor.Executor
 }

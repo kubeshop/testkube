@@ -36,7 +36,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if t.Spec.Disabled {
 			continue
 		}
-		if t.Spec.Execution != ExecutionTestWorkflow {
+		if t.Spec.Execution != ExecutionTestWorkflow && t.Spec.Execution != "" {
 			continue
 		}
 

@@ -81,9 +81,9 @@ func TestEmitter_Listen(t *testing.T) {
 
 		// events
 		event1 := newExampleTestEvent1()
-		event1.TestExecution.Labels = map[string]string{"type": "listener1"}
+		event1.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "listener1"}
 		event2 := newExampleTestEvent2()
-		event2.TestExecution.Labels = map[string]string{"type": "listener2"}
+		event2.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "listener2"}
 
 		// when
 		emitter.Notify(event1)
@@ -165,10 +165,10 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
-			testkube.BECOME_TEST_FAILED_EventType, testkube.BECOME_TEST_DOWN_EventType, testkube.END_TEST_FAILED_EventType}}
+			testkube.BECOME_TESTWORKFLOW_FAILED_EventType, testkube.BECOME_TESTWORKFLOW_DOWN_EventType, testkube.END_TESTWORKFLOW_FAILED_EventType}}
 		// * second on pod2
 		listener2 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
-			testkube.BECOME_TEST_FAILED_EventType, testkube.BECOME_TEST_DOWN_EventType, testkube.END_TEST_FAILED_EventType}}
+			testkube.BECOME_TESTWORKFLOW_FAILED_EventType, testkube.BECOME_TESTWORKFLOW_DOWN_EventType, testkube.END_TESTWORKFLOW_FAILED_EventType}}
 
 		emitter.Register(listener1)
 		emitter.Register(listener2)
@@ -228,25 +228,25 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 
 func newExampleTestEvent1() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID1",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID1", "test/test", "test"),
+		Id:                    "eventID1",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID1", "test"),
 	}
 }
 
 func newExampleTestEvent2() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID2",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
+		Id:                    "eventID2",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID2", "test"),
 	}
 }
 
 func newExampleTestEvent5() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID5",
-		Type_:         testkube.EventEndTestFailed,
-		TestExecution: testkube.NewExecutionWithID("executionID5", "test/test", "test"),
+		Id:                    "eventID5",
+		Type_:                 testkube.EventEndTestWorkflowFailed,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID5", "test"),
 	}
 }
 

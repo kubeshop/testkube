@@ -61,7 +61,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		},
 	}
 
-	if t.Spec.Execution != ExecutionTestWorkflow {
+	if t.Spec.Execution != ExecutionTestWorkflow && t.Spec.Execution != "" {
 		return errors.New("deprecated: please upgrade to test workflows")
 	}
 

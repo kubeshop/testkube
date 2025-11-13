@@ -13,10 +13,6 @@ func TestEventType_IsBecome(t *testing.T) {
 		t.Parallel()
 
 		events := map[EventType]bool{
-			START_TEST_EventType:             false,
-			BECOME_TEST_UP_EventType:         true,
-			START_TESTSUITE_EventType:        false,
-			BECOME_TESTSUITE_UP_EventType:    true,
 			START_TESTWORKFLOW_EventType:     false,
 			BECOME_TESTWORKFLOW_UP_EventType: true,
 		}
@@ -42,10 +38,6 @@ func TestEventType_MapBecomeToRegular(t *testing.T) {
 		t.Parallel()
 
 		events := map[EventType][]EventType{
-			START_TEST_EventType:             nil,
-			BECOME_TEST_UP_EventType:         {END_TEST_SUCCESS_EventType},
-			START_TESTSUITE_EventType:        nil,
-			BECOME_TESTSUITE_UP_EventType:    {END_TESTSUITE_SUCCESS_EventType},
 			START_TESTWORKFLOW_EventType:     nil,
 			BECOME_TESTWORKFLOW_UP_EventType: {END_TESTWORKFLOW_SUCCESS_EventType},
 		}
