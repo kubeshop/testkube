@@ -77,7 +77,7 @@ Define API image
 {{- $registryName := .Values.image.registry -}}
 {{- $repositoryName := .Values.image.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.image.tag | toString -}}
-{{- $tagSuffix := .Values.image.tagSuffix -}}
+{{- $tagSuffix := default "" .Values.image.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.image.digest }}
     {{- $separator = "@" -}}
