@@ -333,11 +333,11 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 	}
 
 	// Convert to map for easier processing
-	sigMap := make(map[int32]*testkube.TestWorkflowSignature)
-	parentChildMap := make(map[int32][]int32)
+	sigMap := make(map[string]*testkube.TestWorkflowSignature)
+	parentChildMap := make(map[string][]string)
 
 	for _, sig := range signatures {
-		id := int32(sig["id"].(float64))
+		id := sig["id"].(string)
 
 		twSig := &testkube.TestWorkflowSignature{
 			Ref:      getStringFromMap(sig, "ref"),
@@ -349,16 +349,21 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		sigMap[id] = twSig
 
 		if parentID, ok := sig["parent_id"]; ok && parentID != nil {
-			parentInt := int32(parentID.(float64))
-			parentChildMap[parentInt] = append(parentChildMap[parentInt], id)
+			parentStr := parentID.(string)
+			parentChildMap[parentStr] = append(parentChildMap[parentStr], id)
 		}
 	}
 
-	// Build tree structure
-	var buildChildren func(parentId int32) []testkube.TestWorkflowSignature
-	buildChildren = func(parentId int32) []testkube.TestWorkflowSignature {
-		var children []testkube.TestWorkflowSignature
-		for _, childId := range parentChildMap[parentId] {
+	// Build tree structure - order is preserved from input
+	var buildChildren func(parentId string) []testkube.TestWorkflowSignature
+	buildChildren = func(parentId string) []testkube.TestWorkflowSignature {
+		childIds := parentChildMap[parentId]
+		if len(childIds) == 0 {
+			return nil
+		}
+
+		children := make([]testkube.TestWorkflowSignature, 0, len(childIds))
+		for _, childId := range childIds {
 			child := *sigMap[childId]
 			child.Children = buildChildren(childId)
 			children = append(children, child)
@@ -366,10 +371,10 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 		return children
 	}
 
-	// Find root signatures (those without parents)
-	var roots []testkube.TestWorkflowSignature
+	// Find root signatures (those without parents) - order is preserved from input
+	roots := make([]testkube.TestWorkflowSignature, 0)
 	for _, sig := range signatures {
-		id := int32(sig["id"].(float64))
+		id := sig["id"].(string)
 		if _, hasParent := sig["parent_id"]; !hasParent || sig["parent_id"] == nil {
 			root := *sigMap[id]
 			root.Children = buildChildren(id)
@@ -379,6 +384,7 @@ func (r *PostgresRepository) buildSignatureTreeFromJSON(signatures []map[string]
 
 	return roots
 }
+
 func (r *PostgresRepository) convertOutputsFromJSON(outputs []map[string]interface{}) []testkube.TestWorkflowOutput {
 	result := make([]testkube.TestWorkflowOutput, len(outputs))
 	for i, output := range outputs {
@@ -732,7 +738,8 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	// Insert related data
-	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, 0); err != nil {
+	sigOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &sigOrder); err != nil {
 		return err
 	}
 
@@ -825,13 +832,9 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 	})
 }
 
-func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId int32) error {
+func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId pgtype.UUID, sigOrder *int32) error {
 	for _, sig := range signatures {
-		var parentIdPg pgtype.Int4
-		if parentId > 0 {
-			parentIdPg = toPgInt4(parentId)
-		}
-
+		*sigOrder += 1
 		id, err := qtx.InsertTestWorkflowSignature(ctx, sqlc.InsertTestWorkflowSignatureParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(sig.Ref),
@@ -839,7 +842,8 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 			Category:    toPgText(sig.Category),
 			Optional:    toPgBool(sig.Optional),
 			Negative:    toPgBool(sig.Negative),
-			ParentID:    parentIdPg,
+			ParentID:    parentId,
+			SigOrder:    *sigOrder,
 		})
 		if err != nil {
 			return err
@@ -850,7 +854,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 		if len(sig.Children) > 0 {
 			// TODO: Implement recursive insertion for children
 			// This would require getting the ID of the just inserted signature
-			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id); err != nil {
+			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id, sigOrder); err != nil {
 				return err
 			}
 		}
@@ -901,7 +905,7 @@ func (r *PostgresRepository) insertResult(ctx context.Context, qtx sqlc.TestWork
 }
 
 func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, outputs []testkube.TestWorkflowOutput) error {
-	for _, output := range outputs {
+	for i, output := range outputs {
 		value, err := toJSONB(output.Value)
 		if err != nil {
 			return err
@@ -912,6 +916,7 @@ func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx sqlc.TestWor
 			Ref:         toPgText(output.Ref),
 			Name:        toPgText(output.Name),
 			Value:       value,
+			OutOrder:    int32(i + 1),
 		})
 		if err != nil {
 			return err
@@ -973,7 +978,7 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 }
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
-	for _, report := range reports {
+	for i, report := range reports {
 		summary, err := toJSONB(report.Summary)
 		if err != nil {
 			return err
@@ -985,6 +990,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			Kind:        toPgText(report.Kind),
 			File:        toPgText(report.File),
 			Summary:     summary,
+			RepOrder:    int32(i + 1),
 		})
 		if err != nil {
 			return err
@@ -1108,7 +1114,8 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	// Re-insert all related data
-	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, 0); err != nil {
+	sigOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, pgtype.UUID{}, &sigOrder); err != nil {
 		return err
 	}
 
@@ -1399,20 +1406,29 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 	return nil
 }
 
-// UpdateReport adds a report
+// UpdateReport updates a report
 func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) error {
-	summary, err := toJSONB(report.Summary)
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Delete existing reports
+	err = qtx.DeleteTestWorkflowReports(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	return r.queries.UpdateTestWorkflowExecutionReport(ctx, sqlc.UpdateTestWorkflowExecutionReportParams{
-		ExecutionID: id,
-		Ref:         toPgText(report.Ref),
-		Kind:        toPgText(report.Kind),
-		File:        toPgText(report.File),
-		Summary:     summary,
-	})
+	// Insert new reports
+	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // UpdateOutput replaces all outputs
@@ -1633,7 +1649,16 @@ func (r *PostgresRepository) Init(ctx context.Context, id string, data testworkf
 		return fmt.Errorf("failed to init test workflow execution: %w", err)
 	}
 
-	if err := qtx.UpdateTestWorkflowExecutionResult(ctx, sqlc.UpdateTestWorkflowExecutionResultParams{
+	if err = r.deleteSignatures(ctx, qtx, id); err != nil {
+		return err
+	}
+
+	sigOrder := int32(0)
+	if err = r.insertSignatures(ctx, qtx, id, data.Signature, pgtype.UUID{}, &sigOrder); err != nil {
+		return err
+	}
+
+	if err := qtx.UpdateExecutionStatus(ctx, sqlc.UpdateExecutionStatusParams{
 		ExecutionID: id,
 		Status:      toPgText(string(testkube.SCHEDULING_TestWorkflowStatus)),
 	}); err != nil {
@@ -1748,7 +1773,29 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		return 0, err
 	}
 
-	return r.queries.CountTestWorkflowExecutions(ctx, sqlc.CountTestWorkflowExecutionsParams(params))
+	return r.queries.CountTestWorkflowExecutions(ctx, sqlc.CountTestWorkflowExecutionsParams{
+		OrganizationID:     params.OrganizationID,
+		EnvironmentID:      params.EnvironmentID,
+		WorkflowName:       params.WorkflowName,
+		WorkflowNames:      params.WorkflowNames,
+		TextSearch:         params.TextSearch,
+		StartDate:          params.StartDate,
+		EndDate:            params.EndDate,
+		LastNDays:          params.LastNDays,
+		Statuses:           params.Statuses,
+		RunnerID:           params.RunnerID,
+		Assigned:           params.Assigned,
+		ActorName:          params.ActorName,
+		ActorType:          params.ActorType,
+		GroupID:            params.GroupID,
+		Initialized:        params.Initialized,
+		TagKeys:            params.TagKeys,
+		TagConditions:      params.TagConditions,
+		LabelKeys:          params.LabelKeys,
+		LabelConditions:    params.LabelConditions,
+		SelectorKeys:       params.SelectorKeys,
+		SelectorConditions: params.SelectorConditions,
+	})
 }
 
 // Helper functions for building query parameters and converting rows

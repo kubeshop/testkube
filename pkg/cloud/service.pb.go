@@ -6308,6 +6308,7 @@ func (x *TestTriggerListItem) GetTrigger() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type ListTestTriggerLabelsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6355,6 +6356,7 @@ func (x *ListTestTriggerLabelsRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type ListTestTriggerLabelsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6879,6 +6881,7 @@ func (x *DeleteTestTriggersByLabelsResponse) GetCount() uint32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type WatchTestTriggerUpdatesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6934,6 +6937,7 @@ func (x *WatchTestTriggerUpdatesRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type TestTriggerUpdate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7005,6 +7009,7 @@ func (x *TestTriggerUpdate) GetResource() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type GetWebhookRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7060,6 +7065,7 @@ func (x *GetWebhookRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type GetWebhookResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7107,6 +7113,7 @@ func (x *GetWebhookResponse) GetWebhook() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type ListWebhooksRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7194,6 +7201,7 @@ func (x *ListWebhooksRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type WebhookListItem struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7241,6 +7249,7 @@ func (x *WebhookListItem) GetWebhook() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type ListWebhookLabelsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7288,6 +7297,7 @@ func (x *ListWebhookLabelsRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type ListWebhookLabelsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7335,6 +7345,7 @@ func (x *ListWebhookLabelsResponse) GetLabels() []*LabelListItem {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type CreateWebhookRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7382,6 +7393,7 @@ func (x *CreateWebhookRequest) GetWebhook() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type CreateWebhookResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7429,6 +7441,7 @@ func (x *CreateWebhookResponse) GetWebhook() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type UpdateWebhookRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7476,6 +7489,7 @@ func (x *UpdateWebhookRequest) GetWebhook() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type UpdateWebhookResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7523,6 +7537,7 @@ func (x *UpdateWebhookResponse) GetWebhook() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type DeleteWebhookRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7578,6 +7593,7 @@ func (x *DeleteWebhookRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type DeleteWebhookResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7616,6 +7632,7 @@ func (*DeleteWebhookResponse) Descriptor() ([]byte, []int) {
 	return file_service_proto_rawDescGZIP(), []int{123}
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type DeleteAllWebhooksRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7663,6 +7680,7 @@ func (x *DeleteAllWebhooksRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type DeleteAllWebhooksResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7710,6 +7728,7 @@ func (x *DeleteAllWebhooksResponse) GetCount() uint32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type DeleteWebhooksByLabelsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7757,6 +7776,7 @@ func (x *DeleteWebhooksByLabelsRequest) GetLabels() map[string]string {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type DeleteWebhooksByLabelsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7804,6 +7824,7 @@ func (x *DeleteWebhooksByLabelsResponse) GetCount() uint32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type WatchWebhookUpdatesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7859,6 +7880,7 @@ func (x *WatchWebhookUpdatesRequest) GetNamespace() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in service.proto.
 type WebhookUpdate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

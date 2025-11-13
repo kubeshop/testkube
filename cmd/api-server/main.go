@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	k8sctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -36,6 +35,8 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/cronjob/robfig"
+	cronjobtestworkflow "github.com/kubeshop/testkube/internal/cronjob/testworkflow"
 	syncagent "github.com/kubeshop/testkube/internal/sync"
 	synccontroller "github.com/kubeshop/testkube/internal/sync/controller"
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
@@ -816,47 +817,42 @@ func main() {
 		})
 	}
 
-	scheduler := commons.CreateCronJobScheduler(
-		cfg,
-		testWorkflowsClient,
-		testWorkflowTemplatesClient,
-		testWorkflowExecutor,
-		log.DefaultLogger,
-		&proContext,
-	)
-	if scheduler != nil {
-		// Remove any remaining legacy cronjobs.
-		// TODO: Remove this section once we are happy that users are not migrating from legacy cronjobs (next Major version?)
-		resources := []string{cronjob.TestResourceURI, cronjob.TestSuiteResourceURI, cronjob.TestWorkflowResourceURI}
-		for _, resource := range resources {
-			reqs, err := labels.ParseToRequirements("testkube=" + resource)
-			if err != nil {
-				log.DefaultLogger.Errorw("unable to parse label selector", "error", err, "label", "testkube="+resource)
-				continue
-			}
-
-			u := &unstructured.Unstructured{}
-			u.SetKind("CronJob")
-			u.SetAPIVersion("batch/v1")
-			if err := kubeClient.DeleteAllOf(
-				ctx,
-				u,
-				k8sctrlclient.InNamespace(cfg.TestkubeNamespace),
-				k8sctrlclient.MatchingLabelsSelector{Selector: labels.NewSelector().Add(reqs...)},
-			); err != nil {
-				log.DefaultLogger.Errorw("unable to delete legacy cronjobs", "error", err, "label", "testkube="+resource, "namespace", cfg.TestkubeNamespace)
-				continue
-			}
-		}
-
+	if commons.CronJobsEnabled(cfg) {
+		schedulableResourceWatcher := cronjobtestworkflow.New(
+			log.DefaultLogger,
+			testWorkflowsClient,
+			testWorkflowTemplatesClient,
+			proContext.EnvID,
+		)
+		cronManager := robfig.New(
+			log.DefaultLogger,
+			testWorkflowExecutor,
+			proContext.APIKey != "",
+		)
+		cronService := cronjob.NewService(
+			log.DefaultLogger,
+			cronManager,
+			schedulableResourceWatcher.WatchTestWorkflows,
+			schedulableResourceWatcher.WatchTestWorkflowTemplates,
+		)
 		// Start the new scheduler.
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
-				scheduler.Reconcile(taskCtx)
+				go func() {
+					// Start the cron manager.
+					cronManager.Start()
+					// If we're no longer the leader then stop the manager.
+					// This probably won't happen as losing leadership likely means we died.
+					<-taskCtx.Done()
+					cronManager.Stop()
+				}()
+				cronService.Run(taskCtx)
 				return nil
 			},
 		})
+	} else {
+		log.DefaultLogger.Infow("Not configured to handle cronjobs")
 	}
 
 	g.Go(func() error {
