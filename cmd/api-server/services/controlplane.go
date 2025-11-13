@@ -16,7 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
@@ -45,8 +44,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	var factory repository.RepositoryFactory
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		var logGrpcClient logsclient.StreamGetter // TODO WITO REMOVE ME
-		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, storageClient)
 	}
 	if cfg.APIPostgresDSN != "" {
 		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
@@ -106,7 +104,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 }
 
 func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
-	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client) (repository.RepositoryFactory, error) {
+	storageClient domainstorage.Client) (repository.RepositoryFactory, error) {
 	var outputRepository *minioresult.MinioRepository
 	// Init logs storage
 	if cfg.LogsStorage == "minio" {
@@ -124,7 +122,6 @@ func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Datab
 		Database:         db,
 		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
 		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
-		LogGrpcClient:    logGrpcClient,
 		OutputRepository: outputRepository,
 	}).Build()
 	if err != nil {

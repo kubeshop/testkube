@@ -44,7 +44,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTestWorkflow,
+			Type_:                 testkube.EventStartTestWorkflow,
 			TestWorkflowExecution: exampleExecution(),
 		})
 
@@ -70,7 +70,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTestWorkflow,
+			Type_:                 testkube.EventStartTestWorkflow,
 			TestWorkflowExecution: exampleExecution(),
 		})
 
@@ -91,7 +91,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := s.Notify(testkube.Event{
-			Type_:         testkube.EventStartTestWorkflow,
+			Type_:                 testkube.EventStartTestWorkflow,
 			TestWorkflowExecution: exampleExecution(),
 		})
 
@@ -105,7 +105,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body := bytes.NewBuffer([]byte{})
 			err := json.NewEncoder(body).Encode(testkube.Event{
-				Type_:         testkube.EventStartTestWorkflow,
+				Type_:                 testkube.EventStartTestWorkflow,
 				TestWorkflowExecution: exampleExecution(),
 			})
 			assert.NoError(t, err)
@@ -128,7 +128,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTestWorkflow,
+			Type_:                 testkube.EventStartTestWorkflow,
 			TestWorkflowExecution: exampleExecution(),
 		})
 
@@ -159,8 +159,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Id:            "12345",
-			Type_:         testkube.EventStartTestWorkflow,
+			Id:                    "12345",
+			Type_:                 testkube.EventStartTestWorkflow,
 			TestWorkflowExecution: exampleExecution(),
 		})
 
@@ -180,7 +180,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		// when
 		match := s.Match(testkube.Event{
-			Type_:         testkube.EventStartTestWorkflow,
+			Type_:                 testkube.EventStartTestWorkflow,
 			TestWorkflowExecution: exampleExecution(),
 		})
 

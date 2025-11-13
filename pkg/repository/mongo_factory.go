@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendmongo "github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -25,7 +24,6 @@ type MongoDBFactory struct {
 	db               *mongo.Database
 	allowDiskUse     bool
 	isDocDb          bool
-	logGrpcClient    logsclient.StreamGetter
 	sequenceRepo     sequence.Repository
 	outputRepository *minio.MinioRepository
 	leaseBackendRepo leasebackend.Repository
@@ -38,7 +36,6 @@ type MongoDBFactoryConfig struct {
 	Database         *mongo.Database
 	AllowDiskUse     bool
 	IsDocDb          bool
-	LogGrpcClient    logsclient.StreamGetter
 	OutputRepository *minio.MinioRepository
 }
 
@@ -47,7 +44,6 @@ func NewMongoDBFactory(config MongoDBFactoryConfig) *MongoDBFactory {
 		db:               config.Database,
 		allowDiskUse:     config.AllowDiskUse,
 		isDocDb:          config.IsDocDb,
-		logGrpcClient:    config.LogGrpcClient,
 		outputRepository: config.OutputRepository,
 	}
 
@@ -67,7 +63,6 @@ func (f *MongoDBFactory) NewLeaseBackendRepository() leasebackend.Repository {
 func (f *MongoDBFactory) NewResultRepository() result.Repository {
 	if f.resultRepo == nil {
 		opts := []resultmongo.MongoRepositoryOpt{
-			resultmongo.WithLogsClient(f.logGrpcClient),
 			resultmongo.WithMongoRepositorySequence(f.sequenceRepo),
 		}
 

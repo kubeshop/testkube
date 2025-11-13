@@ -17,7 +17,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -94,7 +93,6 @@ type MongoRepository struct {
 	db                 *mongo.Database
 	ResultsColl        *mongo.Collection
 	OutputRepository   result.OutputRepository
-	logGrpcClient      logsclient.StreamGetter
 	allowDiskUse       bool
 	isDocDb            bool
 	log                *zap.SugaredLogger
@@ -102,12 +100,6 @@ type MongoRepository struct {
 }
 
 type MongoRepositoryOpt func(*MongoRepository)
-
-func WithLogsClient(client logsclient.StreamGetter) MongoRepositoryOpt {
-	return func(r *MongoRepository) {
-		r.logGrpcClient = client
-	}
-}
 
 func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
 	return func(r *MongoRepository) {

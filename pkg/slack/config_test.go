@@ -36,29 +36,6 @@ const notificationConfigString = `[
     }
   ]`
 
-const multipleConfigurationString = `[
-    {
-      "ChannelID": "ChannelID1",
-      "selector": {},
-      "testName": [],
-      "testSuiteName": [],
-      "testWorkflowName": [],	  
-      "events": [
-        "start-test"
-      ]
-    },
-    {
-      "ChannelID": "ChannelID2",
-      "selector": {},
-      "testName": [],
-      "testSuiteName": [],
-	  "testWorkflowName": [],		  
-      "events": [
-        "end-test-failed"
-      ]
-    }
-  ]`
-
 func TestParamsNilAssign(t *testing.T) {
 	var notificationConfig []NotificationsConfig
 	err := json.Unmarshal([]byte(notificationConfigString), &notificationConfig)
