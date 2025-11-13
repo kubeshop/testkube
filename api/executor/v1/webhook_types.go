@@ -184,6 +184,8 @@ type Webhook struct {
 
 	Spec   WebhookSpec   `json:"spec,omitempty"`
 	Status WebhookStatus `json:"status,omitempty"`
+
+	ContextMeta map[string]string `json:"-"`
 }
 
 //+kubebuilder:object:root=true

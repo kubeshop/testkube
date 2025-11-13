@@ -29,6 +29,11 @@ type WebhookClient interface {
 	List(selector string) (*executorv1.WebhookList, error)
 }
 
+const (
+	ContextKeyOrganizationId string = "organization-id"
+	ContextKeyEnvironmentId  string = "environment-id"
+)
+
 // NewWebhookLoader creates a new WebhooksLoader
 func NewWebhookLoader(
 	webhookClient WebhookClient,
@@ -57,9 +62,9 @@ type WebhooksLoader struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
-	dashboardURI string
-	orgID        string
-	envID        string
+	dashboardURI                  string
+	orgID                         string
+	envID                         string
 
 	// Deprecated fields
 	deprecatedClients      commons.DeprecatedClients
@@ -199,6 +204,15 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		eventTypes := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.Namespace, webhook.Name)
+		// Attempt to find organization and environment IDs within context metadata
+		orgID := r.orgID
+		if contextOrgID, exists := webhook.ContextMeta[ContextKeyOrganizationId]; exists && contextOrgID != "" {
+			orgID = contextOrgID
+		}
+		envID := r.envID
+		if contextEnvID, exists := webhook.ContextMeta[ContextKeyEnvironmentId]; exists && contextEnvID != "" {
+			orgID = contextEnvID
+		}
 		listeners = append(
 			listeners,
 			NewWebhookListener(
@@ -219,8 +233,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				listenerWithSecretClient(r.secretClient),
 				listenerWithEnvs(r.envs),
 				listenerWithDashboardURI(r.dashboardURI),
-				listenerWithOrgID(r.orgID),
-				listenerWithEnvID(r.envID),
+				listenerWithOrgID(orgID),
+				listenerWithEnvID(envID),
 			),
 		)
 	}
