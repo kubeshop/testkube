@@ -33,13 +33,11 @@ type TestTriggerWatcher channels.Watcher[*TestTriggerUpdate]
 type TestTriggersClient interface {
 	GetTestTrigger(ctx context.Context, environmentId, name, namespace string) (*testkube.TestTrigger, error)
 	ListTestTriggers(ctx context.Context, environmentId string, options ListTestTriggerOptions, namespace string) TestTriggersReader
-	ListTestTriggerLabels(ctx context.Context, environmentId, namespace string) (map[string][]string, error)
 	UpdateTestTrigger(ctx context.Context, environmentId string, trigger testkube.TestTrigger) error
 	CreateTestTrigger(ctx context.Context, environmentId string, trigger testkube.TestTrigger) error
 	DeleteTestTrigger(ctx context.Context, environmentId, name, namespace string) error
 	DeleteAllTestTriggers(ctx context.Context, environmentId, namespace string) (uint32, error)
 	DeleteTestTriggersByLabels(ctx context.Context, environmentId, selector, namespace string) (uint32, error)
-	WatchTestTriggerUpdates(ctx context.Context, environmentId, namespace string, includeInitialData bool) TestTriggerWatcher
 }
 
 func (c *client) GetTestTrigger(ctx context.Context, environmentId, name, namespace string) (*testkube.TestTrigger, error) {
@@ -88,20 +86,6 @@ func (c *client) ListTestTriggers(ctx context.Context, environmentId string, opt
 	return result
 }
 
-func (c *client) ListTestTriggerLabels(ctx context.Context, environmentId, namespace string) (map[string][]string, error) {
-	req := &cloud.ListTestTriggerLabelsRequest{Namespace: namespace}
-	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListTestTriggerLabels, req)
-	if err != nil {
-		return nil, err
-	}
-
-	labels := make(map[string][]string)
-	for _, label := range res.Labels {
-		labels[label.Name] = label.Value
-	}
-	return labels, nil
-}
-
 func (c *client) CreateTestTrigger(ctx context.Context, environmentId string, trigger testkube.TestTrigger) error {
 	triggerBytes, err := json.Marshal(trigger)
 	if err != nil {
@@ -144,40 +128,4 @@ func (c *client) DeleteTestTriggersByLabels(ctx context.Context, environmentId, 
 		return 0, err
 	}
 	return res.Count, nil
-}
-
-func (c *client) WatchTestTriggerUpdates(ctx context.Context, environmentId, namespace string, includeInitialData bool) TestTriggerWatcher {
-	req := &cloud.WatchTestTriggerUpdatesRequest{
-		IncludeInitialData: includeInitialData,
-		Namespace:          namespace,
-	}
-	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.WatchTestTriggerUpdates, req)
-	if err != nil {
-		return channels.NewError[*TestTriggerUpdate](err)
-	}
-	watcher := channels.NewWatcher[*TestTriggerUpdate]()
-	go func() {
-		var item *cloud.TestTriggerUpdate
-		for err == nil {
-			item, err = res.Recv()
-			if err != nil {
-				break
-			}
-			if item.Ping {
-				continue
-			}
-			var resource testkube.TestTrigger
-			err = json.Unmarshal(item.Resource, &resource)
-			watcher.Send(&TestTriggerUpdate{
-				Type:      item.Type,
-				Timestamp: item.Timestamp.AsTime(),
-				Resource:  &resource,
-			})
-		}
-		if errors.Is(err, io.EOF) {
-			err = nil
-		}
-		watcher.Close(err)
-	}()
-	return watcher
 }
