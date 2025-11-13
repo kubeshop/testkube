@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-logr/zapr"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/kubeshop/testkube/pkg/coordination/leader"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -206,6 +208,19 @@ func main() {
 		log.DefaultLogger.Infow("connected to remote control plane successfully", "url", cfg.TestkubeProURL)
 	}
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	var leaderLeaseBackend leasebackend.Repository
+	if controlPlane != nil {
+		leaderLeaseBackend = controlPlane.GetRepositoryManager().LeaseBackend()
+	} else {
+		leaderLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(
+			clientset,
+			cfg.TestkubeNamespace,
+			leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
+		)
+	}
+
+	leaderTasks := make([]leader.Task, 0)
 
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
@@ -798,10 +813,15 @@ func main() {
 			eventsEmitter,
 		)
 		commons.ExitOnError("starting agent", err)
-		g.Go(func() error {
-			err = agentHandle.Run(ctx)
-			commons.ExitOnError("running agent", err)
-			return nil
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.Run(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent", err)
+				}
+				return err
+			},
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
@@ -819,7 +839,11 @@ func main() {
 			lb = controlPlane.GetRepositoryManager().LeaseBackend()
 		} else {
 			// Fallback: Kubernetes Lease-based coordination (no external DB required)
-			lb = leasebackendk8s.NewK8sLeaseBackend(clientset, cfg.TestkubeNamespace)
+			lb = leasebackendk8s.NewK8sLeaseBackend(
+				clientset,
+				cfg.TestkubeNamespace,
+				leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
+			)
 		}
 
 		triggerService := triggers.NewService(
@@ -855,9 +879,12 @@ func main() {
 	}
 
 	// telemetry based functions
-	g.Go(func() error {
-		services.HandleTelemetryHeartbeat(ctx, clusterId, configMapConfig)
-		return nil
+	leaderTasks = append(leaderTasks, leader.Task{
+		Name: "telemetry-heartbeat",
+		Start: func(taskCtx context.Context) error {
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig)
+			return nil
+		},
 	})
 
 	log.DefaultLogger.Infow(
@@ -929,9 +956,12 @@ func main() {
 		}
 
 		// Start the new scheduler.
-		g.Go(func() error {
-			scheduler.Reconcile(ctx)
-			return nil
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "cron-scheduler",
+			Start: func(taskCtx context.Context) error {
+				scheduler.Reconcile(taskCtx)
+				return nil
+			},
 		})
 	}
 
@@ -954,9 +984,42 @@ func main() {
 		}
 	}
 
+	if len(leaderTasks) > 0 {
+		leaderIdentifier := resolveLeaderIdentifier()
+
+		leaderClusterID := clusterId
+		if leaderClusterID == "" {
+			leaderClusterID = "testkube-core"
+		} else {
+			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
+		}
+
+		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
+		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
+		for _, task := range leaderTasks {
+			leaderCoordinator.Register(task)
+		}
+
+		g.Go(func() error {
+			return leaderCoordinator.Run(ctx)
+		})
+	}
+
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
+}
+
+func resolveLeaderIdentifier() string {
+	if podName := os.Getenv("POD_NAME"); podName != "" {
+		return podName
+	}
+
+	if host, err := os.Hostname(); err == nil && host != "" {
+		return host
+	}
+
+	return fmt.Sprintf("testkube-core-%d", time.Now().UnixNano())
 }
 
 func must[T any](v T, err error) T {

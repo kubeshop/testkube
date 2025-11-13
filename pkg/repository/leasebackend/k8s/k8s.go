@@ -22,24 +22,35 @@ import (
 // - If the Lease exists and is held by another instance but expired, it is taken over
 // - Otherwise, acquisition fails (returns leased=false)
 type K8sLeaseBackend struct {
-	client        kubernetes.Interface
-	namespace     string
-	leaseDuration time.Duration
+	client            kubernetes.Interface
+	namespace         string
+	leaseDuration     time.Duration
+	leaseNameOverride string
 }
 
 type Option func(*K8sLeaseBackend)
+
+const defaultLeaseName = "testkube-triggers-lease-%s"
 
 // WithLeaseDuration overrides the default max lease duration.
 func WithLeaseDuration(d time.Duration) Option {
 	return func(b *K8sLeaseBackend) { b.leaseDuration = d }
 }
 
+// WithLeaseName overrides the Lease name. When set, the configured value is used verbatim.
+func WithLeaseName(name string) Option {
+	return func(b *K8sLeaseBackend) {
+		b.leaseNameOverride = name
+	}
+}
+
 // NewK8sLeaseBackend creates a K8s-backed lease backend using coordination.k8s.io Leases in the given namespace.
 func NewK8sLeaseBackend(client kubernetes.Interface, namespace string, opts ...Option) *K8sLeaseBackend {
 	b := &K8sLeaseBackend{
-		client:        client,
-		namespace:     namespace,
-		leaseDuration: leasebackend.DefaultMaxLeaseDuration,
+		client:            client,
+		namespace:         namespace,
+		leaseDuration:     leasebackend.DefaultMaxLeaseDuration,
+		leaseNameOverride: "",
 	}
 	for _, opt := range opts {
 		opt(b)
@@ -126,5 +137,9 @@ func (b *K8sLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) 
 }
 
 func (b *K8sLeaseBackend) leaseName(clusterID string) string {
-	return fmt.Sprintf("testkube-triggers-lease-%s", clusterID)
+	if b.leaseNameOverride != "" {
+		return b.leaseNameOverride
+	}
+
+	return fmt.Sprintf(defaultLeaseName, clusterID)
 }

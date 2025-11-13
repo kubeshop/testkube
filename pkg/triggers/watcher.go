@@ -113,37 +113,19 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	return inf
 }
 
-func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
-	running := false
-	var stopChan chan struct{}
+func (s *Service) runWatcher(ctx context.Context) {
+	s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
+	s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 
-	for {
-		select {
-		case <-ctx.Done():
-			s.logger.Infof("trigger service: stopping watcher component: context finished")
-			if _, ok := <-stopChan; ok {
-				close(stopChan)
-			}
-			return
-		case leased := <-leaseChan:
-			if !leased {
-				if running {
-					s.logger.Infof("trigger service: instance %s in cluster %s lost lease", s.identifier, s.clusterID)
-					close(stopChan)
-					s.informers = nil
-					running = false
-				}
-			} else {
-				if !running {
-					s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
-					s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
-					stopChan = make(chan struct{})
-					s.runInformers(ctx, stopChan)
-					running = true
-				}
-			}
-		}
-	}
+	stopChan := make(chan struct{})
+	defer func() {
+		close(stopChan)
+		s.informers = nil
+		s.logger.Infof("trigger service: instance %s in cluster %s released lease", s.identifier, s.clusterID)
+	}()
+	s.runInformers(ctx, stopChan)
+
+	<-ctx.Done()
 }
 
 func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
