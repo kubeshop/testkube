@@ -78,6 +78,7 @@ image:
   pullPolicy: IfNotPresent
   ## Overrides the image tag whose default is the chart appVersion.
   # tag: "1.7.24"
+  tagSuffix: ""
   digest: ""
   pullSecrets: []
 
@@ -90,6 +91,7 @@ imageTwToolkit:
   ## Overrides the image tag whose default is the api-server version.
   # tag: "1.7.24"
   digest: ""
+  tagSuffix: ""
 
 imageTwInit:
   registry: docker.io
@@ -97,6 +99,7 @@ imageTwInit:
   ## Overrides the image tag whose default is the api-server version.
   # tag: "1.7.24"
   digest: ""
+  tagSuffix: ""
 
 ## Chart parameters
 ## nameOverride Overrides Chart name

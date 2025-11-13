@@ -75,22 +75,33 @@ type TestKubeCloudAPIClient interface {
 	// -- Test Triggers
 	GetTestTrigger(ctx context.Context, in *GetTestTriggerRequest, opts ...grpc.CallOption) (*GetTestTriggerResponse, error)
 	ListTestTriggers(ctx context.Context, in *ListTestTriggersRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestTriggersClient, error)
+	// Deprecated: Do not use.
 	ListTestTriggerLabels(ctx context.Context, in *ListTestTriggerLabelsRequest, opts ...grpc.CallOption) (*ListTestTriggerLabelsResponse, error)
 	CreateTestTrigger(ctx context.Context, in *CreateTestTriggerRequest, opts ...grpc.CallOption) (*CreateTestTriggerResponse, error)
 	UpdateTestTrigger(ctx context.Context, in *UpdateTestTriggerRequest, opts ...grpc.CallOption) (*UpdateTestTriggerResponse, error)
 	DeleteTestTrigger(ctx context.Context, in *DeleteTestTriggerRequest, opts ...grpc.CallOption) (*DeleteTestTriggerResponse, error)
 	DeleteAllTestTriggers(ctx context.Context, in *DeleteAllTestTriggersRequest, opts ...grpc.CallOption) (*DeleteAllTestTriggersResponse, error)
 	DeleteTestTriggersByLabels(ctx context.Context, in *DeleteTestTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestTriggersByLabelsResponse, error)
+	// Deprecated: Do not use.
 	WatchTestTriggerUpdates(ctx context.Context, in *WatchTestTriggerUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestTriggerUpdatesClient, error)
+	// Deprecated: Do not use.
 	// -- Webhook
 	GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error)
+	// Deprecated: Do not use.
 	ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error)
+	// Deprecated: Do not use.
 	ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error)
+	// Deprecated: Do not use.
 	CreateWebhook(ctx context.Context, in *CreateWebhookRequest, opts ...grpc.CallOption) (*CreateWebhookResponse, error)
+	// Deprecated: Do not use.
 	UpdateWebhook(ctx context.Context, in *UpdateWebhookRequest, opts ...grpc.CallOption) (*UpdateWebhookResponse, error)
+	// Deprecated: Do not use.
 	DeleteWebhook(ctx context.Context, in *DeleteWebhookRequest, opts ...grpc.CallOption) (*DeleteWebhookResponse, error)
+	// Deprecated: Do not use.
 	DeleteAllWebhooks(ctx context.Context, in *DeleteAllWebhooksRequest, opts ...grpc.CallOption) (*DeleteAllWebhooksResponse, error)
+	// Deprecated: Do not use.
 	DeleteWebhooksByLabels(ctx context.Context, in *DeleteWebhooksByLabelsRequest, opts ...grpc.CallOption) (*DeleteWebhooksByLabelsResponse, error)
+	// Deprecated: Do not use.
 	WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error)
 }
 
@@ -845,6 +856,7 @@ func (x *testKubeCloudAPIListTestTriggersClient) Recv() (*TestTriggerListItem, e
 	return m, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) ListTestTriggerLabels(ctx context.Context, in *ListTestTriggerLabelsRequest, opts ...grpc.CallOption) (*ListTestTriggerLabelsResponse, error) {
 	out := new(ListTestTriggerLabelsResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListTestTriggerLabels", in, out, opts...)
@@ -899,6 +911,7 @@ func (c *testKubeCloudAPIClient) DeleteTestTriggersByLabels(ctx context.Context,
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) WatchTestTriggerUpdates(ctx context.Context, in *WatchTestTriggerUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestTriggerUpdatesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[16], "/cloud.TestKubeCloudAPI/WatchTestTriggerUpdates", opts...)
 	if err != nil {
@@ -931,6 +944,7 @@ func (x *testKubeCloudAPIWatchTestTriggerUpdatesClient) Recv() (*TestTriggerUpda
 	return m, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error) {
 	out := new(GetWebhookResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetWebhook", in, out, opts...)
@@ -940,6 +954,7 @@ func (c *testKubeCloudAPIClient) GetWebhook(ctx context.Context, in *GetWebhookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error) {
 	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[17], "/cloud.TestKubeCloudAPI/ListWebhooks", opts...)
 	if err != nil {
@@ -972,6 +987,7 @@ func (x *testKubeCloudAPIListWebhooksClient) Recv() (*WebhookListItem, error) {
 	return m, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error) {
 	out := new(ListWebhookLabelsResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListWebhookLabels", in, out, opts...)
@@ -981,6 +997,7 @@ func (c *testKubeCloudAPIClient) ListWebhookLabels(ctx context.Context, in *List
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) CreateWebhook(ctx context.Context, in *CreateWebhookRequest, opts ...grpc.CallOption) (*CreateWebhookResponse, error) {
 	out := new(CreateWebhookResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CreateWebhook", in, out, opts...)
@@ -990,6 +1007,7 @@ func (c *testKubeCloudAPIClient) CreateWebhook(ctx context.Context, in *CreateWe
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) UpdateWebhook(ctx context.Context, in *UpdateWebhookRequest, opts ...grpc.CallOption) (*UpdateWebhookResponse, error) {
 	out := new(UpdateWebhookResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateWebhook", in, out, opts...)
@@ -999,6 +1017,7 @@ func (c *testKubeCloudAPIClient) UpdateWebhook(ctx context.Context, in *UpdateWe
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) DeleteWebhook(ctx context.Context, in *DeleteWebhookRequest, opts ...grpc.CallOption) (*DeleteWebhookResponse, error) {
 	out := new(DeleteWebhookResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteWebhook", in, out, opts...)
@@ -1008,6 +1027,7 @@ func (c *testKubeCloudAPIClient) DeleteWebhook(ctx context.Context, in *DeleteWe
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) DeleteAllWebhooks(ctx context.Context, in *DeleteAllWebhooksRequest, opts ...grpc.CallOption) (*DeleteAllWebhooksResponse, error) {
 	out := new(DeleteAllWebhooksResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteAllWebhooks", in, out, opts...)
@@ -1017,6 +1037,7 @@ func (c *testKubeCloudAPIClient) DeleteAllWebhooks(ctx context.Context, in *Dele
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) DeleteWebhooksByLabels(ctx context.Context, in *DeleteWebhooksByLabelsRequest, opts ...grpc.CallOption) (*DeleteWebhooksByLabelsResponse, error) {
 	out := new(DeleteWebhooksByLabelsResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteWebhooksByLabels", in, out, opts...)
@@ -1026,6 +1047,7 @@ func (c *testKubeCloudAPIClient) DeleteWebhooksByLabels(ctx context.Context, in 
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[18], "/cloud.TestKubeCloudAPI/WatchWebhookUpdates", opts...)
 	if err != nil {
@@ -1114,22 +1136,33 @@ type TestKubeCloudAPIServer interface {
 	// -- Test Triggers
 	GetTestTrigger(context.Context, *GetTestTriggerRequest) (*GetTestTriggerResponse, error)
 	ListTestTriggers(*ListTestTriggersRequest, TestKubeCloudAPI_ListTestTriggersServer) error
+	// Deprecated: Do not use.
 	ListTestTriggerLabels(context.Context, *ListTestTriggerLabelsRequest) (*ListTestTriggerLabelsResponse, error)
 	CreateTestTrigger(context.Context, *CreateTestTriggerRequest) (*CreateTestTriggerResponse, error)
 	UpdateTestTrigger(context.Context, *UpdateTestTriggerRequest) (*UpdateTestTriggerResponse, error)
 	DeleteTestTrigger(context.Context, *DeleteTestTriggerRequest) (*DeleteTestTriggerResponse, error)
 	DeleteAllTestTriggers(context.Context, *DeleteAllTestTriggersRequest) (*DeleteAllTestTriggersResponse, error)
 	DeleteTestTriggersByLabels(context.Context, *DeleteTestTriggersByLabelsRequest) (*DeleteTestTriggersByLabelsResponse, error)
+	// Deprecated: Do not use.
 	WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error
+	// Deprecated: Do not use.
 	// -- Webhook
 	GetWebhook(context.Context, *GetWebhookRequest) (*GetWebhookResponse, error)
+	// Deprecated: Do not use.
 	ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error
+	// Deprecated: Do not use.
 	ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error)
+	// Deprecated: Do not use.
 	CreateWebhook(context.Context, *CreateWebhookRequest) (*CreateWebhookResponse, error)
+	// Deprecated: Do not use.
 	UpdateWebhook(context.Context, *UpdateWebhookRequest) (*UpdateWebhookResponse, error)
+	// Deprecated: Do not use.
 	DeleteWebhook(context.Context, *DeleteWebhookRequest) (*DeleteWebhookResponse, error)
+	// Deprecated: Do not use.
 	DeleteAllWebhooks(context.Context, *DeleteAllWebhooksRequest) (*DeleteAllWebhooksResponse, error)
+	// Deprecated: Do not use.
 	DeleteWebhooksByLabels(context.Context, *DeleteWebhooksByLabelsRequest) (*DeleteWebhooksByLabelsResponse, error)
+	// Deprecated: Do not use.
 	WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }

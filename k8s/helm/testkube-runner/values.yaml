@@ -127,6 +127,7 @@ images:
     ## Overrides the image tag whose default is the chart appVersion.
     # tag: "2.1.147"
     digest: ""
+    tagSuffix: ""
     pullSecrets: []
 
   toolkit:
@@ -135,6 +136,7 @@ images:
     ## Overrides the image tag whose default is the api-server version.
     # tag: "2.1.147"
     digest: ""
+    tagSuffix: ""
 
   init:
     registry: docker.io
@@ -142,6 +144,7 @@ images:
     ## Overrides the image tag whose default is the api-server version.
     # tag: "2.1.147"
     digest: ""
+    tagSuffix: ""
 
 ## Persistent cache for Docker
 imageInspectionCache:
