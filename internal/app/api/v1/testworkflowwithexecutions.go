@@ -11,7 +11,6 @@ import (
 
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
@@ -114,7 +113,7 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 		var page, pageSize int
 		pageParam := c.Query("page", "")
 		if pageParam != "" {
-			pageSize = result.PageDefaultLimit
+			pageSize = testworkflow.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "workflow page filter invalid", err)

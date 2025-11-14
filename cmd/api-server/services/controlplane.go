@@ -20,11 +20,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	"github.com/kubeshop/testkube/pkg/repository"
-	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	"github.com/kubeshop/testkube/pkg/secret"
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
@@ -39,12 +37,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 
 	// Connect to storages
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	storageClient := commons.MustGetMinioClient(cfg)
 
 	var factory repository.RepositoryFactory
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, storageClient)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb)
 	}
 	if cfg.APIPostgresDSN != "" {
 		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
@@ -60,6 +57,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	// Build repositories
 	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
+	storageClient := commons.MustGetMinioClient(cfg)
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
@@ -103,26 +101,12 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
-func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
-	storageClient domainstorage.Client) (repository.RepositoryFactory, error) {
-	var outputRepository *minioresult.MinioRepository
-	// Init logs storage
-	if cfg.LogsStorage == "minio" {
-		if cfg.LogsBucket == "" {
-			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
-			log.DefaultLogger.Info("setting minio as logs storage")
-			outputRepository = minioresult.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
-		} else {
-			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-		}
-	}
+func CreateMongoFactory(_ context.Context, cfg *config.Config, db *mongo.Database) (repository.RepositoryFactory, error) {
 
 	factory, err := repository.NewFactoryBuilder().WithMongoDB(repository.MongoDBFactoryConfig{
-		Database:         db,
-		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
-		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
-		OutputRepository: outputRepository,
+		Database:     db,
+		AllowDiskUse: cfg.APIMongoAllowDiskUse,
+		IsDocDb:      cfg.APIMongoDBType == storage.TypeDocDB,
 	}).Build()
 	if err != nil {
 		return nil, err
