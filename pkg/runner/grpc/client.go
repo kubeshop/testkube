@@ -215,11 +215,18 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 		}
 	}
 	for _, start := range response.GetStart() {
+		// Execute with our own call timeout context to prevent stalling out.
+		callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
+		// Add required metadata to the call.
+		callCtx = metadata.AppendToOutgoingContext(callCtx,
+			"organization-id", c.OrganizationId,
+			"environment-id", start.GetEnvironmentId())
 		// Grab the full workflow.
-		workflowResponse, err := c.client.GetExecutionWorkflow(ctx, &executionv1.GetExecutionWorkflowRequest{
+		workflowResponse, err := c.client.GetExecutionWorkflow(callCtx, &executionv1.GetExecutionWorkflowRequest{
 			ExecutionId:   start.ExecutionId,
 			EnvironmentId: start.EnvironmentId,
 		}, c.callOpts...)
+		cancel()
 		if err != nil {
 			// We cannot process this request as we do not know about the workflow to be executed.
 			c.logger.Errorw("Failed to retrieve workflow for execution, this execution will not be started.",
