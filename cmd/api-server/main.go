@@ -760,14 +760,14 @@ func main() {
 			testWorkflowTemplatesClient,
 			proContext.EnvID,
 		)
-		cronManager := robfig.New(
+		scheduleManager := robfig.New(
 			log.DefaultLogger,
 			testWorkflowExecutor,
 			proContext.APIKey != "",
 		)
 		cronService := cronjob.NewService(
 			log.DefaultLogger,
-			cronManager,
+			scheduleManager,
 			schedulableResourceWatcher.WatchTestWorkflows,
 			schedulableResourceWatcher.WatchTestWorkflowTemplates,
 		)
@@ -776,12 +776,12 @@ func main() {
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
 				go func() {
-					// Start the cron manager.
-					cronManager.Start()
+					// Start the schedule manager.
+					scheduleManager.Start()
 					// If we're no longer the leader then stop the manager.
 					// This probably won't happen as losing leadership likely means we died.
 					<-taskCtx.Done()
-					cronManager.Stop()
+					scheduleManager.Stop()
 				}()
 				cronService.Run(taskCtx)
 				return nil
