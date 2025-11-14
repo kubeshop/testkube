@@ -211,7 +211,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		}
 		envID := r.envID
 		if contextEnvID, exists := webhook.ContextMeta[ContextKeyEnvironmentId]; exists && contextEnvID != "" {
-			orgID = contextEnvID
+			envID = contextEnvID
 		}
 		listeners = append(
 			listeners,
