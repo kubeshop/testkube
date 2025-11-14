@@ -261,7 +261,7 @@ func main() {
 				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
 			}
 		}
-		if cfg.EnableK8sControllers || cfg.GitOpsSyncKubernetesToCloudEnabled {
+		if cfg.GitOpsSyncKubernetesToCloudEnabled {
 			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
 		}
 
