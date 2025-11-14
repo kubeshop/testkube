@@ -247,9 +247,21 @@ jobs:
 
       - name: Get release
         id: get_release
-        uses: bruceadams/get-release@v1.3.2
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{steps.tag.outputs.tag}}
+        run: |
+          # Get release info using gh CLI
+          RELEASE_DATA=$(gh api repos/${{ github.repository }}/releases/tags/${VERSION})
+
+          # Extract upload URL
+          UPLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.upload_url')
+          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+
+          # Extract other useful info
+          RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id')
+          echo "id=$RELEASE_ID" >> $GITHUB_OUTPUT
 
       - name: Calculate Checksum
         id: checksum
