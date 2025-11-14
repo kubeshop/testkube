@@ -221,7 +221,7 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	if !valid {
 		return false
 	}
@@ -394,7 +394,7 @@ func (l *WebhookListener) Group() string {
 	if l.envID != "" {
 		return l.envID
 	}
-	return "default-group"
+	return ""
 }
 
 func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {

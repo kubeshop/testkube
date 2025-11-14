@@ -43,7 +43,7 @@ func (l *testWorkflowExecutionTelemetryListener) Kind() string {
 }
 
 func (l *testWorkflowExecutionTelemetryListener) Group() string {
-	return "default-group"
+	return ""
 }
 
 func (l *testWorkflowExecutionTelemetryListener) Events() []testkube.EventType {
@@ -65,7 +65,7 @@ func (l *testWorkflowExecutionTelemetryListener) Metadata() map[string]string {
 }
 
 func (l *testWorkflowExecutionTelemetryListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 

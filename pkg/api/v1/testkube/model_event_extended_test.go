@@ -18,7 +18,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		types, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("", "test=1", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TEST_EventType}, types)
@@ -34,7 +34,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		types, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("", "test=1", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TEST_EventType}, types)
@@ -49,7 +49,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		types, valid := e.Valid("", AllEventTypes)
+		types, valid := e.Valid("", "", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TEST_EventType}, types)
@@ -64,7 +64,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventEndTestFailed, TestExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TEST_DOWN_EventType, BECOME_TEST_FAILED_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TEST_DOWN_EventType, BECOME_TEST_FAILED_EventType})
 
 		// then
 		assert.Equal(t, []EventType{BECOME_TEST_DOWN_EventType, BECOME_TEST_FAILED_EventType}, types)
@@ -79,7 +79,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventEndTestFailed, TestExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TEST_DOWN_EventType, END_TEST_FAILED_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TEST_DOWN_EventType, END_TEST_FAILED_EventType})
 
 		// then
 		assert.Equal(t, []EventType{BECOME_TEST_DOWN_EventType, END_TEST_FAILED_EventType}, types)
@@ -94,7 +94,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventEndTestFailed, TestExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TEST_UP_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TEST_UP_EventType})
 
 		// then
 		assert.Nil(t, types)
@@ -114,7 +114,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		types, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("", "test=1", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
@@ -130,7 +130,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		types, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("", "test=1", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
@@ -145,7 +145,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		types, valid := e.Valid("", AllEventTypes)
+		types, valid := e.Valid("", "", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
@@ -160,7 +160,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventEndTestSuiteFailed, TestSuiteExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TESTSUITE_DOWN_EventType, BECOME_TESTSUITE_FAILED_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TESTSUITE_DOWN_EventType, BECOME_TESTSUITE_FAILED_EventType})
 
 		// then
 		assert.Equal(t, []EventType{BECOME_TESTSUITE_DOWN_EventType, BECOME_TESTSUITE_FAILED_EventType}, types)
@@ -175,7 +175,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventEndTestSuiteFailed, TestSuiteExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TESTSUITE_DOWN_EventType, END_TESTSUITE_FAILED_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TESTSUITE_DOWN_EventType, END_TESTSUITE_FAILED_EventType})
 
 		// then
 		assert.Equal(t, []EventType{BECOME_TESTSUITE_DOWN_EventType, END_TESTSUITE_FAILED_EventType}, types)
@@ -190,7 +190,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventEndTestSuiteFailed, TestSuiteExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TESTSUITE_UP_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TESTSUITE_UP_EventType})
 
 		// then
 		assert.Nil(t, types)
@@ -210,7 +210,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		types, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("", "test=1", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
@@ -226,7 +226,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		types, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("", "test=1", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
@@ -241,7 +241,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		types, valid := e.Valid("", AllEventTypes)
+		types, valid := e.Valid("", "", AllEventTypes)
 
 		// then
 		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
@@ -256,7 +256,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, BECOME_TESTWORKFLOW_FAILED_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, BECOME_TESTWORKFLOW_FAILED_EventType})
 
 		// then
 		assert.Equal(t, []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, BECOME_TESTWORKFLOW_FAILED_EventType}, types)
@@ -271,7 +271,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, END_TESTWORKFLOW_FAILED_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, END_TESTWORKFLOW_FAILED_EventType})
 
 		// then
 		assert.Equal(t, []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, END_TESTWORKFLOW_FAILED_EventType}, types)
@@ -286,7 +286,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
 
 		// when
-		types, valid := e.Valid("", []EventType{BECOME_TESTWORKFLOW_UP_EventType})
+		types, valid := e.Valid("", "", []EventType{BECOME_TESTWORKFLOW_UP_EventType})
 
 		// then
 		assert.Nil(t, types)
