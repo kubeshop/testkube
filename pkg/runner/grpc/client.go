@@ -43,7 +43,7 @@ type workflowStore interface {
 }
 
 type Client struct {
-	OrganisationId     string
+	OrganizationId     string
 	ControlPlaneConfig testworkflowconfig.ControlPlaneConfig
 
 	client        executionv1.TestWorkflowExecutionServiceClient
@@ -56,7 +56,7 @@ type Client struct {
 }
 
 // NewClient creates a client for retrieving updates about executions.
-func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runner, apiToken, organisationId string, controlPlane testworkflowconfig.ControlPlaneConfig, workflows workflowStore) Client {
+func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runner, apiToken, organizationId string, controlPlane testworkflowconfig.ControlPlaneConfig, workflows workflowStore) Client {
 	client := executionv1.NewTestWorkflowExecutionServiceClient(conn)
 
 	opts := []grpc.CallOption{
@@ -78,7 +78,7 @@ func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, r runne
 	}
 
 	return Client{
-		OrganisationId:     organisationId,
+		OrganizationId:     organizationId,
 		ControlPlaneConfig: controlPlane,
 
 		client:        client,
@@ -106,7 +106,7 @@ func (c Client) IsSupported(ctx context.Context, environmentId string) bool {
 	// Add metadata to the call.
 	// Environment ID should only be sent in some instances so it should be omitted
 	// if it is not set to any specific value.
-	callCtx = metadata.AppendToOutgoingContext(callCtx, "organisation-id", c.OrganisationId)
+	callCtx = metadata.AppendToOutgoingContext(callCtx, "organization-id", c.OrganizationId)
 	if environmentId != "" {
 		callCtx = metadata.AppendToOutgoingContext(callCtx, "environment-id", environmentId)
 	}
@@ -146,7 +146,7 @@ func (c Client) Start(ctx context.Context, environmentId string) error {
 			// Add metadata to the call.
 			// Environment ID should only be sent in some instances so it should be omitted
 			// if it is not set to any specific value.
-			callCtx = metadata.AppendToOutgoingContext(callCtx, "organisation-id", c.OrganisationId)
+			callCtx = metadata.AppendToOutgoingContext(callCtx, "organization-id", c.OrganizationId)
 			if environmentId != "" {
 				callCtx = metadata.AppendToOutgoingContext(callCtx, "environment-id", environmentId)
 			}
@@ -251,7 +251,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 					ScheduledAt:     start.GetQueuedAt().AsTime(),
 					DisableWebhooks: start.GetDisableWebhooks(),
 					Debug:           false,
-					OrganizationId:  c.OrganisationId,
+					OrganizationId:  c.OrganizationId,
 					EnvironmentId:   start.GetEnvironmentId(),
 					ParentIds:       strings.Join(start.AncestorExecutionIds, "/"),
 				},
@@ -266,7 +266,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 				// Add required metadata to the call.
 				callCtx = metadata.AppendToOutgoingContext(callCtx,
-					"organisation-id", c.OrganisationId,
+					"organization-id", c.OrganizationId,
 					"environment-id", start.GetEnvironmentId())
 				// Report the error to the control plane to prevent getting the execution on
 				// subsequent calls.
@@ -292,7 +292,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 			// Add required metadata to the call.
 			callCtx = metadata.AppendToOutgoingContext(callCtx,
-				"organisation-id", c.OrganisationId,
+				"organization-id", c.OrganizationId,
 				"environment-id", start.GetEnvironmentId())
 			// Update the control plane that the execution is awaiting scheduling by Kubernetes.
 			_, err = c.client.AcceptExecution(callCtx, &executionv1.AcceptExecutionRequest{
