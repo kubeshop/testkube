@@ -32,7 +32,6 @@ type ProContext struct {
 	URL                                 string
 	TLSInsecure                         bool
 	WorkerCount                         int
-	LogStreamWorkerCount                int
 	SkipVerify                          bool
 	EnvID                               string
 	EnvSlug                             string

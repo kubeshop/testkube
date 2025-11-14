@@ -34,7 +34,6 @@ type ServerInfo struct {
 	// disable secret creation for tests and test sources
 	DisableSecretCreation bool          `json:"disableSecretCreation,omitempty"`
 	Secret                *SecretConfig `json:"secret,omitempty"`
-	Features              *Features     `json:"features,omitempty"`
 	// execution namespaces
 	ExecutionNamespaces []string `json:"executionNamespaces,omitempty"`
 	// docker image version

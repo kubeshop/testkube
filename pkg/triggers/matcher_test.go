@@ -11,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -75,7 +74,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 				},
 			},
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			Disabled:          false,
@@ -84,7 +83,6 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -155,7 +153,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 				},
 			},
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			Disabled:          false,
@@ -164,7 +162,6 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -216,7 +213,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:             "modified",
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
@@ -240,7 +237,6 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:          &services.DeprecatedSystem{},
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -286,7 +282,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:             "modified",
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
@@ -310,7 +306,6 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:          &services.DeprecatedSystem{},
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
 		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
@@ -407,7 +402,7 @@ func TestService_match(t *testing.T) {
 				},
 			},
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			Disabled:          false,
@@ -416,7 +411,6 @@ func TestService_match(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
@@ -461,7 +455,7 @@ func TestService_matchRegex(t *testing.T) {
 			ResourceSelector:  testtriggersv1.TestTriggerSelector{NameRegex: "test.*"},
 			Event:             "modified",
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{NameRegex: "some.*"},
 			Disabled:          false,
@@ -470,7 +464,6 @@ func TestService_matchRegex(t *testing.T) {
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
 	s := &Service{
-		deprecatedSystem:              &services.DeprecatedSystem{},
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
@@ -511,7 +504,7 @@ func TestService_noMatch(t *testing.T) {
 			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
 			Event:             "modified",
 			Action:            "run",
-			Execution:         "test",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			Disabled:          false,
@@ -524,11 +517,10 @@ func TestService_noMatch(t *testing.T) {
 		return nil
 	}
 	s := &Service{
-		deprecatedSystem: &services.DeprecatedSystem{},
-		triggerExecutor:  testExecutorF,
-		triggerStatus:    map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
-		logger:           log.DefaultLogger,
-		metrics:          metrics.NewMetrics(),
+		triggerExecutor: testExecutorF,
+		triggerStatus:   map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
+		logger:          log.DefaultLogger,
+		metrics:         metrics.NewMetrics(),
 	}
 
 	err := s.match(context.Background(), e)

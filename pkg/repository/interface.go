@@ -5,8 +5,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
@@ -22,12 +20,6 @@ const (
 type RepositoryFactory interface {
 	// LeaseBackend Repository
 	NewLeaseBackendRepository() leasebackend.Repository
-
-	// Result Repository (Test Executions)
-	NewResultRepository() result.Repository
-
-	// TestResult Repository (Test Suite Executions)
-	NewTestResultRepository() testresult.Repository
 
 	// TestWorkflow Repository (Test Workflow Executions)
 	NewTestWorkflowRepository() testworkflow.Repository
@@ -49,12 +41,6 @@ type RepositoryFactory interface {
 type DatabaseRepository interface {
 	// LeaseBackend Repository
 	LeaseBackend() leasebackend.Repository
-
-	// Result Repository (Test Executions)
-	Result() result.Repository
-
-	// TestResult Repository (Test Suite Executions)
-	TestResult() testresult.Repository
 
 	// TestWorkflow Repository (Test Workflow Executions)
 	TestWorkflow() testworkflow.Repository

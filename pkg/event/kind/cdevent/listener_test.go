@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-var testEventTypes = []testkube.EventType{*testkube.EventStartTest}
+var testEventTypes = []testkube.EventType{*testkube.EventStartTestWorkflow}
 
 func TestCDEventListener_Notify(t *testing.T) {
 	t.Parallel()
@@ -36,8 +36,8 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		assert.Equal(t, "", r.Error())
@@ -61,8 +61,8 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
@@ -81,8 +81,8 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
@@ -91,11 +91,13 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 }
 
-func exampleExecution() *testkube.Execution {
+func exampleExecution() *testkube.TestWorkflowExecution {
+	namespace := "testkube"
+
 	execution := testkube.NewQueuedExecution()
 	execution.Id = "1"
 	execution.Name = "test-1"
-	execution.TestName = "test"
-	execution.TestNamespace = "testkube"
+	execution.Namespace = namespace
+	execution.Workflow = &testkube.TestWorkflow{Name: "test", Namespace: namespace}
 	return execution
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
-	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
@@ -85,7 +85,7 @@ func TestEmitter_NATS_Listen_Integration(t *testing.T) {
 
 		// events
 		event1 := newExampleTestEvent3()
-		event1.TestExecution.Labels = map[string]string{"type": "OnlyMe"}
+		event1.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "OnlyMe"}
 		event2 := newExampleTestEvent4()
 
 		// when
@@ -164,9 +164,9 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 
 		// events
 		event1 := newExampleTestEvent3()
-		event1.TestExecution.Labels = map[string]string{"type": "listener1"}
+		event1.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "listener1"}
 		event2 := newExampleTestEvent4()
-		event2.TestExecution.Labels = map[string]string{"type": "listener2"}
+		event2.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "listener2"}
 
 		// when
 		emitter.Notify(event1)
@@ -183,16 +183,16 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 
 func newExampleTestEvent3() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID3",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID3", "test/test", "test"),
+		Id:                    "eventID3",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID3", "test"),
 	}
 }
 
 func newExampleTestEvent4() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID4",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID4", "test/test", "test"),
+		Id:                    "eventID4",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID4", "test"),
 	}
 }

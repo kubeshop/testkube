@@ -16,13 +16,6 @@ limitations under the License.
 
 package v1
 
-// ExecutorListerExpansion allows custom methods to be added to ExecutorLister.
-type ExecutorListerExpansion interface{}
-
-// ExecutorNamespaceListerExpansion allows custom methods to be added to
-// ExecutorNamespaceLister.
-type ExecutorNamespaceListerExpansion interface{}
-
 // WebhookListerExpansion allows custom methods to be added to WebhookLister.
 type WebhookListerExpansion interface{}
 

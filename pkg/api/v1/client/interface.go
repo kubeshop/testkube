@@ -1,48 +1,20 @@
 package client
 
 import (
-	"time"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 // Client is the Testkube API client abstraction
 type Client interface {
-	TestAPI
-	ExecutionAPI
-	TestSuiteExecutionAPI
 	WebhookAPI
 	WebhookTemplateAPI
 	ServiceAPI
 	ConfigAPI
-	TestSourceAPI
-	CopyFileAPI
 	TestWorkflowAPI
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
 	TestTriggerAPI
 	SharedAPI
-}
-
-// TestAPI describes test api methods
-type TestAPI interface {
-	GetTestWithExecution(id string) (test testkube.TestWithExecution, err error)
-	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
-}
-
-// ExecutionAPI describes execution api methods
-type ExecutionAPI interface {
-	GetExecution(executionID string) (execution testkube.Execution, err error)
-	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
-	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
-}
-
-// TestSuiteExecutionAPI describes test suite execution api methods
-type TestSuiteExecutionAPI interface {
-	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
-	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 }
 
 // WebhookAPI describes webhook api methods
@@ -85,16 +57,6 @@ type ConfigAPI interface {
 type ServiceAPI interface {
 	GetServerInfo() (info testkube.ServerInfo, err error)
 	GetDebugInfo() (info testkube.DebugInfo, err error)
-}
-
-// TestSourceAPI describes test source api methods
-type TestSourceAPI interface {
-	CreateTestSource(options UpsertTestSourceOptions) (testSource testkube.TestSource, err error)
-	UpdateTestSource(options UpdateTestSourceOptions) (testSource testkube.TestSource, err error)
-	GetTestSource(name string) (testSource testkube.TestSource, err error)
-	ListTestSources(selector string) (testSources testkube.TestSources, err error)
-	DeleteTestSource(name string) (err error)
-	DeleteTestSources(selector string) (err error)
 }
 
 type SharedAPI interface {
@@ -146,15 +108,6 @@ type TestWorkflowTemplateAPI interface {
 	ValidateTestWorkflowTemplate(body []byte) error
 }
 
-// CopyFileAPI describes methods to handle files in the object storage
-type CopyFileAPI interface {
-	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
-}
-
-// UpsertTestOptions - is mapping for now to OpenAPI schema for creating test
-// if needed can be extended to custom struct
-type UpsertTestOptions testkube.TestUpsertRequest
-
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
 
@@ -167,82 +120,11 @@ type CreateWebhookTemplateOptions testkube.WebhookTemplateCreateRequest
 // UpdateWebhookTemplateOptions - is mapping for now to OpenAPI schema for changing webhook template request
 type UpdateWebhookTemplateOptions testkube.WebhookTemplateUpdateRequest
 
-// UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
-// if needed can be extended to custom struct
-type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
-
-// UpdateTestSourceOptions - is mapping for now to OpenAPI schema for changing test source
-// if needed can be extended to custom struct
-type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
-
-// CreateTemplateOptions - is mapping for now to OpenAPI schema for creating/changing template
-type CreateTemplateOptions testkube.TemplateCreateRequest
-
-// UpdateTemplateOptions - is mapping for now to OpenAPI schema for changing template request
-type UpdateTemplateOptions testkube.TemplateUpdateRequest
-
 // CreateTestTriggerOptions - is mapping for now to OpenAPI schema for creating trigger
 type CreateTestTriggerOptions testkube.TestTriggerUpsertRequest
 
 // UpdateTestTriggerOptions - is mapping for now to OpenAPI schema for changing trigger request
 type UpdateTestTriggerOptions testkube.TestTriggerUpsertRequest
-
-// TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
-// ExecuteTestOptions contains test run options
-type ExecuteTestOptions struct {
-	ExecutionVariables                 map[string]testkube.Variable
-	ExecutionVariablesFileContent      string
-	IsVariablesFileUploaded            bool
-	ExecutionLabels                    map[string]string
-	Command                            []string
-	Args                               []string
-	ArgsMode                           string
-	Envs                               map[string]string
-	SecretEnvs                         map[string]string
-	HTTPProxy                          string
-	HTTPSProxy                         string
-	Image                              string
-	Uploads                            []string
-	BucketName                         string
-	ArtifactRequest                    *testkube.ArtifactRequest
-	JobTemplate                        string
-	JobTemplateReference               string
-	ContentRequest                     *testkube.TestContentRequest
-	PreRunScriptContent                string
-	PostRunScriptContent               string
-	ExecutePostRunScriptBeforeScraping bool
-	SourceScripts                      bool
-	ScraperTemplate                    string
-	ScraperTemplateReference           string
-	PvcTemplate                        string
-	PvcTemplateReference               string
-	NegativeTest                       bool
-	IsNegativeTestChangedOnRun         bool
-	EnvConfigMaps                      []testkube.EnvReference
-	EnvSecrets                         []testkube.EnvReference
-	RunningContext                     *testkube.RunningContext
-	SlavePodRequest                    *testkube.PodRequest
-	ExecutionNamespace                 string
-	DisableWebhooks                    bool
-}
-
-// ExecuteTestSuiteOptions contains test suite run options
-type ExecuteTestSuiteOptions struct {
-	ExecutionVariables       map[string]testkube.Variable
-	HTTPProxy                string
-	HTTPSProxy               string
-	ExecutionLabels          map[string]string
-	ContentRequest           *testkube.TestContentRequest
-	RunningContext           *testkube.RunningContext
-	ConcurrencyLevel         int32
-	JobTemplate              string
-	JobTemplateReference     string
-	ScraperTemplate          string
-	ScraperTemplateReference string
-	PvcTemplate              string
-	PvcTemplateReference     string
-	DisableWebhooks          bool
-}
 
 // FilterTestWorkflowExecutionOptions contains filter test workflow execution options
 type FilterTestWorkflowExecutionOptions struct {
@@ -255,18 +137,14 @@ type FilterTestWorkflowExecutionOptions struct {
 
 // Gettable is an interface of gettable objects
 type Gettable interface {
-	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
-		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
-		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
-		testkube.TestSource | testkube.Template |
+	testkube.Webhook | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
 		testkube.TestTrigger | testkube.WebhookTemplate | map[string][]string
 }
 
 // Executable is an interface of executable objects
 type Executable interface {
-	testkube.Execution | testkube.TestSuiteExecution | testkube.TestWorkflowExecution |
-		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult | testkube.TestWorkflowExecutionsResult
+	testkube.TestWorkflowExecution | testkube.TestWorkflowExecutionsResult
 }
 
 // All is an interface of all objects
@@ -281,8 +159,6 @@ type Transport[A All] interface {
 	Delete(uri, selector string, isContentExpected bool) error
 	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
-	GetLogs(uri string, logs chan output.Output) error
-	GetLogsV2(uri string, logs chan events.Log) error
 	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 	GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error)

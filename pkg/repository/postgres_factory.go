@@ -9,10 +9,6 @@ import (
 	database "github.com/kubeshop/testkube/pkg/database/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendpostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	resultpostgres "github.com/kubeshop/testkube/pkg/repository/result/postgres"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-	testresultpostgres "github.com/kubeshop/testkube/pkg/repository/testresult/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testworkflowpostgres "github.com/kubeshop/testkube/pkg/repository/testworkflow/postgres"
 )
@@ -22,8 +18,6 @@ type PostgreSQLFactory struct {
 	db               *pgxpool.Pool
 	schedulerDb      *database.DB
 	leaseBackendRepo leasebackend.Repository
-	resultRepo       result.Repository
-	testResultRepo   testresult.Repository
 	testWorkflowRepo testworkflow.Repository
 }
 
@@ -46,24 +40,6 @@ func (f *PostgreSQLFactory) NewLeaseBackendRepository() leasebackend.Repository 
 		f.leaseBackendRepo = leasebackendpostgres.NewPostgresLeaseBackend(f.db)
 	}
 	return f.leaseBackendRepo
-}
-
-func (f *PostgreSQLFactory) NewResultRepository() result.Repository {
-	if f.resultRepo == nil {
-		f.resultRepo = resultpostgres.NewPostgresRepository(
-			f.db,
-		)
-	}
-	return f.resultRepo
-}
-
-func (f *PostgreSQLFactory) NewTestResultRepository() testresult.Repository {
-	if f.testResultRepo == nil {
-		f.testResultRepo = testresultpostgres.NewPostgresRepository(
-			f.db,
-		)
-	}
-	return f.testResultRepo
 }
 
 func (f *PostgreSQLFactory) NewTestWorkflowRepository() testworkflow.Repository {

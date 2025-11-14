@@ -35,26 +35,6 @@ func (s *triggerStatus) hasActiveTests() bool {
 	return len(s.testExecutionIDs) > 0 || len(s.testSuiteExecutionIDs) > 0 || len(s.testWorkflowExecutionIDs) > 0
 }
 
-func (s *triggerStatus) getExecutionIDs() []string {
-	defer s.RUnlock()
-
-	s.RLock()
-	executionIDs := make([]string, len(s.testExecutionIDs))
-	copy(executionIDs, s.testExecutionIDs)
-
-	return executionIDs
-}
-
-func (s *triggerStatus) getTestSuiteExecutionIDs() []string {
-	defer s.RUnlock()
-
-	s.RLock()
-	testSuiteExecutionIDs := make([]string, len(s.testSuiteExecutionIDs))
-	copy(testSuiteExecutionIDs, s.testSuiteExecutionIDs)
-
-	return testSuiteExecutionIDs
-}
-
 func (s *triggerStatus) getTestWorkflowExecutionIDs() []string {
 	defer s.RUnlock()
 
@@ -72,42 +52,6 @@ func (s *triggerStatus) start() {
 	now := time.Now()
 	s.lastExecutionStarted = &now
 	s.lastExecutionFinished = nil
-}
-
-func (s *triggerStatus) addExecutionID(id string) {
-	defer s.Unlock()
-
-	s.Lock()
-	s.testExecutionIDs = append(s.testExecutionIDs, id)
-}
-
-func (s *triggerStatus) removeExecutionID(targetID string) {
-	defer s.Unlock()
-
-	s.Lock()
-	for i, id := range s.testExecutionIDs {
-		if id == targetID {
-			s.testExecutionIDs = append(s.testExecutionIDs[:i], s.testExecutionIDs[i+1:]...)
-		}
-	}
-}
-
-func (s *triggerStatus) addTestSuiteExecutionID(id string) {
-	defer s.Unlock()
-
-	s.Lock()
-	s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs, id)
-}
-
-func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
-	defer s.Unlock()
-
-	s.Lock()
-	for i, id := range s.testSuiteExecutionIDs {
-		if id == targetID {
-			s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs[:i], s.testSuiteExecutionIDs[i+1:]...)
-		}
-	}
 }
 
 func (s *triggerStatus) addTestWorkflowExecutionID(id string) {

@@ -43,9 +43,6 @@ func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 			getClientLabelSource(s.TestWorkflowsClient, s.getEnvironmentId()),
 			getClientLabelSource(s.TestWorkflowTemplatesClient, s.getEnvironmentId()),
 		}
-		if s.DeprecatedClients != nil {
-			sources = append(sources, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites())
-		}
 
 		for _, source := range sources {
 			nextLabels, err := source.ListLabels()

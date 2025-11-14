@@ -36,7 +36,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if t.Spec.Disabled {
 			continue
 		}
-		if s.deprecatedSystem == nil && (t.Spec.Execution == ExecutionTest || t.Spec.Execution == ExecutionTestSuite) {
+		if t.Spec.Execution != ExecutionTestWorkflow && t.Spec.Execution != "" {
 			continue
 		}
 

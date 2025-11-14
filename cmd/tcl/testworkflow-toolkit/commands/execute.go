@@ -24,11 +24,9 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -49,13 +47,6 @@ const (
 	ExecutionResultPollingTime = 200 * time.Millisecond
 )
 
-type testExecutionDetails struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	TestName    string `json:"testName"`
-	Description string `json:"description,omitempty"`
-}
-
 type testWorkflowExecutionDetails struct {
 	Id               string `json:"id"`
 	Name             string `json:"name"`
@@ -66,100 +57,6 @@ type testWorkflowExecutionDetails struct {
 type executionResult struct {
 	Id     string `json:"id"`
 	Status string `json:"status"`
-}
-
-func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func() error, error) {
-	return func() (err error) {
-		c := env.Testkube()
-
-		if test.ExecutionRequest == nil {
-			test.ExecutionRequest = &testworkflowsv1.TestExecutionRequest{}
-		}
-
-		exec, err := c.ExecuteTest(test.Name, test.ExecutionRequest.Name, client.ExecuteTestOptions{
-			RunningContext: &testkube.RunningContext{
-				Type_:   string(testkube.RunningContextTypeTestWorkflow),
-				Context: fmt.Sprintf("%s/executions/%s", config.WorkflowName(), config.ExecutionId()),
-			},
-			IsVariablesFileUploaded:            test.ExecutionRequest.IsVariablesFileUploaded,
-			ExecutionLabels:                    test.ExecutionRequest.ExecutionLabels,
-			Command:                            test.ExecutionRequest.Command,
-			Args:                               test.ExecutionRequest.Args,
-			ArgsMode:                           string(test.ExecutionRequest.ArgsMode),
-			HTTPProxy:                          test.ExecutionRequest.HttpProxy,
-			HTTPSProxy:                         test.ExecutionRequest.HttpsProxy,
-			Image:                              test.ExecutionRequest.Image,
-			ArtifactRequest:                    common.MapPtr(test.ExecutionRequest.ArtifactRequest, testworkflows.MapTestArtifactRequestKubeToAPI),
-			JobTemplate:                        test.ExecutionRequest.JobTemplate,
-			PreRunScriptContent:                test.ExecutionRequest.PreRunScript,
-			PostRunScriptContent:               test.ExecutionRequest.PostRunScript,
-			ExecutePostRunScriptBeforeScraping: test.ExecutionRequest.ExecutePostRunScriptBeforeScraping,
-			SourceScripts:                      test.ExecutionRequest.SourceScripts,
-			ScraperTemplate:                    test.ExecutionRequest.ScraperTemplate,
-			NegativeTest:                       test.ExecutionRequest.NegativeTest,
-			EnvConfigMaps:                      common.MapSlice(test.ExecutionRequest.EnvConfigMaps, testworkflows.MapTestEnvReferenceKubeToAPI),
-			EnvSecrets:                         common.MapSlice(test.ExecutionRequest.EnvSecrets, testworkflows.MapTestEnvReferenceKubeToAPI),
-			ExecutionNamespace:                 test.ExecutionRequest.ExecutionNamespace,
-			DisableWebhooks:                    config.ExecutionDisableWebhooks(),
-		})
-		execName := exec.Name
-		if err != nil {
-			ui.Errf("failed to execute test: %s: %s", test.Name, err)
-			return
-		}
-
-		instructions.PrintOutput(config.Ref(), "test-start", &testExecutionDetails{
-			Id:          exec.Id,
-			Name:        exec.Name,
-			TestName:    exec.TestName,
-			Description: test.Description,
-		})
-		description := ""
-		if test.Description != "" {
-			description = fmt.Sprintf(": %s", test.Description)
-		}
-		fmt.Printf("%s%s • scheduled %s\n", ui.LightCyan(execName), description, ui.DarkGray("("+exec.Id+")"))
-
-		if async {
-			return
-		}
-
-		prevStatus := testkube.QUEUED_ExecutionStatus
-	loop:
-		for {
-			time.Sleep(time.Second)
-			exec, err = c.GetExecution(exec.Id)
-			if err != nil {
-				ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(execName), err.Error())
-				return
-			}
-			if exec.ExecutionResult != nil && exec.ExecutionResult.Status != nil {
-				status := *exec.ExecutionResult.Status
-				switch status {
-				case testkube.QUEUED_ExecutionStatus, testkube.RUNNING_ExecutionStatus:
-					break
-				default:
-					break loop
-				}
-				if prevStatus != status {
-					instructions.PrintOutput(config.Ref(), "test-status", &executionResult{Id: exec.Id, Status: string(status)})
-				}
-				prevStatus = status
-			}
-		}
-
-		status := *exec.ExecutionResult.Status
-		color := ui.Green
-
-		if status != testkube.PASSED_ExecutionStatus {
-			err = errors.New("test failed")
-			color = ui.Red
-		}
-
-		instructions.PrintOutput(config.Ref(), "test-end", &executionResult{Id: exec.Id, Status: string(status)})
-		fmt.Printf("%s • %s\n", color(execName), string(status))
-		return
-	}, nil
 }
 
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
@@ -346,7 +243,6 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 
 func NewExecuteCmd() *cobra.Command {
 	var (
-		tests         []string
 		workflows     []string
 		parallelism   int
 		async         bool
@@ -377,11 +273,6 @@ func NewExecuteCmd() *cobra.Command {
 					ui.Fail(errors.Wrap(err, "parsing execute data"))
 				}
 
-				// Extract individual test/workflow specs from the decoded data
-				tests = make([]string, len(executeData.Tests))
-				for i, raw := range executeData.Tests {
-					tests[i] = string(raw)
-				}
 				workflows = make([]string, len(executeData.Workflows))
 				for i, raw := range executeData.Workflows {
 					workflows[i] = string(raw)
@@ -403,45 +294,6 @@ func NewExecuteCmd() *cobra.Command {
 
 			// Build operations to run
 			operations := make([]func() error, 0)
-			for _, s := range tests {
-				var t testworkflowsv1.StepExecuteTest
-				err := json.Unmarshal([]byte(s), &t)
-				if err != nil {
-					ui.Fail(errors.Wrap(err, "unmarshal test definition"))
-				}
-
-				// Resolve the params
-				params, err := commontcl.GetParamsSpec(t.Matrix, t.Shards, t.Count, t.MaxCount, baseMachine)
-				if err != nil {
-					ui.Fail(errors.Wrap(err, "matrix and sharding"))
-				}
-				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(t.Name), params.Humanize())
-
-				// Create operations for each expected execution
-				for i := int64(0); i < params.Count; i++ {
-					// Clone the spec
-					spec := t.DeepCopy()
-
-					// Build files for transfer
-					tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
-					if err != nil {
-						ui.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
-					}
-					spec.Tarball = nil
-
-					// Prepare the operation to run
-					err = expressions.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
-					if err != nil {
-						ui.Fail(errors.Wrapf(err, "'%s' test: computing execution", spec.Name))
-					}
-					fn, err := buildTestExecution(*spec, async)
-					if err != nil {
-						ui.Fail(err)
-					}
-					operations = append(operations, fn)
-				}
-			}
-
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
@@ -569,8 +421,6 @@ func NewExecuteCmd() *cobra.Command {
 		},
 	}
 
-	// TODO: Support test suites too
-	cmd.Flags().StringArrayVarP(&tests, "test", "t", nil, "tests to run")
 	cmd.Flags().StringArrayVarP(&workflows, "workflow", "w", nil, "workflows to run")
 	cmd.Flags().IntVarP(&parallelism, "parallelism", "p", 0, "how many items could be executed at once")
 	cmd.Flags().BoolVar(&async, "async", false, "should it wait for results")

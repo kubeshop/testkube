@@ -18,15 +18,12 @@ package externalversions
 
 import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
-	testsourcev1 "github.com/kubeshop/testkube/api/testsource/v1"
-	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 
 	"github.com/pkg/errors"
 
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	cache "k8s.io/client-go/tools/cache"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/cache"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -61,24 +58,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 			resource: resource.GroupResource(),
 			informer: f.Tests().V1().TestTriggers().Informer(),
 		}, nil
-		// Group=tests.testkube.io, Version=v3
-	case testsuitev3.GroupVersionResource:
-		return &genericInformer{
-			resource: resource.GroupResource(),
-			informer: f.Tests().V3().TestSuites().Informer(),
-		}, nil
-		// Group=tests.testkube.io, Version=v3
-	case testsv3.GroupVersionResource:
-		return &genericInformer{
-			resource: resource.GroupResource(),
-			informer: f.Tests().V3().Tests().Informer(),
-		}, nil
-		// Group=executor.testkube.io, Version=v1
-	case executorv1.ExecutorGroupVersionResource:
-		return &genericInformer{
-			resource: resource.GroupResource(),
-			informer: f.Executor().V1().Executor().Informer(),
-		}, nil
 		// Group=executor.testkube.io, Version=v1
 	case executorv1.WebhookGroupVersionResource:
 		return &genericInformer{
@@ -92,11 +71,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 			informer: f.Executor().V1().WebhookTemplate().Informer(),
 		}, nil
 		// Group=tests.testkube.io, Version=v1
-	case testsourcev1.GroupVersionResource:
-		return &genericInformer{
-			resource: resource.GroupResource(),
-			informer: f.Tests().V1().TestSource().Informer(),
-		}, nil
 	}
 
 	return nil, errors.Errorf("no informer found for %v", resource)

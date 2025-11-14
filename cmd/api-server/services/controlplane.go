@@ -14,23 +14,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	database "github.com/kubeshop/testkube/pkg/database/postgres"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	"github.com/kubeshop/testkube/pkg/repository"
-	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	"github.com/kubeshop/testkube/pkg/secret"
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, eventsEmitter *event.Emitter) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *event.Emitter) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
 	commons.ExitOnError("Getting kubernetes config", err)
@@ -41,18 +37,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Connect to storages
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	storageClient := commons.MustGetMinioClient(cfg)
-
-	var logGrpcClient logsclient.StreamGetter
-	if !cfg.DisableDeprecatedTests && features.LogsV2 {
-		logGrpcClient = commons.MustGetLogsV2Client(cfg)
-		commons.ExitOnError("Creating logs streaming client", err)
-	}
 
 	var factory repository.RepositoryFactory
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb)
 	}
 	if cfg.APIPostgresDSN != "" {
 		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
@@ -68,10 +57,10 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	// Build repositories
 	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
+	storageClient := commons.MustGetMinioClient(cfg)
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(repoManager)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
-	commands := controlplane.CreateCommands(cfg.DisableDeprecatedTests, cfg.StorageBucket, deprecatedRepositories, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
+	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
 	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter)
 	scheduler := factory.NewScheduler()
@@ -112,27 +101,12 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
-func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
-	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client) (repository.RepositoryFactory, error) {
-	var outputRepository *minioresult.MinioRepository
-	// Init logs storage
-	if cfg.LogsStorage == "minio" {
-		if cfg.LogsBucket == "" {
-			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
-			log.DefaultLogger.Info("setting minio as logs storage")
-			outputRepository = minioresult.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
-		} else {
-			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-		}
-	}
+func CreateMongoFactory(_ context.Context, cfg *config.Config, db *mongo.Database) (repository.RepositoryFactory, error) {
 
 	factory, err := repository.NewFactoryBuilder().WithMongoDB(repository.MongoDBFactoryConfig{
-		Database:         db,
-		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
-		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
-		LogGrpcClient:    logGrpcClient,
-		OutputRepository: outputRepository,
+		Database:     db,
+		AllowDiskUse: cfg.APIMongoAllowDiskUse,
+		IsDocDb:      cfg.APIMongoDBType == storage.TypeDocDB,
 	}).Build()
 	if err != nil {
 		return nil, err
