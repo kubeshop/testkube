@@ -20,8 +20,6 @@ import "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/int
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Executor returns an ExecutorInformer.
-	Executor() ExecutorInformer
 	// Webhook returns a WebhookInformer.
 	Webhook() WebhookInformer
 	// WebhookTemplate returns a WebhookTemplateInformer.
@@ -41,11 +39,6 @@ func New(
 	tweakListOptions internalinterfaces.TweakListOptionsFunc,
 ) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
-}
-
-// Executor returns an ExecutorInformer.
-func (v *version) Executor() ExecutorInformer {
-	return &executorInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Webhook returns a WebhookInformer.

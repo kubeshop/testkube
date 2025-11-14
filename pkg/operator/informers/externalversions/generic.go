@@ -25,8 +25,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	cache "k8s.io/client-go/tools/cache"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/cache"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -72,12 +72,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{
 			resource: resource.GroupResource(),
 			informer: f.Tests().V3().Tests().Informer(),
-		}, nil
-		// Group=executor.testkube.io, Version=v1
-	case executorv1.ExecutorGroupVersionResource:
-		return &genericInformer{
-			resource: resource.GroupResource(),
-			informer: f.Executor().V1().Executor().Informer(),
 		}, nil
 		// Group=executor.testkube.io, Version=v1
 	case executorv1.WebhookGroupVersionResource:
