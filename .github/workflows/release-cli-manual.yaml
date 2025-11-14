@@ -220,6 +220,7 @@ jobs:
 
       - name: Get tag
         id: tag
+        shell: bash
         run: |
           # Find tag pointing to current commit
           TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
