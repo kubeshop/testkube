@@ -222,8 +222,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p windows/testkube_windows_386
-          gh release download ${VERSION} --pattern "testkube_${VERSION}_Windows_i386.zip" --dir windows/temp
-          unzip windows/temp/testkube_${VERSION}_Windows_i386.zip -d windows/testkube_windows_386
+          gh release download ${VERSION} --pattern "testkube_${VERSION}_Windows_i386.tar.gz" --dir windows/temp
+          tar -xzf windows/temp/testkube_${VERSION}_Windows_i386.tar.gz -C windows/testkube_windows_386
 
       - name: Create and Sign MSI
         run: |
