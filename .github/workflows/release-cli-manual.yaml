@@ -109,6 +109,10 @@ jobs:
         with:
           app-id: 253113
           private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            testkube
+            homebrew-testkube
       - name: Get GitHub App User ID
         id: get-user-id
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
