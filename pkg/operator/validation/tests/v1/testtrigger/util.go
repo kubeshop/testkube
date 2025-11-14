@@ -22,7 +22,7 @@ func GetSupportedActions() []string {
 }
 
 func GetSupportedExecutions() []string {
-	return []string{ExecutionTest, ExecutionTestsuite, ExecutionTestWorkflow}
+	return []string{ExecutionTestWorkflow}
 }
 
 func GetSupportedConcurrencyPolicies() []string {

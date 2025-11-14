@@ -22,10 +22,3 @@ type TestTriggerListerExpansion interface{}
 // TestTriggerNamespaceListerExpansion allows custom methods to be added to
 // TestTriggerNamespaceLister.
 type TestTriggerNamespaceListerExpansion interface{}
-
-// TestSourceListerExpansion allows custom methods to be added to TestSourceLister.
-type TestSourceListerExpansion interface{}
-
-// TestSourceNamespaceListerExpansion allows custom methods to be added to
-// TestSourceNamespaceLister.
-type TestSourceNamespaceListerExpansion interface{}
