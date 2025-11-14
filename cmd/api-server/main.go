@@ -261,6 +261,9 @@ func main() {
 				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
 			}
 		}
+		if cfg.EnableK8sControllers || cfg.GitOpsSyncKubernetesToCloudEnabled {
+			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
+		}
 
 		// Get all labels that matches with prefix
 		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
