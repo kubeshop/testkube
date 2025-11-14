@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 

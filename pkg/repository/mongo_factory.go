@@ -8,7 +8,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendmongo "github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
-	"github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	sequencemongo "github.com/kubeshop/testkube/pkg/repository/sequence/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -21,24 +20,21 @@ type MongoDBFactory struct {
 	allowDiskUse     bool
 	isDocDb          bool
 	sequenceRepo     sequence.Repository
-	outputRepository *minio.MinioRepository
 	leaseBackendRepo leasebackend.Repository
 	testWorkflowRepo testworkflow.Repository
 }
 
 type MongoDBFactoryConfig struct {
-	Database         *mongo.Database
-	AllowDiskUse     bool
-	IsDocDb          bool
-	OutputRepository *minio.MinioRepository
+	Database     *mongo.Database
+	AllowDiskUse bool
+	IsDocDb      bool
 }
 
 func NewMongoDBFactory(config MongoDBFactoryConfig) *MongoDBFactory {
 	factory := &MongoDBFactory{
-		db:               config.Database,
-		allowDiskUse:     config.AllowDiskUse,
-		isDocDb:          config.IsDocDb,
-		outputRepository: config.OutputRepository,
+		db:           config.Database,
+		allowDiskUse: config.AllowDiskUse,
+		isDocDb:      config.IsDocDb,
 	}
 
 	// Initialize sequence repository first as it's used by other repositories
