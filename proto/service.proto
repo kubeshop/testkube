@@ -396,6 +396,9 @@ message RegisterRequest {
   string organization_id = 3;
   bool floating = 4;
   repeated AgentCapability capabilities = 5;
+  string runner_group = 6;
+  bool is_global = 7;
+  map<string, string> labels = 8;
 }
 
 message RegisterResponse {

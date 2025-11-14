@@ -36,6 +36,11 @@ spec:
         {{- if .Values.pod.labels }}
         {{- include "global.tplvalues.render" ( dict "value" .Values.pod.labels "context" $ ) | nindent 8 }}
         {{- end }}
+        {{- if .Values.runner.register.labels }}
+        {{- range $key, $value := .Values.runner.register.labels }}
+        {{ $.Values.runner.register.labelPrefix }}{{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
       annotations:
         {{- if .Values.global.annotations }}
         {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 8 }}
