@@ -11,8 +11,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
-var _ testresult.Repository = (*PostgresRepository)(nil)
-
 const (
 	PageDefaultLimit = 100
 )

@@ -26,14 +26,6 @@ func (rm *RepositoryManager) LeaseBackend() leasebackend.Repository {
 	return rm.factory.NewLeaseBackendRepository()
 }
 
-func (rm *RepositoryManager) Result() result.Repository {
-	return rm.factory.NewResultRepository()
-}
-
-func (rm *RepositoryManager) TestResult() testresult.Repository {
-	return rm.factory.NewTestResultRepository()
-}
-
 func (rm *RepositoryManager) TestWorkflow() testworkflow.Repository {
 	return rm.factory.NewTestWorkflowRepository()
 }

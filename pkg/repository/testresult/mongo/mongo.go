@@ -19,8 +19,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
-var _ testresult.Repository = (*MongoRepository)(nil)
-
 const CollectionName = "testresults"
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...MongoRepositoryOpt) *MongoRepository {
@@ -575,11 +573,11 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 	pipeline = append(pipeline, bson.D{
 		{
 			Key: "$project", Value: bson.D{
-				{Key: "status", Value: 1},
-				{Key: "duration", Value: 1},
-				{Key: "starttime", Value: 1},
-				{Key: "name", Value: 1},
-			},
+			{Key: "status", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "starttime", Value: 1},
+			{Key: "name", Value: 1},
+		},
 		},
 	})
 
