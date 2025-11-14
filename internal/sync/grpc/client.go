@@ -16,7 +16,7 @@ import (
 const defaultCallTimeout = time.Second * 30
 
 type Client struct {
-	OrganisationId string
+	OrganizationId string
 
 	client      syncv1.SyncServiceClient
 	logger      *zap.SugaredLogger
@@ -24,10 +24,10 @@ type Client struct {
 	callTimeout time.Duration
 }
 
-func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, apiToken, organisationId string) Client {
+func NewClient(conn grpc.ClientConnInterface, logger *zap.SugaredLogger, apiToken, organizationId string) Client {
 	c := syncv1.NewSyncServiceClient(conn)
 	return Client{
-		OrganisationId: organisationId,
+		OrganizationId: organizationId,
 
 		client: c,
 		logger: logger,
