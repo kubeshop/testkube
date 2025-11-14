@@ -8,7 +8,6 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/config"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -27,6 +26,11 @@ type WebhookLoaderOption func(*WebhooksLoader)
 type WebhookClient interface {
 	List(selector string) (*executorv1.WebhookList, error)
 }
+
+const (
+	ContextKeyOrganizationId string = "organization-id"
+	ContextKeyEnvironmentId  string = "environment-id"
+)
 
 // NewWebhookLoader creates a new WebhooksLoader
 func NewWebhookLoader(
@@ -56,7 +60,9 @@ type WebhooksLoader struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
-	proContext                    *config.ProContext
+	dashboardURI                  string
+	orgID                         string
+	envID                         string
 }
 
 // WithTestWorkflowResultsRepository sets the test workflow results repository
@@ -101,11 +107,27 @@ func WithEnvs(envs map[string]string) WebhookLoaderOption {
 	}
 }
 
-// WithProContext sets the "pro context" for the connection to the control plane
+// WithDashboardURI sets the dashboard URI for the connection to the control plane
 // to be used in templates
-func WithProContext(proContext *config.ProContext) WebhookLoaderOption {
+func WithDashboardURI(dashboardURI string) WebhookLoaderOption {
 	return func(loader *WebhooksLoader) {
-		loader.proContext = proContext
+		loader.dashboardURI = dashboardURI
+	}
+}
+
+// WithOrgID sets the organization ID for the connection to the control plane
+// to be used in templates
+func WithOrgID(orgID string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.orgID = orgID
+	}
+}
+
+// WithEnvID sets the environment ID for the connection to the control plane
+// to be used in templates
+func WithEnvID(envID string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.envID = envID
 	}
 }
 
@@ -148,6 +170,15 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		eventTypes := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.Namespace, webhook.Name)
+		// Attempt to find organization and environment IDs within context metadata
+		orgID := r.orgID
+		if contextOrgID, exists := webhook.ContextMeta[ContextKeyOrganizationId]; exists && contextOrgID != "" {
+			orgID = contextOrgID
+		}
+		envID := r.envID
+		if contextEnvID, exists := webhook.ContextMeta[ContextKeyEnvironmentId]; exists && contextEnvID != "" {
+			envID = contextEnvID
+		}
 		listeners = append(
 			listeners,
 			NewWebhookListener(
@@ -166,7 +197,9 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				listenerWithMetrics(r.metrics),
 				listenerWithSecretClient(r.secretClient),
 				listenerWithEnvs(r.envs),
-				listenerWithProContext(r.proContext),
+				listenerWithDashboardURI(r.dashboardURI),
+				listenerWithOrgID(orgID),
+				listenerWithEnvID(envID),
 			),
 		)
 	}
@@ -175,7 +208,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 }
 
 func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) executorv1.Webhook {
-	var maps = []struct {
+	maps := []struct {
 		d *map[string]string
 		s *map[string]string
 	}{
@@ -207,7 +240,7 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		}
 	}
 
-	var items = []struct {
+	items := []struct {
 		d *string
 		s *string
 	}{

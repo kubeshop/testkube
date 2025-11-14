@@ -61,7 +61,7 @@ func (l *CDEventListener) Metadata() map[string]string {
 }
 
 func (l *CDEventListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 
@@ -105,6 +105,10 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 
 func (l *CDEventListener) Kind() string {
 	return "cdevent"
+}
+
+func (l *CDEventListener) Group() string {
+	return ""
 }
 
 func (l *CDEventListener) sendCDEvent(ev cdevents.CDEventReader) error {

@@ -7868,6 +7868,9 @@ components:
         streamTopic:
           type: string
           description: stream topic
+        groupId:
+          description: ID for event group
+          type: string
         resource:
           $ref: "#/components/schemas/EventResource"
         resourceId:

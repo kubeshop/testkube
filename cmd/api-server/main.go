@@ -500,7 +500,9 @@ func main() {
 			webhook.WithSecretClient(secretClient),
 			webhook.WithMetrics(metrics),
 			webhook.WithEnvs(envs),
-			webhook.WithProContext(&proContext))
+			webhook.WithDashboardURI(proContext.DashboardURI),
+			webhook.WithOrgID(proContext.OrgID),
+			webhook.WithEnvID(proContext.EnvID))
 		eventsEmitter.RegisterLoader(webhookLoader)
 	}
 	websocketLoader := ws.NewWebsocketLoader()

@@ -42,6 +42,10 @@ func (l *testWorkflowExecutionListener) Kind() string {
 	return "TestWorkflowExecution"
 }
 
+func (l *testWorkflowExecutionListener) Group() string {
+	return ""
+}
+
 func (l *testWorkflowExecutionListener) Events() []testkube.EventType {
 	return []testkube.EventType{
 		testkube.QUEUE_TESTWORKFLOW_EventType,
@@ -61,7 +65,7 @@ func (l *testWorkflowExecutionListener) Metadata() map[string]string {
 }
 
 func (l *testWorkflowExecutionListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 
