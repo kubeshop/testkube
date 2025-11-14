@@ -614,7 +614,7 @@ func main() {
 			// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
 			// connect and so we need to fallback to an implementation that doesn't do anything.
 			if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
-				log.DefaultLogger.Warn("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
+				log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
 				store = syncagent.NoOpStore{}
 			}
 
