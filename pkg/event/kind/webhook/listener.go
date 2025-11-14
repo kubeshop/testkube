@@ -16,7 +16,6 @@ import (
 	"go.uber.org/zap"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -86,9 +85,6 @@ type WebhookListener struct {
 	metrics                       v1.Metrics
 	envs                          map[string]string
 	proContext                    *config.ProContext
-
-	// Deprecated fields
-	deprecatedRepositories commons.DeprecatedRepositories
 }
 
 // WebhookListenerOption is a functional option for WebhookListener
@@ -134,14 +130,6 @@ func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
 func listenerWithProContext(proContext *config.ProContext) WebhookListenerOption {
 	return func(wl *WebhookListener) {
 		wl.proContext = proContext
-	}
-}
-
-// listenerWithDeprecatedRepositories configures the deprecated repositories for the webhook listener.
-// Deprecated: test and test suites are deprecated.
-func listenerWithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookListenerOption {
-	return func(wl *WebhookListener) {
-		wl.deprecatedRepositories = deprecatedRepositories
 	}
 }
 
@@ -459,41 +447,13 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
 	if event.TestExecution != nil && event.Type_ != nil {
-		if l.deprecatedRepositories == nil {
-			log.Warn("unable to determine become state, test execution results queries not supported")
-			return false, nil
-
-		}
-		prevStatus, err := l.deprecatedRepositories.TestResults().GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
-		if err != nil {
-			return false, err
-		}
-
-		if prevStatus == "" {
-			log.Debugw(fmt.Sprintf("no previous finished state for test %s", event.TestExecution.TestName))
-			return true, nil
-		}
-
-		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
+		log.Warn("unable to determine become state, test execution results queries not supported")
+		return false, nil
 	}
 
 	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
-		if l.deprecatedRepositories == nil {
-			log.Warn("unable to determine become state, testsuite execution results queries not supported")
-			return false, nil
-
-		}
-		prevStatus, err := l.deprecatedRepositories.TestSuiteResults().GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
-		if err != nil {
-			return false, err
-		}
-
-		if prevStatus == "" {
-			log.Debugw(fmt.Sprintf("no previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name))
-			return true, nil
-		}
-
-		return event.Type_.IsBecomeTestSuiteExecutionStatus(prevStatus), nil
+		log.Warn("unable to determine become state, testsuite execution results queries not supported")
+		return false, nil
 	}
 
 	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil && event.Type_ != nil {

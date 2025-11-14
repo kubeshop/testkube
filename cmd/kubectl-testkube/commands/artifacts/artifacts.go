@@ -28,22 +28,8 @@ func NewListArtifactsCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			execution, err := client.GetExecution(executionID)
 			var artifacts testkube.Artifacts
 			var errArtifacts error
-			if err == nil && execution.Id != "" {
-				artifacts, errArtifacts = client.GetExecutionArtifacts(execution.Id)
-				ui.ExitOnError("getting test artifacts", errArtifacts)
-				ui.Table(artifacts, os.Stdout)
-				return
-			}
-			tsExecution, err := client.GetTestSuiteExecution(executionID)
-			if err == nil && tsExecution.Id != "" {
-				artifacts, errArtifacts = client.GetTestSuiteExecutionArtifacts(tsExecution.Id)
-				ui.ExitOnError("getting test suite artifacts", errArtifacts)
-				ui.Table(artifacts, os.Stdout)
-				return
-			}
 			twExecution, err := client.GetTestWorkflowExecution(executionID)
 			if err == nil && twExecution.Id != "" {
 				artifacts, errArtifacts = client.GetTestWorkflowExecutionArtifacts(twExecution.Id)

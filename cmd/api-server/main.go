@@ -76,7 +76,6 @@ import (
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
-	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -86,7 +85,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func init() {
@@ -99,9 +97,6 @@ func main() {
 	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
 
 	cfg := commons.MustGetConfig()
-	features := commons.MustGetFeatureFlags()
-	// Determine the running mode
-
 	mode := common.ModeAgent
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
 		mode = common.ModeStandalone
@@ -183,7 +178,7 @@ func main() {
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features, eventsEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -333,12 +328,6 @@ func main() {
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
-
-	var (
-		testWorkflowsClient         testworkflowclient.TestWorkflowClient
-		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
-		testTriggersClient          testtriggerclient.TestTriggerClient
-	)
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
@@ -356,6 +345,11 @@ func main() {
 		RecvTimeout: cfg.TestkubeProRecvTimeout,
 	}, log.DefaultLogger)
 
+	var (
+		testWorkflowsClient         testworkflowclient.TestWorkflowClient
+		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+		testTriggersClient          testtriggerclient.TestTriggerClient
+	)
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
@@ -384,30 +378,6 @@ func main() {
 		}
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
-	}
-
-	var deprecatedSystem *services.DeprecatedSystem
-	if !cfg.DisableDeprecatedTests {
-		log.DefaultLogger.Info("initializing deprecated test system...")
-		log.DefaultLogger.Info("  - connecting to MongoDB and other storage backends...")
-		deprecatedSystem = services.CreateDeprecatedSystem(
-			ctx,
-			mode,
-			cfg,
-			features,
-			metrics,
-			configMapConfig,
-			secretConfig,
-			grpcClient,
-			nc,
-			eventsEmitter,
-			eventBus,
-			inspector,
-			&proContext,
-		)
-		log.DefaultLogger.Info("deprecated test system initialized successfully")
-	} else {
-		log.DefaultLogger.Info("deprecated test system is disabled")
 	}
 
 	// Transfer common environment variables
@@ -516,20 +486,11 @@ func main() {
 		proContext.Agent.ID,
 	)
 
-	var deprecatedClients commons.DeprecatedClients
-	var deprecatedRepositories commons.DeprecatedRepositories
-	if deprecatedSystem != nil {
-		deprecatedClients = deprecatedSystem.Clients
-		deprecatedRepositories = deprecatedSystem.Repositories
-	}
-
 	// Initialize event handlers
 	if !cfg.DisableWebhooks && !cfg.EnableCloudWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksClient,
-			webhook.WithDeprecatedClients(deprecatedClients),
-			webhook.WithDeprecatedRepositories(deprecatedRepositories),
 			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
 			webhook.WithWebhookResultsRepository(webhookRepository),
 			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
@@ -634,14 +595,6 @@ func main() {
 		if cfg.EnableK8sControllers {
 			err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
 			commons.ExitOnError("creating TestWorkflowExecution controller", err)
-
-			// Legacy controllers
-			testExecutor := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](scheduler.DefaultConcurrencyLevel)
-			err = controller.NewTestExecutionExecutorController(mgr, testExecutor, deprecatedSystem)
-			commons.ExitOnError("creating TestExecution controller", err)
-			testSuiteExecutor := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](scheduler.DefaultConcurrencyLevel)
-			err = controller.NewTestSuiteExecutionExecutorController(mgr, testSuiteExecutor, deprecatedSystem)
-			commons.ExitOnError("creating TestSuiteExecution controller", err)
 		}
 
 		// Finally start the manager.
@@ -655,10 +608,6 @@ func main() {
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
 
-	if deprecatedSystem != nil && deprecatedSystem.API != nil {
-		deprecatedSystem.API.Init(httpServer)
-	}
-
 	isStandalone := mode == common.ModeStandalone
 	var executionController scheduling.Controller
 	if isStandalone && controlPlane != nil {
@@ -668,7 +617,6 @@ func main() {
 	api := apiv1.NewTestkubeAPI(
 		isStandalone,
 		executionController,
-		deprecatedClients,
 		clusterId,
 		cfg.TestkubeNamespace,
 		testWorkflowResultsRepository,
@@ -689,7 +637,6 @@ func main() {
 		websocketLoader,
 		metrics,
 		&proContext,
-		features,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
@@ -699,19 +646,13 @@ func main() {
 
 	log.DefaultLogger.Info("starting agent service")
 
-	getDeprecatedLogStream := agent.GetDeprecatedLogStream
-	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
-		getDeprecatedLogStream = deprecatedSystem.StreamLogs
-	}
 	if !cfg.DisableDefaultAgent {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
 			grpcClient,
-			getDeprecatedLogStream,
 			clusterId,
 			cfg.TestkubeClusterName,
-			features,
 			&proContext,
 			cfg.TestkubeDockerImageVersion,
 			eventsEmitter,
@@ -753,14 +694,12 @@ func main() {
 
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
-			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
 			testTriggersClient,
 			triggersLeaseBackend,
 			log.DefaultLogger,
-			configMapConfig,
 			eventBus,
 			metrics,
 			executionWorker,
@@ -770,7 +709,6 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
 			triggers.WithEventLabels(cfg.EventLabels),
 		)

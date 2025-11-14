@@ -15,11 +15,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
-var _ testresult.Repository = (*CloudRepository)(nil)
-
 type CloudRepository struct {
 	executor executor.Executor
 }
+
+var _ testresult.Repository = (*CloudRepository)(nil)
 
 func NewCloudRepository(client cloud.TestKubeCloudAPIClient, proContext *config.ProContext) *CloudRepository {
 	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, proContext)}

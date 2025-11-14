@@ -388,7 +388,6 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	}
 
 	settings := map[string]string{
-		"global.features.logsV2":              fmt.Sprintf("%v", options.Master.Features.LogsV2),
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
 		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
