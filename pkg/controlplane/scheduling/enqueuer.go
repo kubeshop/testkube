@@ -351,17 +351,17 @@ func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExe
 
 		switch {
 		case execution.Result.IsPassed():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, ""))
 		case execution.Result.IsAborted():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, ""))
 		case execution.Result.IsCanceled():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, ""))
 		default:
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, ""))
 		}
 
 		if execution.Result.IsNotPassed() {
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
+			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, ""))
 		}
 	}
 }

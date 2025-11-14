@@ -14,6 +14,7 @@ const (
 	TestStopSubject  = "agentevents.test.stop"
 )
 
+
 // check if Event implements model generic event type
 var _ Trigger = Event{}
 
@@ -47,9 +48,10 @@ func NewEventStartTestWorkflow(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowSuccess,
 		TestWorkflowExecution: execution,
 		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
@@ -57,9 +59,10 @@ func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowFailed,
 		TestWorkflowExecution: execution,
 		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
@@ -67,9 +70,10 @@ func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowAborted,
 		TestWorkflowExecution: execution,
 		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
@@ -77,9 +81,10 @@ func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowCanceled,
 		TestWorkflowExecution: execution,
 		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
@@ -87,9 +92,10 @@ func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventEndTestWorkflowNotPassed(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowNotPassed(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowNotPassed,
 		TestWorkflowExecution: execution,
 		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
@@ -152,7 +158,11 @@ func (e Event) Log() []any {
 	}
 }
 
-func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventType, valid bool) {
+func (e Event) Valid(groupId, selector string, types []EventType) (matchedTypes []EventType, valid bool) {
+	if e.GroupId != groupId {
+		return nil, false
+	}
+
 	var executionLabels map[string]string
 
 	// load labels from event test execution or test-suite execution or test workflow execution

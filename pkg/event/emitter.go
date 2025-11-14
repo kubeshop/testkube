@@ -252,7 +252,7 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			continue
 		}
 		// Event type fanout
-		matchedEventTypes, _ := event.Valid(l.Selector(), l.Events())
+		matchedEventTypes, _ := event.Valid(l.Group(), l.Selector(), l.Events())
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]
 			go notifyListener(logger, l, event)

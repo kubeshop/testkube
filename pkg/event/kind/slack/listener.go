@@ -51,7 +51,7 @@ func (l *SlackListener) Metadata() map[string]string {
 }
 
 func (l *SlackListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 
@@ -69,5 +69,5 @@ func (l *SlackListener) Kind() string {
 }
 
 func (l *SlackListener) Group() string {
-	return "default-group"
+	return ""
 }

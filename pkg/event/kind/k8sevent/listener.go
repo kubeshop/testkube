@@ -57,7 +57,7 @@ func (l *K8sEventListener) Metadata() map[string]string {
 }
 
 func (l *K8sEventListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 
@@ -76,5 +76,5 @@ func (l *K8sEventListener) Kind() string {
 }
 
 func (l *K8sEventListener) Group() string {
-	return "default-group"
+	return ""
 }

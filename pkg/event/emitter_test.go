@@ -349,7 +349,7 @@ func (l *FakeListener) Kind() string {
 }
 
 func (l *FakeListener) Group() string {
-	return "default-group"
+	return ""
 }
 
 func (l *FakeListener) Metadata() map[string]string {
