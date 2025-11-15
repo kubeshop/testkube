@@ -64,13 +64,14 @@ func Test_ReconcileTestWorkflow(t *testing.T) {
 	mockTestWorkflowTemplatesClient.EXPECT().WatchUpdates(gomock.Any(), "fooenv", gomock.Any()).Return(channels.NewWatcher[testworkflowtemplateclient.Update]()).AnyTimes()
 	watcher := cronjobtestworkflow.New(log.DefaultLogger, mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, "fooenv")
 
-	mgr := cronjob.NewMockCronManager(mockCtrl)
+	mgr := cronjob.NewMockScheduleManager(mockCtrl)
 	mgr.EXPECT().
-		CreateOrUpdate(gomock.Any(), mockTestWorkflow.Name, *mockTestWorkflow.Spec.Events[0].Cronjob).
+		ReplaceWorkflowSchedules(gomock.Any(), cronjob.Workflow{Name: mockTestWorkflow.Name, EnvId: "fooenv"}, []testkube.TestWorkflowCronJobConfig{*mockTestWorkflow.Spec.Events[0].Cronjob}).
 		Return(nil).
 		Times(2)
 	mgr.EXPECT().
-		Delete(gomock.Any(), mockTestWorkflow.Name, *mockTestWorkflow.Spec.Events[0].Cronjob).
+		ReplaceWorkflowSchedules(gomock.Any(), cronjob.Workflow{Name: mockTestWorkflow.Name, EnvId: "fooenv"}, []testkube.TestWorkflowCronJobConfig(nil)).
+		Return(nil).
 		Times(1)
 
 	svc := cronjob.NewService(

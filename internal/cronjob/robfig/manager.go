@@ -11,6 +11,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	cronjobtcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cronjob"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -56,19 +57,30 @@ func cronSpec(config testkube.TestWorkflowCronJobConfig) string {
 	return spec
 }
 
-// CreateOrUpdate a schedule in the manager.
-func (m Manager) CreateOrUpdate(ctx context.Context, workflow string, config testkube.TestWorkflowCronJobConfig) error {
-	if _, ok := m.cronEntries[workflow]; !ok {
-		m.cronEntries[workflow] = make(map[string]cron.EntryID, 0)
-	}
-
-	spec := cronSpec(config)
-	if _, ok := m.cronEntries[workflow][spec]; !ok {
-		entryId, err := m.cron.AddJob(spec, m.testWorkflowExecuteJob(ctx, workflow, spec, config))
-		if err != nil {
-			return fmt.Errorf("adding cron %q for workflow %q: %w", spec, workflow, err)
+func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.Workflow, configs []testkube.TestWorkflowCronJobConfig) error {
+	// Delete all existing schedules for this workflow.
+	// This is because we may not know when a schedule is removed from
+	// an object so we must recreate the entire schedule from scratch
+	// each time there is a change.
+	if _, exists := m.cronEntries[workflow.Name]; exists {
+		for _, entryId := range m.cronEntries[workflow.Name] {
+			m.cron.Remove(entryId)
 		}
-		m.cronEntries[workflow][spec] = entryId
+		delete(m.cronEntries, workflow.Name)
+	}
+	m.cronEntries[workflow.Name] = make(map[string]cron.EntryID)
+
+	for _, config := range configs {
+		spec := cronSpec(config)
+		entryId, err := m.cron.AddJob(spec, m.testWorkflowExecuteJob(ctx, workflow.Name, spec, config))
+		if err != nil {
+			m.logger.Errorw("Error adding cron for workflow, continuing processing",
+				"cron", spec,
+				"workflow", workflow,
+				"err", err)
+			continue
+		}
+		m.cronEntries[workflow.Name][spec] = entryId
 	}
 
 	return nil
@@ -112,25 +124,8 @@ func (m Manager) testWorkflowExecuteJob(ctx context.Context, workflow, cronSpec 
 			executionID = results[0].Id
 		}
 
-		log.Debugf("started scheduled workflow execution",
+		log.Debugw("started scheduled workflow execution",
 			"execution id", executionID,
 		)
 	})
-}
-
-// Delete a schedule from the manager.
-func (m Manager) Delete(_ context.Context, workflow string, config testkube.TestWorkflowCronJobConfig) error {
-	if _, ok := m.cronEntries[workflow]; !ok {
-		// Already gone, mission failed successfully!
-		return nil
-	}
-
-	spec := cronSpec(config)
-	// Only need to remove if it isn't in the entries.
-	if _, ok := m.cronEntries[workflow][spec]; ok {
-		m.cron.Remove(m.cronEntries[workflow][spec])
-		delete(m.cronEntries[workflow], spec)
-	}
-
-	return nil
 }
