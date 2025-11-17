@@ -90,22 +90,13 @@ func (c *testWorkflowTemplateClientWithBuildIn) List(ctx context.Context, enviro
 	// 1. Kubernetes client: Remove official templates from Helm Charts.
 	// 2. Cloud client: Run migration to remove official templates that were synced by GitOps agent.
 	for _, o := range c.officials {
-		if hasTemplate(tpls, o.Name) {
+		if slices.ContainsFunc(tpls, templateWithName(o.Name)) {
 			continue
 		}
 		tpls = append(tpls, o)
 	}
 
 	return tpls, nil
-}
-
-func hasTemplate(templates []testkube.TestWorkflowTemplate, name string) bool {
-	for _, template := range templates {
-		if template.Name == name {
-			return true
-		}
-	}
-	return false
 }
 
 func (c *testWorkflowTemplateClientWithBuildIn) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
@@ -126,30 +117,24 @@ func (c *testWorkflowTemplateClientWithBuildIn) ListLabels(ctx context.Context, 
 }
 
 func (c *testWorkflowTemplateClientWithBuildIn) Update(ctx context.Context, environmentId string, workflow testkube.TestWorkflowTemplate) error {
-	for _, template := range c.officials {
-		if template.Name == workflow.Name {
-			return errCannotModify
-		}
+	if slices.ContainsFunc(c.officials, templateWithName(workflow.Name)) {
+		return errCannotModify
 	}
 
 	return c.client.Update(ctx, environmentId, workflow)
 }
 
 func (c *testWorkflowTemplateClientWithBuildIn) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflowTemplate) error {
-	for _, template := range c.officials {
-		if template.Name == workflow.Name {
-			return errDuplicate
-		}
+	if slices.ContainsFunc(c.officials, templateWithName(workflow.Name)) {
+		return errDuplicate
 	}
 
 	return c.client.Create(ctx, environmentId, workflow)
 }
 
 func (c *testWorkflowTemplateClientWithBuildIn) Delete(ctx context.Context, environmentId string, name string) error {
-	for _, template := range c.officials {
-		if template.Name == name {
-			return errCannotDelete
-		}
+	if slices.ContainsFunc(c.officials, templateWithName(name)) {
+		return errCannotDelete
 	}
 
 	return c.client.Delete(ctx, environmentId, name)
@@ -161,4 +146,10 @@ func (c *testWorkflowTemplateClientWithBuildIn) DeleteByLabels(ctx context.Conte
 
 func (c *testWorkflowTemplateClientWithBuildIn) WatchUpdates(ctx context.Context, environmentId string, includeInitialData bool) Watcher {
 	return c.client.WatchUpdates(ctx, environmentId, includeInitialData)
+}
+
+func templateWithName(name string) func(testkube.TestWorkflowTemplate) bool {
+	return func(template testkube.TestWorkflowTemplate) bool {
+		return template.Name == name
+	}
 }
