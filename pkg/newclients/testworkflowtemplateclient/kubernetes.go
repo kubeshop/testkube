@@ -59,7 +59,7 @@ func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *r
 		return nil, err
 	}
 
-	return newTestWorkflowTemplateClientWithOfficials(&k8sTestWorkflowTemplateClient{
+	return NewTestWorkflowTemplateClientWithOfficials(&k8sTestWorkflowTemplateClient{
 		client:         client,
 		restClient:     restClient,
 		parameterCodec: parameterCodec,
