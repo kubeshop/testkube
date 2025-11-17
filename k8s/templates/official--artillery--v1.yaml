@@ -1,0 +1,48 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--artillery--v1
+  labels:
+    testkube.io/name: Artillery
+    testkube.io/wizard: enabled
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "19"
+    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
+    testkube.io/categories: Load & Performance
+    testkube.io/description: Run Artillery tests
+    testkube.io/icon: artillery
+    testkube.io/image: artilleryio/artillery
+    testkube.io/example-path: script.yaml
+    testkube.io/example: |
+      config:
+        target: "https://testkube.kubeshop.io/"
+        phases:
+        - duration: 1
+          arrivalRate: 1
+      scenarios:
+      - flow:
+          - get:
+              url: "/"
+          - think: 0.1
+spec:
+  config:
+    version:
+      description: Artillery version to use
+      type: string
+      default: 2.0.9
+    artillery_binary:
+      description: Artillery binary path
+      type: string
+      default: "/home/node/artillery/bin/run" # "run", or "artillery" (for older images)
+    run:
+      description: Run command
+      type: string
+      default: "artillery run script.yaml"
+  steps:
+  - name: Run Artillery tests
+    run:
+      image: {{`"artilleryio/artillery:{{ config.version }}"`}}
+      shell: |
+        {{`artillery() { {{ config.artillery_binary }} $@; }
+        {{ config.run }}`}}

@@ -1,0 +1,35 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--cypress--beta
+  labels:
+    testkube.io/name: Cypress
+    testkube.io/wizard: disabled
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "19"
+    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
+    testkube.io/categories: E2E
+    testkube.io/description: Run Cypress tests
+    testkube.io/icon: cypress
+spec:
+  config:
+    dependencies_command:
+      description: Command to install dependencies
+      type: string
+      default: npm install
+    version:
+      description: Cypress version to use
+      type: string
+      default: 13.6.4
+    run:
+      description: Run command
+      type: string
+      default: "npx cypress run"
+  container:
+    image: {{`"cypress/included:{{ config.version }}"`}}
+  steps:
+  - name: Install dependencies
+    shell: {{`"{{ config.dependencies_command }}"`}}
+  - name: Run Cypress tests
+    shell: {{`"{{ config.run }}"`}}

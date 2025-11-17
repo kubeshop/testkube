@@ -1,0 +1,37 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--playwright--v1
+  labels:
+    testkube.io/name: Playwright
+    testkube.io/wizard: enabled
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "19"
+    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
+    testkube.io/categories: E2E
+    testkube.io/description: Run Playwright tests
+    testkube.io/icon: playwright
+    testkube.io/image: mcr.microsoft.com/playwright
+spec:
+  config:
+    dependencies_command:
+      description: Command to install dependencies
+      type: string
+      default: npm ci
+    version:
+      description: Playwright version to use
+      type: string
+      default: v1.43.0
+    run:
+      description: Run command
+      type: string
+      default: "npx playwright test"
+  container:
+    image: {{`"mcr.microsoft.com/playwright:{{ config.version }}"`}}
+  steps:
+  - name: Install dependencies
+    shell: {{`"{{ config.dependencies_command }}"`}}
+  - name: Run Playwright tests
+    run:
+      shell: {{`"{{ config.run }}"`}}
