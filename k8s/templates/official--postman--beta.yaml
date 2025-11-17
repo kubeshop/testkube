@@ -25,5 +25,5 @@ spec:
   steps:
   - name: Run Postman tests
     run:
-      image: {{`"postman/newman:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
+      image: "postman/newman:{{ config.version }}"
+      shell: "{{ config.run }}"

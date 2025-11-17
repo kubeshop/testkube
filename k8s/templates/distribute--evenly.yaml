@@ -14,11 +14,11 @@ spec:
       default: ""
   pod:
     labels:
-      distribute-evenly: {{`"{{execution.id}}{{config.name}}"`}}
+      distribute-evenly: "{{execution.id}}{{config.name}}"
     topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
       whenUnsatisfiable: ScheduleAnyway
       labelSelector:
         matchLabels:
-          distribute-evenly: {{`"{{execution.id}}{{config.name}}"`}}
+          distribute-evenly: "{{execution.id}}{{config.name}}"

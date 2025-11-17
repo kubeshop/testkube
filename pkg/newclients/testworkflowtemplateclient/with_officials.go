@@ -11,6 +11,7 @@ import (
 	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/k8s/templates"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned/scheme"
 )
@@ -34,7 +35,8 @@ func newTestWorkflowTemplateClientWithOfficials(client TestWorkflowTemplateClien
 	for _, entry := range entries {
 		t, err := parse(entry)
 		if err != nil {
-			continue // Silently skip official templates that are incorrect.
+			log.DefaultLogger.Warnf("skipping official template which cannot be parsed: %s, %s", entry.Name(), err.Error())
+			continue
 		}
 		officialTemplates = append(officialTemplates, *t)
 	}

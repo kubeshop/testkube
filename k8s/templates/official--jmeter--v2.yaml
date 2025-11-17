@@ -26,5 +26,5 @@ spec:
   steps:
   - name: Run JMeter tests
     run:
-      image: {{`"alpine/jmeter:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
+      image: "alpine/jmeter:{{ config.version }}"
+      shell: "{{ config.run }}"
