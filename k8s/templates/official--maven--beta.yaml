@@ -1,0 +1,29 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--maven--beta
+  labels:
+    testkube.io/name: Maven
+    testkube.io/wizard: disabled
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "19"
+    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
+    testkube.io/categories: Other
+    testkube.io/description: Maven
+    testkube.io/icon: maven
+spec:
+  config:
+    version:
+      description: Maven version to use
+      type: string
+      default: 3.9.6-eclipse-temurin-22-alpine
+    run:
+      description: Run command
+      type: string
+      default: "mvn test"
+  steps:
+  - name: Run Maven command
+    run:
+      image: {{`"maven:{{ config.version }}"`}}
+      shell: {{`"{{ config.run }}"`}}
