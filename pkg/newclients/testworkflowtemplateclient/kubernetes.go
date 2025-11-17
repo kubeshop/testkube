@@ -59,12 +59,12 @@ func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *r
 		return nil, err
 	}
 
-	return &k8sTestWorkflowTemplateClient{
+	return newTestWorkflowTemplateClientWithOfficials(&k8sTestWorkflowTemplateClient{
 		client:         client,
 		restClient:     restClient,
 		parameterCodec: parameterCodec,
 		namespace:      namespace,
-	}, nil
+	}), nil
 }
 
 func (c *k8sTestWorkflowTemplateClient) get(ctx context.Context, name string) (*testworkflowsv1.TestWorkflowTemplate, error) {
