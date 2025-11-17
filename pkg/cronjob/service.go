@@ -13,35 +13,49 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-//go:generate go tool mockgen -destination=./mock_service.go -package=cronjob "github.com/kubeshop/testkube/pkg/cronjob" CronManager
+//go:generate go tool mockgen -destination=./mock_service.go -package=cronjob "github.com/kubeshop/testkube/pkg/cronjob" ScheduleManager
 
-// CronManager is responsible for managing the schedule and executing workflow on their schedule.
-type CronManager interface {
-	// CreateOrUpdate a workflow execution schedule.
-	CreateOrUpdate(context.Context, string, testkube.TestWorkflowCronJobConfig) error
-	// Delete a workflow execution schedule.
-	Delete(context.Context, string, testkube.TestWorkflowCronJobConfig) error
+// Workflow uniquely identifies a workflow in a multi-tenanted installation.
+type Workflow struct {
+	// Name of the workflow, this is expected to be unique within an environment.
+	Name string
+	// Identifier of the Environment, the named workflow is expected to be under
+	// this environment.
+	EnvId string
+	// Identifier of the Organisation, the identified environment is expected to
+	// be under this organisation. This value may be empty when the watcher is
+	// operating in a single tenant mode.
+	OrgId string
+}
+
+// ScheduleManager is responsible for managing the schedule and executing workflow on their schedule.
+type ScheduleManager interface {
+	// ReplaceWorkflowSchedules does pretty much what it says.
+	// A manager is expected to replace all existing schedules for the passed workflow with only the schedules
+	// passed in the function call.
+	// In the event that the list of schedules is empty then this indicates that no schedules should exist
+	// for this workflow.
+	ReplaceWorkflowSchedules(ctx context.Context, workflow Workflow, schedules []testkube.TestWorkflowCronJobConfig) error
 }
 
 // Config of a workflow schedule
 type Config struct {
-	// WorkflowName is the name of the workflow that should be executed on this schedule.
-	WorkflowName string
-	// CronJob is the schedule configuration itself.
-	CronJob testkube.TestWorkflowCronJobConfig
-	// Remove, when set to true will cause the associated schedule to be removed from the manager.
-	Remove bool
+	// Workflow is the unique identifier of a workflow that the schedule relates to.
+	Workflow Workflow
+	// Schedules are all the execution schedules for this workflow.
+	// If it is empty then no schedules should exist for this workflow.
+	Schedules []testkube.TestWorkflowCronJobConfig
 }
 
 type Watcher func(context.Context, chan<- Config)
 
 type Service struct {
 	logger   *zap.SugaredLogger
-	cron     CronManager
+	cron     ScheduleManager
 	watchers []Watcher
 }
 
-func NewService(logger *zap.SugaredLogger, mgr CronManager, watchers ...Watcher) Service {
+func NewService(logger *zap.SugaredLogger, mgr ScheduleManager, watchers ...Watcher) Service {
 	return Service{
 		logger:   logger,
 		cron:     mgr,
@@ -60,18 +74,10 @@ func (s Service) Run(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case config := <-cronChan:
-				var err error
-				switch {
-				case config.Remove:
-					err = s.cron.Delete(ctx, config.WorkflowName, config.CronJob)
-				default:
-					err = s.cron.CreateOrUpdate(ctx, config.WorkflowName, config.CronJob)
-				}
-				if err != nil {
-					s.logger.Errorf("error modifying workflow execution schedule",
-						"workflow name", config.WorkflowName,
-						"delete action", config.Remove,
-						"cron", config.CronJob.Cron,
+				if err := s.cron.ReplaceWorkflowSchedules(ctx, config.Workflow, config.Schedules); err != nil {
+					s.logger.Errorw("error modifying workflow execution schedule",
+						"workflow name", config.Workflow.Name,
+						"cron count", len(config.Schedules),
 						"err", err)
 				}
 			}
