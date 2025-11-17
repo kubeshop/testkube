@@ -1,19 +1,20 @@
 package testworkflowtemplateclient
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io/fs"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	v1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/k8s/templates"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned/scheme"
 )
 
 var errCannotModify = errors.New("cannot modify official templates")
@@ -27,13 +28,26 @@ type testWorkflowTemplateClientWithBuildIn struct {
 	officials []testkube.TestWorkflowTemplate
 }
 
-// NewTestWorkflowTemplateClientWithBuildin wraps another TestWorkflowTemplateClient and adds build-in official officials to it when they do not yet exist.
+// newTestWorkflowTemplateClientWithOfficials wraps another TestWorkflowTemplateClient and adds build-in official officials to it when they do not yet exist.
 func newTestWorkflowTemplateClientWithOfficials(client TestWorkflowTemplateClient) TestWorkflowTemplateClient {
+	officialTemplates, err := parseAllOfficialTemplates()
+	if err != nil {
+		log.DefaultLogger.Warnf("cannot load official templates: %s", err.Error())
+		// Silently continue…
+	}
+
+	return &testWorkflowTemplateClientWithBuildIn{client: client, officials: officialTemplates}
+}
+
+func parseAllOfficialTemplates() ([]testkube.TestWorkflowTemplate, error) {
 	var officialTemplates []testkube.TestWorkflowTemplate
-	entries, _ := templates.Templates.ReadDir(".")
+	entries, err := templates.Templates.ReadDir(".")
+	if err != nil {
+		return nil, err
+	}
 
 	for _, entry := range entries {
-		t, err := parse(entry)
+		t, err := parseOfficialTemplate(entry)
 		if err != nil {
 			log.DefaultLogger.Warnf("skipping official template which cannot be parsed: %s, %s", entry.Name(), err.Error())
 			continue
@@ -41,10 +55,10 @@ func newTestWorkflowTemplateClientWithOfficials(client TestWorkflowTemplateClien
 		officialTemplates = append(officialTemplates, *t)
 	}
 
-	return &testWorkflowTemplateClientWithBuildIn{client: client, officials: officialTemplates}
+	return officialTemplates, nil
 }
 
-func parse(e fs.DirEntry) (*testkube.TestWorkflowTemplate, error) {
+func parseOfficialTemplate(e fs.DirEntry) (*testkube.TestWorkflowTemplate, error) {
 	if e.IsDir() {
 		// Unexpected and due to incorrect usage of our `templates` directory. Please keep it flat!
 		return nil, errors.New("expected entry to not be a directory")
@@ -54,17 +68,14 @@ func parse(e fs.DirEntry) (*testkube.TestWorkflowTemplate, error) {
 	if err != nil {
 		return nil, err
 	}
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(file, nil, nil)
-	if err != nil {
+
+	var template v1.TestWorkflowTemplate
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(file), len(file))
+	if err := decoder.Decode(&template); err != nil {
 		return nil, err
 	}
 
-	t, ok := obj.(*v1.TestWorkflowTemplate)
-	if ok {
-		return nil, errors.New("cannot parse official template")
-	}
-
-	result := testworkflows.MapTemplateKubeToAPI(t)
+	result := testworkflows.MapTemplateKubeToAPI(&template)
 	return result, nil
 }
 
@@ -83,22 +94,22 @@ func (c *testWorkflowTemplateClientWithBuildIn) GetKubernetesObjectUID(ctx conte
 }
 
 func (c *testWorkflowTemplateClientWithBuildIn) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflowTemplate, error) {
-	tpls, err := c.client.List(ctx, environmentId, options)
+	result, err := c.client.List(ctx, environmentId, options)
 	if err != nil {
-		return tpls, err
+		return result, err
 	}
 
 	// Avoid duplicates. We should be able to remove this over time once we
 	// 1. Kubernetes client: Remove official templates from Helm Charts.
 	// 2. Cloud client: Run migration to remove official templates that were synced by GitOps agent.
 	for _, o := range c.officials {
-		if slices.ContainsFunc(tpls, templateWithName(o.Name)) {
+		if slices.ContainsFunc(result, templateWithName(o.Name)) {
 			continue
 		}
-		tpls = append(tpls, o)
+		result = append(result, o)
 	}
 
-	return tpls, nil
+	return result, nil
 }
 
 func (c *testWorkflowTemplateClientWithBuildIn) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
