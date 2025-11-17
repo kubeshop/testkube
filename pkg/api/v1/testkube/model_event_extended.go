@@ -14,7 +14,6 @@ const (
 	TestStopSubject  = "agentevents.test.stop"
 )
 
-
 // check if Event implements model generic event type
 var _ Trigger = Event{}
 
