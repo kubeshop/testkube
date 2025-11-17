@@ -27,7 +27,7 @@ type testWorkflowTemplateClientWithBuildIn struct {
 }
 
 // NewTestWorkflowTemplateClientWithBuildin wraps another TestWorkflowTemplateClient and adds build-in official officials to it when they do not yet exist.
-func NewTestWorkflowTemplateClientWithBuildin(client TestWorkflowTemplateClient) TestWorkflowTemplateClient {
+func newTestWorkflowTemplateClientWithOfficials(client TestWorkflowTemplateClient) TestWorkflowTemplateClient {
 	var officialTemplates []testkube.TestWorkflowTemplate
 	entries, _ := templates.Templates.ReadDir(".")
 

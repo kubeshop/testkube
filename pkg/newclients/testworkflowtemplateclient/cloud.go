@@ -19,7 +19,7 @@ type cloudTestWorkflowTemplateClient struct {
 }
 
 func NewCloudTestWorkflowTemplateClient(client controlplaneclient.TestWorkflowTemplatesClient) TestWorkflowTemplateClient {
-	return &cloudTestWorkflowTemplateClient{client: client}
+	return newTestWorkflowTemplateClientWithOfficials(&cloudTestWorkflowTemplateClient{client: client})
 }
 
 func (c *cloudTestWorkflowTemplateClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflowTemplate, error) {
