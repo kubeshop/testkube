@@ -28,9 +28,9 @@ spec:
       type: string
       default: "npx cypress run"
   container:
-    image: {{`"cypress/included:{{ config.version }}"`}}
+    image: "cypress/included:{{ config.version }}"
   steps:
   - name: Install dependencies
-    shell: {{`"{{ config.dependencies_command }}"`}}
+    shell: "{{ config.dependencies_command }}"
   - name: Run Cypress tests
-    shell: {{`"{{ config.run }}"`}}
+    shell: "{{ config.run }}"

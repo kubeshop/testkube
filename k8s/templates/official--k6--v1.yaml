@@ -34,5 +34,5 @@ spec:
   steps:
   - name: Run k6 tests
     run:
-      image: {{`"grafana/k6:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
+      image: "grafana/k6:{{ config.version }}"
+      shell: "{{ config.run }}"

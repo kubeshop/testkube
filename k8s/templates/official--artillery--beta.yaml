@@ -40,7 +40,7 @@ spec:
   steps:
   - name: Run Artillery tests
     run:
-      image: {{`"artilleryio/artillery:{{ config.version }}"`}}
+      image: "artilleryio/artillery:{{ config.version }}"
       shell: |
-        {{`artillery() { {{ config.artillery_binary }} $@; }
-        {{ config.run }}`}}
+        artillery() { {{ config.artillery_binary }} $@; }
+        {{ config.run }}

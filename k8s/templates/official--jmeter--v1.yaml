@@ -26,5 +26,5 @@ spec:
   steps:
   - name: Run JMeter tests
     run:
-      image: {{`"justb4/jmeter:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
+      image: "justb4/jmeter:{{ config.version }}"
+      shell: "{{ config.run }}"

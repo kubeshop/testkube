@@ -28,10 +28,10 @@ spec:
       type: string
       default: "npx playwright test"
   container:
-    image: {{`"mcr.microsoft.com/playwright:{{ config.version }}"`}}
+    image: "mcr.microsoft.com/playwright:{{ config.version }}"
   steps:
   - name: Install dependencies
-    shell: {{`"{{ config.dependencies_command }}"`}}
+    shell: "{{ config.dependencies_command }}"
   - name: Run Playwright tests
     run:
-      shell: {{`"{{ config.run }}"`}}
+      shell: "{{ config.run }}"

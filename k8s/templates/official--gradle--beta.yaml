@@ -25,5 +25,5 @@ spec:
   steps:
   - name: Run Gradle command
     run:
-      image: {{`"gradle:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
+      image: "gradle:{{ config.version }}"
+      shell: "{{ config.run }}"
