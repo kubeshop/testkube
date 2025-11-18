@@ -344,11 +344,22 @@ spec:
             {{- if .Values.pod.extraEnvVars }}
             {{ toYaml .Values.pod.extraEnvVars | nindent 12 | trim }}
             {{- end }}
-
-            # Self registration
-          {{- if .Values.runner.register.token }}
+          # Self registration
+          {{- $register := .Values.runner.register | default dict -}}
+          {{- $tokenSecret := $register.tokenSecret | default dict -}}
+          {{- if or ($register.token) ($tokenSecret.name) }}
+          {{- if .Values.runner.register.tokenSecret }}
+          {{- if $tokenSecret.name }}
             - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
-              value: "{{ .Values.runner.register.token }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $tokenSecret.name }}
+                  key:  {{ $tokenSecret.key | default "token" }}
+          {{- else if .Values.runner.register.token }}
+            - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+              value: "{{ $register.token }}"
+          {{- end }}
+
             - name: RUNNER_NAME
               value: "{{ include "testkube-runner.fullname" . }}"
             - name: ENABLE_SECRETS_ENDPOINT

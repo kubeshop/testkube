@@ -35,7 +35,10 @@ runner:
   ## Self-registration using API token
   register:
     ## Control Plane API token
-    token: ""
+  #  token: ""
+#    tokenSecret:
+#      name: name
+#      key: def
     ## Whether to register as a Floating runner
     floating: false
     ## Whether to register with mode Global
