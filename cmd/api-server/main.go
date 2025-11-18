@@ -285,7 +285,7 @@ func main() {
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
 		}
-		log.DefaultLogger.Infow("registered runner", "runner_name", runnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
+		log.DefaultLogger.Infow("registered runner", "runner_name", res.RunnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
 
 		// Add the new values to the current configuration.
 		cfg.TestkubeProAPIKey = res.RunnerKey
@@ -301,6 +301,7 @@ func main() {
 			// Create or update the existing secret
 			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret)
 			secretData := map[string]string{
+				"RUNNER_NAME":           res.RunnerName,
 				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
 				"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
 				"TESTKUBE_PRO_ORG_ID":   res.OrganizationId,
@@ -309,13 +310,13 @@ func main() {
 				if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.CreateOptions{Bypass: true}); err != nil {
 					log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
 				} else {
-					log.DefaultLogger.Infow("saved registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+					log.DefaultLogger.Infow("saved registration in secret", "secret_name", cfg.SelfRegistrationSecret)
 				}
 			} else {
 				if _, err := secretManager.Update(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.UpdateOptions{Bypass: true}); err != nil {
 					log.DefaultLogger.Errorw("error updating self-register runner secret", "error", err.Error())
 				} else {
-					log.DefaultLogger.Infow("updated registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+					log.DefaultLogger.Infow("updated registration in secret", "secret_name", cfg.SelfRegistrationSecret)
 				}
 			}
 		}
