@@ -81,7 +81,7 @@ func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []st
 
 	agent, err = UpdateAgent(cmd, agent.ID, client.AgentInput{
 		RunnerPolicy: common.Ptr(*agent.RunnerPolicy),
-		Labels: common.Ptr(agent.Labels),
+		Labels:       common.Ptr(agent.Labels),
 	})
 	ui.ExitOnError("updating agent", err)
 
