@@ -15,8 +15,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
 
@@ -144,44 +142,8 @@ func (t ProxyClient[A]) GetURI(pathTemplate string, params ...interface{}) strin
 }
 
 // GetLogs returns logs stream from job pods, based on job pods logs
-func (t ProxyClient[A]) GetLogs(uri string, logs chan output.Output) error {
-	resp, err := t.getProxy(http.MethodGet).
-		Suffix(uri).
-		SetHeader("Accept", "text/event-stream").
-		Stream(context.Background())
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer close(logs)
-		defer resp.Close()
-
-		StreamToLogsChannel(resp, logs)
-	}()
-
-	return nil
-}
 
 // GetLogsV2 returns logs version 2 stream from log server, based on job pods logs
-func (t ProxyClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
-	resp, err := t.getProxy(http.MethodGet).
-		Suffix(uri).
-		SetHeader("Accept", "text/event-stream").
-		Stream(context.Background())
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer close(logs)
-		defer resp.Close()
-
-		StreamToLogsChannelV2(resp, logs)
-	}()
-
-	return nil
-}
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
 func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {

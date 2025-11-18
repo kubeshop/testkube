@@ -31,17 +31,6 @@ func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, proConte
 	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, proContext)}
 }
 
-// NewCloudArtifactsStorageWithParams creates a new cloud artifacts storage with individual parameters (for deprecated system)
-func NewCloudArtifactsStorageWithParams(cloudClient cloud.TestKubeCloudAPIClient, apiKey string, orgID string, envID string) *CloudArtifactsStorage {
-	// Create a minimal proContext for the deprecated system
-	proContext := &intconfig.ProContext{
-		APIKey: apiKey,
-		OrgID:  orgID,
-		EnvID:  envID,
-	}
-	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, proContext)}
-}
-
 func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error) {
 	req := ListFilesRequest{
 		ExecutionID:      executionID,

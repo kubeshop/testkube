@@ -112,7 +112,7 @@ mongodb:
     # -- MongoDB image repository
     repository: testkube-cloud-372110/testkube/mongodb
     # -- MongoDB image tag
-    tag: 8.0.13
+    tag: 8.0.15
     # -- MongoDB image pull Secret
     pullSecrets: []
   # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm

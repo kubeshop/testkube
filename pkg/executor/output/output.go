@@ -3,7 +3,6 @@ package output
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -45,15 +44,6 @@ func NewOutputError(err error) Output {
 	}
 }
 
-// NewOutputResult returns new Output struct of type result - should be last line in stream as it'll stop listening
-func NewOutputResult(result testkube.ExecutionResult) Output {
-	return Output{
-		Type_:  TypeResult,
-		Result: &result,
-		Time:   time.Now(),
-	}
-}
-
 // Output generic json based output data structure
 type Output testkube.ExecutorOutput
 
@@ -70,12 +60,6 @@ func (out Output) String() string {
 	return ""
 }
 
-// PrintError - prints error as output json
-func PrintError(w io.Writer, err error) {
-	out, _ := json.Marshal(NewOutputError(err))
-	fmt.Fprintf(w, "%s\n", out)
-}
-
 // PrintLog - prints log line as output json
 func PrintLog(message string) {
 	out, _ := json.Marshal(NewOutputLine([]byte(message)))
@@ -86,12 +70,6 @@ func PrintLog(message string) {
 func PrintLogf(format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	out, _ := json.Marshal(NewOutputLine([]byte(message)))
-	fmt.Printf("%s\n", out)
-}
-
-// PrintResult - prints result as output json
-func PrintResult(result testkube.ExecutionResult) {
-	out, _ := json.Marshal(NewOutputResult(result))
 	fmt.Printf("%s\n", out)
 }
 

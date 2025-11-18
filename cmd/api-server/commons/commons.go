@@ -3,7 +3,6 @@ package commons
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -37,8 +36,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
-	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -54,8 +51,6 @@ func ExitOnError(title string, err error) {
 		os.Exit(1)
 	}
 }
-
-// General
 
 func GetEnvironmentVariables() map[string]string {
 	list := os.Environ()
@@ -95,13 +90,6 @@ func MustGetConfig() *config.Config {
 	cfg, err := config.Get()
 	ExitOnError("error getting application config", err)
 	return cfg
-}
-
-func MustGetFeatureFlags() featureflags.FeatureFlags {
-	features, err := featureflags.Get()
-	ExitOnError("error getting application feature flags", err)
-	log.DefaultLogger.Infow("feature flags configured", "ff", features)
-	return features
 }
 
 func MustFreePort(port int) {
@@ -249,79 +237,6 @@ func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-// Actions
-
-func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, images kubeexecutor.Images, err error) {
-	rawExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeDefaultExecutors,
-		cfg.TestkubeConfigDir,
-		"executors.json",
-		"executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
-		return nil, images, err
-	}
-
-	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeEnabledExecutors,
-		cfg.TestkubeConfigDir,
-		"enabledExecutors",
-		"enabled executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	// Load internal images
-	next := make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if executors[i].Name == "logs-sidecar" {
-			images.LogSidecar = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "init-executor" {
-			images.Init = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "scraper-executor" {
-			images.Scraper = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Executor == nil {
-			continue
-		}
-		next = append(next, executors[i])
-	}
-	executors = next
-
-	// When there is no executors selected, enable all
-	if enabledExecutors == "" {
-		return executors, images, nil
-	}
-
-	// Filter enabled executors
-	specifiedExecutors := make(map[string]struct{})
-	for _, executor := range strings.Split(enabledExecutors, ",") {
-		if strings.TrimSpace(executor) == "" {
-			continue
-		}
-		specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
-	}
-
-	next = make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if _, ok := specifiedExecutors[executors[i].Name]; ok {
-			next = append(next, executors[i])
-		}
-	}
-
-	return next, images, nil
-}
-
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
 		APIKey:                              cfg.TestkubeProAPIKey,
@@ -336,7 +251,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		OrgName:                             cfg.TestkubeProOrgID,
 		ConnectionTimeout:                   cfg.TestkubeProConnectionTimeout,
 		WorkerCount:                         cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
 		DashboardURI:                        cfg.TestkubeDashboardURI,
 		CloudStorage:                        false,

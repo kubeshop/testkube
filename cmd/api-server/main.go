@@ -76,7 +76,6 @@ import (
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
-	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -86,7 +85,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func init() {
@@ -99,9 +97,6 @@ func main() {
 	log.DefaultLogger.Infow("version info", "version", version.Version, "commit", version.Commit)
 
 	cfg := commons.MustGetConfig()
-	features := commons.MustGetFeatureFlags()
-	// Determine the running mode
-
 	mode := common.ModeAgent
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "" {
 		mode = common.ModeStandalone
@@ -183,7 +178,7 @@ func main() {
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, features, eventsEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -261,6 +256,9 @@ func main() {
 				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
 			}
 		}
+		if cfg.GitOpsSyncKubernetesToCloudEnabled {
+			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
+		}
 
 		// Get all labels that matches with prefix
 		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
@@ -287,7 +285,7 @@ func main() {
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
 		}
-		log.DefaultLogger.Infow("registered runner", "runner_name", runnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
+		log.DefaultLogger.Infow("registered runner", "runner_name", res.RunnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
 
 		// Add the new values to the current configuration.
 		cfg.TestkubeProAPIKey = res.RunnerKey
@@ -303,6 +301,7 @@ func main() {
 			// Create or update the existing secret
 			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret)
 			secretData := map[string]string{
+				"RUNNER_NAME":           res.RunnerName,
 				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
 				"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
 				"TESTKUBE_PRO_ORG_ID":   res.OrganizationId,
@@ -311,13 +310,13 @@ func main() {
 				if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.CreateOptions{Bypass: true}); err != nil {
 					log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
 				} else {
-					log.DefaultLogger.Infow("saved registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+					log.DefaultLogger.Infow("saved registration in secret", "secret_name", cfg.SelfRegistrationSecret)
 				}
 			} else {
 				if _, err := secretManager.Update(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.UpdateOptions{Bypass: true}); err != nil {
 					log.DefaultLogger.Errorw("error updating self-register runner secret", "error", err.Error())
 				} else {
-					log.DefaultLogger.Infow("updated registration in secret", "runner_name", runnerName, "secret_name", cfg.SelfRegistrationSecret)
+					log.DefaultLogger.Infow("updated registration in secret", "secret_name", cfg.SelfRegistrationSecret)
 				}
 			}
 		}
@@ -333,12 +332,6 @@ func main() {
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
-
-	var (
-		testWorkflowsClient         testworkflowclient.TestWorkflowClient
-		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
-		testTriggersClient          testtriggerclient.TestTriggerClient
-	)
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
@@ -356,6 +349,11 @@ func main() {
 		RecvTimeout: cfg.TestkubeProRecvTimeout,
 	}, log.DefaultLogger)
 
+	var (
+		testWorkflowsClient         testworkflowclient.TestWorkflowClient
+		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+		testTriggersClient          testtriggerclient.TestTriggerClient
+	)
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
@@ -384,30 +382,6 @@ func main() {
 		}
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
-	}
-
-	var deprecatedSystem *services.DeprecatedSystem
-	if !cfg.DisableDeprecatedTests {
-		log.DefaultLogger.Info("initializing deprecated test system...")
-		log.DefaultLogger.Info("  - connecting to MongoDB and other storage backends...")
-		deprecatedSystem = services.CreateDeprecatedSystem(
-			ctx,
-			mode,
-			cfg,
-			features,
-			metrics,
-			configMapConfig,
-			secretConfig,
-			grpcClient,
-			nc,
-			eventsEmitter,
-			eventBus,
-			inspector,
-			&proContext,
-		)
-		log.DefaultLogger.Info("deprecated test system initialized successfully")
-	} else {
-		log.DefaultLogger.Info("deprecated test system is disabled")
 	}
 
 	// Transfer common environment variables
@@ -516,20 +490,11 @@ func main() {
 		proContext.Agent.ID,
 	)
 
-	var deprecatedClients commons.DeprecatedClients
-	var deprecatedRepositories commons.DeprecatedRepositories
-	if deprecatedSystem != nil {
-		deprecatedClients = deprecatedSystem.Clients
-		deprecatedRepositories = deprecatedSystem.Repositories
-	}
-
 	// Initialize event handlers
 	if !cfg.DisableWebhooks && !cfg.EnableCloudWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksClient,
-			webhook.WithDeprecatedClients(deprecatedClients),
-			webhook.WithDeprecatedRepositories(deprecatedRepositories),
 			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
 			webhook.WithWebhookResultsRepository(webhookRepository),
 			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
@@ -614,7 +579,7 @@ func main() {
 			// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
 			// connect and so we need to fallback to an implementation that doesn't do anything.
 			if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
-				log.DefaultLogger.Warn("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
+				log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
 				store = syncagent.NoOpStore{}
 			}
 
@@ -634,14 +599,6 @@ func main() {
 		if cfg.EnableK8sControllers {
 			err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
 			commons.ExitOnError("creating TestWorkflowExecution controller", err)
-
-			// Legacy controllers
-			testExecutor := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](scheduler.DefaultConcurrencyLevel)
-			err = controller.NewTestExecutionExecutorController(mgr, testExecutor, deprecatedSystem)
-			commons.ExitOnError("creating TestExecution controller", err)
-			testSuiteExecutor := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](scheduler.DefaultConcurrencyLevel)
-			err = controller.NewTestSuiteExecutionExecutorController(mgr, testSuiteExecutor, deprecatedSystem)
-			commons.ExitOnError("creating TestSuiteExecution controller", err)
 		}
 
 		// Finally start the manager.
@@ -655,10 +612,6 @@ func main() {
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort, EnableTracing: cfg.TracingEnabled})
 	httpServer.Routes.Use(cors.New())
 
-	if deprecatedSystem != nil && deprecatedSystem.API != nil {
-		deprecatedSystem.API.Init(httpServer)
-	}
-
 	isStandalone := mode == common.ModeStandalone
 	var executionController scheduling.Controller
 	if isStandalone && controlPlane != nil {
@@ -668,7 +621,6 @@ func main() {
 	api := apiv1.NewTestkubeAPI(
 		isStandalone,
 		executionController,
-		deprecatedClients,
 		clusterId,
 		cfg.TestkubeNamespace,
 		testWorkflowResultsRepository,
@@ -689,7 +641,6 @@ func main() {
 		websocketLoader,
 		metrics,
 		&proContext,
-		features,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
@@ -699,19 +650,13 @@ func main() {
 
 	log.DefaultLogger.Info("starting agent service")
 
-	getDeprecatedLogStream := agent.GetDeprecatedLogStream
-	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
-		getDeprecatedLogStream = deprecatedSystem.StreamLogs
-	}
 	if !cfg.DisableDefaultAgent {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
 			grpcClient,
-			getDeprecatedLogStream,
 			clusterId,
 			cfg.TestkubeClusterName,
-			features,
 			&proContext,
 			cfg.TestkubeDockerImageVersion,
 			eventsEmitter,
@@ -753,14 +698,12 @@ func main() {
 
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
-			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
 			testTriggersClient,
 			triggersLeaseBackend,
 			log.DefaultLogger,
-			configMapConfig,
 			eventBus,
 			metrics,
 			executionWorker,
@@ -770,7 +713,6 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
 			triggers.WithEventLabels(cfg.EventLabels),
 		)
@@ -822,14 +764,14 @@ func main() {
 			testWorkflowTemplatesClient,
 			proContext.EnvID,
 		)
-		cronManager := robfig.New(
+		scheduleManager := robfig.New(
 			log.DefaultLogger,
 			testWorkflowExecutor,
 			proContext.APIKey != "",
 		)
 		cronService := cronjob.NewService(
 			log.DefaultLogger,
-			cronManager,
+			scheduleManager,
 			schedulableResourceWatcher.WatchTestWorkflows,
 			schedulableResourceWatcher.WatchTestWorkflowTemplates,
 		)
@@ -838,12 +780,12 @@ func main() {
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
 				go func() {
-					// Start the cron manager.
-					cronManager.Start()
+					// Start the schedule manager.
+					scheduleManager.Start()
 					// If we're no longer the leader then stop the manager.
 					// This probably won't happen as losing leadership likely means we died.
 					<-taskCtx.Done()
-					cronManager.Stop()
+					scheduleManager.Stop()
 				}()
 				cronService.Run(taskCtx)
 				return nil

@@ -109,6 +109,7 @@ jobs:
         with:
           app-id: 253113
           private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
+          owner: kubeshop
       - name: Get GitHub App User ID
         id: get-user-id
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
@@ -182,7 +183,7 @@ jobs:
   build-and-publish-windows-installer:
     needs: release
     runs-on: windows-latest
-    if: ${{ inputs.confirm == 'yes' && !inputs.skip_build }}
+    if: ${{ always() && inputs.confirm == 'yes' && (inputs.skip_build || needs.release.result == 'success') }}
 
     steps:
       - name: Checkout
@@ -191,11 +192,38 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 0
 
-      - name: Get Intermediate Artifacts
+      - name: Get Intermediate Artifacts (from workflow)
+        if: ${{ !inputs.skip_build }}
         uses: actions/download-artifact@master
         with:
           name: testkube_windows
           path: windows
+
+      - name: Get tag
+        id: tag
+        shell: bash
+        run: |
+          # Find tag pointing to current commit
+          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "Error: No tag found"
+            exit 1
+          fi
+          # Strip 'v' prefix if present
+          TAG_STRIPPED=${TAG#v}
+          echo "tag=$TAG_STRIPPED" >> $GITHUB_OUTPUT
+          echo "Found tag: $TAG (stripped: $TAG_STRIPPED)"
+
+      - name: Download Windows binary from GitHub Release
+        if: ${{ inputs.skip_build }}
+        shell: bash
+        env:
+          VERSION: ${{steps.tag.outputs.tag}}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p windows/testkube_windows_386
+          gh release download ${VERSION} --pattern "testkube_${VERSION}_Windows_i386.tar.gz" --dir windows/temp
+          tar -xzf windows/temp/testkube_${VERSION}_Windows_i386.tar.gz -C windows/testkube_windows_386
 
       - name: Create and Sign MSI
         run: |
@@ -217,25 +245,23 @@ jobs:
           output_path: ${GITHUB_WORKSPACE}\artifacts
           malware_block: false
 
-      - name: Get tag
-        id: tag
-        run: |
-          # Find tag pointing to current commit
-          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$TAG" ]; then
-            echo "Error: No tag found"
-            exit 1
-          fi
-          # Strip 'v' prefix if present
-          TAG_STRIPPED=${TAG#v}
-          echo "tag=$TAG_STRIPPED" >> $GITHUB_OUTPUT
-          echo "Found tag: $TAG (stripped: $TAG_STRIPPED)"
-
       - name: Get release
         id: get_release
-        uses: bruceadams/get-release@v1.3.2
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{steps.tag.outputs.tag}}
+        run: |
+          # Get release info using gh CLI
+          RELEASE_DATA=$(gh api repos/${{ github.repository }}/releases/tags/${VERSION})
+
+          # Extract upload URL
+          UPLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.upload_url')
+          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+
+          # Extract other useful info
+          RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id')
+          echo "id=$RELEASE_ID" >> $GITHUB_OUTPUT
 
       - name: Calculate Checksum
         id: checksum

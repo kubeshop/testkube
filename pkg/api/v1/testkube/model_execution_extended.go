@@ -5,19 +5,21 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"k8s.io/utils/ptr"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func NewExecutionWithID(id, testType, testName string) *Execution {
-	return &Execution{
+func NewExecutionWithID(id, testName string) *TestWorkflowExecution {
+	return &TestWorkflowExecution{
 		Id: id,
-		ExecutionResult: &ExecutionResult{
-			Status: ExecutionStatusQueued,
+		Result: &TestWorkflowResult{
+			Status: ptr.To(QUEUED_TestWorkflowStatus),
 		},
-		TestName: testName,
-		TestType: testType,
-		Labels:   map[string]string{},
+		Workflow: &TestWorkflow{
+			Name:   testName,
+			Labels: map[string]string{},
+		},
 	}
 }
 
@@ -57,10 +59,10 @@ func NewFailedExecution(err error) Execution {
 }
 
 // NewQueued execution for executions status used in test executions
-func NewQueuedExecution() *Execution {
-	return &Execution{
-		ExecutionResult: &ExecutionResult{
-			Status: ExecutionStatusQueued,
+func NewQueuedExecution() *TestWorkflowExecution {
+	return &TestWorkflowExecution{
+		Result: &TestWorkflowResult{
+			Status: ptr.To(QUEUED_TestWorkflowStatus),
 		},
 	}
 }

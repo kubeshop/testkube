@@ -7,13 +7,11 @@ import (
 	"go.uber.org/zap"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
-	log "github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -59,10 +57,6 @@ type WebhooksLoader struct {
 	metrics                       v1.Metrics
 	envs                          map[string]string
 	proContext                    *config.ProContext
-
-	// Deprecated fields
-	deprecatedClients      commons.DeprecatedClients
-	deprecatedRepositories commons.DeprecatedRepositories
 }
 
 // WithTestWorkflowResultsRepository sets the test workflow results repository
@@ -115,22 +109,6 @@ func WithProContext(proContext *config.ProContext) WebhookLoaderOption {
 	}
 }
 
-// WithDeprecatedClients sets the deprecated clients
-// Deprecated: test and test suites are deprecated.
-func WithDeprecatedClients(deprecatedClients commons.DeprecatedClients) WebhookLoaderOption {
-	return func(loader *WebhooksLoader) {
-		loader.deprecatedClients = deprecatedClients
-	}
-}
-
-// WithDeprecatedRepositories sets the deprecated repositories
-// Deprecated: test and test suites are deprecated.
-func WithDeprecatedRepositories(deprecatedRepositories commons.DeprecatedRepositories) WebhookLoaderOption {
-	return func(loader *WebhooksLoader) {
-		loader.deprecatedRepositories = deprecatedRepositories
-	}
-}
-
 func (r WebhooksLoader) Kind() string {
 	return "webhook"
 }
@@ -164,20 +142,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		}
 
 		if webhook.Spec.PayloadTemplate == "" && webhook.Spec.PayloadTemplateReference != "" {
-			if r.deprecatedClients == nil {
-				r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template_ref", webhook.Spec.PayloadTemplateReference)
-				continue
-			}
-			template, err := r.deprecatedClients.Templates().Get(webhook.Spec.PayloadTemplateReference)
-			if err != nil {
-				return listeners, err
-			}
-
-			if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.WEBHOOK_TemplateType {
-				webhook.Spec.PayloadTemplate = template.Spec.Body
-			} else {
-				r.log.Warnw("not matching template type", "template", webhook.Spec.PayloadTemplateReference)
-			}
+			r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template_ref", webhook.Spec.PayloadTemplateReference)
+			continue
 		}
 
 		eventTypes := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
@@ -195,7 +161,6 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				webhook.Spec.Disabled,
 				webhook.Spec.Config,
 				webhook.Spec.Parameters,
-				listenerWithDeprecatedRepositories(r.deprecatedRepositories),
 				listenerWithTestWorkflowResultsRepository(r.testWorkflowResultsRepository),
 				listenerWithWebhookResultsRepository(r.webhookResultsRepository),
 				listenerWithMetrics(r.metrics),

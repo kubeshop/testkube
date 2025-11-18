@@ -5,8 +5,6 @@ type ResourceType string
 type Cause string
 
 const (
-	ExecutionTest                               = "test"
-	ExecutionTestsuite                          = "testsuite"
 	ExecutionTestWorkflow                       = "testworkflow"
 	ActionRun                                   = "run"
 	ConcurrencyPolicyAllow                      = "allow"
@@ -30,16 +28,6 @@ const (
 	CauseDeploymentContainersModified Cause     = "deployment-containers-modified"
 	CauseDeploymentGenerationModified Cause     = "deployment-generation-modified"
 	CauseDeploymentResourceModified   Cause     = "deployment-resource-modified"
-	CauseEventStartTest               Cause     = "event-start-test"
-	CauseEventEndTestSuccess          Cause     = "event-end-test-success"
-	CauseEventEndTestFailed           Cause     = "event-end-test-failed"
-	CauseEventEndTestAborted          Cause     = "event-end-test-aborted"
-	CauseEventEndTestTimeout          Cause     = "event-end-test-timeout"
-	CauseEventStartTestSuite          Cause     = "event-start-testsuite"
-	CauseEventEndTestSuiteSuccess     Cause     = "event-end-testsuite-success"
-	CauseEventEndTestSuiteFailed      Cause     = "event-end-testsuite-failed"
-	CauseEventEndTestSuiteAborted     Cause     = "event-end-testsuite-aborted"
-	CauseEventEndTestSuiteTimeout     Cause     = "event-end-testsuite-timeout"
 	CauseEventQueueTestWorkflow       Cause     = "event-queue-testworkflow"
 	CauseEventStartTestWorkflow       Cause     = "event-start-testworkflow"
 	CauseEventEndTestWorkflowSuccess  Cause     = "event-end-testworkflow-success"
