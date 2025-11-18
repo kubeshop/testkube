@@ -368,6 +368,10 @@ spec:
               value: "{{ .Values.runner.register.floating }}"
             - name: RUNNER_IS_GLOBAL
               value: "{{ .Values.runner.register.global }}"
+            {{- if .Values.runner.register.labelPrefix }}
+            - name: RUNNER_LABELS_PREFIX
+              value: "{{ .Values.runner.register.labelPrefix }}"
+            {{- end }}
             {{- if .Values.runner.register.groupName }}
             - name: RUNNER_GROUP
               value: "{{ .Values.runner.register.groupName }}"
