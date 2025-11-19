@@ -34,6 +34,7 @@ var (
 )
 
 type GetOptions struct {
+	// Bypass allows bypassing the permissions provided to the secret manager
 	Bypass bool
 }
 
@@ -41,12 +42,14 @@ type CreateOptions struct {
 	Type   string
 	Labels map[string]string
 	Owner  *metav1.OwnerReference
+	// Bypass allows bypassing the permissions provided to the secret manager
 	Bypass bool
 }
 
 type UpdateOptions struct {
 	Labels map[string]string
 	Owner  *metav1.OwnerReference
+	// Bypass allows bypassing the permissions provided to the secret manager
 	Bypass bool
 }
 
