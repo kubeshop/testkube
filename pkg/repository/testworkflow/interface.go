@@ -113,6 +113,8 @@ type Repository interface {
 	GetUnassigned(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflows gets latest execution results by workflow names
 	GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error)
+	// GetLatestExecutionsByWorkflow gets latest execution results by workflow names
+	GetLatestExecutionsByWorkflow(ctx context.Context, filter Filter) ([]testkube.TestWorkflowExecution, error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
 	// Count gets total count of executions using a filter, optimized for pagination

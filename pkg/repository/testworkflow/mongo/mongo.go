@@ -1016,3 +1016,48 @@ func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool
 	}
 	return res.ModifiedCount > 0, nil
 }
+
+// GetLatestExecutionsByWorkflow gets latest execution results by workflow names
+func (r *MongoRepository) GetLatestExecutionsByWorkflow(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	query, _ := composeQueryAndOpts(filter)
+
+	pipeline := []bson.M{
+		{"$match": query},
+		{"$sort": bson.D{{Key: "workflow.name", Value: 1}, {Key: "scheduledat", Value: -1}}},
+		{"$project": bson.M{
+			"output":    0,
+			"logs":      0,
+			"variables": 0,
+		}},
+		{"$group": bson.M{
+			"_id":    "$workflow.name",
+			"latest": bson.M{"$first": "$$ROOT"},
+		}},
+		{"$replaceRoot": bson.M{"newRoot": "$latest"}},
+		{"$sort": bson.D{{Key: "scheduledat", Value: -1}}},
+	}
+
+	if filter.PageSize() > 0 {
+		if filter.Page() > 0 {
+			pipeline = append(pipeline, bson.M{"$skip": int64(filter.Page() * filter.PageSize())})
+		}
+		pipeline = append(pipeline, bson.M{"$limit": int64(filter.PageSize() + 1)})
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}
