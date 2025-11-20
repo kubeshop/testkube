@@ -2381,28 +2381,3 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 
 	return configParams
 }
-
-// GetLatestExecutionsByWorkflow returns latest executions for each workflow with filter
-func (r *PostgresRepository) GetLatestExecutionsByWorkflow(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
-	params, err := r.buildTestWorkflowExecutionParams(filter)
-	if err != nil {
-		return nil, err
-	}
-
-	rows, err := r.queries.GetLatestTestWorkflowExecutionsByWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionsByWorkflowParams(params))
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]testkube.TestWorkflowExecution, len(rows))
-	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
-		if err != nil {
-			return nil, err
-		}
-
-		result[i] = *execution
-	}
-
-	return result, nil
-}
