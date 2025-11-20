@@ -299,7 +299,7 @@ func main() {
 			log.DefaultLogger.Warnw("unable to save api key from registration with secrets disabled, will reuse registration token for subsequent deployments")
 		} else {
 			// Create or update the existing secret
-			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret)
+			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretmanager.GetOptions{Bypass: true})
 			secretData := map[string]string{
 				"RUNNER_NAME":           res.RunnerName,
 				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
