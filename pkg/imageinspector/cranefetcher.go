@@ -51,7 +51,7 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 		return nil, err
 	}
 
-	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))
+	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
 	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
 	keychain := authn.NewMultiKeychain(
 		authn.DefaultKeychain,
