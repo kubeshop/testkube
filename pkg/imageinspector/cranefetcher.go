@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"io"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
@@ -50,7 +51,7 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 		return nil, err
 	}
 
-	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper())
+	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))
 	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
 	keychain := authn.NewMultiKeychain(
 		authn.DefaultKeychain,
