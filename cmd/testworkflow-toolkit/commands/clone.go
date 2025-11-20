@@ -34,13 +34,16 @@ var (
 
 // CloneOptions encapsulates all options for the clone command
 type CloneOptions struct {
-	RawPaths []string
-	Username string
-	Token    string
-	SSHKey   string
-	AuthType string
-	Revision string
-	Cone     bool
+	RawPaths   []string
+	Username   string
+	Token      string
+	SSHKey     string
+	CaCert     string
+	ClientCert string
+	ClientKey  string
+	AuthType   string
+	Revision   string
+	Cone       bool
 }
 
 // NewCloneCmd creates a new clone command
@@ -62,6 +65,9 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Username, "username", "u", "", "git username for authentication")
 	cmd.Flags().StringVarP(&opts.Token, "token", "t", "", "git token for authentication")
 	cmd.Flags().StringVarP(&opts.SSHKey, "sshKey", "s", "", "SSH private key for authentication")
+	cmd.Flags().StringVarP(&opts.CaCert, "caCert", "c", "", "CA certificate to verify repository TLS connection")
+	cmd.Flags().StringVarP(&opts.ClientCert, "clientCert", "e", "", "Client certificate for TLS authentication")
+	cmd.Flags().StringVarP(&opts.ClientKey, "clientKey", "k", "", "Client key for TLS authentication")
 	cmd.Flags().StringVarP(&opts.AuthType, "authType", "a", "basic", "authentication type (allowed: basic, header, github)")
 	cmd.Flags().StringVarP(&opts.Revision, "revision", "r", "", "commit hash, branch name or tag")
 	cmd.Flags().BoolVar(&opts.Cone, "cone", false, "enable cone mode for sparse checkout")
@@ -96,6 +102,16 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 		return fmt.Errorf("setting up SSH key: %w", err)
 	}
 	defer cleanupSSH()
+
+	certAuthArgs, cleanupFuncs, err := setupCertAuth(opts)
+	if err != nil {
+		return fmt.Errorf("setting up Certificate Auth: %w", err)
+	}
+
+	authArgs = append(authArgs, certAuthArgs...)
+
+	// Ensure cleanup of temp cert/key files
+	defer RunCleanupFuncs(cleanupFuncs)
 
 	// Use temporary directory for cloning
 	tmpPath, err := os.MkdirTemp(constants.DefaultTmpDirPath, "clone-*")
@@ -219,6 +235,68 @@ func setupSSHKey(sshKey string) (func(), error) {
 	os.Setenv("GIT_SSH_COMMAND", sshCmd)
 
 	return func() { _ = os.Remove(sshKeyPath) }, nil
+}
+
+// setupCertAuth configures certificate authentication if provided and returns a cleanup function
+func setupCertAuth(opts *CloneOptions) ([]string, []func(), error) {
+	if opts.CaCert == "" && opts.ClientCert == "" && opts.ClientKey == "" {
+		return nil, []func(){}, nil
+	}
+	cleanupFuncs := make([]func(), 0)
+	certAuthArgs := make([]string, 0)
+	if opts.CaCert != "" {
+		cleanupCaCertFile, caCertFilePath, err := CreateTempFile(opts.CaCert, "ca-cert-*")
+		if err != nil {
+			RunCleanupFuncs(cleanupFuncs)
+			return nil, nil, fmt.Errorf("creating temp file for CA Certificate: %w", err)
+		}
+		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslCAInfo=%s", caCertFilePath))
+		cleanupFuncs = append(cleanupFuncs, cleanupCaCertFile)
+	}
+	if opts.ClientCert != "" && opts.ClientKey != "" {
+		cleanupclientCertFile, clientCertFilePath, err := CreateTempFile(opts.ClientCert, "client-cert-*")
+		if err != nil {
+			RunCleanupFuncs(cleanupFuncs)
+			return nil, nil, fmt.Errorf("creating temp file for Client Certificate: %w", err)
+		}
+		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslCert=%s", clientCertFilePath))
+		cleanupFuncs = append(cleanupFuncs, cleanupclientCertFile)
+
+		cleanupclientKeyFile, clientKeyFilePath, err := CreateTempFile(opts.ClientKey, "client-key-*")
+		if err != nil {
+			RunCleanupFuncs(cleanupFuncs)
+			return nil, nil, fmt.Errorf("creating temp file for Client Key: %w", err)
+		}
+		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslKey=%s", clientKeyFilePath))
+		cleanupFuncs = append(cleanupFuncs, cleanupclientKeyFile)
+	}
+
+	return certAuthArgs, cleanupFuncs, nil
+}
+
+func RunCleanupFuncs(cleanupFuncs []func()) {
+	for _, cleanup := range cleanupFuncs {
+		cleanup()
+	}
+}
+
+func CreateTempFile(key string, fileName string) (func(), string, error) {
+	key = strings.TrimRight(key, "\n") + "\n"
+
+	// Create temp file for the key
+	tmpFile, err := os.CreateTemp(constants.DefaultTmpDirPath, fileName)
+	if err != nil {
+		return func() {}, "", fmt.Errorf("creating temp file for key %s: %w", fileName, err)
+	}
+	keyPath := tmpFile.Name()
+	tmpFile.Close() // Close it so we can write to it with proper permissions
+
+	if err := os.WriteFile(keyPath, []byte(key), 0400); err != nil {
+		_ = os.Remove(keyPath)
+		return func() {}, "", fmt.Errorf("writing SSH key: %w", err)
+	}
+
+	return func() { _ = os.Remove(keyPath) }, keyPath, nil
 }
 
 // cleanPaths prepares paths for sparse checkout

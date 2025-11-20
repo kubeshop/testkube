@@ -189,6 +189,21 @@ func (in *ContentGit) DeepCopyInto(out *ContentGit) {
 		*out = new(corev1.EnvVarSource)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CaCertFrom != nil {
+		in, out := &in.CaCertFrom, &out.CaCertFrom
+		*out = new(corev1.EnvVarSource)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ClientCertFrom != nil {
+		in, out := &in.ClientCertFrom, &out.ClientCertFrom
+		*out = new(corev1.EnvVarSource)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ClientKeyFrom != nil {
+		in, out := &in.ClientKeyFrom, &out.ClientKeyFrom
+		*out = new(corev1.EnvVarSource)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Paths != nil {
 		in, out := &in.Paths, &out.Paths
 		*out = make([]string, len(*in))

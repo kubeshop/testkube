@@ -471,18 +471,24 @@ func MapConcurrencyPolicyKubeToApi(v testworkflowsv1.ConcurrencyPolicy) testkube
 
 func MapContentGitKubeToAPI(v testworkflowsv1.ContentGit) testkube.TestWorkflowContentGit {
 	return testkube.TestWorkflowContentGit{
-		Uri:          v.Uri,
-		Revision:     v.Revision,
-		Username:     v.Username,
-		UsernameFrom: common.MapPtr(v.UsernameFrom, MapEnvVarSourceKubeToAPI),
-		Token:        v.Token,
-		TokenFrom:    common.MapPtr(v.TokenFrom, MapEnvVarSourceKubeToAPI),
-		SshKey:       v.SshKey,
-		SshKeyFrom:   common.MapPtr(v.SshKeyFrom, MapEnvVarSourceKubeToAPI),
-		AuthType:     MapGitAuthTypeKubeToAPI(v.AuthType),
-		MountPath:    v.MountPath,
-		Cone:         v.Cone,
-		Paths:        v.Paths,
+		Uri:            v.Uri,
+		Revision:       v.Revision,
+		Username:       v.Username,
+		UsernameFrom:   common.MapPtr(v.UsernameFrom, MapEnvVarSourceKubeToAPI),
+		Token:          v.Token,
+		TokenFrom:      common.MapPtr(v.TokenFrom, MapEnvVarSourceKubeToAPI),
+		SshKey:         v.SshKey,
+		SshKeyFrom:     common.MapPtr(v.SshKeyFrom, MapEnvVarSourceKubeToAPI),
+		CaCert:         v.CaCert,
+		CaCertFrom:     common.MapPtr(v.CaCertFrom, MapEnvVarSourceKubeToAPI),
+		ClientCert:     v.ClientCert,
+		ClientCertFrom: common.MapPtr(v.ClientCertFrom, MapEnvVarSourceKubeToAPI),
+		ClientKey:      v.ClientKey,
+		ClientKeyFrom:  common.MapPtr(v.ClientKeyFrom, MapEnvVarSourceKubeToAPI),
+		AuthType:       MapGitAuthTypeKubeToAPI(v.AuthType),
+		MountPath:      v.MountPath,
+		Cone:           v.Cone,
+		Paths:          v.Paths,
 	}
 }
 
