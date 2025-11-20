@@ -54,11 +54,6 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecuti
 	return args.Get(0).([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionsByWorkflow(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionsByWorkflowParams) ([]sqlc.GetLatestTestWorkflowExecutionsByWorkflowRow, error) {
-	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetLatestTestWorkflowExecutionsByWorkflowRow), args.Error(1)
-}
-
 func (m *MockTestWorkflowExecutionQueriesInterface) GetRunningTestWorkflowExecutions(ctx context.Context, arg sqlc.GetRunningTestWorkflowExecutionsParams) ([]sqlc.GetRunningTestWorkflowExecutionsRow, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).([]sqlc.GetRunningTestWorkflowExecutionsRow), args.Error(1)

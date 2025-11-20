@@ -69,14 +69,6 @@ func (r *CloudRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetLatestExecutionsByWorkflow(ctx context.Context, filter testworkflow2.Filter) ([]testkube.TestWorkflowExecution, error) {
-	req := ExecutionGetExecutionsRequest{Filter: filter.(*testworkflow2.FilterImpl)}
-	process := func(v ExecutionGetExecutionsResponse) []testkube.TestWorkflowExecution {
-		return v.WorkflowExecutions
-	}
-	return pass(r.executor, ctx, req, process)
-}
-
 func (r *CloudRepository) GetRunning(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	req := ExecutionGetRunningRequest{}
 	process := func(v ExecutionGetRunningResponse) []testkube.TestWorkflowExecution {

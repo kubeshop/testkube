@@ -284,21 +284,6 @@ func (mr *MockRepositoryMockRecorder) GetLatestByTestWorkflows(ctx, workflowName
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestWorkflows", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestWorkflows), ctx, workflowNames)
 }
 
-// GetLatestExecutionsByWorkflow mocks base method.
-func (m *MockRepository) GetLatestExecutionsByWorkflow(ctx context.Context, filter Filter) ([]testkube.TestWorkflowExecution, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestExecutionsByWorkflow", ctx, filter)
-	ret0, _ := ret[0].([]testkube.TestWorkflowExecution)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetLatestExecutionsByWorkflow indicates an expected call of GetLatestExecutionsByWorkflow.
-func (mr *MockRepositoryMockRecorder) GetLatestExecutionsByWorkflow(ctx, filter any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestExecutionsByWorkflow", reflect.TypeOf((*MockRepository)(nil).GetLatestExecutionsByWorkflow), ctx, filter)
-}
-
 // GetNextExecutionNumber mocks base method.
 func (m *MockRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
 	m.ctrl.T.Helper()
