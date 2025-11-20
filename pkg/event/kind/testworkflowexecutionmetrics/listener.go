@@ -38,6 +38,10 @@ func (l *testWorkflowExecutionMetricsListener) Kind() string {
 	return "TestWorkflowExecutionMetrics"
 }
 
+func (l *testWorkflowExecutionMetricsListener) Group() string {
+	return ""
+}
+
 func (l *testWorkflowExecutionMetricsListener) Events() []testkube.EventType {
 	return []testkube.EventType{
 		testkube.END_TESTWORKFLOW_SUCCESS_EventType,
@@ -56,7 +60,7 @@ func (l *testWorkflowExecutionMetricsListener) Metadata() map[string]string {
 }
 
 func (l *testWorkflowExecutionMetricsListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 

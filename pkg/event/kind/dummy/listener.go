@@ -23,7 +23,7 @@ func (l *DummyListener) GetNotificationCount() int {
 }
 
 func (l *DummyListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	return valid
 }
 
@@ -54,6 +54,10 @@ func (l *DummyListener) Selector() string {
 
 func (l *DummyListener) Kind() string {
 	return "dummy"
+}
+
+func (l *DummyListener) Group() string {
+	return ""
 }
 
 func (l *DummyListener) Metadata() map[string]string {

@@ -17,7 +17,6 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
@@ -84,7 +83,9 @@ type WebhookListener struct {
 	secretClient                  secret.Interface
 	metrics                       v1.Metrics
 	envs                          map[string]string
-	proContext                    *config.ProContext
+	dashboardURI                  string
+	orgID                         string
+	envID                         string
 }
 
 // WebhookListenerOption is a functional option for WebhookListener
@@ -125,11 +126,27 @@ func listenerWithEnvs(envs map[string]string) WebhookListenerOption {
 	}
 }
 
-// listenerWithProContext sets the "pro context" for the connection to the
+// ListenerWithDashboardURI sets the dashboard URI for the connection to the
 // control plane to be used in templates.
-func listenerWithProContext(proContext *config.ProContext) WebhookListenerOption {
+func ListenerWithDashboardURI(dashboardURI string) WebhookListenerOption {
 	return func(wl *WebhookListener) {
-		wl.proContext = proContext
+		wl.dashboardURI = dashboardURI
+	}
+}
+
+// ListenerWithOrgID sets the organization ID for the connection to the
+// control plane to be used in templates.
+func ListenerWithOrgID(orgID string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.orgID = orgID
+	}
+}
+
+// ListenerWithEnvID sets the environment ID for the connection to the
+// control plane to be used in templates.
+func ListenerWithEnvID(envID string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.envID = envID
 	}
 }
 
@@ -192,7 +209,7 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Match(event testkube.Event) bool {
-	_, valid := event.Valid(l.Selector(), l.Events())
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 	if !valid {
 		return false
 	}
@@ -361,6 +378,13 @@ func (l *WebhookListener) Kind() string {
 	return "webhook"
 }
 
+func (l *WebhookListener) Group() string {
+	if l.envID != "" {
+		return l.envID
+	}
+	return ""
+}
+
 func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {
 	log := l.Log.With(event.Log()...)
 
@@ -435,7 +459,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, config)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.dashboardURI, l.orgID, l.envID, config)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}

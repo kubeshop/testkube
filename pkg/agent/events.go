@@ -29,6 +29,10 @@ func (ag *Agent) Load() (listeners common.Listeners, err error) {
 	return listeners, nil
 }
 
+func (ag *Agent) Group() string {
+	return ""
+}
+
 func (ag *Agent) Name() string {
 	return "agent"
 }
@@ -49,7 +53,7 @@ func (ag *Agent) Metadata() map[string]string {
 }
 
 func (ag *Agent) Match(event testkube.Event) bool {
-	_, valid := event.Valid(ag.Selector(), ag.Events())
+	_, valid := event.Valid(ag.Group(), ag.Selector(), ag.Events())
 	return valid
 }
 

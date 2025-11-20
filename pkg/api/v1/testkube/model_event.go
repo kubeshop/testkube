@@ -14,8 +14,10 @@ type Event struct {
 	// UUID of event
 	Id string `json:"id"`
 	// stream topic
-	StreamTopic string         `json:"streamTopic,omitempty"`
-	Resource    *EventResource `json:"resource"`
+	StreamTopic string `json:"streamTopic,omitempty"`
+	// ID for event group
+	GroupId  string         `json:"groupId,omitempty"`
+	Resource *EventResource `json:"resource"`
 	// ID of resource
 	ResourceId            string                 `json:"resourceId"`
 	Type_                 *EventType             `json:"type"`

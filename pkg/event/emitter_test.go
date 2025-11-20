@@ -348,6 +348,10 @@ func (l *FakeListener) Kind() string {
 	return "fake"
 }
 
+func (l *FakeListener) Group() string {
+	return ""
+}
+
 func (l *FakeListener) Metadata() map[string]string {
 	return map[string]string{}
 }
