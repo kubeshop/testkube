@@ -199,7 +199,7 @@ spec:
                   name: "{{ .Values.runner.secretRef.name }}"
                   key: "{{ .Values.runner.secretRef.envIdKey }}"
             {{- else }}
-            {{- if not .Values.runner.register.token }}
+            {{- if not ( or .Values.runner.register.token .Values.runner.register.tokenSecret.name ) }}
             - name: "TESTKUBE_PRO_AGENT_ID"
               value: "{{ .Values.runner.id }}"
             - name: "TESTKUBE_PRO_API_KEY"
@@ -351,9 +351,17 @@ spec:
             {{- end }}
 
             # Self registration
-          {{- if .Values.runner.register.token }}
+          {{- if or .Values.runner.register.token .Values.runner.register.tokenSecret.name }}
+            {{- if .Values.runner.register.token }}
             - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
               value: "{{ .Values.runner.register.token }}"
+            {{- else if .Values.runner.register.tokenSecret.name }}
+            - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runner.register.tokenSecret.name }}
+                  key: {{ .Values.runner.register.tokenSecret.key | default "token" }}
+            {{- end }}
             - name: RUNNER_NAME
               value: "{{ include "testkube-runner.fullname" . }}"
             - name: ENABLE_SECRETS_ENDPOINT
