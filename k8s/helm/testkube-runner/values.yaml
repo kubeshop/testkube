@@ -36,6 +36,10 @@ runner:
   register:
     ## Control Plane API token
     token: ""
+    ## Control Plane API token provided via k8s secret
+    tokenSecret:
+      name: ""
+      key: token
     ## Whether to register as a Floating runner
     floating: false
     ## Whether to register with mode Global
