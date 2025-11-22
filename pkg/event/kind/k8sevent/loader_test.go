@@ -8,8 +8,6 @@ import (
 )
 
 func TestK8sLoader(t *testing.T) {
-	t.Parallel()
-
 	clientset := fake.NewSimpleClientset()
 	k8seventLoader := NewK8sEventLoader(clientset, "", nil)
 
