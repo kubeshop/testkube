@@ -1,11 +1,10 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: official--postman--beta
+  name: official--postman--v1
   labels:
     testkube.io/name: Postman
-    testkube.io/wizard: disabled
+    testkube.io/wizard: enabled
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "19"
@@ -13,6 +12,7 @@ metadata:
     testkube.io/categories: API
     testkube.io/description: Run Postman tests
     testkube.io/icon: postman
+    testkube.io/image: postman/newman
 spec:
   config:
     version:
@@ -26,6 +26,5 @@ spec:
   steps:
   - name: Run Postman tests
     run:
-      image: {{`"postman/newman:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
-{{- end }}
+      image: "postman/newman:{{ config.version }}"
+      shell: "{{ config.run }}"

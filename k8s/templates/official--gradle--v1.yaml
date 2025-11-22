@@ -1,11 +1,10 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: official--gradle--beta
+  name: official--gradle--v1
   labels:
     testkube.io/name: Gradle
-    testkube.io/wizard: disabled
+    testkube.io/wizard: enabled
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "19"
@@ -13,6 +12,7 @@ metadata:
     testkube.io/categories: Other
     testkube.io/description: Gradle
     testkube.io/icon: gradle
+    testkube.io/image: gradle
 spec:
   config:
     version:
@@ -26,6 +26,5 @@ spec:
   steps:
   - name: Run Gradle command
     run:
-      image: {{`"gradle:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
-{{- end }}
+      image: "gradle:{{ config.version }}"
+      shell: "{{ config.run }}"
