@@ -103,13 +103,11 @@ func TestWebhooks(t *testing.T) {
 	})
 	t.Run("WebhookGet", func(t *testing.T) {
 		t.Run("Get webhook with empty name", func(t *testing.T) {
-			t.Parallel()
 			_, err := wClient.Get("")
 			assert.Error(t, err)
 		})
 
 		t.Run("Get webhook with non existent name", func(t *testing.T) {
-			t.Parallel()
 			_, err := wClient.Get("no-webhook")
 			assert.Error(t, err)
 		})

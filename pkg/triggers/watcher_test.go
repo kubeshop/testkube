@@ -33,7 +33,6 @@ func newWatcherTestService(clientset *fake.Clientset, testKubeClientset *faketes
 }
 
 func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
-	t.Parallel()
 
 	clientset := fake.NewSimpleClientset()
 	testKubeClientset := faketestkube.NewSimpleClientset()
@@ -71,7 +70,6 @@ func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 }
 
 func TestService_runWatcher_stopsOnContextCancellation(t *testing.T) {
-	t.Parallel()
 
 	clientset := fake.NewSimpleClientset()
 	testKubeClientset := faketestkube.NewSimpleClientset()

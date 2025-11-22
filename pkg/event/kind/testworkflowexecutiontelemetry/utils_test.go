@@ -11,7 +11,6 @@ import (
 )
 
 func Test_apiTCL_getClusterID(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Get Cluster ID", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -25,7 +24,6 @@ func Test_apiTCL_getClusterID(t *testing.T) {
 }
 
 func Test_GetImage(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Get Image from empty container", func(t *testing.T) {
 		if got := GetImage(nil); got != "" {

@@ -625,7 +625,6 @@ exec /entrypoint.sh "$@"
 }
 
 func TestDefaultValues(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	expected := DefaultResources(t, test)
 	RenderAndCheck(t, test, expected)
