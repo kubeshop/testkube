@@ -841,17 +841,17 @@ func resolveLeaderIdentifier() string {
 }
 
 func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {
+	labels := map[string]string{}
 	if deploymentName == "" {
-		return nil
+		return labels
 	}
 
 	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		log.DefaultLogger.Warnw("cannot read deployment labels", "deployment", deploymentName, "error", err.Error())
-		return nil
+		return labels
 	}
 	log.DefaultLogger.Debugw("deployment found", "deployment_name", deploymentName, "deployment_labels", deploy.Labels)
-	labels := map[string]string{}
 	for k, v := range deploy.Labels {
 		if strings.HasPrefix(k, labelPrefix) {
 			shortKey := strings.TrimPrefix(k, labelPrefix)
