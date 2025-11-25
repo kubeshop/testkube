@@ -12,8 +12,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: contrib/executor/gradle/examples/hello-gradle
-      workingDir: contrib/executor/gradle/examples/hello-gradle
+      path: test/gradle/projects/hello-gradle
+      workingDir: test/gradle/projects/hello-gradle
   executionRequest:
     variables:
       TESTKUBE_GRADLE:

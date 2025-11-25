@@ -12,14 +12,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - contrib/executor/maven/examples/hello-maven
+      - test/maven/projects/hello-maven
   container:
     image: maven:3.9.6-eclipse-temurin-11-focal
     resources:
       requests:
         cpu: 256m
         memory: 256Mi
-    workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
+    workingDir: /data/repo/test/maven/projects/hello-maven
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -44,13 +44,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - contrib/executor/maven/examples/hello-maven
+      - test/maven/projects/hello-maven
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
+    workingDir: /data/repo/test/maven/projects/hello-maven
     env:
     - name: TESTKUBE_MAVEN
       value: "true"

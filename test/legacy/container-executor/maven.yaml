@@ -12,8 +12,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: contrib/executor/maven/examples/hello-maven
-      workingDir: contrib/executor/maven/examples/hello-maven
+      path: test/maven/projects/hello-maven
+      workingDir: test/maven/projects/hello-maven
   executionRequest:
     variables:
       TESTKUBE_MAVEN:
