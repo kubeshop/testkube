@@ -226,16 +226,16 @@ func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecution
 
 	switch {
 	case execution.Result.IsPassed():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, ""))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, s.envID))
 	case execution.Result.IsAborted():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, ""))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
 	case execution.Result.IsCanceled():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, ""))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, s.envID))
 	default:
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, ""))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, s.envID))
 	}
 	if execution.Result.IsNotPassed() {
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, ""))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, s.envID))
 	}
 
 	return &cloud.FinishExecutionResponse{}, nil

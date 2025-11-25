@@ -178,7 +178,8 @@ func main() {
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter)
+		// In standalone mode, use environment ID from config (empty if not set)
+		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter, cfg.TestkubeProEnvID)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -468,7 +469,8 @@ func main() {
 	)
 
 	// Initialize event handlers
-	if !cfg.DisableWebhooks && !cfg.EnableCloudWebhooks {
+	if !cfg.DisableWebhooks {
+		log.DefaultLogger.Infow("registering webhook loader", "envID", proContext.EnvID, "orgID", proContext.OrgID)
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
 			webhooksClient,
@@ -480,8 +482,14 @@ func main() {
 			webhook.WithEnvs(envs),
 			webhook.WithDashboardURI(proContext.DashboardURI),
 			webhook.WithOrgID(proContext.OrgID),
-			webhook.WithEnvID(proContext.EnvID))
+			webhook.WithEnvID(proContext.EnvID),
+			webhook.WithGRPCClient(grpcClient),
+			webhook.WithAPIKey(proContext.APIKey),
+			webhook.WithAgentID(proContext.Agent.ID))
 		eventsEmitter.RegisterLoader(webhookLoader)
+		log.DefaultLogger.Infow("webhook loader registered")
+	} else {
+		log.DefaultLogger.Infow("webhooks disabled", "DISABLE_WEBHOOKS", cfg.DisableWebhooks)
 	}
 	websocketLoader := ws.NewWebsocketLoader()
 	eventsEmitter.RegisterLoader(websocketLoader)

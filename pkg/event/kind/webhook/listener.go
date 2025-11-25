@@ -3,14 +3,13 @@ package webhook
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
-	"sort"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -18,7 +17,9 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -76,6 +77,10 @@ type WebhookListener struct {
 	disabled           bool
 	config             map[string]executorv1.WebhookConfigValue
 	parameters         []executorv1.WebhookParameterSchema
+
+	grpcClient cloud.TestKubeCloudAPIClient
+	apiKey     string
+	agentID    string
 
 	// Optional fields
 	testWorkflowResultsRepository testworkflow.Repository
@@ -150,6 +155,28 @@ func ListenerWithEnvID(envID string) WebhookListenerOption {
 	}
 }
 
+// ListenerWithGRPCClient sets the gRPC client for Cloud API communication.
+// Used by agent to communicate with control plane for credential resolution.
+func ListenerWithGRPCClient(client cloud.TestKubeCloudAPIClient) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.grpcClient = client
+	}
+}
+
+// ListenerWithAPIKey sets the API key for gRPC authentication
+func ListenerWithAPIKey(apiKey string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.apiKey = apiKey
+	}
+}
+
+// ListenerWithAgentID sets the agent ID for gRPC metadata
+func ListenerWithAgentID(agentID string) WebhookListenerOption {
+	return func(wl *WebhookListener) {
+		wl.agentID = agentID
+	}
+}
+
 func (l *WebhookListener) Name() string {
 	return common.ListenerName(l.name)
 }
@@ -163,32 +190,12 @@ func (l *WebhookListener) Events() []testkube.EventType {
 }
 
 func (l *WebhookListener) Metadata() map[string]string {
-	headers, err := getMapHashedMetadata(l.headers)
-	if err != nil {
-		l.Log.Errorw("headers hashing error", "error", err)
-	}
-
-	config, err := getMapHashedMetadata(l.config)
-	if err != nil {
-		l.Log.Errorw("config hashing error", "error", err)
-	}
-
-	parameters, err := getSliceHashedMetadata(l.parameters)
-	if err != nil {
-		l.Log.Errorw("parameters hashing error", "error", err)
-	}
-
 	return map[string]string{
 		"name":               l.Name(),
-		"uri":                l.Uri,
 		"selector":           l.selector,
 		"events":             fmt.Sprintf("%v", l.events),
 		"payloadObjectField": l.payloadObjectField,
-		"payloadTemplate":    getTextHashedMetadata([]byte(l.payloadTemplate)),
-		"headers":            headers,
 		"disabled":           fmt.Sprint(l.disabled),
-		"config":             config,
-		"parameters":         parameters,
 	}
 }
 
@@ -238,6 +245,17 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	var err error
 
 	log := l.Log.With(event.Log()...)
+
+	// Log webhook execution start
+	eventType := "unknown"
+	if event.Type_ != nil {
+		eventType = string(*event.Type_)
+	}
+	log.Infow("webhook execution started",
+		"webhook_name", l.name,
+		"event_type", eventType,
+		"selector", l.selector)
+
 	// load global envs to be able to use them in templates
 	event.Envs = l.envs
 
@@ -256,6 +274,20 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			res = "error"
 		}
 		l.metrics.IncWebhookEventCount(l.name, eventType, res)
+
+		// Log webhook execution result
+		if result.Error() != "" {
+			log.Errorw("webhook execution failed",
+				"webhook_name", l.name,
+				"event_type", eventType,
+				"status_code", statusCode,
+				"error", result.Error())
+		} else {
+			log.Infow("webhook execution succeeded",
+				"webhook_name", l.name,
+				"event_type", eventType,
+				"status_code", statusCode)
+		}
 
 		// Webhook telemetry
 		if l.webhookResultsRepository == nil {
@@ -369,7 +401,6 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	log.Infow("webhook send result", "response", responseStr)
 	result = testkube.NewSuccessEventResult(event.Id, responseStr)
 	return
 }
@@ -385,16 +416,85 @@ func (l *WebhookListener) Group() string {
 	return ""
 }
 
+// credentialPattern matches {{credential("name")}} or {{credential('name')}} patterns
+var credentialPattern = regexp.MustCompile(`\{\{credential\(["']([^"']+)["']\)\}\}`)
+
+// vaultPattern matches {{vault("path")}} or {{vault('path')}} patterns
+var vaultPattern = regexp.MustCompile(`\{\{vault\(["']([^"']+)["']\)\}\}`)
+
 func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {
 	log := l.Log.With(event.Log()...)
 
+	// Check for credential/vault patterns before pre-processing
+	credMatches := credentialPattern.FindAllStringSubmatch(body, -1)
+	vaultMatches := vaultPattern.FindAllStringSubmatch(body, -1)
+	hasCredentialPatterns := len(credMatches) > 0 || len(vaultMatches) > 0
+
+	// Pre-process template to convert function call syntax to Go template syntax
+	// Convert {{credential("name")}} to {{credential "name"}}
+	body = credentialPattern.ReplaceAllString(body, `{{credential "$1"}}`)
+	// Convert {{vault("path")}} to {{vault "path"}}
+	body = vaultPattern.ReplaceAllString(body, `{{vault "$1"}}`)
+
+	// Setup credential repository for template functions
+	var repo credentials.CredentialRepository
+	if l.grpcClient != nil {
+		// Create credential repository adapter that uses gRPC to resolve credentials from control plane
+		repo = newGRPCCredentialAdapter(l.grpcClient, l.envID, "", l.apiKey, l.orgID, l.agentID)
+	} else if hasCredentialPatterns {
+		// No credential resolution available but template needs it
+		log.Errorw("template contains credential patterns but no gRPC client configured",
+			"webhook_name", l.name,
+			"field", field,
+			"credential_patterns_found", len(credMatches),
+			"vault_patterns_found", len(vaultMatches))
+		return nil, fmt.Errorf("template contains %d credential patterns and %d vault patterns but gRPC client is not configured", len(credMatches), len(vaultMatches))
+	}
+
+	// Process with Go templates - credentials are resolved as template functions
 	var tmpl *template.Template
-	tmpl, err := utils.NewTemplate(field).Funcs(template.FuncMap{
+	funcMap := template.FuncMap{
 		"tostr":                            text.ToStr,
 		"executionstatustostring":          testkube.ExecutionStatusString,
 		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
 		"testworkflowstatustostring":       testkube.TestWorkflowStatusString,
-	}).Parse(body)
+		"credential": func(name string) (string, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			value, err := repo.Get(ctx, name)
+			if err != nil {
+				log.Errorw("failed to resolve credential",
+					"credential_name", name,
+					"error", err)
+				return "", err
+			}
+
+			log.Infow("resolved credential",
+				"credential_name", name)
+
+			return string(value), nil
+		},
+		"vault": func(path string) (string, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			value, err := repo.GetWithSource(ctx, path, credentials.SourceVault)
+			if err != nil {
+				log.Errorw("failed to resolve vault secret",
+					"vault_path", path,
+					"error", err)
+				return "", err
+			}
+
+			log.Infow("resolved vault secret",
+				"vault_path", path)
+
+			return string(value), nil
+		},
+	}
+
+	tmpl, err := utils.NewTemplate(field).Funcs(funcMap).Parse(body)
 	if err != nil {
 		log.Errorw(fmt.Sprintf("creating webhook %s error", field), "error", err)
 		return nil, err
@@ -499,40 +599,4 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	}
 
 	return false, nil
-}
-
-type configKeyValue[T any] struct {
-	Key   string
-	Value T
-}
-
-type configKeyValues[T any] []configKeyValue[T]
-
-// getMapHashedMetadata returns map hashed metadata
-func getMapHashedMetadata[T any](data map[string]T) (string, error) {
-	var slice configKeyValues[T]
-	for key, value := range data {
-		slice = append(slice, configKeyValue[T]{Key: key, Value: value})
-	}
-
-	sort.Slice(slice, func(i, j int) bool {
-		return slice[i].Key < slice[j].Key
-	})
-
-	return getSliceHashedMetadata(slice)
-}
-
-// getSliceHashedMetadata returns slice hashed metadata
-func getSliceHashedMetadata[T any](slice []T) (string, error) {
-	result, err := json.Marshal(slice)
-	if err != nil {
-		return "", err
-	}
-
-	return getTextHashedMetadata(result), nil
-}
-
-// getTextHashedMetadata returns text hashed metadata
-func getTextHashedMetadata(result []byte) string {
-	return fmt.Sprintf("%x", sha256.Sum256(result))
 }

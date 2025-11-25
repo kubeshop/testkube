@@ -8,6 +8,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -58,6 +59,9 @@ type WebhooksLoader struct {
 	dashboardURI                  string
 	orgID                         string
 	envID                         string
+	agentID                       string
+	grpcClient                    cloud.TestKubeCloudAPIClient
+	apiKey                        string
 }
 
 // WithTestWorkflowResultsRepository sets the test workflow results repository
@@ -126,6 +130,27 @@ func WithEnvID(envID string) WebhookLoaderOption {
 	}
 }
 
+// WithGRPCClient sets the gRPC client for Cloud API communication
+func WithGRPCClient(client cloud.TestKubeCloudAPIClient) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.grpcClient = client
+	}
+}
+
+// WithAPIKey sets the API key for gRPC authentication
+func WithAPIKey(apiKey string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.apiKey = apiKey
+	}
+}
+
+// WithAgentID sets the agent ID for gRPC metadata
+func WithAgentID(agentID string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.agentID = agentID
+	}
+}
+
 func (r WebhooksLoader) Kind() string {
 	return "webhook"
 }
@@ -134,6 +159,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// load all webhooks from kubernetes CRDs
 	webhookList, err := r.webhookClient.List("")
 	if err != nil {
+		r.log.Errorw("failed to list webhooks", "error", err)
 		return listeners, err
 	}
 
@@ -165,29 +191,44 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		eventTypes := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.Namespace, webhook.Name)
-		listeners = append(
-			listeners,
-			NewWebhookListener(
-				name,
-				webhook.Spec.Uri,
-				webhook.Spec.Selector,
-				eventTypes,
-				webhook.Spec.PayloadObjectField,
-				webhook.Spec.PayloadTemplate,
-				webhook.Spec.Headers,
-				webhook.Spec.Disabled,
-				webhook.Spec.Config,
-				webhook.Spec.Parameters,
-				listenerWithTestWorkflowResultsRepository(r.testWorkflowResultsRepository),
-				listenerWithWebhookResultsRepository(r.webhookResultsRepository),
-				listenerWithMetrics(r.metrics),
-				listenerWithSecretClient(r.secretClient),
-				listenerWithEnvs(r.envs),
-				ListenerWithDashboardURI(r.dashboardURI),
-				ListenerWithOrgID(r.orgID),
-				ListenerWithEnvID(r.envID),
-			),
+
+		listenerOpts := []WebhookListenerOption{
+			listenerWithTestWorkflowResultsRepository(r.testWorkflowResultsRepository),
+			listenerWithWebhookResultsRepository(r.webhookResultsRepository),
+			listenerWithMetrics(r.metrics),
+			listenerWithSecretClient(r.secretClient),
+			listenerWithEnvs(r.envs),
+			ListenerWithDashboardURI(r.dashboardURI),
+			ListenerWithOrgID(r.orgID),
+			ListenerWithEnvID(r.envID),
+		}
+
+		// Add gRPC client and API key if available for credential resolution
+		if r.grpcClient != nil {
+			listenerOpts = append(listenerOpts, ListenerWithGRPCClient(r.grpcClient))
+			if r.apiKey != "" {
+				listenerOpts = append(listenerOpts, ListenerWithAPIKey(r.apiKey))
+			}
+			if r.agentID != "" {
+				listenerOpts = append(listenerOpts, ListenerWithAgentID(r.agentID))
+			}
+		}
+
+		listener := NewWebhookListener(
+			name,
+			webhook.Spec.Uri,
+			webhook.Spec.Selector,
+			eventTypes,
+			webhook.Spec.PayloadObjectField,
+			webhook.Spec.PayloadTemplate,
+			webhook.Spec.Headers,
+			webhook.Spec.Disabled,
+			webhook.Spec.Config,
+			webhook.Spec.Parameters,
+			listenerOpts...,
 		)
+
+		listeners = append(listeners, listener)
 	}
 
 	return listeners, nil

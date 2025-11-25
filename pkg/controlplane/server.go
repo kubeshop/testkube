@@ -54,6 +54,7 @@ type Server struct {
 	outputRepository            testworkflow.OutputRepository
 	repositoryManager           repository.DatabaseRepository
 	emitter                     *event.Emitter
+	envID                       string // Environment ID for event grouping
 }
 
 type Config struct {
@@ -77,6 +78,7 @@ func New(
 	resultsRepository testworkflow.Repository,
 	outputRepository testworkflow.OutputRepository,
 	repositoryManager repository.DatabaseRepository,
+	envID string,
 	commandGroups ...CommandHandlers,
 ) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
@@ -99,6 +101,7 @@ func New(
 		outputRepository:            outputRepository,
 		repositoryManager:           repositoryManager,
 		emitter:                     eventEmitter,
+		envID:                       envID,
 	}
 }
 
