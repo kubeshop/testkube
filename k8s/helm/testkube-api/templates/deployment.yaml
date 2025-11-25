@@ -50,12 +50,6 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- if or .Values.cloud.key .Values.cloud.existingSecret.key }}
-          envFrom:
-            - secretRef:
-                name: "{{ include "testkube-api.fullname" . }}-self-registration"
-                optional: true
-          {{- end }}
           env:
             {{- if .Values.global.features.logsV2 }}
             - name: FF_LOGS_V2
