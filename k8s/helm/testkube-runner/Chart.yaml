@@ -2,7 +2,7 @@ apiVersion: v2
 name: testkube-runner
 description: A Helm chart for the Testkube's Runner Agent
 type: application
-version: 2.4.3-rc.0
+version: 2.4.3
 appVersion: 2.3.0
 dependencies:
 - name: global
