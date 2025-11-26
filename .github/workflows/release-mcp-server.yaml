@@ -1,6 +1,11 @@
 name: Release MCP Server
 
 on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
   # Trigger on final release tags only (e.g., 1.19.0, not 1.19.0-rc.0 or 1.19.0-preview.0)
   push:
     tags:
