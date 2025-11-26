@@ -6,7 +6,7 @@
 set -e
 
 # Default values
-TAG=${1:-"testkube/mcp-server:latest"}
+TAG=${1:-"kubeshop/mcp-server:latest"}
 VERSION=${VERSION:-"1.0.0"}
 GIT_SHA=${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")}
 
