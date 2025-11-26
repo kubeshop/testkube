@@ -68,7 +68,6 @@ type ProContextAgentEnvironment struct {
 type ProContextAgent struct {
 	ID           string
 	Name         string
-	Type         string
 	Disabled     bool
 	Labels       map[string]string
 	Environments []ProContextAgentEnvironment

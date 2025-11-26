@@ -197,7 +197,7 @@ message ProContextEnvironment {
 message ProContextAgent {
   string id = 1;
   string name = 2;
-  string type = 3;
+  string type = 3 [deprecated = true]; // Superseded by agent capabilities
   bool disabled = 4;
   map<string, string> labels = 5;
   repeated ProContextEnvironment environments = 6;
