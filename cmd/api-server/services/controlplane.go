@@ -51,7 +51,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 
 	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 	commons.ExitOnError("Creating test workflow client", err)
-	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace, cfg.DisableOfficialTemplates)
 	commons.ExitOnError("Creating test workflow templates client", err)
 
 	// Build repositories
