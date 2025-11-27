@@ -12,6 +12,11 @@ const CapabilityJUnitReports Capability = "junit-reports"
 const CapabilityNewArchitecture Capability = "exec"
 const CapabilityCloudStorage Capability = "tw-storage"
 
+// CapabilitySourceOfTruth is whether the control plane is ready to act as source of truth.
+// When this capability is present, newer versions of the agent MUST migrate which entails
+// pushing data to the control plane and handing over control to let the control plane be the new source of truth.
+const CapabilitySourceOfTruth Capability = "source-of-truth"
+
 func Enabled(capabilities []*cloud.Capability, capability Capability) bool {
 	for _, c := range capabilities {
 		if c.Name == string(capability) {
