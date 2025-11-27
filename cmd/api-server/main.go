@@ -217,8 +217,6 @@ func main() {
 		)
 	}
 
-	leaderTasks := make([]leader.Task, 0)
-
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
 		runnerName := cfg.RunnerName
@@ -301,6 +299,22 @@ func main() {
 
 	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+
+	leaderIdentifier := resolveLeaderIdentifier()
+	leaderClusterID := clusterId
+	if leaderClusterID == "" {
+		leaderClusterID = "testkube-core"
+	} else {
+		leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
+	}
+
+	coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
+	leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
+	hasLeaderTasks := false
+	registerLeaderTask := func(task leader.Task) {
+		hasLeaderTasks = true
+		leaderCoordinator.Register(task)
+	}
 
 	// k8s clients
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
@@ -508,9 +522,12 @@ func main() {
 	// Update TestWorkflowExecution Kubernetes resource objects on status change
 	eventsEmitter.RegisterLoader(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
-	g.Go(func() error {
-		eventsEmitter.Listen(ctx)
-		return nil
+	registerLeaderTask(leader.Task{
+		Name: "event-emitter",
+		Start: func(taskCtx context.Context) error {
+			eventsEmitter.RunLeader(taskCtx)
+			return nil
+		},
 	})
 
 	/////////////////////////////////
@@ -641,7 +658,7 @@ func main() {
 			eventsEmitter,
 		)
 		commons.ExitOnError("starting agent", err)
-		leaderTasks = append(leaderTasks, leader.Task{
+		registerLeaderTask(leader.Task{
 			Name: "agent",
 			Start: func(taskCtx context.Context) error {
 				err := agentHandle.Run(taskCtx)
@@ -662,26 +679,12 @@ func main() {
 		// TODO: Check why this simpler options is not working
 		// testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 
-		var triggersLeaseBackend leasebackend.Repository
-		if controlPlane != nil {
-			triggersLeaseBackend = controlPlane.GetRepositoryManager().LeaseBackend()
-		} else {
-			// Fallback: Kubernetes Lease-based coordination (no external DB required)
-			triggersLeaseBackend = leasebackendk8s.NewK8sLeaseBackend(
-				clientset,
-				"testkube-triggers-lease",
-				cfg.TestkubeNamespace,
-				leasebackendk8s.WithLeaseName(cfg.TestkubeLeaseName),
-			)
-		}
-
-		triggerService := triggers.NewService(
+		triggerTasks := triggers.NewService(
 			cfg.RunnerName,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
 			testTriggersClient,
-			triggersLeaseBackend,
 			log.DefaultLogger,
 			eventBus,
 			metrics,
@@ -695,17 +698,16 @@ func main() {
 			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
 			triggers.WithEventLabels(cfg.EventLabels),
 		)
-		log.DefaultLogger.Info("starting trigger service")
-		g.Go(func() error {
-			triggerService.Run(ctx)
-			return nil
-		})
+		log.DefaultLogger.Info("registering trigger tasks with shared leader coordinator")
+		for _, task := range triggerTasks {
+			registerLeaderTask(task)
+		}
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
 	}
 
 	// telemetry based functions
-	leaderTasks = append(leaderTasks, leader.Task{
+	registerLeaderTask(leader.Task{
 		Name: "telemetry-heartbeat",
 		Start: func(taskCtx context.Context) error {
 			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig)
@@ -755,7 +757,7 @@ func main() {
 			schedulableResourceWatcher.WatchTestWorkflowTemplates,
 		)
 		// Start the new scheduler.
-		leaderTasks = append(leaderTasks, leader.Task{
+		registerLeaderTask(leader.Task{
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
 				go func() {
@@ -779,22 +781,7 @@ func main() {
 		return httpServer.Run(ctx)
 	})
 
-	if len(leaderTasks) > 0 {
-		leaderIdentifier := resolveLeaderIdentifier()
-
-		leaderClusterID := clusterId
-		if leaderClusterID == "" {
-			leaderClusterID = "testkube-core"
-		} else {
-			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
-		}
-
-		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
-		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
-		for _, task := range leaderTasks {
-			leaderCoordinator.Register(task)
-		}
-
+	if hasLeaderTasks {
 		g.Go(func() error {
 			return leaderCoordinator.Run(ctx)
 		})

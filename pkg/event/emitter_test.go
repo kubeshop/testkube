@@ -3,10 +3,12 @@ package event
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -292,6 +294,99 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		assert.Equal(t, "registered", emitter.getListeners()[0].Name())
 	})
 
+}
+
+type trackingBus struct {
+	subscribeTopicCalls []struct {
+		Topic string
+		Queue string
+	}
+	unsubscribeCalls []string
+	closeCalls       int
+	mu               sync.Mutex
+}
+
+func (b *trackingBus) Publish(event testkube.Event) error {
+	return nil
+}
+
+func (b *trackingBus) Subscribe(queue string, handler bus.Handler) error {
+	return nil
+}
+
+func (b *trackingBus) Unsubscribe(queue string) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.unsubscribeCalls = append(b.unsubscribeCalls, queue)
+	return nil
+}
+
+func (b *trackingBus) PublishTopic(topic string, event testkube.Event) error {
+	return nil
+}
+
+func (b *trackingBus) SubscribeTopic(topic string, queue string, handler bus.Handler) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.subscribeTopicCalls = append(b.subscribeTopicCalls, struct {
+		Topic string
+		Queue string
+	}{Topic: topic, Queue: queue})
+	return nil
+}
+
+func (b *trackingBus) Close() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.closeCalls++
+	return nil
+}
+
+type noopLeaseBackend struct{}
+
+func (noopLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) (bool, error) {
+	return false, nil
+}
+
+func TestEmitter_RunLeader_UsesExternalCoordinator(t *testing.T) {
+	t.Parallel()
+
+	tb := &trackingBus{}
+	emitter := NewEmitter(tb, noopLeaseBackend{}, "agentevents", "")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		emitter.RunLeader(ctx)
+		close(done)
+	}()
+
+	// Allow leader loop to subscribe then cancel.
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("expected RunLeader to exit after context cancellation")
+	}
+
+	assert.Len(t, tb.subscribeTopicCalls, 1, "expected one topic subscription")
+	assert.Equal(t, "agentevents.>", tb.subscribeTopicCalls[0].Topic)
+	assert.Equal(t, "emitter", tb.subscribeTopicCalls[0].Queue)
+
+	require.Eventually(t, func() bool {
+		tb.mu.Lock()
+		defer tb.mu.Unlock()
+		return len(tb.unsubscribeCalls) == 1
+	}, time.Second, 10*time.Millisecond, "expected unsubscribe on shutdown")
+
+	assert.Equal(t, "emitter", tb.unsubscribeCalls[0])
+
+	tb.mu.Lock()
+	closeCalls := tb.closeCalls
+	tb.mu.Unlock()
+	assert.Equal(t, 1, closeCalls, "expected bus close on shutdown")
 }
 
 func newExampleTestEvent1() testkube.Event {
