@@ -1,20 +1,17 @@
-name: Release MCP Server
+name: Release MCP Server to MCP Registry
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  # Trigger on final release tags only (e.g., 1.19.0, not 1.19.0-rc.0 or 1.19.0-preview.0)
-  # push:
-  #   tags:
-  #     - "[0-9]+.[0-9]+.[0-9]+"
+  # Trigger on final release tags only (e.g., 1.19.0)
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
 
   # Allow manual triggering for testing or re-publishing
   workflow_dispatch:
     inputs:
       version:
         description: 'Version tag (e.g., 1.19.0)'
-        required: false
-        default: '2.4.3'
+        required: true
         type: string
 
 permissions:
@@ -25,69 +22,9 @@ env:
   DOCKER_IMAGE: kubeshop/mcp-server
 
 jobs:
-  build_and_push_mcp_image:
-    name: Build and Push MCP Server Docker Image
-    runs-on: depot-ubuntu-22.04
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Get version tag
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "pull_request" ]; then
-            # Manual trigger or PR testing - use input/default version
-            VERSION="${{ inputs.version }}"
-            if [ -z "$VERSION" ]; then
-              VERSION="2.4.3"
-            fi
-            echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
-            echo "Using version: $VERSION"
-          else
-            # Tag push - extract version from tag
-            TAG=${GITHUB_REF#refs/tags/}
-            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-            echo "Using version from tag: $TAG"
-          fi
-
-      # - name: Build and push MCP Server image
-      #   run: |
-      #     VERSION=${{ steps.tag.outputs.tag }} \
-      #     GIT_SHA=${{ github.sha }} \
-      #     ./build/mcp-server/build-mcp-server.sh ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
-
-      # - name: Tag as latest
-      #   run: |
-      #     docker buildx imagetools create \
-      #       --tag ${{ env.DOCKER_IMAGE }}:latest \
-      #       ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
-
-      # - name: Verify image
-      #   run: |
-      #     echo "Verifying pushed images..."
-      #     docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
-      #     docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:latest
-
   publish_to_mcp_registry:
     name: Publish to MCP Registry
-    needs: build_and_push_mcp_image
     runs-on: depot-ubuntu-22.04
-    permissions:
-      id-token: write  # Required for GitHub OIDC
-      contents: read
 
     steps:
       - name: Checkout
@@ -96,14 +33,10 @@ jobs:
       - name: Get version tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "pull_request" ]; then
-            # Manual trigger or PR testing - use input/default version
-            VERSION="${{ inputs.version }}"
-            if [ -z "$VERSION" ]; then
-              VERSION="2.4.3"
-            fi
-            echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
-            echo "Using version: $VERSION"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # Manual trigger - use input version
+            echo "tag=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "Using version: ${{ inputs.version }}"
           else
             # Tag push - extract version from tag
             TAG=${GITHUB_REF#refs/tags/}
@@ -148,12 +81,5 @@ jobs:
 
       - name: Summary
         run: |
-          echo "✅ MCP Server published successfully!"
-          echo ""
-          echo "Docker Image: ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}"
-          echo "Docker Image: ${{ env.DOCKER_IMAGE }}:latest"
-          echo "MCP Registry: https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp"
-          echo ""
-          echo "Users can now install with:"
-          echo "  docker pull ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}"
-          echo "  docker pull ${{ env.DOCKER_IMAGE }}:latest"
+          echo "MCP Server v${{ steps.tag.outputs.tag }} published to MCP Registry"
+          echo "Registry URL: https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp"
