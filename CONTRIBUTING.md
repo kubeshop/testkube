@@ -27,9 +27,12 @@ This project and everyone participating in it is governed by the Testkube [Code 
 
 ### Questions and Ideas
 
-- **Questions**: Use our [Q&A discussion page](https://github.com/kubeshop/testkube/discussions/categories/q-a) for questions and clarifications
-- **New Ideas**: Share feature ideas on our [Ideas discussion page](https://github.com/kubeshop/testkube/discussions/categories/ideas)
+- **Questions**: Use our [Slack Workspace](https://testkubeworkspace.slack.com) for ideas, questions and clarifications
 - **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/kubeshop/testkube/issues)
+
+## Testkube Overview
+
+Check out the [Testkube Overview](https://docs.testkube.io/articles/open-source) to understand what components the Open-Source Agent of Testkube has and what they do. 
 
 ## Project Structure
 
@@ -44,7 +47,6 @@ testkube/
 │   └── testworkflow-init/     # TestWorkflow initialization
 ├── pkg/                    # Public library code (importable by external apps)
 │   ├── api/               # API models and clients
-│   ├── executor/          # Test executor interfaces
 │   ├── repository/        # Data repository interfaces
 │   ├── testworkflows/     # TestWorkflow processing logic
 │   ├── controlplane/      # Control Plane communication
@@ -105,6 +107,7 @@ This builds:
 - `bin/app/testkube` - CLI binary
 - `bin/app/testworkflow-toolkit` - TestWorkflow toolkit
 - `bin/app/testworkflow-init` - TestWorkflow init binary
+- `bin/app/kubectl-testkube`- Testkube kubectl plugin 
 
 ### Building Individual Components
 
@@ -217,8 +220,6 @@ Testkube uses several code generation tools. Always regenerate code after modify
 
 - **Protobuf definitions** (`proto/`)
 - **OpenAPI schemas** (`api/`)
-- **Database queries** (SQLC)
-- **Mocks** (for testing)
 
 ### Generate All Code
 
@@ -318,7 +319,6 @@ Use descriptive branch names:
 - `feature/` - New features
 - `fix/` - Bug fixes
 - `refactor/` - Code refactoring
-- `docs/` - Documentation updates
 
 ### 3. Make Changes
 
@@ -364,7 +364,7 @@ Then create a Pull Request on GitHub.
 
 1. **Fix Issues**: Pick an issue from [GitHub Issues](https://github.com/kubeshop/testkube/issues) and submit a PR
 2. **Implement Features**: Discuss features in [Ideas discussions](https://github.com/kubeshop/testkube/discussions/categories/ideas) first
-3. **Improve Documentation**: Help improve docs, examples, and guides
+3. **Improve Documentation**: Documentation for Testkube is in the [kubeshop/testkube-docs](https://github.com/kubeshop/testkube-docs) repository, open a corresponding PR there for documentation updates.
 4. **Report Bugs**: Use GitHub Issues to report problems
 
 ### Pull Request Process
@@ -447,47 +447,6 @@ Before submitting, ensure:
   - Comment non-obvious Kubernetes configurations
   - Keep CRD definitions in sync with Go types
 
-### Example: Adding a New Feature
-
-```go
-// pkg/feature/feature.go
-package feature
-
-// Feature represents a new feature in Testkube.
-// It provides functionality for...
-type Feature struct {
-    // fields
-}
-
-// NewFeature creates a new Feature instance.
-func NewFeature() *Feature {
-    return &Feature{}
-}
-
-// DoSomething performs an action and returns an error if it fails.
-func (f *Feature) DoSomething() error {
-    // implementation
-    return nil
-}
-```
-
-```go
-// pkg/feature/feature_test.go
-package feature
-
-import (
-    "testing"
-)
-
-func TestFeature_DoSomething(t *testing.T) {
-    f := NewFeature()
-    err := f.DoSomething()
-    if err != nil {
-        t.Fatalf("unexpected error: %v", err)
-    }
-}
-```
-
 ## Additional Resources
 
 - [Go Documentation](https://golang.org/doc/)
@@ -501,7 +460,6 @@ func TestFeature_DoSomething(t *testing.T) {
 If you have questions or need help:
 
 - Join our [Slack workspace](https://testkubeworkspace.slack.com)
-- Ask in [GitHub Discussions](https://github.com/kubeshop/testkube/discussions)
 - Open an issue for bugs or feature requests
 
 Thank you for contributing to Testkube! 🚀
