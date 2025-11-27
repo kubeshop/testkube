@@ -156,7 +156,7 @@ spec:
               value:  "{{ .Values.podStartTimeout }}"
             - name: CDEVENTS_TARGET
               value: "{{ .Values.cdeventsTarget }}"
-            {{- if not .Values.global.testWorkflows.createOfficialTemplate }}
+            {{- if not .Values.global.testWorkflows.createOfficialTemplates }}
             - name: DISABLE_OFFICIAL_TEMPLATES
               value: "true"
             {{- end}}
