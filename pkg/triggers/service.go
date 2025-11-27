@@ -2,7 +2,6 @@ package triggers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	testkubeclientsetv1 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
-	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -67,18 +65,17 @@ type Service struct {
 	testTriggerControlPlane       bool
 	eventLabels                   map[string]string
 	Agent                         watcherAgent
-	coordinator                   *leader.Coordinator
 }
 
 type Option func(*Service)
 
+// NewService builds leader-only tasks for trigger watching and scraping.
 func NewService(
 	agentName string,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testTriggersClient testtriggerclient.TestTriggerClient,
-	leaseBackend leasebackend.Repository,
 	logger *zap.SugaredLogger,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
@@ -87,9 +84,9 @@ func NewService(
 	testWorkflowResultsRepository testworkflow.Repository,
 	proContext *intconfig.ProContext,
 	opts ...Option,
-) *Service {
+) []leader.Task {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
-	s := &Service{
+	service := &Service{
 		identifier:                    identifier,
 		clusterID:                     defaultClusterID,
 		agentName:                     agentName,
@@ -113,41 +110,37 @@ func NewService(
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 		proContext:                    proContext,
 	}
-	if s.triggerExecutor == nil {
-		s.triggerExecutor = s.execute
+	if service.triggerExecutor == nil {
+		service.triggerExecutor = service.execute
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		opt(service)
 	}
 
 	// Initialize agent snapshot from proContext if available
-	s.Agent = watcherAgent{}
-	if s.proContext != nil {
-		s.Agent.Name = s.proContext.Agent.Name
-		s.Agent.Labels = s.proContext.Agent.Labels
+	service.Agent = watcherAgent{}
+	if service.proContext != nil {
+		service.Agent.Name = service.proContext.Agent.Name
+		service.Agent.Labels = service.proContext.Agent.Labels
 	}
 
-	coordinatorLogger := logger.With("component", "trigger-service", "identifier", s.identifier)
-	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger)
-
-	s.coordinator.Register(leader.Task{
-		Name: "trigger-watcher",
-		Start: func(taskCtx context.Context) error {
-			s.runWatcher(taskCtx)
-			return nil
+	return []leader.Task{
+		{
+			Name: "trigger-watcher",
+			Start: func(taskCtx context.Context) error {
+				service.runWatcher(taskCtx)
+				return nil
+			},
 		},
-	})
-
-	s.coordinator.Register(leader.Task{
-		Name: "trigger-scraper",
-		Start: func(taskCtx context.Context) error {
-			s.runExecutionScraper(taskCtx)
-			return nil
+		{
+			Name: "trigger-scraper",
+			Start: func(taskCtx context.Context) error {
+				service.runExecutionScraper(taskCtx)
+				return nil
+			},
 		},
-	})
-
-	return s
+	}
 }
 
 func WithHostnameIdentifier() Option {
@@ -189,16 +182,10 @@ func WithEventLabels(eventLabels map[string]string) Option {
 	}
 }
 
-func (s *Service) Run(ctx context.Context) {
-	if s.coordinator == nil {
-		<-ctx.Done()
-		return
-	}
-
-	if err := s.coordinator.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		if s.logger != nil {
-			s.logger.Errorw("trigger service: coordinator stopped unexpectedly", "error", err)
-		}
+// WithCoordinator is retained for compatibility but is a no-op: tasks are expected
+// to be registered on an external coordinator by the caller.
+func WithCoordinator(coordinator *leader.Coordinator) Option {
+	return func(s *Service) {
 	}
 }
 

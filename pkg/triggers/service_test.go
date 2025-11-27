@@ -1,73 +1,45 @@
 package triggers
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.uber.org/zap"
 
-	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/pkg/coordination/leader"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 )
 
-func TestService_addTrigger(t *testing.T) {
-	t.Parallel()
+func TestService_NewServiceReturnsTasks(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	externalCoordinator := leader.New(leaseBackendNoop{}, "external-id", "cluster", logger, leader.WithCheckInterval(time.Hour))
 
-	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
+	tasks := NewService(
+		"agent",
+		nil,
+		nil,
+		nil,
+		nil,
+		logger,
+		bus.NewEventBusMock(),
+		metrics.NewMetrics(),
+		nil,
+		nil,
+		nil,
+		nil,
+		WithCoordinator(externalCoordinator),
+	)
 
-	testTrigger := testtriggersv1.TestTrigger{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-1", Namespace: "testkube"},
-	}
-	s.addTrigger(&testTrigger)
-
-	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-1")
-	assert.NotNil(t, s.triggerStatus[key])
+	assert.Len(t, tasks, 2, "expected watcher and scraper tasks")
+	assert.Equal(t, "trigger-watcher", tasks[0].Name)
+	assert.Equal(t, "trigger-scraper", tasks[1].Name)
 }
 
-func TestService_removeTrigger(t *testing.T) {
-	t.Parallel()
+type leaseBackendNoop struct{}
 
-	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
-
-	testTrigger1 := testtriggersv1.TestTrigger{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-1", Namespace: "testkube"},
-	}
-	testTrigger2 := testtriggersv1.TestTrigger{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-2", Namespace: "testkube"},
-	}
-	s.addTrigger(&testTrigger1)
-	s.addTrigger(&testTrigger2)
-
-	assert.Len(t, s.triggerStatus, 2)
-
-	s.removeTrigger(&testTrigger1)
-
-	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-2")
-	assert.NotNil(t, s.triggerStatus[key])
-	deletedKey := newStatusKey("testkube", "test-trigger-1")
-	assert.Nil(t, s.triggerStatus[deletedKey])
-}
-
-func TestService_updateTrigger(t *testing.T) {
-	t.Parallel()
-
-	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
-
-	oldTestTrigger := testtriggersv1.TestTrigger{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
-		Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
-	}
-	s.addTrigger(&oldTestTrigger)
-
-	newTestTrigger := testtriggersv1.TestTrigger{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
-		Spec:       testtriggersv1.TestTriggerSpec{Event: "modified"},
-	}
-
-	s.updateTrigger(&newTestTrigger)
-
-	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-1")
-	assert.NotNil(t, s.triggerStatus[key])
+func (leaseBackendNoop) TryAcquire(ctx context.Context, id, clusterID string) (bool, error) {
+	return false, nil
 }

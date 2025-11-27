@@ -126,6 +126,28 @@ const (
 	leaseClusterID     string = "event-emitters"
 )
 
+// RunLeader executes the leader-only loop under an externally managed coordinator.
+// It does not perform lease acquisition itself; it assumes the provided context
+// is canceled when leadership is lost or when shutdown is requested.
+func (e *Emitter) RunLeader(ctx context.Context) {
+	e.log.Info("event emitter starting under external coordinator")
+	e.closeBusOnContext(ctx)
+	e.leaderLoop(ctx)
+}
+
+func (e *Emitter) closeBusOnContext(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		e.log.Info("event emitter closing event bus")
+		err := e.bus.Close()
+		if err != nil {
+			e.log.Errorw("error while closing event bus", "error", err)
+		} else {
+			e.log.Info("event emitter closed event bus")
+		}
+	}()
+}
+
 // TODO(emil): convert to using new common coordinator package for lease acquisition
 func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
 	e.log.Info("event emitter waiting for lease")
@@ -154,17 +176,7 @@ func (e *Emitter) leaseCheck(ctx context.Context, leaseChan chan<- bool) {
 // notifications.
 func (e *Emitter) Listen(ctx context.Context) {
 	e.log.Info("event emitter starting")
-	// Clean up
-	go func() {
-		<-ctx.Done()
-		e.log.Info("event emitter closing event bus")
-		err := e.bus.Close()
-		if err != nil {
-			e.log.Errorw("error while closing event bus", "error", err)
-		} else {
-			e.log.Info("event emitter closed event bus")
-		}
-	}()
+	e.closeBusOnContext(ctx)
 
 	// Start lease check loop
 	leaseChan := make(chan bool)

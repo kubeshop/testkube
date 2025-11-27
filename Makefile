@@ -373,7 +373,7 @@ integration-tests: build-init build-toolkit ## Run integration tests (only tests
 		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
 		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
 		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
-		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/... ./test/integration/components/...
+		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/... ./test/integration/... ./test/e2e/...
 
 .PHONY: cover
 cover: unit-tests ## Generate and open test coverage report
