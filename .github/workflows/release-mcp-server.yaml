@@ -1,22 +1,20 @@
 name: Release MCP Server
 
 on:
-  pull_request_target:
-    types:
-      - opened
-      - edited
-      - synchronize
+  pull_request:
+    types: [opened, synchronize, reopened]
   # Trigger on final release tags only (e.g., 1.19.0, not 1.19.0-rc.0 or 1.19.0-preview.0)
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+  # push:
+  #   tags:
+  #     - "[0-9]+.[0-9]+.[0-9]+"
 
   # Allow manual triggering for testing or re-publishing
   workflow_dispatch:
     inputs:
       version:
         description: 'Version tag (e.g., 1.19.0)'
-        required: true
+        required: false
+        default: '2.4.3'
         type: string
 
 permissions:
@@ -50,32 +48,38 @@ jobs:
       - name: Get version tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "pull_request" ]; then
+            # Manual trigger or PR testing - use input/default version
+            VERSION="${{ inputs.version }}"
+            if [ -z "$VERSION" ]; then
+              VERSION="2.4.3"
+            fi
+            echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Using version: $VERSION"
           else
-            # Extract from git tag
+            # Tag push - extract version from tag
             TAG=${GITHUB_REF#refs/tags/}
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "Using version from tag: $TAG"
           fi
 
-      - name: Build and push MCP Server image
-        run: |
-          cd build/mcp-server
-          VERSION=${{ steps.tag.outputs.tag }} \
-          GIT_SHA=${{ github.sha }} \
-          ./build-mcp-server.sh ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
+      # - name: Build and push MCP Server image
+      #   run: |
+      #     VERSION=${{ steps.tag.outputs.tag }} \
+      #     GIT_SHA=${{ github.sha }} \
+      #     ./build/mcp-server/build-mcp-server.sh ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
 
-      - name: Tag as latest
-        run: |
-          docker buildx imagetools create \
-            --tag ${{ env.DOCKER_IMAGE }}:latest \
-            ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
+      # - name: Tag as latest
+      #   run: |
+      #     docker buildx imagetools create \
+      #       --tag ${{ env.DOCKER_IMAGE }}:latest \
+      #       ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
 
-      - name: Verify image
-        run: |
-          echo "Verifying pushed images..."
-          docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
-          docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:latest
+      # - name: Verify image
+      #   run: |
+      #     echo "Verifying pushed images..."
+      #     docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.tag.outputs.tag }}
+      #     docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:latest
 
   publish_to_mcp_registry:
     name: Publish to MCP Registry
@@ -92,19 +96,27 @@ jobs:
       - name: Get version tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "pull_request" ]; then
+            # Manual trigger or PR testing - use input/default version
+            VERSION="${{ inputs.version }}"
+            if [ -z "$VERSION" ]; then
+              VERSION="2.4.3"
+            fi
+            echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Using version: $VERSION"
           else
+            # Tag push - extract version from tag
             TAG=${GITHUB_REF#refs/tags/}
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "Using version from tag: $TAG"
           fi
 
       - name: Update server.json with version
         run: |
           cd build/mcp-server
-          # Update identifier with specific version tag
+          # Update both the top-level version and the Docker image identifier
           jq --arg version "${{ steps.tag.outputs.tag }}" \
-            '.packages[0].identifier = "docker.io/kubeshop/mcp-server:" + $version' \
+            '.version = $version | .packages[0].identifier = "docker.io/kubeshop/mcp-server:" + $version' \
             server.json > server.json.tmp
           mv server.json.tmp server.json
 
