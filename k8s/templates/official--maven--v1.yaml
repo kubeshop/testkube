@@ -1,4 +1,3 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
@@ -27,6 +26,5 @@ spec:
   steps:
   - name: Run Maven command
     run:
-      image: {{`"maven:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
-{{- end }}
+      image: "maven:{{ config.version }}"
+      shell: "{{ config.run }}"

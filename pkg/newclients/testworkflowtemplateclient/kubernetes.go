@@ -32,7 +32,7 @@ type k8sTestWorkflowTemplateClient struct {
 	namespace      string
 }
 
-func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *rest.Config, namespace string) (TestWorkflowTemplateClient, error) {
+func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *rest.Config, namespace string, disableOfficialTemplates bool) (TestWorkflowTemplateClient, error) {
 	// Build the scheme
 	scheme := runtime.NewScheme()
 	if err := metav1.AddMetaToScheme(scheme); err != nil {
@@ -59,12 +59,17 @@ func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *r
 		return nil, err
 	}
 
-	return &k8sTestWorkflowTemplateClient{
+	c := &k8sTestWorkflowTemplateClient{
 		client:         client,
 		restClient:     restClient,
 		parameterCodec: parameterCodec,
 		namespace:      namespace,
-	}, nil
+	}
+
+	if disableOfficialTemplates {
+		return c, nil
+	}
+	return NewTestWorkflowTemplateClientWithOfficials(c), nil
 }
 
 func (c *k8sTestWorkflowTemplateClient) get(ctx context.Context, name string) (*testworkflowsv1.TestWorkflowTemplate, error) {

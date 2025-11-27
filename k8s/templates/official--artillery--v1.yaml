@@ -1,4 +1,3 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
@@ -43,8 +42,7 @@ spec:
   steps:
   - name: Run Artillery tests
     run:
-      image: {{`"artilleryio/artillery:{{ config.version }}"`}}
+      image: "artilleryio/artillery:{{ config.version }}"
       shell: |
-        {{`artillery() { {{ config.artillery_binary }} $@; }
-        {{ config.run }}`}}
-{{- end }}
+        artillery() { {{ config.artillery_binary }} $@; }
+        {{ config.run }}

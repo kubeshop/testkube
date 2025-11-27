@@ -1,4 +1,3 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
@@ -28,11 +27,10 @@ spec:
       type: string
       default: "npx playwright test"
   container:
-    image: {{`"mcr.microsoft.com/playwright:v{{ config.version }}"`}}
+    image: "mcr.microsoft.com/playwright:v{{ config.version }}"
   steps:
   - name: Install dependencies
-    shell: {{`"{{ config.dependencies_command }}"`}}
+    shell: "{{ config.dependencies_command }}"
   - name: Run Playwright tests
     run:
-      shell: {{`"{{ config.run }}"`}}
-{{- end }}
+      shell: "{{ config.run }}"

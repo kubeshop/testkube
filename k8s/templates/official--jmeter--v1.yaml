@@ -1,0 +1,30 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--jmeter--v1
+  labels:
+    testkube.io/name: JMeter
+    testkube.io/wizard: disabled
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "19"
+    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
+    testkube.io/categories: Load & Performance
+    testkube.io/description: Run JMeter Plan
+    testkube.io/icon: jmeter
+    testkube.io/image: justb4/jmeter
+spec:
+  config:
+    version:
+      description: JMeter version to use
+      type: string
+      default: "5.5"
+    run:
+      description: Run command
+      type: string
+      default: "jmeter -n"
+  steps:
+  - name: Run JMeter tests
+    run:
+      image: "justb4/jmeter:{{ config.version }}"
+      shell: "{{ config.run }}"

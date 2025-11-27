@@ -1,11 +1,10 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: official--jmeter--beta
+  name: official--jmeter--v2
   labels:
     testkube.io/name: JMeter
-    testkube.io/wizard: disabled
+    testkube.io/wizard: enabled
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "19"
@@ -13,12 +12,13 @@ metadata:
     testkube.io/categories: Load & Performance
     testkube.io/description: Run JMeter Plan
     testkube.io/icon: jmeter
+    testkube.io/image: alpine/jmeter
 spec:
   config:
     version:
       description: JMeter version to use
       type: string
-      default: "5.5"
+      default: "5.6"
     run:
       description: Run command
       type: string
@@ -26,6 +26,5 @@ spec:
   steps:
   - name: Run JMeter tests
     run:
-      image: {{`"justb4/jmeter:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
-{{- end }}
+      image: "alpine/jmeter:{{ config.version }}"
+      shell: "{{ config.run }}"

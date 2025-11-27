@@ -1,11 +1,10 @@
-{{- if .Values.global.testWorkflows.createOfficialTemplates }}
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: official--k6--v1
+  name: official--k6--beta
   labels:
     testkube.io/name: k6
-    testkube.io/wizard: enabled
+    testkube.io/wizard: disabled
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "19"
@@ -13,8 +12,6 @@ metadata:
     testkube.io/categories: Load & Performance
     testkube.io/description: Run k6 tests
     testkube.io/icon: k6
-    testkube.io/image: grafana/k6
-    testkube.io/example-path: k6.js
     testkube.io/example: |
       import http from 'k6/http';
       import { sleep } from 'k6';
@@ -31,10 +28,9 @@ spec:
     run:
       description: Run command
       type: string
-      default: "k6 run k6.js"
+      default: "k6 run"
   steps:
   - name: Run k6 tests
     run:
-      image: {{`"grafana/k6:{{ config.version }}"`}}
-      shell: {{`"{{ config.run }}"`}}
-{{- end }}
+      image: "grafana/k6:{{ config.version }}"
+      shell: "{{ config.run }}"
