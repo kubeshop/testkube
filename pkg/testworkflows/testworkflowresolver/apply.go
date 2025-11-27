@@ -351,10 +351,18 @@ func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string
 	return applyTemplatesToSpec(&workflow.Spec, templates, externalize)
 }
 
+func addGlobalTemplateRefToServices(services map[string]testworkflowsv1.ServiceSpec, ref testworkflowsv1.TemplateRef) {
+	for name, svc := range services {
+		svc.Use = append([]testworkflowsv1.TemplateRef{ref}, svc.Use...)
+		services[name] = svc
+	}
+}
+
 func addGlobalTemplateRefToStep(step *testworkflowsv1.Step, ref testworkflowsv1.TemplateRef) {
 	if step.Parallel != nil {
 		addGlobalTemplateRefToSpec(step.Parallel.NewTestWorkflowSpec(), ref)
 	}
+	addGlobalTemplateRefToServices(step.Services, ref)
 	for i := range step.Setup {
 		addGlobalTemplateRefToStep(&step.Setup[i], ref)
 	}
@@ -368,6 +376,7 @@ func addGlobalTemplateRefToSpec(spec *testworkflowsv1.TestWorkflowSpec, ref test
 		return
 	}
 	spec.Use = append([]testworkflowsv1.TemplateRef{ref}, spec.Use...)
+	addGlobalTemplateRefToServices(spec.Services, ref)
 	for i := range spec.Setup {
 		addGlobalTemplateRefToStep(&spec.Setup[i], ref)
 	}
