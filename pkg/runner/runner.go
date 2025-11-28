@@ -23,7 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -385,7 +385,7 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 		}
 		status.Result = &summary.Result
 		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
+		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, watchers.DefaultErrorMessage, "aborted")
 		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
 		status.Result.HealDuration(summary.Execution.ScheduledAt)
 		status.Result.HealMissingPauseStatuses()

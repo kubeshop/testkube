@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -114,7 +115,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			}
 
 			// Finalize and save the result
-			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
+			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, watchers.DefaultErrorMessage, "aborted")
 			execution.Result.HealTimestamps(sigSequence, execution.ScheduledAt, time.Time{}, time.Time{}, true)
 			execution.Result.HealDuration(execution.ScheduledAt)
 			execution.Result.HealMissingPauseStatuses()

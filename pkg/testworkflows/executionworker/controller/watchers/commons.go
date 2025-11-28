@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	DefaultErrorMessage = "Job has been aborted"
+
 	defaultListTimeoutSeconds  = int64(240)
 	defaultWatchTimeoutSeconds = int64(365 * 24 * 3600)
 )

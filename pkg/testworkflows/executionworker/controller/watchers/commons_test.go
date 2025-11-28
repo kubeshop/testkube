@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
@@ -60,7 +59,7 @@ func TestGetJobError(t *testing.T) {
 					DeletionTimestamp: ptr.To(metav1.NewTime(time.Now())),
 				},
 			},
-			expect: controller.DefaultErrorMessage,
+			expect: watchers.DefaultErrorMessage,
 		},
 	}
 

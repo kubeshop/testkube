@@ -13,20 +13,16 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	log2 "github.com/kubeshop/testkube/pkg/log"
-	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-)
-
-const (
-	DefaultErrorMessage = "Job has been aborted"
 )
 
 // Not thread-safe, should be used synchronously
 type notifier struct {
 	// Data
 	result      testkube.TestWorkflowResult
-	state       watchers2.ExecutionState
+	state       watchers.ExecutionState
 	scheduledAt time.Time
 
 	// Temporary data to avoid finishing too early
@@ -128,7 +124,7 @@ func (n *notifier) useActionGroups(actions actiontypes.ActionGroups) {
 	_, n.endRefs = ExtractRefsFromActionGroup(actions)
 }
 
-func (n *notifier) Align(state watchers2.ExecutionState) {
+func (n *notifier) Align(state watchers.ExecutionState) {
 	log2.DefaultLogger.Debugw("notify alignment while watching pod", "execution", getExecutionId(state))
 
 	defer n.sendResult()
@@ -260,12 +256,12 @@ func (n *notifier) End() {
 	// Ensure that the steps without the information are fulfilled and marked as aborted
 	n.fillGaps(true)
 
-	terminationCode := watchers2.GetTerminationCode(n.state.Job().Original())
-	errorMessage := DefaultErrorMessage
+	terminationCode := watchers.GetTerminationCode(n.state.Job().Original())
+	errorMessage := watchers.DefaultErrorMessage
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
-	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, terminationCode)
+	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, watchers.DefaultErrorMessage, terminationCode)
 
 	// Finalize the status
 	n.reconcile()
@@ -313,7 +309,7 @@ func (n *notifier) fillGaps(force bool) {
 	}
 
 	// Gather the container results
-	containerResults := make([]watchers2.ContainerResult, len(n.actions))
+	containerResults := make([]watchers.ContainerResult, len(n.actions))
 	for i := range n.actions {
 		containerResults[i] = n.state.Pod().ContainerResult(fmt.Sprintf("%d", i+1), n.state.ExecutionError())
 	}
@@ -400,7 +396,7 @@ func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult,
 	}
 }
 
-func getExecutionId(state watchers2.ExecutionState) string {
+func getExecutionId(state watchers.ExecutionState) string {
 	job := state.Job()
 	if job == nil {
 		return ""
