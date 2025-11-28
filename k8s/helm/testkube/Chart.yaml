@@ -18,7 +18,7 @@ dependencies:
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: nats
     condition: testkube-api.nats.enabled
-    version: 1.2.6-3
+    version: 1.2.6-4
     repository: "file://./charts/nats"
   - name: testkube-api
     version: 2.x.x-x
