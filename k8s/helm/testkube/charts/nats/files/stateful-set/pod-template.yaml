@@ -76,3 +76,9 @@ spec:
 
   securityContext:
     {{- include "nats.podSecurityContext" $ | nindent 6 }}
+  nodeSelector:
+    {{- include "nats.nodeSelector" . | indent 4 }}
+  affinity:
+    {{- include "nats.affinity" . | indent 4 }}
+  tolerations:
+    {{- include "nats.tolerations" . | indent 4 }}
