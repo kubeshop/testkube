@@ -8,11 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
+	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
 
@@ -292,6 +295,53 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		assert.Equal(t, "registered", emitter.getListeners()[0].Name())
 	})
 
+}
+
+func TestEmitterCreatesK8sEvents(t *testing.T) {
+	t.Parallel()
+
+	eventBus := bus.NewEventBusMock()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+	mockLeaseRepository.EXPECT().
+		TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(true, nil).AnyTimes()
+
+	clientset := fake.NewSimpleClientset()
+	listener := k8sevent.NewK8sEventListener("k8sevent", "", "tk-dev",
+		[]testkube.EventType{*testkube.EventStartTestWorkflow}, clientset)
+
+	emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+	emitter.Register(listener)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	go emitter.Listen(ctx)
+	time.Sleep(50 * time.Millisecond)
+
+	event := testkube.Event{
+		Id:                    "event-k8s",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("exec-k8s", "workflow-k8s"),
+	}
+
+	emitter.Notify(event)
+
+	var gotEvent bool
+	for i := 0; i < 20; i++ {
+		evts, err := clientset.CoreV1().Events("tk-dev").List(context.Background(), metav1.ListOptions{})
+		assert.NoError(t, err)
+		if len(evts.Items) > 0 {
+			gotEvent = true
+			assert.Equal(t, "testkube-event-event-k8s", evts.Items[0].Name)
+			assert.Equal(t, "start-testworkflow", evts.Items[0].Reason)
+			assert.Equal(t, "started", evts.Items[0].Action)
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	assert.True(t, gotEvent, "expected a Kubernetes event to be created")
 }
 
 func newExampleTestEvent1() testkube.Event {
