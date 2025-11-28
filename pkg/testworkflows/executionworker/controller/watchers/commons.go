@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
-
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +16,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	processorconstants "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 const (
@@ -293,34 +292,45 @@ func GetPodError(pod *corev1.Pod) string {
 	return ""
 }
 
+// GetJobError checks the passed Job for any fields that may indicate that a particular error has caused the Job to
+// be marked for deletion. If the Job has not been marked for deletion, or the Job is nil then an empty string will
+// be returned. In all other cases then some error message will be produced.
 func GetJobError(job *batchv1.Job) string {
+	// If the Job isn't specified then just return, not much else we can do.
 	if job == nil {
 		return ""
 	}
+
+	// If the Job had an ActiveDeadlineSeconds set then check to see if Job has timed out.
 	if job.Spec.ActiveDeadlineSeconds != nil {
 		for _, c := range job.Status.Conditions {
-			if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
+			if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == batchv1.JobReasonDeadlineExceeded {
 				return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
 			}
 		}
 	}
-	var msg string
-	if job.DeletionTimestamp != nil {
-		msg = "Job has been aborted"
-	}
+
+	// If the Job has annotations then check to see if one is set that specifies the reason it was terminated.
 	if job.Annotations != nil {
-		if terminationReason, ok := job.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
-			msg = terminationReason
+		if terminationReason, ok := job.Annotations[processorconstants.AnnotationTerminationReason]; ok && terminationReason != "" {
+			return terminationReason
 		}
 	}
-	return msg
+
+	// If the Job has been marked for deletion but none of the previous checks have hit then just return a generic error message.
+	if job.DeletionTimestamp != nil {
+		return DefaultErrorMessage
+	}
+
+	// If nothing above has hit then we can probably assume that there wasn't even an error and just return nothing.
+	return ""
 }
 
 func GetTerminationCode(job *batchv1.Job) string {
 	if job == nil || job.Annotations == nil {
 		return string(testkube.ABORTED_TestWorkflowStatus)
 	}
-	if terminationCode, ok := job.Annotations[constants2.AnnotationTerminationCode]; ok && terminationCode != "" {
+	if terminationCode, ok := job.Annotations[processorconstants.AnnotationTerminationCode]; ok && terminationCode != "" {
 		return terminationCode
 	}
 	return string(testkube.ABORTED_TestWorkflowStatus)
