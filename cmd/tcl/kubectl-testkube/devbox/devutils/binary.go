@@ -117,7 +117,7 @@ func (b *Binary) Build(ctx context.Context) (string, error) {
 			"-w",
 			"-v",
 		}, " ")),
-		"./main.go",
+		".",
 	)
 	cmd.Dir = filepath.Dir(b.mainPath)
 	cmd.Env = append(os.Environ(),
