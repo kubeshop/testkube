@@ -17,10 +17,8 @@ import (
 )
 
 func TestCmd_GetJWTPayload(t *testing.T) {
-	t.Parallel()
 
 	t.Run("valid jwt token", func(t *testing.T) {
-		t.Parallel()
 
 		header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
 		payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"1234567890","name":"John Doe","email":"fake@email.com"}`))
@@ -43,7 +41,6 @@ func TestCmd_GetJWTPayload(t *testing.T) {
 	})
 
 	t.Run("invalid jwt token", func(t *testing.T) {
-		t.Parallel()
 
 		token := "invalid.token"
 
@@ -57,7 +54,6 @@ func TestCmd_GetJWTPayload(t *testing.T) {
 	})
 
 	t.Run("invalid base64 payload", func(t *testing.T) {
-		t.Parallel()
 
 		header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
 		payload := "invalidbase64"
@@ -75,7 +71,6 @@ func TestCmd_GetJWTPayload(t *testing.T) {
 	})
 
 	t.Run("invalid json", func(t *testing.T) {
-		t.Parallel()
 
 		header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
 		payload := base64.RawURLEncoding.EncodeToString([]byte(`invalid-json`))

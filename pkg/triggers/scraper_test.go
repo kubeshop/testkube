@@ -14,10 +14,8 @@ import (
 )
 
 func TestService_runExecutionScraper(t *testing.T) {
-	t.Parallel()
 
 	t.Run("completed jobs", func(t *testing.T) {
-		t.Parallel()
 
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
@@ -50,7 +48,6 @@ func TestService_runExecutionScraper(t *testing.T) {
 	})
 
 	t.Run("active jobs", func(t *testing.T) {
-		t.Parallel()
 
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()

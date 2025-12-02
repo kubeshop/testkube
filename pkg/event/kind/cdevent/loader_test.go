@@ -7,8 +7,6 @@ import (
 )
 
 func TestCDEventLoader(t *testing.T) {
-	t.Parallel()
-
 	cdeventLoader, err := NewCDEventLoader("target", "", "", "", nil)
 	assert.NoError(t, err)
 
