@@ -1,0 +1,15 @@
+{
+  "name": "testkube-playwright-cucumber-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example project: Playwright + Cucumber for Testkube",
+  "scripts": {
+    "test": "cucumber-js"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.0.0",
+    "@playwright/test": "^1.48.0"
+  }
+}
+
+
