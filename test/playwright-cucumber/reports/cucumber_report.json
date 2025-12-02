@@ -1,0 +1,119 @@
+[
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "testkube-demo-page-title;smoke-1---has-title",
+        "keyword": "Scenario",
+        "line": 3,
+        "name": "Smoke 1 - has title",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 409235417
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 4,
+            "name": "I open the Testkube demo page",
+            "match": {
+              "location": "features/steps/smoke.steps.js:28"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 214353792
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 5,
+            "name": "the page title should contain \"Testkube\"",
+            "match": {
+              "location": "features/steps/smoke.steps.js:32"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 25773666
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 15281291
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "testkube-demo-page-title;smoke-2---has-title",
+        "keyword": "Scenario",
+        "line": 7,
+        "name": "Smoke 2 - has title",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 154680583
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "I open the Testkube demo page",
+            "match": {
+              "location": "features/steps/smoke.steps.js:28"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 89539166
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 9,
+            "name": "the page title should contain \"Testkube\"",
+            "match": {
+              "location": "features/steps/smoke.steps.js:32"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 10576374
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12248583
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "testkube-demo-page-title",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Testkube demo page title",
+    "tags": [],
+    "uri": "features/smoke.feature"
+  }
+]

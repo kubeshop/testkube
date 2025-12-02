@@ -4,12 +4,13 @@
   "private": true,
   "description": "Example project: Playwright + Cucumber for Testkube",
   "scripts": {
-    "test": "cucumber-js"
+    "test": "cucumber-js",
+    "report": "node generate-report.js",
+    "test:report": "npm run test && npm run report"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^11.0.0",
-    "@playwright/test": "^1.48.0"
+    "@playwright/test": "^1.48.0",
+    "cucumber-html-reporter": "^7.2.0"
   }
 }
-
-
