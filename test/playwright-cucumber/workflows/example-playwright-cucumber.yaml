@@ -1,0 +1,33 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: example-playwright-cucumber
+  namespace: testkube-agent-paris
+  labels:
+    core-tests: wizard-examples
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: jfortunati/playwright-cucumber
+      paths:
+      - test/playwright-cucumber
+  container:
+    workingDir: /data/repo/test/playwright-cucumber
+    image: mcr.microsoft.com/playwright:v1.57.0-noble
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Install dependencies
+    shell: npm install npx playwright install
+  - name: Run tests
+    shell: npm test
+  - name: Save artifacts
+    workingDir: /data/repo/test/playwright-cucumber
+    artifacts:
+      paths:
+      - reports/**/*
