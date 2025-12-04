@@ -56,3 +56,4 @@ jobs:
         uses: swaggerexpert/swagger-editor-validate@v1
         with:
           definition-file: api/v1/testkube.yaml
+          default-timeout: 20000
