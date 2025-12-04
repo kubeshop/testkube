@@ -6,9 +6,6 @@ metadata:
     testkube.io/name: Gradle
     testkube.io/wizard: enabled
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "19"
-    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
     testkube.io/categories: Other
     testkube.io/description: Gradle
     testkube.io/icon: gradle

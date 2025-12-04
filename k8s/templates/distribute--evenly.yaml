@@ -2,10 +2,6 @@ kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: distribute--evenly
-  annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "19"
-    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
 spec:
   config:
     name:
