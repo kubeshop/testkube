@@ -70,5 +70,6 @@ type ProContextAgent struct {
 	Name         string
 	Disabled     bool
 	Labels       map[string]string
+	IsSuperAgent bool
 	Environments []ProContextAgentEnvironment
 }
