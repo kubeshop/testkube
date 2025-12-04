@@ -318,11 +318,25 @@ func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkf
 	}
 }
 
+func MapContentMinioAPIToKube(v testkube.TestWorkflowContentMinio) testworkflowsv1.ContentMinio {
+	return testworkflowsv1.ContentMinio{
+		Endpoint:      v.Endpoint,
+		Bucket:        v.Bucket,
+		Path:          v.Path,
+		AccessKey:     v.AccessKey,
+		SecretKey:     v.SecretKey,
+		AccessKeyFrom: common.MapPtr(v.AccessKeyFrom, MapEnvVarSourceAPIToKube),
+		SecretKeyFrom: common.MapPtr(v.SecretKeyFrom, MapEnvVarSourceAPIToKube),
+		MountPath:     v.MountPath,
+	}
+}
+
 func MapContentAPIToKube(v testkube.TestWorkflowContent) testworkflowsv1.Content {
 	return testworkflowsv1.Content{
 		Git:     common.MapPtr(v.Git, MapContentGitAPIToKube),
 		Files:   common.MapSlice(v.Files, MapContentFileAPIToKube),
 		Tarball: common.MapSlice(v.Tarball, MapContentTarballAPIToKube),
+		Minio:   common.MapPtr(v.Minio, MapContentMinioAPIToKube),
 	}
 }
 
