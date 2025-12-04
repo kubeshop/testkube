@@ -103,6 +103,13 @@ type TestKubeCloudAPIClient interface {
 	DeleteWebhooksByLabels(ctx context.Context, in *DeleteWebhooksByLabelsRequest, opts ...grpc.CallOption) (*DeleteWebhooksByLabelsResponse, error)
 	// Deprecated: Do not use.
 	WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error)
+	// Deprecated: Do not use.
+	// MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+	// to indicate to a server that it has succesfully performed all pre-migration operations
+	// and should now be considered to be a regular agent with capabilities.
+	// This RPC is defined as part of the legacy Service as it will be removed after "Super"
+	// Agents are no longer an applicable Agent type.
+	MigrateSuperAgent(ctx context.Context, in *MigrateSuperAgentRequest, opts ...grpc.CallOption) (*MigrateSuperAgentResponse, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -1080,6 +1087,16 @@ func (x *testKubeCloudAPIWatchWebhookUpdatesClient) Recv() (*WebhookUpdate, erro
 	return m, nil
 }
 
+// Deprecated: Do not use.
+func (c *testKubeCloudAPIClient) MigrateSuperAgent(ctx context.Context, in *MigrateSuperAgentRequest, opts ...grpc.CallOption) (*MigrateSuperAgentResponse, error) {
+	out := new(MigrateSuperAgentResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/MigrateSuperAgent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -1164,6 +1181,13 @@ type TestKubeCloudAPIServer interface {
 	DeleteWebhooksByLabels(context.Context, *DeleteWebhooksByLabelsRequest) (*DeleteWebhooksByLabelsResponse, error)
 	// Deprecated: Do not use.
 	WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error
+	// Deprecated: Do not use.
+	// MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+	// to indicate to a server that it has succesfully performed all pre-migration operations
+	// and should now be considered to be a regular agent with capabilities.
+	// This RPC is defined as part of the legacy Service as it will be removed after "Super"
+	// Agents are no longer an applicable Agent type.
+	MigrateSuperAgent(context.Context, *MigrateSuperAgentRequest) (*MigrateSuperAgentResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -1344,6 +1368,9 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteWebhooksByLabels(context.Contex
 }
 func (UnimplementedTestKubeCloudAPIServer) WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method WatchWebhookUpdates not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) MigrateSuperAgent(context.Context, *MigrateSuperAgentRequest) (*MigrateSuperAgentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MigrateSuperAgent not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -2499,6 +2526,24 @@ func (x *testKubeCloudAPIWatchWebhookUpdatesServer) Send(m *WebhookUpdate) error
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_MigrateSuperAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MigrateSuperAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).MigrateSuperAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/MigrateSuperAgent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).MigrateSuperAgent(ctx, req.(*MigrateSuperAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2661,6 +2706,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteWebhooksByLabels",
 			Handler:    _TestKubeCloudAPI_DeleteWebhooksByLabels_Handler,
+		},
+		{
+			MethodName: "MigrateSuperAgent",
+			Handler:    _TestKubeCloudAPI_MigrateSuperAgent_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
