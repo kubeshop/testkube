@@ -12,3 +12,6 @@ spec:
       parallelism: 2
       workflows:
       - name: soapui-workflow-smoke
+      - name: soapui-workflow-smoke-command-line-env
+      - name: soapui-workflow-smoke-negative-non-existant-file
+      - name: soapui-workflow-smoke-template
