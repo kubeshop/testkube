@@ -96,9 +96,6 @@ metadata:
     testkube.io/name: SoapUI
     testkube.io/wizard: enabled
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
-    helm.sh/hook-weight: "19"
     testkube.io/categories: API
     testkube.io/description: Run SoapUI test
     testkube.io/example-path: example-soapui-test.yaml
