@@ -6,9 +6,6 @@ metadata:
     testkube.io/name: JMeter
     testkube.io/wizard: enabled
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "19"
-    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
     testkube.io/categories: Load & Performance
     testkube.io/description: Run JMeter Plan
     testkube.io/icon: jmeter

@@ -6,9 +6,6 @@ metadata:
     testkube.io/name: Playwright
     testkube.io/wizard: disabled
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "19"
-    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
     testkube.io/categories: E2E
     testkube.io/description: Run Playwright tests
     testkube.io/icon: playwright
