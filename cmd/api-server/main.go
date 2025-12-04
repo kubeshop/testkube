@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudflare/backoff"
 	"github.com/go-logr/zapr"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"golang.org/x/sync/errgroup"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -313,6 +315,209 @@ func main() {
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
+	// Configure SyncStore here as it is required for the SuperAgent migration.
+	// This setup can be moved back down to just before the controller initialisation
+	// when the SuperAgent migration has been removed.
+	var syncStore interface {
+		synccontroller.TestTriggerStore
+		synccontroller.TestWorkflowStore
+		synccontroller.TestWorkflowTemplateStore
+		synccontroller.WebhookStore
+		synccontroller.WebhookTemplateStore
+	}
+	syncStore = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
+	// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
+	// connect and so we need to fallback to an implementation that doesn't do anything.
+	if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
+		log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
+		syncStore = syncagent.NoOpStore{}
+	}
+
+	// SUPER AGENT DEPRECATION MIGRATION
+	// "Super" Agents are deprecated, instead they are being migrated to a more generic Agent with Capabilities.
+	// The migration can only occur if:
+	// - The Control Plane supports being a Source of Truth.
+	// - The current Agent is still considered to be a Super Agent by the Control Plane.
+	// - The current Agent is not being held back as a Super Agent by an override.
+	// Once Super Agent migration has been completed across all clients then this entire block can be removed.
+	if proContext.CloudStorageSupportedInControlPlane && proContext.Agent.IsSuperAgent && !cfg.ForceSuperAgentMode {
+		// If the sync store is a NoOpStore then TLS is not enabled and migration cannot progress.
+		if _, ok := syncStore.(syncagent.NoOpStore); ok {
+			log.DefaultLogger.Error("Unable to perform Super Agent migration when TLS is not configured. Please configure TLS and restart the Agent to perform migration and enable Agent functionality.")
+			// Block forever as this Agent should be migrating but is inappropriately configured to do so.
+			select {}
+		}
+		b := backoff.New(0, 0)
+		// The eventual migration call itself requires its own backoff as the other backoff is
+		// regularly reset to avoid overloading other systems during errors preparing for the
+		// final migration call.
+		migrationBackoff := backoff.New(0, 0)
+		// Migration should be attempted forever because we need to migrate at some point!
+		for {
+			// Snapshot all syncable resources.
+			var (
+				testTriggerList          = testtriggersv1.TestTriggerList{}
+				testWorkflowList         = testworkflowsv1.TestWorkflowList{}
+				testWorkflowTemplateList = testworkflowsv1.TestWorkflowTemplateList{}
+				webhookList              = executorv1.WebhookList{}
+				webhookTemplateList      = executorv1.WebhookTemplateList{}
+			)
+			// Any error here will result in lists being repopulated to ensure that snapshots are as close to a single point in time
+			// as possible.
+			// Also any error here will stall the migration until the error is resolved. I'm not expecting these function calls to error
+			// unless there is some issue with the Kubernetes API or connection to the Kubernetes API, which shouldn't really be happening,
+			// so this is a bit of overkill error handling but we must ensure that all resources are synchronised before the migration can
+			// be finalised.
+			for {
+				if err := kubeClient.List(ctx, &testTriggerList, client.InNamespace(cfg.TestkubeNamespace)); err != nil {
+					retryAfter := b.Duration()
+					log.DefaultLogger.Errorw("error listing TestTriggers in Namespace, unable to migrate SuperAgent, will retry after backoff.",
+						"namespace", cfg.TestkubeNamespace,
+						"backoff", retryAfter,
+						"error", err.Error())
+					time.Sleep(retryAfter)
+					continue
+				}
+				if err := kubeClient.List(ctx, &testWorkflowList, client.InNamespace(cfg.TestkubeNamespace)); err != nil {
+					retryAfter := b.Duration()
+					log.DefaultLogger.Errorw("error listing TestWorkflows in Namespace, unable to migrate SuperAgent, will retry after backoff.",
+						"namespace", cfg.TestkubeNamespace,
+						"backoff", retryAfter,
+						"error", err.Error())
+					time.Sleep(retryAfter)
+					continue
+				}
+				if err := kubeClient.List(ctx, &testWorkflowTemplateList, client.InNamespace(cfg.TestkubeNamespace)); err != nil {
+					retryAfter := b.Duration()
+					log.DefaultLogger.Errorw("error listing TestWorkflowTemplates in Namespace, unable to migrate SuperAgent, will retry after backoff.",
+						"namespace", cfg.TestkubeNamespace,
+						"backoff", retryAfter,
+						"error", err.Error())
+					time.Sleep(retryAfter)
+					continue
+				}
+				if err := kubeClient.List(ctx, &webhookList, client.InNamespace(cfg.TestkubeNamespace)); err != nil {
+					retryAfter := b.Duration()
+					log.DefaultLogger.Errorw("error listing Webhooks in Namespace, unable to migrate SuperAgent, will retry after backoff.",
+						"namespace", cfg.TestkubeNamespace,
+						"backoff", retryAfter,
+						"error", err.Error())
+					time.Sleep(retryAfter)
+					continue
+				}
+				if err := kubeClient.List(ctx, &webhookTemplateList, client.InNamespace(cfg.TestkubeNamespace)); err != nil {
+					retryAfter := b.Duration()
+					log.DefaultLogger.Errorw("error listing WebhookTemplates in Namespace, unable to migrate SuperAgent, will retry after backoff.",
+						"namespace", cfg.TestkubeNamespace,
+						"backoff", retryAfter,
+						"error", err.Error())
+					time.Sleep(retryAfter)
+					continue
+				}
+				break
+			}
+			b.Reset()
+
+			// Sync resources to the Control Plane.
+			// Any error here will result in the client call being retried forever until it succeeds, once we reach this point we must
+			// ensure that resources are fully synchronised to the Control Plane before the migration finalisation can take place, otherwise
+			// the Control Plane cannot be correctly called the Source of Truth.
+			for _, t := range testTriggerList.Items {
+				for {
+					if err := syncStore.UpdateOrCreateTestTrigger(ctx, t); err != nil {
+						retryAfter := b.Duration()
+						log.DefaultLogger.Errorw("error updating or creating TestTrigger, unable to migrate SuperAgent, will retry after backoff.",
+							"TestTrigger", t.Name,
+							"backoff", retryAfter,
+							"error", err.Error())
+						time.Sleep(retryAfter)
+						continue
+					}
+					break
+				}
+			}
+			b.Reset()
+			for _, t := range testWorkflowList.Items {
+				for {
+					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, t); err != nil {
+						retryAfter := b.Duration()
+						log.DefaultLogger.Errorw("error updating or creating TestWorkflow, unable to migrate SuperAgent, will retry after backoff.",
+							"TestWorkflow", t.Name,
+							"backoff", retryAfter,
+							"error", err.Error())
+						time.Sleep(retryAfter)
+						continue
+					}
+					break
+				}
+			}
+			b.Reset()
+			for _, t := range testWorkflowTemplateList.Items {
+				for {
+					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, t); err != nil {
+						retryAfter := b.Duration()
+						log.DefaultLogger.Errorw("error updating or creating TestWorkflowTemplate, unable to migrate SuperAgent, will retry after backoff.",
+							"TestWorkflowTemplate", t.Name,
+							"backoff", retryAfter,
+							"error", err.Error())
+						time.Sleep(retryAfter)
+						continue
+					}
+					break
+				}
+			}
+			b.Reset()
+			for _, t := range webhookList.Items {
+				for {
+					if err := syncStore.UpdateOrCreateWebhook(ctx, t); err != nil {
+						retryAfter := b.Duration()
+						log.DefaultLogger.Errorw("error updating or creating Webhook, unable to migrate SuperAgent, will retry after backoff.",
+							"Webhook", t.Name,
+							"backoff", retryAfter,
+							"error", err.Error())
+						time.Sleep(retryAfter)
+						continue
+					}
+					break
+				}
+			}
+			b.Reset()
+			for _, t := range webhookTemplateList.Items {
+				for {
+					if err := syncStore.UpdateOrCreateWebhookTemplate(ctx, t); err != nil {
+						retryAfter := b.Duration()
+						log.DefaultLogger.Errorw("error updating or creating WebhookTemplate, unable to migrate SuperAgent, will retry after backoff.",
+							"WebhookTemplate", t.Name,
+							"backoff", retryAfter,
+							"error", err.Error())
+						time.Sleep(retryAfter)
+						continue
+					}
+					break
+				}
+			}
+			b.Reset()
+
+			// Inform the Control Plane that we have synchronised and can now safely migrate.
+			if _, err := grpcClient.MigrateSuperAgent(ctx, &cloud.MigrateSuperAgentRequest{}); err != nil { //nolint:staticcheck // Marked as deprecated so nobody else is tempted to use it.
+				// On a failure log and retry with a backoff just in case.
+				retryAfter := migrationBackoff.Duration()
+				log.DefaultLogger.Errorw("Failed to migrate SuperAgent, will retry after backoff.",
+					"backoff", retryAfter,
+					"error", err)
+				time.Sleep(retryAfter)
+				continue
+			}
+
+			// Once everything has successfully migrated, die. The expectation is that the agent will be restarted
+			// causing it to requery the ProContext resulting in the IsSuperAgent field now being set to "false"
+			// resulting in the agent no longer operating as a Super Agent and instead being successfully migrated
+			// to a regular agent with capabilities.
+			log.DefaultLogger.Infow("migrated super agent successfully, agent will now restart in normal agent mode.")
+			os.Exit(0)
+		}
+	}
+
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
@@ -560,30 +765,15 @@ func main() {
 
 		// Create Sync Controllers
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
-			var store interface {
-				synccontroller.TestTriggerStore
-				synccontroller.TestWorkflowStore
-				synccontroller.TestWorkflowTemplateStore
-				synccontroller.WebhookStore
-				synccontroller.WebhookTemplateStore
-			}
-			store = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
-			// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
-			// connect and so we need to fallback to an implementation that doesn't do anything.
-			if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
-				log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
-				store = syncagent.NoOpStore{}
-			}
-
-			err = synccontroller.NewTestTriggerSyncController(mgr, store)
+			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestTrigger sync controller", err)
-			err = synccontroller.NewTestWorkflowSyncController(mgr, store)
+			err = synccontroller.NewTestWorkflowSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflow sync controller", err)
-			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, store)
+			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflowTemplate sync controller", err)
-			err = synccontroller.NewWebhookSyncController(mgr, store)
+			err = synccontroller.NewWebhookSyncController(mgr, syncStore)
 			commons.ExitOnError("creating Webhook sync controller", err)
-			err = synccontroller.NewWebhookTemplateSyncController(mgr, store)
+			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
 		}
 
