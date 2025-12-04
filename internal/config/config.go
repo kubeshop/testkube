@@ -239,6 +239,7 @@ type Config struct {
 
 	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	ForceSuperAgentMode     bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"true"` // Default true during initial testing, change to default false when ready to begin migrations.
 }
 
 type DeprecatedConfig struct {
