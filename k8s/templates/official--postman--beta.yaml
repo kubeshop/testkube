@@ -6,9 +6,6 @@ metadata:
     testkube.io/name: Postman
     testkube.io/wizard: disabled
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "19"
-    helm.sh/hook-delete-policy: hook-failed,before-hook-creation
     testkube.io/categories: API
     testkube.io/description: Run Postman tests
     testkube.io/icon: postman
