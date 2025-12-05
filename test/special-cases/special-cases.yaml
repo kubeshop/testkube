@@ -202,6 +202,23 @@ spec:
           echo UID/GUID incorrect!
           exit 1
         fi
+  - name: Parallel ENV checks
+    parallel:
+      count: 1
+      steps:
+        - name: Parallel step
+          run:
+            securityContext:
+              runAsUser: 500
+              runAsGroup: 1000
+            shell: |
+              if [ "$(id -u)" = "500" ] && [ "$(id -g)" = "1000" ]; then
+                echo UID/GUID correct
+                exit 0
+              else
+                echo UID/GUID incorrect!
+                exit 1
+              fi
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
