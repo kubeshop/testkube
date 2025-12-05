@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubeshop/testkube/k8s/templates"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -123,4 +125,39 @@ func templateWithName(name string) func(testkube.TestWorkflowTemplate) bool {
 	return func(template testkube.TestWorkflowTemplate) bool {
 		return template.Name == name
 	}
+}
+
+// CleanUpOldHelmTemplates will remove the old Custom Resources within Kubernetes.
+// These were deployed through a Helm Hook and will stay around forever until
+// deleted manually.
+func CleanUpOldHelmTemplates(ctx context.Context, client client.Client, restConfig *rest.Config, namespace string) error {
+	c, err := NewKubernetesTestWorkflowTemplateClient(client, restConfig, namespace, true)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range []string{
+		"distribute--evenly",
+		"official--artillery--beta",
+		"official--artillery--v1",
+		"official--cypress--beta",
+		"official--cypress--v1",
+		"official--gradle--beta",
+		"official--gradle--v1",
+		"official--jmeter--beta",
+		"official--jmeter--v1",
+		"official--jmeter--v2",
+		"official--k6--beta",
+		"official--k6--v1",
+		"official--maven--beta",
+		"official--maven--v1",
+		"official--playwright--beta",
+		"official--playwright--v1",
+		"official--postman--beta",
+		"official--postman--v1",
+	} {
+		_ = c.Delete(ctx, "", name)
+	}
+
+	return nil
 }
