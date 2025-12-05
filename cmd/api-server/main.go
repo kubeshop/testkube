@@ -313,6 +313,41 @@ func main() {
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
+	// Configure SyncStore here as it is required for the SuperAgent migration.
+	// This setup can be moved back down to just before the controller initialisation
+	// when the SuperAgent migration has been removed.
+	var syncStore interface {
+		synccontroller.TestTriggerStore
+		synccontroller.TestWorkflowStore
+		synccontroller.TestWorkflowTemplateStore
+		synccontroller.WebhookStore
+		synccontroller.WebhookTemplateStore
+	}
+	syncStore = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
+	// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
+	// connect and so we need to fallback to an implementation that doesn't do anything.
+	if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
+		log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
+		syncStore = syncagent.NoOpStore{}
+	}
+
+	// SUPER AGENT DEPRECATION MIGRATION
+	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
+	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
+	// to force migration of Agents.
+	migrateSuperAgent(ctx, log.DefaultLogger,
+		superAgentMigrationConfig{
+			proContextCloudStorageSupportedInControlPlane: proContext.CloudStorageSupportedInControlPlane,
+			proContextAgentIsSuperAgent:                   proContext.Agent.IsSuperAgent,
+			forceSuperAgentMode:                           cfg.ForceSuperAgentMode,
+			terminationLogPath:                            cfg.TerminationLogPath,
+			namespace:                                     cfg.TestkubeNamespace,
+		},
+		grpcClient,
+		kubeClient,
+		syncStore,
+	)
+
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, &proContext)
@@ -560,30 +595,15 @@ func main() {
 
 		// Create Sync Controllers
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
-			var store interface {
-				synccontroller.TestTriggerStore
-				synccontroller.TestWorkflowStore
-				synccontroller.TestWorkflowTemplateStore
-				synccontroller.WebhookStore
-				synccontroller.WebhookTemplateStore
-			}
-			store = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
-			// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
-			// connect and so we need to fallback to an implementation that doesn't do anything.
-			if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
-				log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
-				store = syncagent.NoOpStore{}
-			}
-
-			err = synccontroller.NewTestTriggerSyncController(mgr, store)
+			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestTrigger sync controller", err)
-			err = synccontroller.NewTestWorkflowSyncController(mgr, store)
+			err = synccontroller.NewTestWorkflowSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflow sync controller", err)
-			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, store)
+			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflowTemplate sync controller", err)
-			err = synccontroller.NewWebhookSyncController(mgr, store)
+			err = synccontroller.NewWebhookSyncController(mgr, syncStore)
 			commons.ExitOnError("creating Webhook sync controller", err)
-			err = synccontroller.NewWebhookTemplateSyncController(mgr, store)
+			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
 		}
 

@@ -105,6 +105,15 @@ service TestKubeCloudAPI {
     rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate) {
       option deprecated = true;
     };
+
+    // MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+    // to indicate to a server that it has succesfully performed all pre-migration operations
+    // and should now be considered to be a regular agent with capabilities.
+    // This RPC is defined as part of the legacy Service as it will be removed after "Super"
+    // Agents are no longer an applicable Agent type.
+    rpc MigrateSuperAgent(MigrateSuperAgentRequest) returns (MigrateSuperAgentResponse) {
+      option deprecated = true;
+    };
 }
 
 enum LogsStreamRequestType {
@@ -201,6 +210,7 @@ message ProContextAgent {
   bool disabled = 4;
   map<string, string> labels = 5;
   repeated ProContextEnvironment environments = 6;
+  bool is_super_agent = 7;
 }
 
 message ProContextResponse {
@@ -906,3 +916,8 @@ message WebhookUpdate {
   UpdateType type = 3;
   bytes resource = 4; // Webhook
 }
+
+message MigrateSuperAgentRequest {}
+
+message MigrateSuperAgentResponse {}
+
