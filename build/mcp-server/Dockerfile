@@ -21,6 +21,9 @@ RUN cd cmd/kubectl-testkube && \
 
 # Final stage
 FROM ${ALPINE_IMAGE}
+ARG VERSION=1.0.0
+ARG GIT_SHA=unknown
+
 RUN apk --no-cache add ca-certificates
 
 # Create non-root user
@@ -28,6 +31,20 @@ RUN adduser -D -s /bin/sh -u 1001 mcpuser
 
 # Copy the binary
 COPY --from=build /app/kubectl-testkube /bin/kubectl-testkube
+
+# MCP Registry validation labels
+LABEL io.modelcontextprotocol.server.name="io.github.kubeshop/testkube-mcp"
+LABEL io.github.kubeshop.testkube-mcp.name="testkube-mcp"
+LABEL org.opencontainers.image.title="Testkube MCP Server"
+LABEL org.opencontainers.image.description="The Testkube MCP Server exposes tools for Test Execution, Troubleshooting and Analysis to your AI-enabled Agents and IDEs"
+LABEL org.opencontainers.image.url="https://github.com/kubeshop/testkube"
+LABEL org.opencontainers.image.source="https://github.com/kubeshop/testkube"
+LABEL org.opencontainers.image.documentation="https://docs.testkube.io/articles/mcp-overview"
+LABEL org.opencontainers.image.vendor="Kubeshop"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
+
 RUN chmod +x /bin/kubectl-testkube
 
 # Create symbolic links for convenience
