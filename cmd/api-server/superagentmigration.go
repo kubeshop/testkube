@@ -66,8 +66,8 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			// Attempt to write to the termination log to make cluster operators' lives easier when working out why
 			// the Agent is dying. Errors here are ignored as this is a nice to have and we're about to die so there
 			// isn't any relevant error handling to perform here.
-			_ = os.WriteFile(cfg.terminationLogPath, []byte("Insecure TLS settings configured"), os.ModePerm)
-			os.Exit(1)
+			_ = os.WriteFile(cfg.terminationLogPath, []byte("Insecure TLS settings configured"), os.ModePerm) //nolint:govet // This code is unreachable on purpose to enable simpler migration to enforced TLS and migrations in the future
+			os.Exit(1)                                                                                        //nolint:govet // This code is unreachable on purpose to enable simpler migration to enforced TLS and migrations in the future
 		}
 		b := backoff.New(0, 0)
 		// The eventual migration call itself requires its own backoff as the other backoff is
