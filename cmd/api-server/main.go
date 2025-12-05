@@ -346,6 +346,11 @@ func main() {
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
+	err = testworkflowtemplateclient.CleanUpOldHelmTemplates(ctx, kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	if err != nil {
+		log.DefaultLogger.Warnw("cannot clean up old helm templates", "error", err.Error())
+	}
+
 	defaultExecutionNamespace := cfg.TestkubeNamespace
 	if cfg.DefaultExecutionNamespace != "" {
 		defaultExecutionNamespace = cfg.DefaultExecutionNamespace

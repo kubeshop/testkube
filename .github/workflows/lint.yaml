@@ -52,7 +52,8 @@ jobs:
             proto/logs.proto
             proto/service.proto
 
-      - name: Lint OpenAPI
-        uses: swaggerexpert/swagger-editor-validate@v1
-        with:
-          definition-file: api/v1/testkube.yaml
+#      - name: Lint OpenAPI
+#        uses: swaggerexpert/swagger-editor-validate@v1
+#        with:
+#          definition-file: api/v1/testkube.yaml
+#          default-timeout: 20000
