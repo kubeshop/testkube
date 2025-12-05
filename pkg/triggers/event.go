@@ -7,9 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
@@ -129,6 +131,8 @@ func (s Service) newWatcherEvent(
 		opt(w)
 	}
 
+	sanitizeEventLabelValues(w.EventLabels, s.logger)
+
 	return w
 }
 
@@ -230,4 +234,61 @@ func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.C
 
 	causes = append(causes, testtrigger.Cause(fmt.Sprintf("%s%s", testkubeEventCausePrefix, event.Reason)))
 	return event.InvolvedObject.Name, causes
+}
+
+func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogger) {
+	for key, value := range labels {
+		if errs := validation.IsValidLabelValue(value); len(errs) == 0 {
+			continue
+		}
+
+		sanitized := strings.Map(func(r rune) rune {
+			if isAllowedLabelRune(r) {
+				return r
+			}
+			return '-'
+		}, value)
+
+		if len(sanitized) > validation.LabelValueMaxLength {
+			sanitized = sanitized[:validation.LabelValueMaxLength]
+		}
+
+		sanitized = strings.TrimLeftFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+		sanitized = strings.TrimRightFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+
+		if sanitized == "" {
+			if logger != nil {
+				logger.Debugf("dropping event label %s because value %q is empty after sanitization", key, value)
+			}
+			delete(labels, key)
+			continue
+		}
+
+		if errs := validation.IsValidLabelValue(sanitized); len(errs) == 0 {
+			if logger != nil && sanitized != value {
+				logger.Debugf(
+					"sanitized event label %s from %q to %q to satisfy Kubernetes label constraints",
+					key, value, sanitized,
+				)
+			}
+			labels[key] = sanitized
+			continue
+		}
+
+		if logger != nil {
+			logger.Warnf(
+				"dropping event label %s=%q because it is invalid after sanitization: %v",
+				key, value, validation.IsValidLabelValue(sanitized),
+			)
+		}
+		delete(labels, key)
+	}
+}
+
+func isAllowedLabelRune(r rune) bool {
+	return isAlphaNumeric(r) || r == '-' || r == '_' || r == '.'
+}
+
+func isAlphaNumeric(r rune) bool {
+	return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
 }
