@@ -343,9 +343,12 @@ func main() {
 	if proContext.CloudStorageSupportedInControlPlane && proContext.Agent.IsSuperAgent && !cfg.ForceSuperAgentMode {
 		// If the sync store is a NoOpStore then TLS is not enabled and migration cannot progress.
 		if _, ok := syncStore.(syncagent.NoOpStore); ok {
+			// Attempt to write to the termination log to make cluster operators' lives easier when working out why
+			// the Agent is dying. Errors here are ignored as this is a nice to have and we're about to die so there
+			// isn't any relevant error handling to perform here.
+			_ = os.WriteFile(cfg.TerminationLogPath, []byte("Insecure TLS settings configured"), os.ModePerm)
 			log.DefaultLogger.Error("Unable to perform Super Agent migration when TLS is not configured. Please configure TLS and restart the Agent to perform migration and enable Agent functionality.")
-			// Block forever as this Agent should be migrating but is inappropriately configured to do so.
-			select {}
+			os.Exit(1)
 		}
 		b := backoff.New(0, 0)
 		// The eventual migration call itself requires its own backoff as the other backoff is
