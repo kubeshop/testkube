@@ -8,7 +8,7 @@ on:
       - "[0-9].[0-9]+.[0-9]+-dev.[0-9]+"
       - "[0-9].[0-9]+.[0-9]+-beta.[0-9]+"
     branches:
-      - "*"
+      - "**"
 env:
   ALPINE_IMAGE: alpine:3.20.6
   BUSYBOX_IMAGE: busybox:1.36.1-musl
