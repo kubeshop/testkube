@@ -1,0 +1,21 @@
+dependencies:
+- name: testkube-operator
+  repository: file://../testkube-operator
+  version: 2.3.0-rc.0
+- name: mongodb
+  repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
+  version: 8.0.15-0
+- name: postgresql
+  repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
+  version: 0.1.0
+- name: nats
+  repository: file://./charts/nats
+  version: 1.2.6-4
+- name: testkube-api
+  repository: file://../testkube-api
+  version: 2.5.0-rc.0
+- name: global
+  repository: file://../global
+  version: 0.1.3
+digest: sha256:31bf0fb4f6465b8342ab2a935652e993e62b4f1f32d79defb9874941e49b6eb1
+generated: "2025-12-04T15:36:08.604194+01:00"

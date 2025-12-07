@@ -15,6 +15,13 @@ global:
     # can be overridden by individual image registry
     registry:
 
+  # -- Global Tolerations
+  tolerations: []
+  # -- Global NodeSelector
+  nodeSelector: {}
+  # -- Global Affinity
+  affinity: {}
+
   # global labels will be applied to all resources deployed by the chart
   labels: {}
   # -- Security Context for all pods

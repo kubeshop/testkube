@@ -93,12 +93,30 @@ func (e *Emitter) Register(listener common.Listener) {
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.clusterName
-	err := e.bus.PublishTopic(e.eventTopic(event), event)
+	topic := e.eventTopic(event)
+
+	eventType := "unknown"
+	if event.Type_ != nil {
+		eventType = string(*event.Type_)
+	}
+
+	e.log.Debugw("publishing event",
+		"event_type", eventType,
+		"topic", topic,
+		"resource", event.Resource,
+		"resource_id", event.ResourceId)
+
+	err := e.bus.PublishTopic(topic, event)
 	if err != nil {
-		e.log.Errorw("error publishing event", append(event.Log(), "error", err))
+		e.log.Errorw("failed to publish event",
+			"event_type", eventType,
+			"topic", topic,
+			"error", err)
 		return
 	}
-	e.log.Debugw("event published", event.Log()...)
+	e.log.Debugw("event published successfully",
+		"event_type", eventType,
+		"topic", topic)
 }
 
 // eventTopic returns topic to publish a particular evnet.
@@ -216,12 +234,18 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 	e.loadListeners(e.Reconcile())
 	log.Tracew(e.log, "reconciled listeners", e.ListenersDump()...)
 	// Subscribe and handle events
-	e.log.Infow("event emitter leader subscribing to events")
-	err := e.bus.SubscribeTopic(e.subjectRoot+".>", eventEmitterQueueName, e.leaderEventHandler)
+	subscribeSubject := e.subjectRoot + ".>"
+	e.log.Infow("event emitter leader subscribing to events",
+		"subject", subscribeSubject,
+		"queue_name", eventEmitterQueueName)
+	err := e.bus.SubscribeTopic(subscribeSubject, eventEmitterQueueName, e.leaderEventHandler)
 	if err != nil {
-		e.log.Errorw("error while starting to listen for events", "error", err)
+		e.log.Errorw("error while starting to listen for events",
+			"subject", subscribeSubject,
+			"error", err)
 	}
-	e.log.Infow("event emitter leader subscribed to events")
+	e.log.Infow("event emitter leader subscribed to events",
+		"subject", subscribeSubject)
 	// Reconcilation loop
 	e.log.Info("event emitter leader started reconciler")
 	ticker := time.NewTicker(reconcileInterval)
@@ -239,11 +263,26 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 }
 
 func (e *Emitter) leaderEventHandler(event testkube.Event) error {
+	// Log event received by leader
+	eventType := "unknown"
+	if event.Type_ != nil {
+		eventType = string(*event.Type_)
+	}
+	e.log.Infow("leader received event",
+		"event_type", eventType,
+		"resource", event.Resource,
+		"resource_id", event.ResourceId,
+		"event_groupid", event.GroupId)
+
 	// Current set of listeners
 	e.mutex.Lock()
 	listenersSnapshot := make([]common.Listener, len(e.listeners))
 	copy(listenersSnapshot, e.listeners)
 	e.mutex.Unlock()
+
+	// Track matched listeners
+	matchedCount := 0
+
 	// Find listeners that match the event
 	for _, l := range listenersSnapshot {
 		logger := e.log.With("listen-on", l.Events(), "selector", l.Selector(), "metadata", l.Metadata())
@@ -252,12 +291,38 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			continue
 		}
 		// Event type fanout
-		matchedEventTypes, _ := event.Valid(l.Group(), l.Selector(), l.Events())
+		matchedEventTypes, valid := event.Valid(l.Group(), l.Selector(), l.Events())
+		if !valid {
+			e.log.Infow("listener did not match event",
+				"listener_name", l.Name(),
+				"listener_kind", l.Kind(),
+				"listener_group", l.Group(),
+				"event_groupid", event.GroupId,
+				"matched", false)
+			continue
+		}
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]
+			matchedCount++
+			e.log.Infow("notifying listener",
+				"listener_name", l.Name(),
+				"listener_kind", l.Kind(),
+				"event_type", string(matchedEventTypes[i]))
 			go notifyListener(logger, l, event)
 		}
 	}
+
+	if matchedCount == 0 {
+		e.log.Debugw("no listeners matched event",
+			"event_type", eventType,
+			"total_listeners", len(listenersSnapshot))
+	} else {
+		e.log.Infow("event matched listeners",
+			"event_type", eventType,
+			"matched_count", matchedCount,
+			"total_listeners", len(listenersSnapshot))
+	}
+
 	return nil
 }
 
@@ -265,8 +330,20 @@ func notifyListener(logger *zap.SugaredLogger, listener common.Listener, event t
 	// TODO(emil): Held over from old implementation. These results are just
 	// logged, not sure there is much point even returning them, can just log
 	// in the listener and all this can be simplified to use Notify.
+	eventType := "unknown"
+	if event.Type_ != nil {
+		eventType = string(*event.Type_)
+	}
+
 	result := listener.Notify(event)
-	log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
+
+	if result.Error() != "" {
+		logger.Errorw("listener notification failed",
+			"listener_name", listener.Name(),
+			"listener_kind", listener.Kind(),
+			"event_type", eventType,
+			"error", result.Error())
+	}
 }
 
 // ListenersDump dumps all the currently reconciled listeners in an array for debugging.
