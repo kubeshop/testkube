@@ -1,0 +1,85 @@
+name: Release MCP Server to MCP Registry
+
+on:
+  # Trigger on final release tags only (e.g., 1.19.0)
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+  # Allow manual triggering for testing or re-publishing
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 1.19.0)'
+        required: true
+        type: string
+
+permissions:
+  id-token: write  # Required for GitHub OIDC authentication with MCP Registry
+  contents: read
+
+env:
+  DOCKER_IMAGE: kubeshop/mcp-server
+
+jobs:
+  publish_to_mcp_registry:
+    name: Publish to MCP Registry
+    runs-on: depot-ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # Manual trigger - use input version
+            echo "tag=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "Using version: ${{ inputs.version }}"
+          else
+            # Tag push - extract version from tag
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "Using version from tag: $TAG"
+          fi
+
+      - name: Update server.json with version
+        run: |
+          cd build/mcp-server
+          # Update both the top-level version and the Docker image identifier
+          jq --arg version "${{ steps.tag.outputs.tag }}" \
+            '.version = $version | .packages[0].identifier = "docker.io/kubeshop/mcp-server:" + $version' \
+            server.json > server.json.tmp
+          mv server.json.tmp server.json
+
+          echo "Updated server.json:"
+          cat server.json
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz
+          chmod +x mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Authenticate via GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: |
+          cd build/mcp-server
+          ../../mcp-publisher publish
+
+      - name: Verify publication
+        run: |
+          echo "Waiting for registry to update..."
+          sleep 30
+
+          echo "Verifying publication..."
+          curl -f https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp || \
+            echo "Warning: Could not verify publication immediately. It may take a few minutes to appear."
+
+      - name: Summary
+        run: |
+          echo "MCP Server v${{ steps.tag.outputs.tag }} published to MCP Registry"
+          echo "Registry URL: https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp"
