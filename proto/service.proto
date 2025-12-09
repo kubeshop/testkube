@@ -84,6 +84,7 @@ service TestKubeCloudAPI {
     rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem) {
       option deprecated = true;
     };
+    rpc ListWebhooksV2(ListWebhooksV2Request) returns (ListWebhooksResponse);
     rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse) {
       option deprecated = true;
     };
@@ -838,9 +839,23 @@ message ListWebhooksRequest {
   string namespace = 6;
 }
 
+message ListWebhooksV2Request {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
 message WebhookListItem {
   option deprecated = true;
   bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksResponse {
+  repeated WebhookListItem items = 1;
+  uint32 total = 2;
 }
 
 message ListWebhookLabelsRequest {
@@ -922,4 +937,3 @@ message MigrateSuperAgentRequest {
 }
 
 message MigrateSuperAgentResponse {}
-
