@@ -10015,6 +10015,8 @@ components:
       properties:
         git:
           $ref: "#/components/schemas/TestWorkflowContentGit"
+        minio:
+          $ref: "#/components/schemas/TestWorkflowContentMinio"
         files:
           type: array
           items:
@@ -10093,6 +10095,35 @@ components:
       required:
       - url
       - path
+
+    TestWorkflowContentMinio:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          description: endpoint for the MinIO/S3 storage
+        bucket:
+          type: string
+          description: bucket name to fetch from
+        path:
+          type: string
+          description: path within the bucket to fetch
+        region:
+          type: string
+          description: region for the storage
+        accessKey:
+          type: string
+          description: plain text access key to fetch with
+        accessKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        secretKey:
+          type: string
+          description: plain text secret key to fetch with
+        secretKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        mountPath:
+          type: string
+          description: where to mount the fetched bucket contents (defaults to "minio" directory in the data volume)
 
     TestWorkflowRef:
       type: object
