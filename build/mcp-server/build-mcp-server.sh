@@ -6,7 +6,7 @@
 set -e
 
 # Default values
-TAG=${1:-"kubeshop/mcp-server:latest"}
+TAG=${1:-"testkube/mcp-server:latest"}
 VERSION=${VERSION:-"1.0.0"}
 GIT_SHA=${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")}
 
@@ -21,8 +21,6 @@ docker buildx build \
   --file build/mcp-server/Dockerfile \
   --build-arg VERSION="$VERSION" \
   --build-arg GIT_SHA="$GIT_SHA" \
-  --label "org.opencontainers.image.version=$VERSION" \
-  --label "org.opencontainers.image.revision=$GIT_SHA" \
   --tag "$TAG" \
   --push \
   .
@@ -54,8 +52,6 @@ docker buildx build \
   --file build/mcp-server/Dockerfile \
   --build-arg VERSION="$VERSION" \
   --build-arg GIT_SHA="$GIT_SHA" \
-  --label "org.opencontainers.image.version=$VERSION" \
-  --label "org.opencontainers.image.revision=$GIT_SHA" \
   --tag "$LOCAL_TAG" \
   --load \
   .
