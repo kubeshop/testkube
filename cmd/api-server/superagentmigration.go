@@ -51,9 +51,14 @@ type superAgentMigrationSyncStore interface {
 // - The Control Plane supports being a Source of Truth.
 // - The current Agent is still considered to be a Super Agent by the Control Plane.
 // - The current Agent is not being held back as a Super Agent by an override.
-// If the migration is not possible then this function will cause the entire program to exit.
 // If the migration completes successfully then this function will cause the entire program to exit.
 // This function will block until the migration is successfully completed.
+// Additionally in a specific circumstance this function will attempt to rollback the agent to a super
+// agent, this rollback can only occur if:
+// - The current Agent is not considered to be a Super Agent by the Control Plane.
+// - The current Agent is being held back as a Super Agent by an override.
+// As with forward migration this function will block until the rollback is successful and then will
+// exit the entire program.
 func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg superAgentMigrationConfig, grpcClient superAgentMigrationGRPCClient, kubeClient superAgentMigrationKubernetesResourceLister, syncStore superAgentMigrationSyncStore) {
 	if cfg.proContextCloudStorageSupportedInControlPlane && cfg.proContextAgentIsSuperAgent && !cfg.forceSuperAgentMode {
 		// If the sync store is a NoOpStore then TLS is not enabled and migration cannot progress.
@@ -236,6 +241,30 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			// resulting in the agent no longer operating as a Super Agent and instead being successfully migrated
 			// to a regular agent with capabilities.
 			log.Infow("migrated super agent successfully, agent will now restart in normal agent mode.")
+			os.Exit(0)
+		}
+	} else if !cfg.proContextAgentIsSuperAgent && cfg.forceSuperAgentMode {
+		log.Infow("Rolling back agent to super agent. This may result in data added to the Control Plane no longer being accessible!")
+		// If the agent is not currently considered to be a super agent, but the user has requested
+		// that super agent mode is forced, then rollback the super agent migration.
+		b := backoff.New(0, 0)
+		// As with forward migration, we need this migration to go through before anything else can
+		// start up, so keep retrying until the migration is accepted.
+		for {
+			if _, err := grpcClient.MigrateSuperAgent(ctx, &cloud.MigrateSuperAgentRequest{Rollback: true}); err != nil { //nolint:staticcheck // Marked as deprecated so nobody else is tempted to use it.
+				// On a failure log and retry with a backoff just in case.
+				retryAfter := b.Duration()
+				log.Errorw("Failed to rollback Agent to SuperAgent, will retry after backoff.",
+					"backoff", retryAfter,
+					"error", err)
+				time.Sleep(retryAfter)
+				continue
+			}
+
+			// Once everything has successfully migrated, die. The expectation is that the agent will be restarted
+			// causing it to requery the ProContext resulting in the IsSuperAgent field now being set to "true"
+			// resulting in the agent operating as a Super Agent.
+			log.Infow("Rolled back super agent successfully, agent will now restart in super agent mode.")
 			os.Exit(0)
 		}
 	}
