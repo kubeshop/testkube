@@ -917,7 +917,9 @@ message WebhookUpdate {
   bytes resource = 4; // Webhook
 }
 
-message MigrateSuperAgentRequest {}
+message MigrateSuperAgentRequest {
+  bool rollback = 1;
+}
 
 message MigrateSuperAgentResponse {}
 
