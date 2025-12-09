@@ -1,0 +1,110 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.kubeshop/testkube-mcp",
+  "description": "MCP server for Testkube - Manage test workflows, executions, and artifacts via AI assistants",
+  "icons": [
+    {
+      "src": "https://avatars.githubusercontent.com/u/82541796?v=4",
+      "mimeType": "image/png",
+      "sizes": ["any"]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/kubeshop/testkube",
+    "source": "github"
+  },
+  "homepage": "https://testkube.io",
+  "documentation": "https://docs.testkube.io/articles/mcp-overview",
+  "license": "MIT",
+  "version": "1.0.1",
+  "tags": [
+    "testing",
+    "kubernetes",
+    "test-automation",
+    "ci-cd",
+    "workflows",
+    "test-orchestration",
+    "ai-testing",
+    "devops"
+  ],
+  "authors": [
+    {
+      "name": "Testkube",
+      "url": "https://testkube.io"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "docker.io/kubeshop/mcp-server:latest",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "TK_ACCESS_TOKEN",
+          "description": "Testkube access token for authentication",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "TK_ORG_ID",
+          "description": "Testkube organization ID",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_ENV_ID",
+          "description": "Testkube environment ID",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_CONTROL_PLANE_URL",
+          "description": "Testkube Control Plane URL (default: https://api.testkube.io)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_DASHBOARD_URL",
+          "description": "Testkube Dashboard URL",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_DEBUG",
+          "description": "Enable debug mode (default: false)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_MCP_TRANSPORT",
+          "description": "MCP transport type: stdio or shttp (default: stdio)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_MCP_SHTTP_HOST",
+          "description": "SHTTP host when using shttp transport",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TK_MCP_SHTTP_PORT",
+          "description": "SHTTP port when using shttp transport",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
