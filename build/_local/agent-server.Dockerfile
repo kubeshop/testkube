@@ -29,7 +29,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
     go build \
       -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
       -ldflags="-X github.com/kubeshop/testkube/pkg/version.Version=${VERSION} -X github.com/kubeshop/testkube/pkg/version.Commit=${GIT_SHA} -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=${SLACK_BOT_CLIENT_ID} -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=${SLACK_BOT_CLIENT_SECRET} -X github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants.DefaultImage=${BUSYBOX_IMAGE} -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=${ANALYTICS_TRACKING_ID} -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=${ANALYTICS_API_KEY} -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey=${SEGMENTIO_KEY} -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey=${CLOUD_SEGMENTIO_KEY}" \
-      -o build/_local/agent-server ./cmd/api-server/...
+      -o build/_local/agent-server github.com/kubeshop/testkube/cmd/api-server
 
 ###################################
 ## Debug
