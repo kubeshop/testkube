@@ -21,7 +21,7 @@ spec:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 1200
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}
@@ -49,6 +49,7 @@ spec:
   - name: Install dependencies
     shell: npm install
   - name: Run tests
+    timeout: 15m
     shell: npx playwright test --retries=1
     artifacts:
       paths:
@@ -80,7 +81,7 @@ spec:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 1200
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}
