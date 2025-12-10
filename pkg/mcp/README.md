@@ -84,6 +84,27 @@ The MCP server exposes 20 tools organized into five categories:
 - `list_resource_groups` - List resource groups in the organization
 - `list_agents` - List agents with filtering (type, capability, pagination)
 
+### Available Resources
+
+The MCP server exposes 7 TestWorkflow example resources that help AI assistants understand the TestWorkflow schema and best practices:
+
+1. **postman-simple** - A simple Postman workflow that runs a collection with environment variables
+2. **playwright-e2e** - A Playwright workflow with artifacts, JUnit reports, and trace collection
+3. **k6-load-test** - A k6 workflow for load testing with custom configuration
+4. **special-cases-env-override** - Demonstrates ENV variable overrides at different levels (container, step, parallel)
+5. **special-cases-retries** - Demonstrates retry logic and conditional step execution
+6. **parallel-execution** - Demonstrates parallel step execution and matrix workflows
+7. **artifacts-and-junit** - Demonstrates artifact collection and JUnit report generation
+
+These resources are available via the MCP protocol using URIs like `testworkflow://examples/postman-simple`. AI assistants can read these resources to understand the TestWorkflow schema before creating or modifying workflows.
+
+**Note for maintainers:** When adding new resources to `pkg/mcp/resources/`, ensure that:
+
+1. The resource examples are placed in `pkg/mcp/resources/examples/` directory
+2. The resources are registered in `pkg/mcp/resources/testworkflow_examples.go`
+3. The resources follow the TestWorkflow schema and represent real-world use cases
+4. Resources are added to both the CLI and control plane MCP servers
+
 **Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
 
 1. The tool follows the interface-based design pattern (see existing tools for examples)
