@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudflare/backoff"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -15,6 +16,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	syncagent "github.com/kubeshop/testkube/internal/sync"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 )
 
 type superAgentMigrationLogger interface {
@@ -24,6 +26,7 @@ type superAgentMigrationLogger interface {
 
 type superAgentMigrationConfig struct {
 	agentId                                          string
+	apiKey                                           string
 	proContextControlPlaneHasSourceOfTruthCapability bool
 	proContextAgentIsSuperAgent                      bool
 	forceSuperAgentMode                              bool
@@ -62,6 +65,9 @@ type superAgentMigrationSyncStore interface {
 // As with forward migration this function will block until the rollback is successful and then will
 // exit the entire program.
 func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg superAgentMigrationConfig, grpcClient superAgentMigrationGRPCClient, kubeClient superAgentMigrationKubernetesResourceLister, syncStore superAgentMigrationSyncStore) {
+	// Add additional metadata to gRPC context.
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs(controlplaneclient.AgentSecretKeyMetadataName, cfg.apiKey))
+
 	isOrWasSuperAgent := strings.HasPrefix(cfg.agentId, "tkcroot_")
 	if !isOrWasSuperAgent || !cfg.proContextControlPlaneHasSourceOfTruthCapability {
 		return

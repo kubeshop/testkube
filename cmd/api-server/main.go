@@ -340,6 +340,7 @@ func main() {
 	migrateSuperAgent(ctx, log.DefaultLogger,
 		superAgentMigrationConfig{
 			agentId: proContext.Agent.ID,
+			apiKey:  proContext.APIKey,
 			proContextControlPlaneHasSourceOfTruthCapability: proContext.HasSourceOfTruthCapability,
 			proContextAgentIsSuperAgent:                      proContext.Agent.IsSuperAgent,
 			forceSuperAgentMode:                              cfg.ForceSuperAgentMode,
