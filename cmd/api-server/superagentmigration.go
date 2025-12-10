@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cloudflare/backoff"
@@ -22,11 +23,12 @@ type superAgentMigrationLogger interface {
 }
 
 type superAgentMigrationConfig struct {
-	proContextCloudStorageSupportedInControlPlane bool
-	proContextAgentIsSuperAgent                   bool
-	forceSuperAgentMode                           bool
-	terminationLogPath                            string
-	namespace                                     string
+	agentId                                          string
+	proContextControlPlaneHasSourceOfTruthCapability bool
+	proContextAgentIsSuperAgent                      bool
+	forceSuperAgentMode                              bool
+	terminationLogPath                               string
+	namespace                                        string
 }
 
 type superAgentMigrationGRPCClient interface {
@@ -60,7 +62,12 @@ type superAgentMigrationSyncStore interface {
 // As with forward migration this function will block until the rollback is successful and then will
 // exit the entire program.
 func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg superAgentMigrationConfig, grpcClient superAgentMigrationGRPCClient, kubeClient superAgentMigrationKubernetesResourceLister, syncStore superAgentMigrationSyncStore) {
-	if cfg.proContextCloudStorageSupportedInControlPlane && cfg.proContextAgentIsSuperAgent && !cfg.forceSuperAgentMode {
+	isOrWasSuperAgent := strings.HasPrefix(cfg.agentId, "tkcroot_")
+	if !isOrWasSuperAgent || !cfg.proContextControlPlaneHasSourceOfTruthCapability {
+		return
+	}
+
+	if cfg.proContextAgentIsSuperAgent && !cfg.forceSuperAgentMode {
 		// If the sync store is a NoOpStore then TLS is not enabled and migration cannot progress.
 		if _, ok := syncStore.(syncagent.NoOpStore); ok {
 			log.Errorw("Unable to perform Super Agent migration when TLS is not configured. Please configure TLS and restart the Agent to perform migration.")

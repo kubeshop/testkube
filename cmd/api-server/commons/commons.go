@@ -335,6 +335,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilitySourceOfTruth) {
+		proContext.HasSourceOfTruthCapability = true
+	}
+
 	return proContext, nil
 }
 
