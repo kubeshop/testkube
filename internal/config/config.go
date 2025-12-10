@@ -186,6 +186,7 @@ type CronJobConfig struct {
 type WebhookConfig struct {
 	DisableWebhooks     bool `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	EnableCloudWebhooks bool `envconfig:"ENABLE_CLOUD_WEBHOOKS" default:"false"`
+	WebhookControlPlane bool `envconfig:"WEBHOOK_CONTROL_PLANE" default:"false"`
 }
 
 type Config struct {

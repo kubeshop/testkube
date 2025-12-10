@@ -89,6 +89,7 @@ type TestKubeCloudAPIClient interface {
 	GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error)
 	// Deprecated: Do not use.
 	ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error)
+	ListWebhooksV2(ctx context.Context, in *ListWebhooksV2Request, opts ...grpc.CallOption) (*ListWebhooksResponse, error)
 	// Deprecated: Do not use.
 	ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error)
 	// Deprecated: Do not use.
@@ -994,6 +995,15 @@ func (x *testKubeCloudAPIListWebhooksClient) Recv() (*WebhookListItem, error) {
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) ListWebhooksV2(ctx context.Context, in *ListWebhooksV2Request, opts ...grpc.CallOption) (*ListWebhooksResponse, error) {
+	out := new(ListWebhooksResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListWebhooksV2", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error) {
 	out := new(ListWebhookLabelsResponse)
@@ -1167,6 +1177,7 @@ type TestKubeCloudAPIServer interface {
 	GetWebhook(context.Context, *GetWebhookRequest) (*GetWebhookResponse, error)
 	// Deprecated: Do not use.
 	ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error
+	ListWebhooksV2(context.Context, *ListWebhooksV2Request) (*ListWebhooksResponse, error)
 	// Deprecated: Do not use.
 	ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error)
 	// Deprecated: Do not use.
@@ -1347,6 +1358,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetWebhook(context.Context, *GetWebho
 }
 func (UnimplementedTestKubeCloudAPIServer) ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListWebhooks not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListWebhooksV2(context.Context, *ListWebhooksV2Request) (*ListWebhooksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWebhooksV2 not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListWebhookLabels not implemented")
@@ -2397,6 +2411,24 @@ func (x *testKubeCloudAPIListWebhooksServer) Send(m *WebhookListItem) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_ListWebhooksV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWebhooksV2Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ListWebhooksV2(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ListWebhooksV2",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ListWebhooksV2(ctx, req.(*ListWebhooksV2Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_ListWebhookLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListWebhookLabelsRequest)
 	if err := dec(in); err != nil {
@@ -2682,6 +2714,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetWebhook",
 			Handler:    _TestKubeCloudAPI_GetWebhook_Handler,
+		},
+		{
+			MethodName: "ListWebhooksV2",
+			Handler:    _TestKubeCloudAPI_ListWebhooksV2_Handler,
 		},
 		{
 			MethodName: "ListWebhookLabels",

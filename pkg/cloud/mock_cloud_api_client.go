@@ -902,6 +902,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) ListWebhooks(ctx, in any, opts
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWebhooks", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).ListWebhooks), varargs...)
 }
 
+// ListWebhooksV2 mocks base method.
+func (m *MockTestKubeCloudAPIClient) ListWebhooksV2(ctx context.Context, in *ListWebhooksV2Request, opts ...grpc.CallOption) (*ListWebhooksResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListWebhooksV2", varargs...)
+	ret0, _ := ret[0].(*ListWebhooksResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWebhooksV2 indicates an expected call of ListWebhooksV2.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) ListWebhooksV2(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWebhooksV2", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).ListWebhooksV2), varargs...)
+}
+
 // MigrateSuperAgent mocks base method.
 func (m *MockTestKubeCloudAPIClient) MigrateSuperAgent(ctx context.Context, in *MigrateSuperAgentRequest, opts ...grpc.CallOption) (*MigrateSuperAgentResponse, error) {
 	m.ctrl.T.Helper()

@@ -66,6 +66,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	cloudwebhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
@@ -304,7 +305,8 @@ func main() {
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	// k8s clients
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	var webhooksClient executorsclientv1.WebhooksInterface = executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	var webhooksLoaderClient webhook.WebhookClient = webhooksClient
 	webhookTemplatesClient := executorsclientv1.NewWebhookTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 
 	envs := commons.GetEnvironmentVariables()
@@ -511,10 +513,14 @@ func main() {
 
 	// Initialize event handlers
 	if !cfg.DisableWebhooks {
+		if cfg.WebhookControlPlane && !cfg.EnableCloudWebhooks {
+			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, log.DefaultLogger)
+			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
+		}
 		log.DefaultLogger.Infow("registering webhook loader", "envID", proContext.EnvID, "orgID", proContext.OrgID)
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
-			webhooksClient,
+			webhooksLoaderClient,
 			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
 			webhook.WithWebhookResultsRepository(webhookRepository),
 			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
