@@ -12,7 +12,6 @@ import (
 )
 
 func TestNewBufferedFileWriter(t *testing.T) {
-	t.Parallel()
 
 	tmpDir := t.TempDir()
 	meta1 := &Metadata{
@@ -37,7 +36,6 @@ func TestNewBufferedFileWriter(t *testing.T) {
 }
 
 func TestInitFile(t *testing.T) {
-	t.Parallel()
 
 	tmpDir := t.TempDir()
 	filename := "test_metrics.txt"
@@ -71,7 +69,6 @@ func TestInitFile(t *testing.T) {
 }
 
 func TestReserveMetadataSpace(t *testing.T) {
-	t.Parallel()
 
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "reserve_test.txt")
@@ -97,7 +94,6 @@ func TestReserveMetadataSpace(t *testing.T) {
 }
 
 func TestBufferedFileWriter_Write(t *testing.T) {
-	t.Parallel()
 
 	tmpDir := t.TempDir()
 	meta := &Metadata{
@@ -133,7 +129,6 @@ func TestBufferedFileWriter_Write(t *testing.T) {
 }
 
 func TestBufferedFileWriter_writeMetadata(t *testing.T) {
-	t.Parallel()
 
 	tmpDir := t.TempDir()
 	meta := &Metadata{
@@ -173,7 +168,6 @@ func TestBufferedFileWriter_writeMetadata(t *testing.T) {
 }
 
 func TestBufferedFileWriter_Close(t *testing.T) {
-	t.Parallel()
 
 	tmpDir := t.TempDir()
 	meta := &Metadata{

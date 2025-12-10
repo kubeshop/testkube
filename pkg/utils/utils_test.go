@@ -36,10 +36,8 @@ func TestRoundDuration(t *testing.T) {
 }
 
 func TestSanitizeName(t *testing.T) {
-	t.Parallel()
 
 	t.Run("name should not be changed", func(t *testing.T) {
-		t.Parallel()
 		//given
 		name := "abc-123"
 
@@ -51,7 +49,6 @@ func TestSanitizeName(t *testing.T) {
 	})
 
 	t.Run("name should be shorted", func(t *testing.T) {
-		t.Parallel()
 		//given
 		name := "abc" + strings.Repeat("0123456789", 10)
 
@@ -63,7 +60,6 @@ func TestSanitizeName(t *testing.T) {
 	})
 
 	t.Run("name should be sanitized", func(t *testing.T) {
-		t.Parallel()
 		//given
 		name := "@#$%!abc()~+123{}<>;"
 
@@ -76,10 +72,8 @@ func TestSanitizeName(t *testing.T) {
 }
 
 func TestNewTemplate(t *testing.T) {
-	t.Parallel()
 
 	t.Run("sprig functions should be available", func(t *testing.T) {
-		t.Parallel()
 		//given
 		template := `{{ default "foo" .Bar }}`
 
