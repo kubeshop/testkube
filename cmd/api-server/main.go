@@ -337,11 +337,12 @@ func main() {
 	// to force migration of Agents.
 	migrateSuperAgent(ctx, log.DefaultLogger,
 		superAgentMigrationConfig{
-			proContextCloudStorageSupportedInControlPlane: proContext.CloudStorageSupportedInControlPlane,
-			proContextAgentIsSuperAgent:                   proContext.Agent.IsSuperAgent,
-			forceSuperAgentMode:                           cfg.ForceSuperAgentMode,
-			terminationLogPath:                            cfg.TerminationLogPath,
-			namespace:                                     cfg.TestkubeNamespace,
+			agentId: proContext.Agent.ID,
+			proContextControlPlaneHasSourceOfTruthCapability: proContext.HasSourceOfTruthCapability,
+			proContextAgentIsSuperAgent:                      proContext.Agent.IsSuperAgent,
+			forceSuperAgentMode:                              cfg.ForceSuperAgentMode,
+			terminationLogPath:                               cfg.TerminationLogPath,
+			namespace:                                        cfg.TestkubeNamespace,
 		},
 		grpcClient,
 		kubeClient,

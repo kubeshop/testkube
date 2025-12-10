@@ -44,6 +44,7 @@ type ProContext struct {
 	DashboardURI                        string
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
+	HasSourceOfTruthCapability          bool
 	Agent                               ProContextAgent
 }
 
