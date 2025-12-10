@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -142,7 +143,7 @@ func TestExampleYAMLContents(t *testing.T) {
 		hasKind := false
 		hasMetadata := false
 
-		lines := splitLines(example.Content)
+		lines := strings.Split(example.Content, "\n")
 		for _, line := range lines {
 			if len(line) >= 11 && line[:11] == "apiVersion:" {
 				hasApiVersion = true
@@ -165,22 +166,4 @@ func TestExampleYAMLContents(t *testing.T) {
 			t.Errorf("Example %s is missing 'metadata:' field", example.Name)
 		}
 	}
-}
-
-// Helper function to split content into lines
-func splitLines(content string) []string {
-	var lines []string
-	current := ""
-	for _, c := range content {
-		if c == '\n' {
-			lines = append(lines, current)
-			current = ""
-		} else {
-			current += string(c)
-		}
-	}
-	if current != "" {
-		lines = append(lines, current)
-	}
-	return lines
 }
