@@ -86,24 +86,24 @@ The MCP server exposes 20 tools organized into five categories:
 
 ### Available Resources
 
-The MCP server exposes 7 TestWorkflow example resources that help AI assistants understand the TestWorkflow schema and best practices:
+The MCP server exposes 4 TestWorkflow example resources that help AI assistants understand the TestWorkflow schema and best practices. These resources point directly to actual test files in the `test/` directory, ensuring examples stay synchronized with the real test suite:
 
-1. **postman-simple** - A simple Postman workflow that runs a collection with environment variables
-2. **playwright-e2e** - A Playwright workflow with artifacts, JUnit reports, and trace collection
-3. **k6-load-test** - A k6 workflow for load testing with custom configuration
-4. **special-cases-env-override** - Demonstrates ENV variable overrides at different levels (container, step, parallel)
-5. **special-cases-retries** - Demonstrates retry logic and conditional step execution
-6. **parallel-execution** - Demonstrates parallel step execution and matrix workflows
-7. **artifacts-and-junit** - Demonstrates artifact collection and JUnit report generation
+1. **postman-smoke** - Multiple Postman workflow examples including simple runs, templates, and JUnit reporting (`test/postman/crd-workflow/smoke.yaml`)
+2. **playwright-smoke** - Playwright workflows demonstrating E2E testing with artifacts, JUnit reports, and trace collection (`test/playwright/crd-workflow/smoke.yaml`)
+3. **k6-smoke** - K6 workflows for performance and load testing with various configurations (`test/k6/crd-workflow/smoke.yaml`)
+4. **special-cases** - Advanced features including ENV overrides, retries, conditions, parallel execution, shared volumes, and security contexts (`test/special-cases/special-cases.yaml`)
 
-These resources are available via the MCP protocol using URIs like `testworkflow://examples/postman-simple`. AI assistants can read these resources to understand the TestWorkflow schema before creating or modifying workflows.
+These resources are available via the MCP protocol using URIs like `testworkflow://examples/postman-smoke`. AI assistants can read these resources to understand the TestWorkflow schema before creating or modifying workflows.
+
+**Important:** The resources reference actual test files from the repository. If test file paths change, the resources will need to be updated in `pkg/mcp/resources/testworkflow_examples.go`.
 
 **Note for maintainers:** When adding new resources to `pkg/mcp/resources/`, ensure that:
 
-1. The resource examples are placed in `pkg/mcp/resources/examples/` directory
-2. The resources are registered in `pkg/mcp/resources/testworkflow_examples.go`
-3. The resources follow the TestWorkflow schema and represent real-world use cases
-4. Resources are added to both the CLI and control plane MCP servers
+1. The resource references point to actual test files in the `test/` directory
+2. The file paths in `GetTestWorkflowExamples()` are correct and relative to repository root
+3. The resources are registered in both the CLI and control plane MCP servers
+4. Resources represent real-world use cases and follow the TestWorkflow schema
+5. Resource descriptions include the file path for easy reference
 
 **Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
 

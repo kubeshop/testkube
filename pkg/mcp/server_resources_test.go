@@ -36,7 +36,7 @@ func TestMCPServerWithResources(t *testing.T) {
 		t.Fatal("Expected at least one resource to be created")
 	}
 
-	expectedCount := 7
+	expectedCount := 4
 	if len(exampleResources) != expectedCount {
 		t.Errorf("Expected %d resources, got %d", expectedCount, len(exampleResources))
 	}

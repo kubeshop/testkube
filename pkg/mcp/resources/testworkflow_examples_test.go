@@ -15,7 +15,7 @@ func TestGetTestWorkflowExamples(t *testing.T) {
 		t.Fatal("Expected at least one example, got none")
 	}
 
-	expectedCount := 7
+	expectedCount := 4
 	if len(examples) != expectedCount {
 		t.Errorf("Expected %d examples, got %d", expectedCount, len(examples))
 	}
@@ -31,8 +31,8 @@ func TestGetTestWorkflowExamples(t *testing.T) {
 		if example.Description == "" {
 			t.Errorf("Example has empty Description")
 		}
-		if example.Content == "" {
-			t.Errorf("Example %s has empty Content", example.Name)
+		if example.FilePath == "" {
+			t.Errorf("Example %s has empty FilePath", example.Name)
 		}
 
 		// Check URI format
@@ -49,7 +49,7 @@ func TestCreateTestWorkflowExampleResources(t *testing.T) {
 		t.Fatal("Expected at least one resource, got none")
 	}
 
-	expectedCount := 7
+	expectedCount := 4
 	if len(resources) != expectedCount {
 		t.Errorf("Expected %d resources, got %d", expectedCount, len(resources))
 	}
@@ -116,6 +116,11 @@ func TestTestWorkflowExampleResourceHandler(t *testing.T) {
 		t.Errorf("Expected non-empty text content for %s", firstExample.URI)
 	}
 
+	// Verify the content is actually from the test file
+	if !strings.Contains(textContent.Text, "apiVersion: testworkflows.testkube.io/v1") {
+		t.Errorf("Content doesn't look like a valid TestWorkflow")
+	}
+
 	// Test reading a non-existent resource
 	invalidRequest := mcp.ReadResourceRequest{
 		Params: mcp.ReadResourceParams{
@@ -130,12 +135,39 @@ func TestTestWorkflowExampleResourceHandler(t *testing.T) {
 }
 
 func TestExampleYAMLContents(t *testing.T) {
+	handler := TestWorkflowExampleResourceHandler()
 	examples := GetTestWorkflowExamples()
+	ctx := context.Background()
 
 	for _, example := range examples {
+		request := mcp.ReadResourceRequest{
+			Params: mcp.ReadResourceParams{
+				URI: example.URI,
+			},
+		}
+
+		contents, err := handler(ctx, request)
+		if err != nil {
+			t.Errorf("Failed to load example %s: %v", example.Name, err)
+			continue
+		}
+
+		if len(contents) == 0 {
+			t.Errorf("Example %s returned no contents", example.Name)
+			continue
+		}
+
+		textContent, ok := contents[0].(mcp.TextResourceContents)
+		if !ok {
+			t.Errorf("Example %s did not return TextResourceContents", example.Name)
+			continue
+		}
+
+		content := textContent.Text
+
 		// Check that content looks like valid YAML
-		if len(example.Content) < 10 {
-			t.Errorf("Example %s has suspiciously short content: %d bytes", example.Name, len(example.Content))
+		if len(content) < 10 {
+			t.Errorf("Example %s has suspiciously short content: %d bytes", example.Name, len(content))
 		}
 
 		// Basic YAML structure checks
@@ -143,7 +175,7 @@ func TestExampleYAMLContents(t *testing.T) {
 		hasKind := false
 		hasMetadata := false
 
-		lines := strings.Split(example.Content, "\n")
+		lines := strings.Split(content, "\n")
 		for _, line := range lines {
 			if len(line) >= 11 && line[:11] == "apiVersion:" {
 				hasApiVersion = true

@@ -2,81 +2,99 @@ package resources
 
 import (
 	"context"
-	"embed"
 	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
-
-//go:embed examples/*.yaml
-var examplesFS embed.FS
 
 // TestWorkflowExample represents a TestWorkflow example resource
 type TestWorkflowExample struct {
 	URI         string
 	Name        string
 	Description string
-	Content     string
+	FilePath    string // Relative path from repository root
 }
 
 // GetTestWorkflowExamples returns a list of TestWorkflow example resources
+// These examples point to actual test files from the test/ directory
 func GetTestWorkflowExamples() []TestWorkflowExample {
 	return []TestWorkflowExample{
 		{
-			URI:         "testworkflow://examples/postman-simple",
-			Name:        "Postman Simple Workflow",
-			Description: "A simple Postman workflow that runs a collection with environment variables",
-			Content:     loadExample("postman-simple.yaml"),
+			URI:         "testworkflow://examples/postman-smoke",
+			Name:        "Postman Smoke Test Workflows",
+			Description: "Multiple Postman workflow examples including simple runs, templates, and JUnit reporting. File: test/postman/crd-workflow/smoke.yaml",
+			FilePath:    "test/postman/crd-workflow/smoke.yaml",
 		},
 		{
-			URI:         "testworkflow://examples/playwright-e2e",
-			Name:        "Playwright E2E Workflow",
-			Description: "A Playwright workflow with artifacts, JUnit reports, and trace collection",
-			Content:     loadExample("playwright-e2e.yaml"),
+			URI:         "testworkflow://examples/playwright-smoke",
+			Name:        "Playwright E2E Test Workflows",
+			Description: "Playwright workflows demonstrating E2E testing with artifacts, JUnit reports, and trace collection. File: test/playwright/crd-workflow/smoke.yaml",
+			FilePath:    "test/playwright/crd-workflow/smoke.yaml",
 		},
 		{
-			URI:         "testworkflow://examples/k6-load-test",
-			Name:        "K6 Load Testing Workflow",
-			Description: "A k6 workflow for load testing with custom configuration",
-			Content:     loadExample("k6-load-test.yaml"),
+			URI:         "testworkflow://examples/k6-smoke",
+			Name:        "K6 Load Testing Workflows",
+			Description: "K6 workflows for performance and load testing with various configurations. File: test/k6/crd-workflow/smoke.yaml",
+			FilePath:    "test/k6/crd-workflow/smoke.yaml",
 		},
 		{
-			URI:         "testworkflow://examples/special-cases-env-override",
-			Name:        "Special Cases: ENV Variable Override",
-			Description: "Demonstrates ENV variable overrides at different levels (container, step, parallel)",
-			Content:     loadExample("special-cases-env-override.yaml"),
-		},
-		{
-			URI:         "testworkflow://examples/special-cases-retries",
-			Name:        "Special Cases: Retries and Conditions",
-			Description: "Demonstrates retry logic and conditional step execution",
-			Content:     loadExample("special-cases-retries.yaml"),
-		},
-		{
-			URI:         "testworkflow://examples/parallel-execution",
-			Name:        "Parallel Execution Workflow",
-			Description: "Demonstrates parallel step execution and matrix workflows",
-			Content:     loadExample("parallel-execution.yaml"),
-		},
-		{
-			URI:         "testworkflow://examples/artifacts-and-junit",
-			Name:        "Artifacts and JUnit Reports",
-			Description: "Demonstrates artifact collection and JUnit report generation",
-			Content:     loadExample("artifacts-and-junit.yaml"),
+			URI:         "testworkflow://examples/special-cases",
+			Name:        "Special Cases and Advanced Features",
+			Description: "Demonstrates advanced features: ENV overrides, retries, conditions, parallel execution, shared volumes, security contexts. File: test/special-cases/special-cases.yaml",
+			FilePath:    "test/special-cases/special-cases.yaml",
 		},
 	}
 }
 
-// loadExample loads an example file from the embedded filesystem
-func loadExample(filename string) string {
-	content, err := examplesFS.ReadFile(filepath.Join("examples", filename))
-	if err != nil {
-		// Return a placeholder if the file doesn't exist yet
-		return fmt.Sprintf("# Example file %s not found\n# This is a placeholder that will be replaced with actual content", filename)
+// getRepoRoot returns the repository root directory
+// It walks up from the current file location to find the repo root
+func getRepoRoot() (string, error) {
+	// Get the directory of this source file
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("unable to get current file path")
 	}
-	return string(content)
+	
+	// Start from this file's directory and walk up
+	dir := filepath.Dir(filename)
+	for {
+		// Check if this directory contains go.mod (indicator of repo root)
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		
+		// Move up one directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached filesystem root without finding go.mod
+			return "", fmt.Errorf("could not find repository root (go.mod not found)")
+		}
+		dir = parent
+	}
+}
+
+// loadExample loads an example file from the test directory
+func loadExample(filePath string) (string, error) {
+	// Get repository root
+	repoRoot, err := getRepoRoot()
+	if err != nil {
+		return "", fmt.Errorf("failed to find repository root: %w", err)
+	}
+	
+	// Construct full path
+	fullPath := filepath.Join(repoRoot, filePath)
+	
+	// Read the file
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %s: %w", fullPath, err)
+	}
+	
+	return string(content), nil
 }
 
 // CreateTestWorkflowExampleResources creates MCP resources for TestWorkflow examples
@@ -112,11 +130,17 @@ func TestWorkflowExampleResourceHandler() server.ResourceHandlerFunc {
 			return nil, fmt.Errorf("resource not found: %s", request.Params.URI)
 		}
 
+		// Load content from the test file
+		content, err := loadExample(example.FilePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load resource %s: %w", request.Params.URI, err)
+		}
+
 		// Return the example content as TextResourceContents
 		contents := mcp.TextResourceContents{
 			URI:      example.URI,
 			MIMEType: "application/x-yaml",
-			Text:     example.Content,
+			Text:     content,
 		}
 
 		return []mcp.ResourceContents{contents}, nil
