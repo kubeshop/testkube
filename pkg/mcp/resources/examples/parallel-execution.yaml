@@ -1,0 +1,57 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: parallel-execution-example
+  labels:
+    category: special-cases
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Sequential steps before parallel
+    shell: echo "This runs first"
+  
+  - name: Run tests in parallel
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      paused: true # synchronise starting all workers
+      run:
+        image: alpine:3.22.0
+        shell: |
+          echo "Running worker {{ index }}"
+          sleep 5
+          echo "Worker {{ index }} completed"
+  
+  - name: Another parallel step with different tasks
+    parallel:
+      steps:
+      - name: Task A
+        shell: |
+          echo "Running Task A"
+          sleep 2
+      
+      - name: Task B
+        shell: |
+          echo "Running Task B"
+          sleep 3
+      
+      - name: Task C
+        shell: |
+          echo "Running Task C"
+          sleep 1
+  
+  - name: Final sequential step
+    shell: echo "All parallel steps completed"

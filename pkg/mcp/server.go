@@ -9,6 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/kubeshop/testkube/pkg/mcp/resources"
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -23,6 +24,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		"testkube-mcp",
 		cfg.Version,
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(false, false),
 		server.WithToolHandlerMiddleware(DebugMiddleware(&cfg)),
 		server.WithToolHandlerMiddleware(TelemetryMiddleware(&cfg)),
 	)
@@ -66,6 +68,13 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	// Artifact tools
 	mcpServer.AddTool(tools.ListArtifacts(client))
 	mcpServer.AddTool(tools.ReadArtifact(client))
+
+	// Register TestWorkflow example resources
+	exampleResources := resources.CreateTestWorkflowExampleResources()
+	resourceHandler := resources.TestWorkflowExampleResourceHandler()
+	for _, resource := range exampleResources {
+		mcpServer.AddResource(resource, resourceHandler)
+	}
 
 	return mcpServer, nil
 }
