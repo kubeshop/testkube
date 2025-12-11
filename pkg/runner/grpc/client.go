@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,7 @@ import (
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
@@ -194,7 +196,13 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_CANCELLED:
 			wg.Go(func() {
-				if err := c.runner.Cancel(transition.GetExecutionId()); err != nil {
+				err := c.runner.Cancel(transition.GetExecutionId())
+				switch {
+				case errors.Is(err, registry.ErrResourceNotFound):
+					// Mission failed successfully!
+					c.logger.Debugw("Request to cancel execution that does not exist, execution was probably already cancelled but the Control Plane doesn't know.",
+						"execution", transition.GetExecutionId())
+				case err != nil:
 					c.logger.Errorw("Failed to cancel execution",
 						"execution", transition.GetExecutionId(),
 						"error", err)
@@ -202,7 +210,13 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 			})
 		case executionv1.ExecutionState_EXECUTION_STATE_ABORTED:
 			wg.Go(func() {
-				if err := c.runner.Abort(transition.GetExecutionId()); err != nil {
+				err := c.runner.Abort(transition.GetExecutionId())
+				switch {
+				case errors.Is(err, registry.ErrResourceNotFound):
+					// Mission failed successfully!
+					c.logger.Debugw("Request to abort execution that does not exist, execution was probably already aborted but the Control Plane doesn't know.",
+						"execution", transition.GetExecutionId())
+				case err != nil:
 					c.logger.Errorw("Failed to abort execution",
 						"execution", transition.GetExecutionId(),
 						"error", err)
