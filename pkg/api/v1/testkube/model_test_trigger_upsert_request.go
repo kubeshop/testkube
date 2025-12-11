@@ -20,8 +20,8 @@ type TestTriggerUpsertRequest struct {
 	// test trigger annotations
 	Annotations      map[string]string                            `json:"annotations,omitempty"`
 	Selector         *IoK8sApimachineryPkgApisMetaV1LabelSelector `json:"selector,omitempty"`
-	Resource         *TestTriggerResources                        `json:"resource"`
-	ResourceSelector *TestTriggerSelector                         `json:"resourceSelector"`
+	Resource         *TestTriggerResources                        `json:"resource,omitempty"`
+	ResourceSelector *TestTriggerSelector                         `json:"resourceSelector,omitempty"`
 	// listen for event for selected resource
 	Event             string                          `json:"event"`
 	ConditionSpec     *TestTriggerConditionSpec       `json:"conditionSpec,omitempty"`
