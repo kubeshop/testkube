@@ -242,6 +242,7 @@ func (c Client) executeResponse(ctx context.Context, response *executionv1.GetEx
 				c.logger.Errorw("Failed to start execution.",
 					"executionId", start.GetExecutionId(),
 					"error", err)
+				return
 			}
 
 			if result.Redundant {
