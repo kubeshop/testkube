@@ -70,10 +70,14 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 
 	isOrWasSuperAgent := strings.HasPrefix(cfg.agentId, "tkcroot_")
 	if !isOrWasSuperAgent || !cfg.proContextControlPlaneHasSourceOfTruthCapability {
+		log.Infow("agent is ineligible to migrate environment to source of truth",
+			"no-superagent", !isOrWasSuperAgent,
+			"no-capability", !cfg.proContextControlPlaneHasSourceOfTruthCapability)
 		return
 	}
 
 	if cfg.proContextAgentIsSuperAgent && !cfg.forceSuperAgentMode {
+		log.Infow("starting migration of super agent, agent will sync resources and afterwards restart in normal agent mode.")
 		// If the sync store is a NoOpStore then TLS is not enabled and migration cannot progress.
 		if _, ok := syncStore.(syncagent.NoOpStore); ok {
 			log.Errorw("Unable to perform Super Agent migration when TLS is not configured. Please configure TLS and restart the Agent to perform migration.")
@@ -280,5 +284,7 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			log.Infow("Rolled back super agent successfully, agent will now restart in super agent mode.")
 			os.Exit(0)
 		}
+	} else {
+		log.Infow("agent has migrated", "was_superagent", true, "requires_rollback", false)
 	}
 }
