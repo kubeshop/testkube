@@ -670,7 +670,7 @@ func main() {
 
 	log.DefaultLogger.Info("starting agent service")
 
-	if !cfg.DisableDefaultAgent {
+	if proContext.Agent.IsSuperAgent && !cfg.DisableDefaultAgent {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
