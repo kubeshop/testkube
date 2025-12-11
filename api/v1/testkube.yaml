@@ -7340,8 +7340,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - resource
-        - resourceSelector
         - event
         - action
         - execution
@@ -12093,4 +12091,3 @@ components:
               filePath:
                 type: string
                 example: folder/file.txt
-
