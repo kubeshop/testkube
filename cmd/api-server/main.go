@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	_ "time/tzdata" // Import timezone database to be used in case the host OS does not have a tzdb available.
 
 	"github.com/go-logr/zapr"
 	"github.com/gofiber/fiber/v2/middleware/cors"
