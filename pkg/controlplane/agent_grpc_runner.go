@@ -56,6 +56,37 @@ func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExe
 	return &executionv1.AcceptExecutionResponse{}, nil
 }
 
+func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineExecutionRequest) (*executionv1.DeclineExecutionResponse, error) {
+	// Running in Standalone mode so the only option here is to immediately enter an ABORTED state without passing through other transitional states.
+	execution, err := s.resultsRepository.GetWithRunner(ctx, req.GetExecutionId(), common.StandaloneRunner)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "execution %q could not be retrieved: %v", req.GetExecutionId(), err)
+	}
+
+	result := execution.Result
+	if result == nil {
+		// This shouldn't happen but just in case we can set something to avoid nil panics.
+		result = &testkube.TestWorkflowResult{}
+	}
+
+	// Update the result to be aborted immediately.
+	result.FinishedAt = time.Now().UTC()
+	result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+
+	updated, err := s.resultsRepository.FinishResultStrict(ctx, req.GetExecutionId(), common.StandaloneRunner, result)
+	if err != nil || !updated {
+		return nil, status.Errorf(codes.Unknown, "cannot update execution %q result: %v", req.GetExecutionId(), err)
+	}
+
+	// Update in-memory properties which we know has been updated by the query.
+	execution.StatusAt = result.FinishedAt
+	execution.Result = result
+	// Emit the aborted event.
+	s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
+
+	return &executionv1.DeclineExecutionResponse{}, nil
+}
+
 func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {
 	var ret []testkube.TestWorkflowSignature
 	for _, sig := range sigs {
