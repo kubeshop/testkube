@@ -29,3 +29,4 @@ spec:
       - name: special-cases-missing-configmap-key
       - name: special-cases-no-initial-output
       - name: special-cases-artifact-double-asterisk
+      - name: special-cases-execution-tags
