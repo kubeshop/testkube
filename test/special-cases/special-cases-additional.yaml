@@ -2,6 +2,30 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: special-cases-cron-trigger-with-timezone
+  labels:
+    core-tests: special-case
+description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
+spec:
+  events:
+  - cronjob:
+      cron: 5 12 * * * # 12:05 PM every day
+      timezone: Europe/Warsaw
+  - cronjob:
+      cron: 5 12 * * * # 12:05 PM every day
+      timezone: America/New_York
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step - should just pass" && exit 0'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: special-cases-long-lasting-30m
   labels:
     core-tests: special-cases
