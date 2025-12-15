@@ -26,13 +26,16 @@ var (
 	Setup                    *setup
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
-		"TK_C_KEY",        // Cloud API key
-		"TK_OS_ACCESSKEY", // Object Storage Access Key
-		"TK_OS_SECRETKEY", // Object Storage Secret Key
-		"TK_OS_TOKEN",     // Object Storage Token
-		"TK_GIT_USERNAME", // Git Username
-		"TK_GIT_TOKEN",    // Git Token
-		"TK_SSH_KEY",      // Git SSH Key
+		"TK_C_KEY",           // Cloud API key
+		"TK_OS_ACCESSKEY",    // Object Storage Access Key
+		"TK_OS_SECRETKEY",    // Object Storage Secret Key
+		"TK_OS_TOKEN",        // Object Storage Token
+		"TK_GIT_USERNAME",    // Git Username
+		"TK_GIT_TOKEN",       // Git Token
+		"TK_SSH_KEY",         // Git SSH Key
+		"TK_GIT_CA_CERT",     // Git CA Certificate
+		"TK_GIT_CLIENT_CERT", // Git Client Certificate
+		"TK_GIT_CLIENT_KEY",  // Git Client Key
 	}
 )
 
