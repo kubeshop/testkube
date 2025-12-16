@@ -20,6 +20,13 @@
 - `cmd/choco-stub` displays a deprecation message for the old Chocolatey package location.
 - `cmd/tools` contains internal tooling for release management and version bumping.
 
+## MCP integration
+
+- `pkg/mcp/` implements the Model Context Protocol server for AI assistant integration.
+- Exposes tools across workflows, executions, artifacts, and metadata via `testkube mcp serve` (CLI), Docker image (`testkube/mcp-server`), or Control Plane's `/mcp` endpoint per environment.
+- Uses interface-based tool design; new tools need registration in both `pkg/mcp/server.go` and control plane's `mcp_handler.go`.
+- See `pkg/mcp/README.md` for architecture, tool patterns, and usage examples.
+
 ## Regenerating artifacts
 
 - Update the agent OpenAPI files with `make generate-openapi` after schema edits.
