@@ -31,6 +31,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- $tag = .Values.images.agent.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -52,6 +55,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- $tag = .Values.images.toolkit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -73,6 +79,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- $tag = .Values.images.init.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
