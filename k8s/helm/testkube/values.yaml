@@ -262,8 +262,6 @@ postgresql:
     pullSecrets: []
 
 ## NATS chart parameter
-## Tolerations to schedule a workload to nodes with any architecture type. Required for deployment to GKE cluster.
-## More info: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
 nats:
   # -- Uncomment to pass a global registry name to all NATS images
   # global:
@@ -276,12 +274,15 @@ nats:
   #     tag: 2.11.6-alpine
   #     pullPolicy:
   #     registry:
+  # Example of setting nodeSelector and tolerations
+  #  nodeSelector:
+  #    workload-type: infra
+  #  tolerations:
+  #  - effect: NoSchedule
+  #    key: workload-type
+  #    operator: Equal
+  #    value: infra
   # NATS Box container settings
-  # TODO remove this container after tests on dev and stage
-  # nats-box is A lightweight container with NATS utilities. It's not needed for nats server
-  # change it to
-  # natsBox:
-  #   enabled: false
   natsBox:
     enabled: false
     # -- Uncomment to override the NATS Box image options

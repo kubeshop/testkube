@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 
+	errors2 "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -27,6 +28,8 @@ type GitOpsAgent struct {
 	kubernetesToCloudEnabled bool
 	cloudPattern             string
 	kubernetesPattern        string
+	env                      *client.Environment // Store environment for pod recreation
+	agent                    *client.Agent       // Store agent config for pod recreation
 }
 
 func NewGitOpsAgent(
@@ -47,11 +50,7 @@ func NewGitOpsAgent(
 	}
 }
 
-func (r *GitOpsAgent) Create(ctx context.Context, env *client.Environment, agent *client.Agent) error {
-	if env == nil || agent == nil {
-		panic("crd sync is not supported in OSS")
-	}
-
+func (r *GitOpsAgent) generatePodSpec(env *client.Environment, agent *client.Agent) *corev1.Pod {
 	envVariables := []corev1.EnvVar{
 		// Disabling the rest
 		{Name: "NATS_EMBEDDED", Value: "true"},
@@ -81,7 +80,7 @@ func (r *GitOpsAgent) Create(ctx context.Context, env *client.Environment, agent
 		// Feature flags
 		{Name: "FEATURE_CLOUD_STORAGE", Value: "true"},
 	}
-	return r.pod.Create(ctx, &corev1.Pod{
+	return &corev1.Pod{
 		Spec: corev1.PodSpec{
 			TerminationGracePeriodSeconds: common.Ptr(int64(1)),
 			Volumes: []corev1.Volume{
@@ -119,6 +118,20 @@ func (r *GitOpsAgent) Create(ctx context.Context, env *client.Environment, agent
 				},
 			},
 		},
+	}
+}
+
+func (r *GitOpsAgent) Create(ctx context.Context, env *client.Environment, agent *client.Agent) error {
+	if env == nil || agent == nil {
+		return errors2.New("GitOps agent requires cloud environment and agent configuration (not available in OSS mode)")
+	}
+
+	r.env = env
+	r.agent = agent
+	podSpec := r.generatePodSpec(env, agent)
+
+	return r.pod.CreateWithFunc(ctx, podSpec, func() (*corev1.Pod, error) {
+		return r.generatePodSpec(r.env, r.agent), nil
 	})
 }
 

@@ -84,6 +84,7 @@ service TestKubeCloudAPI {
     rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem) {
       option deprecated = true;
     };
+    rpc ListWebhooksV2(ListWebhooksV2Request) returns (ListWebhooksResponse);
     rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse) {
       option deprecated = true;
     };
@@ -103,6 +104,15 @@ service TestKubeCloudAPI {
       option deprecated = true;
     };
     rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate) {
+      option deprecated = true;
+    };
+
+    // MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+    // to indicate to a server that it has succesfully performed all pre-migration operations
+    // and should now be considered to be a regular agent with capabilities.
+    // This RPC is defined as part of the legacy Service as it will be removed after "Super"
+    // Agents are no longer an applicable Agent type.
+    rpc MigrateSuperAgent(MigrateSuperAgentRequest) returns (MigrateSuperAgentResponse) {
       option deprecated = true;
     };
 }
@@ -197,10 +207,11 @@ message ProContextEnvironment {
 message ProContextAgent {
   string id = 1;
   string name = 2;
-  string type = 3;
+  string type = 3 [deprecated = true]; // Superseded by agent capabilities
   bool disabled = 4;
   map<string, string> labels = 5;
   repeated ProContextEnvironment environments = 6;
+  bool is_super_agent = 7;
 }
 
 message ProContextResponse {
@@ -828,9 +839,23 @@ message ListWebhooksRequest {
   string namespace = 6;
 }
 
+message ListWebhooksV2Request {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
 message WebhookListItem {
   option deprecated = true;
   bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksResponse {
+  repeated WebhookListItem items = 1;
+  uint32 total = 2;
 }
 
 message ListWebhookLabelsRequest {
@@ -906,3 +931,9 @@ message WebhookUpdate {
   UpdateType type = 3;
   bytes resource = 4; // Webhook
 }
+
+message MigrateSuperAgentRequest {
+  bool rollback = 1;
+}
+
+message MigrateSuperAgentResponse {}

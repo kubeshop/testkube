@@ -26,7 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *event.Emitter) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *event.Emitter, envID string) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
 	commons.ExitOnError("Getting kubernetes config", err)
@@ -51,7 +51,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 
 	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 	commons.ExitOnError("Creating test workflow client", err)
-	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace, cfg.DisableOfficialTemplates)
 	commons.ExitOnError("Creating test workflow templates client", err)
 
 	// Build repositories
@@ -98,7 +98,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
 	}, enqueuer, scheduler, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
-		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
+		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, envID, commands...)
 }
 
 func CreateMongoFactory(_ context.Context, cfg *config.Config, db *mongo.Database) (repository.RepositoryFactory, error) {

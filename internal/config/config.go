@@ -186,6 +186,7 @@ type CronJobConfig struct {
 type WebhookConfig struct {
 	DisableWebhooks     bool `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	EnableCloudWebhooks bool `envconfig:"ENABLE_CLOUD_WEBHOOKS" default:"false"`
+	WebhookControlPlane bool `envconfig:"WEBHOOK_CONTROL_PLANE" default:"false"`
 }
 
 type Config struct {
@@ -235,9 +236,12 @@ type Config struct {
 	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
+	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
+	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 
 	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	ForceSuperAgentMode     bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"true"` // Default true during initial testing, change to default false when ready to begin migrations.
 }
 
 type DeprecatedConfig struct {

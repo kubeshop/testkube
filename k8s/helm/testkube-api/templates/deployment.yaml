@@ -50,12 +50,6 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- if or .Values.cloud.key .Values.cloud.existingSecret.key }}
-          envFrom:
-            - secretRef:
-                name: "{{ include "testkube-api.fullname" . }}-self-registration"
-                optional: true
-          {{- end }}
           env:
             {{- if .Values.global.features.logsV2 }}
             - name: FF_LOGS_V2
@@ -162,6 +156,10 @@ spec:
               value:  "{{ .Values.podStartTimeout }}"
             - name: CDEVENTS_TARGET
               value: "{{ .Values.cdeventsTarget }}"
+            {{- if not .Values.global.testWorkflows.createOfficialTemplates }}
+            - name: DISABLE_OFFICIAL_TEMPLATES
+              value: "true"
+            {{- end}}
             - name: TESTKUBE_DASHBOARD_URI
               value: "{{ .Values.dashboardUri }}"
             - name: TESTKUBE_CLUSTER_NAME

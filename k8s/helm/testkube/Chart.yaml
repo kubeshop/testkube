@@ -2,8 +2,8 @@ apiVersion: v2
 name: testkube
 description: Testkube is an open-source platform that simplifies the deployment and management of automated testing infrastructure.
 type: application
-version: 2.4.0-rc.0
-appVersion: 2.4.0-rc.0
+version: 2.5.0-rc.0
+appVersion: 2.5.0-rc.0
 dependencies:
   - name: testkube-operator
     version: 2.x.x-x
@@ -18,7 +18,7 @@ dependencies:
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: nats
     condition: testkube-api.nats.enabled
-    version: 1.2.6-3
+    version: 1.2.6-4
     repository: "file://./charts/nats"
   - name: testkube-api
     version: 2.x.x-x

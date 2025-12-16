@@ -211,20 +211,26 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 		if ev.Resource == nil {
 			ev.Resource = &cloud.EventResource{}
 		}
+
+		// Reconstruct testkube event from gRPC event
+		// Note: ev.Data contains the serialized execution/resource, not the full event
 		tkEvent := testkube.Event{
-			Id:                    ev.Id,
-			Resource:              common.Ptr(testkube.EventResource(ev.Resource.Type)),
-			ResourceId:            ev.Resource.Id,
-			Type_:                 common.Ptr(testkube.EventType(ev.Type)),
-			TestWorkflowExecution: nil,
-			External:              true,
+			Id:         ev.Id,
+			Resource:   common.Ptr(testkube.EventResource(ev.Resource.Type)),
+			ResourceId: ev.Resource.Id,
+			Type_:      common.Ptr(testkube.EventType(ev.Type)),
+			GroupId:    ag.proContext.EnvID, // Set GroupId to agent's environment ID
+			External:   true,
 		}
+
+		// Unmarshal the execution/resource data based on resource type
 		if ev.Resource.Type == string(testkube.TESTWORKFLOWEXECUTION_EventResource) {
 			var v testkube.TestWorkflowExecution
 			if err = json.Unmarshal(ev.Data, &v); err == nil {
 				tkEvent.TestWorkflowExecution = &v
 			}
 		}
+
 		ag.eventEmitter.Notify(tkEvent)
 	}
 }

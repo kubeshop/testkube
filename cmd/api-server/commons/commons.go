@@ -309,9 +309,9 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
 		proContext.Agent.ID = foundProContext.Agent.Id
 		proContext.Agent.Name = foundProContext.Agent.Name
-		proContext.Agent.Type = foundProContext.Agent.Type
 		proContext.Agent.Labels = foundProContext.Agent.Labels
 		proContext.Agent.Disabled = foundProContext.Agent.Disabled
+		proContext.Agent.IsSuperAgent = foundProContext.Agent.IsSuperAgent
 		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
 			return config.ProContextAgentEnvironment{
 				ID:   env.Id,
@@ -333,6 +333,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		if cfg.FeatureCloudStorage {
 			proContext.CloudStorage = true
 		}
+	}
+
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilitySourceOfTruth) {
+		proContext.HasSourceOfTruthCapability = true
 	}
 
 	return proContext, nil

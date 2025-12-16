@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	_ "time/tzdata" // Import timezone database to be used in case the host OS does not have a tzdb available.
 
 	"github.com/go-logr/zapr"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -66,6 +67,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	cloudwebhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
@@ -178,7 +180,8 @@ func main() {
 	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
 		log.DefaultLogger.Info("starting embedded Control Plane service...")
-		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter)
+		// In standalone mode, use environment ID from config (empty if not set)
+		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter, cfg.TestkubeProEnvID)
 
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
@@ -219,23 +222,27 @@ func main() {
 
 	leaderTasks := make([]leader.Task, 0)
 
-	// Agents should be able to make an initial registration with their
-	// registration token and subsequent registrations with their API key to
-	// enable them to update their set of capabilities.
-	// To transition super agents to the new capabilities based registration,
-	// the charts have been changed to set the old super agent API key value as
-	// their registration token and registration has been enabled with the use
-	// of the API key. After intial self registration the super agent will be
-	// able to use the API key in the generated secret to reregister.
-	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
+	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
 		runnerName := cfg.RunnerName
 		if runnerName == "" {
 			// Fallback to a set name, but this is unlikely to be unique.
-			// Note, that the runner name for a super agent will be overriden
-			// on the backend to make sure it is unique within the org.
 			runnerName = cfg.APIServerFullname
 		}
 		log.DefaultLogger.Infow("registering runner", "runner_name", runnerName)
+
+		// Check for required fields.
+		if cfg.TestkubeProOrgID == "" {
+			log.DefaultLogger.Fatalw("cannot register runner without org id", "error", "org id must be set to register a runner")
+		}
+		if cfg.SelfRegistrationSecret == "" {
+			log.DefaultLogger.Fatalw("cannot register runner without self registration secret", "error", "self registration secret must be set to register a runner")
+		}
+		// If not configured to store secrets then registering the runner could cause severe issues such as
+		// the runner registering on every restart creating new runner IDs in the Control Plane.
+		if !cfg.EnableSecretsEndpoint || cfg.DisableSecretCreation {
+			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
+		}
 
 		// Build capabilities based on enabled features
 		capabilities := []cloud.AgentCapability{}
@@ -267,13 +274,8 @@ func main() {
 		// Debug labels found
 		log.DefaultLogger.Debugw("labels to be configured", "labels", runnerLabels)
 
-		registrationToken := cfg.TestkubeProAgentRegToken
-		if cfg.TestkubeProAPIKey != "" {
-			registrationToken = cfg.TestkubeProAPIKey
-		}
-
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
-			RegistrationToken: registrationToken,
+			RegistrationToken: cfg.TestkubeProAgentRegToken,
 			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
@@ -285,40 +287,18 @@ func main() {
 		if err != nil {
 			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
 		}
-		log.DefaultLogger.Infow("registered runner", "runner_name", res.RunnerName, "runner_id", res.RunnerId, "organization_id", res.OrganizationId)
 
 		// Add the new values to the current configuration.
 		cfg.TestkubeProAPIKey = res.RunnerKey
 		cfg.TestkubeProAgentID = res.RunnerId
-		cfg.TestkubeProOrgID = res.OrganizationId
 
 		// Attempt to store the values in a Kubernetes secret for consumption next startup.
-		if cfg.SelfRegistrationSecret == "" {
-			log.DefaultLogger.Warnw("unable to save api key from registration with the self registration secret unspecified, will reuse registration token for subsequent deployments")
-		} else if cfg.DisableSecretCreation {
-			log.DefaultLogger.Warnw("unable to save api key from registration with secrets disabled, will reuse registration token for subsequent deployments")
-		} else {
-			// Create or update the existing secret
-			_, err := secretManager.Get(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretmanager.GetOptions{Bypass: true})
-			secretData := map[string]string{
-				"RUNNER_NAME":           res.RunnerName,
-				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
-				"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
-				"TESTKUBE_PRO_ORG_ID":   res.OrganizationId,
-			}
-			if errors.Is(err, secretmanager.ErrNotFound) {
-				if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.CreateOptions{Bypass: true}); err != nil {
-					log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
-				} else {
-					log.DefaultLogger.Infow("saved registration in secret", "secret_name", cfg.SelfRegistrationSecret)
-				}
-			} else {
-				if _, err := secretManager.Update(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, secretData, secretmanager.UpdateOptions{Bypass: true}); err != nil {
-					log.DefaultLogger.Errorw("error updating self-register runner secret", "error", err.Error())
-				} else {
-					log.DefaultLogger.Infow("updated registration in secret", "secret_name", cfg.SelfRegistrationSecret)
-				}
-			}
+		if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
+			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
+			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
+		}, secretmanager.CreateOptions{}); err != nil {
+			log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
+			log.DefaultLogger.Warn("runner will re-register on restart")
 		}
 	}
 
@@ -326,7 +306,8 @@ func main() {
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	// k8s clients
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	var webhooksClient executorsclientv1.WebhooksInterface = executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	var webhooksLoaderClient webhook.WebhookClient = webhooksClient
 	webhookTemplatesClient := executorsclientv1.NewWebhookTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 
 	envs := commons.GetEnvironmentVariables()
@@ -334,6 +315,43 @@ func main() {
 	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
+
+	// Configure SyncStore here as it is required for the SuperAgent migration.
+	// This setup can be moved back down to just before the controller initialisation
+	// when the SuperAgent migration has been removed.
+	var syncStore interface {
+		synccontroller.TestTriggerStore
+		synccontroller.TestWorkflowStore
+		synccontroller.TestWorkflowTemplateStore
+		synccontroller.WebhookStore
+		synccontroller.WebhookTemplateStore
+	}
+	syncStore = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
+	// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
+	// connect and so we need to fallback to an implementation that doesn't do anything.
+	if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
+		log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
+		syncStore = syncagent.NoOpStore{}
+	}
+
+	// SUPER AGENT DEPRECATION MIGRATION
+	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
+	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
+	// to force migration of Agents.
+	migrateSuperAgent(ctx, log.DefaultLogger,
+		superAgentMigrationConfig{
+			agentId: proContext.Agent.ID,
+			apiKey:  proContext.APIKey,
+			proContextControlPlaneHasSourceOfTruthCapability: proContext.HasSourceOfTruthCapability,
+			proContextAgentIsSuperAgent:                      proContext.Agent.IsSuperAgent,
+			forceSuperAgentMode:                              cfg.ForceSuperAgentMode,
+			terminationLogPath:                               cfg.TerminationLogPath,
+			namespace:                                        cfg.TestkubeNamespace,
+		},
+		grpcClient,
+		kubeClient,
+		syncStore,
+	)
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
@@ -356,16 +374,21 @@ func main() {
 	)
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
-		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client, cfg.DisableOfficialTemplates)
 		testTriggersClient = testtriggerclient.NewCloudTestTriggerClient(client)
 	} else {
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow client", err)
-		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace, cfg.DisableOfficialTemplates)
 		commons.ExitOnError("creating test workflow templates client", err)
 
 		legacyTestTriggersClientForAPI := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
+	}
+
+	err = testworkflowtemplateclient.CleanUpOldHelmTemplates(ctx, kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	if err != nil {
+		log.DefaultLogger.Warnw("cannot clean up old helm templates", "error", err.Error())
 	}
 
 	defaultExecutionNamespace := cfg.TestkubeNamespace
@@ -491,10 +514,15 @@ func main() {
 	)
 
 	// Initialize event handlers
-	if !cfg.DisableWebhooks && !cfg.EnableCloudWebhooks {
+	if !cfg.DisableWebhooks {
+		if cfg.WebhookControlPlane && !cfg.EnableCloudWebhooks {
+			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, log.DefaultLogger)
+			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
+		}
+		log.DefaultLogger.Infow("registering webhook loader", "envID", proContext.EnvID, "orgID", proContext.OrgID)
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		webhookLoader := webhook.NewWebhookLoader(
-			webhooksClient,
+			webhooksLoaderClient,
 			webhook.WithTestWorkflowResultsRepository(testWorkflowResultsRepository),
 			webhook.WithWebhookResultsRepository(webhookRepository),
 			webhook.WithWebhookTemplateClient(webhookTemplatesClient),
@@ -503,8 +531,14 @@ func main() {
 			webhook.WithEnvs(envs),
 			webhook.WithDashboardURI(proContext.DashboardURI),
 			webhook.WithOrgID(proContext.OrgID),
-			webhook.WithEnvID(proContext.EnvID))
+			webhook.WithEnvID(proContext.EnvID),
+			webhook.WithGRPCClient(grpcClient),
+			webhook.WithAPIKey(proContext.APIKey),
+			webhook.WithAgentID(proContext.Agent.ID))
 		eventsEmitter.RegisterLoader(webhookLoader)
+		log.DefaultLogger.Infow("webhook loader registered")
+	} else {
+		log.DefaultLogger.Infow("webhooks disabled", "DISABLE_WEBHOOKS", cfg.DisableWebhooks)
 	}
 	websocketLoader := ws.NewWebsocketLoader()
 	eventsEmitter.RegisterLoader(websocketLoader)
@@ -570,30 +604,15 @@ func main() {
 
 		// Create Sync Controllers
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
-			var store interface {
-				synccontroller.TestTriggerStore
-				synccontroller.TestWorkflowStore
-				synccontroller.TestWorkflowTemplateStore
-				synccontroller.WebhookStore
-				synccontroller.WebhookTemplateStore
-			}
-			store = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
-			// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
-			// connect and so we need to fallback to an implementation that doesn't do anything.
-			if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
-				log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
-				store = syncagent.NoOpStore{}
-			}
-
-			err = synccontroller.NewTestTriggerSyncController(mgr, store)
+			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestTrigger sync controller", err)
-			err = synccontroller.NewTestWorkflowSyncController(mgr, store)
+			err = synccontroller.NewTestWorkflowSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflow sync controller", err)
-			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, store)
+			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflowTemplate sync controller", err)
-			err = synccontroller.NewWebhookSyncController(mgr, store)
+			err = synccontroller.NewWebhookSyncController(mgr, syncStore)
 			commons.ExitOnError("creating Webhook sync controller", err)
-			err = synccontroller.NewWebhookTemplateSyncController(mgr, store)
+			err = synccontroller.NewWebhookTemplateSyncController(mgr, syncStore)
 			commons.ExitOnError("creating WebhookTemplate sync controller", err)
 		}
 
@@ -841,17 +860,17 @@ func resolveLeaderIdentifier() string {
 }
 
 func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {
+	labels := map[string]string{}
 	if deploymentName == "" {
-		return nil
+		return labels
 	}
 
 	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		log.DefaultLogger.Warnw("cannot read deployment labels", "deployment", deploymentName, "error", err.Error())
-		return nil
+		return labels
 	}
 	log.DefaultLogger.Debugw("deployment found", "deployment_name", deploymentName, "deployment_labels", deploy.Labels)
-	labels := map[string]string{}
 	for k, v := range deploy.Labels {
 		if strings.HasPrefix(k, labelPrefix) {
 			shortKey := strings.TrimPrefix(k, labelPrefix)
