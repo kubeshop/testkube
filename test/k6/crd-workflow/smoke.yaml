@@ -7,6 +7,8 @@ metadata:
     tool: k6
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -51,6 +53,8 @@ metadata:
     core-tests: workflows
     tool: k6
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   container:
     resources:
@@ -86,6 +90,8 @@ metadata:
     core-tests: workflows
     tool: k6
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -122,6 +128,8 @@ metadata:
     tool: k6
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     files:
@@ -161,6 +169,8 @@ metadata:
     core-tests: workflows
     tool: k6
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -193,6 +203,8 @@ metadata:
     core-tests: workflows
     tool: k6
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -225,6 +237,8 @@ metadata:
     core-tests: workflows
     tool: k6
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   config:
     vus: {type: integer, default: 2}
@@ -279,6 +293,8 @@ metadata:
     tool: k6-browser
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:

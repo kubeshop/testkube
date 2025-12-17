@@ -8,6 +8,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: selenium
 description: "Selenium Java + Standalone Chrome"
 spec:
   content:
@@ -63,6 +65,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: selenium
 description: "Selenium Java + Hub + Chrome Nodes"
 spec:
   config:
@@ -155,6 +159,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: selenium
 description: "Selenium Python + Standalone Chrome"
 spec:
   system:
@@ -215,6 +221,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: selenium
 description: "Selenium Python + Hub + Chrome Nodes"
 spec:
   system:
@@ -302,6 +310,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Mocha + Standalone Chrome"
 spec:
   system:
@@ -361,6 +371,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: selenium
 description: "Selenium JS (selenium-webdriver) + Cucumber + Standalone Chrome"
 spec:
   system:
