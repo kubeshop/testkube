@@ -34,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/cronjob/robfig"
 	cronjobtestworkflow "github.com/kubeshop/testkube/internal/cronjob/testworkflow"
 	syncagent "github.com/kubeshop/testkube/internal/sync"
@@ -367,15 +368,19 @@ func main() {
 		RecvTimeout: cfg.TestkubeProRecvTimeout,
 	}, log.DefaultLogger)
 
+	cloudTestTriggersClient := testtriggerclient.NewCloudTestTriggerClient(client)
+
 	var (
 		testWorkflowsClient         testworkflowclient.TestWorkflowClient
 		testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 		testTriggersClient          testtriggerclient.TestTriggerClient
+		useCloudTestTriggers        bool
 	)
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client, cfg.DisableOfficialTemplates)
-		testTriggersClient = testtriggerclient.NewCloudTestTriggerClient(client)
+		testTriggersClient = cloudTestTriggersClient
+		useCloudTestTriggers = true
 	} else {
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow client", err)
@@ -385,6 +390,13 @@ func main() {
 		legacyTestTriggersClientForAPI := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
+
+	if !useCloudTestTriggers && !cfg.DisableTestTriggers && shouldUseCloudTestTriggers(proContext) {
+		log.DefaultLogger.Infow("control plane is source of truth, using cloud test trigger client")
+		testTriggersClient = cloudTestTriggersClient
+		useCloudTestTriggers = true
+	}
+	useTestTriggerControlPlane := cfg.TestTriggerControlPlane || useCloudTestTriggers
 
 	err = testworkflowtemplateclient.CleanUpOldHelmTemplates(ctx, kubeClient, kubeConfig, cfg.TestkubeNamespace)
 	if err != nil {
@@ -734,7 +746,7 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithTestTriggerControlPlane(cfg.TestTriggerControlPlane),
+			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),
 			triggers.WithEventLabels(cfg.EventLabels),
 		)
 		log.DefaultLogger.Info("starting trigger service")
@@ -880,4 +892,12 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 		}
 	}
 	return labels
+}
+
+// shouldUseCloudTestTriggers returns true when the agent has migrated off super-agent mode,
+// and the Control Plane advertises source-of-truth support.
+func shouldUseCloudTestTriggers(
+	proContext intconfig.ProContext,
+) bool {
+	return proContext.HasSourceOfTruthCapability && !proContext.Agent.IsSuperAgent && proContext.EnvID != ""
 }
