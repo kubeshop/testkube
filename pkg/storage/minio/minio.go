@@ -158,7 +158,11 @@ func (c *Client) listFiles(ctx context.Context, bucket, bucketFolder string) ([]
 			return nil, obj.Err
 		}
 		if bucketFolder != "" {
-			obj.Key = strings.TrimPrefix(obj.Key, bucketFolder+"/")
+			if bucketFolder[len(bucketFolder)-1] == '/' {
+				obj.Key = strings.TrimPrefix(obj.Key, bucketFolder)
+			} else {
+				obj.Key = strings.TrimPrefix(obj.Key, bucketFolder+"/")
+			}
 		}
 		toReturn = append(toReturn, testkube.Artifact{Name: obj.Key, Size: int32(obj.Size)})
 	}
@@ -559,7 +563,11 @@ func (c *Client) PlaceFiles(ctx context.Context, bucketFolders []string, prefix 
 			}
 
 			if folder != "" {
-				objectName = fmt.Sprintf("%s/%s", folder, objectName)
+				if folder[len(folder)-1] == '/' {
+					objectName = fmt.Sprintf("%s%s", folder, objectName)
+				} else {
+					objectName = fmt.Sprintf("%s/%s", folder, objectName)
+				}
 			}
 
 			path := filepath.Join(prefix, f.Name)
