@@ -37,7 +37,6 @@ import (
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/cronjob/robfig"
 	cronjobtestworkflow "github.com/kubeshop/testkube/internal/cronjob/testworkflow"
-	syncagent "github.com/kubeshop/testkube/internal/sync"
 	synccontroller "github.com/kubeshop/testkube/internal/sync/controller"
 	syncgrpc "github.com/kubeshop/testkube/internal/sync/grpc"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -317,6 +316,8 @@ func main() {
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
+	grpcTLSEnabled := !cfg.TestkubeProTLSInsecure
+
 	// Configure SyncStore here as it is required for the SuperAgent migration.
 	// This setup can be moved back down to just before the controller initialisation
 	// when the SuperAgent migration has been removed.
@@ -327,14 +328,7 @@ func main() {
 		synccontroller.WebhookStore
 		synccontroller.WebhookTemplateStore
 	}
-	syncStore = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID)
-	// If the agent is running without secure gRPC TLS connection to the Control Plane then the client will not be able to
-	// connect and so we need to fallback to an implementation that doesn't do anything.
-	if cfg.TestkubeProTLSInsecure || cfg.TestkubeProSkipVerify {
-		log.DefaultLogger.Error("Unable to create GitOps sync connection to Control Plane when running in insecure TLS mode. Kubernetes resource updates will not be synced with the Control Plane!")
-		syncStore = syncagent.NoOpStore{}
-	}
-
+	syncStore = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
 	// SUPER AGENT DEPRECATION MIGRATION
 	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
 	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
@@ -478,6 +472,7 @@ func main() {
 		runner,
 		proContext.APIKey,
 		proContext.OrgID,
+		grpcTLSEnabled,
 		testworkflowconfig.ControlPlaneConfig{
 			DashboardUrl:   proContext.DashboardURI,
 			CDEventsTarget: cfg.CDEventsTarget,
@@ -487,22 +482,7 @@ func main() {
 
 	if !cfg.DisableRunner {
 		g.Go(func() error {
-			// Check if the new client is supported by the control plane.
-			// If not then just start up the existing implementation.
-			// Here we are not using capabilities because the client and/or server may not have TLS implemented as it was not previously
-			// enforced, however it is required with the new client implementation to secure authentication tokens.
-			// gRPC does not provide a specific error for an attempt to transmit credentials over an unencrypted connection so to
-			// prevent the fallback to the previous insecure behaviour we must instead check to see whether connectivity can be
-			// established. The repercussions of this is that the agent will eagerly fallback to the insecure and legacy behaviour
-			// and so bringing up an agent before networking with the Control Plane has been established, or during a Control Plane
-			// outage will cause a fallback to the previous behaviour.
-			// This check should be removed once TLS is enforced across deployments.
-			if !runnerClient.IsSupported(ctx, proContext.EnvID) {
-				log.DefaultLogger.Warn("new runner RPC is not supported by Control Plane, falling back to previous implementation.")
-				return runnerService.Start(ctx, true)
-			}
-			log.DefaultLogger.Info("new runner RPC is supported by Control Plane, will use new runner RPC to retrieve execution updates.")
-			// If the client is supported then start both services/clients.
+			log.DefaultLogger.Info("starting runner RPC client for execution updates.")
 			var eg errgroup.Group
 			eg.Go(func() error {
 				// Start the older service but without the legacy execution RPC loop.

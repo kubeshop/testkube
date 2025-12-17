@@ -80,5 +80,5 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		t.Fatal(err)
 	}
 
-	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar")
+	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", true)
 }
