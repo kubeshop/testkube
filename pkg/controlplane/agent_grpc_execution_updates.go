@@ -25,7 +25,7 @@ func (s *Server) GetExecutionUpdates(ctx context.Context, _ *executionv1.GetExec
 	// separate functions that do not error (logging is doing a lot of heavy lifting here).
 	log := log2.DefaultLogger.With("runner id", info.Id, "runner name", info.Name)
 	update := s.getExecutionUpdates(ctx, log)
-	start := s.getNextExecution(ctx, log, info)
+	start := s.getNextExecutions(ctx, log, info)
 
 	return &executionv1.GetExecutionUpdatesResponse{Update: update, Start: start}, nil
 }
@@ -81,18 +81,42 @@ func (s *Server) getExecutionUpdates(ctx context.Context, log *zap.SugaredLogger
 	return updates
 }
 
-func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, info scheduling.RunnerInfo) []*executionv1.ExecutionStart {
-	// Run THE schedule query that will atomically assign one or no execution to this runner.
-	exe, ok, err := s.scheduler.ScheduleExecution(ctx, info)
-	if err != nil {
-		log.Warnw("error scheduling execution", "err", err)
-		return nil
+func (s *Server) getNextExecutions(ctx context.Context, log *zap.SugaredLogger, info scheduling.RunnerInfo) []*executionv1.ExecutionStart {
+	var next []*executionv1.ExecutionStart
+
+	for exe, err := range s.executionQuerier.Starting(ctx) {
+		if err != nil {
+			log.Errorw("Error retrieving starting executions",
+				"err", err)
+			continue
+		}
+
+		executionStart := createExecutionStart(exe, info)
+		next = append(next, &executionStart)
 	}
-	// No executions found, nothing to do.
-	if !ok {
-		return nil
+	for exe, err := range s.executionQuerier.Assigned(ctx) {
+		if err != nil {
+			log.Errorw("Error retrieving assigned executions",
+				"err", err)
+			continue
+		}
+
+		executionStart := createExecutionStart(exe, info)
+		next = append(next, &executionStart)
+
+		// Mark the execution as starting
+		if err := s.ExecutionController.StartExecution(ctx, exe.Id); err != nil {
+			log.Warnw("error marking execution as starting", "err", err)
+		}
+
+		// Dispatch event for WebHooks and friends
+		s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exe))
 	}
 
+	return next
+}
+
+func createExecutionStart(exe testkube.TestWorkflowExecution, info scheduling.RunnerInfo) executionv1.ExecutionStart {
 	// Populate some possibly missing values and avoid nil pointer issues.
 	var workflowName string
 	var ancestorIds []string
@@ -109,27 +133,17 @@ func (s *Server) getNextExecution(ctx context.Context, log *zap.SugaredLogger, i
 		variableOverrides = exe.Runtime.Variables
 	}
 
-	// Mark the execution as starting
-	if err := s.ExecutionController.StartExecution(ctx, exe.Id); err != nil {
-		log.Warnw("error marking execution as starting", "err", err)
-	}
-
-	// Dispatch event for WebHooks and friends
-	s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exe))
-
-	return []*executionv1.ExecutionStart{
-		{
-			ExecutionId:          common.Ptr(exe.Id),
-			GroupId:              common.Ptr(exe.GroupId),
-			Name:                 common.Ptr(exe.Name),
-			Number:               common.Ptr(exe.Number),
-			QueuedAt:             timestamppb.New(exe.ScheduledAt),
-			DisableWebhooks:      common.Ptr(exe.DisableWebhooks),
-			EnvironmentId:        common.Ptr(info.EnvironmentId),
-			ExecutionToken:       common.Ptr(""), //TODO currently build-in control plane is insecure. Add auth and generate execution tokens.
-			AncestorExecutionIds: ancestorIds,
-			WorkflowName:         common.Ptr(workflowName),
-			VariableOverrides:    variableOverrides,
-		},
+	return executionv1.ExecutionStart{
+		ExecutionId:          common.Ptr(exe.Id),
+		GroupId:              common.Ptr(exe.GroupId),
+		Name:                 common.Ptr(exe.Name),
+		Number:               common.Ptr(exe.Number),
+		QueuedAt:             timestamppb.New(exe.ScheduledAt),
+		DisableWebhooks:      common.Ptr(exe.DisableWebhooks),
+		EnvironmentId:        common.Ptr(info.EnvironmentId),
+		ExecutionToken:       common.Ptr(""), //TODO currently build-in control plane is insecure. Add auth and generate execution tokens.
+		AncestorExecutionIds: ancestorIds,
+		WorkflowName:         common.Ptr(workflowName),
+		VariableOverrides:    variableOverrides,
 	}
 }
