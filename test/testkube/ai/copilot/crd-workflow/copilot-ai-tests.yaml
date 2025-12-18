@@ -31,19 +31,26 @@ spec:
           value: "production"
         - name: LOG_LEVEL
           value: "info"
+        - name: USE_TLS
+          value: "false"
         - name: CONTROL_PLANE_ENDPOINT
           value: "https://api.testkube.dev"
         - name: OIDC_CONFIGURATION_URL
           value: "https://api.testkube.dev/idp/.well-known/openid-configuration"
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: testkube-agent-secrets
+              key: DEV_LLM_API_KEY
       readinessProbe:
         httpGet:
-          path: /health
+          path: /
           port: 9090
         periodSeconds: 2
         initialDelaySeconds: 10
       logs: always
 
-    test-receiver:
+    receiver:
       image: "{{ config.copilotImage }}"
       command: ["npm", "run", "test:receiver"]
       env:
@@ -86,7 +93,7 @@ spec:
               -H "Content-Type: application/json" \
               -d '{
                 "message": "{{ matrix.test.prompt }}",
-                "callbackUrl": "http://{{services.test-receiver.0.ip}}:9999/callback/{{ matrix.test.name }}",
+                "callbackUrl": "http://{{services.receiver.0.ip}}:9999/callback/{{ matrix.test.name }}",
                 "readable": {
                   "orgId": "{{ config.orgId }}",
                   "envId": "{{ config.envId }}"
@@ -105,7 +112,7 @@ spec:
           echo "⏳ Waiting for $EXPECTED results..."
 
           while true; do
-            COUNT=$(curl -sf "http://{{services.test-receiver.0.ip}}:9999/" | grep -o '"resultCount":[0-9]*' | cut -d: -f2 || echo "0")
+            COUNT=$(curl -sf "http://{{services.receiver.0.ip}}:9999/" | grep -o '"resultCount":[0-9]*' | cut -d: -f2 || echo "0")
             echo "   Received: $COUNT / $EXPECTED"
             
             if [ "$COUNT" -ge "$EXPECTED" ]; then
@@ -121,7 +128,7 @@ spec:
             ELAPSED=$((ELAPSED + 5))
           done
 
-          curl -sf "http://{{services.test-receiver.0.ip}}:9999/results" > /data/artifacts/results.json
+          curl -sf "http://{{services.receiver.0.ip}}:9999/results" > /data/artifacts/results.json
 
           FAILURES=$(cat /data/artifacts/results.json | grep -o '"success":false' | wc -l || echo "0")
 
