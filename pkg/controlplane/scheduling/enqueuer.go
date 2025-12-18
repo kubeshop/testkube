@@ -124,6 +124,12 @@ func (e *Enqueuer) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 	}
 	// END POST-COMMIT VALIDATION
 
+	// Workaround
+	err = e.assignExecutions(commitContext, intermediateExecutions)
+	if err != nil {
+		return nil, err
+	}
+
 	executions, err := e.persistExecution(commitContext, intermediateExecutions, logger)
 	if err != nil {
 		return nil, err
@@ -305,6 +311,14 @@ func (e *Enqueuer) finaliseExecution(ctx context.Context, executions []*testwork
 		}
 	}
 
+	return nil
+}
+
+func (e *Enqueuer) assignExecutions(_ context.Context, executions []*testworkflowexecutor.IntermediateExecution) error {
+	for i := range executions {
+		exec := executions[i]
+		exec.Assign(time.Now(), common.StandaloneRunner)
+	}
 	return nil
 }
 

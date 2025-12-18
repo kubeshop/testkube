@@ -53,6 +53,18 @@ func (a MongoExecutionQuerier) Cancelling(ctx context.Context) func(yield func(t
 	}})
 }
 
+// Assigned yields an iterator returning all executions assigned to the runner indicated
+// by the passed runner, that should be started by the runner.
+func (a MongoExecutionQuerier) Assigned(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+	return a.executionIterator(ctx, bson.M{"result.status": testkube.ASSIGNED_TestWorkflowStatus})
+}
+
+// Starting yields an iterator returning all executions assigned to the runner indicated
+// by the passed runner, that should be started by the runner.
+func (a MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+	return a.executionIterator(ctx, bson.M{"result.status": testkube.STARTING_TestWorkflowStatus})
+}
+
 func (a MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
 		cur, err := a.executionsCollection.Find(ctx, filter)
