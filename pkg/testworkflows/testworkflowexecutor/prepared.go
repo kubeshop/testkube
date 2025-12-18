@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -353,14 +352,6 @@ func (e *IntermediateExecution) SetOriginalTarget(target testkube.ExecutionTarge
 
 func (e *IntermediateExecution) SetSequenceNumber(number int32) *IntermediateExecution {
 	e.execution.Number = number
-	return e
-}
-
-func (e *IntermediateExecution) Assign(ts time.Time, runnerId string) *IntermediateExecution {
-	e.execution.AssignedAt = ts
-	e.execution.StatusAt = ts
-	e.execution.Result.Status = ptr.To(testkube.ASSIGNED_TestWorkflowStatus)
-	e.execution.RunnerId = runnerId
 	return e
 }
 

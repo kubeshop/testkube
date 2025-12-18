@@ -41,18 +41,6 @@ func (a *PostgresExecutionQuerier) Cancelling(ctx context.Context) func(yield fu
 	return a.executionIterator(ctx, testkube.STOPPING_TestWorkflowStatus, testkube.CANCELED_TestWorkflowStatus)
 }
 
-// Assigned yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be started by the runner.
-func (a *PostgresExecutionQuerier) Assigned(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, testkube.ASSIGNED_TestWorkflowStatus, "")
-}
-
-// Assigned yields an iterator returning all executions assigned to the runner indicated
-// by the passed runner, that should be started by the runner.
-func (a *PostgresExecutionQuerier) Starting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
-	return a.executionIterator(ctx, testkube.STARTING_TestWorkflowStatus, "")
-}
-
 func (a *PostgresExecutionQuerier) executionIterator(ctx context.Context, status, predicted testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
 	return func(yield func(testkube.TestWorkflowExecution, error) bool) {
 		executions, err := a.db.GetExecutionsByStatus(ctx, sqlc.GetExecutionsByStatusParams{
