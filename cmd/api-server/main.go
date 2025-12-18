@@ -527,7 +527,7 @@ func main() {
 
 	// Initialize event handlers
 	if !cfg.DisableWebhooks {
-		if cfg.WebhookControlPlane && !cfg.EnableCloudWebhooks {
+		if (cfg.WebhookControlPlane || shouldUseCloudWebhooks(proContext)) && !cfg.EnableCloudWebhooks {
 			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, log.DefaultLogger)
 			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
 		}
@@ -897,6 +897,14 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 // shouldUseCloudTestTriggers returns true when the agent has migrated off super-agent mode,
 // and the Control Plane advertises source-of-truth support.
 func shouldUseCloudTestTriggers(
+	proContext intconfig.ProContext,
+) bool {
+	return proContext.HasSourceOfTruthCapability && !proContext.Agent.IsSuperAgent && proContext.EnvID != ""
+}
+
+// shouldUseCloudWebhooks returns true when the agent has migrated off super-agent mode,
+// and the Control Plane advertises source-of-truth support.
+func shouldUseCloudWebhooks(
 	proContext intconfig.ProContext,
 ) bool {
 	return proContext.HasSourceOfTruthCapability && !proContext.Agent.IsSuperAgent && proContext.EnvID != ""
