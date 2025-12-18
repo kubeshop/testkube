@@ -16,9 +16,6 @@ spec:
     envId:
       type: string
       default: "tkcenv_03e3ff499f13ccba"
-    jwtToken:
-      type: string
-      description: "JWT token for copilot auth (passed directly initially, TODO: refactor to use secret + API token after copilot API supports it)"
     testCount:
       type: integer
       default: "3"
@@ -69,6 +66,12 @@ spec:
       requests:
         cpu: 64m
         memory: 64Mi
+    env:
+      - name: AUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: TESTKUBE-CLOUD-TEST-BASIC-RUN-TOKEN-FOR-DEV
 
   job:
     activeDeadlineSeconds: 600
@@ -89,7 +92,7 @@ spec:
           shell: |
             curl -sf -X POST \
               "http://{{services.copilot.0.ip}}:9090/copilot/test" \
-              -H "Authorization: Bearer {{ config.jwtToken }}" \
+              -H "Authorization: Bearer ${AUTH_TOKEN}" \
               -H "Content-Type: application/json" \
               -d '{
                 "message": "{{ matrix.test.prompt }}",
