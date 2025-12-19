@@ -169,3 +169,12 @@ func GetEnvVarWithDeprecation(key, deprecatedKey, defaultVal string) string {
 	}
 	return defaultVal
 }
+
+// TruncateName truncates name to k8s name length
+func TruncateName(value string) string {
+	if len(value) > 63 {
+		return value[:63]
+	}
+
+	return value
+}
