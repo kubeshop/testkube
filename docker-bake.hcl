@@ -14,7 +14,7 @@ variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
 variable "KEYGEN_PUBLIC_KEY"       { default = ""}
 
 group "default" {
-  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit", "mcp-server", "cli"]
+  targets = ["api", "cli", "tw-init", "tw-toolkit", "mcp-server"]
 }
 
 target "api-meta" {}
@@ -39,7 +39,7 @@ target "api" {
 
 target "cli-meta" {}
 target "cli" {
-  inherits = ["testworkflow-init-meta"]
+  inherits = ["cli-meta"]
   context="."
   dockerfile = "build/new/cli.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
@@ -55,7 +55,7 @@ target "cli" {
 
 target "tw-init-meta" {}
 target "tw-init" {
-  inherits = ["testworkflow-init-meta"]
+  inherits = ["tw-init-meta"]
   context="."
   dockerfile = "build/new/tw-init.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
@@ -67,7 +67,7 @@ target "tw-init" {
 
 target "tw-toolkit-meta" {}
 target "tw-toolkit" {
-  inherits = ["testworkflow-toolkit-meta"]
+  inherits = ["tw-toolkit-meta"]
   context="."
   dockerfile = "build/new/tw-toolkit.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]

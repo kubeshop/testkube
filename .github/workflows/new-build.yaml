@@ -69,10 +69,10 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for tw-init
-        id: tw-init
+        id: tw-init-meta
         uses: docker/metadata-action@v5
         with:
-          bake-target: "tw-init"
+          bake-target: "tw-init-meta"
           images: |
             kubeshop/testkube-tw-init
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-init
@@ -81,10 +81,10 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for tw-toolkit
-        id: tw-toolkit
+        id: tw-toolkit-meta
         uses: docker/metadata-action@v5
         with:
-          bake-target: "tw-toolkit"
+          bake-target: "tw-toolkit-meta"
           images: |
             kubeshop/testkube-tw-toolkit
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GAR_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/tw-toolkit
@@ -93,7 +93,7 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Create Docker tags and metadata for mcp-server
-        id: mcp-meta
+        id: mcp-server-meta
         uses: docker/metadata-action@v5
         with:
           bake-target: "mcp-server-meta"
@@ -114,11 +114,11 @@ jobs:
           files: |
             ./docker-bake.hcl
             ${{ steps.api-meta.outputs.bake-file }}
-            ${{ steps.tw-toolkit.outputs.bake-file }}
-            ${{ steps.tw-init.outputs.bake-file }}
             ${{ steps.cli-meta.outputs.bake-file }}
-            ${{ steps.mcp-meta.outputs.bake-file }}
-          targets: api,tw-toolkit,tw-init,mcp-server,cli
+            ${{ steps.tw-init-meta.outputs.bake-file }}
+            ${{ steps.tw-toolkit-meta.outputs.bake-file }}
+            ${{ steps.mcp-server-meta.outputs.bake-file }}
+          targets: api,cli,tw-init,tw-toolkit,mcp-server
           provenance: mode=max
           sbom: true
           # Only tags are pushed, pushes to branches test whether app can be built.
