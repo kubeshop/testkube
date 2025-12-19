@@ -513,6 +513,58 @@ spec:
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
+	t.Run("should clear conditionSpec when json update uses mode=replace query param", func(t *testing.T) {
+		// given - JSON without conditionSpec but with mode=replace query param
+		request := testkube.TestTriggerUpsertRequest{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Event:     "updated",
+		}
+
+		// existing trigger HAS conditionSpec
+		existingTrigger := &testkube.TestTrigger{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Resource:  resourcePtr("deployment"),
+			Event:     "created",
+			Action:    actionPtr("run"),
+			Execution: executionPtr("testworkflow"),
+			ConditionSpec: &testkube.TestTriggerConditionSpec{
+				Timeout: 100,
+				Conditions: []testkube.TestTriggerCondition{
+					{Type_: "Ready", Status: conditionStatusPtr("True")},
+				},
+			},
+		}
+
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "test-trigger", "default").
+			Return(existingTrigger, nil).
+			Times(1)
+
+		mockClient.EXPECT().
+			Update(gomock.Any(), "test-env", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, envId string, trigger testkube.TestTrigger) error {
+				// conditionSpec should be nil (cleared) since mode=replace triggers full replacement
+				assert.Nil(t, trigger.ConditionSpec, "conditionSpec should be nil when using mode=replace")
+				assert.Equal(t, "updated", trigger.Event)
+				return nil
+			}).
+			Times(1)
+
+		requestBody, _ := json.Marshal(request)
+		// Note: using mode=replace query param with JSON content type
+		req := httptest.NewRequest("PUT", "/test-triggers?mode=replace", bytes.NewReader(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
 	t.Run("should preserve conditionSpec when json update does not include it", func(t *testing.T) {
 		// given - JSON update without conditionSpec (merge behavior)
 		request := testkube.TestTriggerUpsertRequest{

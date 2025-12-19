@@ -83,6 +83,8 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		errPrefix := "failed to update test trigger"
 		var request testkube.TestTriggerUpsertRequest
 		isYAML := string(c.Request().Header.ContentType()) == mediaTypeYAML
+		// Check for replace mode query parameter (used by cloud-api for YAML updates)
+		isReplaceMode := c.Query("mode") == "replace"
 		if isYAML {
 			var testTrigger testtriggersv1.TestTrigger
 			testTriggerSpec := string(c.Body())
@@ -113,9 +115,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 
 		var apiTrigger *testkube.TestTrigger
 
-		// YAML requests do full replacement (Definition tab sends complete YAML)
-		// JSON requests do merge (form-based updates send partial JSON)
-		if isYAML {
+		// YAML requests or replace mode do full replacement (Definition tab sends complete YAML)
+		// JSON requests without replace mode do merge (form-based updates send partial JSON)
+		if isYAML || isReplaceMode {
 			apiTrigger = &testkube.TestTrigger{
 				Name:              request.Name,
 				Namespace:         namespace,
