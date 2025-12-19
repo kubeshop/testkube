@@ -82,7 +82,8 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test trigger"
 		var request testkube.TestTriggerUpsertRequest
-		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+		isYAML := string(c.Request().Header.ContentType()) == mediaTypeYAML
+		if isYAML {
 			var testTrigger testtriggersv1.TestTrigger
 			testTriggerSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testTriggerSpec), len(testTriggerSpec))
@@ -104,57 +105,85 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + request.Name
 
-		// we need to get resource first
-		apiTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
+		// we need to get resource first to validate it exists
+		existingTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
-		// Update the trigger with new values from request
-		apiTrigger.Name = request.Name
-		apiTrigger.Namespace = namespace
-		if request.Labels != nil {
-			apiTrigger.Labels = request.Labels
-		}
-		if request.Annotations != nil {
-			apiTrigger.Annotations = request.Annotations
-		}
+		var apiTrigger *testkube.TestTrigger
 
-		// Update individual fields from the request
-		if request.Selector != nil {
-			apiTrigger.Selector = request.Selector
+		// YAML requests do full replacement (Definition tab sends complete YAML)
+		// JSON requests do merge (form-based updates send partial JSON)
+		if isYAML {
+			apiTrigger = &testkube.TestTrigger{
+				Name:              request.Name,
+				Namespace:         namespace,
+				Labels:            request.Labels,
+				Annotations:       request.Annotations,
+				Selector:          request.Selector,
+				Resource:          request.Resource,
+				ResourceSelector:  request.ResourceSelector,
+				Event:             request.Event,
+				ConditionSpec:     request.ConditionSpec,
+				ProbeSpec:         request.ProbeSpec,
+				Action:            request.Action,
+				ActionParameters:  request.ActionParameters,
+				Execution:         request.Execution,
+				TestSelector:      request.TestSelector,
+				ConcurrencyPolicy: request.ConcurrencyPolicy,
+				Disabled:          request.Disabled,
+				Sync:              request.Sync,
+			}
+		} else {
+			// JSON merge: only update fields that are present in the request
+			apiTrigger = existingTrigger
+			apiTrigger.Name = request.Name
+			apiTrigger.Namespace = namespace
+			if request.Labels != nil {
+				apiTrigger.Labels = request.Labels
+			}
+			if request.Annotations != nil {
+				apiTrigger.Annotations = request.Annotations
+			}
+			if request.Selector != nil {
+				apiTrigger.Selector = request.Selector
+			}
+			if request.Resource != nil {
+				apiTrigger.Resource = request.Resource
+			}
+			if request.ResourceSelector != nil {
+				apiTrigger.ResourceSelector = request.ResourceSelector
+			}
+			if request.Event != "" {
+				apiTrigger.Event = request.Event
+			}
+			if request.ConditionSpec != nil {
+				apiTrigger.ConditionSpec = request.ConditionSpec
+			}
+			if request.ProbeSpec != nil {
+				apiTrigger.ProbeSpec = request.ProbeSpec
+			}
+			if request.Action != nil {
+				apiTrigger.Action = request.Action
+			}
+			if request.ActionParameters != nil {
+				apiTrigger.ActionParameters = request.ActionParameters
+			}
+			if request.Execution != nil {
+				apiTrigger.Execution = request.Execution
+			}
+			if request.TestSelector != nil {
+				apiTrigger.TestSelector = request.TestSelector
+			}
+			if request.ConcurrencyPolicy != nil {
+				apiTrigger.ConcurrencyPolicy = request.ConcurrencyPolicy
+			}
+			if request.Sync != nil {
+				apiTrigger.Sync = request.Sync
+			}
+			apiTrigger.Disabled = request.Disabled
 		}
-		if request.Resource != nil {
-			apiTrigger.Resource = request.Resource
-		}
-		if request.ResourceSelector != nil {
-			apiTrigger.ResourceSelector = request.ResourceSelector
-		}
-		if request.Event != "" {
-			apiTrigger.Event = request.Event
-		}
-		if request.ConditionSpec != nil {
-			apiTrigger.ConditionSpec = request.ConditionSpec
-		}
-		if request.ProbeSpec != nil {
-			apiTrigger.ProbeSpec = request.ProbeSpec
-		}
-		if request.Action != nil {
-			apiTrigger.Action = request.Action
-		}
-		if request.ActionParameters != nil {
-			apiTrigger.ActionParameters = request.ActionParameters
-		}
-		if request.Execution != nil {
-			apiTrigger.Execution = request.Execution
-		}
-		if request.TestSelector != nil {
-			apiTrigger.TestSelector = request.TestSelector
-		}
-		if request.ConcurrencyPolicy != nil {
-			apiTrigger.ConcurrencyPolicy = request.ConcurrencyPolicy
-		}
-		apiTrigger.Disabled = request.Disabled
 
 		err = s.TestTriggersClient.Update(c.Context(), s.getEnvironmentId(), *apiTrigger)
 		s.Metrics.IncUpdateTestTrigger(err)
