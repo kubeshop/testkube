@@ -149,6 +149,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		Name:              request.Name,
 		Namespace:         request.Namespace,
 		Labels:            request.Labels,
+		Annotations:       request.Annotations,
 		Selector:          mapLabelSelectorFromCRD(request.Spec.Selector),
 		Resource:          resource,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
