@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: gradle
     category: build-integration
+  annotations:
+    testkube.io/icon: gradle
 spec:
   content:
     git:
@@ -38,6 +40,8 @@ metadata:
     core-tests: workflows
     tool: gradle
     category: build-integration
+  annotations:
+    testkube.io/icon: gradle
 spec:
   content:
     git:
@@ -69,6 +73,8 @@ metadata:
     core-tests: workflows
     tool: gradle
     category: build-integration
+  annotations:
+    testkube.io/icon: gradle
 spec:
   content:
     git:

@@ -9,6 +9,8 @@ metadata:
     junit: "true"
     playwright-traces: "on"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: playwright
 spec:
   content:
     git:
@@ -55,6 +57,8 @@ metadata:
     junit: "true"
     playwright-traces: "on"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: playwright
 description: "Playwright project with video recording enabled (in playwright config)"
 spec:
   content:
@@ -99,6 +103,8 @@ metadata:
     tool: playwright
     artifacts: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: playwright
 spec:
   content:
     git:
@@ -150,6 +156,8 @@ metadata:
     core-tests: workflows
     tool: playwright
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: playwright
 spec:
   container:
     resources:
@@ -183,6 +191,8 @@ metadata:
     tool: playwright
     artifacts: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: playwright
 spec:
   content:
     git:
@@ -230,6 +240,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: playwright
 description: "Distributed Playwright with `--shard`"
 spec:
   content:

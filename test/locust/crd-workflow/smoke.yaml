@@ -7,6 +7,8 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   content:
     git:
@@ -42,6 +44,8 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   content:
     git:
@@ -77,6 +81,8 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   content:
     git:
@@ -111,6 +117,8 @@ metadata:
     core-tests: workflows
     tool: locust
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   config:
     workers: {type: integer, default: 2}
