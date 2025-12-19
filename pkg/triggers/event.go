@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const testkubeEventCausePrefix = "event-"
@@ -109,9 +110,9 @@ func (s Service) newWatcherEvent(
 	}
 
 	maps.Copy(w.EventLabels, s.eventLabels)
-	w.EventLabels[eventLabelKeyAgentName] = s.agentName
+	w.EventLabels[eventLabelKeyAgentName] = utils.TruncateName(s.agentName)
 	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
-	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
+	w.EventLabels[eventLabelKeyResourceName] = utils.TruncateName(objectMeta.GetName())
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	if runtimeObject, ok := object.(runtime.Object); ok &&
