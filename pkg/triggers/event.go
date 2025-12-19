@@ -110,9 +110,9 @@ func (s Service) newWatcherEvent(
 	}
 
 	maps.Copy(w.EventLabels, s.eventLabels)
-	w.EventLabels[eventLabelKeyAgentName] = utils.SanitizeName(s.agentName)
+	w.EventLabels[eventLabelKeyAgentName] = utils.TruncateName(s.agentName)
 	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
-	w.EventLabels[eventLabelKeyResourceName] = utils.SanitizeName(objectMeta.GetName())
+	w.EventLabels[eventLabelKeyResourceName] = utils.TruncateName(objectMeta.GetName())
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	if runtimeObject, ok := object.(runtime.Object); ok &&
