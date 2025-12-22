@@ -513,6 +513,101 @@ spec:
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
+	t.Run("should clear all optional fields when json update uses mode=replace query param", func(t *testing.T) {
+		// given - JSON with only required fields but with mode=replace query param
+		// This simulates cloud-api forwarding a YAML Definition tab update
+		request := testkube.TestTriggerUpsertRequest{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Resource:  resourcePtr("deployment"),
+			Event:     "created",
+			Action:    actionPtr("run"),
+			Execution: executionPtr("testworkflow"),
+			TestSelector: &testkube.TestTriggerSelector{
+				Name: "my-test",
+			},
+		}
+
+		// existing trigger has ALL optional fields populated
+		existingTrigger := &testkube.TestTrigger{
+			Name:        "test-trigger",
+			Namespace:   "default",
+			Labels:      map[string]string{"env": "test", "team": "platform"},
+			Annotations: map[string]string{"description": "my trigger"},
+			Resource:    resourcePtr("deployment"),
+			ResourceSelector: &testkube.TestTriggerSelector{
+				Name:          "specific-deployment",
+				Namespace:     "apps",
+				LabelSelector: &testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector{MatchLabels: map[string]string{"app": "test"}},
+			},
+			Event:     "created",
+			Action:    actionPtr("run"),
+			Execution: executionPtr("testworkflow"),
+			ConditionSpec: &testkube.TestTriggerConditionSpec{
+				Timeout: 100,
+				Conditions: []testkube.TestTriggerCondition{
+					{Type_: "Ready", Status: conditionStatusPtr("True")},
+				},
+			},
+			ProbeSpec: &testkube.TestTriggerProbeSpec{
+				Timeout: 60,
+				Probes: []testkube.TestTriggerProbe{
+					{Scheme: "http", Host: "localhost", Port: 8080},
+				},
+			},
+			ActionParameters: &testkube.TestTriggerActionParameters{
+				Config: map[string]string{"key": "value"},
+				Tags:   map[string]string{"env": "test"},
+			},
+			TestSelector: &testkube.TestTriggerSelector{
+				Name: "old-test",
+			},
+			ConcurrencyPolicy: concurrencyPolicyPtr(testkube.FORBID_TestTriggerConcurrencyPolicies),
+			Disabled:          true,
+		}
+
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "test-trigger", "default").
+			Return(existingTrigger, nil).
+			Times(1)
+
+		mockClient.EXPECT().
+			Update(gomock.Any(), "test-env", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, envId string, trigger testkube.TestTrigger) error {
+				// All optional fields should be cleared since mode=replace triggers full replacement
+				// This should behave identically to a YAML update
+				assert.Nil(t, trigger.Labels, "labels should be nil when using mode=replace")
+				assert.Nil(t, trigger.Annotations, "annotations should be nil when using mode=replace")
+				assert.Nil(t, trigger.ResourceSelector, "resourceSelector should be nil when using mode=replace")
+				assert.Nil(t, trigger.ConditionSpec, "conditionSpec should be nil when using mode=replace")
+				assert.Nil(t, trigger.ProbeSpec, "probeSpec should be nil when using mode=replace")
+				assert.Nil(t, trigger.ActionParameters, "actionParameters should be nil when using mode=replace")
+				assert.Nil(t, trigger.ConcurrencyPolicy, "concurrencyPolicy should be nil when using mode=replace")
+				assert.False(t, trigger.Disabled, "disabled should be false when using mode=replace")
+				// Required fields should still be set from the request
+				assert.Equal(t, "test-trigger", trigger.Name)
+				assert.Equal(t, "default", trigger.Namespace)
+				assert.NotNil(t, trigger.Resource)
+				assert.Equal(t, "created", trigger.Event)
+				assert.NotNil(t, trigger.TestSelector)
+				assert.Equal(t, "my-test", trigger.TestSelector.Name)
+				return nil
+			}).
+			Times(1)
+
+		requestBody, _ := json.Marshal(request)
+		// Note: using mode=replace query param with JSON content type
+		req := httptest.NewRequest("PUT", "/test-triggers?mode=replace", bytes.NewReader(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
 	t.Run("should preserve conditionSpec when json update does not include it", func(t *testing.T) {
 		// given - JSON update without conditionSpec (merge behavior)
 		request := testkube.TestTriggerUpsertRequest{
