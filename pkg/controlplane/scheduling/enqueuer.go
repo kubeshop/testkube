@@ -124,6 +124,16 @@ func (e *Enqueuer) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 	}
 	// END POST-COMMIT VALIDATION
 
+	// The OSS scheduler differs in behaviour compared to the PRO scheduler.
+	// It can immediately assign executions because there is only one possible
+	// runner which is known in advance. The benefit is that there is no limitation
+	// of a maximum of 60 executions per minute (due to JIT assignment during polling
+	// being limited to max 1 per second). Some customers were running into this limitation.
+	err = e.assignExecutions(commitContext, intermediateExecutions)
+	if err != nil {
+		return nil, err
+	}
+
 	executions, err := e.persistExecution(commitContext, intermediateExecutions, logger)
 	if err != nil {
 		return nil, err
@@ -305,6 +315,14 @@ func (e *Enqueuer) finaliseExecution(ctx context.Context, executions []*testwork
 		}
 	}
 
+	return nil
+}
+
+func (e *Enqueuer) assignExecutions(_ context.Context, executions []*testworkflowexecutor.IntermediateExecution) error {
+	for i := range executions {
+		exec := executions[i]
+		exec.Assign(time.Now(), common.StandaloneRunner)
+	}
 	return nil
 }
 

@@ -86,7 +86,6 @@ func (s *PostgresScheduler) ScheduleExecution(ctx context.Context, info RunnerIn
 
 // We need everything because the event dispatcher and listeners expect the full execution.
 func (s *PostgresScheduler) getFullExecution(ctx context.Context, exec sqlc.TestWorkflowExecution, result sqlc.TestWorkflowResult) (testkube.TestWorkflowExecution, error) {
-	// TODO handle NoRows better?
 	var workflow sqlc.TestWorkflow
 	var resolvedWorkflow sqlc.TestWorkflow
 	var outputs []sqlc.TestWorkflowOutput
