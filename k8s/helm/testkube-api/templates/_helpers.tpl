@@ -350,6 +350,8 @@ Define API environment in standalone mode
   value: "{{ .Values.storage.certSecret.baseMountPath }}/{{ .Values.storage.certSecret.caFile }}"
 {{- end }}
 {{- end }}
+- name: "STORAGE_USE_VIRTUAL_HOSTED_STYLE"
+  value: "{{ .Values.storage.useVirtualHostedStyle }}"
 - name: "SCRAPPERENABLED"
   value:  "{{ .Values.storage.scrapperEnabled }}"
 - name: "COMPRESSARTIFACTS"

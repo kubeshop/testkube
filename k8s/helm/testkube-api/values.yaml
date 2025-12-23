@@ -467,6 +467,9 @@ storage:
   SSL: false
   ## Skip Verify is used to configure storage client not to verify SSL certificates
   skipVerify: false
+  ## Use virtual-hosted-style URLs for S3-compatible storage (bucket in hostname instead of path)
+  ## Set to true for services like Tencent Cloud COS CDC that only support virtual-hosted-style
+  useVirtualHostedStyle: false
   ## If enabled, will also require a CA certificate to be provided
   mountCACertificate: false
   certSecret:
