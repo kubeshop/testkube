@@ -84,6 +84,27 @@ The MCP server exposes 20 tools organized into five categories:
 - `list_resource_groups` - List resource groups in the organization
 - `list_agents` - List agents with filtering (type, capability, pagination)
 
+### Available Resources
+
+The MCP server exposes 4 TestWorkflow example resources that help AI assistants understand the TestWorkflow schema and best practices. These resources point directly to actual test files in the `test/` directory, ensuring examples stay synchronized with the real test suite:
+
+1. **postman-smoke** - Multiple Postman workflow examples including simple runs, templates, and JUnit reporting (`test/postman/crd-workflow/smoke.yaml`)
+2. **playwright-smoke** - Playwright workflows demonstrating E2E testing with artifacts, JUnit reports, and trace collection (`test/playwright/crd-workflow/smoke.yaml`)
+3. **k6-smoke** - K6 workflows for performance and load testing with various configurations (`test/k6/crd-workflow/smoke.yaml`)
+4. **special-cases** - Advanced features including ENV overrides, retries, conditions, parallel execution, shared volumes, and security contexts (`test/special-cases/special-cases.yaml`)
+
+These resources are available via the MCP protocol using URIs like `testworkflow://examples/postman-smoke`. AI assistants can read these resources to understand the TestWorkflow schema before creating or modifying workflows.
+
+**Important:** The resources reference actual test files from the repository. If test file paths change, the resources will need to be updated in `pkg/mcp/resources/testworkflow_examples.go`.
+
+**Note for maintainers:** When adding new resources to `pkg/mcp/resources/`, ensure that:
+
+1. The resource references point to actual test files in the `test/` directory
+2. The file paths in `GetTestWorkflowExamples()` are correct and relative to repository root
+3. The resources are registered in both the CLI and control plane MCP servers
+4. Resources represent real-world use cases and follow the TestWorkflow schema
+5. Resource descriptions include the file path for easy reference
+
 **Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
 
 1. The tool follows the interface-based design pattern (see existing tools for examples)
