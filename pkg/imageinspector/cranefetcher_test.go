@@ -37,10 +37,8 @@ func TestExtractRegistry(t *testing.T) {
 }
 
 func TestParseSecretData(t *testing.T) {
-	t.Parallel()
 
 	t.Run("parse docker config base auth", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"auth\": \"ZG9ja2VyLXVzZXJuYW1lOnlvdXItcmVhbGx5LXJlYWxseS1sb25nLWF1dGgta2V5\"}}}")},
@@ -55,7 +53,6 @@ func TestParseSecretData(t *testing.T) {
 	})
 
 	t.Run("parse docker config map", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockercfg": []byte("{\"https://index.docker.io/v1/\": {\"auth\": \"ZG9ja2VyLXVzZXJuYW1lOnlvdXItcmVhbGx5LXJlYWxseS1sb25nLWF1dGgta2V5\"}}")},
@@ -70,7 +67,6 @@ func TestParseSecretData(t *testing.T) {
 	})
 
 	t.Run("parse docker config plain credentials", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}}}")},
@@ -85,7 +81,6 @@ func TestParseSecretData(t *testing.T) {
 	})
 
 	t.Run("parse docker config path credentials", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com/company\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}}}")},
@@ -100,7 +95,6 @@ func TestParseSecretData(t *testing.T) {
 	})
 
 	t.Run("parse docker config longest path credentials", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"registry.gitlab.com/company/path\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}, \"registry.gitlab.com/company\": {\"username\": \"user\", \"password\": \"pass\"}}}")},
@@ -115,7 +109,6 @@ func TestParseSecretData(t *testing.T) {
 	})
 
 	t.Run("parse docker config missed data", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -130,7 +123,6 @@ func TestParseSecretData(t *testing.T) {
 	})
 
 	t.Run("parse docker config wrong auth", func(t *testing.T) {
-		t.Parallel()
 
 		secret := corev1.Secret{
 			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"auth\": \"12345\"}}}")},
