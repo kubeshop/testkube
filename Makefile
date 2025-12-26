@@ -246,7 +246,7 @@ build-api-server: ## Build API server binary
 		$(GOFLAGS) \
 		-ldflags='$(LD_FLAGS_API)' \
 		-o $(API_SERVER_BIN) \
-		cmd/api-server/main.go
+		./cmd/api-server/
 	@echo "API server built: $(API_SERVER_BIN)"
 
 .PHONY: build-testkube-cli
