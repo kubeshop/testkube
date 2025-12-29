@@ -158,7 +158,7 @@ func (e Event) Log() []any {
 }
 
 func (e Event) Valid(groupId, selector string, types []EventType) (matchedTypes []EventType, valid bool) {
-	if e.GroupId != groupId {
+	if groupId != "" && e.GroupId != groupId {
 		return nil, false
 	}
 

@@ -56,6 +56,21 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		assert.True(t, valid)
 	})
 
+	t.Run("should treat empty group as wildcard", func(t *testing.T) {
+		t.Parallel()
+
+		// given
+		execution := &TestWorkflowExecution{Workflow: &TestWorkflow{}}
+		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution, GroupId: "env-1"}
+
+		// when
+		types, valid := e.Valid("", "", AllEventTypes)
+
+		// then
+		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
+		assert.True(t, valid)
+	})
+
 	t.Run("should pass events with become events", func(t *testing.T) {
 		t.Parallel()
 
