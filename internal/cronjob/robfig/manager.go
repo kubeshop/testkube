@@ -5,6 +5,7 @@ package robfig
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -41,12 +42,16 @@ func New(logger *zap.SugaredLogger, executor Executor, proModeEnabled bool) Mana
 
 // Start the cron manager in its own goroutine, or no-op if already started.
 func (m Manager) Start() {
+    m.logger.Infow("cron manager starting")
 	m.cron.Start()
+	m.logger.Infow("cron manager started")
 }
 
 // Stop stops the cron manager if it is running; otherwise it does nothing.
 func (m Manager) Stop() {
+	m.logger.Infow("cron manager stopping")
 	m.cron.Stop()
+	m.logger.Infow("cron manager stopped")
 }
 
 func cronSpec(config testkube.TestWorkflowCronJobConfig) string {
@@ -58,13 +63,16 @@ func cronSpec(config testkube.TestWorkflowCronJobConfig) string {
 }
 
 func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.Workflow, configs []testkube.TestWorkflowCronJobConfig) error {
+	log := m.logger.With("workflow", workflow.Name)
 	// Delete all existing schedules for this workflow.
 	// This is because we may not know when a schedule is removed from
 	// an object so we must recreate the entire schedule from scratch
 	// each time there is a change.
 	if _, exists := m.cronEntries[workflow.Name]; exists {
+        log.Infow("removing existing schedules", "existing_entries", m.cronEntries[workflow.Name])
 		for _, entryId := range m.cronEntries[workflow.Name] {
-			m.cron.Remove(entryId)
+		    log.Debugw("removing schedule entry", "entry_id", entryId)
+            m.cron.Remove(entryId)
 		}
 		delete(m.cronEntries, workflow.Name)
 	}
@@ -72,6 +80,19 @@ func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.
 
 	for _, config := range configs {
 		spec := cronSpec(config)
+
+		if config.Timezone != nil {
+        log.Infow("adding schedule",
+            "spec", spec,
+            "cron", config.Cron,
+            "timezone", config.Timezone.Value,
+        )
+        } else {
+            log.Infow("adding schedule",
+                "spec", spec,
+                "cron", config.Cron,
+            )
+        }
 		entryId, err := m.cron.AddJob(spec, m.testWorkflowExecuteJob(ctx, workflow.Name, spec, config))
 		if err != nil {
 			m.logger.Errorw("Error adding cron for workflow, continuing processing",
@@ -81,8 +102,16 @@ func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.
 			continue
 		}
 		m.cronEntries[workflow.Name][spec] = entryId
-	}
+		entry := m.cron.Entry(entryId)
 
+		log.Infow("schedule registered",
+            "entry_id", entryId,
+            "spec", spec,
+            "next_run", entry.Next.Format(time.RFC3339),
+            "prev_run", entry.Prev.Format(time.RFC3339),
+        )
+	}
+    log.Infow("ReplaceWorkflowSchedules finished")
 	return nil
 }
 
