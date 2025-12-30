@@ -102,48 +102,54 @@ func NewAgent(logger *zap.SugaredLogger,
 }
 
 func (ag *Agent) Run(ctx context.Context) error {
-	reconnectionLoop := func(name string, fn func(context.Context) error) func() {
-		return func() {
-			for {
-				// Pre check for already finished context in case it is not correctly handled by the passed function.
-				if ctx.Err() != nil {
-					return
-				}
-
-				ag.logger.Infow("starting reconnection loop",
-					"name", name)
-
-				err := fn(ctx)
-				switch {
-				case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-					// After context cancellation exit the loop.
-					return
-				case err != nil:
-					ag.logger.Errorw("error running agent connection",
-						"name", name,
-						"error", err)
-				}
-
-				ag.logger.Infow("agent connection closed, reconnecting after delay",
-					"name", name,
-					"delay", reconnectionLoopDelay)
-
-				time.Sleep(reconnectionLoopDelay)
-			}
-		}
-	}
-
 	var wg sync.WaitGroup
 
-	wg.Go(reconnectionLoop("command loop", ag.runCommandLoop))
-	wg.Go(reconnectionLoop("worker loop", ag.runWorkers(ag.workerCount)))
-	wg.Go(reconnectionLoop("event loop", ag.runEventLoop))
-
-	wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
+	wg.Go(func() {
+		_ = ag.runWithReconnect(ctx, "command loop", ag.runCommandLoop)
+	})
+	wg.Go(func() {
+		_ = ag.runWithReconnect(ctx, "worker loop", ag.runWorkers(ag.workerCount))
+	})
+	wg.Go(func() {
+		_ = ag.runWithReconnect(ctx, "event loop", ag.runEventLoop)
+	})
 	wg.Wait()
 
 	// We can only return here if the context has been cancelled.
 	return ctx.Err()
+}
+
+func (ag *Agent) RunEventReader(ctx context.Context) error {
+	return ag.runWithReconnect(ctx, "event read loop", ag.runEventsReaderLoop)
+}
+
+func (ag *Agent) runWithReconnect(ctx context.Context, name string, fn func(context.Context) error) error {
+	for {
+		// Pre check for already finished context in case it is not correctly handled by the passed function.
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		ag.logger.Infow("starting reconnection loop",
+			"name", name)
+
+		err := fn(ctx)
+		switch {
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+			// After context cancellation exit the loop.
+			return err
+		case err != nil:
+			ag.logger.Errorw("error running agent connection",
+				"name", name,
+				"error", err)
+		}
+
+		ag.logger.Infow("agent connection closed, reconnecting after delay",
+			"name", name,
+			"delay", reconnectionLoopDelay)
+
+		time.Sleep(reconnectionLoopDelay)
+	}
 }
 
 func (ag *Agent) outgoingContext(ctx context.Context) context.Context {
