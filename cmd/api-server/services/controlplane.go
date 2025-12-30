@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,12 +43,16 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	if cfg.APIMongoDSN != "" {
 		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 		factory, err = CreateMongoFactory(ctx, cfg, mongoDb)
+		commons.ExitOnError("Creating MongoDB factory", err)
 	}
 	if cfg.APIPostgresDSN != "" {
 		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
 		factory, err = CreatePostgresFactory(postgresDb)
+		commons.ExitOnError("Creating PostgreSQL factory", err)
 	}
-	commons.ExitOnError("Creating factory for database", err)
+	if factory == nil {
+		commons.ExitOnError("Creating factory for database", errors.New("neither API_MONGO_DSN nor API_POSTGRES_DSN is configured, at least one database connection is required"))
+	}
 
 	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 	commons.ExitOnError("Creating test workflow client", err)
