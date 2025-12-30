@@ -40,12 +40,13 @@ Testkube follows a standard Go project layout with clear separation of concerns:
 
 ```
 testkube/
-├── cmd/                    # Application entry points
+├── cmd/                   # Application entry points
 │   ├── api-server/        # Main API server (Control Plane)
 │   ├── kubectl-testkube/  # CLI tool (kubectl plugin)
 │   ├── testworkflow-toolkit/  # TestWorkflow execution toolkit
 │   └── testworkflow-init/     # TestWorkflow initialization
-├── pkg/                    # Public library code (importable by external apps)
+│   └── ...                # Other cmd-related packages
+├── pkg/                   # Public library code (importable by external apps)
 │   ├── api/               # API models and clients
 │   ├── repository/        # Data repository interfaces
 │   ├── testworkflows/     # TestWorkflow processing logic
@@ -55,6 +56,7 @@ testkube/
 │   ├── app/               # Application-specific logic
 │   ├── config/            # Configuration management
 │   └── sync/              # Synchronization logic
+│   └── ...                # Other internal packages
 ├── api/                   # API definitions and OpenAPI specs
 ├── k8s/                   # Kubernetes manifests and Helm charts
 ├── proto/                 # Protocol Buffer definitions
