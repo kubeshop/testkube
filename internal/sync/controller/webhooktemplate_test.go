@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -36,6 +37,10 @@ func TestWebhookTemplateSyncReconcilerUpdateOrCreate(t *testing.T) {
 	if diff := cmp.Diff(input, store.WebhookTemplate); diff != "" {
 		t.Errorf("WebhookTemplateSyncReconcilerUpdateOrCreate: -want, +got:\n%s", diff)
 	}
+
+	if store.UpdateCalls != 1 {
+		t.Errorf("WebhookTemplateSyncReconcilerUpdateOrCreate: expected 1 update call, got %d", store.UpdateCalls)
+	}
 }
 
 func TestWebhookTemplateSyncReconcilerDelete(t *testing.T) {
@@ -55,5 +60,39 @@ func TestWebhookTemplateSyncReconcilerDelete(t *testing.T) {
 
 	if diff := cmp.Diff(name, store.Deleted); diff != "" {
 		t.Errorf("WebhookTemplateSyncReconcilerUpdateOrCreate: -want, +got:\n%s", diff)
+	}
+
+	if store.UpdateCalls != 0 {
+		t.Errorf("WebhookTemplateSyncReconcilerDelete: expected 0 update calls, got %d", store.UpdateCalls)
+	}
+}
+
+func TestWebhookTemplateSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
+	store := &fakeStore{}
+	name := "foobar"
+	now := metav1.Now()
+
+	reconciler := webhookTemplateSyncReconciler(
+		fakeKubernetesClient{
+			WebhookTemplate: executorv1.WebhookTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              name,
+					DeletionTimestamp: &now,
+				},
+			},
+		},
+		store,
+	)
+
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+
+	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+		t.Errorf("WebhookTemplateSyncReconcilerDeleteWhenMarkedForDeletion: -want, +got:\n%s", diff)
+	}
+
+	if store.UpdateCalls != 0 {
+		t.Errorf("WebhookTemplateSyncReconcilerDeleteWhenMarkedForDeletion: expected 0 update calls, got %d", store.UpdateCalls)
 	}
 }
