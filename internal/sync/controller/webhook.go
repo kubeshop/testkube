@@ -42,6 +42,7 @@ func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.R
 				// the store then we should handle them here.
 				return ctrl.Result{}, fmt.Errorf("delete Webhook %q from store: %w", req.Name, err)
 			}
+			return ctrl.Result{}, nil
 		case err != nil:
 			return ctrl.Result{}, fmt.Errorf("retrieve Webhook %q from Kubernetes: %w", req.NamespacedName, err)
 		}
@@ -63,6 +64,7 @@ func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.R
 				// the store then we should handle them here.
 				return ctrl.Result{}, fmt.Errorf("delete Webhook %q from store: %w", req.Name, err)
 			}
+			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.

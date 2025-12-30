@@ -50,9 +50,11 @@ type fakeStore struct {
 	Webhook              executorv1.Webhook
 	WebhookTemplate      executorv1.WebhookTemplate
 	Deleted              string
+	UpdateCalls          int
 }
 
 func (t *fakeStore) UpdateOrCreateTestTrigger(_ context.Context, trigger testtriggersv1.TestTrigger) error {
+	t.UpdateCalls++
 	trigger.DeepCopyInto(&t.TestTrigger)
 	return nil
 }
@@ -63,6 +65,7 @@ func (t *fakeStore) DeleteTestTrigger(_ context.Context, s string) error {
 }
 
 func (t *fakeStore) UpdateOrCreateTestWorkflow(_ context.Context, workflow testworkflowsv1.TestWorkflow) error {
+	t.UpdateCalls++
 	workflow.DeepCopyInto(&t.TestWorkflow)
 	return nil
 }
@@ -73,6 +76,7 @@ func (t *fakeStore) DeleteTestWorkflow(_ context.Context, s string) error {
 }
 
 func (t *fakeStore) UpdateOrCreateTestWorkflowTemplate(_ context.Context, template testworkflowsv1.TestWorkflowTemplate) error {
+	t.UpdateCalls++
 	template.DeepCopyInto(&t.TestWorkflowTemplate)
 	return nil
 }
@@ -83,6 +87,7 @@ func (t *fakeStore) DeleteTestWorkflowTemplate(_ context.Context, s string) erro
 }
 
 func (t *fakeStore) UpdateOrCreateWebhook(_ context.Context, webhook executorv1.Webhook) error {
+	t.UpdateCalls++
 	webhook.DeepCopyInto(&t.Webhook)
 	return nil
 }
@@ -93,6 +98,7 @@ func (t *fakeStore) DeleteWebhook(_ context.Context, s string) error {
 }
 
 func (t *fakeStore) UpdateOrCreateWebhookTemplate(_ context.Context, template executorv1.WebhookTemplate) error {
+	t.UpdateCalls++
 	template.DeepCopyInto(&t.WebhookTemplate)
 	return nil
 }
