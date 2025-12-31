@@ -313,7 +313,7 @@ build-all-platforms: ## Build binaries for all supported platforms
 .PHONY: run-api
 run-api: ## Run API server locally
 	@echo "Starting API server..."
-	$(GO) run -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
+	$(GO) run -ldflags='$(LD_FLAGS_API)' ./cmd/api-server/
 
 .PHONY: run-api-race
 run-api-race: ## Run API server with race detector
