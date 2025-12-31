@@ -683,8 +683,12 @@ func main() {
 
 	log.DefaultLogger.Info("starting agent service")
 
-	if !cfg.DisableDefaultAgent {
-		agentHandle, err := agent.NewAgent(
+	shouldRunAgent := shouldRunDefaultAgent(cfg, proContext)
+	shouldRunEventReader := shouldRunAgent || shouldRunWebhookEventReader(cfg, proContext)
+	var agentHandle *agent.Agent
+	if shouldRunAgent || shouldRunEventReader {
+		var err error
+		agentHandle, err = agent.NewAgent(
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
 			grpcClient,
@@ -695,6 +699,8 @@ func main() {
 			eventsEmitter,
 		)
 		commons.ExitOnError("starting agent", err)
+	}
+	if shouldRunAgent {
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "agent",
 			Start: func(taskCtx context.Context) error {
@@ -706,6 +712,18 @@ func main() {
 			},
 		})
 		eventsEmitter.Register(agentHandle)
+	}
+	if shouldRunEventReader {
+		leaderTasks = append(leaderTasks, leader.Task{
+			Name: "agent-event-reader",
+			Start: func(taskCtx context.Context) error {
+				err := agentHandle.RunEventReader(taskCtx)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					commons.ExitOnError("running agent event reader", err)
+				}
+				return err
+			},
+		})
 	}
 
 	if !cfg.DisableTestTriggers {
@@ -908,4 +926,19 @@ func shouldUseCloudWebhooks(
 	proContext intconfig.ProContext,
 ) bool {
 	return proContext.HasSourceOfTruthCapability && !proContext.Agent.IsSuperAgent && proContext.EnvID != ""
+}
+
+// Disable the legacy agent once the control plane becomes the source of truth.
+func shouldRunDefaultAgent(cfg *intconfig.Config, proContext intconfig.ProContext) bool {
+	if cfg.DisableDefaultAgent {
+		return false
+	}
+	return !proContext.HasSourceOfTruthCapability || proContext.Agent.IsSuperAgent
+}
+
+func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.ProContext) bool {
+	if cfg.DisableWebhooks {
+		return false
+	}
+	return shouldUseCloudWebhooks(proContext)
 }
