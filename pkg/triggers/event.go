@@ -260,7 +260,8 @@ func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.C
 
 func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogger) {
 	for key, value := range labels {
-		if errs := validation.IsValidLabelValue(value); len(errs) == 0 {
+		errs := validation.IsValidLabelValue(value)
+		if len(errs) == 0 {
 			continue
 		}
 		if logger != nil {
