@@ -133,6 +133,27 @@ func (s Service) newWatcherEvent(
 	}
 
 	sanitizeEventLabelValues(w.EventLabels, s.logger)
+	if s.logger != nil {
+		s.logger.Debugw("testtrigger event labels prepared",
+			"eventType", string(eventType),
+
+			"agentName", s.agentName,
+			"agentNameLabel", w.EventLabels[eventLabelKeyAgentName],
+			"agentNamespaceLabel", w.EventLabels[eventLabelKeyAgentNamespace],
+
+			"resourceKindLabel", w.EventLabels[eventLabelKeyResourceKind],
+			"resourceGroupLabel", w.EventLabels[eventLabelKeyResourceGroup],
+			"resourceVersionLabel", w.EventLabels[eventLabelKeyResourceVersion],
+			"resourceNameLabel", w.EventLabels[eventLabelKeyResourceName],
+			"resourceNamespaceLabel", w.EventLabels[eventLabelKeyResourceNamespace],
+			"resourceType", string(resource),
+
+			"objectNamespace", objectMeta.GetNamespace(),
+			"objectName", objectMeta.GetName(),
+
+			"labels", w.EventLabels,
+		)
+	}
 
 	return w
 }
@@ -242,6 +263,13 @@ func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogge
 		if errs := validation.IsValidLabelValue(value); len(errs) == 0 {
 			continue
 		}
+		if logger != nil {
+			logger.Debugw("event label invalid before sanitization",
+				"key", key,
+				"value", value,
+				"errors", errs,
+			)
+		}
 
 		sanitized := strings.Map(func(r rune) rune {
 			if isAllowedLabelRune(r) {
@@ -256,6 +284,14 @@ func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogge
 
 		sanitized = strings.TrimLeftFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
 		sanitized = strings.TrimRightFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+
+		if logger != nil {
+			logger.Debugw("event label sanitization result",
+				"key", key,
+				"original", value,
+				"sanitized", sanitized,
+			)
+		}
 
 		if sanitized == "" {
 			if logger != nil {
