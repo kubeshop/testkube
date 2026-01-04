@@ -247,8 +247,7 @@ func setupCertAuth(opts *CloneOptions) ([]string, []func(), error) {
 	if opts.CaCert != "" {
 		cleanupCaCertFile, caCertFilePath, err := CreateTempFile(opts.CaCert, "ca-cert-*")
 		if err != nil {
-			RunCleanupFuncs(cleanupFuncs)
-			return nil, nil, fmt.Errorf("creating temp file for CA Certificate: %w", err)
+			return nil, cleanupFuncs, fmt.Errorf("creating temp file for CA Certificate: %w", err)
 		}
 		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslCAInfo=%s", caCertFilePath))
 		cleanupFuncs = append(cleanupFuncs, cleanupCaCertFile)
@@ -256,16 +255,14 @@ func setupCertAuth(opts *CloneOptions) ([]string, []func(), error) {
 	if opts.ClientCert != "" && opts.ClientKey != "" {
 		cleanupclientCertFile, clientCertFilePath, err := CreateTempFile(opts.ClientCert, "client-cert-*")
 		if err != nil {
-			RunCleanupFuncs(cleanupFuncs)
-			return nil, nil, fmt.Errorf("creating temp file for Client Certificate: %w", err)
+			return nil, cleanupFuncs, fmt.Errorf("creating temp file for Client Certificate: %w", err)
 		}
 		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslCert=%s", clientCertFilePath))
 		cleanupFuncs = append(cleanupFuncs, cleanupclientCertFile)
 
 		cleanupclientKeyFile, clientKeyFilePath, err := CreateTempFile(opts.ClientKey, "client-key-*")
 		if err != nil {
-			RunCleanupFuncs(cleanupFuncs)
-			return nil, nil, fmt.Errorf("creating temp file for Client Key: %w", err)
+			return nil, cleanupFuncs, fmt.Errorf("creating temp file for Client Key: %w", err)
 		}
 		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslKey=%s", clientKeyFilePath))
 		cleanupFuncs = append(cleanupFuncs, cleanupclientKeyFile)
