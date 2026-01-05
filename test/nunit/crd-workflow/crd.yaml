@@ -8,6 +8,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: unit-component-testing
+  annotations:
+    testkube.io/icon: nunit
 spec:
   content:
     git:

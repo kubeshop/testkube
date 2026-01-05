@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: postman
     category: api-testing
+  annotations:
+    testkube.io/icon: postman
 spec:
   content:
     git:
@@ -34,6 +36,8 @@ metadata:
     core-tests: workflows
     tool: postman
     category: api-testing
+  annotations:
+    testkube.io/icon: postman
 spec:
   content:
     git:
@@ -65,6 +69,8 @@ metadata:
     core-tests: workflows
     tool: postman
     category: api-testing
+  annotations:
+    testkube.io/icon: postman
 spec:
   content:
     git:
@@ -96,6 +102,8 @@ metadata:
     core-tests: workflows
     tool: postman
     category: api-testing
+  annotations:
+    testkube.io/icon: postman
 spec:
   content:
     git:
@@ -128,6 +136,8 @@ metadata:
     artifacts: "true"
     junit: "true"
     category: api-testing
+  annotations:
+    testkube.io/icon: postman
 spec:
   content:
     git:
@@ -159,6 +169,8 @@ metadata:
     core-tests: workflows
     tool: postman
     category: api-testing
+  annotations:
+    testkube.io/icon: postman
 spec:
   content:
     git:

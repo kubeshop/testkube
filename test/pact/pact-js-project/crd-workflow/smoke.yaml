@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: pact
     category: api-testing
+  annotations:
+    testkube.io/icon: pact
 spec:
   content:
     git:
