@@ -321,14 +321,7 @@ func main() {
 	// Configure SyncStore here as it is required for the SuperAgent migration.
 	// This setup can be moved back down to just before the controller initialisation
 	// when the SuperAgent migration has been removed.
-	var syncStore interface {
-		synccontroller.TestTriggerStore
-		synccontroller.TestWorkflowStore
-		synccontroller.TestWorkflowTemplateStore
-		synccontroller.WebhookStore
-		synccontroller.WebhookTemplateStore
-	}
-	syncStore = syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
+	syncStore := syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
 	// SUPER AGENT DEPRECATION MIGRATION
 	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
 	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
