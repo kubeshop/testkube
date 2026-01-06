@@ -16,8 +16,6 @@ import (
 )
 
 func Test_ReconcileTestWorkflow(t *testing.T) {
-	t.Parallel()
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

@@ -11,7 +11,6 @@ import (
 )
 
 func TestResourceOptions(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 global:
@@ -388,7 +387,6 @@ natsBox:
 }
 
 func TestResourcesMergePatch(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:

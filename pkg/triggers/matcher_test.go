@@ -16,7 +16,6 @@ import (
 )
 
 func TestService_matchConditionsRetry(t *testing.T) {
-	t.Parallel()
 
 	retry := 0
 	e := &watcherEvent{
@@ -101,7 +100,6 @@ func TestService_matchConditionsRetry(t *testing.T) {
 }
 
 func TestService_matchConditionsTimeout(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:       "deployment",
@@ -179,7 +177,6 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 }
 
 func TestService_matchProbesMultiple(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:       "deployment",
@@ -255,7 +252,6 @@ func TestService_matchProbesMultiple(t *testing.T) {
 }
 
 func TestService_matchProbesTimeout(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:       "deployment",
@@ -324,7 +320,6 @@ func TestService_matchProbesTimeout(t *testing.T) {
 }
 
 func TestService_match(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:       "deployment",
@@ -431,7 +426,6 @@ func TestService_match(t *testing.T) {
 }
 
 func TestService_matchRegex(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:       "deployment",
@@ -484,7 +478,6 @@ func TestService_matchRegex(t *testing.T) {
 }
 
 func TestService_noMatch(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:       "deployment",
@@ -547,7 +540,6 @@ func newDefaultTestTriggersService(t *testing.T, trigger *testtriggersv1.TestTri
 }
 
 func TestService_matchResourceSelector_matchLabels(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resourceLabels: map[string]string{
@@ -583,7 +575,6 @@ func TestService_matchResourceSelector_matchLabels(t *testing.T) {
 }
 
 func TestService_matchResourceSelector_matchLabels_noMatch(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resourceLabels: map[string]string{
@@ -615,7 +606,6 @@ func TestService_matchResourceSelector_matchLabels_noMatch(t *testing.T) {
 }
 
 func TestService_matchResourceSelector_matchExpression(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resourceLabels: map[string]string{
@@ -655,7 +645,6 @@ func TestService_matchResourceSelector_matchExpression(t *testing.T) {
 }
 
 func TestService_matchResourceSelector_matchExpression_noMatch(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resourceLabels: map[string]string{
@@ -690,7 +679,6 @@ func TestService_matchResourceSelector_matchExpression_noMatch(t *testing.T) {
 }
 
 func TestService_matchSelector_nilSelector(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource: "deployment",
@@ -720,7 +708,6 @@ func TestService_matchSelector_nilSelector(t *testing.T) {
 }
 
 func TestService_matchSelector_emptySelector(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource: "deployment",
@@ -750,7 +737,6 @@ func TestService_matchSelector_emptySelector(t *testing.T) {
 }
 
 func TestService_matchSelector_matchLabels(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource: "deployment",
@@ -790,7 +776,6 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 }
 
 func TestService_matchSelector_matchExpression(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource: "deployment",
@@ -833,7 +818,6 @@ func TestService_matchSelector_matchExpression(t *testing.T) {
 }
 
 func TestService_matchSelector_noMatch(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource: "deployment",
@@ -869,7 +853,6 @@ func TestService_matchSelector_noMatch(t *testing.T) {
 }
 
 func TestService_matchSelector_matchResourceSelector(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:  "deployment",
@@ -915,7 +898,6 @@ func TestService_matchSelector_matchResourceSelector(t *testing.T) {
 }
 
 func TestService_matchSelector_noMatchResourceSelector(t *testing.T) {
-	t.Parallel()
 
 	e := &watcherEvent{
 		resource:  "deployment",

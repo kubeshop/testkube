@@ -13,7 +13,6 @@ import (
 )
 
 func TestWebhookLoader(t *testing.T) {
-	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -40,7 +39,6 @@ func TestWebhookLoader(t *testing.T) {
 }
 
 func TestWebhookTemplateLoader(t *testing.T) {
-	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

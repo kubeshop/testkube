@@ -105,13 +105,11 @@ func TestTemplates(t *testing.T) {
 	})
 	t.Run("TemplateGet", func(t *testing.T) {
 		t.Run("Get template with empty name", func(t *testing.T) {
-			t.Parallel()
 			_, err := tClient.Get("")
 			assert.Error(t, err)
 		})
 
 		t.Run("Get template with non existent name", func(t *testing.T) {
-			t.Parallel()
 			_, err := tClient.Get("no-template")
 			assert.Error(t, err)
 		})

@@ -12,8 +12,6 @@ import (
 )
 
 func TestCloudRepository_CollectExecutionResult(t *testing.T) {
-	t.Parallel()
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
