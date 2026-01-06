@@ -67,13 +67,23 @@ func NewService(logger *zap.SugaredLogger, mgr ScheduleManager, watchers ...Watc
 // updates of configured listeners and use those to generate
 // cron scheduled test executions.
 func (s Service) Run(ctx context.Context) {
+    s.logger.Infow("cronjob service starting",
+            "watchers", len(s.watchers),
+        )
 	cronChan := make(chan Config)
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
+                s.logger.Infow("cronjob service stopping (context done)")
 				return
 			case config := <-cronChan:
+                s.logger.Infow("cronjob service received schedule config",
+                    "workflow", config.Workflow.Name,
+                    "org", config.Workflow.OrgId,
+                    "env", config.Workflow.EnvId,
+                    "cron_count", len(config.Schedules),
+                )
 				if err := s.cron.ReplaceWorkflowSchedules(ctx, config.Workflow, config.Schedules); err != nil {
 					s.logger.Errorw("error modifying workflow execution schedule",
 						"workflow name", config.Workflow.Name,
@@ -84,6 +94,8 @@ func (s Service) Run(ctx context.Context) {
 		}
 	}()
 	for _, watcher := range s.watchers {
+			s.logger.Infow("starting cronjob watcher")
+
 		go watcher(ctx, cronChan)
 	}
 	// Run until context is complete.
