@@ -1,7 +1,7 @@
 variable "GOCACHE"       { default = "/go/pkg" }
 variable "GOMODCACHE"    { default = "/root/.cache/go-build" }
 variable "BUSYBOX_IMAGE" { default = "busybox:1.36.1-musl"}
-variable "ALPINE_IMAGE"  { default = "alpine:3.20.6" }
+variable "ALPINE_IMAGE"  { default = "alpine:3.20.8" }
 variable "VERSION"       { default = "0.0.0-unknown"}
 
 variable "GIT_SHA"                 { default = ""}
