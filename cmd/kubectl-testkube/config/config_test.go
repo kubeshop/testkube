@@ -11,6 +11,9 @@ func TestSave(t *testing.T) {
 	// override default directory
 	dir, err := os.MkdirTemp("", "test-config-save")
 	assert.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
 	defaultDirectory = dir
 
 	t.Run("test save into default storage", func(t *testing.T) {
@@ -29,9 +32,11 @@ func TestSave(t *testing.T) {
 }
 
 func TestSaveTelemetryEnabled(t *testing.T) {
-
 	dir, err := os.MkdirTemp("", "test-config-save")
 	assert.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
 
 	// create homedir config file
 	s := Storage{Dir: dir}
@@ -45,7 +50,6 @@ func TestSaveTelemetryEnabled(t *testing.T) {
 		// then
 		assert.NoError(t, err)
 		assert.Equal(t, true, d.TelemetryEnabled)
-
 	})
 
 	t.Run("check if telemetry system is disabled", func(t *testing.T) {
@@ -63,7 +67,5 @@ func TestSaveTelemetryEnabled(t *testing.T) {
 		// then
 		assert.NoError(t, err)
 		assert.Equal(t, false, d.TelemetryEnabled)
-
 	})
-
 }
