@@ -364,11 +364,13 @@ func main() {
 		useCloudTestTriggers        bool
 	)
 	if proContext.CloudStorage {
+		log.DefaultLogger.Info("using cloud storage clients for test workflows and test workflow templates")
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client, cfg.DisableOfficialTemplates)
 		testTriggersClient = cloudTestTriggersClient
 		useCloudTestTriggers = true
 	} else {
+		log.DefaultLogger.Info("using kubernetes clients for test workflows and test workflow templates")
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow client", err)
 		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace, cfg.DisableOfficialTemplates)
