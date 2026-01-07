@@ -244,7 +244,7 @@ func (c *k8sTestWorkflowTemplateClient) WatchUpdates(ctx context.Context, enviro
 
 		// Watch
 		for event := range watcher.ResultChan() {
-			log.DefaultLogger.Infow("received watcher event", "type", event.Type, "object", event.Object)
+			log.DefaultLogger.Infow("received template watcher event", "type", event.Type, "object", event.Object)
 
 			// Continue watching if that's just a bookmark
 			if event.Type == watch.Bookmark {
