@@ -44,10 +44,6 @@ func (w Watcher) WatchTestWorkflows(ctx context.Context, configChan chan<- cronj
 		case <-ctx.Done():
 			return
 		case obj := <-watcher.Channel():
-			w.logger.Infow("workflow watcher",
-				"workflow", obj,
-			)
-
 			if obj.Resource == nil || obj.Resource.Spec == nil {
 				continue
 			}
@@ -126,10 +122,6 @@ func (w Watcher) WatchTestWorkflowTemplates(ctx context.Context, configChan chan
 		case <-ctx.Done():
 			return
 		case obj := <-watcher.Channel():
-			w.logger.Infow("template watcher",
-				"template", obj,
-			)
-
 			if obj.Resource == nil || obj.Resource.Spec == nil {
 				continue
 			}
