@@ -5,6 +5,7 @@ package testworkflow
 import (
 	"context"
 	"slices"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
+
+const watcherDelay = 200 * time.Millisecond
 
 type Watcher struct {
 	environmentId              string
@@ -32,79 +35,84 @@ func New(logger *zap.SugaredLogger, workflowClient testworkflowclient.TestWorkfl
 }
 
 func (w Watcher) WatchTestWorkflows(ctx context.Context, configChan chan<- cronjob.Config) {
-	watcher := w.testWorkflowClient.WatchUpdates(ctx, w.environmentId, true)
-	if watcher.Err() != nil {
-		w.logger.Errorw("failed to watch TestWorkflows",
-			"error", watcher.Err())
-		return
-	}
-
+	includeInitialData := true
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case obj := <-watcher.Channel():
-			if obj.Resource == nil || obj.Resource.Spec == nil {
-				continue
-			}
+		default:
+			watcher := w.testWorkflowClient.WatchUpdates(ctx, w.environmentId, includeInitialData)
+			for obj := range watcher.Channel() {
+				if obj.Resource == nil || obj.Resource.Spec == nil {
+					continue
+				}
 
-			if !slices.Contains([]testworkflowclient.EventType{
-				testworkflowclient.EventTypeCreate,
-				testworkflowclient.EventTypeUpdate,
-				testworkflowclient.EventTypeDelete,
-			}, obj.Type) {
-				continue
-			}
+				if !slices.Contains([]testworkflowclient.EventType{
+					testworkflowclient.EventTypeCreate,
+					testworkflowclient.EventTypeUpdate,
+					testworkflowclient.EventTypeDelete,
+				}, obj.Type) {
+					continue
+				}
 
-			// In the event of deletion simply send an empty set of schedules.
-			// This is expected to cause all schedules for this workflow to be
-			// removed.
-			if obj.Type == testworkflowclient.EventTypeDelete {
+				// In the event of deletion simply send an empty set of schedules.
+				// This is expected to cause all schedules for this workflow to be
+				// removed.
+				if obj.Type == testworkflowclient.EventTypeDelete {
+					configChan <- cronjob.Config{
+						Workflow: cronjob.Workflow{
+							Name:  obj.Resource.GetName(),
+							EnvId: w.environmentId,
+						},
+					}
+					continue
+				}
+
+				events := obj.Resource.Spec.Events
+				for _, template := range obj.Resource.Spec.Use {
+					testWorkflowTemplate, err := w.testWorkflowTemplateClient.Get(ctx, w.environmentId, testworkflowresolver.GetInternalTemplateName(template.Name))
+					if err != nil {
+						w.logger.Errorw("failed to get template for scheduled workflow, ignoring this template and continuing processing of workflow schedule",
+							"workflow", obj.Resource.GetName(),
+							"template", template.Name,
+							"error", err)
+						continue
+					}
+
+					if testWorkflowTemplate.Spec == nil {
+						continue
+					}
+
+					events = append(events, testWorkflowTemplate.Spec.Events...)
+				}
+
+				var schedules []testkubev1.TestWorkflowCronJobConfig
+				for _, event := range events {
+					if event.Cronjob != nil {
+						schedules = append(schedules, *event.Cronjob)
+					}
+				}
 				configChan <- cronjob.Config{
 					Workflow: cronjob.Workflow{
 						Name:  obj.Resource.GetName(),
 						EnvId: w.environmentId,
 					},
-				}
-				continue
-			}
-
-			events := obj.Resource.Spec.Events
-			for _, template := range obj.Resource.Spec.Use {
-				testWorkflowTemplate, err := w.testWorkflowTemplateClient.Get(ctx, w.environmentId, testworkflowresolver.GetInternalTemplateName(template.Name))
-				if err != nil {
-					w.logger.Errorw("failed to get template for scheduled workflow, ignoring this template and continuing processing of workflow schedule",
-						"workflow", obj.Resource.GetName(),
-						"template", template.Name,
-						"error", err)
-					continue
+					Schedules: schedules,
 				}
 
-				if testWorkflowTemplate.Spec == nil {
-					continue
-				}
-
-				events = append(events, testWorkflowTemplate.Spec.Events...)
+				w.logger.Infow("seen workflow change",
+					"workflow", obj.Resource.GetName(),
+					"type", obj.Type,
+				)
 			}
 
-			var schedules []testkubev1.TestWorkflowCronJobConfig
-			for _, event := range events {
-				if event.Cronjob != nil {
-					schedules = append(schedules, *event.Cronjob)
-				}
-			}
-			configChan <- cronjob.Config{
-				Workflow: cronjob.Workflow{
-					Name:  obj.Resource.GetName(),
-					EnvId: w.environmentId,
-				},
-				Schedules: schedules,
+			if watcher.Err() != nil {
+				w.logger.Errorw("failed to watch TestWorkflows", "error", watcher.Err())
+			} else {
+				includeInitialData = false
 			}
 
-			w.logger.Infow("seen workflow change",
-				"workflow", obj.Resource.GetName(),
-				"type", obj.Type,
-			)
+			time.Sleep(watcherDelay)
 		}
 	}
 }
