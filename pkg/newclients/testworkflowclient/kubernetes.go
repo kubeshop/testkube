@@ -19,6 +19,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
@@ -250,6 +251,8 @@ func (c *k8sTestWorkflowClient) WatchUpdates(ctx context.Context, environmentId 
 
 		// Watch
 		for event := range watcher.ResultChan() {
+			log.DefaultLogger.Infow("received workflow watcher event", "type", event.Type, "object", event.Object)
+
 			// Continue watching if that's just a bookmark
 			if event.Type == watch.Bookmark {
 				continue
