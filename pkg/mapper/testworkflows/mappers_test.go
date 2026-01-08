@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	testsuitesv3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 )
@@ -421,4 +422,72 @@ func TestMapEmptyTestWorkflowTemplateBackAndForth(t *testing.T) {
 	}
 	got := MapTestWorkflowTemplateAPIToKube(MapTestWorkflowTemplateKubeToAPI(*want.DeepCopy()))
 	assert.Equal(t, want, got)
+}
+
+func TestMapTestSuiteKubeToTestWorkflowKubeWithRepeats(t *testing.T) {
+	tests := []struct {
+		name           string
+		repeats        int
+		expectParallel bool
+	}{
+		{
+			name:           "no repeat when repeats is 0",
+			repeats:        0,
+			expectParallel: false,
+		},
+		{
+			name:           "no repeat when repeats is 1",
+			repeats:        1,
+			expectParallel: false,
+		},
+		{
+			name:           "wrap in parallel when repeats is 2",
+			repeats:        2,
+			expectParallel: true,
+		},
+		{
+			name:           "wrap in parallel when repeats is 5",
+			repeats:        5,
+			expectParallel: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testSuite := testsuitesv3.TestSuite{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-suite",
+					Namespace: "test-namespace",
+				},
+				Spec: testsuitesv3.TestSuiteSpec{
+					Repeats: tt.repeats,
+					Steps: []testsuitesv3.TestSuiteBatchStep{
+						{
+							Execute: []testsuitesv3.TestSuiteStepSpec{
+								{Test: "test-1"},
+							},
+						},
+					},
+				},
+			}
+
+			result := MapTestSuiteKubeToTestWorkflowKube(testSuite)
+
+			if tt.expectParallel {
+				// Should have wrapped steps in a parallel step
+				assert.Len(t, result.Spec.Steps, 1, "should have exactly one step")
+				assert.NotNil(t, result.Spec.Steps[0].Parallel, "step should have parallel")
+				assert.Equal(t, int32(1), result.Spec.Steps[0].Parallel.Parallelism, "parallelism should be 1 for sequential execution")
+				assert.NotNil(t, result.Spec.Steps[0].Parallel.Count, "should have count set")
+				assert.Equal(t, int32(tt.repeats), result.Spec.Steps[0].Parallel.Count.IntVal, "count should match repeats")
+				assert.Nil(t, result.Spec.Setup, "setup should be nil when wrapped")
+				assert.Nil(t, result.Spec.After, "after should be nil when wrapped")
+			} else {
+				// Should not wrap in parallel
+				if len(result.Spec.Steps) > 0 {
+					assert.Nil(t, result.Spec.Steps[0].Parallel, "step should not have parallel when repeats <= 1")
+				}
+			}
+		})
+	}
 }

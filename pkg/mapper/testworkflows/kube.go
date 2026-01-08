@@ -521,6 +521,34 @@ func MapTestSuiteKubeToTestWorkflowKube(v testsuitesv3.TestSuite) testworkflowsv
 		maps.Copy(job.Labels, v.Labels)
 	}
 
+	setup := common.MapSlice(v.Spec.Before, MapTestSuiteBatchStepKubeToStepKube)
+	steps := common.MapSlice(v.Spec.Steps, MapTestSuiteBatchStepKubeToStepKube)
+	after := common.MapSlice(v.Spec.After, MapTestSuiteBatchStepKubeToStepKube)
+
+	// If repeats > 1, wrap all steps in a parallel step with count for sequential iteration
+	if v.Spec.Repeats > 1 {
+		repeatStep := testworkflowsv1.Step{
+			StepMeta: testworkflowsv1.StepMeta{
+				Name: "Repeat test suite",
+			},
+			Parallel: &testworkflowsv1.StepParallel{
+				Parallelism: 1, // Sequential execution
+				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+					Count: &intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: int32(v.Spec.Repeats),
+					},
+				},
+				Setup: setup,
+				Steps: steps,
+				After: after,
+			},
+		}
+		setup = nil
+		steps = []testworkflowsv1.Step{repeatStep}
+		after = nil
+	}
+
 	return testworkflowsv1.TestWorkflow{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name,
@@ -535,9 +563,9 @@ func MapTestSuiteKubeToTestWorkflowKube(v testsuitesv3.TestSuite) testworkflowsv
 				Container: common.MapPtr(v.Spec.ExecutionRequest, MapTestSuiteExecutionRequestKubeToContainerConfigKube),
 				Job:       job,
 			},
-			Setup: common.MapSlice(v.Spec.Before, MapTestSuiteBatchStepKubeToStepKube),
-			Steps: common.MapSlice(v.Spec.Steps, MapTestSuiteBatchStepKubeToStepKube),
-			After: common.MapSlice(v.Spec.After, MapTestSuiteBatchStepKubeToStepKube),
+			Setup: setup,
+			Steps: steps,
+			After: after,
 		},
 	}
 }
