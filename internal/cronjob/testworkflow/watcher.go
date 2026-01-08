@@ -118,88 +118,93 @@ func (w Watcher) WatchTestWorkflows(ctx context.Context, configChan chan<- cronj
 }
 
 func (w Watcher) WatchTestWorkflowTemplates(ctx context.Context, configChan chan<- cronjob.Config) {
-	watcher := w.testWorkflowTemplateClient.WatchUpdates(ctx, w.environmentId, true)
-	if watcher.Err() != nil {
-		w.logger.Errorw("failed to watch TestWorkflowTemplates",
-			"error", watcher.Err())
-		return
-	}
-
+	includeInitialData := true
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case obj := <-watcher.Channel():
-			if obj.Resource == nil || obj.Resource.Spec == nil {
-				continue
-			}
-
-			if !slices.Contains([]testworkflowtemplateclient.EventType{
-				testworkflowtemplateclient.EventTypeCreate,
-				testworkflowtemplateclient.EventTypeUpdate,
-				testworkflowtemplateclient.EventTypeDelete,
-			}, obj.Type) {
-				continue
-			}
-
-			testWorkflows, err := w.testWorkflowClient.List(ctx, w.environmentId, testworkflowclient.ListOptions{})
-			if err != nil {
-				w.logger.Errorw("failed to get all workflows to check for scheduled template changes", "error", err)
-				continue
-			}
-
-			for _, testWorkflow := range testWorkflows {
-				// Workflow spec is not processable. Something has gone wrong if this gets hit!
-				if testWorkflow.Spec == nil {
-					continue
-				}
-				// If the Workflow does not use the changed template then we can skip processing of it.
-				if !slices.ContainsFunc(testWorkflow.Spec.Use, func(template testkubev1.TestWorkflowTemplateRef) bool {
-					return testworkflowresolver.GetInternalTemplateName(template.Name) == obj.Resource.Name
-				}) {
+		default:
+			watcher := w.testWorkflowTemplateClient.WatchUpdates(ctx, w.environmentId, includeInitialData)
+			for obj := range watcher.Channel() {
+				if obj.Resource == nil || obj.Resource.Spec == nil {
 					continue
 				}
 
-				events := testWorkflow.Spec.Events
-				for _, template := range testWorkflow.Spec.Use {
-					internalName := testworkflowresolver.GetInternalTemplateName(template.Name)
-					// If the workflow is using this template, but the template is being deleted,
-					// then process the workflow as though this template is not being used.
-					if obj.Type == testworkflowtemplateclient.EventTypeDelete && internalName == obj.Resource.Name {
+				if !slices.Contains([]testworkflowtemplateclient.EventType{
+					testworkflowtemplateclient.EventTypeCreate,
+					testworkflowtemplateclient.EventTypeUpdate,
+					testworkflowtemplateclient.EventTypeDelete,
+				}, obj.Type) {
+					continue
+				}
+
+				testWorkflows, err := w.testWorkflowClient.List(ctx, w.environmentId, testworkflowclient.ListOptions{})
+				if err != nil {
+					w.logger.Errorw("failed to get all workflows to check for scheduled template changes", "error", err)
+					continue
+				}
+
+				for _, testWorkflow := range testWorkflows {
+					// Workflow spec is not processable. Something has gone wrong if this gets hit!
+					if testWorkflow.Spec == nil {
 						continue
 					}
-					testWorkflowTemplate, err := w.testWorkflowTemplateClient.Get(ctx, w.environmentId, internalName)
-					if err != nil {
-						w.logger.Errorw("failed to get template for scheduled workflow, ignoring this template and continuing processing of workflow schedule",
-							"workflow", testWorkflow.GetName(),
-							"template", template.Name,
-							"error", err)
+					// If the Workflow does not use the changed template then we can skip processing of it.
+					if !slices.ContainsFunc(testWorkflow.Spec.Use, func(template testkubev1.TestWorkflowTemplateRef) bool {
+						return testworkflowresolver.GetInternalTemplateName(template.Name) == obj.Resource.Name
+					}) {
 						continue
 					}
 
-					events = append(events, testWorkflowTemplate.Spec.Events...)
-				}
+					events := testWorkflow.Spec.Events
+					for _, template := range testWorkflow.Spec.Use {
+						internalName := testworkflowresolver.GetInternalTemplateName(template.Name)
+						// If the workflow is using this template, but the template is being deleted,
+						// then process the workflow as though this template is not being used.
+						if obj.Type == testworkflowtemplateclient.EventTypeDelete && internalName == obj.Resource.Name {
+							continue
+						}
+						testWorkflowTemplate, err := w.testWorkflowTemplateClient.Get(ctx, w.environmentId, internalName)
+						if err != nil {
+							w.logger.Errorw("failed to get template for scheduled workflow, ignoring this template and continuing processing of workflow schedule",
+								"workflow", testWorkflow.GetName(),
+								"template", template.Name,
+								"error", err)
+							continue
+						}
 
-				var schedules []testkubev1.TestWorkflowCronJobConfig
-				for _, event := range events {
-					if event.Cronjob != nil {
-						schedules = append(schedules, *event.Cronjob)
+						events = append(events, testWorkflowTemplate.Spec.Events...)
+					}
+
+					var schedules []testkubev1.TestWorkflowCronJobConfig
+					for _, event := range events {
+						if event.Cronjob != nil {
+							schedules = append(schedules, *event.Cronjob)
+						}
+					}
+
+					configChan <- cronjob.Config{
+						Workflow: cronjob.Workflow{
+							Name:  obj.Resource.GetName(),
+							EnvId: w.environmentId,
+						},
+						Schedules: schedules,
 					}
 				}
 
-				configChan <- cronjob.Config{
-					Workflow: cronjob.Workflow{
-						Name:  obj.Resource.GetName(),
-						EnvId: w.environmentId,
-					},
-					Schedules: schedules,
-				}
+				w.logger.Infow("seen workflow template change",
+					"template", obj.Resource.GetName(),
+					"type", obj.Type,
+				)
 			}
 
-			w.logger.Infow("seen workflow template change",
-				"template", obj.Resource.GetName(),
-				"type", obj.Type,
-			)
+			if watcher.Err() != nil {
+				w.logger.Errorw("failed to watch TestWorkflowTemplates", "error", watcher.Err())
+			} else {
+				includeInitialData = false
+			}
+
+			time.Sleep(watcherDelay)
 		}
 	}
 }
