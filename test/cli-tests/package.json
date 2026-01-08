@@ -6,7 +6,7 @@
     "@babel/register": "^7.18.9",
     "chai": "^4.3.6",
     "dotenv": "^16.0.3",
-    "mocha": "^10.1.0",
+    "mocha": "^10.8.2",
     "superagent": "9.0.1"
   },
   "scripts": {
