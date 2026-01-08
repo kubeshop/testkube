@@ -126,7 +126,6 @@ func (w Watcher) WatchTestWorkflowTemplates(ctx context.Context, configChan chan
 		default:
 			watcher := w.testWorkflowTemplateClient.WatchUpdates(ctx, w.environmentId, includeInitialData)
 			for obj := range watcher.Channel() {
-
 				if obj.Resource == nil || obj.Resource.Spec == nil {
 					continue
 				}
