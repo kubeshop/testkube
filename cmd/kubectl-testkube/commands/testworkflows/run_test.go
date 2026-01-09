@@ -40,7 +40,134 @@ func TestGetIterationDelay(t *testing.T) {
 		})
 	}
 }
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected map[string]string
+		wantErr  bool
+		errMsg   string
+	}{
+		{
+			name:     "simple string value",
+			input:    []string{"env=production"},
+			expected: map[string]string{"env": "production"},
+			wantErr:  false,
+		},
+		{
+			name:     "simple integer value",
+			input:    []string{"workers=2"},
+			expected: map[string]string{"workers": "2"},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON object value",
+			input:    []string{`customAgency={"agency":{"url":"https://test.com"}}`},
+			expected: map[string]string{"customAgency": `{"agency":{"url":"https://test.com"}}`},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON object with escaped quotes",
+			input:    []string{`data={\"key\":\"value\"}`},
+			expected: map[string]string{"data": `{\"key\":\"value\"}`},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON array value",
+			input:    []string{`tags=["tag1","tag2","tag3"]`},
+			expected: map[string]string{"tags": `["tag1","tag2","tag3"]`},
+			wantErr:  false,
+		},
+		{
+			name:     "mixed simple and JSON",
+			input:    []string{"env=prod", `config={"key":"value"}`},
+			expected: map[string]string{"env": "prod", "config": `{"key":"value"}`},
+			wantErr:  false,
+		},
+		{
+			name:     "value with colon (URL)",
+			input:    []string{"url=http://example.com:8080"},
+			expected: map[string]string{"url": "http://example.com:8080"},
+			wantErr:  false,
+		},
+		{
+			name:     "value with equals sign",
+			input:    []string{"query=param1=value1&param2=value2"},
+			expected: map[string]string{"query": "param1=value1&param2=value2"},
+			wantErr:  false,
+		},
+		{
+			name:     "complex JSON with nested objects and arrays",
+			input:    []string{`settings={"server":{"host":"localhost","port":8080},"features":["auth","logging"]}`},
+			expected: map[string]string{"settings": `{"server":{"host":"localhost","port":8080},"features":["auth","logging"]}`},
+			wantErr:  false,
+		},
+		{
+			name:     "empty value",
+			input:    []string{"key="},
+			expected: map[string]string{"key": ""},
+			wantErr:  false,
+		},
+		{
+			name:     "multiple configs",
+			input:    []string{"env=dev", "region=us-west", "workers=5"},
+			expected: map[string]string{"env": "dev", "region": "us-west", "workers": "5"},
+			wantErr:  false,
+		},
+		{
+			name:    "invalid format no equals",
+			input:   []string{"invalid"},
+			wantErr: true,
+			errMsg:  "invalid config format",
+		},
+		{
+			name:    "empty key",
+			input:   []string{"=value"},
+			wantErr: true,
+			errMsg:  "empty config key",
+		},
+		{
+			name:    "only equals sign",
+			input:   []string{"="},
+			wantErr: true,
+			errMsg:  "empty config key",
+		},
+		{
+			name:     "value that looks like invalid JSON (should still work as string)",
+			input:    []string{`key={invalid`},
+			expected: map[string]string{"key": "{invalid"},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON with spaces",
+			input:    []string{`data={"key": "value with spaces"}`},
+			expected: map[string]string{"data": `{"key": "value with spaces"}`},
+			wantErr:  false,
+		},
+		{
+			name:     "backward compatibility - simple key value pairs",
+			input:    []string{"version=1.0.0", "timeout=30s", "retries=3"},
+			expected: map[string]string{"version": "1.0.0", "timeout": "30s", "retries": "3"},
+			wantErr:  false,
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseConfig(tt.input)
+
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
 func TestParseTargetMap(t *testing.T) {
 	tests := []struct {
 		name     string
