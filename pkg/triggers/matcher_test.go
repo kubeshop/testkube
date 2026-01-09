@@ -775,6 +775,56 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 	assert.Equal(t, 1, triggerCount)
 }
 
+func TestService_matchSelector_matchLabels_resourceKindCaseInsensitive(t *testing.T) {
+
+	cases := []struct {
+		name              string
+		selectorKindValue string
+	}{
+		{name: "lowercase selector value", selectorKindValue: "deployment"},
+		{name: "capitalized selector value", selectorKindValue: "Deployment"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &watcherEvent{
+				resource: "deployment",
+				EventLabels: map[string]string{
+					eventLabelKeyResourceKind:      "Deployment",
+					eventLabelKeyResourceName:      "backend-api",
+					eventLabelKeyResourceNamespace: "sandbox-cron-schedules",
+				},
+			}
+
+			testTrigger := &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							eventLabelKeyResourceKind:      tc.selectorKindValue,
+							eventLabelKeyResourceName:      "backend-api",
+							eventLabelKeyResourceNamespace: "sandbox-cron-schedules",
+						},
+					},
+				},
+			}
+
+			s := newDefaultTestTriggersService(t, testTrigger)
+			triggerCount := 0
+			s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+				triggerCount++
+				assert.Equal(t, "testkube", trigger.Namespace)
+				assert.Equal(t, "test-trigger", trigger.Name)
+				return nil
+			}
+
+			err := s.match(context.Background(), e)
+			assert.NoError(t, err)
+			assert.Equal(t, 1, triggerCount)
+		})
+	}
+}
+
 func TestService_matchSelector_matchExpression(t *testing.T) {
 
 	e := &watcherEvent{
