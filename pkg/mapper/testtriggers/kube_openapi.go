@@ -61,6 +61,14 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 }
 
 func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
+	if selector.Name == "" &&
+		selector.NameRegex == "" &&
+		selector.Namespace == "" &&
+		selector.NamespaceRegex == "" &&
+		(labelSelectorEmpty(selector.LabelSelector)) {
+		return nil
+	}
+
 	return &testkube.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
@@ -68,6 +76,14 @@ func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTrig
 		NamespaceRegex: selector.NamespaceRegex,
 		LabelSelector:  mapLabelSelectorFromCRD(selector.LabelSelector),
 	}
+}
+
+func labelSelectorEmpty(selector *v1.LabelSelector) bool {
+	if selector == nil {
+		return true
+	}
+
+	return len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0
 }
 
 func mapLabelSelectorFromCRD(labelSelector *v1.LabelSelector) *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector {
