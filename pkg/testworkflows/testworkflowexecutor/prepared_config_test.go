@@ -215,3 +215,182 @@ func TestApplyConfig_JSONValidation(t *testing.T) {
 		})
 	}
 }
+
+// TestApplyConfig_ColonHandling tests proper handling of colons in JSON config values
+func TestApplyConfig_ColonHandling(t *testing.T) {
+	tests := []struct {
+		name             string
+		configInput      map[string]string
+		expectedWrapping map[string]bool
+		shouldContain    map[string][]string
+		shouldNotContain map[string][]string
+	}{
+		{
+			name: "nested JSON object with URL fields",
+			configInput: map[string]string{
+				"customAgency": `{"agency":{"url":"https://test.com"}}`,
+			},
+			expectedWrapping: map[string]bool{
+				"customAgency": true,
+			},
+			shouldContain: map[string][]string{
+				"customAgency": {`tojson(json(`, `\"url\":`, `\"https:`},
+			},
+			shouldNotContain: map[string][]string{
+				"customAgency": {"agency:url", "url:https"},
+			},
+		},
+		{
+			name: "mixed config types",
+			configInput: map[string]string{
+				"env":       "production",
+				"apiConfig": `{"url":"https://api.test.com:8080"}`,
+			},
+			expectedWrapping: map[string]bool{
+				"env":       false,
+				"apiConfig": true,
+			},
+			shouldContain: map[string][]string{
+				"env":       {"production"},
+				"apiConfig": {`tojson(json(`},
+			},
+			shouldNotContain: map[string][]string{
+				"env":       {`tojson(json(`},
+				"apiConfig": {"url:https"},
+			},
+		},
+		{
+			name: "template expressions not wrapped",
+			configInput: map[string]string{
+				"baseUrl":   "{{config.apiUrl}}",
+				"condition": "{{env.DEBUG ? 'debug' : 'production'}}",
+			},
+			expectedWrapping: map[string]bool{
+				"baseUrl":   false,
+				"condition": false,
+			},
+			shouldNotContain: map[string][]string{
+				"baseUrl":   {`tojson(json(`},
+				"condition": {`tojson(json(`},
+			},
+		},
+		{
+			name: "plain URLs not wrapped",
+			configInput: map[string]string{
+				"apiUrl": "https://api.test.com:8080/v1",
+				"dbUrl":  "postgresql://user:pass@localhost:5432/db",
+			},
+			expectedWrapping: map[string]bool{
+				"apiUrl": false,
+				"dbUrl":  false,
+			},
+			shouldContain: map[string][]string{
+				"apiUrl": {"https://api.test.com:8080/v1"},
+			},
+			shouldNotContain: map[string][]string{
+				"apiUrl": {`tojson(json(`},
+			},
+		},
+		{
+			name: "complex nested JSON",
+			configInput: map[string]string{
+				"services": `{"database":{"host":"db.test.com:5432"},"api":{"endpoint":"https://api.test.com:8443"}}`,
+			},
+			expectedWrapping: map[string]bool{
+				"services": true,
+			},
+			shouldContain: map[string][]string{
+				"services": {`tojson(json(`, `\"host\":`},
+			},
+			shouldNotContain: map[string][]string{
+				"services": {"host:db"},
+			},
+		},
+		{
+			name: "JSON array with objects",
+			configInput: map[string]string{
+				"endpoints": `[{"name":"api","url":"https://api.test.com:8080"}]`,
+			},
+			expectedWrapping: map[string]bool{
+				"endpoints": true,
+			},
+			shouldContain: map[string][]string{
+				"endpoints": {`tojson(json(`},
+			},
+			shouldNotContain: map[string][]string{
+				"endpoints": {"url:https"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			processedConfig := make(map[string]string)
+			for k, v := range tt.configInput {
+				isJSON := len(v) > 0 && ((v[0] == '{' && (len(v) < 2 || v[1] != '{')) || v[0] == '[')
+
+				if expectedWrapped, exists := tt.expectedWrapping[k]; exists {
+					assert.Equal(t, expectedWrapped, isJSON)
+				}
+
+				if isJSON {
+					processedConfig[k] = "tojson(json(" + expressions.NewStringValue(v).String() + "))"
+				} else {
+					processedConfig[k] = expressions.NewStringValue(v).Template()
+				}
+			}
+
+			for key, expectedStrings := range tt.shouldContain {
+				processedValue := processedConfig[key]
+				for _, expected := range expectedStrings {
+					assert.Contains(t, processedValue, expected)
+				}
+			}
+
+			for key, unwantedStrings := range tt.shouldNotContain {
+				processedValue := processedConfig[key]
+				for _, unwanted := range unwantedStrings {
+					assert.NotContains(t, processedValue, unwanted)
+				}
+			}
+		})
+	}
+}
+
+// TestApplyConfig_MultipleColonsInValue tests values with many colons are preserved
+func TestApplyConfig_MultipleColonsInValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		key   string
+		value string
+	}{
+		{
+			name:  "database connection strings",
+			input: `dbConfig={"primary":"postgresql://user:password@primary.db.com:5432/mydb"}`,
+			key:   "dbConfig",
+			value: `{"primary":"postgresql://user:password@primary.db.com:5432/mydb"}`,
+		},
+		{
+			name:  "service endpoint arrays",
+			input: `services=["https://service1.test.com:8080","https://service2.test.com:8081"]`,
+			key:   "services",
+			value: `["https://service1.test.com:8080","https://service2.test.com:8081"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parts := strings.SplitN(tt.input, "=", 2)
+			assert.Equal(t, tt.key, parts[0])
+			assert.Equal(t, tt.value, parts[1])
+
+			isJSON := len(parts[1]) > 0 && ((parts[1][0] == '{' && (len(parts[1]) < 2 || parts[1][1] != '{')) || parts[1][0] == '[')
+			assert.True(t, isJSON)
+
+			processedValue := "tojson(json(" + expressions.NewStringValue(parts[1]).String() + "))"
+			assert.Contains(t, processedValue, "tojson(json(")
+			assert.Greater(t, strings.Count(parts[1], ":"), 0)
+		})
+	}
+}
