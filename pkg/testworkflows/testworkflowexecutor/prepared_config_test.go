@@ -4,8 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 func TestApplyConfig_JSONHandling(t *testing.T) {
