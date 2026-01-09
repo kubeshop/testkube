@@ -178,6 +178,7 @@ spec:
               value: "true"
             {{- end }}
             {{- if .Values.runner.secretRef.name }}
+            {{- if not ( or .Values.runner.register.token .Values.runner.register.tokenSecret.name ) }}
             - name: "TESTKUBE_PRO_AGENT_ID"
               valueFrom:
                 secretKeyRef:
@@ -187,12 +188,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
-                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
+                  key: "{{ .Values.runner.secretRef.secretKey }}"
+            {{- end }}
             - name: "TESTKUBE_PRO_ORG_ID"
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
-                  key: "{{ .Values.runner.secretRef.secretKey }}"
+                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
             - name: "TESTKUBE_PRO_ENV_ID"
               valueFrom:
                 secretKeyRef:
