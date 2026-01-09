@@ -394,6 +394,57 @@ spec:
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
+	t.Run("should keep test selector when yaml omits it", func(t *testing.T) {
+		// given
+		requestBody := `
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: test-trigger
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      testkube.io/agent-name: test-agent
+  event: updated
+  action: run
+  execution: test
+`
+		existingTrigger := &testkube.TestTrigger{
+			Name:      "test-trigger",
+			Namespace: "default",
+			TestSelector: &testkube.TestTriggerSelector{
+				Name: "existing-selector",
+			},
+		}
+
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "test-trigger", "default").
+			Return(existingTrigger, nil).
+			Times(1)
+
+		mockClient.EXPECT().
+			Update(gomock.Any(), "test-env", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, envId string, trigger testkube.TestTrigger) error {
+				assert.NotNil(t, trigger.TestSelector)
+				if trigger.TestSelector != nil {
+					assert.Equal(t, "existing-selector", trigger.TestSelector.Name)
+				}
+				return nil
+			}).
+			Times(1)
+
+		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
+		req.Header.Set("Content-Type", "text/yaml")
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
 	t.Run("should return error when get fails", func(t *testing.T) {
 		// given
 		request := testkube.TestTriggerUpsertRequest{
