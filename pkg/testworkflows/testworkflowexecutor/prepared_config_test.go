@@ -321,6 +321,48 @@ func TestApplyConfig_ColonHandling(t *testing.T) {
 				"endpoints": {"url:https"},
 			},
 		},
+		{
+			name: "JSON with base64 secret containing special chars",
+			configInput: map[string]string{
+				"apiClient": `{"clientId":"AAAAAAAA-BBBB-CCCC","secret":"aGVsbG8rd29ybGQ+c2VjcmV0PQ=="}`,
+			},
+			expectedWrapping: map[string]bool{
+				"apiClient": true,
+			},
+			shouldContain: map[string][]string{
+				"apiClient": {`tojson(json(`, `+`, `=`},
+			},
+			shouldNotContain: map[string][]string{
+				"apiClient": {"secret:aGVs", "clientId:AAAA"},
+			},
+		},
+		{
+			name: "JSON with empty string values",
+			configInput: map[string]string{
+				"user": `{"id":"","username":"","password":""}`,
+			},
+			expectedWrapping: map[string]bool{
+				"user": true,
+			},
+			shouldContain: map[string][]string{
+				"user": {`tojson(json(`},
+			},
+		},
+		{
+			name: "real user scenario - full structure from bug report",
+			configInput: map[string]string{
+				"customAgency": `{"agency":{"url":"https://api.example.com","id":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"},"apiClient":{"clientId":"FFFFFFFF-GGGG-HHHH-IIII-JJJJJJJJJJJJ","secret":"aGVsbG8rd29ybGQ+c2VjcmV0PQ=="},"user":{"id":"","username":"","password":""},"device":{"serial":""}}`,
+			},
+			expectedWrapping: map[string]bool{
+				"customAgency": true,
+			},
+			shouldContain: map[string][]string{
+				"customAgency": {`tojson(json(`, `api.example.com`, `aGVsbG8rd29ybGQ+`, `c2VjcmV0PQ==`},
+			},
+			shouldNotContain: map[string][]string{
+				"customAgency": {"url:https", "agency:url", "clientId:FFFF", "secret:aGVs"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
