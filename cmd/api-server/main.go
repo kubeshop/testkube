@@ -77,7 +77,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendk8s "github.com/kubeshop/testkube/pkg/repository/leasebackend/k8s"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
-	runnergrpc "github.com/kubeshop/testkube/pkg/runner/grpc"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -437,56 +436,30 @@ func main() {
 	} else if cfg.GlobalWorkflowTemplateName != "" {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
-	runner := runner2.New(
-		executionWorker,
-		configMapConfig,
-		client,
-		eventsEmitter,
-		metrics,
-		proContext,
-		runnerOpts.StorageSkipVerify,
-		runnerOpts.GlobalTemplate,
-	)
-	runnerService := runner2.NewService(
-		log.DefaultLogger,
-		eventsEmitter,
-		client,
-		testworkflowconfig.ControlPlaneConfig{
-			DashboardUrl:   proContext.DashboardURI,
-			CDEventsTarget: cfg.CDEventsTarget,
-		},
-		proContext,
-		executionWorker,
-		runnerOpts,
-		runner,
-	)
-
-	runnerClient := runnergrpc.NewClient(
-		grpcConn,
-		log.DefaultLogger,
-		runner,
-		proContext.APIKey,
-		proContext.OrgID,
-		grpcTLSEnabled,
-		testworkflowconfig.ControlPlaneConfig{
-			DashboardUrl:   proContext.DashboardURI,
-			CDEventsTarget: cfg.CDEventsTarget,
-		},
-		testWorkflowsClient,
-	)
+	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
+		DashboardUrl:   proContext.DashboardURI,
+		CDEventsTarget: cfg.CDEventsTarget,
+	}
+	runnerAgent, err := runner2.NewAgent(runner2.AgentConfig{
+		ExecutionWorker:     executionWorker,
+		ConfigRepository:    configMapConfig,
+		ControlPlaneClient:  client,
+		EventsEmitter:       eventsEmitter,
+		Metrics:             metrics,
+		Logger:              log.DefaultLogger,
+		ProContext:          proContext,
+		Options:             runnerOpts,
+		ControlPlaneConfig:  controlPlaneConfig,
+		GRPCConn:            grpcConn,
+		GRPCTLSEnabled:      grpcTLSEnabled,
+		TestWorkflowsClient: testWorkflowsClient,
+	})
+	commons.ExitOnError("creating runner agent", err)
 
 	if !cfg.DisableRunner {
 		g.Go(func() error {
-			log.DefaultLogger.Info("starting runner RPC client for execution updates.")
-			var eg errgroup.Group
-			eg.Go(func() error {
-				// Start the older service but without the legacy execution RPC loop.
-				return runnerService.Start(ctx, false)
-			})
-			eg.Go(func() error {
-				return runnerClient.Start(ctx, proContext.EnvID)
-			})
-			return eg.Wait()
+			log.DefaultLogger.Info("starting runner agent")
+			return runnerAgent.Start(ctx)
 		})
 	}
 
@@ -494,7 +467,7 @@ func main() {
 		grpcClient,
 		cfg.TestkubeProAPIKey,
 		eventsEmitter,
-		runnerService,
+		runnerAgent.Service,
 		proContext.OrgID,
 		proContext.EnvID,
 		proContext.Agent.ID,

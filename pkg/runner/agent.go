@@ -48,7 +48,9 @@ type AgentLoop interface {
 	Start(ctx context.Context, withRunnerRequests bool) error
 }
 
-func newAgentLoop(
+// NewAgentLoop creates a new agent loop that handles communication with the control plane.
+// This is the core component that processes runner requests and notifications.
+func NewAgentLoop(
 	runner Runner,
 	worker executionworkertypes.Worker,
 	logger *zap.SugaredLogger,

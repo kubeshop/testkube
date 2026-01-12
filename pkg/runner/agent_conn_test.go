@@ -61,7 +61,7 @@ func TestAgentLoop_Start_SimpleReconnectionDelay(t *testing.T) {
 	logger := zap.NewExample().Sugar()
 
 	// Create agent loop
-	agent := newAgentLoop(
+	agent := NewAgentLoop(
 		mockRunner,
 		mockWorker,
 		logger,
@@ -127,7 +127,7 @@ func TestAgentLoop_GetRunnerRequests_ReconnectionOnReceiveTimeout(t *testing.T) 
 	logger := zap.NewExample().Sugar()
 
 	// Create agent loop
-	agent := newAgentLoop(
+	agent := NewAgentLoop(
 		mockRunner,
 		mockWorker,
 		logger,
@@ -197,7 +197,7 @@ func TestAgentLoop_GetNotifications_ReconnectionOnReceiveTimeout(t *testing.T) {
 	logger := zap.NewExample().Sugar()
 
 	// Create agent loop
-	agent := newAgentLoop(
+	agent := NewAgentLoop(
 		mockRunner,
 		mockWorker,
 		logger,
