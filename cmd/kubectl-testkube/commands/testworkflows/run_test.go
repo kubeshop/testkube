@@ -150,6 +150,30 @@ func TestParseConfig(t *testing.T) {
 			expected: map[string]string{"version": "1.0.0", "timeout": "30s", "retries": "3"},
 			wantErr:  false,
 		},
+		{
+			name:     "JSON with base64 secret containing + and =",
+			input:    []string{`config={"apiClient":{"clientId":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","secret":"aGVsbG8rd29ybGQ+c2VjcmV0PQ=="}}`},
+			expected: map[string]string{"config": `{"apiClient":{"clientId":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","secret":"aGVsbG8rd29ybGQ+c2VjcmV0PQ=="}}`},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON with empty string values",
+			input:    []string{`user={"id":"","username":"","password":""}`},
+			expected: map[string]string{"user": `{"id":"","username":"","password":""}`},
+			wantErr:  false,
+		},
+		{
+			name:     "complex JSON with special chars, empty values, and nested objects",
+			input:    []string{`customAgency={"agency":{"url":"https://test.com","id":"ABC"},"apiClient":{"clientId":"123","secret":"key+val="},"user":{"id":"","username":""}}`},
+			expected: map[string]string{"customAgency": `{"agency":{"url":"https://test.com","id":"ABC"},"apiClient":{"clientId":"123","secret":"key+val="},"user":{"id":"","username":""}}`},
+			wantErr:  false,
+		},
+		{
+			name:     "real user scenario - exact structure from bug report with escaped quotes",
+			input:    []string{`customAgency={\"agency\":{\"url\":\"https://api.example.com\",\"id\":\"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE\"},\"apiClient\":{\"clientId\":\"FFFFFFFF-GGGG-HHHH-IIII-JJJJJJJJJJJJ\",\"secret\":\"aGVsbG8rd29ybGQ+c2VjcmV0PQ==\"},\"user\":{\"id\":\"\",\"username\":\"\",\"password\":\"\"},\"device\":{\"serial\":\"\"}}`},
+			expected: map[string]string{"customAgency": `{\"agency\":{\"url\":\"https://api.example.com\",\"id\":\"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE\"},\"apiClient\":{\"clientId\":\"FFFFFFFF-GGGG-HHHH-IIII-JJJJJJJJJJJJ\",\"secret\":\"aGVsbG8rd29ybGQ+c2VjcmV0PQ==\"},\"user\":{\"id\":\"\",\"username\":\"\",\"password\":\"\"},\"device\":{\"serial\":\"\"}}`},
+			wantErr:  false,
+		},
 	}
 
 	for _, tt := range tests {
