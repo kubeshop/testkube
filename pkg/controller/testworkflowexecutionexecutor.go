@@ -3,8 +3,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -31,11 +33,13 @@ func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkf
 	return nil
 }
 
-func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecutor) reconcile.Reconciler {
+func testWorkflowExecutionExecutor(k8sClient client.Client, exec TestWorkflowExecutor) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+		log := ctrl.LoggerFrom(ctx)
+
 		// Get and validate the TestWorkflowExecution.
 		var twe testworkflowsv1.TestWorkflowExecution
-		err := client.Get(ctx, req.NamespacedName, &twe)
+		err := k8sClient.Get(ctx, req.NamespacedName, &twe)
 		switch {
 		case errors.IsNotFound(err):
 			return ctrl.Result{}, nil
@@ -83,22 +87,73 @@ func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecut
 		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: twe.Spec.TestWorkflow.Name}
 		scheduleExecution.Config = testworkflows.MapConfigValueKubeToAPI(twe.Spec.ExecutionRequest.Config)
 
-		_, err = exec.Execute(ctx, &cloud.ScheduleRequest{
+		// Execute the workflow - use twe.Name as the KubernetesObjectName so that
+		// the event listener can find this CRD and update its status.
+		executions, err := exec.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      twe.Spec.ExecutionRequest.DisableWebhooks,
 			Tags:                 twe.Spec.ExecutionRequest.Tags,
 			RunningContext:       rc,
-			KubernetesObjectName: twe.Spec.ExecutionRequest.TestWorkflowExecutionName,
+			KubernetesObjectName: twe.Name,
 			User:                 user,
 		})
 
 		if err != nil {
+			// Update status to reflect the scheduling error
+			if updateErr := updateStatusWithError(ctx, k8sClient, &twe, err); updateErr != nil {
+				log.Error(updateErr, "failed to update TestWorkflowExecution status with error")
+			}
 			return ctrl.Result{}, fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, err)
 		}
 
-		log := ctrl.LoggerFrom(ctx)
-		log.Info("executed test workflow", "name", twe.Spec.TestWorkflow.Name)
+		// Update the status with the initial execution details.
+		// Subsequent status updates (START, END events) will be handled by the
+		// testworkflowexecutions event listener.
+		if len(executions) > 0 {
+			if updateErr := updateStatusWithExecution(ctx, k8sClient, &twe, &executions[0]); updateErr != nil {
+				log.Error(updateErr, "failed to update TestWorkflowExecution status")
+				// Don't return error - the execution was scheduled successfully
+			}
+		}
 
+		log.Info("executed test workflow", "name", twe.Spec.TestWorkflow.Name, "executionCount", len(executions))
 		return ctrl.Result{}, nil
 	})
+}
+
+// updateStatusWithExecution updates the TestWorkflowExecution CRD status with the execution details.
+func updateStatusWithExecution(ctx context.Context, k8sClient client.Client, twe *testworkflowsv1.TestWorkflowExecution, execution *testkubev1.TestWorkflowExecution) error {
+	twe.Status = testworkflows.MapTestWorkflowExecutionStatusAPIToKube(execution, twe.Generation)
+	return k8sClient.Status().Update(ctx, twe)
+}
+
+// updateStatusWithError updates the TestWorkflowExecution CRD status to reflect a scheduling failure.
+func updateStatusWithError(ctx context.Context, k8sClient client.Client, twe *testworkflowsv1.TestWorkflowExecution, err error) error {
+	now := metav1.NewTime(time.Now())
+	failedStatus := testworkflowsv1.FAILED_TestWorkflowStatus
+	failedStepStatus := testworkflowsv1.FAILED_TestWorkflowStepStatus
+
+	twe.Status = testworkflowsv1.TestWorkflowExecutionStatus{
+		LatestExecution: &testworkflowsv1.TestWorkflowExecutionDetails{
+			Name:        twe.Name,
+			Namespace:   twe.Namespace,
+			ScheduledAt: now,
+			StatusAt:    now,
+			Result: &testworkflowsv1.TestWorkflowResult{
+				Status:          &failedStatus,
+				PredictedStatus: &failedStatus,
+				QueuedAt:        now,
+				FinishedAt:      now,
+				Initialization: &testworkflowsv1.TestWorkflowStepResult{
+					Status:       &failedStepStatus,
+					ErrorMessage: fmt.Sprintf("Failed to schedule execution: %s", err.Error()),
+					QueuedAt:     now,
+					FinishedAt:   now,
+				},
+				Steps: map[string]testworkflowsv1.TestWorkflowStepResult{},
+			},
+		},
+		Generation: twe.Generation,
+	}
+	return k8sClient.Status().Update(ctx, twe)
 }
