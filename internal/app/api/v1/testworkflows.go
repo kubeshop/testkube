@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/crd"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -523,6 +524,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			ParentExecutionIds:   request.ParentExecutionIds,
 			KubernetesObjectName: request.TestWorkflowExecutionName,
 			User:                 user,
+			SilentMode:           commonmapper.MapSilentModeApiToGrpc(request.SilentMode),
 		})
 
 		if err != nil {
@@ -633,6 +635,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			User:               user,
 			ExecutionReference: &executionID,
 			ResolvedWorkflow:   workflow,
+			SilentMode:         commonmapper.MapSilentModeApiToGrpc(request.SilentMode),
 		})
 
 		if err != nil {

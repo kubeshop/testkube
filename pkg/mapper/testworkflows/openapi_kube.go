@@ -1605,10 +1605,11 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 	}
 }
 
-func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
-	return testworkflowsv1.TestWorkflowTagSchema{
+func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowExecutionSchema) testworkflowsv1.TestWorkflowExecutionSchema {
+	return testworkflowsv1.TestWorkflowExecutionSchema{
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
+		Muted:  v.Muted,
 	}
 }
 

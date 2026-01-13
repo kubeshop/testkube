@@ -239,10 +239,14 @@ type CronJobConfig struct {
 	Timezone *string `json:"timezone,omitempty" expr:"template"`
 }
 
-type TestWorkflowTagSchema struct {
+type TestWorkflowExecutionSchema struct {
 	// test workflow execution tags
 	Tags map[string]string `json:"tags,omitempty" expr:"template,template"`
 
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
+
+	// Muted indicates that all executions should be silent by default.
+	// When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+	Muted *bool `json:"muted,omitempty" expr:"template"`
 }

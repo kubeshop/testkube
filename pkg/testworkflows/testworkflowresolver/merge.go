@@ -412,7 +412,7 @@ func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res tes
 	return res
 }
 
-func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testworkflowsv1.TestWorkflowTagSchema {
+func MergeExecution(dst, include *testworkflowsv1.TestWorkflowExecutionSchema) *testworkflowsv1.TestWorkflowExecutionSchema {
 	if dst == nil {
 		return include
 	} else if include == nil {
@@ -420,6 +420,10 @@ func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testwo
 	}
 
 	dst.Tags = MergeTags(dst.Tags, include.Tags)
+	// Muted field: if include has muted set, use it; otherwise keep dst value
+	if include.Muted != nil {
+		dst.Muted = include.Muted
+	}
 	return dst
 }
 
