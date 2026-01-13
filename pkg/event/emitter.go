@@ -201,7 +201,7 @@ func (e *Emitter) Listen(ctx context.Context) {
 		case leased := <-leaseChan:
 			if !leased && leaderCancel != nil {
 				// Lost leadership
-				e.log.Info("event emitter no longer leader stop listening")
+				e.log.Debug("event emitter no longer leader stop listening")
 				leaderCancel()
 				leaderCancel = nil
 			} else if leased && leaderCancel == nil {
@@ -268,7 +268,7 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 	if event.Type_ != nil {
 		eventType = string(*event.Type_)
 	}
-	e.log.Infow("leader received event",
+	e.log.Debugw("leader received event",
 		"event_type", eventType,
 		"resource", event.Resource,
 		"resource_id", event.ResourceId,
@@ -293,7 +293,7 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 		// Event type fanout
 		matchedEventTypes, valid := event.Valid(l.Group(), l.Selector(), l.Events())
 		if !valid {
-			e.log.Infow("listener did not match event",
+			e.log.Debugw("listener did not match event",
 				"listener_name", l.Name(),
 				"listener_kind", l.Kind(),
 				"listener_group", l.Group(),
@@ -304,7 +304,7 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 		for i := range matchedEventTypes {
 			event.Type_ = &matchedEventTypes[i]
 			matchedCount++
-			e.log.Infow("notifying listener",
+			e.log.Debugw("notifying listener",
 				"listener_name", l.Name(),
 				"listener_kind", l.Kind(),
 				"event_type", string(matchedEventTypes[i]))
