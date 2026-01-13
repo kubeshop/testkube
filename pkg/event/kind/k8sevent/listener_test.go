@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,7 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/mapper/k8sevents"
 )
 
 func TestK8sEventListenerCreatesEvent(t *testing.T) {
@@ -77,4 +79,32 @@ func TestK8sEventListenerCreateError(t *testing.T) {
 	events, err := clientset.CoreV1().Events("tk-dev").List(context.Background(), metav1.ListOptions{})
 	require.NoError(t, err)
 	assert.Len(t, events.Items, 0)
+}
+
+func TestK8sEventListenerCreateAlreadyExists(t *testing.T) {
+	t.Parallel()
+
+	clientset := fake.NewSimpleClientset()
+	listener := NewK8sEventListener("k8s", "", "tk-dev",
+		[]testkube.EventType{*testkube.EventEndTestWorkflowSuccess}, clientset)
+
+	event := testkube.Event{
+		Id:    "event-exists",
+		Type_: testkube.EventEndTestWorkflowSuccess,
+		TestWorkflowExecution: &testkube.TestWorkflowExecution{
+			Id:       "exec-exists",
+			Workflow: &testkube.TestWorkflow{Name: "sample-workflow"},
+		},
+	}
+
+	existing := k8sevents.MapAPIToCRD(event, "tk-dev", time.Now())
+	_, err := clientset.CoreV1().Events("tk-dev").Create(context.Background(), &existing, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	result := listener.Notify(event)
+	assert.Empty(t, result.Error())
+
+	events, err := clientset.CoreV1().Events("tk-dev").List(context.Background(), metav1.ListOptions{})
+	require.NoError(t, err)
+	assert.Len(t, events.Items, 1)
 }
