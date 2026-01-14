@@ -27,6 +27,7 @@ type Enqueuer struct {
 	templateRepository  testworkflowtemplateclient.TestWorkflowTemplateClient
 	executionRepository testworkflow.Repository
 	emitter             *event.Emitter
+	globalTemplateName  string
 }
 
 func NewEnqueuer(
@@ -35,6 +36,7 @@ func NewEnqueuer(
 	templateRepository testworkflowtemplateclient.TestWorkflowTemplateClient,
 	executionRepository testworkflow.Repository,
 	emitter *event.Emitter,
+	globalTemplateName string,
 ) Enqueuer {
 	return Enqueuer{
 		logger:              logger,
@@ -42,6 +44,7 @@ func NewEnqueuer(
 		templateRepository:  templateRepository,
 		executionRepository: executionRepository,
 		emitter:             emitter,
+		globalTemplateName:  globalTemplateName,
 	}
 }
 
@@ -195,6 +198,10 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			return nil, err
 		}
 		executionBase.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
+	} else {
+		if e.globalTemplateName != "" {
+			executionBase.PrependTemplate(e.globalTemplateName)
+		}
 	}
 
 	for _, exec := range executions {
