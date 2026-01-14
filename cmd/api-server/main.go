@@ -15,6 +15,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -284,7 +286,16 @@ func main() {
 			Labels:            runnerLabels,
 		})
 		if err != nil {
-			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
+			switch status.Code(err) {
+			case codes.AlreadyExists:
+				log.DefaultLogger.Fatalw("runner already registered; use a different name",
+					"runner_name", runnerName,
+					"organization_id", cfg.TestkubeProOrgID,
+					"error", err.Error(),
+				)
+			default:
+				log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
+			}
 		}
 
 		// Add the new values to the current configuration.
