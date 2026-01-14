@@ -62,7 +62,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
-	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter)
+	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter, cfg.GlobalWorkflowTemplateName)
 	scheduler := factory.NewScheduler()
 	executionController := factory.NewExecutionController()
 	executionQuerier := factory.NewExecutionQuerier()
