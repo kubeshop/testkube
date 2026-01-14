@@ -356,6 +356,26 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			"variableCount", len(runtime.EnvVars))
 	}
 
+	// Check if workflow is muted and ensure SilentMode is activated
+	// This check happens when executing the workflow to ensure the muted flag from the workflow definition
+	// is always respected, regardless of how the execution was started
+	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil &&
+		execution.ResolvedWorkflow.Spec.Execution != nil &&
+		execution.ResolvedWorkflow.Spec.Execution.Muted != nil &&
+		*execution.ResolvedWorkflow.Spec.Execution.Muted {
+		// Workflow is muted, activate SilentMode with all fields set to true
+		// This overrides any SilentMode settings from the request (CLI flags)
+		execution.SilentMode = &testkube.SilentMode{
+			Webhooks: true,
+			Insights: true,
+			Health:   true,
+			Metrics:  true,
+			Cdevents: true,
+		}
+		logger.Debugw("Workflow is muted, activated SilentMode for execution",
+			"executionId", executionId)
+	}
+
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{
 		Token:   executionToken,
 		Runtime: executionRuntime,

@@ -501,6 +501,33 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			}
 		}
 
+		// Determine SilentMode - check workflow spec muted flag if workflow name is provided
+		var silentMode *cloud.SilentMode
+		if name != "" {
+			// Fetch workflow to check if it's muted
+			workflow, err := s.TestWorkflowsClient.Get(ctx, s.getEnvironmentId(), name)
+			if err == nil && workflow != nil {
+				workflowKube := testworkflows.MapAPIToKube(workflow)
+				// Check if workflow has muted set to true, and if so, activate SilentMode with all fields to true
+				// This overrides any SilentMode settings from the request (CLI flags)
+				if workflowKube.Spec.Execution != nil &&
+					workflowKube.Spec.Execution.Muted != nil &&
+					*workflowKube.Spec.Execution.Muted {
+					silentMode = &cloud.SilentMode{
+						Webhooks: true,
+						Insights: true,
+						Health:   true,
+						Metrics:  true,
+						Cdevents: true,
+					}
+				}
+			}
+		}
+		// If workflow is not muted or we couldn't fetch it, use SilentMode from request
+		if silentMode == nil {
+			silentMode = commonmapper.MapSilentModeApiToGrpc(request.SilentMode)
+		}
+
 		if name != "" {
 			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 			scheduleExecution.Config = request.Config
@@ -524,7 +551,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			ParentExecutionIds:   request.ParentExecutionIds,
 			KubernetesObjectName: request.TestWorkflowExecutionName,
 			User:                 user,
-			SilentMode:           commonmapper.MapSilentModeApiToGrpc(request.SilentMode),
+			SilentMode:           silentMode,
 		})
 
 		if err != nil {
@@ -598,6 +625,30 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			}
 		}
 
+		// Check if workflow is muted and activate SilentMode accordingly
+		// We have the resolved workflow from the execution, so we can check the muted flag
+		var silentMode *cloud.SilentMode
+		if execution.ResolvedWorkflow != nil {
+			workflowKube := testworkflows.MapAPIToKube(execution.ResolvedWorkflow)
+			// Check if workflow has muted set to true, and if so, activate SilentMode with all fields to true
+			// This overrides any SilentMode settings from the request (CLI flags)
+			if workflowKube.Spec.Execution != nil &&
+				workflowKube.Spec.Execution.Muted != nil &&
+				*workflowKube.Spec.Execution.Muted {
+				silentMode = &cloud.SilentMode{
+					Webhooks: true,
+					Insights: true,
+					Health:   true,
+					Metrics:  true,
+					Cdevents: true,
+				}
+			}
+		}
+		// If workflow is not muted or we couldn't check it, use SilentMode from request
+		if silentMode == nil {
+			silentMode = commonmapper.MapSilentModeApiToGrpc(request.SilentMode)
+		}
+
 		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, nil)
 
 		var scheduleExecution cloud.ScheduleExecution
@@ -635,7 +686,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			User:               user,
 			ExecutionReference: &executionID,
 			ResolvedWorkflow:   workflow,
-			SilentMode:         commonmapper.MapSilentModeApiToGrpc(request.SilentMode),
+			SilentMode:         silentMode,
 		})
 
 		if err != nil {
