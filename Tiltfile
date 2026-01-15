@@ -284,20 +284,78 @@ k8s_resource(
 # Development Utilities
 # ============================================================================
 
-# Local resource to run go tests
+# Local resource to run tests via Make
 local_resource(
-    "go-test",
-    cmd="go test ./cmd/api-server/... ./pkg/... ./internal/... -short -count=1",
+    "make test",
+    cmd="make test",
     labels=["dev"],
     auto_init=False,
     trigger_mode=TRIGGER_MODE_MANUAL,
 )
 
-# Local resource to run go vet
+# Local resource to run linting via Make
 local_resource(
-    "go-vet",
-    cmd="go vet ./cmd/api-server/... ./pkg/... ./internal/...",
+    "make lint",
+    cmd="make lint",
     labels=["dev"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
+
+# ============================================================================
+# Code Generation
+# ============================================================================
+
+# Local resource to generate all code
+local_resource(
+    "make generate",
+    cmd="make generate",
+    labels=["generate"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
+
+# Local resource to generate protobuf code
+local_resource(
+    "make generate-protobuf",
+    cmd="make generate-protobuf",
+    labels=["generate"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
+
+# Local resource to generate OpenAPI models
+local_resource(
+    "make generate-openapi",
+    cmd="make generate-openapi",
+    labels=["generate"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
+
+# Local resource to generate mock files
+local_resource(
+    "make generate-mocks",
+    cmd="make generate-mocks",
+    labels=["generate"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
+
+# Local resource to generate sqlc queries
+local_resource(
+    "make generate-sqlc",
+    cmd="make generate-sqlc",
+    labels=["generate"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
+
+# Local resource to generate Kubernetes CRDs
+local_resource(
+    "make generate-crds",
+    cmd="make generate-crds",
+    labels=["generate"],
     auto_init=False,
     trigger_mode=TRIGGER_MODE_MANUAL,
 )
