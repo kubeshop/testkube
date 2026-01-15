@@ -1,5 +1,5 @@
 # -*- mode: Python -*-
-# Tiltfile for local development of testkube-api-server
+# Tiltfile for local development of the standalone Testkube Agent (testkube-api-server)
 #
 # Prerequisites:
 #   - Docker with buildx support
@@ -365,10 +365,10 @@ local_resource(
 # ============================================================================
 print("""
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                    Testkube Local Development Environment                     ║
+║                    Testkube Local Development Environment                    ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  Namespace:    {namespace}                                                     ║
+║  Namespace:    {namespace}                                                   ║
 ║                                                                              ║
 ║  Images Built (with Delve debugging, local-only names):                      ║
 ║    • testkube-api-server-dev      (API Server)         Delve: 56268          ║
