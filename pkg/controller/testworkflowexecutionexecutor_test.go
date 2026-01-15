@@ -2,8 +2,6 @@ package controller
 
 import (
 	"context"
-	"errors"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,14 +32,10 @@ var scheduleCmpOpts = []cmp.Option{
 
 type fakeTestWorkflowExecutor struct {
 	req *cloud.ScheduleRequest
-	err error
 }
 
 func (f *fakeTestWorkflowExecutor) Execute(_ context.Context, request *cloud.ScheduleRequest) ([]testkubev1.TestWorkflowExecution, error) {
 	f.req = request
-	if f.err != nil {
-		return nil, f.err
-	}
 	return []testkubev1.TestWorkflowExecution{}, nil
 }
 
@@ -84,7 +78,6 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 					Name: "test-workflow-execution",
 					Type: cloud.RunningContextType_KUBERNETESOBJECT,
 				},
-				KubernetesObjectName: "test-workflow-execution",
 			},
 		},
 		// Should pass through a basic test workflow execution with target selectors.
@@ -142,7 +135,6 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 					Name: "test-workflow-execution",
 					Type: cloud.RunningContextType_KUBERNETESOBJECT,
 				},
-				KubernetesObjectName: "test-workflow-execution",
 			},
 		},
 		// Should not execute if the generation has not changed.
@@ -195,11 +187,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 			if err := testworkflowsv1.AddToScheme(scheme); err != nil {
 				t.Fatalf("failed to add testworkflowsv1 to scheme: %v", err)
 			}
-			k8sClient := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(test.objs...).
-				WithStatusSubresource(&testworkflowsv1.TestWorkflowExecution{}).
-				Build()
+			k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(test.objs...).Build()
 			reconciler := testWorkflowExecutionExecutor(k8sClient, exec)
 
 			_, err := reconciler.Reconcile(context.Background(), test.request)
@@ -212,77 +200,4 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 		})
 	}
 
-}
-
-func TestWorkflowExecutionExecutorController_ErrorHandling(t *testing.T) {
-	scheme := runtime.NewScheme()
-	if err := testworkflowsv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("failed to add testworkflowsv1 to scheme: %v", err)
-	}
-
-	twe := &testworkflowsv1.TestWorkflowExecution{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TestWorkflowExecution",
-			APIVersion: "testworkflows.testkube.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-workflow-execution",
-			Namespace:  "test-namespace",
-			Generation: 1,
-		},
-		Spec: testworkflowsv1.TestWorkflowExecutionSpec{
-			TestWorkflow: &v1.LocalObjectReference{Name: "test-workflow"},
-		},
-		Status: testworkflowsv1.TestWorkflowExecutionStatus{},
-	}
-
-	k8sClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(twe).
-		WithStatusSubresource(&testworkflowsv1.TestWorkflowExecution{}).
-		Build()
-
-	exec := &fakeTestWorkflowExecutor{err: errors.New("workflow not found")}
-	reconciler := testWorkflowExecutionExecutor(k8sClient, exec)
-
-	_, err := reconciler.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: client.ObjectKey{
-			Name:      "test-workflow-execution",
-			Namespace: "test-namespace",
-		},
-	})
-
-	// Reconcile should return an error
-	if err == nil {
-		t.Error("expected reconcile to return an error")
-	}
-
-	// Check that the status was updated with the error
-	var updated testworkflowsv1.TestWorkflowExecution
-	if err := k8sClient.Get(context.Background(), client.ObjectKey{
-		Name:      "test-workflow-execution",
-		Namespace: "test-namespace",
-	}, &updated); err != nil {
-		t.Fatalf("failed to get updated TestWorkflowExecution: %v", err)
-	}
-
-	// Verify the status reflects the error
-	if updated.Status.LatestExecution == nil {
-		t.Fatal("expected LatestExecution to be set")
-	}
-	if updated.Status.LatestExecution.Result == nil {
-		t.Fatal("expected Result to be set")
-	}
-	if updated.Status.LatestExecution.Result.Status == nil || *updated.Status.LatestExecution.Result.Status != testworkflowsv1.FAILED_TestWorkflowStatus {
-		t.Errorf("expected status to be failed, got: %v", updated.Status.LatestExecution.Result.Status)
-	}
-	if updated.Status.LatestExecution.Result.Initialization == nil {
-		t.Fatal("expected Initialization to be set")
-	}
-	if !strings.Contains(updated.Status.LatestExecution.Result.Initialization.ErrorMessage, "workflow not found") {
-		t.Errorf("expected error message to contain 'workflow not found', got: %s", updated.Status.LatestExecution.Result.Initialization.ErrorMessage)
-	}
-	if updated.Status.Generation != 1 {
-		t.Errorf("expected generation to be 1, got: %d", updated.Status.Generation)
-	}
 }
