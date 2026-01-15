@@ -1,0 +1,107 @@
+# Tilt development values for testkube helm chart
+# 
+# Copy this file to tilt-values.yaml and modify as needed:
+#   cp tilt-values.yaml.example tilt-values.yaml
+#
+# The Tiltfile will automatically use tilt-values.yaml if it exists
+
+# Testkube API configuration
+testkube-api:
+  fullnameOverride: testkube-api-server
+  
+  # Disable analytics for local dev
+  analyticsEnabled: false
+  
+  # Enable debug mode
+  enableDebugMode: true
+  
+  # Standalone mode (no cloud connection)
+  cloud:
+    key: ""
+    url: ""
+  
+  # Resource limits for development
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Disable probes during development for faster restarts
+  livenessProbe:
+    enabled: false
+  readinessProbe:
+    enabled: false
+  
+  # NATS configuration
+  nats:
+    embedded: false
+    enabled: true
+  
+  # MinIO for artifact storage
+  minio:
+    enabled: true
+    minioRootUser: minio
+    minioRootPassword: minio123
+    storage: 1Gi
+  
+  # PostgreSQL connection (configured via postgresql.* values below)
+  
+  # Test connection pod
+  testConnection:
+    enabled: false
+  
+  # Next generation features (optional)
+  next:
+    enabled: true
+    cloudStorage: false
+    runner:
+      enabled: true
+    gitops:
+      enabled: true
+      syncCloudToKubernetes: false
+      syncKubernetesToCloud: false
+
+# MongoDB (disabled - using PostgreSQL instead)
+mongodb:
+  enabled: false
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    enablePostgresUser: true
+    postgresPassword: "postgres1234"
+    username: "testkube"
+    password: "postgres5432"
+    database: "backend"
+  primary:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# NATS configuration
+nats:
+  config:
+    jetstream:
+      enabled: true
+  natsBox:
+    enabled: false
+
+# Testkube Operator (disabled for local dev by default)
+# Enable if you want to test operator functionality
+testkube-operator:
+  enabled: false
+
+# Global settings
+global:
+  # Remove default ARM tolerations for local dev
+  tolerations: []
+  
+  # Test Workflows configuration
+  testWorkflows:
+    createServiceAccountTemplates: true
+    createOfficialTemplates: true

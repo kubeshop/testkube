@@ -1,0 +1,7 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowExecution
+metadata:
+  name: curl-testworkflowexecution
+spec:
+  testWorkflow:
+    name: curl-workflow-smoke
