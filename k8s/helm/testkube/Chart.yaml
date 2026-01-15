@@ -10,7 +10,7 @@ dependencies:
     repository: "file://../testkube-operator"
   - name: mongodb
     condition: mongodb.enabled
-    version: 8.0.15-0
+    version: 8.2.3-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: postgresql
     condition: postgresql.enabled
