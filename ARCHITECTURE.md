@@ -2,7 +2,7 @@
 
 This document describes the high-level architecture of the Testkube agent when running in standalone mode. It's intended to help new contributors understand how the system works and navigate the codebase.
 
-> In standalone mode, the Testkube Agent manages all storage and orchestration locally without connecting to a remote control plane.
+> In standalone mode, the Testkube Agent manages all storage and orchestration locally without connecting to a remote control plane - [Read More](https://docs.testkube.io/articles/install/standalone-agent).
 
 ## Table of Contents
 
@@ -77,8 +77,6 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - Core TestWorkflow executor (`testworkflowexecutor/`)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
-
-Read more about how Workflows are executed at https://docs.testkube.io/articles/test-workflows-high-level-architecture. 
 
 ### 4. Storage Layer
 
@@ -301,7 +299,10 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 6. **Status Updates**: Execution status is written to PostgreSQL and CRD status
 7. **Events**: Lifecycle events published to NATS and processed by event listeners (webhooks, etc.)
 
-## Deployment
+You can read more about how Workflows are executed in our docs at https://docs.testkube.io/articles/test-workflows-high-level-architecture. 
+
+## Kubernetes Deployment
+
 
 **Helm Chart**: [`k8s/helm/testkube/`](k8s/helm/testkube/)
 
