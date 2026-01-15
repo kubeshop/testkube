@@ -10,7 +10,7 @@ This document describes the high-level architecture of the Testkube agent when r
 
 - [1. API Server](#1-api-server)
 - [2. Kubernetes Controllers](#2-kubernetes-controllers)
-- [3. Test Execution Runtime](#3-test-execution-runtime)
+- [3. Workflow Execution Runtime](#3-workflow-execution-runtime)
 - [4. Storage Layer](#4-storage-layer)
 - [5. Event System](#5-event-system)
 - [6. REST API](#6-rest-api)
@@ -59,7 +59,9 @@ Controllers watch Kubernetes Custom Resource Definitions (CRDs) and trigger acti
 
 Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime).
 
-### 3. Test Execution Runtime
+### 3. Workflow Execution Runtime
+
+Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows) as an abstraction layer for running any kind of test inside Kubernetes.
 
 **TestWorkflow Init**: [`cmd/testworkflow-init/`](cmd/testworkflow-init/)
 - Initializes TestWorkflow execution containers
@@ -75,6 +77,8 @@ Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-ru
 - Core TestWorkflow executor (`testworkflowexecutor/`)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
+
+Read more about how Workflows are executed at https://docs.testkube.io/articles/test-workflows-high-level-architecture. 
 
 ### 4. Storage Layer
 
@@ -108,6 +112,8 @@ The event system publishes and listens to test execution events:
 
 ### 6. REST API
 
+Testkube exposes REST APIs for interacting with core resources and functionality - [Read More](https://docs.testkube.io/openapi/overview).
+
 **OpenAPI Definition**: [`api/v1/testkube.yaml`](api/v1/testkube.yaml)
 - Defines the agent's REST API contract
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
@@ -136,7 +142,7 @@ The event system publishes and listens to test execution events:
 
 **Endpoint**: `GET /metrics`
 
-The API server exposes Prometheus metrics at `/metrics` for monitoring and observability.
+The API server exposes Prometheus metrics at `/metrics` for monitoring and observability - [Read More](https://docs.testkube.io/articles/metrics).
 
 **Metrics Implementation**: [`internal/app/api/metrics/metrics.go`](internal/app/api/metrics/metrics.go)
 
