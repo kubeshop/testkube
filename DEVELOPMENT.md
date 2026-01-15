@@ -2,10 +2,12 @@
 
 This guide explains how to set up and use the local development environment for Testkube using [Tilt](https://tilt.dev).
 
-The development environment builds and deploys:
+This Tilt-driven development environment builds and deploys:
 - **testkube-api-server** - The main API server (live reload on code changes)
 - **testworkflow-init** - Init container for Test Workflow execution (built as local resource)
 - **testworkflow-toolkit** - Runtime utilities for Test Workflow containers (built as local resource)
+
+> **Note**: This guide applies specifically to developing the **standalone/open-source Testkube agent**, and not to development of the agent when it is connected to the Testkube Control Plane (in which case storage/etc is managed there instead).
 
 ## Prerequisites
 
@@ -446,20 +448,6 @@ docker build -t testworkflow-toolkit-dev:latest --target debug \
 kind load docker-image testkube-api-server-dev:latest
 kind load docker-image testworkflow-init-dev:latest
 kind load docker-image testworkflow-toolkit-dev:latest
-```
-
-### Connecting to Testkube Cloud (Pro)
-
-To test cloud connectivity during local development:
-
-```yaml
-# tilt-values.yaml
-testkube-api:
-  cloud:
-    key: "your-agent-key"
-    url: "agent.testkube.io:443"
-    orgId: "your-org-id"
-    envId: "your-env-id"
 ```
 
 ### Running Multiple Instances

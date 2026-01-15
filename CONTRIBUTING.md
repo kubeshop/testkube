@@ -1,4 +1,4 @@
-# Contribution to testkube 
+# Contributing to Testkube Open Source
 
 Thanks for reaching out 🎉
 
@@ -14,7 +14,6 @@ This project and everyone participating in it is governed by the testkube [code 
 We're using github discussions for managing pre-development ideas and clarifications, feel free to add one at our [Q&A discussion page](https://github.com/kubeshop/testkube/discussions/categories/q-a)
 
 New ideas should be placed in [Ideas discussion page](https://github.com/kubeshop/testkube/discussions/categories/ideas)
-
 
 
 ## General guidance for contributing to testkube project
