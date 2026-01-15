@@ -224,8 +224,10 @@ k8s_resource(
     labels=["dependencies"],
 )
 
-# Create MinIO buckets after MinIO is ready using mc client image
-# Note: The API server should auto-create buckets, but this ensures they exist on startup
+# Create MinIO buckets after MinIO is ready
+# This compensates for a race condition where the API server starts before MinIO is ready,
+# causing its startup bucket creation to fail silently. By creating buckets here,
+# they exist when the runner needs them for saving logs/artifacts.
 local_resource(
     "create-minio-buckets",
     cmd="""

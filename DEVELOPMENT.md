@@ -3,17 +3,17 @@
 This guide explains how to set up and use the local development environment for Testkube using [Tilt](https://tilt.dev).
 
 The development environment builds and deploys:
-- **testkube-api-server** - The main API server
-- **testworkflow-init** - Init container for Test Workflow execution
-- **testworkflow-toolkit** - Runtime utilities for Test Workflow containers
+- **testkube-api-server** - The main API server (live reload on code changes)
+- **testworkflow-init** - Init container for Test Workflow execution (built as local resource)
+- **testworkflow-toolkit** - Runtime utilities for Test Workflow containers (built as local resource)
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- **Docker** with [BuildX](https://docs.docker.com/buildx/working-with-buildx/) support
+- **Docker** with BuildX support
 - **Kubernetes cluster** - one of:
-  - [kind](https://kind.sigs.k8s.io/) (recommended)
+  - [kind](https://kind.sigs.k8s.io/) (recommended - images are automatically loaded)
   - [minikube](https://minikube.sigs.k8s.io/)
   - [Docker Desktop](https://www.docker.com/products/docker-desktop) with Kubernetes enabled
   - [Rancher Desktop](https://rancherdesktop.io/)
@@ -42,9 +42,12 @@ Before you begin, ensure you have the following installed:
 
    This will:
    - Create the `testkube-dev` namespace
-   - Build 3 images: `testkube-api-server`, `testworkflow-init`, `testworkflow-toolkit`
+   - Update Helm dependencies automatically
+   - Build 3 images: `testkube-api-server-dev`, `testworkflow-init-dev`, `testworkflow-toolkit-dev`
    - Deploy the Testkube helm chart with all dependencies (PostgreSQL, MinIO, NATS)
+   - Create MinIO buckets for artifacts and logs
    - Set up port forwards for easy local access
+   - For kind clusters: automatically load images into the cluster
 
 3. **Access the Tilt UI**:
 
@@ -108,11 +111,15 @@ The local development setup deploys the following components:
 
 ### Images Built
 
-| Image | Description |
-|-------|-------------|
-| `testkube-api-server-dev` | Main API server handling all Testkube operations |
-| `testworkflow-init-dev` | Init container that sets up Test Workflow execution environments |
-| `testworkflow-toolkit-dev` | Runtime utilities for artifact collection, parallel execution, etc. |
+All images are built with local-only names (no registry prefix) and use Dockerfiles in `build/_local/`:
+
+| Image | Dockerfile | Build Type | Description |
+|-------|------------|------------|-------------|
+| `testkube-api-server-dev` | `build/_local/agent-server.Dockerfile` | `docker_build` (Tilt-tracked) | Main API server - live reloads on code changes |
+| `testworkflow-init-dev` | `build/_local/testworkflow-init.Dockerfile` | `local_resource` | Init container for TW execution - rebuild manually via Tilt UI |
+| `testworkflow-toolkit-dev` | `build/_local/testworkflow-toolkit.Dockerfile` | `local_resource` | Runtime utilities - rebuild manually via Tilt UI |
+
+**Note**: The Test Workflow images (`testworkflow-init-dev` and `testworkflow-toolkit-dev`) are built as Tilt local resources, not tracked docker builds. This means they won't automatically rebuild when code changes - you need to trigger a rebuild from the Tilt UI when needed. For kind clusters, images are automatically loaded using `kind load docker-image`.
 
 ## Port Forwards
 
@@ -172,19 +179,35 @@ NAMESPACE = "testkube-dev"
 # Change the helm release name
 HELM_RELEASE_NAME = "testkube"
 
-# Change the image name (useful if you have naming conflicts)
-API_SERVER_IMAGE = "docker.io/testkube-api-server-dev"
+# Change the Helm chart path
+HELM_CHART_PATH = "./k8s/helm/testkube"
+
+# Change the image names (local-only names without registry prefix)
+API_SERVER_IMAGE = "testkube-api-server-dev"
+TW_INIT_IMAGE = "testworkflow-init-dev:latest"
+TW_TOOLKIT_IMAGE = "testworkflow-toolkit-dev:latest"
 ```
+
+The Tiltfile automatically detects kind clusters and loads images appropriately.
+
+**Watch Settings**: The Tiltfile ignores Helm chart dependency files (`k8s/helm/testkube/charts/*.tgz`, `Chart.lock`) to prevent reload loops when Helm updates dependencies.
 
 ## Development Workflow
 
 ### Making Code Changes
 
+**For API Server changes:**
 1. Edit any Go files in `cmd/api-server/`, `pkg/`, `internal/`, or `api/`
 2. Tilt automatically detects changes and triggers a rebuild
-3. The new image is built using `docker buildx bake` with caching
+3. The new image is built using Docker with the `build/_local/agent-server.Dockerfile`
 4. The deployment is updated with the new image
 5. The API server restarts with your changes
+
+**For Test Workflow image changes:**
+1. Edit files in `cmd/testworkflow-init/` or `cmd/testworkflow-toolkit/`
+2. In the Tilt UI, click on `build-tw-init` or `build-tw-toolkit` to trigger a manual rebuild
+3. The images are rebuilt and (for kind) loaded into the cluster
+4. New Test Workflow executions will use the updated images
 
 ### Running Tests
 
@@ -257,13 +280,25 @@ The API server also runs with `enableDebugMode: true` for verbose logging.
 
 #### Disabling Debug Mode
 
-To use production images without Delve (faster startup), change `target="debug"` to `target="dist"` in the Tiltfile:
+To use production images without Delve (faster startup), change `target="debug"` to `target="dist"` in the Tiltfile's `docker_build` call:
 
 ```python
 docker_build(
     API_SERVER_IMAGE,
-    ...
+    context=".",
+    dockerfile="build/_local/agent-server.Dockerfile",
     target="dist",  # Production build without Delve
+    ...
+)
+```
+
+For Test Workflow images, update the `docker build` commands in the `local_resource` definitions:
+
+```python
+local_resource(
+    "build-tw-init",
+    cmd="docker build -t testworkflow-init-dev:latest --target dist ...",
+    ...
 )
 ```
 
@@ -283,6 +318,8 @@ psql -h localhost -p 5432 -U testkube -d backend
 - **Web Console**: http://localhost:9001
 - **Credentials**: `minio` / `minio123`
 - **API Endpoint**: http://localhost:9000
+
+**Note**: The Tiltfile automatically creates the required buckets (`testkube-artifacts`, `testkube-logs`) via a job after MinIO starts. This compensates for a race condition where the API server may start before MinIO is ready.
 
 ## Troubleshooting
 
@@ -320,9 +357,13 @@ Since images are loaded locally (not pushed to a registry), ensure:
 2. Your cluster can access locally loaded images:
 
    ```bash
-   # For kind, images are loaded automatically
+   # For kind clusters, the Tiltfile automatically loads images using:
+   # kind load docker-image <image-name>
+   
    # For minikube, you may need to use minikube's docker daemon:
    eval $(minikube docker-env)
+   
+   # Then restart Tilt so it builds inside minikube's Docker
    ```
 
 ### Port Already in Use
@@ -367,6 +408,13 @@ kind delete cluster --name testkube-dev
 
 ### Using a Different Kubernetes Context
 
+The Tiltfile allows the following local Kubernetes contexts by default:
+- `docker-desktop`
+- `docker-for-desktop`
+- `minikube`
+- `kind-kind`
+- `rancher-desktop`
+
 ```bash
 # Set the context before running tilt
 kubectl config use-context my-cluster
@@ -375,19 +423,29 @@ kubectl config use-context my-cluster
 tilt up --context my-cluster
 ```
 
-### Building Other Components
+To allow additional contexts, modify the `allow_k8s_contexts()` call in the Tiltfile.
 
-The `docker-bake.hcl` file defines multiple build targets. To build other components:
+### Building Images Manually
+
+You can build the development images manually using the Dockerfiles in `build/_local/`:
 
 ```bash
-# Build the CLI
-docker buildx bake --file docker-bake.hcl cli
+# Build the API server image
+docker build -t testkube-api-server-dev:latest --target debug \
+  -f build/_local/agent-server.Dockerfile .
 
 # Build Test Workflow init container
-docker buildx bake --file docker-bake.hcl tw-init
+docker build -t testworkflow-init-dev:latest --target debug \
+  -f build/_local/testworkflow-init.Dockerfile .
 
 # Build Test Workflow toolkit
-docker buildx bake --file docker-bake.hcl tw-toolkit
+docker build -t testworkflow-toolkit-dev:latest --target debug \
+  -f build/_local/testworkflow-toolkit.Dockerfile .
+
+# For kind clusters, load the images:
+kind load docker-image testkube-api-server-dev:latest
+kind load docker-image testworkflow-init-dev:latest
+kind load docker-image testworkflow-toolkit-dev:latest
 ```
 
 ### Connecting to Testkube Cloud (Pro)
