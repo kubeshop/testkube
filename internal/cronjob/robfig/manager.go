@@ -141,7 +141,8 @@ func (m Manager) testWorkflowExecuteJob(ctx context.Context, workflow, cronSpec 
 		)
 		log.Info("executing scheduled workflow")
 
-		results, err := m.executor.Execute(ctx, request)
+		executionCtx := context.WithoutCancel(ctx)
+		results, err := m.executor.Execute(executionCtx, request)
 		if err != nil {
 			log.Errorw("unable to execute scheduled workflow",
 				"error", err)
