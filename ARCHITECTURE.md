@@ -27,8 +27,6 @@ This document describes the high-level architecture of the Testkube agent when r
 ### Client Tools
 
 - [CLI](#cli)
-  - [Features](#features)
-  - [Architecture](#architecture)
 
 ### References
 
@@ -123,22 +121,6 @@ The event system publishes and listens to test execution events:
 
 **Route Registration**: [`internal/app/api/v1/server.go`](internal/app/api/v1/server.go) - `TestkubeAPI.Init()`
 
-**Main Endpoint Groups**:
-
-- **`/info`** - Server information (version, cluster ID, namespace)
-- **`/debug`** - Debug information (cluster version, logs)
-- **`/test-workflows`** - TestWorkflow CRUD operations
-- **`/test-workflow-executions`** - Execution management
-- **`/test-workflow-templates`** - Template management (CRUD operations)
-- **`/webhooks`** - Webhook management (CRUD operations)
-- **`/webhook-templates`** - Webhook template management (CRUD operations)
-- **`/triggers`** - TestTrigger CRUD operations
-- **`/events`** - Event streaming and Flux event handling
-- **`/labels`** - List available labels
-- **`/tags`** - List available tags
-- **`/config`** - Configuration management
-- **`/secrets`** - Secret management (CRUD operations)
-
 **Handler Implementation**: [`internal/app/api/v1/`](internal/app/api/v1/)
 - Handlers: `testworkflows.go`, `testworkflowexecutions.go`, `webhook.go`, etc.
 - Each handler function (e.g., `ListTestWorkflowsHandler()`) returns a Fiber handler
@@ -157,22 +139,6 @@ The event system publishes and listens to test execution events:
 The API server exposes Prometheus metrics at `/metrics` for monitoring and observability.
 
 **Metrics Implementation**: [`internal/app/api/metrics/metrics.go`](internal/app/api/metrics/metrics.go)
-
-**Metrics Exposed**:
-- **Test Executions**: Count, duration, abort counts
-- **Test Suite Executions**: Count, duration, abort counts
-- **Test Workflow Executions**: Count, duration, abort counts
-- **Test Workflow Steps**: Count, duration, start/finish times
-- **Resource Operations**: Test/workflow creation, updates, deletions
-- **Test Triggers**: Creation, updates, deletions, bulk operations
-- **Webhook Executions**: Execution counts
-
-**Metric Types**:
-- **Counters**: Track total number of events (executions, creations, etc.)
-- **Summaries**: Track execution durations with percentiles (p50, p90, p95, p99)
-- **Gauges**: Track current state (step durations, start/finish times)
-
-**Labeling**: Metrics are labeled by type, name, result, labels, URIs, and other dimensions for flexible querying.
 
 **Server Setup**: The metrics endpoint is registered in [`pkg/server/httpserver.go`](pkg/server/httpserver.go) using Prometheus's standard HTTP handler (`promhttp.Handler()`).
 
@@ -206,19 +172,6 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 
 **Timestamps**: Logs include RFC3339 formatted timestamps
 
-**Examples**:
-```go
-// Simple log
-log.DefaultLogger.Info("starting Testkube API Server")
-
-// Structured log
-log.DefaultLogger.Infow("configuration loaded",
-    "version", version.Version,
-    "commit", version.Commit)
-
-// Error log
-log.DefaultLogger.Errorw("failed to connect", "error", err)
-```
 
 #### Telemetry
 
@@ -227,47 +180,10 @@ log.DefaultLogger.Errorw("failed to connect", "error", err)
 Telemetry collects usage analytics to help improve the product. It can be disabled by users.
 
 **Telemetry Backends**:
-- **Google Analytics** (`sender_ga4.go`) - Primary analytics backend
-- **Segment.io** (`sender_sio.go`) - Alternative analytics backend
+
+- **Segment.io** (`sender_sio.go`) - Primary analytics backend
+- **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
-
-**Event Types**:
-
-**Server Events**:
-- **Server Start**: Sent when API server starts (`SendServerStartEvent`)
-- **Heartbeat**: Sent periodically (hourly) while server is running (`SendHeartbeatEvent`)
-- **Service Management**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
-
-**CLI Events**:
-- **Command Execution**: Tracks CLI command usage (`SendCmdEvent`)
-- **Command Errors**: Tracks CLI errors with stack traces (`SendCmdErrorEvent`)
-- **Init Events**: Tracks initialization commands (`SendCmdInitEvent`)
-
-**API Events**:
-- **Test/Workflow Creation**: Tracks resource creation (`SendCreateEvent`, `SendCreateWorkflowEvent`)
-- **Test/Workflow Execution**: Tracks test runs (`SendRunEvent`, `SendRunWorkflowEvent`)
-
-**Telemetry Data**:
-- Cluster ID, version, hostname
-- Operating system, architecture
-- Context type (OSS/Cloud)
-- Machine ID (anonymous)
-- Command names, error types, stack traces
-- License information (if available)
-
-**Configuration**:
-- **Enable/Disable**: Controlled via ConfigMap (`GetTelemetryEnabled`)
-- **Opt-out**: Users can disable telemetry via configuration
-- **Heartbeat Interval**: Default 1 hour (configurable in `services/telemetry.go`)
-
-**Privacy**:
-- Uses machine ID (anonymous identifier) instead of personal information
-- No sensitive data is collected
-- Can be completely disabled
-
-**Payload Structure**: [`pkg/telemetry/payload.go`](pkg/telemetry/payload.go)
-- Defines event payloads for different event types
-- Includes validation and sanitization
 
 ### 9. Kubernetes Custom Resource Definitions (CRDs)
 
@@ -405,15 +321,6 @@ The Helm chart deploys:
 
 The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kubectl plugin that provides a command-line interface for managing tests, workflows, and executions.
 
-### Features
-
-- **Resource Management**: Create, update, delete, and list tests, test workflows, webhooks, and configurations
-- **Execution Control**: Run, watch, cancel, and abort test/workflow executions
-- **Artifact Management**: Download execution artifacts (logs, reports, files)
-- **CRD Operations**: Manage Kubernetes Custom Resource Definitions directly
-- **Configuration**: Configure API server endpoints, contexts, and authentication
-- **Multi-Environment Support**: Works with both standalone agents and Testkube Cloud/Enterprise control planes
-
 ### Architecture
 
 **Command Structure**: [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/)
@@ -425,13 +332,6 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks
 - [`pkg/controlplaneclient/`](pkg/controlplaneclient/) - Control plane client
 - [`cmd/kubectl-testkube/config/`](cmd/kubectl-testkube/config/) - Configuration management (API server URIs, contexts)
-
-**Key Commands**:
-- `testkube run testworkflow <name>` - Execute a test workflow
-- `testkube get executions` - List execution history
-- `testkube watch <execution-id>` - Stream execution logs
-- `testkube create testworkflow` - Create a new workflow from file
-- `testkube config api-server-uri <uri>` - Configure API endpoint
 
 **Configuration**: CLI stores configuration in `~/.testkube/` directory, including:
 - API server endpoints (standalone or control plane)
