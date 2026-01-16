@@ -784,11 +784,8 @@ func main() {
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
+				scheduleManager.Start()
 				go func() {
-					// Start the schedule manager.
-					scheduleManager.Start()
-					// If we're no longer the leader then stop the manager.
-					// This probably won't happen as losing leadership likely means we died.
 					<-taskCtx.Done()
 					scheduleManager.Stop()
 				}()
