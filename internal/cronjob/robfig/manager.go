@@ -28,28 +28,36 @@ type Manager struct {
 	cron           *cron.Cron
 	cronEntries    map[string]map[string]cron.EntryID
 	executor       Executor
+	execCtx        context.Context
+	execCancel     context.CancelFunc
 }
 
-func New(logger *zap.SugaredLogger, executor Executor, proModeEnabled bool) Manager {
-	return Manager{
+func New(logger *zap.SugaredLogger, executor Executor, proModeEnabled bool) *Manager {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Manager{
 		proModeEnabled: proModeEnabled,
 		logger:         logger,
 		cron:           cron.New(),
 		cronEntries:    make(map[string]map[string]cron.EntryID),
 		executor:       executor,
+		execCtx:        ctx,
+		execCancel:     cancel,
 	}
 }
 
 // Start the cron manager in its own goroutine, or no-op if already started.
-func (m Manager) Start() {
+func (m *Manager) Start() {
 	m.logger.Infow("cron manager starting")
+	m.execCancel()
+	m.execCtx, m.execCancel = context.WithCancel(context.Background())
 	m.cron.Start()
 	m.logger.Infow("cron manager started")
 }
 
 // Stop stops the cron manager if it is running; otherwise it does nothing.
-func (m Manager) Stop() {
+func (m *Manager) Stop() {
 	m.logger.Infow("cron manager stopping")
+	m.execCancel()
 	m.cron.Stop()
 	m.logger.Infow("cron manager stopped")
 }
@@ -62,7 +70,7 @@ func cronSpec(config testkube.TestWorkflowCronJobConfig) string {
 	return spec
 }
 
-func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.Workflow, configs []testkube.TestWorkflowCronJobConfig) error {
+func (m *Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.Workflow, configs []testkube.TestWorkflowCronJobConfig) error {
 	log := m.logger.With("workflow", workflow.Name)
 	// Delete all existing schedules for this workflow.
 	// This is because we may not know when a schedule is removed from
@@ -93,7 +101,7 @@ func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.
 				"cron", config.Cron,
 			)
 		}
-		entryId, err := m.cron.AddJob(spec, m.testWorkflowExecuteJob(ctx, workflow.Name, spec, config))
+		entryId, err := m.cron.AddJob(spec, m.testWorkflowExecuteJob(workflow.Name, spec, config))
 		if err != nil {
 			m.logger.Errorw("Error adding cron for workflow, continuing processing",
 				"cron", spec,
@@ -115,8 +123,9 @@ func (m Manager) ReplaceWorkflowSchedules(ctx context.Context, workflow cronjob.
 	return nil
 }
 
-func (m Manager) testWorkflowExecuteJob(ctx context.Context, workflow, cronSpec string, config testkube.TestWorkflowCronJobConfig) cron.FuncJob {
+func (m *Manager) testWorkflowExecuteJob(workflow, cronSpec string, config testkube.TestWorkflowCronJobConfig) cron.FuncJob {
 	return cron.FuncJob(func() {
+		execCtx := m.execCtx
 		var targets []*cloud.ExecutionTarget
 		if config.Target != nil {
 			targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*config.Target})
@@ -141,7 +150,7 @@ func (m Manager) testWorkflowExecuteJob(ctx context.Context, workflow, cronSpec 
 		)
 		log.Info("executing scheduled workflow")
 
-		results, err := m.executor.Execute(ctx, request)
+		results, err := m.executor.Execute(execCtx, request)
 		if err != nil {
 			log.Errorw("unable to execute scheduled workflow",
 				"error", err)
