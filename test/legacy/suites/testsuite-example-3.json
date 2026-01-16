@@ -1,9 +1,0 @@
-{
-	"name": "test-example-3",
-	"description": "Tests fast first",
-	"steps": [
-		{"execute": [{"test": "testkube-variables-test"}]},
-		{"execute": [{"delay": "1s"}]},
-		{"execute": [{"test": "testkube-variables-test"}]}
-	]
-}
