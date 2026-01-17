@@ -62,6 +62,7 @@ COMMON_IGNORE = [
     "test",
     "assets",
     "choco",
+    "tmp",
     "js",
     "proto",
     "scripts",
@@ -125,6 +126,17 @@ local_resource(
     ],
     labels=["build"],
     resource_deps=["create-namespace"],
+)
+
+# Manual rebuild of the API server image (bypasses automatic rebuild on file changes)
+local_resource(
+    "build-api-server",
+    cmd="docker build -t {}:latest --target debug --build-arg VERSION=dev --build-arg GIT_SHA=local -f build/_local/agent-server.Dockerfile . && ".format(API_SERVER_IMAGE) +
+        ("kind load docker-image {}:latest && ".format(API_SERVER_IMAGE) if IS_KIND else "") +
+        "kubectl rollout restart deployment/testkube-api-server -n {}".format(NAMESPACE),
+    labels=["build"],
+    auto_init=True,
+    trigger_mode=TRIGGER_MODE_MANUAL,
 )
 
 # ============================================================================
