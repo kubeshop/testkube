@@ -22,12 +22,13 @@ import (
 )
 
 type Enqueuer struct {
-	logger              *zap.SugaredLogger
-	workflowRepository  testworkflowclient.TestWorkflowClient
-	templateRepository  testworkflowtemplateclient.TestWorkflowTemplateClient
-	executionRepository testworkflow.Repository
-	emitter             *event.Emitter
-	globalTemplateName  string
+	logger                   *zap.SugaredLogger
+	workflowRepository       testworkflowclient.TestWorkflowClient
+	templateRepository       testworkflowtemplateclient.TestWorkflowTemplateClient
+	executionRepository      testworkflow.Repository
+	emitter                  *event.Emitter
+	globalTemplateName       string
+	hasInlinedGlobalTemplate bool
 }
 
 func NewEnqueuer(
@@ -37,14 +38,16 @@ func NewEnqueuer(
 	executionRepository testworkflow.Repository,
 	emitter *event.Emitter,
 	globalTemplateName string,
+	hasInlinedGlobalTemplate bool,
 ) Enqueuer {
 	return Enqueuer{
-		logger:              logger,
-		workflowRepository:  workflowRepository,
-		templateRepository:  templateRepository,
-		executionRepository: executionRepository,
-		emitter:             emitter,
-		globalTemplateName:  globalTemplateName,
+		logger:                   logger,
+		workflowRepository:       workflowRepository,
+		templateRepository:       templateRepository,
+		executionRepository:      executionRepository,
+		emitter:                  emitter,
+		globalTemplateName:       globalTemplateName,
+		hasInlinedGlobalTemplate: hasInlinedGlobalTemplate,
 	}
 }
 
@@ -209,7 +212,9 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 		}
 		executionBase.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
 	} else {
-		if e.globalTemplateName != "" {
+		if e.hasInlinedGlobalTemplate {
+			executionBase.PrependTemplate(testworkflowtemplateclient.InlinedGlobalTemplateName)
+		} else if e.globalTemplateName != "" {
 			executionBase.PrependTemplate(e.globalTemplateName)
 		}
 	}

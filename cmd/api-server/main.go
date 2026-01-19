@@ -384,7 +384,8 @@ func main() {
 		log.DefaultLogger.Info("using kubernetes clients for test workflows and test workflow templates")
 		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 		commons.ExitOnError("creating test workflow client", err)
-		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace, cfg.DisableOfficialTemplates)
+		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace,
+			cfg.DisableOfficialTemplates, cfg.GlobalWorkflowTemplateInline)
 		commons.ExitOnError("creating test workflow templates client", err)
 
 		legacyTestTriggersClientForAPI := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -816,11 +817,8 @@ func main() {
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
+				scheduleManager.Start()
 				go func() {
-					// Start the schedule manager.
-					scheduleManager.Start()
-					// If we're no longer the leader then stop the manager.
-					// This probably won't happen as losing leadership likely means we died.
 					<-taskCtx.Done()
 					scheduleManager.Stop()
 				}()

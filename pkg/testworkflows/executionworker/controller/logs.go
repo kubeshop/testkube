@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -29,6 +31,7 @@ const (
 
 	LogRetryOnConnectionLostDelay  = 300 * time.Millisecond
 	LogRetryOnWaitingForStartDelay = 100 * time.Millisecond
+	LogStreamIdleTimeout           = 30 * time.Second
 )
 
 type Comment struct {
@@ -114,10 +117,21 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
+type logStreamOpener func(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time) (io.Reader, error)
+
 func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog] {
+	return watchContainerLogsWithStream(parentCtx, getContainerLogsStream, clientSet, namespace, podName, containerName, bufferSize, isDone, isLastHint, LogStreamIdleTimeout)
+}
+
+func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpener, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool, idleTimeout time.Duration) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
 	var mu sync.Mutex
+	var lastActivity int64
+	atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
+	touch := func() {
+		atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
+	}
 
 	sendError := func(err error) {
 		defer func() {
@@ -144,6 +158,29 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		close(ch)
 	}()
 
+	if idleTimeout > 0 {
+		go func() {
+			ticker := time.NewTicker(idleTimeout)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					if !isDone() {
+						continue
+					}
+					last := time.Unix(0, atomic.LoadInt64(&lastActivity))
+					if time.Since(last) >= idleTimeout {
+						sendError(fmt.Errorf("log stream idle timeout after %s", idleTimeout))
+						ctxCancel()
+						return
+					}
+				}
+			}
+		}()
+	}
+
 	go func() {
 		defer ctxCancel()
 		var err error
@@ -151,7 +188,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var since *time.Time
 
 		// Create logs stream request
-		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
+		stream, err := opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -268,6 +305,9 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// Read next timestamp
 			err = tsReader.Read(reader)
+			if err == nil || errors.Is(err, ErrInvalidTimestamp) {
+				touch()
+			}
 
 			// Handle context canceled
 			if errors.Is(err, context.Canceled) {
@@ -305,7 +345,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// Similarly for GOAWAY, that may be caused by too long connection.
 			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
 				since = common.Ptr(lastTs.Add(1))
-				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
+				stream, err = opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
 				if err != nil {
 					return
 				}

@@ -1,4 +1,0 @@
-{
-  "command": ["curl", "https://testkube-test-page-lipsum.pages.dev/"],
-  "expected_status": "418"
-}
