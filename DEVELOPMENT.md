@@ -3,6 +3,7 @@
 This guide explains how to set up and use the local development environment for Testkube using [Tilt](https://tilt.dev).
 
 This Tilt-driven development environment builds and deploys:
+
 - **testkube-api-server** - The main API server (live reload on code changes)
 - **testworkflow-init** - Init container for Test Workflow execution (built as local resource)
 - **testworkflow-toolkit** - Runtime utilities for Test Workflow containers (built as local resource)
@@ -199,6 +200,7 @@ The Tiltfile automatically detects kind clusters and loads images appropriately.
 ### Making Code Changes
 
 **For API Server changes:**
+
 1. Edit any Go files in `cmd/api-server/`, `pkg/`, `internal/`, or `api/`
 2. Tilt automatically detects changes and triggers a rebuild
 3. The new image is built using Docker with the `build/_local/agent-server.Dockerfile`
@@ -206,6 +208,7 @@ The Tiltfile automatically detects kind clusters and loads images appropriately.
 5. The API server restarts with your changes
 
 **For Test Workflow image changes:**
+
 1. Edit files in `cmd/testworkflow-init/` or `cmd/testworkflow-toolkit/`
 2. In the Tilt UI, click on `build-tw-init` or `build-tw-toolkit` to trigger a manual rebuild
 3. The images are rebuilt and (for kind) loaded into the cluster
@@ -248,6 +251,7 @@ kubectl logs -f -n testkube-dev deployment/testkube-api-server
 The API server also runs with `enableDebugMode: true` for verbose logging.
 
 **Debug Ports:**
+
 | Image | Delve Port | Notes |
 |-------|------------|-------|
 | testkube-api-server | 56268 | Port-forwarded automatically |
@@ -276,6 +280,7 @@ The API server also runs with `enableDebugMode: true` for verbose logging.
 ```
 
 **GoLand/IntelliJ:**
+
 1. Run → Edit Configurations → Add New → Go Remote
 2. Host: `localhost`, Port: `56268`
 3. Click Debug

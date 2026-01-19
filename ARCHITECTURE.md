@@ -1,35 +1,40 @@
-# Testkube Agent Architecture (Standalone Mode)
+# Testkube Agent Architecture 
 
-This document describes the high-level architecture of the Testkube agent when running in standalone mode. It's intended to help new contributors understand how the system works and navigate the codebase.
+The Testkube Agent is 100% Open Source and can be run in two modes:
 
-> In standalone mode, the Testkube Agent manages all storage and orchestration locally without connecting to a remote control plane - [Read More](https://docs.testkube.io/articles/install/standalone-agent).
+- In **Standalone Mode** (free), the Agent manages results/artifact storage, scheduling, triggering, etc. 
+- In **Connected Mode** (commercial), core functionality is delegated to the Testkube Control Plane and the Agent primarily runs Workflows scheduled by the Control Plane and reports results back to it.
+
+You can read more about the differences between the two deployment modes in the [Testkube Documentation](https://docs.testkube.io/articles/install/feature-comparison)
+
+> **This document describes the high-level architecture of the Testkube Agent when run in Standalone Mode**
 
 ## Table of Contents
 
-### Core Components
-
-- [1. API Server](#1-api-server)
-- [2. Kubernetes Controllers](#2-kubernetes-controllers)
-- [3. Workflow Execution Runtime](#3-workflow-execution-runtime)
-- [4. Storage Layer](#4-storage-layer)
-- [5. Event System](#5-event-system)
-- [6. REST API](#6-rest-api)
-- [7. Prometheus Metrics Endpoint](#7-prometheus-metrics-endpoint)
-- [8. Logging and Telemetry](#8-logging-and-telemetry)
-- [9. Kubernetes Custom Resource Definitions (CRDs)](#9-kubernetes-custom-resource-definitions-crds)
-
-### Architecture Overview
-
-- [Data Flow: TestWorkflow Execution](#data-flow-testworkflow-execution)
-- [Deployment](#deployment)
-- [Key Configuration](#key-configuration)
-
-### Client Tools
-
+- [Core Components](#core-components)
+  - [1. API Server](#1-api-server)
+  - [2. Kubernetes Controllers](#2-kubernetes-controllers)
+  - [3. Workflow Execution Runtime](#3-workflow-execution-runtime)
+  - [4. Storage Layer](#4-storage-layer)
+  - [5. Event System](#5-event-system)
+  - [6. REST API](#6-rest-api)
+  - [7. Prometheus Metrics Endpoint](#7-prometheus-metrics-endpoint)
+  - [8. Logging and Telemetry](#8-logging-and-telemetry)
+  - [9. Kubernetes Custom Resource Definitions (CRDs)](#9-kubernetes-custom-resource-definitions-crds)
+- [Kubernetes Deployment](#kubernetes-deployment)
 - [CLI](#cli)
-
-### References
-
+- [Key Files for New Contributors](#key-files-for-new-contributors)
+  - [Entry Points](#entry-points)
+  - [Core Type Definitions](#core-type-definitions)
+  - [Configuration](#configuration)
+  - [API Layer](#api-layer)
+  - [Business Logic](#business-logic)
+  - [Client Libraries](#client-libraries)
+  - [Storage & Repositories](#storage--repositories)
+  - [Infrastructure & Logging](#infrastructure--logging)
+  - [Development & Build](#development--build)
+  - [Testing](#testing)
+  - [Recommended Reading Order](#recommended-reading-order)
 - [Related Documentation](#related-documentation)
 
 ## Core Components
@@ -39,13 +44,15 @@ This document describes the high-level architecture of the Testkube agent when r
 **Entry Point**: [`cmd/api-server/main.go`](cmd/api-server/main.go)
 
 The API server is the main service that:
+
 - Exposes REST (HTTP) and gRPC APIs for managing tests, workflows, and executions
 - Handles test/workflow execution requests
-- Manages storage connections (PostgreSQL, MinIO, NATS)
+- Manages storage connections (MongoDB/PostgreSQL, MinIO, NATS)
 - Runs Kubernetes controllers for watching CRDs
 - Processes events and webhooks
 
 **Key Packages**:
+
 - [`internal/app/api/v1/`](internal/app/api/v1/) - HTTP/gRPC API handlers
 - [`internal/config/`](internal/config/) - Configuration and environment variables
 - [`pkg/server/`](pkg/server/) - HTTP/gRPC server setup
@@ -55,6 +62,7 @@ The API server is the main service that:
 **Location**: [`pkg/controller/`](pkg/controller/)
 
 Controllers watch Kubernetes Custom Resource Definitions (CRDs) and trigger actions:
+
 - **TestWorkflowExecution Controller** (`testworkflowexecutionexecutor.go`) - Watches `TestWorkflowExecution` CRDs and schedules workflow runs when CRDs are created/updated
 
 Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime).
@@ -64,16 +72,19 @@ Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-ru
 Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows) as an abstraction layer for running any kind of test inside Kubernetes.
 
 **TestWorkflow Init**: [`cmd/testworkflow-init/`](cmd/testworkflow-init/)
+
 - Initializes TestWorkflow execution containers
 - Orchestrates workflow step groups and parallel execution
 - Handles container lifecycle and coordination
 
 **TestWorkflow Toolkit**: [`cmd/testworkflow-toolkit/`](cmd/testworkflow-toolkit/)
+
 - Runtime utilities for TestWorkflow containers
 - Artifact collection and upload
 - Log streaming and aggregation
 
 **Execution Logic**: [`pkg/testworkflows/`](pkg/testworkflows/)
+
 - Core TestWorkflow executor (`testworkflowexecutor/`)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
@@ -81,22 +92,26 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 ### 4. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
+
 - Stores test definitions, executions, webhooks, and metadata
 - Repository layer: [`pkg/repository/postgres/`](pkg/repository/postgres/)
 - Migration: [`pkg/dbmigrator/`](pkg/dbmigrator/)
 
 **MongoDB** (Current Primary Database)
+
 - Alternative to PostgreSQL for storing test definitions, executions, webhooks, and metadata
 - Repository layer: [`pkg/repository/testworkflow/mongo/`](pkg/repository/testworkflow/mongo/)
 - Lease backend: [`pkg/repository/leasebackend/mongo/`](pkg/repository/leasebackend/mongo/)
 - Factory: [`pkg/repository/mongo_factory.go`](pkg/repository/mongo_factory.go)
 
 **MinIO** (Object Storage)
+
 - Stores test artifacts (logs, reports, files)
 - Buckets: `testkube-artifacts`, `testkube-logs`
 - Storage interface: [`pkg/storage/`](pkg/storage/)
 
 **NATS** (Message Queue)
+
 - Async job processing and event publishing
 - Event bus: [`pkg/event/bus/`](pkg/event/bus/)
 
@@ -105,6 +120,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 **Location**: [`pkg/event/`](pkg/event/)
 
 The event system publishes and listens to test execution events:
+
 - **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, Slack, K8s events, CD events, WebSockets
 - **Event Emitter**: [`pkg/event/emitter.go`](pkg/event/emitter.go) - Publishes execution lifecycle events
 
@@ -113,12 +129,14 @@ The event system publishes and listens to test execution events:
 Testkube exposes REST APIs for interacting with core resources and functionality - [Read More](https://docs.testkube.io/openapi/overview).
 
 **OpenAPI Definition**: [`api/v1/testkube.yaml`](api/v1/testkube.yaml)
+
 - Defines the agent's REST API contract
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
 
 **Framework**: Uses [Fiber](https://gofiber.io/) web framework for HTTP routing and middleware
 
 **OpenAPI Definition**: [`api/v1/testkube.yaml`](api/v1/testkube.yaml)
+
 - Defines the complete REST API contract
 - Used for client code generation and documentation
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
@@ -126,11 +144,13 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 **Route Registration**: [`internal/app/api/v1/server.go`](internal/app/api/v1/server.go) - `TestkubeAPI.Init()`
 
 **Handler Implementation**: [`internal/app/api/v1/`](internal/app/api/v1/)
+
 - Handlers: `testworkflows.go`, `testworkflowexecutions.go`, `webhook.go`, etc.
 - Each handler function (e.g., `ListTestWorkflowsHandler()`) returns a Fiber handler
 - Handlers interact with repositories, executors, and event emitters
 
 **Response Formats**: Supports JSON and YAML (via `Accept` header)
+
 - Default: `application/json`
 - Alternative: `text/yaml` or `application/yaml`
 
@@ -157,6 +177,7 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
 **Implementation**: [`pkg/log/log.go`](pkg/log/log.go)
 
 **Configuration**:
+
 - **Log Level**: Controlled via `DEBUG` environment variable
   - Default: `InfoLevel`
   - Set `DEBUG=true` for `DebugLevel`
@@ -165,6 +186,7 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
   - Set `LOGGER_JSON=true` for Development format (human-readable)
 
 **Usage**:
+
 - **Default Logger**: `log.DefaultLogger` - Singleton logger used throughout the codebase
 - **Logger Methods**: 
   - `Info()`, `Infow()` - Information messages
@@ -175,7 +197,6 @@ The API server exposes Prometheus metrics at `/metrics` for monitoring and obser
   - Example: `log.DefaultLogger.Infow("connected to database", "host", dbHost, "port", dbPort)`
 
 **Timestamps**: Logs include RFC3339 formatted timestamps
-
 
 #### Telemetry
 
@@ -219,37 +240,6 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Controller**: Watched by `TestWorkflowExecutionController` (see [Kubernetes Controllers](#2-kubernetes-controllers))
   - **Status**: Tracks execution state, results, logs, and artifacts
 
-#### Test CRDs (Legacy)
-
-- **`Test`** (`tests.testkube.io/v1`, v2, v3)
-  - **Definition**: [`api/tests/v1/`, `api/tests/v2/`, `api/tests/v3/`](api/tests/)
-  - **Purpose**: Defines a test using an executor (Cypress, Postman, etc.)
-
-- **`TestExecution`** (`tests.testkube.io/v1`)
-  - **Definition**: [`api/testexecution/v1/testexecution_types.go`](api/testexecution/v1/testexecution_types.go)
-  - **Purpose**: Represents an execution of a test
-
-- **`TestSource`** (`tests.testkube.io/v1`)
-  - **Definition**: [`api/testsource/v1/testsource_types.go`](api/testsource/v1/testsource_types.go)
-  - **Purpose**: Defines test source code location (Git, S3, etc.)
-
-#### TestSuite CRDs (Legacy)
-
-- **`TestSuite`** (`tests.testkube.io/v1`, v2, v3)
-  - **Definition**: [`api/testsuite/v1/`, `api/testsuite/v2/`, `api/testsuite/v3/`](api/testsuite/)
-  - **Purpose**: Groups multiple tests for sequential execution
-
-- **`TestSuiteExecution`** (`tests.testkube.io/v1`)
-  - **Definition**: [`api/testsuiteexecution/v1/testsuiteexecution_types.go`](api/testsuiteexecution/v1/testsuiteexecution_types.go)
-  - **Purpose**: Represents an execution of a test suite
-
-#### Executor CRDs (Legacy)
-
-- **`Executor`** (`executor.testkube.io/v1`)
-  - **Definition**: [`api/executor/v1/executor_types.go`](api/executor/v1/executor_types.go)
-  - **Purpose**: Defines test executors (Cypress, Postman, Playwright, etc.)
-  - **Usage**: Specifies container images and execution types
-
 #### Webhook CRDs
 
 - **`Webhook`** (`executor.testkube.io/v1`)
@@ -267,15 +257,17 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
   - **Purpose**: Automatically triggers tests/workflows based on Kubernetes events
   - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions
 
-#### Other Legacy CRDs
+#### Deprecated CRDs
 
-- **`Template`** (`tests.testkube.io/v1`)
-  - **Definition**: [`api/template/v1/template_types.go`](api/template/v1/template_types.go)
-  - **Purpose**: Reusable test templates for common test patterns
-
-- **`Script`** (`tests.testkube.io/v1`, v2)
-  - **Definition**: [`api/script/v1/`, `api/script/v2/`](api/script/)
-  - **Purpose**: Legacy test script definitions (deprecated in favor of Test CRD)
+- A number of now-deprecated CRDs are still in the codebase to avoid the removal of corresponding Kubernetes resources.
+  - **`Test`** (`tests.testkube.io/v1`, v2, v3)
+  - **`TestExecution`** (`tests.testkube.io/v1`)
+  - **`TestSource`** (`tests.testkube.io/v1`)
+  - **`TestSuite`** (`tests.testkube.io/v1`, v2, v3)
+  - **`TestSuiteExecution`** (`tests.testkube.io/v1`)
+  - **`Executor`** (`executor.testkube.io/v1`)
+  - **`Template`** (`tests.testkube.io/v1`)
+  - **`Script`** (`tests.testkube.io/v1`, v2)
 
 #### CRD Lifecycle
 
@@ -286,41 +278,19 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 5. **API Server**: Kubernetes API server validates and stores CRD instances
 6. **Controllers**: Controllers watch CRDs and take actions (see [Kubernetes Controllers](#2-kubernetes-controllers))
 
-## Data Flow: TestWorkflow Execution
-
-1. **Creation**: User creates a `TestWorkflowExecution` CRD (via CLI or YAML)
-2. **Controller Watch**: TestWorkflowExecution controller detects the CRD
-3. **Scheduling**: Controller calls the executor (`pkg/testworkflows/testworkflowexecutor/`)
-4. **Pod Creation**: Executor creates Kubernetes Pods with:
-   - Init container: `testworkflow-init` (orchestrates workflow steps)
-   - Step containers: Execute individual workflow steps
-   - Toolkit container: `testworkflow-toolkit` (collects artifacts)
-5. **Execution**: Pods run workflow steps, collect outputs, upload artifacts to MinIO
-6. **Status Updates**: Execution status is written to PostgreSQL and CRD status
-7. **Events**: Lifecycle events published to NATS and processed by event listeners (webhooks, etc.)
-
-You can read more about how Workflows are executed in our docs at https://docs.testkube.io/articles/test-workflows-high-level-architecture. 
-
 ## Kubernetes Deployment
-
 
 **Helm Chart**: [`k8s/helm/testkube/`](k8s/helm/testkube/)
 
 The Helm chart deploys:
+
 - API server deployment
-- PostgreSQL (via subchart)
+- MongoDB or PostgreSQL (via subchart) - MongoDB is default but will be deprecated.
 - MinIO (via subchart)
 - NATS (via subchart)
 - Kubernetes RBAC and service accounts
 
 **Configuration**: See [`DEVELOPMENT.md`](DEVELOPMENT.md) for local development setup using Tilt.
-
-## Key Configuration
-
-**Environment Variables**: [`internal/config/config.go`](internal/config/config.go)
-- `ENABLE_K8S_CONTROLLERS` - Enable Kubernetes controllers
-- Database, storage, and NATS connection strings
-- Feature flags for various agent personas
 
 ## CLI
 
@@ -331,21 +301,131 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 ### Architecture
 
 **Command Structure**: [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/)
+
 - Root command and command groups (testworkflows, webhooks, artifacts, etc.)
 - Common utilities: [`cmd/kubectl-testkube/commands/common/`](cmd/kubectl-testkube/commands/common/)
 - Client abstraction: Works with both standalone API and control plane APIs
 
 **Client Layer**:
+
 - [`pkg/newclients/`](pkg/newclients/) - API clients for tests, testworkflows, webhooks
 - [`pkg/controlplaneclient/`](pkg/controlplaneclient/) - Control plane client
 - [`cmd/kubectl-testkube/config/`](cmd/kubectl-testkube/config/) - Configuration management (API server URIs, contexts)
 
 **Configuration**: CLI stores configuration in `~/.testkube/` directory, including:
+
 - API server endpoints (standalone or control plane)
 - Authentication tokens
 - Contexts (for multi-environment setups)
+
+## Key Files for New Contributors
+
+This section highlights the most important files to familiarize yourself with when starting to contribute to Testkube.
+
+### Entry Points
+
+| File | Purpose |
+|------|---------|
+| [`cmd/api-server/main.go`](cmd/api-server/main.go) | Main API server entry point - start here to understand how the agent boots up |
+| [`cmd/kubectl-testkube/main.go`](cmd/kubectl-testkube/main.go) | CLI entry point - the `testkube` command users interact with |
+| [`cmd/testworkflow-init/main.go`](cmd/testworkflow-init/main.go) | Init container that orchestrates TestWorkflow step execution |
+| [`cmd/testworkflow-toolkit/main.go`](cmd/testworkflow-toolkit/main.go) | Runtime utilities available inside TestWorkflow containers |
+
+### Core Type Definitions
+
+| File | Purpose |
+|------|---------|
+| [`api/testworkflows/v1/testworkflow_types.go`](api/testworkflows/v1/testworkflow_types.go) | TestWorkflow CRD type definition - the main abstraction for running tests |
+| [`api/testworkflows/v1/step_types.go`](api/testworkflows/v1/step_types.go) | Step types that define workflow actions (run, shell, artifacts, etc.) |
+| [`api/testtriggers/v1/testtrigger_types.go`](api/testtriggers/v1/testtrigger_types.go) | TestTrigger CRD for event-based test execution |
+| [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go) | Webhook and WebhookTemplate CRD definitions |
+| [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/) | Generated OpenAPI models used throughout the codebase |
+
+### Configuration
+
+| File | Purpose |
+|------|---------|
+| [`internal/config/config.go`](internal/config/config.go) | All environment variables that configure the API server (search for `envconfig:"..."` tags) |
+| [`api/v1/testkube.yaml`](api/v1/testkube.yaml) | OpenAPI specification defining the REST API contract |
+| [`k8s/helm/testkube/values.yaml`](k8s/helm/testkube/values.yaml) | Helm chart default values - authoritative deployment configuration |
+
+### API Layer
+
+| File | Purpose |
+|------|---------|
+| [`internal/app/api/v1/server.go`](internal/app/api/v1/server.go) | API initialization and route registration (`TestkubeAPI.Init()`) |
+| [`internal/app/api/v1/testworkflows.go`](internal/app/api/v1/testworkflows.go) | TestWorkflow CRUD handlers |
+| [`internal/app/api/v1/testworkflowexecutions.go`](internal/app/api/v1/testworkflowexecutions.go) | Execution management handlers |
+| [`internal/app/api/v1/webhook.go`](internal/app/api/v1/webhook.go) | Webhook management handlers |
+| [`pkg/server/httpserver.go`](pkg/server/httpserver.go) | HTTP server setup with Fiber framework |
+
+### Business Logic
+
+| File | Purpose |
+|------|---------|
+| [`pkg/testworkflows/testworkflowexecutor/`](pkg/testworkflows/testworkflowexecutor/) | Core TestWorkflow execution logic |
+| [`pkg/testworkflows/testworkflowprocessor/`](pkg/testworkflows/testworkflowprocessor/) | Workflow processing and step transformation |
+| [`pkg/event/emitter.go`](pkg/event/emitter.go) | Event system that publishes execution lifecycle events |
+| [`pkg/event/kind/webhook/`](pkg/event/kind/webhook/) | Webhook event listener implementation |
+| [`pkg/triggers/`](pkg/triggers/) | TestTrigger service - watches Kubernetes events |
+| [`pkg/controller/`](pkg/controller/) | Kubernetes controllers for CRD reconciliation |
+
+### Client Libraries
+
+| File | Purpose |
+|------|---------|
+| [`pkg/api/v1/client/`](pkg/api/v1/client/) | Low-level API client for direct HTTP calls |
+| [`pkg/newclients/`](pkg/newclients/) | Higher-level clients for workflows, webhooks, triggers |
+| [`pkg/controlplaneclient/`](pkg/controlplaneclient/) | Client for Control Plane communication (Connected mode) |
+| [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/) | CLI command implementations - good examples of client usage |
+
+### Storage & Repositories
+
+| File | Purpose |
+|------|---------|
+| [`pkg/repository/testworkflow/`](pkg/repository/testworkflow/) | TestWorkflow result/output repository interfaces |
+| [`pkg/repository/postgres/`](pkg/repository/postgres/) | PostgreSQL implementation |
+| [`pkg/storage/`](pkg/storage/) | Artifact storage interface |
+| [`pkg/storage/minio/`](pkg/storage/minio/) | MinIO artifact storage implementation |
+
+### Infrastructure & Logging
+
+| File | Purpose |
+|------|---------|
+| [`pkg/log/log.go`](pkg/log/log.go) | Logging setup with zap - use `log.DefaultLogger` throughout |
+| [`internal/app/api/metrics/metrics.go`](internal/app/api/metrics/metrics.go) | Prometheus metrics definitions |
+| [`k8s/helm/testkube/`](k8s/helm/testkube/) | Helm chart for deployment |
+| [`k8s/crd/`](k8s/crd/) | Generated CRD YAML files |
+
+### Development & Build
+
+| File | Purpose |
+|------|---------|
+| [`Makefile`](Makefile) | Build targets - run `make help` for available commands |
+| [`Tiltfile`](Tiltfile) | Tilt configuration for local development |
+| [`go.mod`](go.mod) | Go module dependencies |
+| [`.goreleaser.yml`](.goreleaser.yml) | Release configuration |
+
+### Testing
+
+| File | Purpose |
+|------|---------|
+| [`test/`](test/) | Integration test fixtures and examples |
+| [`internal/test/framework/`](internal/test/framework/) | Test framework utilities |
+
+### Recommended Reading Order
+
+For new contributors, we recommend exploring the codebase in this order:
+
+1. **Start with the types**: Read [`api/testworkflows/v1/testworkflow_types.go`](api/testworkflows/v1/testworkflow_types.go) to understand the core TestWorkflow abstraction
+2. **Understand configuration**: Review [`internal/config/config.go`](internal/config/config.go) to see what environment variables drive behavior
+3. **Trace the API server startup**: Follow [`cmd/api-server/main.go`](cmd/api-server/main.go) to see how components are wired together
+4. **Explore the API layer**: Look at [`internal/app/api/v1/server.go`](internal/app/api/v1/server.go) to understand route registration
+5. **Study the CLI**: Browse [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/) for examples of how clients interact with the API
+6. **Set up local development**: Follow [`DEVELOPMENT.md`](DEVELOPMENT.md) to run Testkube locally with Tilt
 
 ## Related Documentation
 
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) - Local development guide
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines
+- [Workflow Execution Architecture](https://docs.testkube.io/articles/test-workflows-high-level-architecture) - How TestWorkflows are executed.
