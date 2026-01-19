@@ -591,17 +591,17 @@ func (r *ServiceRunner) checkForImmediateFailure(
 	if notifications.Err() != nil {
 		return execResult
 	}
-	/*
-		for v := range notifications.Channel() {
-			if v.Result != nil && v.Result.IsFinished() {
-				if !v.Result.IsPassed() {
-					execResult.Failed = true
-					r.log("service failed immediately after starting")
-				}
-				break
+
+	for v := range notifications.Channel() {
+		if v.Result != nil && v.Result.IsFinished() {
+			if !v.Result.IsPassed() {
+				execResult.Failed = true
+				r.log("service failed immediately after starting")
 			}
+			break
 		}
-	*/
+	}
+
 	return execResult
 }
 
