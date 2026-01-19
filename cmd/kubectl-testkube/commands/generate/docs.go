@@ -29,7 +29,7 @@ var filePrepender = func(filename string) string {
 		sidebarPosition = "sidebar_position: 1\n"
 	}
 
-	return fmt.Sprintf(fmTemplate, strings.Replace(base, "-", " ", -1), sidebarPosition)
+	return fmt.Sprintf(fmTemplate, strings.ReplaceAll(base, "-", " "), sidebarPosition)
 }
 
 var linkHandler = func(name string) string {
