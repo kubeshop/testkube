@@ -32,8 +32,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
-
-	//	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
@@ -613,7 +612,7 @@ func (r *ServiceRunner) processNotifications(
 	execResult := ServiceExecutionResult{
 		Ready: r.instance.ReadinessProbe == nil,
 	}
-	//	var lastWorkflowResult *testkube.TestWorkflowResult
+	var lastWorkflowResult *testkube.TestWorkflowResult
 
 	scheduled := false
 	index := r.instance.Index
@@ -630,11 +629,11 @@ func (r *ServiceRunner) processNotifications(
 			r.info.Status = ServiceStatusRunning
 			instructions.PrintOutput(r.deps.Ref, "service", r.info)
 		}
-		/*
-			if v.Result != nil {
-				lastWorkflowResult = v.Result
-			}
-		*/
+
+		if v.Result != nil {
+			lastWorkflowResult = v.Result
+		}
+
 		execResult.Ready = v.Ready || r.instance.ReadinessProbe == nil
 
 		if !execResult.Started && v.Ref == mainRef && r.state[r.instance.Name][index].Ip != "" {
@@ -645,19 +644,18 @@ func (r *ServiceRunner) processNotifications(
 				r.log("container started, waiting for readiness")
 			}
 		}
-		/*
-			if lastWorkflowResult != nil && lastWorkflowResult.IsFinished() {
-				if !lastWorkflowResult.IsPassed() {
-					execResult.Failed = true
-					r.log("service execution failed")
-				}
-				break
-			}
 
-			if execResult.Started && execResult.Ready && r.instance.ReadinessProbe != nil {
-				break
+		if lastWorkflowResult != nil && lastWorkflowResult.IsFinished() {
+			if !lastWorkflowResult.IsPassed() {
+				r.log("service execution failed")
 			}
-		*/
+			break
+		}
+
+		if execResult.Started && execResult.Ready && r.instance.ReadinessProbe != nil {
+			break
+		}
+
 		// For services without readiness probe, break once started
 		if execResult.Started && r.instance.ReadinessProbe == nil {
 			break
