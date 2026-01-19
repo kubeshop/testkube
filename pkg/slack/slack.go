@@ -52,6 +52,9 @@ func NewNotifier(template, clusterName, dashboardURI string, config []Notificati
 		notifier.client = slack.New(token, slack.OptionDebug(true))
 		notifier.Ready = true
 	} else {
+		// TODO(emil): this slack integration is depercated and this warning
+		// should be removed as it confuses users; instead a warning should be
+		// put in the clause above if someone is using this integration still
 		log.DefaultLogger.Warn("SLACK_TOKEN is not set")
 	}
 	return &notifier
@@ -131,7 +134,7 @@ func (s *Notifier) getChannels(event *testkube.Event) ([]string, error) {
 		}
 		_, needsSending := s.config.NeedsSending(event)
 		if len(channels) > 0 && needsSending {
-			result = append(result, channels[0].GroupConversation.ID)
+			result = append(result, channels[0].ID)
 			return result, nil
 		}
 	} else {
@@ -145,13 +148,7 @@ func (s *Notifier) getChannels(event *testkube.Event) ([]string, error) {
 
 func (s *Notifier) composeMessage(event *testkube.Event) (view *slack.Message, name string, err error) {
 	var message []byte
-	if event.TestExecution != nil {
-		message, err = s.composeTestMessage(event.TestExecution, event.Type())
-		name = event.TestExecution.Name
-	} else if event.TestSuiteExecution != nil {
-		message, err = s.composeTestsuiteMessage(event.TestSuiteExecution, event.Type())
-		name = event.TestSuiteExecution.Name
-	} else if event.TestWorkflowExecution != nil {
+	if event.TestWorkflowExecution != nil {
 		message, err = s.composeTestWorkflowMessage(event.TestWorkflowExecution, event.Type())
 		name = event.TestWorkflowExecution.Name
 	} else {
@@ -170,43 +167,6 @@ func (s *Notifier) composeMessage(event *testkube.Event) (view *slack.Message, n
 	}
 
 	return view, name, nil
-}
-
-func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecution, eventType testkube.EventType) ([]byte, error) {
-	t, err := utils.NewTemplate("message").Parse(s.messageTemplate)
-	if err != nil {
-		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
-		return nil, err
-	}
-
-	args := MessageArgs{
-		ExecutionID:   execution.Id,
-		ExecutionName: execution.Name,
-		EventType:     string(eventType),
-		Namespace:     execution.TestSuite.Namespace,
-		Labels:        testkube.MapToString(execution.Labels),
-		TestName:      execution.TestSuite.Name,
-		TestType:      "Test Suite",
-		Status:        string(*execution.Status),
-		StartTime:     execution.StartTime.String(),
-		EndTime:       execution.EndTime.String(),
-		Duration:      execution.Duration,
-		TotalSteps:    len(execution.ExecuteStepResults),
-		FailedSteps:   execution.FailedStepsCount(),
-		ClusterName:   s.clusterName,
-		DashboardURI:  s.dashboardURI,
-		Envs:          s.envs,
-	}
-
-	log.DefaultLogger.Infow("Execution changed", "status", execution.Status)
-
-	var message bytes.Buffer
-	err = t.Execute(&message, args)
-	if err != nil {
-		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error(), "template", s.messageTemplate, "args", args)
-		return nil, err
-	}
-	return message.Bytes(), nil
 }
 
 func (s *Notifier) composeTestWorkflowMessage(execution *testkube.TestWorkflowExecution, eventType testkube.EventType) ([]byte, error) {
@@ -259,51 +219,6 @@ func (s *Notifier) composeTestWorkflowMessage(execution *testkube.TestWorkflowEx
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", status)
-
-	var message bytes.Buffer
-	err = t.Execute(&message, args)
-	if err != nil {
-		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error(), "template", s.messageTemplate, "args", args)
-		return nil, err
-	}
-	return message.Bytes(), nil
-}
-
-func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType testkube.EventType) ([]byte, error) {
-	t, err := utils.NewTemplate("message").Parse(s.messageTemplate)
-	if err != nil {
-		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error(), "template", s.messageTemplate)
-		return nil, err
-	}
-
-	args := MessageArgs{
-		ExecutionID:   execution.Id,
-		ExecutionName: execution.Name,
-		EventType:     string(eventType),
-		Namespace:     execution.TestNamespace,
-		Labels:        testkube.MapToString(execution.Labels),
-		TestName:      execution.TestName,
-		TestType:      execution.TestType,
-		Status:        string(testkube.QUEUED_ExecutionStatus),
-		StartTime:     execution.StartTime.String(),
-		EndTime:       execution.EndTime.String(),
-		Duration:      execution.Duration,
-		TotalSteps:    0,
-		FailedSteps:   0,
-		ClusterName:   s.clusterName,
-		DashboardURI:  s.dashboardURI,
-		Envs:          s.envs,
-	}
-
-	if execution.ExecutionResult != nil {
-		if execution.ExecutionResult.Status != nil {
-			args.Status = string(*execution.ExecutionResult.Status)
-		}
-		args.TotalSteps = len(execution.ExecutionResult.Steps)
-		args.FailedSteps = execution.ExecutionResult.FailedStepsCount()
-	}
-
-	log.DefaultLogger.Infow("Execution changed", "status", execution.ExecutionResult.Status)
 
 	var message bytes.Buffer
 	err = t.Execute(&message, args)

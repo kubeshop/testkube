@@ -44,7 +44,7 @@ type ArtifactURL struct {
 // GetFile, in cloud we need to call non
 func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
 
-	cloudURI := strings.Replace(uri, "/agent", "", -1)
+	cloudURI := strings.ReplaceAll(uri, "/agent", "")
 	req, err := http.NewRequest(http.MethodGet, cloudURI, nil)
 	if err != nil {
 		return "", err
@@ -80,7 +80,10 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 	if err != nil {
 		return "", err
 	}
-	resp, err = t.client.Do(req)
+	// Signed URLs should use default client as these URLs are self-sufficient
+	// and do not need Authorization headers added. Some Object Storage Providers
+	// even fail when both Auth header and signed query parameter are present.
+	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return name, err
 	}

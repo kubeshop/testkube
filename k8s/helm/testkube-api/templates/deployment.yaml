@@ -1,0 +1,412 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "testkube-api.fullname" . }}
+  labels: {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    {{- if .Values.global.annotations}}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "testkube-api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "testkube-api.selectorLabels" . | nindent 8 }}
+          {{- if .Values.podLabels }}
+          {{- include "global.tplvalues.render" ( dict "value" .Values.podLabels "context" $ ) | nindent 8 }}
+          {{- end }}
+          {{- if .Values.global.labels }}
+          {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 8 }}
+          {{- end }}
+    spec:
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.image.pullSecrets) | nindent 6 }}
+      serviceAccountName: {{ include "testkube-api.serviceAccountName" . }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      {{- if .Values.hostNetwork }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      {{- end }}
+      {{- if .Values.dnsPolicy }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          env:
+            {{- if .Values.global.features.logsV2 }}
+            - name: FF_LOGS_V2
+              value:  "{{ .Values.global.features.logsV2 }}"
+              {{- if .Values.testkubeLogs.grpcAddress }}
+            - name: LOG_SERVER_GRPC_ADDRESS
+              value:  "{{ .Values.testkubeLogs.grpcAddress }}"
+              {{- end }}
+            - name: "LOG_SERVER_SECURE"
+              value: "{{ .Values.testkubeLogs.tls.enabled }}"
+            - name: "LOG_SERVER_SKIP_VERIFY"
+              value:  "{{ .Values.testkubeLogs.tls.skipVerify }}"
+            {{- if .Values.testkubeLogs.tls.certSecret.enabled }}
+            - name: "LOG_SERVER_CERT_FILE"
+              value:  "{{ .Values.testkubeLogs.tls.certSecret.baseMountPath }}/{{ .Values.testkubeLogs.tls.certSecret.certFile }}"
+            - name: "LOG_SERVER_KEY_FILE"
+              value: "{{ .Values.testkubeLogs.tls.certSecret.baseMountPath }}/{{ .Values.testkubeLogs.tls.certSecret.keyFile }}"
+            {{- if .Values.testkubeLogs.tls.mountCACertificate }}
+            - name: "LOG_SERVER_CA_FILE"
+              value: "{{ .Values.testkubeLogs.tls.certSecret.baseMountPath }}/{{ .Values.testkubeLogs.tls.certSecret.caFile }}"
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            - name: APISERVER_PORT
+              value: "{{ .Values.service.port }}"
+            - name: GRPCSERVER_PORT
+              value: "{{ .Values.service.grpcPort }}"
+            - name: POSTMANEXECUTOR_URI
+              value: "{{ .Values.postmanExecutorURI }}"
+            - name: TESTKUBE_ANALYTICS_ENABLED
+              value: "{{ .Values.analyticsEnabled }}"
+            {{- if .Values.slackSecret }}
+            - name: SLACK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.slackSecret }}"
+                  key: SLACK_TOKEN
+            {{- else }}
+            - name: SLACK_TOKEN
+              value: "{{ .Values.slackToken }}"
+            {{- end }}
+            {{- if .Values.slackTemplate }}
+            - name: SLACK_TEMPLATE
+              value:  "{{ .Values.slackTemplate }}"
+            {{- end }}
+            {{- if .Values.executors }}
+            - name: TESTKUBE_DEFAULT_EXECUTORS
+              value:  "{{ .Values.executors }}"
+            {{- end }}
+            {{- if .Values.templates.job }}
+            - name: TESTKUBE_TEMPLATE_JOB
+              value: "{{ .Values.templates.job }}"
+            {{- end }}
+            {{- if .Values.templates.jobContainer }}
+            - name: TESTKUBE_CONTAINER_TEMPLATE_JOB
+              value: "{{ .Values.templates.jobContainer }}"
+            {{- end }}
+            {{- if .Values.templates.scraperContainer }}
+            - name: TESTKUBE_CONTAINER_TEMPLATE_SCRAPER
+              value: "{{ .Values.templates.scraperContainer }}"
+            {{- end }}
+            {{- if .Values.templates.pvcContainer }}
+            - name: TESTKUBE_CONTAINER_TEMPLATE_PVC
+              value: "{{ .Values.templates.pvcContainer }}"
+            {{- end }}
+            {{- if .Values.templates.slavePod }}
+            - name: TESTKUBE_TEMPLATE_SLAVE_POD
+              value: "{{ .Values.templates.slavePod }}"
+            {{- end }}
+            - name: TESTKUBE_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+            - name: JOB_SERVICE_ACCOUNT_NAME
+              value: {{ if .Values.jobServiceAccountName }}"{{ .Values.jobServiceAccountName }}"{{ else if .Values.testServiceAccount.create }}{{ include "testkube-api.testServiceAccountName" . }}{{ else }}""{{ end }}
+            - name: APISERVER_FULLNAME
+              value: "{{ include "testkube-api.fullname" . }}"
+            - name: APISERVER_CONFIG
+              value: "testkube-api-server-config-{{ .Release.Namespace }}"
+            {{- if .Values.httpBodyLimit }}
+            - name: APISERVER_HTTP_BODY_LIMIT
+              value: {{ .Values.httpBodyLimit | quote }}
+            {{- end}}
+            {{- if .Values.httpReadBufferSize }}
+            - name: APISERVER_HTTP_READBUFFERSIZE
+              value: {{ .Values.httpReadBufferSize | quote }}
+            {{- end}}
+            - name: TESTKUBE_WATCHER_NAMESPACES
+              value: "{{ include "testkube-api.watcher-namespaces" . | nindent 12 | trim }}"
+            {{- if .Values.extraEnvVars }}
+            {{ include "global.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 | trim }}
+            {{- end }}
+            {{- if .Values.imageInspectionCache.enabled }}
+            - name: TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE
+              value:  "true"
+            - name: TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY
+              value:  "{{ .Values.imageInspectionCache.name }}"
+            {{- end}}
+            - name: TESTKUBE_CONFIG_DIR
+              value: /app/config
+            {{- if .Values.global }}
+            - name: TESTKUBE_REGISTRY
+              value:  {{ .Values.global.imageRegistry }}
+            {{- end }}
+            - name: TESTKUBE_POD_START_TIMEOUT
+              value:  "{{ .Values.podStartTimeout }}"
+            - name: CDEVENTS_TARGET
+              value: "{{ .Values.cdeventsTarget }}"
+            {{- if not .Values.global.testWorkflows.createOfficialTemplates }}
+            - name: DISABLE_OFFICIAL_TEMPLATES
+              value: "true"
+            {{- end}}
+            - name: TESTKUBE_DASHBOARD_URI
+              value: "{{ .Values.dashboardUri }}"
+            - name: TESTKUBE_CLUSTER_NAME
+              value: "{{ .Values.clusterName }}"
+            - name: TESTKUBE_HELMCHART_VERSION
+              value: "{{ .Chart.Version }}"
+            - name: ENABLE_SECRETS_ENDPOINT
+              value: "{{ .Values.enableSecretsEndpoint }}"
+            - name: DISABLE_MONGO_MIGRATIONS
+              value: "{{ .Values.disableMongoMigrations }}"
+            - name: DISABLE_POSTGRES_MIGRATIONS
+              value: "{{ .Values.disablePostgresMigrations }}"
+            - name: DISABLE_SECRET_CREATION
+              value: "{{ .Values.disableSecretCreation }}"
+            {{- if .Values.executionNamespaces }}
+            {{- $value := "" }}
+            {{- range $rangeItem := .Values.executionNamespaces }}
+                {{- if $value }}
+                  {{ $value = printf "%s," $value }}
+                {{- end }}
+                {{ $value = printf "%s%s=%s" $value $rangeItem.namespace $rangeItem.jobServiceAccountName }}
+            {{- end }}
+            - name: TESTKUBE_EXECUTION_NAMESPACES
+              value: "{{ $value }}"
+            {{- end }}
+            {{- if .Values.global.tls.caCertPath }}
+            - name: SSL_CERT_DIR
+              value: {{ .Values.global.tls.caCertPath }}
+            - name: GIT_SSL_CAPATH
+              value: {{ .Values.global.tls.caCertPath }}
+            {{- end }}
+            {{- if .Values.cloud.tls.customCaDirPath }}
+            - name: SSL_CERT_DIR
+              value: {{ .Values.cloud.tls.customCaDirPath }}
+            {{- else if .Values.cloud.tls.customCaSecretRef }}
+            - name: SSL_CERT_DIR
+              value: /etc/testkube/certs
+            - name: TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET
+              value:  {{ .Values.cloud.tls.customCaSecretRef }}
+            {{- end }}
+            - name: TESTKUBE_DEFAULT_STORAGE_CLASS_NAME
+              value: "{{ .Values.defaultStorageClassName }}"
+            - name: TESTKUBE_TW_TOOLKIT_IMAGE
+              value: "{{ include "testkube-tw-toolkit.image" . }}"
+            - name: TESTKUBE_TW_INIT_IMAGE
+              value: "{{ include "testkube-tw-init.image" . }}"
+            {{- if .Values.global.testWorkflows.globalTemplate.enabled }}
+            {{- if .Values.global.testWorkflows.globalTemplate.inline }}
+            {{- if .Values.global.testWorkflows.globalTemplate.spec }}
+            - name: TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE
+              {{- if kindIs "map" .Values.global.testWorkflows.globalTemplate.spec }}
+              value: {{ toJson .Values.global.testWorkflows.globalTemplate.spec | quote }}
+              {{- else }}
+              value: {{ toJson (fromYaml .Values.global.testWorkflows.globalTemplate.spec) | quote }}
+              {{- end }}
+            {{- end }}
+            {{- else }}
+            - name: TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME
+              value: "{{ .Values.global.testWorkflows.globalTemplate.name }}"
+            {{- end }}
+            {{- end }}
+            - name: ENABLE_K8S_EVENTS
+              value: "{{ .Values.enableK8sEvents }}"
+            {{- if or .Values.cloud.key .Values.cloud.existingSecret.key }}
+              {{- include "testkube-api.env-agent-mode" . | nindent 12 }}
+            {{- else }}
+              {{- include "testkube-api.env-standalone-mode" . | nindent 12 }}
+            {{- end }}
+            - name: WHITELISTED_CONTAINERS
+              value: "{{ .Values.global.features.whitelistedContainers }}"
+            - name: TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL
+              value: "{{ .Values.imageInspectionCache.ttl }}"
+            {{- if .Values.dockerImageVersion }}
+            - name: TESTKUBE_DOCKER_IMAGE_VERSION
+              value: "{{ .Values.dockerImageVersion }}"
+            {{- end }}
+            {{- if .Values.next.enabled }}
+            - name: FEATURE_CLOUD_STORAGE
+              value: "{{ .Values.next.cloudStorage }}"
+            - name: DISABLE_TEST_TRIGGERS
+              value: "{{ not .Values.next.testTriggers.enabled }}"
+            - name: DISABLE_WEBHOOKS
+              value: "{{ not .Values.next.webhooks.enabled }}"
+            - name: DISABLE_RUNNER
+              value: "{{ not .Values.next.runner.enabled }}"
+            - name: DISABLE_DEPRECATED_TESTS
+              value: "{{ not .Values.next.legacyTests.enabled }}"
+            - name: GITOPS_KUBERNETES_TO_CLOUD_ENABLED
+              value: "{{ .Values.next.gitops.syncKubernetesToCloud }}"
+            - name: DISABLE_DEFAULT_AGENT
+              value: "{{ not .Values.next.legacyAgent.enabled }}"
+            - name: ENABLE_CRON_JOBS
+              value: "{{ .Values.next.cronJobs.enabled }}"           
+            {{- end }}
+            - name: ALLOW_LOW_SECURITY_FIELDS
+              value: "{{ .Values.allowLowSecurityFields }}"
+            - name: ENABLE_K8S_CONTROLLERS
+              value: "{{ .Values.next.controllers.enabled }}"
+            {{- if .Values.enableDebugMode }}
+            - name: DEBUG
+              value: "true"
+            {{- end }}
+          image: {{ include "testkube-api.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8088
+              protocol: TCP
+            - name: grpc
+              containerPort: 8089
+              protocol: TCP
+          startupProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 3
+            timeoutSeconds: 3
+            failureThreshold: 20
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+              scheme: HTTP
+          {{- if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /tmp
+              name: testkube-tmp
+            {{- if .Values.nats.embedded }}
+            - mountPath: /app/nats
+              name: testkube-nats
+            {{- end }}
+            - mountPath: /app/config
+              name: testkube-config
+            {{- if .Values.storage.certSecret.enabled }}
+            - mountPath: /etc/client-certs/storage
+              name: {{ .Values.storage.certSecret.name }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.nats.tls.certSecret.enabled }}
+            - mountPath: /etc/client-certs/nats
+              name: {{ .Values.nats.tls.certSecret.name }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.global.features.logsV2 }}
+            {{- if .Values.testkubeLogs.tls.certSecret.enabled }}
+            - mountPath: /etc/client-certs/grpc
+              name: {{ .Values.testkubeLogs.tls.certSecret.name }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- if .Values.cloud.tls.customCaSecretRef }}
+            - mountPath: /etc/testkube/certs/testkube-custom-ca.pem
+              name: {{ .Values.cloud.tls.customCaSecretRef }}
+              readOnly: true
+              subPath: {{ .Values.cloud.tls.customCaSecretKey }}
+            {{- end }}
+            {{- with .Values.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 -}}
+            {{- end }}
+            {{- with .Values.global.volumes.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 -}}
+            {{- end }}
+          securityContext: {{ include "testkube-api.containerSecurityContext" . | nindent 12 }}
+      securityContext: {{ include "testkube-api.podSecurityContext" . | nindent 8 }}
+      volumes:
+        - name: testkube-tmp
+          emptyDir: {}
+        - name: testkube-config
+          configMap:
+            name: {{ include "testkube-api.fullname" . }}
+        {{- if .Values.nats.embedded }}
+        - name: testkube-nats
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.storage.certSecret.enabled }}
+        - name: {{ .Values.storage.certSecret.name }}
+          secret:
+            secretName: {{ .Values.storage.certSecret.name }}
+        {{- end }}
+        {{- if .Values.nats.tls.certSecret.enabled }}
+        - name: {{ .Values.nats.tls.certSecret.name }}
+          secret:
+            secretName: {{ .Values.nats.tls.certSecret.name }}
+        {{- end }}
+        {{- if .Values.global.features.logsV2 }}
+        {{- if .Values.testkubeLogs.tls.certSecret.enabled }}
+        - name: {{ .Values.testkubeLogs.tls.certSecret.name }}
+          secret:
+            secretName: {{ .Values.testkubeLogs.tls.certSecret.name }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloud.tls.customCaSecretRef }}
+        - name: {{ .Values.cloud.tls.customCaSecretRef }}
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.cloud.tls.customCaSecretRef }}
+        {{- end }}
+        {{- with .Values.additionalVolumes }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- with .Values.global.volumes.additionalVolumes }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+      {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if .Values.global.affinity }}
+      affinity:
+      {{- toYaml .Values.global.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+      {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- else if .Values.global.tolerations }}
+      tolerations:
+      {{- toYaml .Values.global.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- else if .Values.global.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+      {{- end }}

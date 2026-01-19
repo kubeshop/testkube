@@ -1,20 +1,19 @@
+//nolint:staticcheck
 package controlplaneclient
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
@@ -30,9 +29,6 @@ type RunnerClient interface {
 }
 
 func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
-	if c.IsLegacy() {
-		return c.legacyGetRunnerOngoingExecutions(ctx)
-	}
 	res, err := call(ctx, c.metadata().GRPC(), c.client.GetUnfinishedExecutions, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
@@ -65,46 +61,6 @@ func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.Unfin
 	}
 }
 
-// Deprecated
-func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionGetRunningRequest{})
-	if err != nil {
-		return nil, err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return nil, err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionGetRunning),
-		Payload: &s,
-	}
-	cmdResponse, err := call(ctx, c.metadata().GRPC(), c.client.Call, &req)
-	if err != nil {
-		return nil, err
-	}
-	var response cloudtestworkflow.ExecutionGetRunningResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*cloud.UnfinishedExecution, 0)
-	for i := range response.WorkflowExecutions {
-		// Ignore if it's not assigned to any runner
-		if response.WorkflowExecutions[i].RunnerId == "" && len(response.WorkflowExecutions[i].Signature) == 0 {
-			continue
-		}
-
-		// Ignore if it's assigned to a different runner
-		if response.WorkflowExecutions[i].RunnerId != c.proContext.Agent.ID {
-			continue
-		}
-
-		result = append(result, &cloud.UnfinishedExecution{EnvironmentId: c.proContext.EnvID, Id: response.WorkflowExecutions[i].Id})
-	}
-	return result, err
-}
-
 func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
 	ctx, cancel := context.WithCancelCause(ctx)
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
@@ -125,7 +81,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 		}()
 
 		// Receive timeout should be longer than heartbeat interval in cloud.
-		t := time.NewTimer(c.opts.RecvTimeout)
+		t := time.NewTimer(c.opts.SendTimeout)
 		select {
 		case err := <-errChan:
 			t.Stop()
@@ -142,12 +98,20 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	}
 	go func() {
 		defer func() {
+			log := c.logger
+			level := zapcore.InfoLevel
+			if err != nil {
+				log = log.With("error", err)
+				level = zapcore.ErrorLevel
+			}
+			log.Logw(level, "shutting down watch runner requests")
 			cancel(err)
 			watcher.Close(err)
 		}()
 		for {
 			// Ignore if it's not implemented in the Control Plane
 			if getGrpcErrorCode(err) == codes.Unimplemented {
+				c.logger.Errorw("error watching runner requests", "error", err)
 				return
 			}
 
@@ -158,6 +122,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 
 			// Handle the error
 			if err != nil {
+				c.logger.Errorw("error watching runner requests", "error", err)
 				return
 			}
 
@@ -180,19 +145,24 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 				req = result.req
 				err = result.err
 				if err != nil {
-					continue
+					c.logger.Errorw("failed to receive runner request", "error", err)
+					return
 				}
 			case <-ctx.Done():
 				err = ctx.Err()
 				return
 			case <-time.After(c.opts.RecvTimeout):
-				err = errors.New("receive request too slow")
+				// Not erroring here because this isn't an error, it is expected gRPC behaviour
+				// if we stop playing ping pong with the server.
+				c.logger.Infow("did not receive runner request before timeout, closing connection",
+					"timeout", c.opts.RecvTimeout)
 				return
 			}
 
 			if req.Type == cloud.RunnerRequestType_PING {
 				err = send(&cloud.RunnerResponse{Type: cloud.RunnerRequestType_PING})
 				if err != nil {
+					c.logger.Errorw("failed to send ping response", "error", err)
 					return
 				}
 				continue
@@ -214,6 +184,8 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 		buildCloudError,
 		process,
 		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
 	)
 }
 
@@ -227,6 +199,8 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 		buildParallelStepCloudError,
 		process,
 		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
 	)
 }
 
@@ -240,5 +214,7 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 		buildServiceCloudError,
 		process,
 		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
 	)
 }

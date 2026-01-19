@@ -1,0 +1,539 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: testworkflowexecutions.testworkflows.testkube.io
+spec:
+  group: testworkflows.testkube.io
+  names:
+    kind: TestWorkflowExecution
+    listKind: TestWorkflowExecutionList
+    plural: testworkflowexecutions
+    singular: testworkflowexecution
+  scope: Namespaced
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: TestWorkflowExecution is the Schema for the workflows API
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: TestWorkflowExecution specification
+              properties:
+                executionRequest:
+                  description: TestWorkflowExecutionRequest contains TestWorkflow execution parameters
+                  properties:
+                    config:
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        x-kubernetes-int-or-string: true
+                      type: object
+                    disableWebhooks:
+                      description: whether webhooks should be disabled for this execution
+                      type: boolean
+                    name:
+                      description: custom execution name
+                      type: string
+                    runningContext:
+                      description: running context for the test workflow execution (Pro edition only)
+                      properties:
+                        actor:
+                          description: running context actor for test workflow execution
+                          properties:
+                            email:
+                              description: actor email
+                              type: string
+                            executionId:
+                              description: test workflow execution id
+                              type: string
+                            executionPath:
+                              description: all test workflow execution ids starting from the root
+                              type: string
+                            executionReference:
+                              description: reference test workflow execution id
+                              type: string
+                            name:
+                              description: actor name
+                              type: string
+                            type:
+                              description: supported actors for test workflow running context
+                              enum:
+                                - cron
+                                - testtrigger
+                                - user
+                                - testworkflow
+                                - testworkflowexecution
+                                - program
+                              type: string
+                          required:
+                            - type
+                          type: object
+                        interface:
+                          description: running context interface for test workflow execution
+                          properties:
+                            name:
+                              description: interface name
+                              type: string
+                            type:
+                              description: supported interfaces for test workflow running context
+                              enum:
+                                - cli
+                                - ui
+                                - api
+                                - ci/cd
+                                - internal
+                              type: string
+                          required:
+                            - type
+                          type: object
+                      required:
+                        - actor
+                        - interface
+                      type: object
+                    tags:
+                      additionalProperties:
+                        type: string
+                      description: test workflow execution tags
+                      type: object
+                    target:
+                      description: Targets helps decide on which runner the execution is scheduled.
+                      properties:
+                        match:
+                          additionalProperties:
+                            items:
+                              type: string
+                            type: array
+                          type: object
+                        not:
+                          additionalProperties:
+                            items:
+                              type: string
+                            type: array
+                          type: object
+                        replicate:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    testWorkflowExecutionName:
+                      description: test workflow execution name started the test workflow execution
+                      type: string
+                  type: object
+                testWorkflow:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      default: ""
+                      description: |-
+                        Name of the referent.
+                        This field is effectively required, but due to backwards compatibility is
+                        allowed to be empty. Instances of this type with an empty value here are
+                        almost certainly wrong.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+              required:
+                - testWorkflow
+              type: object
+            status:
+              description: TestWorkflowExecutionStatus specification
+              properties:
+                generation:
+                  description: test workflow execution generation
+                  format: int64
+                  type: integer
+                latestExecution:
+                  description: |-
+                    INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                    Important: Run "make" to regenerate code after modifying this file
+                  properties:
+                    disableWebhooks:
+                      description: whether webhooks should be disabled for this execution
+                      type: boolean
+                    id:
+                      description: unique execution identifier
+                      type: string
+                    name:
+                      description: execution name
+                      type: string
+                    namespace:
+                      description: execution namespace
+                      type: string
+                    number:
+                      description: sequence number for the execution
+                      format: int32
+                      type: integer
+                    output:
+                      description: additional information from the steps, like referenced executed tests or artifacts
+                      items:
+                        description: TestWorkflowOutput defines output of TestWorkflow
+                        properties:
+                          name:
+                            description: output kind name
+                            type: string
+                          ref:
+                            description: step reference
+                            type: string
+                          value:
+                            description: value returned
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                        type: object
+                      type: array
+                    reports:
+                      description: generated reports from the steps, like junit
+                      items:
+                        description: TestWorkflowReport contains report of TestWorkflow
+                        properties:
+                          file:
+                            description: file path to full report in artifact storage
+                            type: string
+                          kind:
+                            description: report kind/type
+                            type: string
+                          ref:
+                            description: step reference
+                            type: string
+                          summary:
+                            description: TestWorkflowReportSummary contains report summary of TestWorkflow
+                            properties:
+                              duration:
+                                description: total duration of all test cases in milliseconds
+                                format: int64
+                                type: integer
+                              errored:
+                                description: number of error test cases
+                                format: int32
+                                type: integer
+                              failed:
+                                description: number of failed test cases
+                                format: int32
+                                type: integer
+                              passed:
+                                description: number of passed test cases
+                                format: int32
+                                type: integer
+                              skipped:
+                                description: number of skipped test cases
+                                format: int32
+                                type: integer
+                              tests:
+                                description: total number of test cases
+                                format: int32
+                                type: integer
+                            type: object
+                        type: object
+                      type: array
+                    resolvedWorkflow:
+                      x-kubernetes-preserve-unknown-fields: true
+                    resourceAggregations:
+                      description: resource metrics aggregations (min, max, avg, stddev)
+                      properties:
+                        global:
+                          additionalProperties:
+                            additionalProperties:
+                              description: TestWorkflowExecutionResourceAggregations contains resource metrics aggregations
+                              properties:
+                                avg:
+                                  type: number
+                                max:
+                                  type: number
+                                min:
+                                  type: number
+                                stddev:
+                                  type: number
+                                total:
+                                  type: number
+                              type: object
+                            type: object
+                          type: object
+                        step:
+                          items:
+                            properties:
+                              aggregations:
+                                additionalProperties:
+                                  additionalProperties:
+                                    description: TestWorkflowExecutionResourceAggregations contains resource metrics aggregations
+                                    properties:
+                                      avg:
+                                        type: number
+                                      max:
+                                        type: number
+                                      min:
+                                        type: number
+                                      stddev:
+                                        type: number
+                                      total:
+                                        type: number
+                                    type: object
+                                  type: object
+                                description: resource metrics aggregations grouped by measurement and field
+                                type: object
+                              ref:
+                                description: step reference
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    result:
+                      description: TestWorkflowResult contains result of TestWorkflow
+                      properties:
+                        duration:
+                          description: Go-formatted (human-readable) duration
+                          type: string
+                        durationMs:
+                          description: Duration in milliseconds
+                          format: int32
+                          type: integer
+                        finishedAt:
+                          description: when the pod has been completed
+                          format: date-time
+                          type: string
+                        initialization:
+                          description: TestWorkflowStepResult contains step result of TestWorkflow
+                          properties:
+                            errorMessage:
+                              type: string
+                            exitCode:
+                              format: int64
+                              type: integer
+                            finishedAt:
+                              description: when the container was finished
+                              format: date-time
+                              type: string
+                            queuedAt:
+                              description: when the container was created
+                              format: date-time
+                              type: string
+                            startedAt:
+                              description: when the container was started
+                              format: date-time
+                              type: string
+                            status:
+                              description: TestWorkfloStepwStatus has step status of TestWorkflow
+                              type: string
+                          type: object
+                        pausedMs:
+                          description: Pause duration in milliseconds
+                          format: int32
+                          type: integer
+                        pauses:
+                          items:
+                            description: TestWorkflowPause defines pause of TestWorkflow
+                            properties:
+                              pausedAt:
+                                description: when the pause has started
+                                format: date-time
+                                type: string
+                              ref:
+                                description: step at which it was paused
+                                type: string
+                              resumedAt:
+                                description: when the pause has ended
+                                format: date-time
+                                type: string
+                            required:
+                              - pausedAt
+                              - ref
+                            type: object
+                          type: array
+                        predictedStatus:
+                          description: TestWorkflowStatus has status of TestWorkflow
+                          enum:
+                            - queued
+                            - running
+                            - paused
+                            - passed
+                            - failed
+                            - aborted
+                          type: string
+                        queuedAt:
+                          description: when the pod was created
+                          format: date-time
+                          type: string
+                        startedAt:
+                          description: when the pod has been successfully assigned
+                          format: date-time
+                          type: string
+                        status:
+                          description: TestWorkflowStatus has status of TestWorkflow
+                          enum:
+                            - queued
+                            - running
+                            - paused
+                            - passed
+                            - failed
+                            - aborted
+                          type: string
+                        steps:
+                          additionalProperties:
+                            description: TestWorkflowStepResult contains step result of TestWorkflow
+                            properties:
+                              errorMessage:
+                                type: string
+                              exitCode:
+                                format: int64
+                                type: integer
+                              finishedAt:
+                                description: when the container was finished
+                                format: date-time
+                                type: string
+                              queuedAt:
+                                description: when the container was created
+                                format: date-time
+                                type: string
+                              startedAt:
+                                description: when the container was started
+                                format: date-time
+                                type: string
+                              status:
+                                description: TestWorkfloStepwStatus has step status of TestWorkflow
+                                type: string
+                            type: object
+                          type: object
+                        totalDuration:
+                          description: Go-formatted (human-readable) total duration (incl. pause)
+                          type: string
+                        totalDurationMs:
+                          description: Total duration in milliseconds (incl. pause)
+                          format: int32
+                          type: integer
+                      required:
+                        - predictedStatus
+                        - status
+                      type: object
+                    runningContext:
+                      description: running context for the test workflow execution (Pro edition only)
+                      properties:
+                        actor:
+                          description: running context actor for test workflow execution
+                          properties:
+                            email:
+                              description: actor email
+                              type: string
+                            executionId:
+                              description: test workflow execution id
+                              type: string
+                            executionPath:
+                              description: all test workflow execution ids starting from the root
+                              type: string
+                            executionReference:
+                              description: reference test workflow execution id
+                              type: string
+                            name:
+                              description: actor name
+                              type: string
+                            type:
+                              description: supported actors for test workflow running context
+                              enum:
+                                - cron
+                                - testtrigger
+                                - user
+                                - testworkflow
+                                - testworkflowexecution
+                                - program
+                              type: string
+                          required:
+                            - type
+                          type: object
+                        interface:
+                          description: running context interface for test workflow execution
+                          properties:
+                            name:
+                              description: interface name
+                              type: string
+                            type:
+                              description: supported interfaces for test workflow running context
+                              enum:
+                                - cli
+                                - ui
+                                - api
+                                - ci/cd
+                                - internal
+                              type: string
+                          required:
+                            - type
+                          type: object
+                      required:
+                        - actor
+                        - interface
+                      type: object
+                    scheduledAt:
+                      description: when the execution has been scheduled to run
+                      format: date-time
+                      type: string
+                    signature:
+                      description: structured tree of steps
+                      items:
+                        description: TestWorkflowSignature has signature of TestWorkflow
+                        properties:
+                          category:
+                            description: step category, that may be used as name fallback
+                            type: string
+                          children:
+                            x-kubernetes-preserve-unknown-fields: true
+                          name:
+                            description: step name
+                            type: string
+                          negative:
+                            description: is the step/group meant to be negative
+                            type: boolean
+                          optional:
+                            description: is the step/group meant to be optional
+                            type: boolean
+                          ref:
+                            description: step reference
+                            type: string
+                        type: object
+                      type: array
+                    statusAt:
+                      description: when the execution result's status has changed last time (queued, passed, failed)
+                      format: date-time
+                      type: string
+                    tags:
+                      additionalProperties:
+                        type: string
+                      description: test workflow execution tags
+                      type: object
+                    testWorkflowExecutionName:
+                      description: test workflow execution name started the test workflow execution
+                      type: string
+                    workflow:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                    - id
+                    - name
+                    - workflow
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

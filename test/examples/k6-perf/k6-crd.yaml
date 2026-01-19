@@ -3,19 +3,21 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test
+  labels:
+    category: performance-testing
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test.js
+      - test/k6/k6-perf-test.js
   container:
     resources:
       requests:
         cpu: 15
         memory: 25Gi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
   config:
     vus: {type: integer, default: 20}
     duration: {type: string, default: '1m'}
@@ -43,19 +45,21 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-gcp
+  labels:
+    category: performance-testing
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test-gcp.js
+      - test/k6/k6-perf-test-gcp.js
   container:
     resources:
       requests:
         cpu: 15
         memory: 25Gi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
   config:
     vus: {type: integer, default: 20}
     duration: {type: string, default: '1m'}
@@ -82,6 +86,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -92,7 +98,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test.js
+      - test/k6/k6-perf-test.js
   steps:
   - name: Run test
     parallel:
@@ -111,7 +117,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         shell: mkdir /data/artifacts && k6 run k6-perf-test.js --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
         env:
         - name: K6_WEB_DASHBOARD
@@ -127,6 +133,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers-gcp
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -137,7 +145,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test-gcp.js
+      - test/k6/k6-perf-test-gcp.js
   steps:
   - name: Run test
     parallel:
@@ -156,7 +164,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp.js --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
         env:
         - name: K6_WEB_DASHBOARD
@@ -172,6 +180,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers-gcp-discard-response-bodies
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -182,7 +192,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test-gcp-discard-response-bodies.js
+      - test/k6/k6-perf-test-gcp-discard-response-bodies.js
   steps:
   - name: Run test
     parallel:
@@ -201,7 +211,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp-discard-response-bodies.js --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
         env:
         - name: K6_WEB_DASHBOARD
@@ -217,6 +227,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-workers-prometheus
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -227,7 +239,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test.js
+      - test/k6/k6-perf-test.js
   steps:
   - name: Run test
     parallel:
@@ -246,7 +258,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         shell: mkdir /data/artifacts && k6 run k6-perf-test.js -o experimental-prometheus-rw --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}' --tag testid=worker-{{ index + 1}}
         env:
         - name: K6_WEB_DASHBOARD
@@ -268,6 +280,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: k6-perf-test-gcp-workers-prometheus
+  labels:
+    category: performance-testing
 spec:
   config:
     vus: {type: integer, default: 20}
@@ -278,7 +292,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-perf-test-gcp.js
+      - test/k6/k6-perf-test-gcp.js
   steps:
   - name: Run test
     parallel:
@@ -297,7 +311,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp.js -o experimental-prometheus-rw --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}' --tag testid=worker-{{ index + 1}}
         env:
         - name: K6_WEB_DASHBOARD

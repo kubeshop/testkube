@@ -1,0 +1,217 @@
+# Additional special cases that shouldn't be cron-triggered along with "standard" special cases
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-cron-trigger-with-timezone
+  labels:
+    core-tests: special-case
+description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
+spec:
+  events:
+  - cronjob:
+      cron: 5 12 * * * # 12:05 PM every day
+      timezone: Europe/Warsaw
+  - cronjob:
+      cron: 5 12 * * * # 12:05 PM every day
+      timezone: America/New_York
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step - should just pass" && exit 0'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-30m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 30 minutes"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      for iteration in $(seq 1 1800); do
+        echo "Iteration $iteration, sleep (1 second)"
+        sleep 1
+      done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-90m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 90 minutes"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      for iteration in $(seq 1 5400); do
+        echo "Iteration $iteration, sleep (1 second)"
+        sleep 1
+      done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-sleep-90m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 90 minutes sleep + echo in the end"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      sleep 5400 && echo "Sleep finished after 90 minutes"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-service-name-with-dash  # only . notation is supported (https://linear.app/kubeshop/issue/TKC-4047/)
+  labels:
+    core-tests: special-cases
+description: "Service name with dash"
+spec:
+  container:
+    image: alpine:3.22.0
+  services:
+    service-name-with-dash:
+      image: alpine:3.22.0
+      logs: always
+      count: 1
+      shell: 'echo "started service" && sleep 60'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: |
+        echo "Service IP: {{ at(services, "service-name-with-dash").0.ip }}"
+        echo "Service ENV: $SERVICE_IP"
+        [ -z "$SERVICE_IP" ] && { echo "ERROR: SERVICE_IP empty"; exit 1; } || echo OK
+      env:
+        - name: SERVICE_IP
+          value: '{{ at(services, "service-name-with-dash").0.ip }}'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-credentials-private-git-repository
+  labels:
+    core-tests: special-cases
+    environment: dev
+description: "Credentials - private git repository access. .dev environment-only!"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-external-tests
+      revision: main
+      username: '{{credential("git_testkube-external-tests_username")}}'
+      token: '{{credential("git_testkube-external-tests_token")}}'
+      paths:
+      - testkube/k6-smoke-test.js
+  container:
+    image: grafana/k6:1.1.0
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/testkube/k6
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    steps:
+    - shell: mkdir /data/artifacts
+    - run:
+        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 30s
+        env:
+        - name: K6_SYSTEM_ENV
+          value: K6_SYSTEM_ENV_value
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report.html"
+      steps:
+      - name: Saving artifacts
+        workingDir: /data/artifacts
+        artifacts:
+          paths:
+          - '*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-credentials
+  labels:
+    core-tests: special-cases
+    environment: dev
+description: ".dev environment-only!"
+spec:
+  container:
+    image: alpine:3.22.0
+    env:
+      - name: credential_plaintext_org_level
+        value: '{{ credential("credential-plaintext-org-level") }}'
+        global: true
+      - name: credential_plaintext_env_level
+        value: '{{ credential("credential-plaintext-env-level") }}'
+        global: true
+      - name: credential_plaintext_org_level_env_override
+        value: '{{ credential("credential-plaintext-org-level-env-override") }}'
+        global: true
+      - name: credential_encrypted_org_level
+        value: '{{ credential("credential-encrypted-org-level") }}'
+        global: true
+      - name: credential_encrypted_env_level
+        value: '{{ credential("credential-encrypted-env-level") }}'
+        global: true
+      - name: credential_encrypted_org_level_env_override
+        value: '{{ credential("credential-encrypted-org-level-env-override") }}'
+        global: true
+  services:
+    echo-service:
+      image: alpine:3.22.0
+      shell: |
+        echo "credential-plaintext-org-level ENV: $credential_plaintext_org_level"
+        [ "$credential_plaintext_org_level" = "credential-plaintext-org-level-value" ] && [ '{{ credential("credential-plaintext-org-level") }}' = "credential-plaintext-org-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-plaintext-env-level ENV: $credential_plaintext_env_level"
+        [ "$credential_plaintext_env_level" = "credential-plaintext-env-level-value" ] && [ '{{ credential("credential-plaintext-env-level") }}' = "credential-plaintext-env-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-plaintext-org-level-env-override ENV: $credential_plaintext_org_level_env_override"
+        [ "$credential_plaintext_org_level_env_override" = "credential-plaintext-org-level-env-override-value2" ] && [ '{{ credential("credential-plaintext-org-level-env-override") }}' = "credential-plaintext-org-level-env-override-value2" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-encrypted-org-level ENV: $credential_encrypted_org_level"
+        [ "$credential_encrypted_org_level" = "credential-encrypted-org-level-value" ] && [ '{{ credential("credential-encrypted-org-level") }}' = "credential-encrypted-org-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-encrypted-env-level ENV: $credential_encrypted_env_level"
+        [ "$credential_encrypted_env_level" = "credential-encrypted-env-level-value" ] && [ '{{ credential("credential-encrypted-env-level") }}' = "credential-encrypted-env-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-encrypted-org-level-env-override ENV: $credential_encrypted_org_level_env_override"
+        [ "$credential_encrypted_org_level_env_override" = "credential-encrypted-org-level-env-override-value2" ] && [ '{{ credential("credential-encrypted-org-level-env-override") }}' = "credential-encrypted-org-level-env-override-value2" ] && echo OK || (echo FAIL && exit 1)
+  steps:
+    - name: Validate credentials
+      run:
+        shell: |
+          echo "credential-plaintext-org-level ENV: $credential_plaintext_org_level"
+          [ "$credential_plaintext_org_level" = "credential-plaintext-org-level-value" ] && [ '{{ credential("credential-plaintext-org-level") }}' = "credential-plaintext-org-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-plaintext-env-level ENV: $credential_plaintext_env_level"
+          [ "$credential_plaintext_env_level" = "credential-plaintext-env-level-value" ] && [ '{{ credential("credential-plaintext-env-level") }}' = "credential-plaintext-env-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-plaintext-org-level-env-override ENV: $credential_plaintext_org_level_env_override"
+          [ "$credential_plaintext_org_level_env_override" = "credential-plaintext-org-level-env-override-value2" ] && [ '{{ credential("credential-plaintext-org-level-env-override") }}' = "credential-plaintext-org-level-env-override-value2" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-encrypted-org-level ENV: $credential_encrypted_org_level"
+          [ "$credential_encrypted_org_level" = "credential-encrypted-org-level-value" ] && [ '{{ credential("credential-encrypted-org-level") }}' = "credential-encrypted-org-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-encrypted-env-level ENV: $credential_encrypted_env_level"
+          [ "$credential_encrypted_env_level" = "credential-encrypted-env-level-value" ] && [ '{{ credential("credential-encrypted-env-level") }}' = "credential-encrypted-env-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-encrypted-org-level-env-override ENV: $credential_encrypted_org_level_env_override"
+          [ "$credential_encrypted_org_level_env_override" = "credential-encrypted-org-level-env-override-value2" ] && [ '{{ credential("credential-encrypted-org-level-env-override") }}' = "credential-encrypted-org-level-env-override-value2" ] && echo OK || (echo FAIL && exit 1)

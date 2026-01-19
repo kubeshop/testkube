@@ -3,31 +3,51 @@ name: Code build and checks
 on:
   push:
     branches: [main]
-    paths-ignore: "docs/**"
+    paths-ignore: ["docs/**"]
   pull_request:
-    paths-ignore: "docs/**"
+    paths-ignore: ["docs/**"]
     branches: [main]
+
+permissions:
+  contents: read
+  checks: write  # For test annotations
+  pull-requests: write  # For PR comments
 
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
 
-      # setup-go@v4 handles Go cache by default
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version: '1.25'
+          cache: false
 
-      - name: Setup gotestsum
-        run: go install gotest.tools/gotestsum@latest
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            bin/tooling
+          key: ${{ runner.os }}-go-unit-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-unit-
+
+      - name: Show Go environment
+        run: |
+          go env GOCACHE
+          go env GOMODCACHE
+          echo "Test tool location:"
+          ls -la bin/tooling/ || echo "No tools cached yet"
 
       - name: Unit Test
         id: unit_test
-        run: gotestsum --format pkgname --junitfile unit-tests.xml --jsonfile unit-tests.json -- -coverprofile=coverage.out -covermode=atomic ./...
+        run: make unit-tests
 
       - name: Unit Test Summary
         if: always()
@@ -51,32 +71,23 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Send coverage report to Codecov
-        if: always()
-        uses: codecov/codecov-action@v5
-        with:
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-testkube-unit-tests
-          verbose: true
-
   integration-tests:
     name: Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
 
     services:
       mongo:
-        image: bitnami/mongodb
+        image: bitnamilegacy/mongodb:7.0
         ports:
           - 27017:27017
       nats:
-        image: bitnami/nats
+        image: bitnamilegacy/nats:2
         ports:
           - 4222:4222
           - 6222:6222
           - 8222:8222
       minio:
-        image: bitnami/minio
+        image: bitnamilegacy/minio:2025
         ports:
           - 9000:9000
           - 9001:9001
@@ -87,75 +98,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # setup-go@v4 handles Go cache by default
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version: '1.25'
+          cache: false
 
-      - name: Set up Java@11
-        uses: actions/setup-java@v4
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
         with:
-          distribution: "adopt"
-          java-version: "11"
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            bin/tooling
+          key: ${{ runner.os }}-go-integration-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-integration-
 
-      - name: Install node@19
-        uses: actions/setup-node@v4
-        with:
-          node-version: 19
-
-      - name: Install pnpm@8.1
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8.1.0
-
-      - name: Install Artillery@2.0
-        run: npm install -g artillery@2.0.0-31
-
-      - name: Install kubepug@1.7.1
-        uses: cpanato/kubepug-installer@v1.2.0
-        with:
-          kubepug-release: "1.7.1"
-
-      - name: Install k6
+      - name: Show Go environment
         run: |
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
+          go env GOCACHE
+          go env GOMODCACHE
+          echo "Test tool location:"
+          ls -la bin/tooling/ || echo "No tools cached yet"
 
-      - name: Set up JMeter@5.6.3
-        run: |
-          wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.6.3.zip
-          unzip apache-jmeter-5.6.3.zip
-          mv apache-jmeter-5.6.3 jmeter
-          sudo mv jmeter /opt
-          echo "/opt/jmeter/bin" >> $GITHUB_PATH
-
-      - name: Set up Newman@5.3
-        run: |
-          npm install -g newman@5.3.2
-
-      - name: Install Ginkgo@2.9
-        run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
-
-      - name: Set up gotestsum@v1.9
-        run: go install gotest.tools/gotestsum@v1.9.0
-
-      - name: Set up Playwright
-        run: pnpx playwright install --with-deps
-
-      - name: Set up Tracetest
-        run: curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | bash
-
-      - name: Set up git
-        run: sudo apt-get install -y git
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1
 
       - name: Integration Tests
         env:
           STORAGE_ACCESSKEYID: minio99
           STORAGE_SECRETACCESSKEY: minio123
-        run: INTEGRATION=y gotestsum --format pkgname --junitfile integration-tests.xml --jsonfile integration-tests.json -- -run _Integration -coverprofile=coverage.out -covermode=atomic ./...
+        run: make integration-tests
 
       - name: Integration Test Summary
         if: always()
@@ -175,15 +149,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: integration-test-coverage
-          path: coverage.out
+          path: integration-coverage.out
           if-no-files-found: error
           retention-days: 1
-
-      - name: Send coverage report to Codecov
-        if: always()
-        uses: codecov/codecov-action@v5
-        with:
-          file: ./coverage.out
-          flags: integrationtests
-          name: codecov-testkube-integration-tests
-          verbose: true

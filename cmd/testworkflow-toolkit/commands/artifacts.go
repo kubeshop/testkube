@@ -152,5 +152,5 @@ func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 
 	// TODO: Emit information about artifacts
 	ui.ExitOnError("finishing upload", err)
-	fmt.Printf("Took %s.\n", time.Now().Sub(started).Truncate(time.Millisecond))
+	fmt.Printf("Took %s.\n", time.Since(started).Truncate(time.Millisecond))
 }

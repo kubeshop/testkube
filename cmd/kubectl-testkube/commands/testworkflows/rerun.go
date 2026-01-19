@@ -11,7 +11,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -125,7 +124,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 						exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
 						ui.NL()
 						if downloadArtifactsEnabled {
-							tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+							common.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
 						}
 					} else {
 						uiShellWatchExecution(execution.Id)

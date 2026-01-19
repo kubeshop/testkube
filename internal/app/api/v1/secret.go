@@ -9,8 +9,9 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 )
@@ -180,7 +181,7 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 		}
 
 		// Get the secret details
-		secret, err := s.SecretManager.Get(c.Context(), namespace, name)
+		secret, err := s.SecretManager.Get(c.Context(), namespace, name, secretmanager.GetOptions{})
 		if apiutils.IsNotFound(err) {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
 		} else if errors.Is(err, secretmanager.ErrManagementDisabled) {
@@ -193,18 +194,39 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 }
 
 func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerReference, error) {
-	if kind == testworkflowsv1.Resource {
+	switch kind {
+	case testworkflowsv1.Resource:
 		obj, err := s.TestWorkflowsK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
 		}
-		return metav1.OwnerReference{APIVersion: obj.GroupVersionKind().String(), Kind: obj.Kind, Name: obj.Name, UID: obj.UID}, nil
-	} else if kind == testworkflowsv1.ResourceTemplate {
+
+		// Use AppendTypeMeta to set the GroupVersionKind properly
+		crdcommon.AppendTypeMeta("TestWorkflow", testworkflowsv1.GroupVersion, obj)
+
+		ownerRef := metav1.OwnerReference{
+			APIVersion: obj.APIVersion,
+			Kind:       obj.Kind,
+			Name:       obj.Name,
+			UID:        obj.UID,
+		}
+		return ownerRef, nil
+	case testworkflowsv1.ResourceTemplate:
 		obj, err := s.TestWorkflowTemplatesK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
 		}
-		return metav1.OwnerReference{APIVersion: obj.GroupVersionKind().String(), Kind: obj.Kind, Name: obj.Name, UID: obj.UID}, nil
+
+		// Use AppendTypeMeta to set the GroupVersionKind properly
+		crdcommon.AppendTypeMeta("TestWorkflowTemplate", testworkflowsv1.GroupVersion, obj)
+
+		ownerRef := metav1.OwnerReference{
+			APIVersion: obj.APIVersion,
+			Kind:       obj.Kind,
+			Name:       obj.Name,
+			UID:        obj.UID,
+		}
+		return ownerRef, nil
 	}
 
 	return metav1.OwnerReference{}, fmt.Errorf("unsupported owner kind: %s", kind)

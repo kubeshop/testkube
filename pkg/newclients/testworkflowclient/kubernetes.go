@@ -17,7 +17,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
@@ -165,6 +165,19 @@ func (c *k8sTestWorkflowClient) Update(ctx context.Context, environmentId string
 	next.Namespace = c.namespace
 	next.ResourceVersion = original.ResourceVersion
 	return c.client.Update(ctx, next)
+}
+
+func (c *k8sTestWorkflowClient) UpdateStatus(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
+	original, err := c.get(ctx, workflow.Name)
+	if err != nil {
+		return err
+	}
+
+	if workflow.Status != nil {
+		original.Status = testworkflows.MapTestWorkflowStatusSummaryAPIToKube(*workflow.Status)
+	}
+
+	return c.client.Status().Update(ctx, original)
 }
 
 func (c *k8sTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {

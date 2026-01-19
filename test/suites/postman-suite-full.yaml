@@ -1,0 +1,18 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: postman
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: postman-workflow-smoke
+      - name: postman-workflow-smoke-without-envs
+      - name: postman-workflow-smoke-template
+      - name: postman-workflow-smoke-template-without-envs
+      - name: postman-workflow-smoke-junit

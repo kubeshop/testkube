@@ -3,20 +3,21 @@ kind: TestWorkflow
 metadata:
   name: cypress-video
   labels:
-    core-tests: workflows
+    category: e2e-ui-testing
+    artifacts: "true"
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
   steps:
   - name: Run tests
     run:
@@ -33,7 +34,7 @@ spec:
         value: "0"
     steps:
     - name: Saving artifacts
-      workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
+      workingDir: /data/repo/test/cypress/cypress-13/cypress/videos
       artifacts:
         paths:
         - '**/*'

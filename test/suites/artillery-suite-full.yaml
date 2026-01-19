@@ -1,0 +1,16 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: artillery
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: artillery-workflow-smoke
+      - name: artillery-workflow-smoke-template
+      - name: distributed-artillery-workflow-smoke

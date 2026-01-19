@@ -1,8 +1,8 @@
-# Testkube (by Kubeshop) Community Code of Conduct
+# Testkube Community Code of Conduct
 
 testkube follows the CNCF Code of Conduct. The text of the CNCF CoC is replicated below. If you notice that this is out of date, please file an issue.
 
-If you notice a violation of the Code of Conduct at an event or meeting, in Slack, or in another communication mechanism, reach out to the testkube Code of Conduct Committee. You can reach us by email at contact@kubeshop.io Your anonymity will be protected.
+If you notice a violation of the Code of Conduct at an event or meeting, in Slack, or in another communication mechanism, reach out to the testkube Code of Conduct Committee. You can reach us by email at contact@testkube.io Your anonymity will be protected.
 
 # CNCF Community Code of Conduct v1.0
 

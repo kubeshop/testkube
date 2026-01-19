@@ -1,0 +1,21 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: jmeter
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: jmeter-workflow-smoke
+      - name: jmeter-workflow-smoke-justb4-5.5
+      - name: jmeter-workflow-smoke-shell
+      - name: jmeter-workflow-smoke-from-template
+      - name: jmeter-workflow-smoke-from-template-v1
+      - name: jmeter-workflow-smoke-from-template-separate-artifacts-step
+      - name: distributed-jmeter-workflow-smoke
+      - name: distributed-jmeter-workflow-smoke-shell

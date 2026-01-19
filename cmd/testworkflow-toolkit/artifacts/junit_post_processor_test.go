@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 
@@ -16,8 +16,6 @@ import (
 )
 
 func TestJUnitPostProcessor_Add(t *testing.T) {
-	t.Parallel()
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -66,7 +64,6 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 			assert.Equal(t, tc.want, err)
 		})
 	}
-
 }
 
 func TestJUnitPostProcessor_Add_WithPathPrefix(t *testing.T) {
@@ -94,8 +91,6 @@ func TestJUnitPostProcessor_Add_WithPathPrefix(t *testing.T) {
 }
 
 func TestIsXMLFile(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name string
 		stat *filesystem.MockFileInfo
@@ -143,8 +138,6 @@ func TestIsXMLFile(t *testing.T) {
 }
 
 func TestIsJUnitReport(t *testing.T) {
-	t.Parallel()
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

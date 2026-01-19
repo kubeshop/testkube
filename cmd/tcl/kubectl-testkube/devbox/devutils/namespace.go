@@ -146,6 +146,11 @@ func (n *NamespaceObject) createRole() error {
 				Resources: []string{"secrets", "configmaps"},
 			},
 			{
+				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete"},
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+			},
+			{
 				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete", "deletecollection"},
 				APIGroups: []string{"testworkflows.testkube.io"},
 				Resources: []string{"testworkflows", "testworkflows/status", "testworkflowtemplates", "testworkflowexecutions"},

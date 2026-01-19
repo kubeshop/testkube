@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -26,13 +26,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
-//go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
+//go:generate go tool mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
 type Processor interface {
 	Register(operation Operation) Processor
 	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions, machines ...expressions.Machine) (*Bundle, error)
 }
 
-//go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
+//go:generate go tool mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
 type InternalProcessor interface {
 	Process(layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error)
 }
@@ -154,6 +154,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
+
 	err = expressions.Simplify(&workflow, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
@@ -303,7 +304,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
 		}
 	}
-	containerStages = nil
 
 	// Determine FS Group for the containers
 	fsGroup := common.Ptr(constants.DefaultFsGroup)
@@ -506,6 +506,17 @@ func addEnvVarToContainerSpec(mapEnv map[string]corev1.EnvVarSource, containers 
 				Name:      envName,
 				ValueFrom: envSource.DeepCopy(),
 			}
+
+			if e.ValueFrom != nil {
+				if e.ValueFrom.ConfigMapKeyRef != nil && e.ValueFrom.ConfigMapKeyRef.Optional == nil {
+					e.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+				}
+
+				if e.ValueFrom.SecretKeyRef != nil && e.ValueFrom.SecretKeyRef.Optional == nil {
+					e.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+				}
+			}
+
 			containers[i].Env = append(containers[i].Env, e)
 		}
 	}

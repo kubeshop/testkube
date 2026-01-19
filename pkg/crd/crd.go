@@ -15,7 +15,7 @@ import (
 	"k8s.io/kube-openapi/pkg/validation/strfmt"
 	"k8s.io/kube-openapi/pkg/validation/validate"
 
-	opcrd "github.com/kubeshop/testkube-operator/config/crd"
+	opcrd "github.com/kubeshop/testkube/k8s"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -99,7 +99,7 @@ func GenerateYAML[G Gettable](tmpl Template, items []G) (string, error) {
 
 func ValidateYAMLAgainstSchema(name opcrd.Schema, dataYAML []byte) error {
 	// Load CRD YAML
-	schemaYAML, err := opcrd.SF.ReadFile(fmt.Sprintf("bases/%s.yaml", name))
+	schemaYAML, err := opcrd.SF.ReadFile(fmt.Sprintf("crd/%s.yaml", name))
 	if err != nil {
 		return err
 	}

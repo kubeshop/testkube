@@ -56,6 +56,11 @@ func (l *WebsocketListener) Metadata() map[string]string {
 	}
 }
 
+func (l *WebsocketListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
+	return valid
+}
+
 func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var success, failed []string
 
@@ -81,4 +86,8 @@ func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventR
 
 func (l *WebsocketListener) Kind() string {
 	return "websocket"
+}
+
+func (l *WebsocketListener) Group() string {
+	return ""
 }

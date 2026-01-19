@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,7 +30,7 @@ func Handler[T any, U any](fn func(ctx context.Context, payload T) (U, error)) f
 		data, _ := read[T](req.Payload)
 		value, err := fn(ctx, data)
 		if err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
+			if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, pgx.ErrNoRows) {
 				return nil, status.Error(codes.NotFound, NewNotFoundErr("").Error())
 			}
 			if _, ok := err.(grpcstatus); ok {

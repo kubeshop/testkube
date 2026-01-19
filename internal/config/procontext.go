@@ -32,7 +32,6 @@ type ProContext struct {
 	URL                                 string
 	TLSInsecure                         bool
 	WorkerCount                         int
-	LogStreamWorkerCount                int
 	SkipVerify                          bool
 	EnvID                               string
 	EnvSlug                             string
@@ -43,9 +42,9 @@ type ProContext struct {
 	Migrate                             string
 	ConnectionTimeout                   int
 	DashboardURI                        string
-	NewArchitecture                     bool
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
+	HasSourceOfTruthCapability          bool
 	Agent                               ProContextAgent
 }
 
@@ -70,8 +69,8 @@ type ProContextAgentEnvironment struct {
 type ProContextAgent struct {
 	ID           string
 	Name         string
-	Type         string
 	Disabled     bool
 	Labels       map[string]string
+	IsSuperAgent bool
 	Environments []ProContextAgentEnvironment
 }

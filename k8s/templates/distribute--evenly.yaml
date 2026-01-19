@@ -1,0 +1,20 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: distribute--evenly
+spec:
+  config:
+    name:
+      description: optional group name for even distribution
+      type: string
+      default: ""
+  pod:
+    labels:
+      distribute-evenly: "{{execution.id}}{{config.name}}"
+    topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          distribute-evenly: "{{execution.id}}{{config.name}}"

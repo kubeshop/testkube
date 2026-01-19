@@ -3,7 +3,7 @@ kind: Executor
 metadata:
   name: container-executor-playwright-v1.32.3-args
 spec:
-  image: mcr.microsoft.com/playwright:v1.32.3-focal
+  image: mcr.microsoft.com/playwright:v1.53.2
   command: ["npx", "--yes", "playwright@1.32.3", "test", "--output", "/data/artifacts/playwright-results"]
   executor_type: container
   types:
@@ -25,8 +25,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/playwright/executor-tests/playwright-project
-      workingDir: test/playwright/executor-tests/playwright-project
+      path: test/playwright/playwright-project
+      workingDir: test/playwright/playwright-project
   executionRequest:
     artifactRequest:
       storageClassName: standard

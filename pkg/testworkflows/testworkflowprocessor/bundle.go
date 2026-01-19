@@ -18,12 +18,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
+// RuntimeOptions contains runtime overrides for test workflow execution
+type RuntimeOptions struct {
+	Variables map[string]string
+}
+
 type BundleOptions struct {
 	Secrets                []corev1.Secret
 	Config                 testworkflowconfig.InternalConfig
 	ScheduledAt            time.Time
 	CommonEnvVariables     []corev1.EnvVar
 	AllowLowSecurityFields bool
+	Runtime                *RuntimeOptions // Runtime configuration overrides
 }
 
 type Bundle struct {
@@ -95,5 +101,5 @@ func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, nam
 	}
 
 	_, err = clientSet.BatchV1().Jobs(namespace).Create(ctx, &b.Job, metav1.CreateOptions{})
-	return errors.Wrap(err, "failed to deploy job")
+	return errors.WithStack(err)
 }

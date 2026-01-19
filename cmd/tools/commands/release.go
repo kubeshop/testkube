@@ -42,7 +42,7 @@ func NewReleaseCmd() *cobra.Command {
 			chart, path, err := helm.GetChart(dir)
 			ui.ExitOnError("getting chart path", err)
 			ui.Info("Current "+path+" version", helm.GetVersion(chart))
-			valuesPath := strings.Replace(path, "Chart.yaml", "values.yaml", -1)
+			valuesPath := strings.ReplaceAll(path, "Chart.yaml", "values.yaml")
 
 			// save version in Chart.yaml
 			err = helm.SaveString(&chart, "version", nextAppVersion)

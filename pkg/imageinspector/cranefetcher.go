@@ -5,15 +5,21 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
+	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -40,14 +46,24 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	}
 
 	// Support pull secrets
-	authConfigs, err := ParseSecretData(pullSecrets, registry)
+	authConfigs, err := ParseSecretData(pullSecrets, registry, image)
 	if err != nil {
 		return nil, err
 	}
 
+	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
+	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
+	keychain := authn.NewMultiKeychain(
+		authn.DefaultKeychain,
+		google.Keychain,
+		github.Keychain,
+		amazonKeychain,
+		azureKeychain,
+	)
+
 	// Select the auth
 	cranePlatformOption := crane.WithPlatform(&v1.Platform{OS: runtime.GOOS, Architecture: runtime.GOARCH})
-	craneOptions := []crane.Option{crane.WithContext(ctx)}
+	craneOptions := []crane.Option{crane.WithContext(ctx), crane.WithAuthFromKeychain(keychain)}
 	if len(authConfigs) > 0 {
 		craneOptions = append(craneOptions, crane.WithAuth(authn.FromConfig(authConfigs[0])))
 	}
@@ -144,7 +160,7 @@ type DockerAuths struct {
 }
 
 // ParseSecretData parses secret data for docker auth config
-func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.AuthConfig, error) {
+func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]authn.AuthConfig, error) {
 	var results []authn.AuthConfig
 	for _, imageSecret := range imageSecrets {
 		auths := DockerAuths{}
@@ -168,6 +184,37 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.Aut
 			}
 
 			results = append(results, authn.AuthConfig{Username: username, Password: password})
+		} else {
+			var slice []struct {
+				Path  string
+				Creds authn.AuthConfig
+			}
+
+			for path, creds := range auths.Auths {
+				slice = append(slice, struct {
+					Path  string
+					Creds authn.AuthConfig
+				}{
+					Path:  path,
+					Creds: creds,
+				})
+			}
+
+			sort.Slice(slice, func(i, j int) bool {
+				return slice[i].Path > slice[j].Path
+			})
+
+			for _, item := range slice {
+				if strings.HasPrefix(image, item.Path) {
+					username, password, err := extractRegistryCredentials(item.Creds)
+					if err != nil {
+						return nil, err
+					}
+
+					results = append(results, authn.AuthConfig{Username: username, Password: password})
+					break
+				}
+			}
 		}
 	}
 

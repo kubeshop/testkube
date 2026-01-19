@@ -74,13 +74,16 @@ func (r *testWorkflowTemplateFetcher) PrefetchMany(namesSet map[string]struct{})
 }
 
 func (r *testWorkflowTemplateFetcher) Get(name string) (*testkube.TestWorkflowTemplate, error) {
-	v, ok := r.cache.Load(name)
+	v, ok := r.cache.Load(testworkflowresolver.GetInternalTemplateName(name))
 	if !ok {
 		err := r.Prefetch(name)
 		if err != nil {
 			return nil, err
 		}
-		v, _ = r.cache.Load(name)
+		v, ok = r.cache.Load(testworkflowresolver.GetInternalTemplateName(name))
+		if !ok {
+			return nil, errors.Errorf("unknown test workflow template %s", name)
+		}
 	}
 	return v.(*testkube.TestWorkflowTemplate), nil
 }

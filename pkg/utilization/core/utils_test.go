@@ -7,7 +7,6 @@ import (
 )
 
 func TestSplit(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		name  string

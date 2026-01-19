@@ -4,7 +4,7 @@ info:
   title: Testkube API
   description: "Testkube provides a Kubernetes-native framework for test definition, execution and results"
   contact:
-    email: testkube@kubeshop.io
+    email: contact@testkube.io
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -263,6 +263,19 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
+        - name: mode
+          in: query
+          description: |
+            Update mode for the trigger. When set to "replace", the entire trigger 
+            is replaced with the request body (full replacement semantics). When not 
+            set or set to any other value, merge semantics are used where only 
+            non-null fields from the request are applied to the existing trigger.
+            This is used by cloud-api to signal that the original request was YAML.
+          required: false
+          schema:
+            type: string
+            enum:
+              - replace
       tags:
         - test-triggers
         - api
@@ -4307,6 +4320,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/ForceAgent"
       summary: Abort test workflow execution
       description: Abort test workflow execution
       operationId: abortTestWorkflowExecutionByTestWorkflow
@@ -4676,6 +4690,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/executionID"
+        - $ref: "#/components/parameters/ForceAgent"
       summary: Abort test workflow execution
       description: Abort test workflow execution
       operationId: abortTestWorkflowExecution
@@ -6507,6 +6522,7 @@ components:
         - aborted
         - timeout
         - skipped
+        - canceled
 
     ExecutionResult:
       description: execution result returned from executor
@@ -7337,8 +7353,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - resource
-        - resourceSelector
         - event
         - action
         - execution
@@ -7392,9 +7406,6 @@ components:
       allOf:
         - $ref: "#/components/schemas/WebhookTemplate"
 
-    # Copied from CRD spec
-    # https://github.com/kubeshop/testkube-operator/blob/main/config/crd/bases/executor.testkube.io_executors.yaml
-    # TODO we need to sync those in some nice way
     Executor:
       description: CRD based executor data
       type: object
@@ -7624,6 +7635,16 @@ components:
           type: string
           description: Context value depending from its type
 
+    TestWorkflowExecutionRuntime:
+      description: runtime configuration for a specific test workflow execution
+      type: object
+      properties:
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+          description: runtime variables passed to the test workflow execution
+
     TestWorkflowRunningContext:
       description: running context for test workflow execution
       type: object
@@ -7705,6 +7726,37 @@ components:
         namespace:
           type: string
           example: "testkube"
+        labels:
+          type: object
+          description: "webhook labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        annotations:
+          type: object
+          description: "webhook annotations"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        created:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        updated:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        disabled:
+          type: boolean
+          description: whether webhook is disabled
+          default: false
+          example:
+            - true
+            - false
         uri:
           type: string
           example: "https://hooks.app.com/services/1"
@@ -7731,29 +7783,6 @@ components:
             type: string
           example:
             Content-Type: "application/xml"
-        labels:
-          type: object
-          description: "webhook labels"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
-        annotations:
-          type: object
-          description: "webhook annotations"
-          additionalProperties:
-            type: string
-          example:
-            env: "prod"
-            app: "backend"
-        disabled:
-          type: boolean
-          description: whether webhook is disabled
-          default: false
-          example:
-            - true
-            - false
         config:
           $ref: "#/components/schemas/WebhookConfig"
         parameters:
@@ -7762,6 +7791,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7830,6 +7861,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookParameterSchema"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     Event:
       description: Event data
@@ -7846,6 +7879,9 @@ components:
         streamTopic:
           type: string
           description: stream topic
+        groupId:
+          description: ID for event group
+          type: string
         resource:
           $ref: "#/components/schemas/EventResource"
         resourceId:
@@ -7915,10 +7951,14 @@ components:
         - end-testworkflow-success
         - end-testworkflow-failed
         - end-testworkflow-aborted
+        - end-testworkflow-canceled
+        - end-testworkflow-not-passed
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
         - become-testworkflow-aborted
+        - become-testworkflow-canceled
+        - become-testworkflow-not-passed
         - created
         - updated
         - deleted
@@ -8035,8 +8075,6 @@ components:
     TestTrigger:
       type: object
       required:
-        - resource
-        - resourceSelector
         - event
         - action
         - execution
@@ -8066,6 +8104,9 @@ components:
           example:
             group: "teamA"
             app: "backend"
+        selector:
+          $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+          description: label selector for events
         resource:
           $ref: "#/components/schemas/TestTriggerResources"
         resourceSelector:
@@ -8095,6 +8136,8 @@ components:
           example:
             - true
             - false
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     LocalObjectReference:
       description: Reference to Kubernetes object
@@ -8625,6 +8668,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -8634,6 +8679,9 @@ components:
           description: custom execution name
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        runtime:
+          $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
+          description: runtime configuration for the test workflow execution
         testWorkflowExecutionName:
           type: string
           description: test workflow execution name started the test workflow execution
@@ -8641,6 +8689,8 @@ components:
           type: boolean
           description: whether webhooks on the execution of this test workflow are disabled
           default: false
+        silentMode:
+          $ref: "#/components/schemas/SilentMode"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
@@ -8785,6 +8835,8 @@ components:
           example:
             - true
             - false
+        silentMode:
+          $ref: "#/components/schemas/SilentMode"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
@@ -8792,6 +8844,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContext"
         configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
+        runtime:
+          $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
       required:
         - id
         - name
@@ -8839,6 +8893,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContext"
         configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
+        runtime:
+          $ref: "#/components/schemas/TestWorkflowExecutionRuntime"
         reports:
           type: array
           description: generated reports from the steps, like junit
@@ -8846,6 +8902,9 @@ components:
             $ref: "#/components/schemas/TestWorkflowReport"
         resourceAggregations:
           $ref: "#/components/schemas/TestWorkflowExecutionResourceAggregationsReport"
+        silentMode:
+          description: execution mode to determine which events to skip
+          $ref: "#/components/schemas/SilentMode"
       required:
         - id
         - name
@@ -8866,6 +8925,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowResultSummary:
       type: object
@@ -8912,8 +8973,8 @@ components:
       type: object
       description: test workflow status
       properties:
-        latestExecution:
-          $ref: "#/components/schemas/TestWorkflowExecutionSummary"
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowExecutionNotification:
       type: object
@@ -9003,6 +9064,31 @@ components:
       description: |
         TestWorkflowExecutionResourceAggregationsReport provides resource usage aggregations
         for an entire TestWorkflowExecution (globally) and also per-step (by measurements).
+
+    TestWorkflowExecutionHealth:
+      type: object
+      properties:
+        passRate:
+          type: number
+          format: float64
+          description: |
+            Recency-weighted fraction of executions that passed (value between 0.0 and 1.0).
+        flipRate:
+          type: number
+          format: float64
+          description: |
+            Fraction of status changes among consecutive executions without recency weighting 
+            (value between 0.0 and 1.0).
+        overallHealth:
+          type: number
+          format: float64
+          description: |
+            Combined health score, computed as passRate * (1 - flipRate)
+            (value between 0.0 and 1.0).
+      required:
+        - passRate
+        - flipRate
+        - overallHealth
 
     TestWorkflowExecutionStepResourceAggregations:
       type: object
@@ -9179,11 +9265,18 @@ components:
       type: string
       enum:
         - queued
+        - assigned
+        - starting
+        - scheduling
         - running
+        - pausing
         - paused
+        - resuming
         - passed
         - failed
+        - stopping
         - aborted
+        - canceled
 
     TestWorkflowStepStatus:
       type: string
@@ -9196,6 +9289,7 @@ components:
         - timeout
         - skipped
         - aborted
+        - canceled
 
     TestWorkflowTemplate:
       type: object
@@ -9232,6 +9326,8 @@ components:
           example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     TestWorkflowStepParallel:
       type: object
@@ -9405,6 +9501,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        concurrency:
+          $ref: "#/components/schemas/TestWorkflowConcurrencyPolicy"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
         system:
@@ -9447,6 +9545,8 @@ components:
     TestWorkflowTemplateSpec:
       type: object
       properties:
+        concurrency:
+          $ref: "#/components/schemas/TestWorkflowConcurrencyPolicy"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
         system:
@@ -10120,7 +10220,7 @@ components:
           items:
             $ref: "#/components/schemas/PodResourceClaim"
         hostPID:
-          $ref: "#/components/schemas/BoxedBoolean"            
+          $ref: "#/components/schemas/BoxedBoolean"
 
     TestWorkflowContainerConfig:
       type: object
@@ -10226,6 +10326,21 @@ components:
       description: configuration values to pass to the template
       additionalProperties:
         type: string
+
+    TestWorkflowConcurrencyPolicy:
+      type: object
+      description: configuration to control concurrent executions.
+      properties:
+        group:
+          type: string
+          description: Group ongoing executions by this identifier instead of by workflow name. Use the group identifier if you want the control concurrency across workflows.
+        max:
+          type: integer
+          description: The maximum amount of concurrent executions for this workflow or group. The scheduler will check the amount of ongoing executions for this workflow or group and only schedule this workflow when the amount is below its given maximum. When using a group identifier, it is recommended to keep the maximum in sync through a WorkflowTemplate.
+        cancelInProgress:
+          type: boolean
+          description: Whether the oldest in progress execution should be cancelled to be replaced with the latest queued one.
+          default: false
 
     TestWorkflowConfigSchema:
       type: object
@@ -10348,7 +10463,7 @@ components:
         timezone:
           $ref: "#/components/schemas/BoxedString"
           description: cron timezone
-          example: America/New_York         
+          example: America/New_York
 
     TestWorkflowExecutionCR:
       type: object
@@ -10381,6 +10496,31 @@ components:
       description: tag values to pass to the test workflow execution
       additionalProperties:
         type: string
+
+    SilentMode:
+      type: object
+      description: controls what aspects of an execution should be silent (not tracked/processed)
+      properties:
+        webhooks:
+          type: boolean
+          description: disable webhooks for this execution
+          default: false
+        insights:
+          type: boolean
+          description: exclude from insights and analytics dashboards
+          default: false
+        health:
+          type: boolean
+          description: exclude from health and flakiness calculations
+          default: false
+        metrics:
+          type: boolean
+          description: exclude from prometheus metrics
+          default: false
+        cdevents:
+          type: boolean
+          description: disable CDEvents for this execution
+          default: false
 
     TestWorkflowTagSchema:
       type: object
@@ -10449,7 +10589,7 @@ components:
       type: object
       properties:
         global:
-          $ref: "#/components/schemas/BoxedBoolean"    
+          $ref: "#/components/schemas/BoxedBoolean"
         name:
           type: string
         value:
@@ -10463,6 +10603,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -10474,6 +10615,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -11472,6 +11614,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the ConfigMap or its
                 key must be defined
               type: boolean
@@ -11496,6 +11639,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean
@@ -11650,6 +11794,25 @@ components:
           type: string
       required:
         - name
+
+    Source:
+      description: synchronisation sources
+      type: string
+      enum:
+        - kubernetes
+
+    Syncable:
+      description: |
+        source information about resources that may have been synced from multiple sources.
+        An empty source indicates that the source was the UI/API for backwards compatibility.
+      type: object
+      properties:
+        creationSource:
+          description: the original source from which the resource was created
+          $ref: "#/components/schemas/Source"
+        lastModificationSource:
+          description: the source from which the last modification of the resource originated
+          $ref: "#/components/schemas/Source"
 
     #
     # Errors
@@ -11912,6 +12075,14 @@ components:
       schema:
         type: string
         description: Test workflow running conntext actor type
+    ForceAgent:
+      in: query
+      name: forceAgent
+      schema:
+        type: boolean
+        default: false
+      description: force cancellation using agent
+      required: false
 
   requestBodies:
     UploadsBody:
@@ -11933,4 +12104,3 @@ components:
               filePath:
                 type: string
                 example: folder/file.txt
-

@@ -1,0 +1,593 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-global-env
+  labels:
+    core-tests: special-cases
+description: "Global ENV - set for both pods and slave pods"
+spec:
+  container:
+    image: alpine:3.22.0
+    env:
+    - name: EXAMPLE_GLOBAL_ENV
+      value: "GLOBAL_ENV_VALUE"
+      global: true
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:3.22.0
+      logs: always
+      count: 2
+      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: special-cases-template-with-env
+spec:
+  container:
+    env:
+      - name: TEMPLATE_GLOBAL_ENV
+        value: "template-global-env-value"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-step-env-override
+  labels:
+    core-tests: special-cases
+description: "ENV override - container ENV vs expression ENV in steps, services and parallel"
+spec:
+  use:
+    - name: special-cases-template-with-env
+  container:
+    image: alpine:3.22.0
+    env:
+      - name: EXAMPLE_ENV
+        value: "global"
+        global: true
+  services:
+    echo-service:
+      image: alpine:3.22.0
+      env:
+        - name: EXAMPLE_ENV
+          value: "service-env"
+      shell: |
+        echo "Service Literal: $EXAMPLE_ENV"
+        echo "Service Expression: {{ env.EXAMPLE_ENV }}"
+        [ "$EXAMPLE_ENV" = "service-env" ] && [ "{{ env.EXAMPLE_ENV }}" = "service-env" ] && echo SERVICE OK || (echo SERVICE FAIL && exit 1)
+  steps:
+    - name: Check global ENV
+      run:
+        shell: |
+          echo "Step Literal: $EXAMPLE_ENV"
+          echo "Step Expression: {{ env.EXAMPLE_ENV }}"
+          [ "$EXAMPLE_ENV" = "global" ] && [ "{{ env.EXAMPLE_ENV }}" = "global" ] && echo OK || (echo FAIL && exit 1)
+    - name: Check overridden ENV
+      run:
+        env:
+          - name: EXAMPLE_ENV
+            value: "step-local"
+        shell: |
+          echo "Step Literal: $EXAMPLE_ENV"
+          echo "Step Expression: {{ env.EXAMPLE_ENV }}"
+          [ "$EXAMPLE_ENV" = "step-local" ] && [ "{{ env.EXAMPLE_ENV }}" = "step-local" ] && echo OK || (echo FAIL && exit 1)
+    - name: Parallel ENV checks
+      parallel:
+        steps:
+          - name: Check global (parallel)
+            run:
+              shell: |
+                echo "Parallel Literal: $EXAMPLE_ENV"
+                echo "Parallel Expression: {{ env.EXAMPLE_ENV }}"
+                [ "$EXAMPLE_ENV" = "global" ] && [ "{{ env.EXAMPLE_ENV }}" = "global" ] && echo OK || (echo FAIL && exit 1)
+
+          - name: Check overridden (parallel)
+            run:
+              env:
+                - name: EXAMPLE_ENV
+                  value: "parallel-override"
+              shell: |
+                echo "Parallel Literal: $EXAMPLE_ENV"
+                echo "Parallel Expression: {{ env.EXAMPLE_ENV }}"
+                [ "$EXAMPLE_ENV" = "parallel-override" ] && [ "{{ env.EXAMPLE_ENV }}" = "parallel-override" ] && echo OK || (echo FAIL && exit 1)
+    - name: Check global ENV from template
+      run:
+        shell: |
+          echo "TEMPLATE ENV Literal: $TEMPLATE_GLOBAL_ENV"
+          echo "TEMPLATE ENV Expression: {{ env.TEMPLATE_GLOBAL_ENV }}"
+          [ "$TEMPLATE_GLOBAL_ENV" = "template-global-env-value" ] && [ "{{ env.TEMPLATE_GLOBAL_ENV }}" = "template-global-env-value" ] && echo OK || (echo FAIL && exit 1)
+    - name: Override global ENV from template
+      run:
+        env:
+          - name: TEMPLATE_GLOBAL_ENV
+            value: "template-global-env-override"
+        shell: |
+          echo "TEMPLATE ENV Literal: $TEMPLATE_GLOBAL_ENV"
+          echo "TEMPLATE ENV Expression: {{ env.TEMPLATE_GLOBAL_ENV }}"
+          [ "$TEMPLATE_GLOBAL_ENV" = "template-global-env-override" ] && [ "{{ env.TEMPLATE_GLOBAL_ENV }}" = "template-global-env-override" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-env-expression-env-not-set
+  labels:
+    core-tests: special-cases
+description: "ENV expression - ENV variable not set - should default to empty"
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+    - name: not set env expression
+      run:
+        shell: |
+          value="{{ env.MISSING_ENV }}"
+          echo "Expression value: '$value'"
+          [ -z "$value" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-workingdir-override
+  labels:
+    core-tests: special-cases
+description: "workingDir - override at step level"
+spec:
+  container:
+    image: alpine:3.22.0
+    workingDir: /data/global
+  steps:
+    - name: Create directories
+      shell: mkdir -p /data/global /data/custom
+
+    - name: Check default workingDir
+      shell: |
+        echo "PWD: $(pwd)"
+        [ "$(pwd)" = "/data/global" ] && echo OK || (echo FAIL && exit 1)
+
+    - name: Check overridden workingDir
+      workingDir: /data/custom
+      shell: |
+        echo "PWD: $(pwd)"
+        [ "$(pwd)" = "/data/custom" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-securitycontext-runasuser-runasgroup
+  labels:
+    core-tests: special-cases
+description: "securityContext - runAsUser and runAsGroup"
+spec:
+  container:
+    image: alpine:3.22.0
+    securityContext:
+      runAsUser: 128
+      runAsGroup: 256
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:3.22.0
+      logs: always
+      count: 2
+      securityContext:
+        runAsUser: 512
+        runAsGroup: 1024
+      shell: |
+        if [ "$(id -u)" = "512" ] && [ "$(id -g)" = "1024" ]; then
+          echo UID/GUID correct
+          exit 0
+        else
+          echo UID/GUID incorrect!
+          exit 1
+        fi
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: |
+        if [ "$(id -u)" = "128" ] && [ "$(id -g)" = "256" ]; then
+          echo UID/GUID correct
+          exit 0
+        else
+          echo UID/GUID incorrect!
+          exit 1
+        fi
+  - name: Parallel ENV checks
+    parallel:
+      count: 1
+      steps:
+        - name: Parallel step
+          run:
+            securityContext:
+              runAsUser: 500
+              runAsGroup: 1000
+            shell: |
+              if [ "$(id -u)" = "500" ] && [ "$(id -g)" = "1000" ]; then
+                echo UID/GUID correct
+                exit 0
+              else
+                echo UID/GUID incorrect!
+                exit 1
+              fi
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-multiple-git-repositories-custommountpath
+  labels:
+    core-tests: special-cases
+description: "Git - multiple repositories (one on step level), custom mountPath"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      mountPath: /data/repo-k6/
+      paths:
+      - test/k6/k6-smoke-test-without-envs.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run k6 test
+    workingDir: /data/repo-k6/test/k6
+    run:
+      image: grafana/k6:0.43.1
+      shell: k6 run k6-smoke-test-without-envs.js
+  - name: Checkout second repo - Postman
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        mountPath: /data/repo-postman/
+        paths:
+        - test/postman/postman-executor-smoke-without-envs.postman_collection.json
+    steps:
+    - name: Run postman test
+      workingDir: /data/repo-postman/test/postman
+      run:
+        image: postman/newman:6-alpine
+        shell: newman run postman-executor-smoke-without-envs.postman_collection.json
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-optional-step-failed
+  labels:
+    core-tests: special-cases
+description: "optional step failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Optional step (expected fail)
+    optional: true
+    shell: echo "Expected fail" && exit 1
+  - name: Second step (expected pass)
+    shell: echo "OK"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-optional-step-timed-out
+  labels:
+    core-tests: special-cases
+description: "optional step failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Optional step (expected timeout)
+    optional: true
+    timeout: 5s
+    shell: echo "Expected timeout" && sleep 10
+  - name: Second step (expected pass)
+    shell: echo "OK"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-optional-step-passed
+  labels:
+    core-tests: special-cases
+description: "optional step passed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Optional step (expected fail)
+    optional: true
+    shell: echo "Expected pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-conditional-step-skipped
+  labels:
+    core-tests: special-cases
+description: "conditional step skipped"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be skipped)
+    condition: "false"
+    shell: echo "Shouldn't be executed" && exit 1
+  - name: Step
+    shell: echo "Should pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-conditional-step-passed
+  labels:
+    core-tests: special-cases
+description: "conditional step passed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be executed and pass)
+    condition: always # always is alias for "true" - checking both cases
+    shell: echo "Should pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-conditional-step-failed-but-optional
+  labels:
+    core-tests: special-cases
+description: "conditional step failed but optional"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should fail, shouldn't fail the workflow)
+    condition: "true"
+    optional: true
+    shell: echo "Should fail, but is optional - shouldn't fail workflow" && exit 1
+  - name: Step
+    shell: echo "Should pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-step-retry
+  labels:
+    core-tests: special-cases
+description: "step retry (until step passed)"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Random pass/fail
+    retry:
+      count: 20
+      until: self.passed
+    shell: |
+      code=$((RANDOM % 2))
+      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
+      exit $code
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-negative-step
+  labels:
+    core-tests: special-cases
+description: "negative step failed - inverting step result to passed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step (failed before inverting)
+    negative: true
+    shell: |
+      echo "command failed" && exit 1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-custom-shared-volume-steps
+  labels:
+    core-tests: special-cases
+description: "sharing custom volume between steps"
+spec:
+  pod:
+    volumes:
+      - name: shared-volume
+        emptyDir: {}
+  container:
+    volumeMounts:
+      - name: shared-volume
+        mountPath: /shared-volume
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step 1 - creating file
+    run:
+      image: alpine:3.17.2
+      shell: |
+        echo "creating /shared-volume/step1.txt file with step1-contents contents"
+        echo "step1-contents" > /shared-volume/step1.txt
+  - name: Step 2 - creating file
+    run:
+      image: debian:trixie-20250630
+      shell: |
+        echo "creating /shared-volume/step2.txt file with step1-contents contents"
+        echo "step2-contents" > /shared-volume/step2.txt
+  - name: Validate files contents
+    run:
+      image: alpine:3.17.2
+      shell: |
+        if cat /shared-volume/step1.txt | grep -qx "step1-contents" && \
+          cat /shared-volume/step2.txt | grep -qx "step2-contents"; then
+          echo "validation: OK"
+          exit 0
+        else
+          echo "validation failed!"
+          exit 1
+        fi
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-step-timeout-ok
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Run test
+    timeout: 30s
+    shell: echo "OK" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-missing-env-secret
+  labels:
+    core-tests: special-cases
+description: "Missing Secret - ENV should default to empty string"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 64m
+        memory: 64Mi
+  steps:
+    - name: Check missing secretKeyRef
+      run:
+        env:
+          - name: EXAMPLE_SECRET_PARAM
+            valueFrom:
+              secretKeyRef:
+                name: non-existent-secret
+                key: some-key
+        shell: |
+          echo "Secret ENV: '$EXAMPLE_SECRET_PARAM'"
+          [ -z "$EXAMPLE_SECRET_PARAM" ] && echo OK || (echo FAIL && exit 1)
+
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-missing-configmap-key
+  labels:
+    core-tests: special-cases
+description: "Missing ConfigMap - ENV should default to empty string"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 64m
+        memory: 64Mi
+  steps:
+    - name: Check missing configMapKeyRef
+      run:
+        env:
+          - name: EXAMPLE_PARAM
+            valueFrom:
+              configMapKeyRef:
+                name: non-existent-configmap
+                key: some-key
+        shell: |
+          echo "ConfigMap ENV: '$EXAMPLE_PARAM'"
+          [ -z "$EXAMPLE_PARAM" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-no-initial-output
+  labels:
+    core-tests: special-cases
+description: "No output at the beginning (just sleep)"
+spec:
+  steps:
+  - name: Run test 1
+    shell: |
+      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+  - name: Run test 2
+    shell: |
+      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-artifact-double-asterisk
+  labels:
+    core-tests: special-cases
+    artifacts: "true"
+    manual: "true"
+description: "Artifacts path with double asterisks (/data/example/directory/aaa/bbb should contain file1.txt and file2.log)"
+spec:
+  container:
+    image: alpine:3.22.0
+    workingDir: /data
+    resources:
+      requests:
+        cpu: 50m
+        memory: 32Mi
+  steps:
+  - name: Run test
+    run:
+      shell: |
+        echo "Creating /data/example/directory/aaa/bbb and its contents"
+        mkdir -p /data/example/directory/aaa/bbb
+        echo "file1" > /data/example/directory/aaa/bbb/file1.txt
+        echo "file2" > /data/example/directory/aaa/bbb/file2.log
+  - name: Save artifacts
+    artifacts:
+      paths:
+        - /data/**/aaa/**/*
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-execution-tags
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    image: alpine:3.22.0
+  execution:
+    tags:
+      example: execution-tag
+      another: tag-value
+      id: "{{ execution.id }}"
+  steps:
+  - name: Step
+    shell: echo "Step" && exit 0

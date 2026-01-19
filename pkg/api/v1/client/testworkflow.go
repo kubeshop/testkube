@@ -101,6 +101,26 @@ func (c TestWorkflowClient) UpdateTestWorkflow(workflow testkube.TestWorkflow) (
 	return c.testWorkflowTransport.Execute(http.MethodPut, uri, body, nil)
 }
 
+// UpdateTestWorkflowStatus updates only the status of TestWorkflow Custom Resource
+// This method is used for status updates that should use the Kubernetes status subresource
+func (c TestWorkflowClient) UpdateTestWorkflowStatus(workflow testkube.TestWorkflow) error {
+	if workflow.Name == "" {
+		return fmt.Errorf("test workflow name '%s' is not valid", workflow.Name)
+	}
+
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/status", workflow.Name)
+
+	// For status updates, we send the entire workflow object as per Kubernetes convention
+	// The server/k8s client will handle extracting only the status field
+	body, err := json.Marshal(workflow)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.testWorkflowTransport.Execute(http.MethodPut, uri, body, nil)
+	return err
+}
+
 // DeleteTestWorkflow deletes single test by name
 func (c TestWorkflowClient) DeleteTestWorkflow(name string) error {
 	if name == "" {
@@ -186,6 +206,7 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		"tagSelector": options.TagSelector,
 		"actorName":   options.ActorName,
 		"actorType":   string(options.ActorType),
+		"status":      options.Status,
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }
@@ -193,25 +214,25 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 // PauseTestWorkflowExecution pauses selected execution
 func (c TestWorkflowClient) PauseTestWorkflowExecution(workflow, id string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/pause", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // ResumeTestWorkflowExecution pauses selected execution
 func (c TestWorkflowClient) ResumeTestWorkflowExecution(workflow, id string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/resume", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // AbortTestWorkflowExecution aborts selected execution
-func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string) error {
+func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string, force bool) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, map[string]string{"forceAgent": fmt.Sprint(force)}, false)
 }
 
 // AbortTestWorkflowExecutions aborts all workflow executions
 func (c TestWorkflowClient) AbortTestWorkflowExecutions(workflow string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/abort", workflow)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // GetTestWorkflowExecutionArtifacts returns execution artifacts

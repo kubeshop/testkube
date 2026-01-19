@@ -26,6 +26,7 @@ type ExecutionGetByNameAndWorkflowResponse struct {
 
 type ExecutionGetLatestByWorkflowRequest struct {
 	WorkflowName string `json:"workflowName"`
+	SortBy       string `json:"sortBy,omitempty"`
 }
 
 type ExecutionGetLatestByWorkflowResponse struct {
@@ -36,6 +37,14 @@ type ExecutionGetRunningRequest struct {
 }
 
 type ExecutionGetRunningResponse struct {
+	WorkflowExecutions []testkube.TestWorkflowExecution `json:"workflowExecutions"`
+}
+
+type ExecutionGetFinishedRequest struct {
+	Filter *testworkflow.FilterImpl `json:"filter"`
+}
+
+type ExecutionGetFinishedResponse struct {
 	WorkflowExecutions []testkube.TestWorkflowExecution `json:"workflowExecutions"`
 }
 
@@ -53,6 +62,14 @@ type ExecutionGetExecutionTotalsRequest struct {
 
 type ExecutionGetExecutionTotalsResponse struct {
 	Totals testkube.ExecutionsTotals `json:"totals"`
+}
+
+type ExecutionCountRequest struct {
+	Filter *testworkflow.FilterImpl `json:"filter"`
+}
+
+type ExecutionCountResponse struct {
+	Count int64 `json:"count"`
 }
 
 type ExecutionGetExecutionsRequest struct {
@@ -97,6 +114,12 @@ type ExecutionUpdateResponse struct {
 type ExecutionUpdateResultRequest struct {
 	ID     string                       `json:"id"`
 	Result *testkube.TestWorkflowResult `json:"result"`
+}
+
+type ExecutionUpdateResultStrictRequest struct {
+	ID       string                       `json:"id"`
+	RunnerId string                       `json:"runnerId"`
+	Result   *testkube.TestWorkflowResult `json:"result"`
 }
 
 type ExecutionUpdateResultResponse struct {

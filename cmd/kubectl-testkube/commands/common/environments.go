@@ -18,11 +18,6 @@ func GetEnvironments(url, token, orgID string) ([]cloudclient.Environment, error
 	return c.List()
 }
 
-func EnableNewArchitecture(url, token, orgID string, env cloudclient.Environment) error {
-	c := cloudclient.NewEnvironmentsClient(url, token, orgID)
-	return c.EnableNewArchitecture(env)
-}
-
 func GetEnvNames(envs []cloudclient.Environment) []string {
 	var names []string
 	for _, env := range envs {

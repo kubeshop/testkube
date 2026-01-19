@@ -39,7 +39,17 @@ var aliases = map[string]string{
 }
 
 var LocalMachine = expressions.NewMachine().
-	Register(StatusKey, expressions.MustCompile("self.status"))
+	RegisterAccessor(func(name string) (interface{}, bool) {
+		if name == StatusKey {
+			state := GetState()
+			step := state.GetStep(state.CurrentRef)
+			if step.Status == nil {
+				return nil, false
+			}
+			return string(*step.Status), true
+		}
+		return nil, false
+	})
 
 var RefMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
@@ -65,7 +75,8 @@ var AliasMachine = expressions.NewMachine().
 
 var StateMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
-		if name == "status" {
+		switch name {
+		case "status":
 			currentStatus := GetState().CurrentStatus
 			expr, err := expressions.EvalExpression(currentStatus, RefNotFailedMachine, AliasMachine)
 			if err != nil {
@@ -75,7 +86,7 @@ var StateMachine = expressions.NewMachine().
 				return string(constants.StepStatusPassed), true
 			}
 			return string(constants.StepStatusFailed), true
-		} else if name == "self.status" {
+		case "self.status":
 			state := GetState()
 			step := state.GetStep(state.CurrentRef)
 			if step.Status == nil {
@@ -140,6 +151,6 @@ var RefNotFailedMachine = expressions.NewMachine().
 	})
 
 func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
-	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
+	m = append(m, AliasMachine, GetBaseTestWorkflowMachine(), ExecutionMachine())
 	return expressions.EvalExpression(expr, m...)
 }

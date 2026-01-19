@@ -1,43 +1,110 @@
 package k8sevent
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	clienttesting "k8s.io/client-go/testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/mapper/k8sevents"
 )
 
-var testEventTypes = []testkube.EventType{*testkube.EventStartTest}
-
-func TestK8sEventListener_Notify(t *testing.T) {
+func TestK8sEventListenerCreatesEvent(t *testing.T) {
 	t.Parallel()
 
-	t.Run("send event success response", func(t *testing.T) {
-		t.Parallel()
+	clientset := fake.NewSimpleClientset()
+	listener := NewK8sEventListener("k8s", "", "tk-dev",
+		[]testkube.EventType{*testkube.EventEndTestWorkflowSuccess}, clientset)
 
-		// given
-		clientset := fake.NewSimpleClientset()
+	event := testkube.Event{
+		Id:    "event-123",
+		Type_: testkube.EventEndTestWorkflowSuccess,
+		TestWorkflowExecution: &testkube.TestWorkflowExecution{
+			Id: "exec-1",
+			Workflow: &testkube.TestWorkflow{
+				Name:   "sample-workflow",
+				Labels: map[string]string{"docs": "example"},
+			},
+		},
+	}
 
-		l := NewK8sEventListener("k8seli", "", "", testEventTypes, clientset)
+	result := listener.Notify(event)
+	assert.Empty(t, result.Error())
 
-		// when
-		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
-		})
+	created, err := clientset.CoreV1().Events("tk-dev").Get(context.Background(),
+		"testkube-event-event-123", metav1.GetOptions{})
+	require.NoError(t, err)
 
-		assert.Equal(t, "", r.Error())
-	})
-
+	assert.Equal(t, "event-123", result.Id)
+	assert.Equal(t, "end-testworkflow-success", created.Reason)
+	assert.Equal(t, "succeed", created.Action)
+	assert.Equal(t, "sample-workflow", created.InvolvedObject.Name)
+	assert.Equal(t, "testworkflows.testkube.io/v1", created.InvolvedObject.APIVersion)
+	assert.Equal(t, "TestWorkflow", created.InvolvedObject.Kind)
+	assert.Equal(t, "example", created.Labels["docs"])
 }
 
-func exampleExecution() *testkube.Execution {
-	execution := testkube.NewQueuedExecution()
-	execution.Id = "1"
-	execution.Name = "test-1"
-	execution.TestName = "test"
-	execution.TestNamespace = "testkube"
-	return execution
+func TestK8sEventListenerCreateError(t *testing.T) {
+	t.Parallel()
+
+	clientset := fake.NewSimpleClientset()
+	// Force an error on event creation.
+	clientset.PrependReactor("create", "events", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, nil, errors.New("create failed")
+	})
+
+	listener := NewK8sEventListener("k8s", "", "tk-dev",
+		[]testkube.EventType{*testkube.EventEndTestWorkflowSuccess}, clientset)
+
+	event := testkube.Event{
+		Id:    "event-err",
+		Type_: testkube.EventEndTestWorkflowSuccess,
+		TestWorkflowExecution: &testkube.TestWorkflowExecution{
+			Id:       "exec-err",
+			Workflow: &testkube.TestWorkflow{Name: "sample-workflow"},
+		},
+	}
+
+	result := listener.Notify(event)
+	assert.Equal(t, "create failed", result.Error())
+
+	events, err := clientset.CoreV1().Events("tk-dev").List(context.Background(), metav1.ListOptions{})
+	require.NoError(t, err)
+	assert.Len(t, events.Items, 0)
+}
+
+func TestK8sEventListenerCreateAlreadyExists(t *testing.T) {
+	t.Parallel()
+
+	clientset := fake.NewSimpleClientset()
+	listener := NewK8sEventListener("k8s", "", "tk-dev",
+		[]testkube.EventType{*testkube.EventEndTestWorkflowSuccess}, clientset)
+
+	event := testkube.Event{
+		Id:    "event-exists",
+		Type_: testkube.EventEndTestWorkflowSuccess,
+		TestWorkflowExecution: &testkube.TestWorkflowExecution{
+			Id:       "exec-exists",
+			Workflow: &testkube.TestWorkflow{Name: "sample-workflow"},
+		},
+	}
+
+	existing := k8sevents.MapAPIToCRD(event, "tk-dev", time.Now())
+	_, err := clientset.CoreV1().Events("tk-dev").Create(context.Background(), &existing, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	result := listener.Notify(event)
+	assert.Empty(t, result.Error())
+
+	events, err := clientset.CoreV1().Events("tk-dev").List(context.Background(), metav1.ListOptions{})
+	require.NoError(t, err)
+	assert.Len(t, events.Items, 1)
 }

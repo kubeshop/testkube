@@ -1,459 +1,684 @@
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-git-checkout-path
+  name: expected-fail-cypress-incorrect-repo-path
   labels:
     core-tests: expected-fail
+description: default no-cone mode
 spec:
-  type: artillery/test
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: ASDF/test/artillery/executor-smoke/artillery-smoke-test.yaml
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-git-checkout-branch
-  labels:
-    core-tests: expected-fail
-spec:
-  type: artillery/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: branch-name-ASDF-1024
-      path: test/artillery/executor-smoke/artillery-smoke-test.yaml
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-git-checkout-uri
-  labels:
-    core-tests: expected-fail
-spec:
-  type: artillery/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube-repo-ASDF.git
-      branch: main
-      path: test/artillery/executor-smoke/artillery-smoke-test.yaml
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-artillery-executor-incorrect-uri
-  labels:
-    core-tests: expected-fail
-spec:
-  type: artillery/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/artillery/executor-smoke/artillery-smoke-test-negative.yaml
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-container-executor-curl-incorrect-uri
-  labels:
-    core-tests: expected-fail
-spec:
-  type: container-executor-curl/test
-  executionRequest:
-    args:
-      - $(URL)
-    variables:
-      URL:
-        name: expected-fail-URL
-        type: basic
-        value: https://testkube.non.existing.url.example
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-curl-executor-incorrect-uri
-  labels:
-    core-tests: expected-fail
-spec:
-  type: curl/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/curl/executor-tests/curl-smoke-test-negative.json
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-ginkgo-executor
-  labels:
-    core-tests: expected-fail
-spec:
-  type: ginkgo/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/ginkgo/executor-tests/smoke-negative
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-gradle-executor-wrong-jdk-version
-  labels:
-    core-tests: expected-fail
-spec:
-  type: gradle:jdk8/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube-executor-gradle.git
-      branch: main
-      path: examples/hello-gradle-jdk18
-  executionRequest:
-    variables:
-      TESTKUBE_GRADLE:
-        name: expected-fail-TESTKUBE_GRADLE
-        value: "true"
-        type: basic
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-gradle-executor-envs-not-set
-  labels:
-    core-tests: expected-fail
-spec:
-  type: gradle:jdk18/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube-executor-gradle.git
-      branch: main
-      path: examples/hello-gradle-jdk18
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-jmeter-executor-jsr223
-  labels:
-    core-tests: expected-fail
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
-  executionRequest:
-    variables:
-      URL_ENV:
-        name: expected-fail-URL_ENV
-        value: testkube-test-page-lipsum.pages.dev"
-        type: basic
-    args:
-      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-jmeterd-executor-jsr223
-  labels:
-    core-tests: expected-fail
-spec:
-  type: jmeterd/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
-  executionRequest:
-    variables:
-      URL_ENV:
-        name: expected-fail-URL_ENV
-        value: "testkube-test-page-lipsum.pages.dev"
-        type: basic
-    args:
-      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-kubepug-executor
-  labels:
-    core-tests: expected-fail
-spec:
-  type: kubepug/yaml
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/kubepug/executor-smoke/kubepug-smoke-test-negative.yaml
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-container-executor-k6-wrong-dir
-  labels:
-    core-tests: expected-fail
-spec:
-  type: container-executor-k6-0.43.1/test
-  content:
-    type: git-file
-    repository:
-      type: git
+    git:
       uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
-  executionRequest:
-    args: ["run", "k6-smoke-test-without-envs.js"]
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-maven-executor-jdk18-incorrect-image
-  labels:
-    core-tests: expected-fail
-spec:
-  type: gradle:jdk17/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube-executor-maven.git
-      branch: main
-      path: examples/hello-maven-jdk18
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-jmeter-oomkilled
-  labels:
-    core-tests: expected-fail
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
-  executionRequest:
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 1Mi\n"
-    activeDeadlineSeconds: 300
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-jmeter-timeout
-  labels:
-    core-tests: expected-fail
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
-  executionRequest:
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n"
-    activeDeadlineSeconds: 1
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: expected-fail-cypress-oomkilled
-  labels:
-    core-tests: expected-fail
-spec:
-  type: cypress:v12/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-12
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
+      revision: main
+      paths:
+      - test/cypress/some-incorrect-path # no-cone won't fail here
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/some-incorrect-path
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
-      - video=true
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 30Mi\n              cpu: 1\n"
-    activeDeadlineSeconds: 600
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-pre-run-script
+  name: expected-fail-cypress-incorrect-repo-path-cone-mode
   labels:
     core-tests: expected-fail
 spec:
-  type: postman/collection
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-  executionRequest:
-    args:
-      - --env-var
-      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
-    preRunScript: 'echo "===== pre-run script - EXPECTED FAIL" && exit 128'
-    postRunScript: 'echo "===== post-run script"'
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      cone: true
+      paths:
+      - test/cypress/some-incorrect-path # cone mode will fail here
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-post-run-script
+  name: expected-fail-cypress-incorrect-image-name
   labels:
     core-tests: expected-fail
 spec:
-  type: postman/collection
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-  executionRequest:
-    args:
-      - --env-var
-      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
-    preRunScript: 'echo "===== pre-run script"'
-    postRunScript: 'echo "===== post-run script - EXPECTED FAIL" && exit 128'
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/some-incorrect-name:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-container-pre-run-script
+  name: expected-fail-cypress-incorrect-workingdir
   labels:
     core-tests: expected-fail
 spec:
-  type: container-executor-postman-newman-6-alpine/test
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-      workingDir: test/postman/executor-tests
-  executionRequest:
-    args:
-      [
-        "run",
-        "postman-executor-smoke.postman_collection.json",
-        "--env-var",
-        "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value",
-      ]
-    preRunScript: 'echo "===== pre-run script - EXPECTED FAIL" && exit 128'
-    postRunScript: 'echo "===== post-run script"'
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-container-post-run-script
+  name: expected-fail-cypress-resource-limits # OOMKilled
   labels:
     core-tests: expected-fail
 spec:
-  type: container-executor-postman-newman-6-alpine/test
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-      workingDir: test/postman/executor-tests
-  executionRequest:
-    args:
-      [
-        "run",
-        "postman-executor-smoke.postman_collection.json",
-        "--env-var",
-        "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value",
-      ]
-    preRunScript: 'echo "===== pre-run script"'
-    postRunScript: 'echo "===== post-run script - EXPECTED FAIL" && exit 128'
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-13
+  container:
+    resources:
+      limits:
+        cpu: 2
+        memory: 50Mi
+    workingDir: /data/repo/test/cypress/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-pre-post-run-script
+  name: expected-fail-cypress-artifacts-condition-always-with-artifacts
   labels:
     core-tests: expected-fail
 spec:
-  type: postman/collection
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
-  executionRequest:
-    preRunScript: 'echo "===== pre-run script"'
-    postRunScript: 'echo "===== post-run script"'
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-13
+  container:
+    resources:
+      limits:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+    steps:
+    - name: Saving artifacts
+      condition: always
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: expected-fail-container-pre-post-run-script
+  name: expected-fail-k6-test-report-condition-always-no-artifacts
   labels:
     core-tests: expected-fail
 spec:
-  type: container-executor-postman-newman-6-alpine/test
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
-      workingDir: test/postman/executor-tests
-  executionRequest:
-    args: ["run", "postman-executor-smoke.postman_collection.json"]
-    preRunScript: 'echo "===== pre-run script"'
-    postRunScript: 'echo "===== post-run script"'
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6
+  steps:
+  - name: Run test
+    container:
+      image: grafana/k6:0.49.0
+    steps:
+    - shell: mkdir /data/artifacts
+    - run:
+        args:
+        - run
+        - some-incorrect-file-name.js
+      steps:
+      - name: Saving artifacts # should be run despite step failure
+        condition: always
+        workingDir: /data/artifacts
+        artifacts:
+          paths:
+          - '*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-timeout-activedeadlineseconds
+  labels:
+    core-tests: expected-fail
+spec:
+  job:
+    activeDeadlineSeconds: 1
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-timeout-step
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/playwright-project
+  container:
+    image: mcr.microsoft.com/playwright:v1.56.1
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/playwright-project
+  steps:
+  - name: Install dependencies
+    shell: "npm ci"
+  - name: Run tests
+    timeout: 1s
+    shell: "npx playwright test"
+  - name: Run tests
+    condition: always
+    shell: 'echo "this step should be always executed because of condition: always"'
+  - name: Save artifacts
+    workingDir: /data/repo/test/playwright/playwright-project
+    artifacts:
+      paths:
+      - playwright-report/**/*
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-private-registry-auth
+  labels:
+    core-tests: expected-fail
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/ && sleep 10
+      container:
+        image: tkoniecznykubeshop/example-private-repo:curl-8.11.1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-private-repo-auth
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/some-example-repo
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      args:
+      - run
+      - postman-executor-smoke.postman_collection.json
+      - "--env-var"
+      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-git-secret
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/some-example-repo
+      revision: main
+      usernameFrom:
+        secretKeyRef:
+          name: non-existant-secret
+          key: git-username
+      tokenFrom:
+        secretKeyRef:
+          name: non-existant-secret2
+          key: git-token
+      paths:
+      - test/postman/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      shell: echo "The workflow should fail before executing this command"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-template
+  labels:
+    core-tests: expected-fail
+spec:
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/artillery/artillery-smoke-test.yaml
+    workingDir: /data/repo/test/artillery
+    template:
+      name: some-non-existant-template-name
+      config:
+        run: "echo 'test'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-exit-code # https://linear.app/kubeshop/issue/TKC-3897/
+  labels:
+    core-tests: expected-fail
+spec:
+  container:
+    image: alpine:3.22.0
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:3.22.0
+      logs: always
+      count: 2
+      shell: 'echo "expected fail - non-zero exit code" && exit 1'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step"'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-step-retry
+  labels:
+    core-tests: expected-fail
+description: "step retry (until step failed)"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Random pass/fail
+    retry:
+      count: 20
+      until: self.failed
+    shell: |
+      code=$((RANDOM % 2))
+      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
+      exit $code
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-negative-step
+  labels:
+    core-tests: expected-fail
+description: "negative step passed - inverting step result to failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step (passed before inverting)
+    negative: true
+    shell: |
+      echo "command" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-volume-not-mounted
+  labels:
+    core-tests: expected-fail
+description: "volumeMount references missing volume"
+spec:
+  container:
+    image: alpine:3.22.0
+    volumeMounts:
+      - name: missing-volume
+        mountPath: /non-existent
+  steps:
+    - name: Check directory
+      shell: 'test -e /non-existent && echo FAIL && exit 1 || echo OK'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: expected-fail-required-config-template
+spec:
+  config:
+    message:
+      type: string
+  steps:
+    - name: Print message
+      run:
+        shell: echo "{{ config.message }}"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-template-missing-config-options
+  labels:
+    core-tests: expected-fail
+description: "Required template config missing"
+spec:
+  steps:
+    - name: Missing required config
+      template:
+        name: expected-fail-required-config-template
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-template-not-defined-config-options
+  labels:
+    core-tests: expected-fail
+description: "Not defined template config params passed"
+spec:
+  steps:
+    - name: Missing required config
+      template:
+        name: expected-fail-required-config-template
+        config:
+          version: "asdf"
+          other: "asdf"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-readiness-probe
+  labels:
+    core-tests: expected-fail
+description: "Service with failing readiness probe"
+spec:
+  services:
+    broken-service:
+      image: alpine:3.22.0
+      shell: sleep 5
+      readinessProbe:
+        tcpSocket:
+          port: 9999  # probe on cloded port
+        initialDelaySeconds: 1
+        timeoutSeconds: 1
+        failureThreshold: 1
+  steps:
+    - name: Check
+      shell: echo "Should not reach this step if probe fails as expected"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-conditional-step-failed
+  labels:
+    core-tests: expected-fail
+description: "conditional step failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be executed and fail)
+    condition: "true"
+    shell: echo "Should fail" && exit 1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-failed
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps failed"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - expected fail" && exit 1 || echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-timed-out
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps timed out"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      timeout: 5s
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - 10s sleep" && exit 1 || sleep 1 && echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-oomkilled
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps oomkilled"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          limits:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: python:3.11-slim
+        shell: |
+          ([ "{{ index }}" = "2" ] && sleep 5 && echo "parallel step - worker 3 - expected oomkilled" && python3 -c "a = ' ' * 10**9") || (sleep 10 && echo "passed")

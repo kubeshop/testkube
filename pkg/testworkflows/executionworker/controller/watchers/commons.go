@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +45,7 @@ func IsJobFinished(job *batchv1.Job) bool {
 	if job == nil {
 		return false
 	}
-	if job.ObjectMeta.DeletionTimestamp != nil {
+	if job.DeletionTimestamp != nil {
 		return true
 	}
 	if job.Status.CompletionTime != nil {
@@ -66,7 +68,7 @@ func IsPodFinished(pod *corev1.Pod) bool {
 	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 		return true
 	}
-	if pod.ObjectMeta.DeletionTimestamp != nil {
+	if pod.DeletionTimestamp != nil {
 		return true
 	}
 	if pod.Status.Phase == corev1.PodUnknown {
@@ -137,10 +139,10 @@ func IsContainerFinished(pod *corev1.Pod, name string) bool {
 
 func GetEventTimestamp(event *corev1.Event) time.Time {
 	ts := event.CreationTimestamp.Time
-	if event.FirstTimestamp.Time.After(ts) {
+	if event.FirstTimestamp.After(ts) {
 		ts = event.FirstTimestamp.Time
 	}
-	if event.LastTimestamp.Time.After(ts) {
+	if event.LastTimestamp.After(ts) {
 		ts = event.LastTimestamp.Time
 	}
 	return ts
@@ -300,10 +302,26 @@ func GetJobError(job *batchv1.Job) string {
 			}
 		}
 	}
+	var msg string
 	if job.DeletionTimestamp != nil {
-		return "Job has been aborted"
+		msg = "Job has been aborted"
 	}
-	return ""
+	if job.Annotations != nil {
+		if terminationReason, ok := job.Annotations["testkube.io/termination-reason"]; ok && terminationReason != "" {
+			msg = terminationReason
+		}
+	}
+	return msg
+}
+
+func GetTerminationCode(job *batchv1.Job) string {
+	if job == nil || job.Annotations == nil {
+		return string(testkube.ABORTED_TestWorkflowStatus)
+	}
+	if terminationCode, ok := job.Annotations[constants2.AnnotationTerminationCode]; ok && terminationCode != "" {
+		return terminationCode
+	}
+	return string(testkube.ABORTED_TestWorkflowStatus)
 }
 
 func GetContainerStateDebug(state corev1.ContainerState) string {

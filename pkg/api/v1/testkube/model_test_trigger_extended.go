@@ -9,6 +9,8 @@
  */
 package testkube
 
+import "fmt"
+
 func (t TestTrigger) GetName() string {
 	return t.Name
 }
@@ -23,4 +25,121 @@ func (t TestTrigger) GetLabels() map[string]string {
 
 func (t TestTrigger) GetAnnotations() map[string]string {
 	return t.Annotations
+}
+
+func (t *TestTrigger) QuoteTextFields() {
+	if t == nil {
+		return
+	}
+
+	// Quote selector text fields
+	if t.ResourceSelector != nil {
+		if t.ResourceSelector.Name != "" {
+			t.ResourceSelector.Name = fmt.Sprintf("%q", t.ResourceSelector.Name)
+		}
+		if t.ResourceSelector.NameRegex != "" {
+			t.ResourceSelector.NameRegex = fmt.Sprintf("%q", t.ResourceSelector.NameRegex)
+		}
+		if t.ResourceSelector.Namespace != "" {
+			t.ResourceSelector.Namespace = fmt.Sprintf("%q", t.ResourceSelector.Namespace)
+		}
+		if t.ResourceSelector.NamespaceRegex != "" {
+			t.ResourceSelector.NamespaceRegex = fmt.Sprintf("%q", t.ResourceSelector.NamespaceRegex)
+		}
+		// Do not modify LabelSelector (complex k8s selector)
+	}
+
+	if t.TestSelector != nil {
+		if t.TestSelector.Name != "" {
+			t.TestSelector.Name = fmt.Sprintf("%q", t.TestSelector.Name)
+		}
+		if t.TestSelector.NameRegex != "" {
+			t.TestSelector.NameRegex = fmt.Sprintf("%q", t.TestSelector.NameRegex)
+		}
+		if t.TestSelector.Namespace != "" {
+			t.TestSelector.Namespace = fmt.Sprintf("%q", t.TestSelector.Namespace)
+		}
+		if t.TestSelector.NamespaceRegex != "" {
+			t.TestSelector.NamespaceRegex = fmt.Sprintf("%q", t.TestSelector.NamespaceRegex)
+		}
+	}
+
+	// Quote condition spec textual fields
+	if t.ConditionSpec != nil {
+		for i := range t.ConditionSpec.Conditions {
+			if t.ConditionSpec.Conditions[i].Type_ != "" {
+				t.ConditionSpec.Conditions[i].Type_ = fmt.Sprintf("%q", t.ConditionSpec.Conditions[i].Type_)
+			}
+			if t.ConditionSpec.Conditions[i].Status != nil {
+				status := t.ConditionSpec.Conditions[i].Status
+				if string(*status) != "" {
+					*status = TestTriggerConditionStatuses(fmt.Sprintf("%q", string(*status)))
+				}
+			}
+			if t.ConditionSpec.Conditions[i].Reason != "" {
+				t.ConditionSpec.Conditions[i].Reason = fmt.Sprintf("%q", t.ConditionSpec.Conditions[i].Reason)
+			}
+		}
+	}
+
+	// Quote probe spec textual fields
+	if t.ProbeSpec != nil {
+		for i := range t.ProbeSpec.Probes {
+			p := &t.ProbeSpec.Probes[i]
+			if p.Scheme != "" {
+				p.Scheme = fmt.Sprintf("%q", p.Scheme)
+			}
+			if p.Host != "" {
+				p.Host = fmt.Sprintf("%q", p.Host)
+			}
+			if p.Path != "" {
+				p.Path = fmt.Sprintf("%q", p.Path)
+			}
+			for hk, hv := range p.Headers {
+				if hv != "" {
+					p.Headers[hk] = fmt.Sprintf("%q", hv)
+				}
+			}
+		}
+	}
+
+	// Quote action parameter textual fields
+	if t.ActionParameters != nil {
+		for k, v := range t.ActionParameters.Config {
+			if v != "" {
+				t.ActionParameters.Config[k] = fmt.Sprintf("%q", v)
+			}
+		}
+
+		for k, v := range t.ActionParameters.Tags {
+			if v != "" {
+				t.ActionParameters.Tags[k] = fmt.Sprintf("%q", v)
+			}
+		}
+
+		if t.ActionParameters.Target != nil {
+			target := t.ActionParameters.Target
+			for k, arr := range target.Match {
+				for i := range arr {
+					if arr[i] != "" {
+						arr[i] = fmt.Sprintf("%q", arr[i])
+					}
+				}
+				target.Match[k] = arr
+			}
+			for k, arr := range target.Not {
+				for i := range arr {
+					if arr[i] != "" {
+						arr[i] = fmt.Sprintf("%q", arr[i])
+					}
+				}
+				target.Not[k] = arr
+			}
+			for i := range target.Replicate {
+				if target.Replicate[i] != "" {
+					target.Replicate[i] = fmt.Sprintf("%q", target.Replicate[i])
+				}
+			}
+		}
+	}
 }

@@ -46,7 +46,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   events:
   - cronjob:
       cron: "15 */4 * * *" # every 4 hours
@@ -66,7 +66,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         args:
         - run
         - k6-smoke-test.js
@@ -104,10 +104,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     image: cypress/included:13.6.4
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     resources:
       requests:
         cpu: 1
@@ -187,13 +187,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
   events:
   - cronjob:
       cron: "35 */4 * * *" # every 4 hours
@@ -213,7 +213,7 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
     steps:
     - name: Saving artifacts
-      workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
+      workingDir: /data/repo/test/cypress/cypress-13/cypress/videos
       artifacts:
         paths:
         - '**/*'
@@ -232,9 +232,9 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      - test/postman/postman-executor-smoke.postman_collection.json
   container:
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
     image: postman/newman:6-alpine
     resources:
       requests:
@@ -264,12 +264,12 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
   events:
   - cronjob:
@@ -446,7 +446,7 @@ spec:
       paths:
       - test/nunit/nunit-project/ExampleProject
   container:
-    image: bitnami/dotnet-sdk:8-debian-12
+    image: bitnamilegacy/dotnet-sdk:8-debian-12 # TODO: replace
     resources:
       requests:
         cpu: 512m
@@ -475,13 +475,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    workingDir: /data/repo/test/playwright/playwright-project
+    image: mcr.microsoft.com/playwright:v1.56.1
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
   events:
   - cronjob:

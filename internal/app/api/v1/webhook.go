@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -39,7 +39,7 @@ func (s *TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
-			webhook = webhooksmapper.MapAPIToCRD(request)
+			webhook = webhooksmapper.MapAPICreateRequestToCRD(request)
 			webhook.Namespace = s.Namespace
 		}
 

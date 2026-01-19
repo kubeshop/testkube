@@ -1,0 +1,13 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "testkube/testworkflow/execution/v1/execution_state.proto";
+
+// ExecutionStateTransition contains fields used to transition an execution to a new state.
+message ExecutionStateTransition {
+  // execution_id is the unique identifier of the execution to be transitioned.
+  string execution_id = 1;
+  // transition_to is the state the execution should be transitioned into.
+  ExecutionState transition_to = 2;
+}

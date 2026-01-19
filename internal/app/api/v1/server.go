@@ -3,20 +3,18 @@ package v1
 import (
 	"go.uber.org/zap"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -27,7 +25,8 @@ import (
 )
 
 func NewTestkubeAPI(
-	deprecatedClients commons.DeprecatedClients,
+	isStandalone bool,
+	executionController scheduling.Controller,
 	clusterId string,
 	namespace string,
 	testWorkflowResults testworkflow.Repository,
@@ -35,7 +34,7 @@ func NewTestkubeAPI(
 	artifactsStorage storage.ArtifactsStorage,
 	webhookClient executorsclientv1.WebhooksInterface,
 	webhookTemplateClient executorsclientv1.WebhookTemplatesInterface,
-	testTriggersClient testtriggersclientv1.Interface,
+	testTriggersClient testtriggerclient.TestTriggerClient,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowsK8SClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -48,7 +47,6 @@ func NewTestkubeAPI(
 	websocketLoader *ws.WebsocketLoader,
 	metrics metrics.Metrics,
 	proContext *config.ProContext,
-	ff featureflags.FeatureFlags,
 	helmchartVersion string,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
@@ -56,9 +54,10 @@ func NewTestkubeAPI(
 ) TestkubeAPI {
 
 	return TestkubeAPI{
+		isStandalone:                   isStandalone,
+		executionController:            executionController,
 		ClusterID:                      clusterId,
 		Log:                            log.DefaultLogger,
-		DeprecatedClients:              deprecatedClients,
 		TestWorkflowResults:            testWorkflowResults,
 		TestWorkflowOutput:             testWorkflowOutput,
 		SecretManager:                  secretManager,
@@ -78,7 +77,6 @@ func NewTestkubeAPI(
 		ArtifactsStorage:               artifactsStorage,
 		helmchartVersion:               helmchartVersion,
 		secretConfig:                   secretConfig,
-		featureFlags:                   ff,
 		ServiceAccountNames:            serviceAccountNames,
 		dockerImageVersion:             dockerImageVersion,
 		proContext:                     proContext,
@@ -91,14 +89,11 @@ type TestkubeAPI struct {
 	Log                            *zap.SugaredLogger
 	TestWorkflowResults            testworkflow.Repository
 	TestWorkflowOutput             testworkflow.OutputRepository
-	Executor                       client.Executor
-	ContainerExecutor              client.Executor
 	ExecutionWorkerClient          executionworkertypes.Worker
-	DeprecatedClients              commons.DeprecatedClients
 	SecretManager                  secretmanager.SecretManager
 	WebhooksClient                 executorsclientv1.WebhooksInterface
 	WebhookTemplatesClient         executorsclientv1.WebhookTemplatesInterface
-	TestTriggersClient             testtriggersclientv1.Interface
+	TestTriggersClient             testtriggerclient.TestTriggerClient
 	TestWorkflowsClient            testworkflowclient.TestWorkflowClient
 	TestWorkflowTemplatesClient    testworkflowtemplateclient.TestWorkflowTemplateClient
 	TestWorkflowsK8SClient         testworkflowsv1.Interface
@@ -111,11 +106,24 @@ type TestkubeAPI struct {
 	ArtifactsStorage               storage.ArtifactsStorage
 	helmchartVersion               string
 	secretConfig                   testkube.SecretConfig
-	featureFlags                   featureflags.FeatureFlags
 	proContext                     *config.ProContext
 	ServiceAccountNames            map[string]string
 	dockerImageVersion             string
 	testWorkflowExecutor           testworkflowexecutor.TestWorkflowExecutor
+
+	// In a world where the control plane is the source of truth, the agent should no
+	// longer need an HTTP Server and therefore this HTTP Server would purely become a part
+	// of the standalone deployment's build-in control plane.
+	// However(!), until the superagent ran its migration to push all data to the control plane,
+	// then the control plane can still proxy requests using gRPC `ExecuteAsync` which will in turn
+	// make calls on this HTTP Server to do and fetch stuff.
+	// This flag allows to evolve the build-in Standalone HTTP Server, while keeping the old behaviour intact
+	// until we can remove it after the 2025 November release.
+	// note: the execution scheduling's behaviour is special; as this will _not_ keep the old behaviour.
+	// It now always schedules executions on the control plane instead of being able to incorrectly bypass it.
+	isStandalone bool
+
+	executionController scheduling.Controller
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {
@@ -150,6 +158,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testWorkflows.Delete("/", s.DeleteTestWorkflowsHandler())
 	testWorkflows.Get("/:id", s.GetTestWorkflowHandler())
 	testWorkflows.Put("/:id", s.UpdateTestWorkflowHandler())
+	testWorkflows.Put("/:id/status", s.UpdateTestWorkflowStatusHandler())
 	testWorkflows.Delete("/:id", s.DeleteTestWorkflowHandler())
 	testWorkflows.Get("/:id/executions", s.ListTestWorkflowExecutionsHandler())
 	testWorkflows.Post("/:id/executions", s.ExecuteTestWorkflowHandler())

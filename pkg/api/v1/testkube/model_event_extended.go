@@ -5,6 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/kubeshop/testkube/internal/common"
 )
 
 const (
@@ -29,96 +31,6 @@ func NewEvent(t *EventType, resource *EventResource, id string) Event {
 	}
 }
 
-func NewEventStartTest(execution *Execution) Event {
-	return Event{
-		Id:            uuid.NewString(),
-		Type_:         EventStartTest,
-		TestExecution: execution,
-		StreamTopic:   TestStartSubject,
-		ResourceId:    execution.Id,
-	}
-}
-
-func NewEventEndTestSuccess(execution *Execution) Event {
-	return Event{
-		Id:            uuid.NewString(),
-		Type_:         EventEndTestSuccess,
-		TestExecution: execution,
-		StreamTopic:   TestStopSubject,
-		ResourceId:    execution.Id,
-	}
-}
-
-func NewEventEndTestFailed(execution *Execution) Event {
-	return Event{
-		Id:            uuid.NewString(),
-		Type_:         EventEndTestFailed,
-		TestExecution: execution,
-		StreamTopic:   TestStopSubject,
-		ResourceId:    execution.Id,
-	}
-}
-
-func NewEventEndTestAborted(execution *Execution) Event {
-	return Event{
-		Id:            uuid.NewString(),
-		Type_:         EventEndTestAborted,
-		TestExecution: execution,
-		StreamTopic:   TestStopSubject,
-		ResourceId:    execution.Id,
-	}
-}
-
-func NewEventEndTestTimeout(execution *Execution) Event {
-	return Event{
-		Id:            uuid.NewString(),
-		Type_:         EventEndTestTimeout,
-		TestExecution: execution,
-		StreamTopic:   TestStopSubject,
-		ResourceId:    execution.Id,
-	}
-}
-
-func NewEventStartTestSuite(execution *TestSuiteExecution) Event {
-	return Event{
-		Id:                 uuid.NewString(),
-		Type_:              EventStartTestSuite,
-		TestSuiteExecution: execution,
-	}
-}
-
-func NewEventEndTestSuiteSuccess(execution *TestSuiteExecution) Event {
-	return Event{
-		Id:                 uuid.NewString(),
-		Type_:              EventEndTestSuiteSuccess,
-		TestSuiteExecution: execution,
-	}
-}
-
-func NewEventEndTestSuiteFailed(execution *TestSuiteExecution) Event {
-	return Event{
-		Id:                 uuid.NewString(),
-		Type_:              EventEndTestSuiteFailed,
-		TestSuiteExecution: execution,
-	}
-}
-
-func NewEventEndTestSuiteAborted(execution *TestSuiteExecution) Event {
-	return Event{
-		Id:                 uuid.NewString(),
-		Type_:              EventEndTestSuiteAborted,
-		TestSuiteExecution: execution,
-	}
-}
-
-func NewEventEndTestSuiteTimeout(execution *TestSuiteExecution) Event {
-	return Event{
-		Id:                 uuid.NewString(),
-		Type_:              EventEndTestSuiteTimeout,
-		TestSuiteExecution: execution,
-	}
-}
-
 func NewEventQueueTestWorkflow(execution *TestWorkflowExecution) Event {
 	return Event{
 		Id:                    uuid.NewString(),
@@ -135,27 +47,58 @@ func NewEventStartTestWorkflow(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowSuccess,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
-func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowFailed,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
-func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
+func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventEndTestWorkflowAborted,
 		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
+	}
+}
+
+func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution, groupId string) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		GroupId:               groupId,
+		Type_:                 EventEndTestWorkflowCanceled,
+		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
+	}
+}
+
+func NewEventEndTestWorkflowNotPassed(execution *TestWorkflowExecution, groupId string) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		GroupId:               groupId,
+		Type_:                 EventEndTestWorkflowNotPassed,
+		TestWorkflowExecution: execution,
+		Resource:              common.Ptr(TESTWORKFLOWEXECUTION_EventResource),
+		ResourceId:            execution.Id,
 	}
 }
 
@@ -211,11 +154,14 @@ func (e Event) Log() []any {
 		"executionName", name,
 		"executionId", id,
 		"labels", labelsStr,
-		"topic", e.Topic(),
 	}
 }
 
-func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventType, valid bool) {
+func (e Event) Valid(groupId, selector string, types []EventType) (matchedTypes []EventType, valid bool) {
+	if groupId != "" && e.GroupId != groupId {
+		return nil, false
+	}
+
 	var executionLabels map[string]string
 
 	// load labels from event test execution or test-suite execution or test workflow execution
@@ -260,24 +206,6 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 	}
 
 	return
-}
-
-// Topic returns topic for event based on resource and resource id
-// or fallback to global "events" topic
-func (e Event) Topic() string {
-	if e.StreamTopic != "" {
-		return e.StreamTopic
-	}
-
-	if e.Resource == nil {
-		return "agentevents.all"
-	}
-
-	if e.ResourceId == "" {
-		return "agentevents." + string(*e.Resource)
-	}
-
-	return "agentevents." + string(*e.Resource) + "." + e.ResourceId
 }
 
 // GetResourceId implmenents generic event trigger

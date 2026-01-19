@@ -1,0 +1,17 @@
+# For details on buf.yaml configuration, visit https://buf.build/docs/configuration/v2/buf-yaml
+version: v2
+modules:
+  - path: .
+lint:
+  use:
+    - STANDARD
+    - COMMENTS
+  ignore:
+    - logs.proto
+    - service.proto
+breaking:
+  use:
+    - FILE
+  ignore:
+    - logs.proto
+    - service.proto

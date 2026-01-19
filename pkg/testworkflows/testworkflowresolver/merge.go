@@ -13,7 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 )
 
@@ -381,15 +381,21 @@ func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.Independe
 		Logs:                step.Logs,
 		Transfer:            step.Transfer,
 		Fetch:               step.Fetch,
-		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-			TestWorkflowSpecBase: step.TestWorkflowTemplateSpec.TestWorkflowSpecBase,
-			Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
-			Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
-			After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
-			Pvcs:                 step.TestWorkflowTemplateSpec.Pvcs,
-		},
-		StepControl:    step.StepControl,
-		StepOperations: step.StepOperations,
+		Events:              step.Events,
+		System:              step.System,
+		Config:              step.Config,
+		Content:             step.Content,
+		Container:           step.Container,
+		Job:                 step.Job,
+		Pod:                 step.Pod,
+		Notifications:       step.Notifications,
+		Execution:           step.Execution,
+		Setup:               common.MapSlice(step.Setup, ConvertIndependentStepToStep),
+		Steps:               common.MapSlice(step.Steps, ConvertIndependentStepToStep),
+		After:               common.MapSlice(step.After, ConvertIndependentStepToStep),
+		Pvcs:                step.Pvcs,
+		StepControl:         step.StepControl,
+		StepOperations:      step.StepOperations,
 	}
 }
 
@@ -426,5 +432,18 @@ func MergeTags(dst, src map[string]string) map[string]string {
 		maps.Copy(dst, src)
 	}
 
+	return dst
+}
+
+func MergeConcurrency(dst, src *testworkflowsv1.ConcurrencyPolicy) *testworkflowsv1.ConcurrencyPolicy {
+	if dst == nil {
+		return src
+	} else if src == nil {
+		return dst
+	}
+
+	dst.Max = src.Max
+	dst.Group = src.Group
+	dst.CancelInProgress = src.CancelInProgress
 	return dst
 }

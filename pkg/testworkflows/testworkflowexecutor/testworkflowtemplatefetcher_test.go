@@ -3,11 +3,12 @@ package testworkflowexecutor
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 func TestTestWorkflowTemplateFetcher_ConcurrentAccess(t *testing.T) {
@@ -118,5 +119,28 @@ func TestTestWorkflowTemplateFetcher_ConcurrentAccess(t *testing.T) {
 		}
 
 		<-done // Wait for set operations to complete
+	})
+
+	// Test forward slash get
+	t.Run("forward slash get", func(t *testing.T) {
+		// Create a new template
+		newTmpl := &testkube.TestWorkflowTemplate{
+			Name:        "new--template",
+			Description: "new-description",
+			Labels:      map[string]string{"key": "value"},
+			Spec:        &testkube.TestWorkflowTemplateSpec{},
+		}
+
+		// Setup mock expectations for the new template
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", newTmpl.Name).
+			Return(newTmpl, nil).
+			AnyTimes()
+
+		fetched, err := fetcher.Get(testworkflowresolver.GetDisplayTemplateName(newTmpl.Name))
+		assert.NoError(t, err)
+		assert.Equal(t, newTmpl.Name, fetched.Name)
+		assert.Equal(t, newTmpl.Description, fetched.Description)
+		assert.Equal(t, newTmpl.Labels, fetched.Labels)
 	})
 }

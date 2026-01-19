@@ -1,0 +1,144 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: enterprise-installation-test
+  labels:
+    core-tests: installation
+description: "Enterprise installation test - DinD+kind"
+spec:
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/k6/crd-workflow/smoke.yaml
+        - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
+  container:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+  use:
+    - name: setup-dind-kind-cluster-template
+  steps:
+  - name: Install Testkube CLI (and Expect)
+    shell: |
+      wget -qO - https://repo.testkube.io/key.pub | apt-key add -
+      echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+      apt-get update && apt-get install -y testkube expect
+      testkube disable telemetry
+  - name: Install Testkube Enterprise Demo
+    workingDir: /data/repo/test/testkube/installation-tests
+    run:
+      env:
+      - name: LICENSE_KEY
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
+      - name: TESTKUBE_INIT_COMMAND
+        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m"
+      shell: |
+        helm version
+        helm list -n testkube-enterprise-installation-test
+        echo $TESTKUBE_INIT_COMMAND
+        chmod +x enterprise-installation-expect-file.exp
+        expect enterprise-installation-expect-file.exp
+  - name: Wait for Testkube core components to be ready
+    optional: true
+    shell: |
+      kubectl get deployments -ntestkube
+      for dep in testkube-api-server testkube-minio-testkube testkube-enterprise-api testkube-enterprise-dex testkube-enterprise-minio testkube-enterprise-mongodb testkube-enterprise-ui testkube-enterprise-worker-service; do
+        echo "⏳ Waiting for $dep..."
+        kubectl rollout status deployment/$dep -n testkube --timeout=300s || exit 1
+      done
+
+      echo "⏳ Waiting for testkube-api-server endpoint..."
+      for i in {1..30}; do
+        kubectl get endpoints testkube-api-server -n testkube -o jsonpath='{.subsets[*].addresses[*].ip}' | \
+          grep -qE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' && break
+        sleep 2
+      done
+
+      echo "✅ Testkube core components and API service are ready."
+  - name: Apply TestWorkflow
+    workingDir: /data/repo/test/k6/crd-workflow
+    shell: |
+      kubectl apply -f smoke.yaml -n testkube
+      kubectl get testworkflow k6-workflow-smoke -n testkube && echo "found" || kubectl get all -n testkube
+  - name: Run TestWorkflow
+    shell: testkube run tw k6-workflow-smoke --watch && echo "executed correctly"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: enterprise-installation-multi-namespace
+  labels:
+    core-tests: installation
+    environment-specific: dev
+description: "Enterprise installation test - edge, multi-namespace. Can be run ONLY at .dev"
+spec:
+  system:
+    pureByDefault: true
+  concurrency:
+    max: 1
+  content:
+    files:
+    - path: /root/edge-cluster-sa-key.json
+      contentFrom:
+        secretKeyRef:
+          name: testkube-agent-secrets
+          key: ENTERPRISE_INSTALLATION_TEST_SA_KEY
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
+  container:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
+    workingDir: /data/repo/test/testkube/installation-tests
+  job:
+    activeDeadlineSeconds:  1200
+  steps:
+  - name: Install Helm
+    shell: |
+      # Install helm
+      curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      helm version
+  - name: Install Testkube CLI (and Expect)
+    shell: |
+      wget -qO - https://repo.testkube.io/key.pub | apt-key add -
+      echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+      apt-get update && apt-get install -y testkube expect
+      testkube disable telemetry
+  - name: gcloud auth
+    run:
+      env:
+      - name: SA_NAME
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: ENTERPRISE_INSTALLATION_TEST_SA_NAME
+      shell: |
+        gcloud auth activate-service-account {{ env.SA_NAME }} --key-file=/root/edge-cluster-sa-key.json
+        gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
+  - name: Cleanup before installation
+    shell: kubectl delete namespace testkube-enterprise-installation-test --ignore-not-found
+  - name: Test
+    run:
+      env:
+      - name: LICENSE_KEY
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
+      - name: TESTKUBE_INIT_COMMAND
+        value: "testkube init demo --namespace testkube-enterprise-installation-test --no-confirm --license {{ env.LICENSE_KEY }} --helm-set testkube-agent.testkube-api.multinamespace.enabled=true --helm-set testkube-agent.testkube-operator.enabled=false --helm-set dex.rbac.createClusterScoped=false --helm-set testkube-agent.testkube-operator.installCRD=false"
+      shell: |
+        helm version
+        helm list -n testkube-enterprise-installation-test
+        echo $TESTKUBE_INIT_COMMAND
+        chmod +x enterprise-installation-expect-file.exp
+        expect enterprise-installation-expect-file.exp

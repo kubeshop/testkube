@@ -5,6 +5,11 @@ metadata:
   labels:
     core-tests: workflows
     tool: nunit
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: nunit
 spec:
   content:
     git:
@@ -13,7 +18,7 @@ spec:
       paths:
       - test/nunit/nunit-project/ExampleProject
   container:
-    image: bitnami/dotnet-sdk:8-debian-12
+    image: bitnamilegacy/dotnet-sdk:8-debian-12 # TODO: replace
     resources:
       requests:
         cpu: 512m

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"strings"
 	"time"
@@ -19,9 +20,9 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/cloudlogin"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/cloudlogin"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -387,7 +388,6 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	}
 
 	settings := map[string]string{
-		"global.features.logsV2":              fmt.Sprintf("%v", options.Master.Features.LogsV2),
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
 		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
@@ -620,6 +620,88 @@ func LoginUser(authUri string, customConnector bool, port int) (string, string, 
 	idToken, refreshToken, err := uiGetToken(tokenChan)
 	if err != nil {
 		return "", "", fmt.Errorf("getting token")
+	}
+	return idToken, refreshToken, nil
+}
+
+// extractAndCleanDomain extracts domain from email and removes dots and hyphens for connector ID
+func extractAndCleanDomain(email string) (string, error) {
+	if !strings.Contains(email, "@") || strings.Count(email, "@") != 1 {
+		return "", fmt.Errorf("invalid email format")
+	}
+
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 || parts[1] == "" {
+		return "", fmt.Errorf("invalid email domain")
+	}
+
+	domain := parts[1]
+
+	cleanedDomain := strings.ToLower(domain)
+	cleanedDomain = strings.ReplaceAll(cleanedDomain, ".", "")
+	cleanedDomain = strings.ReplaceAll(cleanedDomain, "-", "")
+
+	return cleanedDomain, nil
+}
+
+// validateSSOConnector checks if SSO connector exists for the domain
+func validateSSOConnector(authUri, domain string) error {
+	if !strings.HasSuffix(authUri, "/") {
+		authUri += "/"
+	}
+
+	validateURL := fmt.Sprintf("%sauth/validate?connector_id=%s", authUri, url.QueryEscape(domain))
+
+	resp, err := http.Get(validateURL)
+	if err != nil {
+		return fmt.Errorf("failed to validate SSO connector: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("SSO not configured for domain %s (HTTP %d)", domain, resp.StatusCode)
+	}
+
+	return nil
+}
+
+func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, error) {
+	ui.H1("SSO Login")
+
+	// Validate email format and extract domain
+	domain, err := extractAndCleanDomain(email)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid email format: %w", err)
+	}
+
+	// Validate that SSO is configured for this domain using API URL
+	err = validateSSOConnector(apiUrl, domain)
+	if err != nil {
+		return "", "", fmt.Errorf("SSO validation failed: %w", err)
+	}
+
+	ui.Debug("Logging into cloud with SSO for domain ", domain)
+	ssoAuthURL, tokenChan, err := cloudlogin.CloudLoginSSO(context.Background(), apiUrl, authUrl, domain, port)
+	if err != nil {
+		return "", "", fmt.Errorf("SSO login: %w", err)
+	}
+
+	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
+	ui.Link(ssoAuthURL)
+	ui.Paragraph("(just login and get back to your terminal)")
+	ui.Paragraph("")
+
+	if ok := ui.Confirm("Continue"); !ok {
+		return "", "", fmt.Errorf("login cancelled")
+	}
+
+	ui.Debug("Opening SSO login page in browser", ssoAuthURL)
+	// open browser with login page and redirect to localhost
+	open.Run(ssoAuthURL)
+
+	idToken, refreshToken, err := uiGetToken(tokenChan)
+	if err != nil {
+		return "", "", fmt.Errorf("getting token: %w", err)
 	}
 	return idToken, refreshToken, nil
 }
@@ -1331,4 +1413,27 @@ func extractJSONObject(input []byte) ([]byte, error) {
 	}
 
 	return prettyJSON.Bytes(), nil
+}
+
+// CheckLegacyName checks if the given resource type is legacy and shows a deprecation warning.
+func CheckLegacyName(commandName string) {
+	// Legacy resource types that are about to be deprecated
+	legacyNames := map[string]bool{
+		"test":                true,
+		"testsuite":           true,
+		"executor":            true,
+		"testsource":          true,
+		"template":            true,
+		"execution":           true,
+		"executions":          true,
+		"testsuiteexecution":  true,
+		"testsuiteexecutions": true,
+		"testsuite-artifacts": true,
+	}
+
+	if legacyNames[commandName] {
+		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
+		ui.Alert("! ⚠️ This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features !")
+		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
+	}
 }

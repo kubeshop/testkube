@@ -1,0 +1,16 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: testkube-oss-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: testkube-oss
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: oss-tests-mongo
+      - name: oss-tests-postgres
+

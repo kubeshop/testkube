@@ -1,0 +1,27 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--gradle--v1
+  labels:
+    testkube.io/name: Gradle
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Other
+    testkube.io/description: Gradle
+    testkube.io/icon: gradle
+    testkube.io/image: gradle
+spec:
+  config:
+    version:
+      description: Gradle version to use
+      type: string
+      default: 8.7.0-jdk21-alpine
+    run:
+      description: Run command
+      type: string
+      default: "gradle --no-daemon test"
+  steps:
+  - name: Run Gradle command
+    run:
+      image: "gradle:{{ config.version }}"
+      shell: "{{ config.run }}"

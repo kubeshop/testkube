@@ -3,20 +3,33 @@ package webhooks
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
 func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
+	updateTime := item.CreationTimestamp.Time
+	if item.DeletionTimestamp != nil {
+		updateTime = item.DeletionTimestamp.Time
+	} else {
+		for _, field := range item.ManagedFields {
+			if field.Time != nil && field.Time.After(updateTime) {
+				updateTime = field.Time.Time
+			}
+		}
+	}
 	return testkube.Webhook{
 		Name:                     item.Name,
 		Namespace:                item.Namespace,
+		Labels:                   item.Labels,
+		Annotations:              item.Annotations,
+		Created:                  item.CreationTimestamp.Time,
+		Updated:                  updateTime,
 		Uri:                      item.Spec.Uri,
 		Events:                   MapEventArrayToCRDEvents(item.Spec.Events),
 		Selector:                 item.Spec.Selector,
-		Labels:                   item.Labels,
 		PayloadObjectField:       item.Spec.PayloadObjectField,
 		PayloadTemplate:          item.Spec.PayloadTemplate,
 		PayloadTemplateReference: item.Spec.PayloadTemplateReference,
@@ -88,26 +101,50 @@ func MapEventArrayToCRDEvents(items []executorv1.EventType) (events []testkube.E
 	return
 }
 
-// MapAPIToCRD maps OpenAPI spec WebhookCreateRequest to CRD Webhook
-func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
+// MapAPIToCRD maps OpenAPI spec Webhook to CRD Webhook
+func MapAPIToCRD(webhook testkube.Webhook) executorv1.Webhook {
 	return executorv1.Webhook{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: request.Namespace,
-			Labels:    request.Labels,
+			Name:      webhook.Name,
+			Namespace: webhook.Namespace,
+			Labels:    webhook.Labels,
 		},
 		Spec: executorv1.WebhookSpec{
-			Uri:                      request.Uri,
-			Events:                   MapEventTypesToStringArray(request.Events),
-			Selector:                 request.Selector,
-			PayloadObjectField:       request.PayloadObjectField,
-			PayloadTemplate:          request.PayloadTemplate,
-			PayloadTemplateReference: request.PayloadTemplateReference,
-			Headers:                  request.Headers,
-			Disabled:                 request.Disabled,
-			Config:                   common.MapMap(request.Config, MapConfigValueAPIToCRD),
-			Parameters:               common.MapSlice(request.Parameters, MapParameterSchemaAPIToCRD),
-			WebhookTemplateRef:       common.MapPtr(request.WebhookTemplateRef, MapTemplateRefAPIToCRD),
+			Uri:                      webhook.Uri,
+			Events:                   MapEventTypesToStringArray(webhook.Events),
+			Selector:                 webhook.Selector,
+			PayloadObjectField:       webhook.PayloadObjectField,
+			PayloadTemplate:          webhook.PayloadTemplate,
+			PayloadTemplateReference: webhook.PayloadTemplateReference,
+			Headers:                  webhook.Headers,
+			Disabled:                 webhook.Disabled,
+			Config:                   common.MapMap(webhook.Config, MapConfigValueAPIToCRD),
+			Parameters:               common.MapSlice(webhook.Parameters, MapParameterSchemaAPIToCRD),
+			WebhookTemplateRef:       common.MapPtr(webhook.WebhookTemplateRef, MapTemplateRefAPIToCRD),
+		},
+	}
+}
+
+// MapAPICreateRequestToCRD maps OpenAPI spec WebhookCreateRequest to CRD Webhook
+func MapAPICreateRequestToCRD(webhook testkube.WebhookCreateRequest) executorv1.Webhook {
+	return executorv1.Webhook{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      webhook.Name,
+			Namespace: webhook.Namespace,
+			Labels:    webhook.Labels,
+		},
+		Spec: executorv1.WebhookSpec{
+			Uri:                      webhook.Uri,
+			Events:                   MapEventTypesToStringArray(webhook.Events),
+			Selector:                 webhook.Selector,
+			PayloadObjectField:       webhook.PayloadObjectField,
+			PayloadTemplate:          webhook.PayloadTemplate,
+			PayloadTemplateReference: webhook.PayloadTemplateReference,
+			Headers:                  webhook.Headers,
+			Disabled:                 webhook.Disabled,
+			Config:                   common.MapMap(webhook.Config, MapConfigValueAPIToCRD),
+			Parameters:               common.MapSlice(webhook.Parameters, MapParameterSchemaAPIToCRD),
+			WebhookTemplateRef:       common.MapPtr(webhook.WebhookTemplateRef, MapTemplateRefAPIToCRD),
 		},
 	}
 }

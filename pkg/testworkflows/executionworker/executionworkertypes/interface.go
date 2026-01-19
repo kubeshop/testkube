@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/utils"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -15,6 +15,11 @@ type ServiceConfig struct {
 	ReadinessProbe *testkube.Probe
 }
 
+// Runtime contains runtime overrides for test workflow execution
+type Runtime struct {
+	Variables map[string]string
+}
+
 // TODO: Consider some context data
 type ExecuteRequest struct {
 	Token       string
@@ -23,6 +28,7 @@ type ExecuteRequest struct {
 	Workflow    testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
 	Secrets     map[string]map[string]string
 	ScheduledAt *time.Time
+	Runtime     *Runtime // Runtime configuration overrides
 
 	Execution           testworkflowconfig.ExecutionConfig
 	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
@@ -38,6 +44,7 @@ type ServiceRequest struct {
 	ScheduledAt    *time.Time
 	ReadinessProbe *testkube.Probe
 	RestartPolicy  string
+	Runtime        *Runtime // Runtime configuration overrides
 
 	Execution           testworkflowconfig.ExecutionConfig
 	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
@@ -194,7 +201,7 @@ type IdentifiableError struct {
 	Error error
 }
 
-//go:generate mockgen -destination=./mock_worker.go -package=executionworkertypes "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes" Worker
+//go:generate go tool mockgen -destination=./mock_worker.go -package=executionworkertypes "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes" Worker
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
@@ -225,6 +232,9 @@ type Worker interface {
 
 	// Abort may either destroy or just stop the selected resource (so the data can be still accessible)
 	Abort(ctx context.Context, id string, options DestroyOptions) error
+
+	// Cancel sends cancel request to the selected resource.
+	Cancel(ctx context.Context, id string, options DestroyOptions) error
 
 	// Destroy gets rid of all the data for the selected resource.
 	Destroy(ctx context.Context, id string, options DestroyOptions) error

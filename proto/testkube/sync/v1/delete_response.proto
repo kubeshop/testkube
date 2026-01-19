@@ -1,0 +1,8 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// DeleteResponse is currently empty but remains reserved for future usage
+// without breaking backwards proto compatibility.
+// https://buf.build/docs/best-practices/style-guide/#rpc-use-empty
+message DeleteResponse {}

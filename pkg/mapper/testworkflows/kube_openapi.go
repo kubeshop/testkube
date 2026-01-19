@@ -6,8 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -314,7 +314,7 @@ func MapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	return &testkube.EnvVarSourceConfigMapKeyRef{
 		Key:      v.Key,
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -350,7 +350,7 @@ func MapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourc
 	return &testkube.EnvVarSourceSecretKeyRef{
 		Key:      v.Key,
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -369,7 +369,7 @@ func MapConfigMapEnvSourceKubeToAPI(v *corev1.ConfigMapEnvSource) *testkube.Conf
 	}
 	return &testkube.ConfigMapEnvSource{
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -379,7 +379,7 @@ func MapSecretEnvSourceKubeToAPI(v *corev1.SecretEnvSource) *testkube.SecretEnvS
 	}
 	return &testkube.SecretEnvSource{
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -458,6 +458,14 @@ func MapTemplateRefKubeToAPI(v testworkflowsv1.TemplateRef) testkube.TestWorkflo
 	return testkube.TestWorkflowTemplateRef{
 		Name:   v.Name,
 		Config: MapConfigValueKubeToAPI(v.Config),
+	}
+}
+
+func MapConcurrencyPolicyKubeToApi(v testworkflowsv1.ConcurrencyPolicy) testkube.TestWorkflowConcurrencyPolicy {
+	return testkube.TestWorkflowConcurrencyPolicy{
+		Group:            v.Group,
+		Max:              int32(v.Max),
+		CancelInProgress: v.CancelInProgress,
 	}
 }
 
@@ -1248,38 +1256,40 @@ func MapSystemKubeToAPI(v testworkflowsv1.TestWorkflowSystem) testkube.TestWorkf
 
 func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowSpec {
 	return testkube.TestWorkflowSpec{
-		Use:       common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
-		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
-		System:    common.MapPtr(v.System, MapSystemKubeToAPI),
-		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:  common.MapMap(v.Services, MapServiceSpecKubeToAPI),
-		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
-		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
-		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
-		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
-		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
-		After:     common.MapSlice(v.After, MapStepKubeToAPI),
-		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
-		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
-		Pvcs:      common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
+		Use:         common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
+		Concurrency: common.MapPtr(v.Concurrency, MapConcurrencyPolicyKubeToApi),
+		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:      common.MapPtr(v.System, MapSystemKubeToAPI),
+		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
+		Services:    common.MapMap(v.Services, MapServiceSpecKubeToAPI),
+		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:         common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:       common.MapSlice(v.Setup, MapStepKubeToAPI),
+		Steps:       common.MapSlice(v.Steps, MapStepKubeToAPI),
+		After:       common.MapSlice(v.After, MapStepKubeToAPI),
+		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
 func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testkube.TestWorkflowTemplateSpec {
 	return testkube.TestWorkflowTemplateSpec{
-		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
-		System:    common.MapPtr(v.System, MapSystemKubeToAPI),
-		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:  common.MapMap(v.Services, MapIndependentServiceSpecKubeToAPI),
-		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
-		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
-		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
-		Setup:     common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
-		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
-		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
-		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
-		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
-		Pvcs:      common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
+		Concurrency: common.MapPtr(v.Concurrency, MapConcurrencyPolicyKubeToApi),
+		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:      common.MapPtr(v.System, MapSystemKubeToAPI),
+		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
+		Services:    common.MapMap(v.Services, MapIndependentServiceSpecKubeToAPI),
+		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:         common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:       common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
+		Steps:       common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
+		After:       common.MapSlice(v.After, MapIndependentStepKubeToAPI),
+		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
@@ -1304,6 +1314,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		Updated:     updateTime,
 		Description: w.Description,
 		Spec:        common.Ptr(MapSpecKubeToAPI(w.Spec)),
+		Status:      MapTestWorkflowStatusSummaryKubeToAPI(w.Status),
 	}
 }
 
@@ -1488,5 +1499,27 @@ func MapTestWorkflowExecutionResourceAggregationsKubeToAPI(
 		Max:    v.Max,
 		Avg:    v.Avg,
 		StdDev: v.StdDev,
+	}
+}
+
+func MapTestWorkflowExecutionHealthKubeToAPI(h *testworkflowsv1.TestWorkflowExecutionHealth) *testkube.TestWorkflowExecutionHealth {
+	if h == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionHealth{
+		PassRate:      h.PassRate,
+		FlipRate:      h.FlipRate,
+		OverallHealth: h.OverallHealth,
+	}
+}
+
+func MapTestWorkflowStatusSummaryKubeToAPI(v testworkflowsv1.TestWorkflowStatusSummary) *testkube.TestWorkflowStatusSummary {
+	// Check if status has any meaningful content
+	if v.Health == nil {
+		return nil
+	}
+
+	return &testkube.TestWorkflowStatusSummary{
+		Health: MapTestWorkflowExecutionHealthKubeToAPI(v.Health),
 	}
 }

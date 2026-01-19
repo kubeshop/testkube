@@ -23,7 +23,7 @@ import (
 
 var (
 	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|05|\d|[1-9]\d*)(C)?(S?)_`)
-	Setup                    = newSetup()
+	Setup                    *setup
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
 		"TK_C_KEY",        // Cloud API key
@@ -35,6 +35,16 @@ var (
 		"TK_SSH_KEY",      // Git SSH Key
 	}
 )
+
+// Initialize must be called before using Setup.
+// In production, this is called early in main().
+// In tests, this can be called after setting up test environment.
+func Initialize() {
+	if Setup == nil {
+		Setup = newSetup()
+		Setup.initialize()
+	}
+}
 
 func getWorkingDir() string {
 	wd, _ := os.Getwd()
@@ -56,7 +66,7 @@ type setup struct {
 }
 
 func newSetup() *setup {
-	c := &setup{
+	return &setup{
 		envBase:                map[string]string{},
 		envGroups:              map[string]map[string]string{},
 		envGroupsComputed:      map[string]map[string]struct{}{},
@@ -65,11 +75,17 @@ func newSetup() *setup {
 		envCurrentGroup:        -1,
 		minSensitiveWordLength: 1,
 	}
-	c.initialize()
-	return c
 }
 
 func (c *setup) initialize() {
+	// Clear existing data
+	c.envBase = map[string]string{}
+	c.envGroups = map[string]map[string]string{}
+	c.envGroupsComputed = map[string]map[string]struct{}{}
+	c.envGroupsSensitive = map[string]map[string]struct{}{}
+	c.envAdditionalSensitive = map[string]struct{}{}
+	c.envCurrentGroup = -1
+
 	// Iterate over the environment variables to group them
 	for _, item := range os.Environ() {
 		match := scopedRegex.FindStringSubmatch(item)

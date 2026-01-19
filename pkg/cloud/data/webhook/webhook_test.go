@@ -5,15 +5,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
 
 func TestCloudRepository_CollectExecutionResult(t *testing.T) {
-	t.Parallel()
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 )
 
 var (

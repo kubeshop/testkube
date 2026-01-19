@@ -3,6 +3,7 @@ kind: TestWorkflow
 metadata:
   name: postman-test
   labels:
+    category: api-testing
     core-tests: workflows
 spec:
   content:
@@ -10,13 +11,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      - test/postman/postman-executor-smoke.postman_collection.json
   container:
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   steps:
   - name: Run test
     run:

@@ -11,7 +11,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
@@ -29,7 +29,7 @@ func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name)
+		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name, testworkflow.LatestSortByScheduledAt)
 		if err != nil && !apiutils.IsNotFound(err) {
 			return s.ClientError(c, errPrefix, err)
 		}
@@ -81,11 +81,11 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 		sort.Slice(results, func(i, j int) bool {
 			iTime := results[i].Workflow.Created
 			if results[i].LatestExecution != nil {
-				iTime = results[i].LatestExecution.StatusAt
+				iTime = results[i].LatestExecution.ScheduledAt
 			}
 			jTime := results[j].Workflow.Created
 			if results[j].LatestExecution != nil {
-				jTime = results[j].LatestExecution.StatusAt
+				jTime = results[j].LatestExecution.ScheduledAt
 			}
 			return iTime.After(jTime)
 		})
@@ -113,7 +113,7 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 		var page, pageSize int
 		pageParam := c.Query("page", "")
 		if pageParam != "" {
-			pageSize = result.PageDefaultLimit
+			pageSize = testworkflow.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "workflow page filter invalid", err)

@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 
+	errors2 "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -26,6 +27,8 @@ type RunnerAgent struct {
 	initProcessImage   string
 	toolkitImage       string
 	executionNamespace string
+	env                *client.Environment // Store environment for pod recreation
+	runner             *client.Agent       // Store runner config for pod recreation
 }
 
 func NewRunnerAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage, executionNamespace string) *RunnerAgent {
@@ -39,11 +42,7 @@ func NewRunnerAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessI
 	}
 }
 
-func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runner *client.Agent) error {
-	if env == nil || runner == nil {
-		panic("runner is not supported in OSS")
-	}
-
+func (r *RunnerAgent) generatePodSpec(env *client.Environment, runner *client.Agent) *corev1.Pod {
 	envVariables := []corev1.EnvVar{
 		// Disabling the rest
 		{Name: "NATS_EMBEDDED", Value: "true"},
@@ -73,10 +72,9 @@ func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runne
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
 
 		// Feature flags
-		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
 		{Name: "FEATURE_CLOUD_STORAGE", Value: "true"},
 	}
-	return r.pod.Create(ctx, &corev1.Pod{
+	return &corev1.Pod{
 		Spec: corev1.PodSpec{
 			TerminationGracePeriodSeconds: common.Ptr(int64(1)),
 			Volumes: []corev1.Volume{
@@ -114,6 +112,20 @@ func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runne
 				},
 			},
 		},
+	}
+}
+
+func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runner *client.Agent) error {
+	if env == nil || runner == nil {
+		return errors2.New("runner agent requires cloud environment and runner configuration (not available in OSS mode)")
+	}
+
+	r.env = env
+	r.runner = runner
+	podSpec := r.generatePodSpec(env, runner)
+
+	return r.pod.CreateWithFunc(ctx, podSpec, func() (*corev1.Pod, error) {
+		return r.generatePodSpec(r.env, r.runner), nil
 	})
 }
 

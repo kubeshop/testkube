@@ -12,10 +12,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	opcrd "github.com/kubeshop/testkube-operator/config/crd"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/crdcommon"
+	opcrd "github.com/kubeshop/testkube/k8s"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -358,6 +358,48 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+func (s *TestkubeAPI) UpdateTestWorkflowStatusHandler() fiber.Handler {
+	errPrefix := "failed to update test workflow status"
+	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
+		name := c.Params("id")
+
+		// Deserialize resource
+		var workflow *testkube.TestWorkflow
+		err = c.BodyParser(&workflow)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		// Validate resource
+		if workflow == nil || workflow.Status == nil {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("workflow and status are required"))
+		}
+
+		// Ensure the name matches the URL parameter
+		workflow.Name = name
+
+		// Update only the status using the status subresource
+		err = s.TestWorkflowsClient.UpdateStatus(ctx, environmentId, *workflow)
+		if err != nil {
+			s.Metrics.IncUpdateTestWorkflow(err)
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		s.Metrics.IncUpdateTestWorkflow(err)
+
+		// Return the updated workflow
+		updatedWorkflow, err := s.TestWorkflowsClient.Get(ctx, environmentId, name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		return c.JSON(updatedWorkflow)
+	}
+}
+
 func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to resolve test workflow"
 	return func(c *fiber.Ctx) (err error) {
@@ -417,7 +459,6 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-// TODO: Add metrics
 func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
@@ -453,6 +494,12 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			}
 			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
 		}
+		if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+			scheduleExecution.Runtime = &cloud.TestWorkflowRuntime{
+				EnvVars: request.Runtime.Variables,
+			}
+		}
+
 		if name != "" {
 			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 			scheduleExecution.Config = request.Config
@@ -468,7 +515,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleExecution.Config = request.Config
 		}
 
-		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+		results, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,
@@ -478,13 +525,8 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			User:                 user,
 		})
 
-		results := make([]testkube.TestWorkflowExecution, 0)
-		for v := range resp.Channel() {
-			results = append(results, *v)
-		}
-
-		if resp.Error() != nil {
-			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		if err != nil {
+			return s.InternalError(c, errPrefix, "execution error", err)
 		}
 
 		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
@@ -500,7 +542,6 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-// TODO: Add metrics
 func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
@@ -509,7 +550,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		errPrefix := "failed to rerun test workflow execution"
 
-		// Load the running comtext
+		// Load the running context
 		var twrContext testkube.TestWorkflowRunningContext
 		err = c.BodyParser(&twrContext)
 		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
@@ -537,6 +578,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			Tags:            execution.Tags,
 			DisableWebhooks: execution.DisableWebhooks,
 			Target:          execution.RunnerTarget,
+			Runtime:         execution.Runtime,
 		}
 
 		request.Config = make(map[string]string)
@@ -578,7 +620,12 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 		scheduleExecution.Config = request.Config
-		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+		if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+			scheduleExecution.Runtime = &cloud.TestWorkflowRuntime{
+				EnvVars: request.Runtime.Variables,
+			}
+		}
+		results, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:    request.DisableWebhooks,
 			Tags:               request.Tags,
@@ -588,13 +635,8 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			ResolvedWorkflow:   workflow,
 		})
 
-		results := make([]testkube.TestWorkflowExecution, 0)
-		for v := range resp.Channel() {
-			results = append(results, *v)
-		}
-
-		if resp.Error() != nil {
-			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		if err != nil {
+			return s.InternalError(c, errPrefix, "execution error", err)
 		}
 
 		s.Log.Debugw("rerunning test workflow execution", "id", executionID)

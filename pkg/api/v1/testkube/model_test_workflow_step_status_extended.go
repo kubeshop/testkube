@@ -8,6 +8,10 @@ func (s *TestWorkflowStepStatus) Aborted() bool {
 	return s != nil && *s == ABORTED_TestWorkflowStepStatus
 }
 
+func (s *TestWorkflowStepStatus) Canceled() bool {
+	return s != nil && *s == CANCELED_TestWorkflowStepStatus
+}
+
 func (s *TestWorkflowStepStatus) Skipped() bool {
 	return s != nil && *s == SKIPPED_TestWorkflowStepStatus
 }
@@ -28,12 +32,16 @@ func (s *TestWorkflowStepStatus) TimedOut() bool {
 	return s != nil && *s == TIMEOUT_TestWorkflowStepStatus
 }
 
+func (s *TestWorkflowStepStatus) Passed() bool {
+	return s != nil && *s == PASSED_TestWorkflowStepStatus
+}
+
 func (s *TestWorkflowStepStatus) Failed() bool {
 	return s != nil && *s == FAILED_TestWorkflowStepStatus
 }
 
-func (s *TestWorkflowStepStatus) AnyError() bool {
-	return s.Failed() || s.TimedOut() || s.Aborted()
+func (s *TestWorkflowStepStatus) AnyAborted() bool {
+	return s.TimedOut() || s.Aborted()
 }
 
 func (s *TestWorkflowStepStatus) NotStarted() bool {

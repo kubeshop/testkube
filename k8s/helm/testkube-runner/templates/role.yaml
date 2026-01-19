@@ -1,0 +1,232 @@
+# Allow Agent to read ConfigMaps and Secrets
+{{- if .Values.pod.serviceAccount.autoCreate }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "agent-role-{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+    - configmaps
+  verbs:
+    - get
+    - create
+    - patch
+    - update
+    - delete
+{{- end }}
+
+---
+
+# Allow Agent to access leases for leader election
+{{- if .Values.pod.serviceAccount.autoCreate }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "agent-lease-access-{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+rules:
+- apiGroups:
+    - "coordination.k8s.io"
+  resources:
+    - leases
+  verbs:
+    - get
+    - create
+    - update
+{{- end }}
+
+---
+
+{{- $anyAdditionalNamespaceWithAutoCreate := false -}}
+{{- range $ns, $data := .Values.execution.additionalNamespaces }}
+{{- $anyAdditionalNamespaceWithAutoCreate = or $anyAdditionalNamespaceWithAutoCreate (and $data.serviceAccount $data.serviceAccount.autoCreate) }}
+{{- end }}
+
+# Allow Agent or Execution to run executions in a default namespace
+{{- if or (or .Values.pod.serviceAccount.autoCreate .Values.execution.default.serviceAccount.autoCreate) $anyAdditionalNamespaceWithAutoCreate }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "exec-role-{{ .Release.Name }}"
+  {{- if .Values.execution.default.namespace }}
+  namespace: "{{ .Values.execution.default.namespace }}"
+  {{- else }}
+  namespace: "{{ .Release.Namespace }}"
+  {{- end }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+rules:
+- apiGroups:
+    - "batch"
+  resources:
+    - jobs
+  verbs:
+    - get
+    - watch
+    - list
+    - create
+    - delete
+    - deletecollection
+    - patch
+- apiGroups:
+    - ""
+  resources:
+    - pods
+    - secrets
+    - configmaps
+    - persistentvolumeclaims
+  verbs:
+    - get
+    - watch
+    - list
+    - create
+    - patch
+    - update
+    - delete
+    - deletecollection
+- apiGroups:
+    - ""
+  resources:
+    - pods/log
+    - events
+  verbs:
+    - get
+    - watch
+    - list
+{{- end }}
+
+# Allow Agent or Execution to run pods in each additional namespace
+{{- if or (or .Values.pod.serviceAccount.autoCreate .Values.execution.default.serviceAccount.autoCreate) $anyAdditionalNamespaceWithAutoCreate }}
+{{- range $ns, $data := .Values.execution.additionalNamespaces }}
+{{ with $ }}
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "exec-role-{{ .Release.Name }}"
+  namespace: "{{ $ns }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+rules:
+- apiGroups:
+  - "batch"
+  resources:
+  - jobs
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+  - deletecollection
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - secrets
+  - configmaps
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  - events
+  verbs:
+  - get
+  - watch
+  - list
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+
+# Allow Agent to watch resources for triggers functionality
+{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- $watchAll := .Values.listener.watchAllNamespaces }}
+{{- $additional := default (list) .Values.listener.additionalNamespaces }}
+{{- if $watchAll }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: "watchers-role-{{ .Release.Name }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations:
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+  {{- end }}
+{{ include "testkube-runner.listener.watchers.rules" . | nindent 0 }}
+{{- else }}
+{{- $root := . }}
+{{- $namespaces := uniq (concat (list .Release.Namespace) $additional) }}
+{{- range $idx, $ns := $namespaces }}
+{{- if gt $idx 0 }}---
+
+{{- end }}
+{{- with $root }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "watchers-role-{{ $ns }}"
+  namespace: {{ $ns }}
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations:
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+  {{- end }}
+{{ include "testkube-runner.listener.watchers.rules" . | nindent 0 }}
+{{ end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---

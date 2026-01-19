@@ -1,0 +1,58 @@
+{{- if .Values.uiIngress.enabled -}}
+apiVersion: {{ include "global.capabilities.ingress.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: ui-{{ include "testkube-api.fullname" $ }}-{{ .Release.Name }}
+  labels:
+    {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.uiIngress.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.uiIngress.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if and .Values.uiIngress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.Version)) }}
+    kubernetes.io/ingress.class: {{ .Values.uiIngress.className }}
+    {{- end }}
+    {{- if .Values.uiIngress.annotations }}
+    {{- include "global.tplvalues.render" (dict "value" .Values.uiIngress.annotations "context" $) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if and .Values.uiIngress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.uiIngress.className }}
+  {{- end }}
+  {{- if .Values.uiIngress.tls }}
+  tls:
+    {{- if .Values.uiIngress.tlsenabled }}
+      {{- range .Values.uiIngress.tls }}
+      - hosts:
+          {{- range .hosts }}
+          - {{ . | quote }}
+          {{- end }}
+        secretName: {{ .secretName }}
+      {{- end }}
+      {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.uiIngress.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: {{ $.Values.uiIngress.path }}
+            pathType: {{ default "Prefix" $.Values.uiIngress.pathType }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.Version }}
+              service:
+                name: {{ include "testkube-api.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+              {{- else }}
+              serviceName: {{ include "testkube-api.fullname" $ }}
+              servicePort: {{ $.Values.service.port }}
+          {{- end }}
+    {{- end }}
+  {{- end }}

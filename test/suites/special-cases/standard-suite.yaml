@@ -1,0 +1,24 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-suite-standard-smoke
+  labels:
+    core-tests: workflows-suite
+    type: suite
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: artillery-workflow-suite
+      - name: cypress-workflow-suite-small
+      - name: curl-workflow-suite
+      - name: gradle-workflow-suite
+      - name: jmeter-workflow-suite-small
+      - name: k6-workflow-suite-small
+      - name: locust-workflow-suite
+      - name: maven-workflow-suite
+      - name: playwright-workflow-suite-small
+      - name: postman-workflow-suite-small
+      - name: pytest-workflow-suite
+      - name: selenium-workflow-suite-small

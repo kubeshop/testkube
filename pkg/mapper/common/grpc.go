@@ -1,13 +1,13 @@
 package commonmapper
 
 import (
-	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
 func MapAllTargetsApiToGrpc(ts []testkube.ExecutionTarget) []*cloud.ExecutionTarget {
-	if ts == nil || len(ts) == 0 {
+	if len(ts) == 0 {
 		return nil
 	}
 	targets := make([]*cloud.ExecutionTarget, len(ts))
@@ -42,7 +42,7 @@ func MapTargetApiToGrpc(t *testkube.ExecutionTarget) *cloud.ExecutionTarget {
 }
 
 func MapAllTargetsKubeToGrpc(ts []commonv1.Target) []*cloud.ExecutionTarget {
-	if ts == nil || len(ts) == 0 {
+	if len(ts) == 0 {
 		return nil
 	}
 	targets := make([]*cloud.ExecutionTarget, len(ts))

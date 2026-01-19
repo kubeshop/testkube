@@ -1,0 +1,75 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit-report-high-level-failure
+  labels:
+    category: unit-component-testing
+    core-tests: junit-pregenerated
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit-pregenerated-reports/high-level-failure.xml
+  container:
+    workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
+    image: alpine:3.21.2
+  steps:
+  - name: Step
+    shell: echo "Step"
+    artifacts:
+      paths:
+        - /data/repo/test/junit-pregenerated-reports/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit-report-high-level-without-testcases
+  labels:
+    category: unit-component-testing
+    core-tests: junit-pregenerated
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit-pregenerated-reports/high-level-without-testcases.xml
+  container:
+    workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
+    image: alpine:3.21.2
+  steps:
+  - name: Step
+    shell: echo "Step"
+    artifacts:
+      paths:
+        - /data/repo/test/junit-pregenerated-reports/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit-report-high-level-testcase-both-error-and-failure
+  labels:
+    category: unit-component-testing
+    core-tests: junit-pregenerated
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit-pregenerated-reports/high-level-testcase-both-error-and-failure.xml
+  container:
+    workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
+    image: alpine:3.21.2
+  steps:
+  - name: Step
+    shell: echo "Step"
+    artifacts:
+      paths:
+        - /data/repo/test/junit-pregenerated-reports/*
+

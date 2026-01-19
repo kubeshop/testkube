@@ -1,0 +1,1688 @@
+{{- if .Values.installCRD }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: testsuiteexecutions.tests.testkube.io
+spec:
+  group: tests.testkube.io
+  names:
+    kind: TestSuiteExecution
+    listKind: TestSuiteExecutionList
+    plural: testsuiteexecutions
+    singular: testsuiteexecution
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: TestSuiteExecution is the Schema for the testsuiteexecutions
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TestSuiteExecutionSpec defines the desired state of TestSuiteExecution
+            properties:
+              executionRequest:
+                description: test suite execution request body
+                properties:
+                  concurrencyLevel:
+                    description: number of tests run in parallel
+                    format: int32
+                    type: integer
+                  contentRequest:
+                    description: test content request body
+                    properties:
+                      repository:
+                        description: repository parameters for tests in git repositories
+                        properties:
+                          branch:
+                            description: branch/tag name for checkout
+                            type: string
+                          commit:
+                            description: commit id (sha) for checkout
+                            type: string
+                          path:
+                            description: if needed we can checkout particular path
+                              (dir or file) in case of BIG/mono repositories
+                            type: string
+                          workingDir:
+                            description: if provided we checkout the whole repository
+                              and run test from this directory
+                            type: string
+                        type: object
+                    type: object
+                  cronJobTemplate:
+                    description: cron job template extensions
+                    type: string
+                  disableWebhooks:
+                    description: whether webhooks should be disabled for this execution
+                    type: boolean
+                  executionLabels:
+                    additionalProperties:
+                      type: string
+                    description: execution labels
+                    type: object
+                  httpProxy:
+                    description: http proxy for executor containers
+                    type: string
+                  httpsProxy:
+                    description: https proxy for executor containers
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: test suite labels
+                    type: object
+                  name:
+                    description: test execution custom name
+                    type: string
+                  namespace:
+                    description: test kubernetes namespace (\"testkube\" when not
+                      set)
+                    type: string
+                  number:
+                    description: test suite execution number
+                    format: int32
+                    type: integer
+                  runningContext:
+                    description: running context for test or test suite execution
+                    properties:
+                      context:
+                        description: Context value depending from its type
+                        type: string
+                      type:
+                        description: One of possible context types
+                        enum:
+                        - user-cli
+                        - user-ui
+                        - testsuite
+                        - testtrigger
+                        - scheduler
+                        - testexecution
+                        - testsuiteexecution
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  secretUUID:
+                    description: secret uuid
+                    type: string
+                  sync:
+                    description: whether to start execution sync or async
+                    type: boolean
+                  testSuiteExecutionName:
+                    description: test suite execution name started the test suite
+                      execution
+                    type: string
+                  timeout:
+                    description: duration in seconds the test suite may be active,
+                      until its stopped
+                    format: int32
+                    type: integer
+                  variables:
+                    additionalProperties:
+                      properties:
+                        name:
+                          description: variable name
+                          type: string
+                        type:
+                          description: variable type
+                          type: string
+                        value:
+                          description: variable string value
+                          type: string
+                        valueFrom:
+                          description: or load it from var source
+                          properties:
+                            configMapKeyRef:
+                              description: Selects a key of a ConfigMap.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              description: |-
+                                Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                              properties:
+                                apiVersion:
+                                  description: Version of the schema the FieldPath
+                                    is written in terms of, defaults to "v1".
+                                  type: string
+                                fieldPath:
+                                  description: Path of the field to select in the
+                                    specified API version.
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              description: |-
+                                FileKeyRef selects a key of the env file.
+                                Requires the EnvFiles feature gate to be enabled.
+                              properties:
+                                key:
+                                  description: |-
+                                    The key within the env file. An invalid key will prevent the pod from starting.
+                                    The keys defined within a source may consist of any printable ASCII characters except '='.
+                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                  type: string
+                                optional:
+                                  default: false
+                                  description: |-
+                                    Specify whether the file or its key must be defined. If the file or key
+                                    does not exist, then the env var is not published.
+                                    If optional is set to true and the specified key does not exist,
+                                    the environment variable will not be set in the Pod's containers.
+
+                                    If optional is set to false and the specified key does not exist,
+                                    an error will be returned during Pod creation.
+                                  type: boolean
+                                path:
+                                  description: |-
+                                    The path within the volume from which to select the file.
+                                    Must be relative and may not contain the '..' path or start with '..'.
+                                  type: string
+                                volumeName:
+                                  description: The name of the volume mount containing
+                                    the env file.
+                                  type: string
+                              required:
+                              - key
+                              - path
+                              - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              description: |-
+                                Selects a resource of the container: only resources limits and requests
+                                (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                              properties:
+                                containerName:
+                                  description: 'Container name: required for volumes,
+                                    optional for env vars'
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: Specifies the output format of the
+                                    exposed resources, defaults to "1"
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  description: 'Required: resource to select'
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              description: Selects a key of a secret in the pod's
+                                namespace
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                      type: object
+                    type: object
+                type: object
+              testSuite:
+                properties:
+                  name:
+                    description: object name
+                    type: string
+                  namespace:
+                    description: object kubernetes namespace
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - testSuite
+            type: object
+          status:
+            description: TestSuiteExecutionStatus defines the observed state of TestSuiteExecution
+            properties:
+              generation:
+                description: test status execution generation
+                format: int64
+                type: integer
+              latestExecution:
+                description: |-
+                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                properties:
+                  disableWebhooks:
+                    description: whether webhooks should be disabled for this execution
+                    type: boolean
+                  duration:
+                    description: test duration
+                    type: string
+                  durationMs:
+                    description: test duration in ms
+                    format: int32
+                    type: integer
+                  endTime:
+                    description: test end time
+                    format: date-time
+                    type: string
+                  envs:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Environment variables passed to executor.
+                      Deprecated: use Basic Variables instead
+                    type: object
+                  executeStepResults:
+                    description: batch steps execution results
+                    items:
+                      description: execution result returned from executor
+                      properties:
+                        duration:
+                          description: step duration
+                          type: string
+                        endTime:
+                          description: step end time
+                          format: date-time
+                          type: string
+                        execute:
+                          items:
+                            description: execution result returned from executor
+                            properties:
+                              execution:
+                                description: test execution
+                                properties:
+                                  args:
+                                    description: additional arguments/flags passed
+                                      to executor binary
+                                    items:
+                                      type: string
+                                    type: array
+                                  args_mode:
+                                    description: usage mode for arguments
+                                    enum:
+                                    - append
+                                    - override
+                                    - replace
+                                    type: string
+                                  artifactRequest:
+                                    description: artifact request body with test artifacts
+                                    properties:
+                                      dirs:
+                                        description: artifact directories for scraping
+                                        items:
+                                          type: string
+                                        type: array
+                                      masks:
+                                        description: regexp to filter scraped artifacts,
+                                          single or comma separated
+                                        items:
+                                          type: string
+                                        type: array
+                                      omitFolderPerExecution:
+                                        description: don't use a separate folder for
+                                          execution artifacts
+                                        type: boolean
+                                      sharedBetweenPods:
+                                        description: whether to share volume between
+                                          pods
+                                        type: boolean
+                                      sidecarScraper:
+                                        description: run scraper as pod sidecar container
+                                        type: boolean
+                                      storageBucket:
+                                        description: artifact bucket storage
+                                        type: string
+                                      storageClassName:
+                                        description: artifact storage class name for
+                                          container executor
+                                        type: string
+                                      useDefaultStorageClassName:
+                                        description: whether to use default storage
+                                          class name
+                                        type: boolean
+                                      volumeMountPath:
+                                        description: artifact volume mount path for
+                                          container executor
+                                        type: string
+                                    type: object
+                                  bucketName:
+                                    description: minio bucket name to get uploads
+                                      from
+                                    type: string
+                                  command:
+                                    description: executor image command
+                                    items:
+                                      type: string
+                                    type: array
+                                  containerShell:
+                                    description: shell used in container executor
+                                    type: string
+                                  content:
+                                    description: TestContent defines test content
+                                    properties:
+                                      data:
+                                        description: test content body
+                                        type: string
+                                      repository:
+                                        description: repository of test content
+                                        properties:
+                                          authType:
+                                            description: auth type for git requests
+                                            enum:
+                                            - basic
+                                            - header
+                                            type: string
+                                          branch:
+                                            description: branch/tag name for checkout
+                                            type: string
+                                          certificateSecret:
+                                            description: git auth certificate secret
+                                              for private repositories
+                                            type: string
+                                          commit:
+                                            description: commit id (sha) for checkout
+                                            type: string
+                                          path:
+                                            description: if needed we can checkout
+                                              particular path (dir or file) in case
+                                              of BIG/mono repositories
+                                            type: string
+                                          tokenSecret:
+                                            description: Testkube internal reference
+                                              for secret storage in Kubernetes secrets
+                                            properties:
+                                              key:
+                                                description: object key
+                                                type: string
+                                              name:
+                                                description: object name
+                                                type: string
+                                              namespace:
+                                                description: object kubernetes namespace
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            description: VCS repository type
+                                            type: string
+                                          uri:
+                                            description: uri of content file or git
+                                              directory
+                                            type: string
+                                          usernameSecret:
+                                            description: Testkube internal reference
+                                              for secret storage in Kubernetes secrets
+                                            properties:
+                                              key:
+                                                description: object key
+                                                type: string
+                                              name:
+                                                description: object name
+                                                type: string
+                                              namespace:
+                                                description: object kubernetes namespace
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          workingDir:
+                                            description: if provided we checkout the
+                                              whole repository and run test from this
+                                              directory
+                                            type: string
+                                        type: object
+                                      type:
+                                        description: test type
+                                        enum:
+                                        - string
+                                        - file-uri
+                                        - git-file
+                                        - git-dir
+                                        - git
+                                        type: string
+                                      uri:
+                                        description: uri of test content
+                                        type: string
+                                    type: object
+                                  disableWebhooks:
+                                    description: whether webhooks should be disabled
+                                      for this execution
+                                    type: boolean
+                                  duration:
+                                    description: test duration
+                                    type: string
+                                  durationMs:
+                                    description: test duration in milliseconds
+                                    format: int32
+                                    type: integer
+                                  endTime:
+                                    description: test end time
+                                    format: date-time
+                                    type: string
+                                  envs:
+                                    additionalProperties:
+                                      type: string
+                                    description: |-
+                                      Environment variables passed to executor.
+                                      Deprecated: use Basic Variables instead
+                                    type: object
+                                  executePostRunScriptBeforeScraping:
+                                    description: execute post run script before scraping
+                                      (prebuilt executor only)
+                                    type: boolean
+                                  executionNamespace:
+                                    description: namespace for test execution (Pro
+                                      edition only)
+                                    type: string
+                                  executionResult:
+                                    description: execution result returned from executor
+                                    properties:
+                                      errorMessage:
+                                        description: error message when status is
+                                          error, separate to output as output can
+                                          be partial in case of error
+                                        type: string
+                                      reports:
+                                        properties:
+                                          junit:
+                                            type: string
+                                        type: object
+                                      status:
+                                        enum:
+                                        - queued
+                                        - running
+                                        - passed
+                                        - failed
+                                        - aborted
+                                        - timeout
+                                        type: string
+                                      steps:
+                                        description: execution steps (for collection
+                                          of requests)
+                                        items:
+                                          description: execution result data
+                                          properties:
+                                            assertionResults:
+                                              items:
+                                                description: execution result data
+                                                properties:
+                                                  errorMessage:
+                                                    type: string
+                                                  name:
+                                                    type: string
+                                                  status:
+                                                    type: string
+                                                type: object
+                                              type: array
+                                            duration:
+                                              type: string
+                                            name:
+                                              description: step name
+                                              type: string
+                                            status:
+                                              description: execution step status
+                                              type: string
+                                          required:
+                                          - name
+                                          - status
+                                          type: object
+                                        type: array
+                                    required:
+                                    - status
+                                    type: object
+                                  id:
+                                    description: execution id
+                                    type: string
+                                  isVariablesFileUploaded:
+                                    description: in case the variables file is too
+                                      big, it will be uploaded to storage
+                                    type: boolean
+                                  labels:
+                                    additionalProperties:
+                                      type: string
+                                    description: test and execution labels
+                                    type: object
+                                  name:
+                                    description: execution name
+                                    type: string
+                                  number:
+                                    description: execution number
+                                    format: int32
+                                    type: integer
+                                  postRunScript:
+                                    description: script to run after test execution
+                                    type: string
+                                  preRunScript:
+                                    description: script to run before test execution
+                                    type: string
+                                  runningContext:
+                                    description: running context for test or test
+                                      suite execution
+                                    properties:
+                                      context:
+                                        description: Context value depending from
+                                          its type
+                                        type: string
+                                      type:
+                                        description: One of possible context types
+                                        enum:
+                                        - user-cli
+                                        - user-ui
+                                        - testsuite
+                                        - testtrigger
+                                        - scheduler
+                                        - testexecution
+                                        - testsuiteexecution
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                  slavePodRequest:
+                                    description: pod request body
+                                    properties:
+                                      podTemplate:
+                                        description: pod template extensions
+                                        type: string
+                                      podTemplateReference:
+                                        description: name of the template resource
+                                        type: string
+                                      resources:
+                                        description: pod resources request specification
+                                        properties:
+                                          limits:
+                                            description: resource request specification
+                                            properties:
+                                              cpu:
+                                                description: requested cpu units
+                                                type: string
+                                              memory:
+                                                description: requested memory units
+                                                type: string
+                                            type: object
+                                          requests:
+                                            description: resource request specification
+                                            properties:
+                                              cpu:
+                                                description: requested cpu units
+                                                type: string
+                                              memory:
+                                                description: requested memory units
+                                                type: string
+                                            type: object
+                                        type: object
+                                    type: object
+                                  sourceScripts:
+                                    description: run scripts using source command
+                                      (container executor only)
+                                    type: boolean
+                                  startTime:
+                                    description: test start time
+                                    format: date-time
+                                    type: string
+                                  testExecutionName:
+                                    description: test execution name started the test
+                                      execution
+                                    type: string
+                                  testName:
+                                    description: unique test name (CRD Test name)
+                                    type: string
+                                  testNamespace:
+                                    description: test namespace
+                                    type: string
+                                  testSecretUUID:
+                                    description: test secret uuid
+                                    type: string
+                                  testSuiteName:
+                                    description: unique test suite name (CRD Test
+                                      suite name), if it's run as a part of test suite
+                                    type: string
+                                  testSuiteSecretUUID:
+                                    description: test suite secret uuid, if it's run
+                                      as a part of test suite
+                                    type: string
+                                  testType:
+                                    description: test type e.g. postman/collection
+                                    type: string
+                                  uploads:
+                                    description: list of file paths that need to be
+                                      copied into the test from uploads
+                                    items:
+                                      type: string
+                                    type: array
+                                  variables:
+                                    additionalProperties:
+                                      properties:
+                                        name:
+                                          description: variable name
+                                          type: string
+                                        type:
+                                          description: variable type
+                                          type: string
+                                        value:
+                                          description: variable string value
+                                          type: string
+                                        valueFrom:
+                                          description: or load it from var source
+                                          properties:
+                                            configMapKeyRef:
+                                              description: Selects a key of a ConfigMap.
+                                              properties:
+                                                key:
+                                                  description: The key to select.
+                                                  type: string
+                                                name:
+                                                  default: ""
+                                                  description: |-
+                                                    Name of the referent.
+                                                    This field is effectively required, but due to backwards compatibility is
+                                                    allowed to be empty. Instances of this type with an empty value here are
+                                                    almost certainly wrong.
+                                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                  type: string
+                                                optional:
+                                                  description: Specify whether the
+                                                    ConfigMap or its key must be defined
+                                                  type: boolean
+                                              required:
+                                              - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            fieldRef:
+                                              description: |-
+                                                Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                                spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                                              properties:
+                                                apiVersion:
+                                                  description: Version of the schema
+                                                    the FieldPath is written in terms
+                                                    of, defaults to "v1".
+                                                  type: string
+                                                fieldPath:
+                                                  description: Path of the field to
+                                                    select in the specified API version.
+                                                  type: string
+                                              required:
+                                              - fieldPath
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            fileKeyRef:
+                                              description: |-
+                                                FileKeyRef selects a key of the env file.
+                                                Requires the EnvFiles feature gate to be enabled.
+                                              properties:
+                                                key:
+                                                  description: |-
+                                                    The key within the env file. An invalid key will prevent the pod from starting.
+                                                    The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                                  type: string
+                                                optional:
+                                                  default: false
+                                                  description: |-
+                                                    Specify whether the file or its key must be defined. If the file or key
+                                                    does not exist, then the env var is not published.
+                                                    If optional is set to true and the specified key does not exist,
+                                                    the environment variable will not be set in the Pod's containers.
+
+                                                    If optional is set to false and the specified key does not exist,
+                                                    an error will be returned during Pod creation.
+                                                  type: boolean
+                                                path:
+                                                  description: |-
+                                                    The path within the volume from which to select the file.
+                                                    Must be relative and may not contain the '..' path or start with '..'.
+                                                  type: string
+                                                volumeName:
+                                                  description: The name of the volume
+                                                    mount containing the env file.
+                                                  type: string
+                                              required:
+                                              - key
+                                              - path
+                                              - volumeName
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            resourceFieldRef:
+                                              description: |-
+                                                Selects a resource of the container: only resources limits and requests
+                                                (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                                              properties:
+                                                containerName:
+                                                  description: 'Container name: required
+                                                    for volumes, optional for env
+                                                    vars'
+                                                  type: string
+                                                divisor:
+                                                  anyOf:
+                                                  - type: integer
+                                                  - type: string
+                                                  description: Specifies the output
+                                                    format of the exposed resources,
+                                                    defaults to "1"
+                                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                                  x-kubernetes-int-or-string: true
+                                                resource:
+                                                  description: 'Required: resource
+                                                    to select'
+                                                  type: string
+                                              required:
+                                              - resource
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secretKeyRef:
+                                              description: Selects a key of a secret
+                                                in the pod's namespace
+                                              properties:
+                                                key:
+                                                  description: The key of the secret
+                                                    to select from.  Must be a valid
+                                                    secret key.
+                                                  type: string
+                                                name:
+                                                  default: ""
+                                                  description: |-
+                                                    Name of the referent.
+                                                    This field is effectively required, but due to backwards compatibility is
+                                                    allowed to be empty. Instances of this type with an empty value here are
+                                                    almost certainly wrong.
+                                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                  type: string
+                                                optional:
+                                                  description: Specify whether the
+                                                    Secret or its key must be defined
+                                                  type: boolean
+                                              required:
+                                              - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                      type: object
+                                    type: object
+                                  variablesFile:
+                                    description: variables file content - need to
+                                      be in format for particular executor (e.g. postman
+                                      envs file)
+                                    type: string
+                                type: object
+                              step:
+                                properties:
+                                  delay:
+                                    description: delay duration in time units
+                                    type: string
+                                  test:
+                                    description: object name
+                                    type: string
+                                type: object
+                              test:
+                                properties:
+                                  name:
+                                    description: object name
+                                    type: string
+                                  namespace:
+                                    description: object kubernetes namespace
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                            type: object
+                          type: array
+                        startTime:
+                          description: step start time
+                          format: date-time
+                          type: string
+                        step:
+                          description: set of steps run in parallel
+                          properties:
+                            execute:
+                              items:
+                                properties:
+                                  delay:
+                                    description: delay duration in time units
+                                    type: string
+                                  test:
+                                    description: object name
+                                    type: string
+                                type: object
+                              type: array
+                            stopOnFailure:
+                              type: boolean
+                          required:
+                          - stopOnFailure
+                          type: object
+                      type: object
+                    type: array
+                  id:
+                    description: execution id
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: test suite labels
+                    type: object
+                  name:
+                    description: execution name
+                    type: string
+                  runningContext:
+                    description: running context for test or test suite execution
+                    properties:
+                      context:
+                        description: Context value depending from its type
+                        type: string
+                      type:
+                        description: One of possible context types
+                        enum:
+                        - user-cli
+                        - user-ui
+                        - testsuite
+                        - testtrigger
+                        - scheduler
+                        - testexecution
+                        - testsuiteexecution
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  secretUUID:
+                    description: secret uuid
+                    type: string
+                  startTime:
+                    description: test start time
+                    format: date-time
+                    type: string
+                  status:
+                    enum:
+                    - queued
+                    - running
+                    - passed
+                    - failed
+                    - aborting
+                    - aborted
+                    - timeout
+                    type: string
+                  stepResults:
+                    description: steps execution results
+                    items:
+                      description: execution result returned from executor
+                      properties:
+                        execution:
+                          description: test execution
+                          properties:
+                            args:
+                              description: additional arguments/flags passed to executor
+                                binary
+                              items:
+                                type: string
+                              type: array
+                            args_mode:
+                              description: usage mode for arguments
+                              enum:
+                              - append
+                              - override
+                              - replace
+                              type: string
+                            artifactRequest:
+                              description: artifact request body with test artifacts
+                              properties:
+                                dirs:
+                                  description: artifact directories for scraping
+                                  items:
+                                    type: string
+                                  type: array
+                                masks:
+                                  description: regexp to filter scraped artifacts,
+                                    single or comma separated
+                                  items:
+                                    type: string
+                                  type: array
+                                omitFolderPerExecution:
+                                  description: don't use a separate folder for execution
+                                    artifacts
+                                  type: boolean
+                                sharedBetweenPods:
+                                  description: whether to share volume between pods
+                                  type: boolean
+                                sidecarScraper:
+                                  description: run scraper as pod sidecar container
+                                  type: boolean
+                                storageBucket:
+                                  description: artifact bucket storage
+                                  type: string
+                                storageClassName:
+                                  description: artifact storage class name for container
+                                    executor
+                                  type: string
+                                useDefaultStorageClassName:
+                                  description: whether to use default storage class
+                                    name
+                                  type: boolean
+                                volumeMountPath:
+                                  description: artifact volume mount path for container
+                                    executor
+                                  type: string
+                              type: object
+                            bucketName:
+                              description: minio bucket name to get uploads from
+                              type: string
+                            command:
+                              description: executor image command
+                              items:
+                                type: string
+                              type: array
+                            containerShell:
+                              description: shell used in container executor
+                              type: string
+                            content:
+                              description: TestContent defines test content
+                              properties:
+                                data:
+                                  description: test content body
+                                  type: string
+                                repository:
+                                  description: repository of test content
+                                  properties:
+                                    authType:
+                                      description: auth type for git requests
+                                      enum:
+                                      - basic
+                                      - header
+                                      type: string
+                                    branch:
+                                      description: branch/tag name for checkout
+                                      type: string
+                                    certificateSecret:
+                                      description: git auth certificate secret for
+                                        private repositories
+                                      type: string
+                                    commit:
+                                      description: commit id (sha) for checkout
+                                      type: string
+                                    path:
+                                      description: if needed we can checkout particular
+                                        path (dir or file) in case of BIG/mono repositories
+                                      type: string
+                                    tokenSecret:
+                                      description: Testkube internal reference for
+                                        secret storage in Kubernetes secrets
+                                      properties:
+                                        key:
+                                          description: object key
+                                          type: string
+                                        name:
+                                          description: object name
+                                          type: string
+                                        namespace:
+                                          description: object kubernetes namespace
+                                          type: string
+                                      required:
+                                      - key
+                                      - name
+                                      type: object
+                                    type:
+                                      description: VCS repository type
+                                      type: string
+                                    uri:
+                                      description: uri of content file or git directory
+                                      type: string
+                                    usernameSecret:
+                                      description: Testkube internal reference for
+                                        secret storage in Kubernetes secrets
+                                      properties:
+                                        key:
+                                          description: object key
+                                          type: string
+                                        name:
+                                          description: object name
+                                          type: string
+                                        namespace:
+                                          description: object kubernetes namespace
+                                          type: string
+                                      required:
+                                      - key
+                                      - name
+                                      type: object
+                                    workingDir:
+                                      description: if provided we checkout the whole
+                                        repository and run test from this directory
+                                      type: string
+                                  type: object
+                                type:
+                                  description: test type
+                                  enum:
+                                  - string
+                                  - file-uri
+                                  - git-file
+                                  - git-dir
+                                  - git
+                                  type: string
+                                uri:
+                                  description: uri of test content
+                                  type: string
+                              type: object
+                            disableWebhooks:
+                              description: whether webhooks should be disabled for
+                                this execution
+                              type: boolean
+                            duration:
+                              description: test duration
+                              type: string
+                            durationMs:
+                              description: test duration in milliseconds
+                              format: int32
+                              type: integer
+                            endTime:
+                              description: test end time
+                              format: date-time
+                              type: string
+                            envs:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                Environment variables passed to executor.
+                                Deprecated: use Basic Variables instead
+                              type: object
+                            executePostRunScriptBeforeScraping:
+                              description: execute post run script before scraping
+                                (prebuilt executor only)
+                              type: boolean
+                            executionNamespace:
+                              description: namespace for test execution (Pro edition
+                                only)
+                              type: string
+                            executionResult:
+                              description: execution result returned from executor
+                              properties:
+                                errorMessage:
+                                  description: error message when status is error,
+                                    separate to output as output can be partial in
+                                    case of error
+                                  type: string
+                                reports:
+                                  properties:
+                                    junit:
+                                      type: string
+                                  type: object
+                                status:
+                                  enum:
+                                  - queued
+                                  - running
+                                  - passed
+                                  - failed
+                                  - aborted
+                                  - timeout
+                                  type: string
+                                steps:
+                                  description: execution steps (for collection of
+                                    requests)
+                                  items:
+                                    description: execution result data
+                                    properties:
+                                      assertionResults:
+                                        items:
+                                          description: execution result data
+                                          properties:
+                                            errorMessage:
+                                              type: string
+                                            name:
+                                              type: string
+                                            status:
+                                              type: string
+                                          type: object
+                                        type: array
+                                      duration:
+                                        type: string
+                                      name:
+                                        description: step name
+                                        type: string
+                                      status:
+                                        description: execution step status
+                                        type: string
+                                    required:
+                                    - name
+                                    - status
+                                    type: object
+                                  type: array
+                              required:
+                              - status
+                              type: object
+                            id:
+                              description: execution id
+                              type: string
+                            isVariablesFileUploaded:
+                              description: in case the variables file is too big,
+                                it will be uploaded to storage
+                              type: boolean
+                            labels:
+                              additionalProperties:
+                                type: string
+                              description: test and execution labels
+                              type: object
+                            name:
+                              description: execution name
+                              type: string
+                            number:
+                              description: execution number
+                              format: int32
+                              type: integer
+                            postRunScript:
+                              description: script to run after test execution
+                              type: string
+                            preRunScript:
+                              description: script to run before test execution
+                              type: string
+                            runningContext:
+                              description: running context for test or test suite
+                                execution
+                              properties:
+                                context:
+                                  description: Context value depending from its type
+                                  type: string
+                                type:
+                                  description: One of possible context types
+                                  enum:
+                                  - user-cli
+                                  - user-ui
+                                  - testsuite
+                                  - testtrigger
+                                  - scheduler
+                                  - testexecution
+                                  - testsuiteexecution
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                            slavePodRequest:
+                              description: pod request body
+                              properties:
+                                podTemplate:
+                                  description: pod template extensions
+                                  type: string
+                                podTemplateReference:
+                                  description: name of the template resource
+                                  type: string
+                                resources:
+                                  description: pod resources request specification
+                                  properties:
+                                    limits:
+                                      description: resource request specification
+                                      properties:
+                                        cpu:
+                                          description: requested cpu units
+                                          type: string
+                                        memory:
+                                          description: requested memory units
+                                          type: string
+                                      type: object
+                                    requests:
+                                      description: resource request specification
+                                      properties:
+                                        cpu:
+                                          description: requested cpu units
+                                          type: string
+                                        memory:
+                                          description: requested memory units
+                                          type: string
+                                      type: object
+                                  type: object
+                              type: object
+                            sourceScripts:
+                              description: run scripts using source command (container
+                                executor only)
+                              type: boolean
+                            startTime:
+                              description: test start time
+                              format: date-time
+                              type: string
+                            testExecutionName:
+                              description: test execution name started the test execution
+                              type: string
+                            testName:
+                              description: unique test name (CRD Test name)
+                              type: string
+                            testNamespace:
+                              description: test namespace
+                              type: string
+                            testSecretUUID:
+                              description: test secret uuid
+                              type: string
+                            testSuiteName:
+                              description: unique test suite name (CRD Test suite
+                                name), if it's run as a part of test suite
+                              type: string
+                            testSuiteSecretUUID:
+                              description: test suite secret uuid, if it's run as
+                                a part of test suite
+                              type: string
+                            testType:
+                              description: test type e.g. postman/collection
+                              type: string
+                            uploads:
+                              description: list of file paths that need to be copied
+                                into the test from uploads
+                              items:
+                                type: string
+                              type: array
+                            variables:
+                              additionalProperties:
+                                properties:
+                                  name:
+                                    description: variable name
+                                    type: string
+                                  type:
+                                    description: variable type
+                                    type: string
+                                  value:
+                                    description: variable string value
+                                    type: string
+                                  valueFrom:
+                                    description: or load it from var source
+                                    properties:
+                                      configMapKeyRef:
+                                        description: Selects a key of a ConfigMap.
+                                        properties:
+                                          key:
+                                            description: The key to select.
+                                            type: string
+                                          name:
+                                            default: ""
+                                            description: |-
+                                              Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
+                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                            type: string
+                                          optional:
+                                            description: Specify whether the ConfigMap
+                                              or its key must be defined
+                                            type: boolean
+                                        required:
+                                        - key
+                                        type: object
+                                        x-kubernetes-map-type: atomic
+                                      fieldRef:
+                                        description: |-
+                                          Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                          spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                                        properties:
+                                          apiVersion:
+                                            description: Version of the schema the
+                                              FieldPath is written in terms of, defaults
+                                              to "v1".
+                                            type: string
+                                          fieldPath:
+                                            description: Path of the field to select
+                                              in the specified API version.
+                                            type: string
+                                        required:
+                                        - fieldPath
+                                        type: object
+                                        x-kubernetes-map-type: atomic
+                                      fileKeyRef:
+                                        description: |-
+                                          FileKeyRef selects a key of the env file.
+                                          Requires the EnvFiles feature gate to be enabled.
+                                        properties:
+                                          key:
+                                            description: |-
+                                              The key within the env file. An invalid key will prevent the pod from starting.
+                                              The keys defined within a source may consist of any printable ASCII characters except '='.
+                                              During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                            type: string
+                                          optional:
+                                            default: false
+                                            description: |-
+                                              Specify whether the file or its key must be defined. If the file or key
+                                              does not exist, then the env var is not published.
+                                              If optional is set to true and the specified key does not exist,
+                                              the environment variable will not be set in the Pod's containers.
+
+                                              If optional is set to false and the specified key does not exist,
+                                              an error will be returned during Pod creation.
+                                            type: boolean
+                                          path:
+                                            description: |-
+                                              The path within the volume from which to select the file.
+                                              Must be relative and may not contain the '..' path or start with '..'.
+                                            type: string
+                                          volumeName:
+                                            description: The name of the volume mount
+                                              containing the env file.
+                                            type: string
+                                        required:
+                                        - key
+                                        - path
+                                        - volumeName
+                                        type: object
+                                        x-kubernetes-map-type: atomic
+                                      resourceFieldRef:
+                                        description: |-
+                                          Selects a resource of the container: only resources limits and requests
+                                          (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                                        properties:
+                                          containerName:
+                                            description: 'Container name: required
+                                              for volumes, optional for env vars'
+                                            type: string
+                                          divisor:
+                                            anyOf:
+                                            - type: integer
+                                            - type: string
+                                            description: Specifies the output format
+                                              of the exposed resources, defaults to
+                                              "1"
+                                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                            x-kubernetes-int-or-string: true
+                                          resource:
+                                            description: 'Required: resource to select'
+                                            type: string
+                                        required:
+                                        - resource
+                                        type: object
+                                        x-kubernetes-map-type: atomic
+                                      secretKeyRef:
+                                        description: Selects a key of a secret in
+                                          the pod's namespace
+                                        properties:
+                                          key:
+                                            description: The key of the secret to
+                                              select from.  Must be a valid secret
+                                              key.
+                                            type: string
+                                          name:
+                                            default: ""
+                                            description: |-
+                                              Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
+                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                            type: string
+                                          optional:
+                                            description: Specify whether the Secret
+                                              or its key must be defined
+                                            type: boolean
+                                        required:
+                                        - key
+                                        type: object
+                                        x-kubernetes-map-type: atomic
+                                    type: object
+                                type: object
+                              type: object
+                            variablesFile:
+                              description: variables file content - need to be in
+                                format for particular executor (e.g. postman envs
+                                file)
+                              type: string
+                          type: object
+                        step:
+                          properties:
+                            delay:
+                              properties:
+                                duration:
+                                  description: delay duration in milliseconds
+                                  format: int32
+                                  type: integer
+                              required:
+                              - duration
+                              type: object
+                            execute:
+                              properties:
+                                name:
+                                  description: object name
+                                  type: string
+                                namespace:
+                                  description: object kubernetes namespace
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            stopTestOnFailure:
+                              type: boolean
+                          required:
+                          - stopTestOnFailure
+                          type: object
+                        test:
+                          properties:
+                            name:
+                              description: object name
+                              type: string
+                            namespace:
+                              description: object kubernetes namespace
+                              type: string
+                          required:
+                          - name
+                          type: object
+                      type: object
+                    type: array
+                  testSuite:
+                    properties:
+                      name:
+                        description: object name
+                        type: string
+                      namespace:
+                        description: object kubernetes namespace
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  testSuiteExecutionName:
+                    description: test suite execution name started the test suite
+                      execution
+                    type: string
+                  variables:
+                    additionalProperties:
+                      properties:
+                        name:
+                          description: variable name
+                          type: string
+                        type:
+                          description: variable type
+                          type: string
+                        value:
+                          description: variable string value
+                          type: string
+                        valueFrom:
+                          description: or load it from var source
+                          properties:
+                            configMapKeyRef:
+                              description: Selects a key of a ConfigMap.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              description: |-
+                                Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                              properties:
+                                apiVersion:
+                                  description: Version of the schema the FieldPath
+                                    is written in terms of, defaults to "v1".
+                                  type: string
+                                fieldPath:
+                                  description: Path of the field to select in the
+                                    specified API version.
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              description: |-
+                                FileKeyRef selects a key of the env file.
+                                Requires the EnvFiles feature gate to be enabled.
+                              properties:
+                                key:
+                                  description: |-
+                                    The key within the env file. An invalid key will prevent the pod from starting.
+                                    The keys defined within a source may consist of any printable ASCII characters except '='.
+                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                  type: string
+                                optional:
+                                  default: false
+                                  description: |-
+                                    Specify whether the file or its key must be defined. If the file or key
+                                    does not exist, then the env var is not published.
+                                    If optional is set to true and the specified key does not exist,
+                                    the environment variable will not be set in the Pod's containers.
+
+                                    If optional is set to false and the specified key does not exist,
+                                    an error will be returned during Pod creation.
+                                  type: boolean
+                                path:
+                                  description: |-
+                                    The path within the volume from which to select the file.
+                                    Must be relative and may not contain the '..' path or start with '..'.
+                                  type: string
+                                volumeName:
+                                  description: The name of the volume mount containing
+                                    the env file.
+                                  type: string
+                              required:
+                              - key
+                              - path
+                              - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              description: |-
+                                Selects a resource of the container: only resources limits and requests
+                                (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                              properties:
+                                containerName:
+                                  description: 'Container name: required for volumes,
+                                    optional for env vars'
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: Specifies the output format of the
+                                    exposed resources, defaults to "1"
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  description: 'Required: resource to select'
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              description: Selects a key of a secret in the pod's
+                                namespace
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                      type: object
+                    type: object
+                required:
+                - id
+                - name
+                - testSuite
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

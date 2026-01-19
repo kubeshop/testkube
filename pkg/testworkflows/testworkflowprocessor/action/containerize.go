@@ -9,8 +9,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -81,6 +82,16 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
+				if newEnv.ValueFrom != nil {
+					if newEnv.ValueFrom.ConfigMapKeyRef != nil && newEnv.ValueFrom.ConfigMapKeyRef.Optional == nil {
+						newEnv.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+					}
+
+					if newEnv.ValueFrom.SecretKeyRef != nil && newEnv.ValueFrom.SecretKeyRef.Optional == nil {
+						newEnv.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+					}
+				}
+
 				cr.Env = append(cr.Env, newEnv.EnvVar)
 				if e.Global != nil && *e.Global {
 					globalEnv = append(globalEnv, e)
@@ -90,6 +101,14 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				newEnvFrom := *e.DeepCopy()
 				sensitive := newEnvFrom.SecretRef != nil
 				newEnvFrom.Prefix = actiontypes.EnvName(fmt.Sprintf("%d", i), false, sensitive, e.Prefix)
+				if newEnvFrom.ConfigMapRef != nil && newEnvFrom.ConfigMapRef.Optional == nil {
+					newEnvFrom.ConfigMapRef.Optional = common.Ptr(true)
+				}
+
+				if newEnvFrom.SecretRef != nil && newEnvFrom.SecretRef.Optional == nil {
+					newEnvFrom.SecretRef.Optional = common.Ptr(true)
+				}
+
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}

@@ -50,6 +50,7 @@ func TestSetup(t *testing.T) {
 
 	// Create a new setup instance
 	setup := newSetup()
+	setup.initialize()
 	setup.UseBaseEnv()
 
 	// Validate the data gets loaded correctly
@@ -93,6 +94,7 @@ func TestSetupInitialize_TableDriven(t *testing.T) {
 			})
 
 			setup := newSetup()
+			setup.initialize()
 
 			assert.Equal(t, tc.expectedEnvGroups, setup.envGroups)
 		})

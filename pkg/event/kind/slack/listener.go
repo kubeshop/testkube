@@ -50,6 +50,11 @@ func (l *SlackListener) Metadata() map[string]string {
 	}
 }
 
+func (l *SlackListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
+	return valid
+}
+
 func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	err := l.slackNotifier.SendEvent(&event)
 	if err != nil {
@@ -61,4 +66,8 @@ func (l *SlackListener) Notify(event testkube.Event) (result testkube.EventResul
 
 func (l *SlackListener) Kind() string {
 	return "slack"
+}
+
+func (l *SlackListener) Group() string {
+	return ""
 }

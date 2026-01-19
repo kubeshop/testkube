@@ -70,30 +70,25 @@ func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Me
 // If file header (metadata) is missing, we have already parsed a metric line, so we provide it as the last parameter.
 func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unaccountedMetric []byte) ([]*Metric, *Metadata, []InvalidLine, error) {
 	var metrics []*Metric
-	var add bool
 	if metadata.Lines > 0 {
-		add = true
-		metrics = make([]*Metric, metadata.Lines)
-	} else {
-		add = false
-		metrics = []*Metric{}
+		metrics = make([]*Metric, 0, metadata.Lines)
 	}
 
 	var invalidLines []InvalidLine
-	i := -1
+	lineNumber := 0
 	if len(unaccountedMetric) > 0 {
-		i++
+		lineNumber++
 		line := strings.TrimSpace(string(unaccountedMetric))
 		metric, err := parser.Parse([]byte(line))
 		if err != nil {
-			invalidLines = append(invalidLines, newInvalidLine(i+1, string(unaccountedMetric)))
+			invalidLines = append(invalidLines, newInvalidLine(lineNumber, string(unaccountedMetric)))
 		} else {
-			addOrAppend(&metrics, metric, i, add)
+			metrics = append(metrics, metric)
 		}
 	}
 
 	for scanner.Scan() {
-		i++
+		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip empty lines or commented lines
@@ -103,25 +98,16 @@ func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unacco
 
 		metric, err := parser.Parse([]byte(line))
 		if err != nil {
-			invalidLines = append(invalidLines, newInvalidLine(i+1, line))
+			invalidLines = append(invalidLines, newInvalidLine(lineNumber, line))
 			continue
 		}
-		addOrAppend(&metrics, metric, i, add)
+		metrics = append(metrics, metric)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, nil, invalidLines, errors.Wrap(err, "error while reading metrics file")
 	}
 
 	return metrics, metadata, invalidLines, nil
-}
-
-func addOrAppend(metrics *[]*Metric, m *Metric, i int, add bool) {
-	if add {
-		(*metrics)[i] = m
-	} else {
-		*metrics = append(*metrics, m)
-	}
-
 }
 
 // NewParser is a factory method which instantiates a parser implementation based on the provided format.

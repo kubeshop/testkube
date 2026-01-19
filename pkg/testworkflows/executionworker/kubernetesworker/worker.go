@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -135,6 +137,13 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
 	}
 
+	var runtimeOptions *testworkflowprocessor.RuntimeOptions
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtimeOptions = &testworkflowprocessor.RuntimeOptions{
+			Variables: request.Runtime.Variables,
+		}
+	}
+
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
 		Config:                 cfg,
@@ -142,6 +151,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		ScheduledAt:            scheduledAt,
 		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+		Runtime:                runtimeOptions,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
@@ -193,6 +203,13 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
 	}
 
+	var runtimeOptions *testworkflowprocessor.RuntimeOptions
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtimeOptions = &testworkflowprocessor.RuntimeOptions{
+			Variables: request.Runtime.Variables,
+		}
+	}
+
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
 		Config:                 cfg,
@@ -200,6 +217,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		ScheduledAt:            scheduledAt,
 		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+		Runtime:                runtimeOptions,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
@@ -243,7 +261,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 func (w *worker) Notifications(ctx context.Context, id string, opts executionworkertypes.NotificationsOptions) executionworkertypes.NotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -278,7 +296,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 func (w *worker) StatusNotifications(ctx context.Context, id string, opts executionworkertypes.StatusNotificationsOptions) executionworkertypes.StatusNotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewStatusNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -368,10 +386,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 // TODO: Allow fetching temporary logs too?
 func (w *worker) Logs(ctx context.Context, id string, options executionworkertypes.LogsOptions) utils.LogsReader {
 	reader := utils.NewLogsReader()
-	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
-		Hints:    options.Hints,
-		NoFollow: options.NoFollow,
-	})
+	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions(options))
 	if notifications.Err() != nil {
 		reader.End(notifications.Err())
 		return reader
@@ -396,7 +411,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 func (w *worker) Get(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, options.Hints)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +450,7 @@ func (w *worker) Get(ctx context.Context, id string, options executionworkertype
 func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, options.Hints)
 	if err != nil {
 		return nil, err
 	}
@@ -524,9 +539,45 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	return list, nil
 }
 
-func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) error {
+func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
+	if options.Namespace == "" {
+		options.Namespace, err = w.registry.GetNamespace(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, "Job has been aborted by the system"); err != nil {
+		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
+	}
 	// It may safely destroy all the resources - the trace should be still readable.
 	return w.Destroy(ctx, id, options)
+}
+
+func (w *worker) Cancel(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
+	if options.Namespace == "" {
+		options.Namespace, err = w.registry.GetNamespace(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, "Job has been canceled by a user"); err != nil {
+		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
+	}
+	return w.Destroy(ctx, id, options)
+}
+
+func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, reason string) error {
+	patch := map[string]interface{}{
+		"metadata": map[string]any{
+			"annotations": map[string]string{
+				constants.AnnotationTerminationCode:   string(status),
+				constants.AnnotationTerminationReason: reason,
+			},
+		},
+	}
+	patchBytes, _ := json.Marshal(patch)
+	_, err := w.clientSet.BatchV1().Jobs(namespace).Patch(ctx, id, types.MergePatchType, patchBytes, metav1.PatchOptions{})
+	return err
 }
 
 func (w *worker) Destroy(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {

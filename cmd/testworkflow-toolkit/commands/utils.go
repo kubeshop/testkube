@@ -11,15 +11,15 @@ import (
 func concat(args ...interface{}) []string {
 	result := make([]string, 0)
 	for _, a := range args {
-		switch a.(type) {
+		switch a := a.(type) {
 		case string:
-			result = append(result, a.(string))
+			result = append(result, a)
 		case int:
-			result = append(result, strconv.Itoa(a.(int)))
+			result = append(result, strconv.Itoa(a))
 		case []string:
-			result = append(result, a.([]string)...)
+			result = append(result, a...)
 		case []interface{}:
-			result = append(result, concat(a.([]interface{})...)...)
+			result = append(result, concat(a...)...)
 		}
 	}
 	return result

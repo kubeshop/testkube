@@ -1,0 +1,198 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: postman
+    category: api-testing
+  annotations:
+    testkube.io/icon: postman
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke.postman_collection.json
+  container:
+    image: postman/newman:6-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run test
+    shell: newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke-without-envs
+  labels:
+    core-tests: workflows
+    tool: postman
+    category: api-testing
+  annotations:
+    testkube.io/icon: postman
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke-without-envs.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      args:
+      - run
+      - postman-executor-smoke-without-envs.postman_collection.json
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke-template
+  labels:
+    core-tests: workflows
+    tool: postman
+    category: api-testing
+  annotations:
+    testkube.io/icon: postman
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run from 
+    workingDir: /data/repo/test/postman
+    template:
+      name: official/postman/v1
+      config:
+        run: "newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke-template-without-envs
+  labels:
+    core-tests: workflows
+    tool: postman
+    category: api-testing
+  annotations:
+    testkube.io/icon: postman
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke-without-envs.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run from 
+    template:
+      name: official/postman/v1
+      config:
+        run: "newman run postman-executor-smoke-without-envs.postman_collection.json"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke-junit
+  labels:
+    core-tests: workflows
+    tool: postman
+    artifacts: "true"
+    junit: "true"
+    category: api-testing
+  annotations:
+    testkube.io/icon: postman
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke.postman_collection.json
+  container:
+    image: postman/newman:6-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run test
+    shell: newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value -r cli,junit --reporter-junit-export /data/artifacts/junit-report.xml
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke-latest-image
+  labels:
+    core-tests: workflows
+    tool: postman
+    category: api-testing
+  annotations:
+    testkube.io/icon: postman
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:alpine
+      args:
+      - run
+      - postman-executor-smoke.postman_collection.json
+      - "--env-var"
+      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+---

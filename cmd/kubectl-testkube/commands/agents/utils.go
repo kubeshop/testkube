@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"os"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/internal/common"
@@ -43,51 +44,17 @@ type internalAgent struct {
 	Registered *cloudclient.Agent
 }
 
-var agentLabelMap = map[string]string{
-	"run":  "Runner",
-	"sync": "GitOps",
-	"agnt": "SuperAgent",
-}
-
-var agentKnownTypeMap = map[string]string{
-	"gitops":     "sync",
-	"runner":     "run",
-	"superagent": "agnt",
-}
-
-func GetInternalAgentType(name string) (string, error) {
-	name = strings.ToLower(name)
-	for k, v := range agentKnownTypeMap {
-		if v == name || k == name {
-			return v, nil
-		}
-	}
-	return name, errors.New("unknown agent type")
-}
-
-func GetCliAgentType(internalType string) (string, error) {
-	internalType = strings.ToLower(internalType)
-	for k, v := range agentKnownTypeMap {
-		if v == internalType || k == internalType {
-			return k, nil
-		}
-	}
-	return internalType, errors.New("unknown agent type")
-}
-
 type internalAgents []internalAgent
 
 func (list internalAgents) Table() (header []string, output [][]string) {
-	header = []string{"Type", "Name", "Version", "Namespace", "Environments", "Labels"}
+	header = []string{"Name", "Version", "Namespace", "Environments", "Labels"}
 	for _, e := range list {
-		agentType := "-"
 		agentVersion := "-"
 		agentName := e.AgentID.Value
 		agentEnvironments := "-"
 		agentLabels := "-"
 		namespace := e.Pod.Namespace
 		if e.Registered != nil {
-			agentType = e.Registered.Type
 			agentName = e.Registered.Name
 			agentVersion = e.Registered.Version
 			agentEnvironments = strings.Join(common.MapSlice(e.Registered.Environments, func(t cloudclient.AgentEnvironment) string {
@@ -102,9 +69,6 @@ func (list internalAgents) Table() (header []string, output [][]string) {
 			}
 			agentLabels = strings.Join(agentLabelsEntries, " ")
 		}
-		if agentLabelMap[agentType] != "" {
-			agentType = agentLabelMap[agentType]
-		}
 		if e.Detected {
 			if e.Ready {
 				namespace = fmt.Sprintf("%s:%s", ui.Green("•"), namespace)
@@ -115,7 +79,6 @@ func (list internalAgents) Table() (header []string, output [][]string) {
 			namespace = e.Registered.Namespace
 		}
 		output = append(output, []string{
-			agentType,
 			agentName,
 			agentVersion,
 			namespace,
@@ -165,24 +128,7 @@ func GetControlPlaneEnvironments(cmd *cobra.Command) (map[string]cloudclient.Env
 	return envsMap, nil
 }
 
-func EnableNewArchitecture(cmd *cobra.Command, env cloudclient.Environment) error {
-	_, _, err := common2.GetClient(cmd)
-	if err != nil {
-		return errors.Wrap(err, "connecting to cloud")
-	}
-	cfg, err := config.Load()
-	if err != nil {
-		return errors.Wrap(err, "loading config")
-	}
-	if cfg.CloudContext.ApiKey == "" {
-		return errors.New("no api key found in config")
-	}
-
-	return common2.EnableNewArchitecture(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, env)
-}
-
-func GetControlPlaneAgents(cmd *cobra.Command, agentType string, includeDeleted bool) ([]cloudclient.Agent, error) {
-	agentType, _ = GetInternalAgentType(agentType)
+func GetControlPlaneAgents(cmd *cobra.Command, includeDeleted bool) ([]cloudclient.Agent, error) {
 	_, _, err := common2.GetClient(cmd)
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to cloud")
@@ -195,7 +141,7 @@ func GetControlPlaneAgents(cmd *cobra.Command, agentType string, includeDeleted 
 		return nil, errors.New("no api key found in config")
 	}
 
-	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, agentType, includeDeleted)
+	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, "run", includeDeleted)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting agents")
 	}
@@ -430,19 +376,15 @@ func CreateHelmOptions(
 		"minio.enabled":   false,
 		"enableK8sEvents": false,
 
-		// Enable GitOps runner
-		"multinamespace.enabled":              true, // TODO: Make its behavior default on next.enabled?
-		"next.enabled":                        true,
-		"next.cloudStorage":                   true,
-		"next.gitops.syncCloudToKubernetes":   false,
-		"next.gitops.syncKubernetesToCloud":   false,
-		"next.gitops.namePatterns.cloud":      false,
-		"next.gitops.namePatterns.kubernetes": false,
-		"next.legacyAgent.enabled":            false,
-		"next.webhooks.enabled":               false,
-		"next.testTriggers.enabled":           false,
-		"next.runner.enabled":                 false,
-		"next.legacyTests.enabled":            false,
+		// Enable runner
+		"multinamespace.enabled":    true, // TODO: Make its behavior default on next.enabled?
+		"next.enabled":              true,
+		"next.cloudStorage":         true,
+		"next.legacyAgent.enabled":  false,
+		"next.webhooks.enabled":     false,
+		"next.testTriggers.enabled": false,
+		"next.runner.enabled":       false,
+		"next.legacyTests.enabled":  false,
 	}
 	maps.Copy(values, additionalValues)
 	if version != "" {
@@ -522,23 +464,12 @@ func CreateCRDsHelmOptions(
 }
 
 func PrintControlPlaneAgent(agent cloudclient.Agent) {
-	agentTypeLabel := agent.Type
-	if agentLabelMap[agentTypeLabel] != "" {
-		agentTypeLabel = agentLabelMap[agentTypeLabel]
-	}
 	agentSecretKey := agent.SecretKey
 	if agent.SecretKey == "" {
 		agentSecretKey = ui.LightGray("<encrypted>")
 	}
 	ui.Warn("ID:            ", agent.ID)
 	ui.Warn("Name:          ", agent.Name)
-	if agent.Type == "run" && agent.Floating {
-		ui.Warn("Type:          ", agentTypeLabel+" (floating)")
-	} else if agent.Type == "run" && !agent.Floating {
-		ui.Warn("Type:          ", agentTypeLabel+" (reserved)")
-	} else {
-		ui.Warn("Type:          ", agentTypeLabel)
-	}
 	ui.Warn("Created:       ", agent.CreatedAt.In(time.Local).Format(time.RFC822Z)+" "+ui.LightGray("("+time.Since(agent.CreatedAt).Truncate(time.Second).String()+")"))
 	if agent.DeletedAt != nil {
 		ui.Warn(ui.Red("Deleted:       "), agent.DeletedAt.In(time.Local).Format(time.RFC822Z)+" "+ui.LightGray("("+time.Since(*agent.DeletedAt).Truncate(time.Second).String()+")"))
@@ -556,7 +487,7 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 	}
 
 	if agent.DeletedAt != nil {
-		fmt.Println("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Agent has been deleted.")) + "\n")
+		fmt.Println("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Runner has been deleted.")) + "\n")
 	}
 
 	ui.Warn("Last Version:  ", agent.Version)
@@ -586,6 +517,98 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 		ui.Warn("Policy:")
 		ui.Warn("   Required Matching Labels:", strings.Join(agent.RunnerPolicy.RequiredMatch, ", "))
 	}
+}
+
+func UiCreateAgent(cmd *cobra.Command, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string, floating bool, enableRunner bool, enableListener bool) *cloudclient.Agent {
+	if name == "" {
+		name = ui.TextInput("agent name")
+		if name == "" {
+			ui.Failf("agent name is required")
+		}
+	}
+
+	// Get existing agent of that name
+	if existing, err := GetControlPlaneAgent(cmd, name); err == nil {
+		ui.Failf("agent '%s' already exists", existing.Name)
+	}
+
+	input := cloudclient.AgentInput{
+		Name:         name,
+		Labels:       common.Ptr(make(map[string]string)),
+		Environments: environmentIds,
+		Floating:     floating,
+		Type:         "run",
+	}
+
+	// Set capabilities based on resolved flags
+	if enableRunner {
+		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityRunner)
+	}
+	if enableListener {
+		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityListener)
+	}
+
+	if runnerGroup != "" {
+		(*input.Labels)["group"] = runnerGroup
+		input.RunnerPolicy = &cloudclient.RunnerPolicy{
+			RequiredMatch: []string{"group"},
+		}
+	} else if !isGlobalRunner {
+		input.RunnerPolicy = &cloudclient.RunnerPolicy{
+			RequiredMatch: []string{"name"},
+		}
+	}
+
+	for _, label := range labelPairs {
+		k, v, _ := strings.Cut(label, "=")
+		(*input.Labels)[k] = v
+	}
+
+	envs, err := GetControlPlaneEnvironments(cmd)
+	ui.ExitOnError("getting environments", err)
+
+	if len(input.Environments) == 0 {
+		cfg, err := config.Load()
+		ui.ExitOnError("loading config", err)
+		envOpts := []string{envs[cfg.CloudContext.EnvironmentId].Slug}
+		for id := range envs {
+			if id != cfg.CloudContext.EnvironmentId {
+				envOpts = append(envOpts, id)
+			}
+		}
+		input.Environments = []string{ui.Select("select environment", envOpts)}
+	}
+
+	for i, envId := range input.Environments {
+		_, ok := envs[envId]
+		if !ok {
+			for _, env := range envs {
+				if env.Slug == envId {
+					input.Environments[i] = env.Id
+					break
+				}
+			}
+		}
+	}
+
+	// Validate if the environments have the next architecture enabled
+	for _, envId := range input.Environments {
+		env, ok := envs[envId]
+		if !ok {
+			ui.Failf("unknown environment: %s", envId)
+		}
+		if !env.NewArchitecture {
+			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture. Please upgrade your control plane.", env.Name, env.Id))
+			os.Exit(1)
+		}
+	}
+
+	agent, err := CreateAgent(cmd, input)
+	ui.ExitOnError("creating agent", err)
+
+	PrintControlPlaneAgent(*agent)
+
+	return agent
 }
 
 func PrintKubernetesAgent(agent internalAgent) {

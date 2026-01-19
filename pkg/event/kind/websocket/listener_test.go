@@ -20,7 +20,7 @@ func TestWebsocketListener(t *testing.T) {
 	}}
 
 	// when
-	result := l.Notify(testkube.NewEventStartTest(testkube.NewQueuedExecution()))
+	result := l.Notify(testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution()))
 
 	// then
 	assert.Equal(t, "", result.Error_)

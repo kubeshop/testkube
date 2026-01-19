@@ -1,0 +1,35 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--k6--v1
+  labels:
+    testkube.io/name: k6
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Load & Performance
+    testkube.io/description: Run k6 tests
+    testkube.io/icon: k6
+    testkube.io/image: grafana/k6
+    testkube.io/example-path: k6.js
+    testkube.io/example: |
+      import http from 'k6/http';
+      import { sleep } from 'k6';
+      export default function () {
+          http.get('https://test.k6.io');
+          sleep(1);
+      };
+spec:
+  config:
+    version:
+      description: k6 version to use
+      type: string
+      default: 0.49.0
+    run:
+      description: Run command
+      type: string
+      default: "k6 run k6.js"
+  steps:
+  - name: Run k6 tests
+    run:
+      image: "grafana/k6:{{ config.version }}"
+      shell: "{{ config.run }}"
