@@ -647,6 +647,7 @@ func (r *ServiceRunner) processNotifications(
 
 		if lastWorkflowResult != nil && lastWorkflowResult.IsFinished() {
 			if !lastWorkflowResult.IsPassed() {
+				execResult.Failed = true
 				r.log("service execution failed")
 			}
 			break
