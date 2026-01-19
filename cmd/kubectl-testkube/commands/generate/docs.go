@@ -21,32 +21,12 @@ title: "%s"
 
 `
 
-const legacyFmTemplate = `---
-title: "%s"
-%s---
-
-import LegacyWarning from "../articles/_legacy-warning.mdx";
-
-<LegacyWarning />
-
-`
-
 var filePrepender = func(filename string) string {
 	name := filepath.Base(filename)
 	base := strings.TrimSuffix(name, path.Ext(name))
 	sidebarPosition := ""
 	if strings.EqualFold(base, "testkube") {
 		sidebarPosition = "sidebar_position: 1\n"
-	}
-
-	// extract command
-	command := strings.TrimPrefix(base, "testkube-")
-
-	// check for legacy commands
-	if strings.Contains(command, "testsuite") || strings.Contains(command, "executor") ||
-		(strings.Contains(command, "test") && !strings.Contains(command, "testworkflow")) ||
-		strings.Contains(command, "-template") || strings.Contains(command, "-execution") {
-		return fmt.Sprintf(legacyFmTemplate, strings.Replace(base, "-", " ", -1), sidebarPosition)
 	}
 
 	return fmt.Sprintf(fmTemplate, strings.Replace(base, "-", " ", -1), sidebarPosition)
