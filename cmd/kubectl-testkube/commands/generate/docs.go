@@ -40,7 +40,7 @@ var filePrepender = func(filename string) string {
 	}
 
 	// extract command
-	command := name[9:]
+	command := strings.TrimPrefix(base, "testkube-")
 
 	// check for legacy commands
 	if strings.Contains(command, "testsuite") || strings.Contains(command, "executor") ||
