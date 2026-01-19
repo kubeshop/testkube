@@ -217,7 +217,7 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 			}
 		}
 
-		execution, err := client.GetTestWorkflowExecution(opts.ExecutionName)
+		execution, _ := client.GetTestWorkflowExecution(opts.ExecutionName)
 
 		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil &&
 			execution.ResolvedWorkflow.Spec.Execution != nil &&
