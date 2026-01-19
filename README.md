@@ -79,6 +79,8 @@ Extensive documentation is available at [docs.testkube.io](https://docs.testkube
 
 ### Contributing
 
+Check out our [Contributors Guide](CONTRIBUTING.md) to find your way around our codebase and process.
+
 Shout-out to our contributors 🎉 - you're great!
 
 - ⭐️ [@lreimer](https://github.com/lreimer) - [K6 executor](https://github.com/kubeshop/testkube-executor-k6) [Gradle executor](https://github.com/kubeshop/testkube-executor-gradle) [Maven executor](https://github.com/kubeshop/testkube-executor-maven)
