@@ -217,20 +217,25 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 			}
 		}
 
-		execution, _ := client.GetTestWorkflowExecution(opts.ExecutionName)
-
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil &&
-			execution.ResolvedWorkflow.Spec.Execution != nil &&
-			execution.ResolvedWorkflow.Spec.Execution.Muted != nil &&
-			*execution.ResolvedWorkflow.Spec.Execution.Muted {
-			// Workflow is muted, activate SilentMode with all fields set to true
-			// This overrides any SilentMode settings from the request (CLI flags)
-			silentMode = &testkube.SilentMode{
-				Webhooks: true,
-				Insights: true,
-				Health:   true,
-				Metrics:  true,
-				Cdevents: true,
+		var workflowName string
+		if len(args) > 0 {
+			workflowName = args[0]
+		}
+		if workflowName != "" {
+			workflow, err := client.GetTestWorkflow(workflowName)
+			if err == nil && workflow.Spec != nil &&
+				workflow.Spec.Execution != nil &&
+				workflow.Spec.Execution.Muted != nil &&
+				*workflow.Spec.Execution.Muted {
+				// Workflow is muted, activate SilentMode with all fields set to true
+				// This overrides any SilentMode settings from the request (CLI flags)
+				silentMode = &testkube.SilentMode{
+					Webhooks: true,
+					Insights: true,
+					Health:   true,
+					Metrics:  true,
+					Cdevents: true,
+				}
 			}
 		}
 
