@@ -25,7 +25,6 @@ type Agent struct {
 	agentImage           string
 	initProcessImage     string
 	toolkitImage         string
-	disableCloudStorage  bool
 	enableCronjobs       bool
 	enableTestTriggers   bool
 	enableK8sControllers bool
@@ -34,14 +33,13 @@ type Agent struct {
 	env                  *client.Environment // Store environment for pod recreation
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks bool, executionNamespace string) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks bool, executionNamespace string) *Agent {
 	return &Agent{
 		pod:                  pod,
 		cloud:                cloud,
 		agentImage:           agentImage,
 		initProcessImage:     initProcessImage,
 		toolkitImage:         toolkitImage,
-		disableCloudStorage:  disableCloudStorage,
 		enableCronjobs:       enableCronjobs,
 		enableTestTriggers:   enableTestTriggers,
 		enableK8sControllers: enableK8sControllers,
@@ -66,7 +64,7 @@ func (r *Agent) generatePodSpec(env *client.Environment) *corev1.Pod {
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
-		{Name: "FEATURE_CLOUD_STORAGE", Value: fmt.Sprintf("%v", !r.disableCloudStorage)},
+		{Name: "FEATURE_CLOUD_STORAGE", Value: "false"},
 	}
 	if !r.enableTestTriggers {
 		envVariables = append(envVariables, corev1.EnvVar{Name: "DISABLE_TEST_TRIGGERS", Value: "true"})
