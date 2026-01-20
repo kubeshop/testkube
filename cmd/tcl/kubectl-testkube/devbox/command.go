@@ -55,7 +55,6 @@ func NewDevBoxCommand() *cobra.Command {
 		runnersCount         uint16
 		gitopsEnabled        bool
 		disableDefaultAgent  bool
-		disableCloudStorage  bool
 		enableTestTriggers   bool
 		enableCronjobs       bool
 		enableK8sControllers bool
@@ -153,7 +152,7 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin, executionNamespace)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, executionNamespace)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, executionNamespace)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -199,7 +198,7 @@ func NewDevBoxCommand() *cobra.Command {
 			// Create environment in the Cloud
 			if !oss {
 				fmt.Println("Creating environment in Cloud...")
-				env, err = cloud.CreateEnvironment(namespace.Name(), disableCloudStorage)
+				env, err = cloud.CreateEnvironment(namespace.Name())
 				if err != nil {
 					fail(errors.Wrap(err, "failed to create Cloud environment"))
 				}
@@ -882,7 +881,6 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "where runners should execute test workflows")
 	cmd.Flags().Uint16Var(&runnersCount, "runners", 0, "additional runners count")
 	cmd.Flags().BoolVar(&disableDefaultAgent, "disable-agent", false, "should disable default agent")
-	cmd.Flags().BoolVar(&disableCloudStorage, "disable-cloud-storage", false, "should disable storage in Cloud")
 	cmd.Flags().BoolVar(&enableTestTriggers, "enable-test-triggers", false, "should enable Test Triggers (remember to install CRDs)")
 	cmd.Flags().BoolVar(&enableCronjobs, "enable-cronjobs", false, "should enable cron resolution of Test Workflows")
 	cmd.Flags().BoolVar(&enableWebhooks, "enable-webhooks", false, "should enable webhooks")
