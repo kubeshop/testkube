@@ -10059,6 +10059,21 @@ components:
           description: plain text SSH private key to fetch with
         sshKeyFrom:
           $ref: "#/components/schemas/EnvVarSource"
+        caCert:
+          type: string
+          description: plain text CA certificate to verify repository TLS connection
+        caCertFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        clientCert:
+          type: string
+          description: plain text client certificate to verify client (testkube) TLS connection
+        clientCertFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        clientKey:
+          type: string
+          description: plain text client key to verify client (testkube) TLS connection
+        clientKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
         authType:
           $ref: "#/components/schemas/ContentGitAuthType"
         mountPath:

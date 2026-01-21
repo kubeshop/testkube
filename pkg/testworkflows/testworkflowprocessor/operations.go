@@ -207,6 +207,30 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		args = append(args, "-t", step.Content.Git.Token)
 	}
 
+	// Provide CA cert
+	if step.Content.Git.CaCertFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_GIT_CA_CERT", ValueFrom: step.Content.Git.CaCertFrom})
+		args = append(args, "-c", "{{env.TK_GIT_CA_CERT}}")
+	} else if step.Content.Git.CaCert != "" {
+		args = append(args, "-c", step.Content.Git.CaCert)
+	}
+
+	// Provide Client cert
+	if step.Content.Git.ClientCertFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_GIT_CLIENT_CERT", ValueFrom: step.Content.Git.ClientCertFrom})
+		args = append(args, "-e", "{{env.TK_GIT_CLIENT_CERT}}")
+	} else if step.Content.Git.ClientCert != "" {
+		args = append(args, "-e", step.Content.Git.ClientCert)
+	}
+
+	// Provide Client key
+	if step.Content.Git.ClientKeyFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_GIT_CLIENT_KEY", ValueFrom: step.Content.Git.ClientKeyFrom})
+		args = append(args, "-k", "{{env.TK_GIT_CLIENT_KEY}}")
+	} else if step.Content.Git.ClientKey != "" {
+		args = append(args, "-k", step.Content.Git.ClientKey)
+	}
+
 	// Provide SSH key
 	if step.Content.Git.SshKeyFrom != nil {
 		container.AppendEnv(corev1.EnvVar{Name: "TK_SSH_KEY", ValueFrom: step.Content.Git.SshKeyFrom})
