@@ -30,3 +30,10 @@ spec:
       - name: special-cases-no-initial-output
       - name: special-cases-artifact-double-asterisk
       - name: special-cases-execution-tags
+  - name: Execute .dev-specific workflows
+    condition: 'environment.id == "tkcenv_03e3ff499f13ccba"' # execute only at .dev environment
+    execute:
+      parallelism: 2
+      workflows:
+      - name: special-cases-dev-credentials-private-git-repository
+      - name: special-cases-dev-credentials
