@@ -80,7 +80,10 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 			return nil, err
 		}
 		if stage != nil {
-			if step.Condition != "" {
+			// Only override the condition if the step has a condition and the stage
+			// doesn't have "always" condition. Operations like ProcessArtifacts set
+			// "always" to ensure they run regardless of the step's condition.
+			if step.Condition != "" && stage.Condition() != "always" {
 				stage.SetCondition(step.Condition)
 			}
 			self.Add(stage)
