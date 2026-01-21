@@ -116,6 +116,9 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 
 func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	if cfg.StorageUseVirtualHostedStyle {
+		opts = append(opts, minio.VirtualHostedStyle())
+	}
 	minioClient := minio.NewClient(
 		cfg.StorageEndpoint,
 		cfg.StorageAccessKeyID,

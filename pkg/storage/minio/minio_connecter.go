@@ -71,18 +71,29 @@ func ClientCert(certFile, keyFile string) Option {
 	}
 }
 
+// VirtualHostedStyle is an Option to enable virtual-hosted-style URLs for S3-compatible storage.
+// When enabled, the bucket name is part of the hostname (e.g., bucket.endpoint.com)
+// instead of being in the path (e.g., endpoint.com/bucket).
+func VirtualHostedStyle() Option {
+	return func(o *Connecter) error {
+		o.UseVirtualHostedStyle = true
+		return nil
+	}
+}
+
 type Connecter struct {
-	Endpoint        string
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Token           string
-	Bucket          string
-	Ssl             bool
-	TlsConfig       *tls.Config
-	Opts            []Option
-	Log             *zap.SugaredLogger
-	client          *minio.Client
+	Endpoint               string
+	AccessKeyID            string
+	SecretAccessKey        string
+	Region                 string
+	Token                  string
+	Bucket                 string
+	Ssl                    bool
+	UseVirtualHostedStyle  bool
+	TlsConfig              *tls.Config
+	Opts                   []Option
+	Log                    *zap.SugaredLogger
+	client                 *minio.Client
 }
 
 // NewConnecter creates a new Connecter
@@ -118,7 +129,8 @@ func (c *Connecter) GetClient() (*minio.Client, error) {
 		"region", c.Region,
 		"token", c.Token,
 		"bucket", c.Bucket,
-		"ssl", c.Ssl)
+		"ssl", c.Ssl,
+		"useVirtualHostedStyle", c.UseVirtualHostedStyle)
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.AccessKeyID, c.SecretAccessKey, c.Token)
 	}
@@ -135,6 +147,12 @@ func (c *Connecter) GetClient() (*minio.Client, error) {
 	}
 	if c.Region != "" {
 		opts.Region = c.Region
+	}
+	// Set BucketLookup based on UseVirtualHostedStyle flag
+	if c.UseVirtualHostedStyle {
+		opts.BucketLookup = minio.BucketLookupDNS
+	} else {
+		opts.BucketLookup = minio.BucketLookupPath
 	}
 	mclient, err := minio.New(c.Endpoint, opts)
 	if err != nil {
