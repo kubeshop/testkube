@@ -163,18 +163,18 @@ func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *
 	return e
 }
 
-// IsMuted checks if the workflow has muted set to true in its execution schema
-func (e *IntermediateExecution) IsMuted() bool {
+// IsSilent checks if the workflow has silent set to true in its execution schema
+func (e *IntermediateExecution) IsSilent() bool {
 	if e.cr == nil {
 		return false
 	}
 	if e.cr.Spec.Execution == nil {
 		return false
 	}
-	if e.cr.Spec.Execution.Muted == nil {
+	if e.cr.Spec.Execution.Silent == nil {
 		return false
 	}
-	return *e.cr.Spec.Execution.Muted
+	return *e.cr.Spec.Execution.Silent
 }
 
 func (e *IntermediateExecution) SetRunningContext(runningContext *testkube.TestWorkflowRunningContext) *IntermediateExecution {

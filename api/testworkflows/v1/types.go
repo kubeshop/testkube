@@ -246,7 +246,6 @@ type TestWorkflowExecutionSchema struct {
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
 
-	// Muted indicates that all executions should be silent by default.
 	// When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
-	Muted *bool `json:"muted,omitempty" expr:"template"`
+	Silent *bool `json:"silent,omitempty" expr:"template"`
 }

@@ -420,9 +420,8 @@ func MergeExecution(dst, include *testworkflowsv1.TestWorkflowExecutionSchema) *
 	}
 
 	dst.Tags = MergeTags(dst.Tags, include.Tags)
-	// Muted field: if include has muted set, use it; otherwise keep dst value
-	if include.Muted != nil {
-		dst.Muted = include.Muted
+	if include.Silent != nil {
+		dst.Silent = include.Silent
 	}
 	return dst
 }

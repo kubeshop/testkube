@@ -204,13 +204,7 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 
 		var silentMode *testkube.SilentMode
 		if opts.Silent {
-			silentMode = &testkube.SilentMode{
-				Webhooks: true,
-				Insights: true,
-				Health:   true,
-				Metrics:  true,
-				Cdevents: true,
-			}
+			silentMode = testworkflows.NewSilenceAllSilentMode()
 		} else if opts.DisableWebhooks {
 			silentMode = &testkube.SilentMode{
 				Webhooks: true,
@@ -223,19 +217,15 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 		}
 		if workflowName != "" {
 			workflow, err := client.GetTestWorkflow(workflowName)
-			if err == nil && workflow.Spec != nil &&
-				workflow.Spec.Execution != nil &&
-				workflow.Spec.Execution.Muted != nil &&
-				*workflow.Spec.Execution.Muted {
-				// Workflow is muted, activate SilentMode with all fields set to true
-				// This overrides any SilentMode settings from the request (CLI flags)
-				silentMode = &testkube.SilentMode{
-					Webhooks: true,
-					Insights: true,
-					Health:   true,
-					Metrics:  true,
-					Cdevents: true,
-				}
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Failed to find workflow by name",
+					"Check if workflow name is valid.",
+					err,
+				))
+			} else if testworkflows.IsWorkflowSilent(&workflow) {
+				silentMode = testworkflows.NewSilenceAllSilentMode()
 			}
 		}
 

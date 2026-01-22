@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -204,7 +205,6 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 		SetKubernetesObjectName(req.KubernetesObjectName).
 		SetRunningContext(testworkflowexecutor.GetLegacyRunningContext(req))
 
-	// Apply SilentMode from request if provided (e.g., from CLI --silent flag)
 	if req.SilentMode != nil {
 		executionBase.SetSilentMode(&testkube.SilentMode{
 			Webhooks: req.SilentMode.Webhooks,
@@ -283,18 +283,9 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			}
 		}
 
-		// Apply muted flag from workflow spec to SilentMode
-		// Check if workflow has muted set to true, and if so, set SilentMode with all fields to true
-		// This must be checked after the workflow is set and templates are applied (so expressions are resolved)
-		// If workflow is muted, it overrides any SilentMode settings from the request (CLI flags)
-		if current.IsMuted() {
-			current.SetSilentMode(&testkube.SilentMode{
-				Webhooks: true,
-				Insights: true,
-				Health:   true,
-				Metrics:  true,
-				Cdevents: true,
-			})
+		// Apply silent flag from workflow spec to SilentMode
+		if current.IsSilent() {
+			current.SetSilentMode(testworkflows.NewSilenceAllSilentMode())
 		}
 	}
 

@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
+	testworkflowutils "github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -356,23 +357,11 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 			"variableCount", len(runtime.EnvVars))
 	}
 
-	// Check if workflow is muted and ensure SilentMode is activated
-	// This check happens when executing the workflow to ensure the muted flag from the workflow definition
-	// is always respected, regardless of how the execution was started
-	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil &&
-		execution.ResolvedWorkflow.Spec.Execution != nil &&
-		execution.ResolvedWorkflow.Spec.Execution.Muted != nil &&
-		*execution.ResolvedWorkflow.Spec.Execution.Muted {
-		// Workflow is muted, activate SilentMode with all fields set to true
+	// Check if workflow is silent and ensure SilentMode is activated
+	if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
 		// This overrides any SilentMode settings from the request (CLI flags)
-		execution.SilentMode = &testkube.SilentMode{
-			Webhooks: true,
-			Insights: true,
-			Health:   true,
-			Metrics:  true,
-			Cdevents: true,
-		}
-		logger.Debugw("Workflow is muted, activated SilentMode for execution",
+		execution.SilentMode = testworkflowutils.NewSilenceAllSilentMode()
+		logger.Debugw("Workflow is silent, activated SilentMode for execution",
 			"executionId", executionId)
 	}
 

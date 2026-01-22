@@ -10530,7 +10530,7 @@ components:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
           $ref: "#/components/schemas/ExecutionTarget"
-        muted:
+        silent:
           type: boolean
           description: indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
           default: false

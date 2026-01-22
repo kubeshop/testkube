@@ -13,6 +13,5 @@ package testkube
 type TestWorkflowExecutionSchema struct {
 	Tags   map[string]string `json:"tags,omitempty"`
 	Target *ExecutionTarget  `json:"target,omitempty"`
-	Muted  *bool             `json:"muted,omitempty"`
+	Silent *bool             `json:"silent,omitempty"`
 }
-

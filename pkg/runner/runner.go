@@ -486,19 +486,6 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 		}
 	}
 
-	// Check if workflow is muted and ensure SilentMode is activated
-	// This check happens when executing the workflow to ensure the muted flag from the workflow definition
-	// is always respected, regardless of how the execution was started
-	if request.Workflow.Spec.Execution != nil &&
-		request.Workflow.Spec.Execution.Muted != nil &&
-		*request.Workflow.Spec.Execution.Muted {
-		// Workflow is muted, but we can't update the execution here as it's already persisted
-		// The check in the agent's directRunTestWorkflow should have already set SilentMode
-		// This is a safety check to ensure the workflow definition is respected
-		log.DefaultLogger.Debugw("Workflow is muted, SilentMode should be activated",
-			"executionId", request.Execution.Id)
-	}
-
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		go func() {

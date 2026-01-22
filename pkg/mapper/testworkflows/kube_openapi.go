@@ -1370,7 +1370,7 @@ func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowExecutionSc
 	return testkube.TestWorkflowExecutionSchema{
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
-		Muted:  v.Muted,
+		Silent: v.Silent,
 	}
 }
 
