@@ -10,3 +10,4 @@ config
 choco
 test
 skaffold.yaml
+js/
