@@ -105,6 +105,9 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
+	if selector == nil {
+		return testsv1.TestTriggerSelector{}
+	}
 	return testsv1.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
