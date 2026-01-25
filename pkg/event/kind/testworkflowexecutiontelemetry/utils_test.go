@@ -4,14 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 )
 
 func Test_apiTCL_getClusterID(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Get Cluster ID", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -25,7 +24,6 @@ func Test_apiTCL_getClusterID(t *testing.T) {
 }
 
 func Test_GetImage(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Get Image from empty container", func(t *testing.T) {
 		if got := GetImage(nil); got != "" {

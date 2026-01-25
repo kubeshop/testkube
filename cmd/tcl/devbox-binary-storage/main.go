@@ -76,7 +76,8 @@ func main() {
 			return
 		}
 		localPath := filepath.Join(storagePath, filePath)
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			getLock(filePath).RLock()
 			defer getLock(filePath).RUnlock()
 
@@ -95,7 +96,7 @@ func main() {
 			w.WriteHeader(http.StatusOK)
 			io.Copy(w, file)
 			return
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			getLock(filePath).Lock()
 			defer getLock(filePath).Unlock()
 
@@ -141,7 +142,7 @@ func main() {
 			fmt.Println("saved file", filePath, humanize.Bytes(uint64(len(body))))
 			w.WriteHeader(http.StatusOK)
 			return
-		} else if r.Method == http.MethodPatch {
+		case http.MethodPatch:
 			getLock(filePath).Lock()
 			defer getLock(filePath).Unlock()
 

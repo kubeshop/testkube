@@ -36,7 +36,7 @@ func Slug(s string) string {
 		buf = buf[:i]
 	}
 
-	return strings.Replace(string(buf), "ł", "l", -1)
+	return strings.ReplaceAll(string(buf), "ł", "l")
 }
 
 var eventNameFilter = regexp.MustCompile("[^a-zA-Z0-9]+")

@@ -1,3 +1,4 @@
+//nolint:staticcheck
 package controlplaneclient
 
 import (
@@ -6,16 +7,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 type ExecutionClient interface {
@@ -29,9 +28,6 @@ type ExecutionClient interface {
 }
 
 func (c *client) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
-	if c.IsLegacy() {
-		return c.legacyGetExecution(ctx, environmentId, executionId)
-	}
 	req := &cloud.GetExecutionRequest{Id: executionId}
 	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.GetExecution, req)
 	if err != nil {
@@ -45,33 +41,8 @@ func (c *client) GetExecution(ctx context.Context, environmentId, executionId st
 	return &execution, nil
 }
 
-// Deprecated
-func (c *client) legacyGetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionGetRequest{ID: executionId})
-	if err != nil {
-		return nil, err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return nil, err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionGet),
-		Payload: &s,
-	}
-	cmdResponse, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
-	if err != nil {
-		return nil, err
-	}
-	var response cloudtestworkflow.ExecutionGetResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	return &response.WorkflowExecution, err
-}
-
 func (c *client) SaveExecutionLogsGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName string) (string, error) {
-	if c.IsLegacy() {
-		return c.legacySaveExecutionLogsGetPresignedURL(ctx, environmentId, executionId, legacyWorkflowName)
-	}
+	log.DefaultLogger.Debugw("grpc.SaveExecutionLogsGetPresignedURL", "id", executionId)
 	req := &cloud.SaveExecutionLogsPresignedRequest{Id: executionId}
 	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.SaveExecutionLogsPresigned, req)
 	if err != nil {
@@ -80,33 +51,8 @@ func (c *client) SaveExecutionLogsGetPresignedURL(ctx context.Context, environme
 	return res.Url, nil
 }
 
-// Deprecated
-func (c *client) legacySaveExecutionLogsGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName string) (string, error) {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.OutputPresignSaveLogRequest{
-		ID:           executionId,
-		WorkflowName: legacyWorkflowName,
-	})
-	if err != nil {
-		return "", err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return "", err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowOutputPresignSaveLog),
-		Payload: &s,
-	}
-	cmdResponse, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
-	if err != nil {
-		return "", err
-	}
-	var response cloudtestworkflow.OutputPresignSaveLogResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	return response.URL, err
-}
-
 func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, executionId, legacyWorkflowName string, reader io.Reader) error {
+	log.DefaultLogger.Debugw("grpc.SaveExecutionLogs", "id", executionId)
 	// TODO: consider how to choose the temp dir
 	buffer, err := bufferedstream.NewBufferedStream("", "log", reader)
 	if err != nil {
@@ -148,9 +94,6 @@ func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, execution
 
 // TODO: Create AppendExecutionOutput (and maybe ResetExecutionOutput?) instead
 func (c *client) UpdateExecutionOutput(ctx context.Context, environmentId, executionId string, output []testkube.TestWorkflowOutput) error {
-	if c.IsLegacy() {
-		return c.legacyUpdateExecutionOutput(ctx, environmentId, executionId, output)
-	}
 	req := &cloud.UpdateExecutionOutputRequest{
 		Id: executionId,
 		Output: common.MapSlice(output, func(t testkube.TestWorkflowOutput) *cloud.ExecutionOutput {
@@ -163,9 +106,7 @@ func (c *client) UpdateExecutionOutput(ctx context.Context, environmentId, execu
 }
 
 func (c *client) UpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error {
-	if c.IsLegacy() {
-		return c.legacyUpdateExecutionResult(ctx, environmentId, executionId, result)
-	}
+	log.DefaultLogger.Debugw("grpc.UpdateExecutionResult", "id", executionId, "result", result.Status)
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
 		return err
@@ -178,31 +119,8 @@ func (c *client) UpdateExecutionResult(ctx context.Context, environmentId, execu
 	return err
 }
 
-// Deprecated
-func (c *client) legacyUpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateResultRequest{
-		ID:     executionId,
-		Result: result,
-	})
-	if err != nil {
-		return err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionUpdateResult),
-		Payload: &s,
-	}
-	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
-	return err
-}
-
 func (c *client) FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error {
-	if c.IsLegacy() {
-		return c.legacyUpdateExecutionResult(ctx, environmentId, executionId, result)
-	}
+	log.DefaultLogger.Debugw("grpc.FinishExecutionResult", "id", executionId)
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
 		return err
@@ -216,9 +134,7 @@ func (c *client) FinishExecutionResult(ctx context.Context, environmentId, execu
 }
 
 func (c *client) InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error {
-	if c.IsLegacy() {
-		return c.legacyInitExecution(ctx, environmentId, executionId, signature, namespace)
-	}
+	log.DefaultLogger.Debugw("grpc.InitExecution", "id", executionId)
 
 	signatureBytes, err := json.Marshal(signature)
 	if err != nil {
@@ -230,54 +146,5 @@ func (c *client) InitExecution(ctx context.Context, environmentId, executionId s
 		Signature: signatureBytes,
 	}
 	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.InitExecution, req)
-	return err
-}
-
-// Deprecated
-func (c *client) legacyInitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error {
-	execution, err := c.GetExecution(ctx, environmentId, executionId)
-	if err != nil {
-		return err
-	}
-	execution.RunnerId = c.proContext.Agent.ID
-	execution.Namespace = namespace
-	execution.Signature = signature
-	execution.AssignedAt = time.Now()
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateRequest{
-		WorkflowExecution: *execution,
-	})
-	if err != nil {
-		return err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionUpdate),
-		Payload: &s,
-	}
-	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
-	return err
-}
-
-// Deprecated
-func (c *client) legacyUpdateExecutionOutput(ctx context.Context, environmentId, executionId string, output []testkube.TestWorkflowOutput) error {
-	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateOutputRequest{
-		ID:     executionId,
-		Output: output,
-	})
-	if err != nil {
-		return err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionUpdateOutput),
-		Payload: &s,
-	}
-	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
 	return err
 }

@@ -57,12 +57,6 @@ func (c *Config) HasChannelsDefined() bool {
 func (c *Config) NeedsSending(event *testkube.Event) ([]string, bool) {
 	channels := []string{}
 	var labels map[string]string
-	if event.TestExecution != nil {
-		labels = event.TestExecution.Labels
-	}
-	if event.TestSuiteExecution != nil {
-		labels = event.TestSuiteExecution.Labels
-	}
 	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil {
 		labels = event.TestWorkflowExecution.Workflow.Labels
 	}

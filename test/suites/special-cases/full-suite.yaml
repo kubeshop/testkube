@@ -1,0 +1,30 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-suite-full-smoke
+  labels:
+    core-tests: workflows-suite
+    type: suite
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: artillery-workflow-suite
+      - name: cypress-workflow-suite
+      - name: curl-workflow-suite
+      - name: gradle-workflow-suite
+      - name: jmeter-workflow-suite
+      - name: junit-workflow-suite
+      - name: k6-workflow-suite
+      - name: locust-workflow-suite
+      - name: maven-workflow-suite
+      - name: nunit-workflow-suite
+      - name: pact-workflow-suite
+      - name: playwright-workflow-suite
+      - name: postman-workflow-suite
+      - name: pytest-workflow-suite
+      - name: robotframework-workflow-suite
+      - name: selenium-workflow-suite
+      - name: soapui-workflow-suite
+      - name: xunit-workflow-suite

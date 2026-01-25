@@ -3,7 +3,7 @@ package testtriggers
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -45,6 +45,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		Name:              crd.Name,
 		Namespace:         crd.Namespace,
 		Labels:            crd.Labels,
+		Selector:          mapLabelSelectorFromCRD(crd.Spec.Selector),
 		Resource:          resource,
 		ResourceSelector:  mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:             string(crd.Spec.Event),
@@ -60,20 +61,19 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 }
 
 func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
-	var labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector
-	if selector.LabelSelector != nil {
-		labelSelector = mapLabelSelectorFromCRD(selector.LabelSelector)
-	}
 	return &testkube.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
 		Namespace:      selector.Namespace,
 		NamespaceRegex: selector.NamespaceRegex,
-		LabelSelector:  labelSelector,
+		LabelSelector:  mapLabelSelectorFromCRD(selector.LabelSelector),
 	}
 }
 
 func mapLabelSelectorFromCRD(labelSelector *v1.LabelSelector) *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector {
+	if labelSelector == nil {
+		return nil
+	}
 	var matchExpressions []testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement
 	for _, e := range labelSelector.MatchExpressions {
 		expression := testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement{
@@ -149,6 +149,8 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		Name:              request.Name,
 		Namespace:         request.Namespace,
 		Labels:            request.Labels,
+		Annotations:       request.Annotations,
+		Selector:          mapLabelSelectorFromCRD(request.Spec.Selector),
 		Resource:          resource,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:             string(request.Spec.Event),

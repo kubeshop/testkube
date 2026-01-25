@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	testkubev1 "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
@@ -18,7 +18,7 @@ import (
 )
 
 type TestWorkflowExecutor interface {
-	Execute(ctx context.Context, namespace string, request *cloud.ScheduleRequest) testworkflowexecutor.TestWorkflowExecutionStream
+	Execute(ctx context.Context, request *cloud.ScheduleRequest) ([]testkubev1.TestWorkflowExecution, error)
 }
 
 func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkflowExecutor) error {
@@ -83,7 +83,7 @@ func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecut
 		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: twe.Spec.TestWorkflow.Name}
 		scheduleExecution.Config = testworkflows.MapConfigValueKubeToAPI(twe.Spec.ExecutionRequest.Config)
 
-		executions := exec.Execute(ctx, "", &cloud.ScheduleRequest{
+		_, err = exec.Execute(ctx, &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      twe.Spec.ExecutionRequest.DisableWebhooks,
 			Tags:                 twe.Spec.ExecutionRequest.Tags,
@@ -92,8 +92,8 @@ func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecut
 			User:                 user,
 		})
 
-		if executions.Error() != nil {
-			return ctrl.Result{}, fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, executions.Error())
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, err)
 		}
 
 		log := ctrl.LoggerFrom(ctx)

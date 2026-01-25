@@ -3,9 +3,11 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +16,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 )
 
@@ -34,19 +36,46 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if t.Spec.Disabled {
 			continue
 		}
-		if s.deprecatedSystem == nil && (t.Spec.Execution == ExecutionTest || t.Spec.Execution == ExecutionTestSuite) {
+		if t.Spec.Execution != ExecutionTestWorkflow && t.Spec.Execution != "" {
 			continue
 		}
 
-		if t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
+		// To keep things backward compatible, but also enable the use of
+		// selector and resourceSelector individually so that we can transition to
+		// eventually deprecating the resourceSelector the logic below toggles
+		// the matching based on which selectors are specified in the resource.
+		selectorSpecified := t.Spec.Selector != nil &&
+			(len(t.Spec.Selector.MatchLabels) > 0 || len(t.Spec.Selector.MatchExpressions) > 0)
+		resourceSelectorSpecified := (t.Spec.ResourceSelector.LabelSelector != nil &&
+			(len(t.Spec.ResourceSelector.LabelSelector.MatchLabels) > 0 ||
+				len(t.Spec.ResourceSelector.LabelSelector.MatchExpressions) > 0)) ||
+			strings.TrimSpace(t.Spec.ResourceSelector.Name) != "" ||
+			strings.TrimSpace(t.Spec.ResourceSelector.NameRegex) != "" ||
+			strings.TrimSpace(t.Spec.ResourceSelector.Namespace) != "" ||
+			strings.TrimSpace(t.Spec.ResourceSelector.NamespaceRegex) != ""
+		selectorMatched := matchSelector(t.Spec.Selector, e, s.logger)
+		resourceSelectorMatched := matchResourceSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger)
+
+		if !selectorSpecified && t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
 			continue
 		}
+
+		if (selectorSpecified || !resourceSelectorSpecified) && !selectorMatched {
+			continue
+		}
+
+		if (resourceSelectorSpecified || !selectorSpecified) && !resourceSelectorMatched {
+			continue
+		}
+
+		if (selectorSpecified && resourceSelectorSpecified) && (!selectorMatched || !resourceSelectorMatched) {
+			continue
+		}
+
 		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
-		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {
-			continue
-		}
+
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
 			matched, err := s.matchConditions(ctx, e, t, s.logger)
@@ -120,18 +149,68 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 	return false
 }
 
-func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
-	if selector.LabelSelector != nil && len(event.labels) > 0 {
+func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.SugaredLogger) bool {
+	if selector == nil {
+		return true
+	}
+
+	normalizedSelector := selector.DeepCopy()
+	mergedLabels := make(map[string]string)
+	maps.Copy(mergedLabels, event.resourceLabels)
+	maps.Copy(mergedLabels, event.EventLabels)
+	normalizeResourceKindSelector(normalizedSelector, mergedLabels)
+
+	k8sSelector, err := v1.LabelSelectorAsSelector(normalizedSelector)
+	if err != nil {
+		logger.Errorf("error creating k8s selector from label selector: %v", err)
+		return false
+	}
+	labelsSet := labels.Set(mergedLabels)
+	_, err = labelsSet.AsValidatedSelector()
+	if err != nil {
+		logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.Namespace, event.name, err)
+		return false
+	}
+	return k8sSelector.Matches(labelsSet)
+}
+
+func normalizeResourceKindSelector(selector *v1.LabelSelector, labels map[string]string) {
+	if selector == nil {
+		return
+	}
+
+	if selector.MatchLabels != nil {
+		if value, ok := selector.MatchLabels[eventLabelKeyResourceKind]; ok {
+			selector.MatchLabels[eventLabelKeyResourceKind] = strings.ToLower(value)
+		}
+	}
+
+	for i := range selector.MatchExpressions {
+		if selector.MatchExpressions[i].Key != eventLabelKeyResourceKind {
+			continue
+		}
+		for j := range selector.MatchExpressions[i].Values {
+			selector.MatchExpressions[i].Values[j] = strings.ToLower(selector.MatchExpressions[i].Values[j])
+		}
+	}
+
+	if value, ok := labels[eventLabelKeyResourceKind]; ok && value != "" {
+		labels[eventLabelKeyResourceKind] = strings.ToLower(value)
+	}
+}
+
+func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
+	if selector.LabelSelector != nil && len(event.resourceLabels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
 		if err != nil {
 			logger.Errorf("error creating k8s selector from label selector: %v", err)
 			return false
 		}
 
-		resourceLabelSet := labels.Set(event.labels)
+		resourceLabelSet := labels.Set(event.resourceLabels)
 		_, err = resourceLabelSet.AsValidatedSelector()
 		if err != nil {
-			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.namespace, event.name, err)
+			logger.Errorf("%s %s/%s labels are invalid: %v", event.resource, event.Namespace, event.name, err)
 			return false
 		}
 
@@ -154,7 +233,7 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 	}
 
 	if selector.Namespace != "" {
-		isSameNamespace = selector.Namespace == event.namespace
+		isSameNamespace = selector.Namespace == event.Namespace
 	}
 
 	if selector.NamespaceRegex != "" {
@@ -164,10 +243,10 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 			return false
 		}
 
-		isSameNamespace = re.MatchString(event.namespace)
+		isSameNamespace = re.MatchString(event.Namespace)
 	}
 
-	isSameTestTriggerNamespace = selector.Namespace == "" && selector.NamespaceRegex == "" && namespace == event.namespace
+	isSameTestTriggerNamespace = selector.Namespace == "" && selector.NamespaceRegex == "" && namespace == event.Namespace
 	return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
 }
 
@@ -186,19 +265,19 @@ outer:
 			logger.Errorf(
 				"trigger service: matcher component: error waiting for conditions to match for trigger %s/%s by event %s on resource %s %s/%s"+
 					" because context got canceled by timeout or exit signal",
-				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
+				t.Namespace, t.Name, e.eventType, e.resource, e.Namespace, e.name,
 			)
 			return false, errors.WithStack(ErrConditionTimeout)
 		default:
 			logger.Debugf(
 				"trigger service: matcher component: running conditions check iteration for %s %s/%s",
-				e.resource, e.namespace, e.name,
+				e.resource, e.Namespace, e.name,
 			)
 			conditions, err := e.conditionsGetter()
 			if err != nil {
 				logger.Errorf(
 					"trigger service: matcher component: error getting conditions for %s %s/%s because of %v",
-					e.resource, e.namespace, e.name, err,
+					e.resource, e.Namespace, e.name, err,
 				)
 				return false, err
 			}
@@ -316,7 +395,7 @@ func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtrigg
 		if err != nil {
 			logger.Errorf(
 				"trigger service: matcher component: error getting addess for %s %s/%s because of %v",
-				e.resource, e.namespace, e.name, err,
+				e.resource, e.Namespace, e.name, err,
 			)
 			return false, err
 		}
@@ -341,13 +420,13 @@ outer:
 			logger.Errorf(
 				"trigger service: matcher component: error waiting for probes to match for trigger %s/%s by event %s on resource %s %s/%s"+
 					" because context got canceled by timeout or exit signal",
-				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
+				t.Namespace, t.Name, e.eventType, e.resource, e.Namespace, e.name,
 			)
 			return false, errors.WithStack(ErrProbeTimeout)
 		default:
 			logger.Debugf(
 				"trigger service: matcher component: running probes check iteration for %s %s/%s",
-				e.resource, e.namespace, e.name,
+				e.resource, e.Namespace, e.name,
 			)
 
 			matched := checkProbes(timeoutCtx, s.httpClient, t.Spec.ProbeSpec.Probes, logger)

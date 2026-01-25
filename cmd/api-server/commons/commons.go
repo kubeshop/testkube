@@ -2,7 +2,7 @@ package commons
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"net"
 	"os"
@@ -12,45 +12,37 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
+	"github.com/pressly/goose/v3"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
-	kubeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
-	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
+	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
-	"github.com/kubeshop/testkube/pkg/cronjob"
+	postgresmigrations "github.com/kubeshop/testkube/pkg/database/postgres/migrations"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
-	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
-	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func ExitOnError(title string, err error) {
@@ -59,8 +51,6 @@ func ExitOnError(title string, err error) {
 		os.Exit(1)
 	}
 }
-
-// General
 
 func GetEnvironmentVariables() map[string]string {
 	list := os.Environ()
@@ -102,16 +92,9 @@ func MustGetConfig() *config.Config {
 	return cfg
 }
 
-func MustGetFeatureFlags() featureflags.FeatureFlags {
-	features, err := featureflags.Get()
-	ExitOnError("error getting application feature flags", err)
-	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
-	return features
-}
-
 func MustFreePort(port int) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	ExitOnError(fmt.Sprintf("Checking if port %d is free", port), err)
+	ExitOnError(fmt.Sprintf("checking if port %d is free", port), err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 }
@@ -121,7 +104,7 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 		name = fmt.Sprintf("testkube-api-server-config-%s", namespace)
 	}
 	configMapConfig, err := configRepo.NewConfigMapConfig(name, namespace)
-	ExitOnError("Getting config map config", err)
+	ExitOnError("getting config map config", err)
 
 	// Load the initial data
 	err = configMapConfig.Load(ctx, defaultTelemetryEnabled)
@@ -152,7 +135,7 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 
 func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 	migrationsCollectionName := "__migrations"
-	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(mongomigrations.MongoMigrationsFs)
 	if err != nil {
 		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
 	}
@@ -162,9 +145,9 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 		return errors.Wrap(err, "failed to plan MongoDB migrations")
 	}
 	if plan.Total == 0 {
-		log.DefaultLogger.Info("No MongoDB migrations to apply.")
+		log.DefaultLogger.Info("no MongoDB migrations to apply.")
 	} else {
-		log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+		log.DefaultLogger.Info(fmt.Sprintf("applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
 	}
 	err = dbMigrator.Apply(ctx)
 	return errors.Wrap(err, "failed to apply MongoDB migrations")
@@ -173,7 +156,7 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 func MustGetMongoDatabase(ctx context.Context, cfg *config.Config, secretClient secret.Interface, migrate bool) *mongo.Database {
 	mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
-	ExitOnError("Getting mongo database", err)
+	ExitOnError("getting mongo database", err)
 	if migrate {
 		if err = runMongoMigrations(ctx, db); err != nil {
 			log.DefaultLogger.Warnf("failed to apply MongoDB migrations: %v", err)
@@ -197,20 +180,20 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 	var keyFile, caFile, pass string
 	var ok bool
 	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
 	}
 	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
 	}
 	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
-	ExitOnError("Could not place mongodb certificate key file", err)
+	ExitOnError("could not place mongodb certificate key file", err)
 
 	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
-	ExitOnError("Could not place mongodb ssl ca file: %s", err)
+	ExitOnError("could not place mongodb ssl ca file: %s", err)
 
 	return &storage.MongoSSLConfig{
 		SSLClientCertificateKeyFile:         clientCertPath,
@@ -219,102 +202,62 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 	}
 }
 
-// Actions
+func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
+	// Connect to PostgreSQL
+	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	ExitOnError("Getting Postgres database", err)
 
-func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, images kubeexecutor.Images, err error) {
-	rawExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeDefaultExecutors,
-		cfg.TestkubeConfigDir,
-		"executors.json",
-		"executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
-		return nil, images, err
-	}
-
-	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeEnabledExecutors,
-		cfg.TestkubeConfigDir,
-		"enabledExecutors",
-		"enabled executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	// Load internal images
-	next := make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if executors[i].Name == "logs-sidecar" {
-			images.LogSidecar = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "init-executor" {
-			images.Init = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "scraper-executor" {
-			images.Scraper = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Executor == nil {
-			continue
-		}
-		next = append(next, executors[i])
-	}
-	executors = next
-
-	// When there is no executors selected, enable all
-	if enabledExecutors == "" {
-		return executors, images, nil
-	}
-
-	// Filter enabled executors
-	specifiedExecutors := make(map[string]struct{})
-	for _, executor := range strings.Split(enabledExecutors, ",") {
-		if strings.TrimSpace(executor) == "" {
-			continue
-		}
-		specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
-	}
-
-	next = make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if _, ok := specifiedExecutors[executors[i].Name]; ok {
-			next = append(next, executors[i])
+	if migrate {
+		db := stdlib.OpenDBFromPool(pool)
+		if err := runPostgresMigrations(ctx, db); err != nil {
+			log.DefaultLogger.Warnf("failed to apply Postgres migrations: %v", err)
 		}
 	}
 
-	return next, images, nil
+	return pool
 }
 
-func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, postgresmigrations.Fs)
+	if err != nil {
+		return errors.Wrap(err, "failed to plan Postgres migrations")
+	}
+
+	results, err := provider.Up(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to apply Postgres migrations")
+	}
+
+	if len(results) == 0 {
+		log.DefaultLogger.Info("No Postgres migrations to apply.")
+	} else {
+		log.DefaultLogger.Info(fmt.Sprintf("Applied Postgres migrations with results %v", results))
+	}
+
+	return nil
+}
+
+func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
-		APIKey:                              cfg.ControlPlaneConfig.TestkubeProAPIKey,
-		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
-		TLSInsecure:                         cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
-		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
-		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
-		EnvSlug:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
-		EnvName:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
-		OrgID:                               cfg.ControlPlaneConfig.TestkubeProOrgID,
-		OrgSlug:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
-		OrgName:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
-		ConnectionTimeout:                   cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
+		APIKey:                              cfg.TestkubeProAPIKey,
+		URL:                                 cfg.TestkubeProURL,
+		TLSInsecure:                         cfg.TestkubeProTLSInsecure,
+		SkipVerify:                          cfg.TestkubeProSkipVerify,
+		EnvID:                               cfg.TestkubeProEnvID,
+		EnvSlug:                             cfg.TestkubeProEnvID,
+		EnvName:                             cfg.TestkubeProEnvID,
+		OrgID:                               cfg.TestkubeProOrgID,
+		OrgSlug:                             cfg.TestkubeProOrgID,
+		OrgName:                             cfg.TestkubeProOrgID,
+		ConnectionTimeout:                   cfg.TestkubeProConnectionTimeout,
 		WorkerCount:                         cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
 		DashboardURI:                        cfg.TestkubeDashboardURI,
-		NewArchitecture:                     grpcClient == nil,
-		CloudStorage:                        grpcClient == nil,
-		CloudStorageSupportedInControlPlane: grpcClient == nil,
+		CloudStorage:                        false,
+		CloudStorageSupportedInControlPlane: false,
 	}
-	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
-	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
+	proContext.Agent.ID = cfg.TestkubeProAgentID
+	proContext.Agent.Name = cfg.TestkubeProAgentID
 
 	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
 	if proContext.DashboardURI == "" && cloudUiUrl != "" {
@@ -322,21 +265,20 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
 
-	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
-		return proContext
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-		"api-key":         proContext.APIKey,
-		"organization-id": proContext.OrgID,
-		"agent-id":        proContext.Agent.ID,
-	}))
+
+	if proContext.APIKey != "" {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
+			"api-key":         proContext.APIKey,
+			"organization-id": proContext.OrgID,
+			"agent-id":        proContext.Agent.ID,
+		}))
+	}
 	defer cancel()
 	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
-		return proContext
+		return proContext, fmt.Errorf("cannot get pro context: %v", err)
 	}
 
 	if proContext.EnvID == "" {
@@ -367,9 +309,9 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
 		proContext.Agent.ID = foundProContext.Agent.Id
 		proContext.Agent.Name = foundProContext.Agent.Name
-		proContext.Agent.Type = foundProContext.Agent.Type
 		proContext.Agent.Labels = foundProContext.Agent.Labels
 		proContext.Agent.Disabled = foundProContext.Agent.Disabled
+		proContext.Agent.IsSuperAgent = foundProContext.Agent.IsSuperAgent
 		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
 			return config.ProContextAgentEnvironment{
 				ID:   env.Id,
@@ -386,10 +328,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
-	if cfg.FeatureNewArchitecture && capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
-		proContext.NewArchitecture = true
-	}
-
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
 		proContext.CloudStorageSupportedInControlPlane = true
 		if cfg.FeatureCloudStorage {
@@ -397,7 +335,11 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
-	return proContext
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilitySourceOfTruth) {
+		proContext.HasSourceOfTruthCapability = true
+	}
+
+	return proContext, nil
 }
 
 func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
@@ -416,16 +358,16 @@ func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.Sl
 		testkube.AllEventTypes, envs)
 }
 
-func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
+func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
-		ExitOnError("Creating NATS connection", err)
+		ExitOnError("creating NATS connection", err)
 
-		log.DefaultLogger.Info("Started embedded NATS server")
+		log.DefaultLogger.Info("started embedded NATS server")
 
-		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-		ExitOnError("Creating NATS connection", err)
+		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
+		ExitOnError("creating NATS connection", err)
 		return conn
 	}
 
@@ -438,7 +380,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 		NatsCAFile:         cfg.NatsCAFile,
 		NatsConnectTimeout: cfg.NatsConnectTimeout,
 	})
-	ExitOnError("Creating NATS connection", err)
+	ExitOnError("creating NATS connection", err)
 	return conn
 }
 
@@ -459,17 +401,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	)
 }
 
-func CreateCronJobScheduler(cfg *config.Config,
-	kubeClient kubeclient.Client,
-	testWorkflowClient testworkflowclient.TestWorkflowClient,
-	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
-	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	deprecatedClients DeprecatedClients,
-	executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution],
-	executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution],
-	logger *zap.SugaredLogger,
-	kubeConfig *rest.Config,
-	proContext *config.ProContext) cronjob.Interface {
+func CronJobsEnabled(cfg *config.Config) bool {
 	enableCronJobs := cfg.EnableCronJobs
 	if enableCronJobs == "" {
 		var err error
@@ -478,45 +410,19 @@ func CreateCronJobScheduler(cfg *config.Config,
 			"enable-cron-jobs",
 			"enable cron jobs",
 		)
-		ExitOnError("Creating cron job scheduler config loading", err)
+		if err != nil {
+			return false
+		}
 	}
 
 	if enableCronJobs == "" {
-		return nil
+		return false
 	}
 
 	result, err := strconv.ParseBool(enableCronJobs)
-	ExitOnError("Creating cron job scheduler config parsing", err)
-
-	if !result {
-		return nil
+	if err != nil {
+		return false
 	}
 
-	var testClient testsclientv3.Interface
-	var testSuiteClient testsuitesclientv3.Interface
-	var testRESTClient testsclientv3.RESTInterface
-	var testSuiteRESTClient testsuitesclientv3.RESTInterface
-	if deprecatedClients != nil {
-		testClient = deprecatedClients.Tests()
-		testSuiteClient = deprecatedClients.TestSuites()
-		testRESTClient, err = testsclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("Creating cron job scheduler test rest client", err)
-		testSuiteRESTClient, err = testsuitesclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("Creating cron job scheduler test suite rest client", err)
-	}
-
-	scheduler := cronjob.New(testWorkflowClient,
-		testWorkflowTemplateClient,
-		testWorkflowExecutor,
-		logger,
-		cronjob.WithProContext(proContext),
-		cronjob.WithTestClient(testClient),
-		cronjob.WithTestSuiteClient(testSuiteClient),
-		cronjob.WithExecuteTestFn(executeTestFn),
-		cronjob.WithExecuteTestSuiteFn(executeTestSuiteFn),
-		cronjob.WithTestRESTClient(testRESTClient),
-		cronjob.WithTestSuiteRESTClient(testSuiteRESTClient),
-	)
-
-	return scheduler
+	return result
 }

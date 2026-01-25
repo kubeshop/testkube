@@ -32,7 +32,7 @@ type controllersRegistry struct {
 
 type ControllersRegistry interface {
 	Get(id string) (ctrl controller.Controller, recycle func())
-	Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, err error, recycle func())
+	Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, recycle func(), err error)
 	GetPodIP(ctx context.Context, id string) (string, error)
 	GetNamespace(ctx context.Context, id string) (string, error)
 	RegisterNamespace(id, namespace string)
@@ -103,7 +103,7 @@ func (r *controllersRegistry) Get(id string) (ctrl controller.Controller, recycl
 	return r.unsafeGet(id)
 }
 
-func (r *controllersRegistry) Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, err error, recycle func()) {
+func (r *controllersRegistry) Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, recycle func(), err error) {
 	for {
 		// Either connect a new controller or use existing one
 		obj, err, _ := r.connectionsGroup.Do(id, func() (interface{}, error) {
@@ -148,7 +148,7 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints exec
 		}
 
 		if err != nil {
-			return nil, err, func() {}
+			return nil, func() {}, err
 		}
 
 		r.mu.Lock()
@@ -156,13 +156,13 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints exec
 		r.mu.Unlock()
 
 		reserved := true
-		return obj.(controller.Controller), nil, func() {
+		return obj.(controller.Controller), func() {
 			if !reserved {
 				return
 			}
 			reserved = false
 			r.deregister(id)
-		}
+		}, nil
 	}
 }
 

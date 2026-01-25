@@ -1,10 +1,13 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: xunit-workflow-smoke-junit-report
+  name: xunit-workflow-smoke
   labels:
     core-tests: workflows
     tool: xunit
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
 spec:
   content:
     git:
@@ -13,7 +16,7 @@ spec:
       paths:
       - test/xunit/xunit-project
   container:
-    image: bitnami/dotnet-sdk:8-debian-12
+    image: bitnamilegacy/dotnet-sdk:8-debian-12 # TODO: replace
     resources:
       requests:
         cpu: 512m

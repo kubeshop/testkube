@@ -1,0 +1,26 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: cypress
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: cypress-workflow-smoke
+      - name: cypress-workflow-smoke-args
+      - name: cypress-workflow-smoke-junit-report
+      - name: cypress-workflow-smoke-clean-and-dev-shm-enabled
+      - name: cypress-workflow-smoke-13
+      - name: cypress-workflow-smoke-13-video-recording-enabled
+      - name: cypress-workflow-smoke-negative
+      - name: cypress-workflow-smoke-template
+      - name: cypress-workflow-smoke-template-checkout-on-step
+      - name: cypress-workflow-smoke-template-sub-step
+      - name: cypress-workflow-smoke-12
+      - name: distributed-cypress-workflow-smoke
+      - name: cypress-workflow-smoke-matrix-junit

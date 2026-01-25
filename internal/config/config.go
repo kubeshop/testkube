@@ -12,9 +12,6 @@ type APIConfig struct {
 	APIServerPort     int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig   string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
-
-	// GraphQL
-	GraphqlPort int `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 }
 
 type OSSControlPlaneConfig struct {
@@ -22,7 +19,7 @@ type OSSControlPlaneConfig struct {
 	GRPCServerPort int `envconfig:"GRPCSERVER_PORT" default:"8089"`
 
 	// Mongo
-	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:""`
 	APIMongoAllowTLS          bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert           string `envconfig:"API_MONGO_SSL_CERT" default:""`
 	APIMongoSSLCAFileKey      string `envconfig:"API_MONGO_SSL_CA_FILE_KEY" default:"sslCertificateAuthorityFile"`
@@ -32,6 +29,10 @@ type OSSControlPlaneConfig struct {
 	APIMongoDB                string `envconfig:"API_MONGO_DB" default:"testkube"`
 	APIMongoDBType            string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
 	DisableMongoMigrations    bool   `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
+	DisablePostgresMigrations bool   `envconfig:"DISABLE_POSTGRES_MIGRATIONS" default:"false"`
+
+	// Postgres
+	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
 	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
@@ -163,22 +164,29 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	DefaultExecutionNamespace string `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
-	DisableRunner             bool   `envconfig:"DISABLE_RUNNER" default:"false"`
-	SelfRegistrationSecret    string `envconfig:"SELF_REGISTRATION_SECRET" default:""`
-	RunnerName                string `envconfig:"RUNNER_NAME" default:""`
-	FloatingRunner            bool   `envconfig:"FLOATING_RUNNER" default:"false"`
+	DefaultExecutionNamespace string            `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
+	DisableRunner             bool              `envconfig:"DISABLE_RUNNER" default:"false"`
+	SelfRegistrationSecret    string            `envconfig:"SELF_REGISTRATION_SECRET" default:""`
+	RunnerName                string            `envconfig:"RUNNER_NAME" default:""`
+	FloatingRunner            bool              `envconfig:"FLOATING_RUNNER" default:"false"`
+	EventLabels               map[string]string `envconfig:"EVENT_LABELS" default:""`
+	IsGlobal                  bool              `envconfig:"RUNNER_IS_GLOBAL" default:"false"`
+	RunnerGroup               string            `envconfig:"RUNNER_GROUP" default:""`
+	RunnerLabelsPrefix        string            `envconfig:"RUNNER_LABELS_PREFIX" default:"runner.testkube.io/"`
 }
 
 type GitOpsSyncConfig struct {
-	GitOpsSyncKubernetesToCloudEnabled bool   `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
-	GitOpsSyncCloudToKubernetesEnabled bool   `envconfig:"GITOPS_CLOUD_TO_KUBERNETES_ENABLED" default:"false"`
-	GitOpsSyncCloudNamePattern         string `envconfig:"GITOPS_CLOUD_NAME_PATTERN" default:"<name>"`
-	GitOpsSyncKubernetesNamePattern    string `envconfig:"GITOPS_KUBERNETES_NAME_PATTERN" default:"<name>"`
+	GitOpsSyncKubernetesToCloudEnabled bool `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
 }
 
 type CronJobConfig struct {
 	EnableCronJobs string `envconfig:"ENABLE_CRON_JOBS" default:""`
+}
+
+type WebhookConfig struct {
+	DisableWebhooks     bool `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	EnableCloudWebhooks bool `envconfig:"ENABLE_CLOUD_WEBHOOKS" default:"false"`
+	WebhookControlPlane bool `envconfig:"WEBHOOK_CONTROL_PLANE" default:"false"`
 }
 
 type Config struct {
@@ -195,10 +203,17 @@ type Config struct {
 	ImageInspectorConfig
 	GitOpsSyncConfig
 	CronJobConfig
+	WebhookConfig
+	// Tracing
+	TracingEnabled                  bool     `envconfig:"TRACING_ENABLED" default:"false"`
+	OTLPEndpoint                    string   `envconfig:"OTLP_ENDPOINT" default:"http://localhost:4317"`
+	OTLPServiceName                 string   `envconfig:"OTLP_SERVICE_NAME" default:"testkube"`
+	TracingSampleRate               float64  `envconfig:"TRACING_SAMPLE_RATE" default:"1.0"`
 	DisableDefaultAgent             bool     `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
 	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeLeaseName               string   `envconfig:"TESTKUBE_LEASE_NAME" default:""`
 	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
@@ -219,12 +234,14 @@ type Config struct {
 	EnableK8sEvents                 bool     `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
 	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
-	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
+	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
+	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 
-	FeatureNewArchitecture bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
-	FeatureCloudStorage    bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	ForceSuperAgentMode     bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"true"` // Default true during initial testing, change to default false when ready to begin migrations.
 }
 
 type DeprecatedConfig struct {
@@ -247,7 +264,6 @@ func Get() (*Config, error) {
 	}
 
 	if strings.HasPrefix(c.TestkubeProAgentID, "tkcrun_") {
-		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
 		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true
@@ -256,7 +272,6 @@ func Get() (*Config, error) {
 		c.EnableCronJobs = "false"
 		c.EnableK8sControllers = false
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
-		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
 		c.DisableDeprecatedTests = true
 		c.DisableReconciler = true

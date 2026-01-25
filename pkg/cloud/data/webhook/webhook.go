@@ -3,6 +3,7 @@ package webhook
 import (
 	"context"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -12,13 +13,13 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-//go:generate mockgen -destination=./mock_webhook.go -package=webhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook" WebhookRepository
+//go:generate go tool mockgen -destination=./mock_webhook.go -package=webhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook" WebhookRepository
 type WebhookRepository interface {
 	CollectExecutionResult(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error
 }
 
-func NewCloudRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
+func NewCloudRepository(cloudClient cloud.TestKubeCloudAPIClient, proContext *intconfig.ProContext) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, proContext)}
 }
 
 func (c *CloudRepository) CollectExecutionResult(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error {

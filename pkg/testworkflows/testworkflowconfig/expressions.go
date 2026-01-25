@@ -3,26 +3,68 @@ package testworkflowconfig
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
+	execution := map[string]interface{}{
+		"id":              cfg.Id,
+		"groupId":         cfg.GroupId,
+		"name":            cfg.Name,
+		"number":          cfg.Number,
+		"scheduledAt":     cfg.ScheduledAt,
+		"disableWebhooks": cfg.DisableWebhooks,
+		"tags":            cfg.Tags,
+	}
+	execution["runningContext"] = buildRunningContext(cfg.RunningContext)
+
 	return expressions.NewMachine().
-		Register("execution", map[string]interface{}{
-			"id":              cfg.Id,
-			"groupId":         cfg.GroupId,
-			"name":            cfg.Name,
-			"number":          cfg.Number,
-			"scheduledAt":     cfg.ScheduledAt,
-			"disableWebhooks": cfg.DisableWebhooks,
-			"tags":            cfg.Tags,
-		}).
+		Register("execution", execution).
 		RegisterStringMap("organization", map[string]string{
 			"id": cfg.OrganizationId,
 		}).
 		RegisterStringMap("environment", map[string]string{
 			"id": cfg.EnvironmentId,
 		})
+}
+
+func buildRunningContext(rc *testkube.TestWorkflowRunningContext) map[string]interface{} {
+	actor := map[string]interface{}{}
+	interfaceMap := map[string]interface{}{}
+	if rc == nil {
+		return map[string]interface{}{
+			"actor":     actor,
+			"interface": interfaceMap,
+		}
+	}
+
+	if rc.Actor != nil {
+		actor = map[string]interface{}{
+			"name":               rc.Actor.Name,
+			"email":              rc.Actor.Email,
+			"executionId":        rc.Actor.ExecutionId,
+			"executionPath":      rc.Actor.ExecutionPath,
+			"executionReference": rc.Actor.ExecutionReference,
+		}
+		if rc.Actor.Type_ != nil {
+			actor["type"] = string(*rc.Actor.Type_)
+		}
+	}
+
+	if rc.Interface_ != nil {
+		interfaceMap = map[string]interface{}{
+			"name": rc.Interface_.Name,
+		}
+		if rc.Interface_.Type_ != nil {
+			interfaceMap["type"] = string(*rc.Interface_.Type_)
+		}
+	}
+
+	return map[string]interface{}{
+		"actor":     actor,
+		"interface": interfaceMap,
+	}
 }
 
 func CreateCloudMachine(cfg *ControlPlaneConfig, orgSlug, envSlug string) expressions.Machine {

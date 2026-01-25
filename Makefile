@@ -1,241 +1,558 @@
-.PHONY: test cover
+# Testkube Makefile
+#
+# This Makefile provides a comprehensive build system for the Testkube project,
+# supporting cross-platform development, testing, and deployment workflows.
+#
+# Usage: make help
 
-CHART_NAME=api-server
-BIN_DIR ?= $(HOME)/bin
-USER ?= $(USER)
-NAMESPACE ?= "testkube"
-DATE ?= $(shell date '+%s')
-COMMIT ?= $(shell git log -1 --pretty=format:"%h")
-VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
-DEBUG ?= ${DEBUG:-0}
-DASHBOARD_URI ?= ${DASHBOARD_URI:-"https://demo.testkube.io"}
-ANALYTICS_TRACKING_ID = ${ANALYTICS_TRACKING_ID:-""}
-ANALYTICS_API_KEY = ${ANALYTICS_API_KEY:-""}
-PROTOC := ${BIN_DIR}/protoc/bin/protoc
-PROTOC_GEN_GO := ${BIN_DIR}/protoc-gen-go
-PROTOC_GEN_GO_GRPC := ${BIN_DIR}/protoc-gen-go-grpc
-LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID)
-LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
-LD_FLAGS += -X github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)
-LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION)
-LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)
+# ==================== Configuration ====================
+# Disable built-in rules and variables for performance and clarity
+MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 
-define setup_env
-	$(eval include .env)
-	$(eval export)
-endef
+# Disable implicit rules and pattern rules to speed up Make
+.SUFFIXES:
+MAKEFLAGS += --no-print-directory
 
-use-env-file:
-	$(call setup_env)
+# Tell Make to not search in subdirectories for prerequisites
+VPATH =
 
-.PHONY: refresh-config
-refresh-config:
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/executors.json" -O config/executors.json &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-container-template.yml" -O config/job-container-template.yml &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-scraper-template.yml" -O config/job-scraper-template.yml &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-template.yml" -O config/job-template.yml &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/pvc-template.yml" -O config/pvc-template.yml &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-config.json" -O config/slack-config.json &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-template.json" -O config/slack-template.json
+# Prevent Make from doing parallel execution and implicit rule searches
+.NOTPARALLEL:
 
+# Default shell configuration for consistent behavior across platforms
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
 
-generate-protobuf: use-env-file
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative pkg/logs/pb/logs.proto
+# Enable secondary expansion for advanced pattern rules
+.SECONDEXPANSION:
 
-just-run-api: use-env-file
-	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
+# Delete targets on error to maintain clean state
+.DELETE_ON_ERROR:
 
-run-api: use-env-file refresh-config
-	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
+# Export all variables to sub-makes by default
+.EXPORT_ALL_VARIABLES:
 
-run-api-race-detector: use-env-file refresh-config
-	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags='$(LD_FLAGS)'  cmd/api-server/main.go
+# Include .env file if it exists (won't fail if missing)
+-include .env
 
-run-api-telepresence: use-env-file refresh-config
-	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
+# ==================== OS Detection ====================
+# Detect operating system for platform-specific configurations
+UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
 
-run-mongo-dev:
-	docker run --name mongodb -p 27017:27017 --rm mongo
+ifeq ($(UNAME_S),Linux)
+    OS := linux
+    SED_INPLACE := sed -i
+    OPEN_CMD := xdg-open
+else ifeq ($(UNAME_S),Darwin)
+    OS := darwin
+    SED_INPLACE := sed -i ''
+    OPEN_CMD := open
+else ifeq ($(UNAME_S),Windows_NT)
+    OS := windows
+    SED_INPLACE := sed -i
+    OPEN_CMD := start
+else
+    $(error Unsupported operating system: $(UNAME_S))
+endif
 
-build: build-api-server build-testkube-bin
+# Architecture detection
+ifeq ($(UNAME_M),x86_64)
+    ARCH := amd64
+else ifeq ($(UNAME_M),aarch64)
+    ARCH := arm64
+else ifeq ($(UNAME_M),arm64)
+    ARCH := arm64
+else
+    ARCH := $(UNAME_M)
+endif
 
-build-api-server:
-	go build -o $(BIN_DIR)/api-server -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
+# ==================== Project Variables ====================
+# Core project configuration
+PROJECT_NAME := testkube
+CHART_NAME := api-server
+NAMESPACE ?= testkube
 
-build-toolkit:
-	go build -o build/testworkflow-toolkit/testworkflow-toolkit -ldflags='$(LD_FLAGS)' cmd/testworkflow-toolkit/main.go
+# Version and build metadata
+VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h" 2>/dev/null || echo "unknown")
+COMMIT = $(shell git log -1 --pretty=format:"%h")
+DATE = $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+USER = $(shell whoami)
 
-build-testkube-bin:
-	go build \
-		-ldflags="-s -w -X main.version=999.0.0-$(COMMIT) \
-			-X main.commit=$(COMMIT) \
-			-X main.date=$(DATE) \
-			-X main.builtBy=$(USER) \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
-			-X github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)" \
-		-o "$(BIN_DIR)/kubectl-testkube" \
-		cmd/kubectl-testkube/main.go
+# Directory configuration
+BUILD_DIR := build
+DIST_DIR := dist
+TMP_DIR := tmp
+CONFIG_DIR := config
+DOCS_DIR := docs
 
-build-testkube-bin-intel:
-	env GOARCH=amd64 \
-	go build \
-		-ldflags="-s -w -X main.version=999.0.0-$(COMMIT) \
-			-X main.commit=$(COMMIT) \
-			-X main.date=$(DATE) \
-			-X main.builtBy=$(USER) \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
-			-X github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)" \
-		-o "$(BIN_DIR)/kubectl-testkube" \
-		cmd/kubectl-testkube/main.go
+# Local binary directories
+LOCALBIN ?= $(PWD)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
-docker-build-api:
-	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest ALPINE_IMAGE=alpine:3.20.6 goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
+# LOCALBIN_APP refers to the directory where application binaries are installed
+LOCALBIN_APP ?= $(LOCALBIN)/app
+$(LOCALBIN_APP):
+	mkdir -p $(LOCALBIN_APP)
 
-docker-build-cli:
-	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.20.6 goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
+# Legacy support - point to new locations
+BIN_DIR ?= $(LOCALBIN_APP)
 
-#make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
-#add ALPINE_IMAGE=alpine:3.20.6 env var for building of curl and scraper executor
-docker-build-executor:
-	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --clean --snapshot
+# Ensure other directories exist
+$(shell mkdir -p $(BUILD_DIR) $(TMP_DIR))
 
-dev-install-local-executors:
-	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
+# ==================== Build Configuration ====================
+# Go build configuration
+GO := $(shell which go)
+GOFLAGS := -trimpath
+GOARCH ?= $(ARCH)
+GOOS ?= $(OS)
 
-install-swagger-codegen-mac:
-	brew install swagger-codegen
+# Binary names
+API_SERVER_BIN := $(LOCALBIN_APP)/api-server
+CLI_BIN := $(LOCALBIN_APP)/testkube
+KUBECTL_TESTKUBE_CLI_BIN := $(LOCALBIN_APP)/kubectl-testkube
+TOOLKIT_BIN := $(LOCALBIN_APP)/testworkflow-toolkit
+INIT_BIN := $(LOCALBIN_APP)/testworkflow-init
 
-openapi-generate-model: openapi-generate-model-testkube
+# Docker configuration
+DOCKER := docker
+DOCKER_REGISTRY ?= docker.io/kubeshop
 
-openapi-generate-model-testkube:
-	swagger-codegen generate --model-package testkube -i api/v1/testkube.yaml -l go -o tmp/api/testkube
-	mv tmp/api/testkube/model_test.go tmp/api/testkube/model_test_base.go || true
-	mv tmp/api/testkube/model_test_suite_step_execute_test.go tmp/api/testkube/model_test_suite_step_execute_test_base.go || true
-	mv tmp/api/testkube/model_*.go pkg/api/v1/testkube/
-	rm -rf tmp
-	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
-	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/\*map\[string\]/map[string]/g" {} \;
-	find ./pkg/api/v1/testkube -name "*.go" -type f -exec sed -i '' -e "s/ map\[string\]Object / map\[string\]interface\{\} /g" {} \; # support map with empty additional properties
-	find ./pkg/api/v1/testkube -name "*.go" -type f -exec sed -i '' -e "s/ \[\]Object / \[\]interface\{\} /g" {} \; # support list with unknown values
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ map/ \*map/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ string/ \*string/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \[\]/ \*\[\]/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*TestContent/ \*\*TestContentUpdate/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ExecutionRequest/ \*\*ExecutionUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*Repository/ \*\*RepositoryUpdate/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*SecretRef/ \*\*SecretRef/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ int32/ \*int32/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ int64/ \*int64/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ArtifactRequest/ \*\*ArtifactUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*TestSuiteExecutionRequest/ \*\*TestSuiteExecutionUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ExecutorMeta/ \*\*ExecutorMetaUpdate/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodRequest/ \*\*PodUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodResourcesRequest/ \*\*PodResourcesUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*WebhookTemplateRef/ \*\*WebhookTemplateRef/g" {} \;	
-	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/ Deprecated/ \\n\/\/ Deprecated/g" {} \;
-	find ./pkg/api/v1/testkube -name "*_env_source.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
-	find ./pkg/api/v1/testkube -name "**_key_ref.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
-	go fmt pkg/api/v1/testkube/*.go
+# ==================== Development ====================
+# Namespace in which to deploy the sandboxed agent for development (see 'make devbox' target)
+DEVBOX_NAMESPACE ?= devbox
 
-protobuf-generate:
-	$(PROTOC) \
-    --go_out=. --go-grpc_out=. proto/service.proto
+# ==================== External Tool Versions ====================
+SWAGGER_CODEGEN_VERSION := latest
+GOTESTSUM_VERSION := v1.12.3
+GORELEASER_VERSION := v2.11.0
+GOLANGCI_LINT_VERSION := v2.5.0
+SQLC_VERSION := v1.29.0
 
-install-protobuf: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
-# Protoc and friends installation and generation
-$(PROTOC):
-	$(call install-protoc)
+# Tool binaries
+GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
+GORELEASER = go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
+GOLANGCI_LINT = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+# swagger-codegen is installed globally via brew/package manager
+SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 
-$(PROTOC_GEN_GO):
-	@echo "[INFO]: Installing protobuf go generation plugin."
-	GOBIN=${BIN_DIR} go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+# ==================== Environment Configuration ====================
+DASHBOARD_URI ?= https://demo.testkube.io
+BUSYBOX_IMAGE ?= busybox:latest
+# Slack bot
+SLACK_BOT_CLIENT_ID ?=
+SLACK_BOT_CLIENT_SECRET ?=
+# Analytics
+TESTKUBE_ANALYTICS_ENABLED ?= false
+ANALYTICS_TRACKING_ID ?=
+ANALYTICS_API_KEY ?=
+# Storage configuration
+ROOT_MINIO_USER ?= minio99
+ROOT_MINIO_PASSWORD ?= minio123
 
-$(PROTOC_GEN_GO_GRPC):
-	@echo "[INFO]: Installing protobuf GRPC go generation plugin."
-	GOBIN=${BIN_DIR} go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+# ==================== Linker Flags ====================
+# Common linker flags for all builds
+LD_FLAGS_COMMON := -s -w \
+    -X main.version=$(VERSION) \
+    -X main.commit=$(COMMIT) \
+    -X main.date=$(DATE) \
+    -X main.builtBy=$(USER)
 
-.PHONY: unit-tests
-unit-tests:
-	gotestsum --format pkgname -- -cover ./...
+# API-specific linker flags
+LD_FLAGS_API := $(LD_FLAGS_COMMON) \
+    -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) \
+    -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT) \
+    -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
+    -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
+    -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID) \
+    -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+    -X github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)
 
-.PHONY: integration-tests
-integration-tests:
-	INTEGRATION="true" STORAGE_ACCESSKEYID="minio99" STORAGE_SECRETACCESSKEY="minio123" gotestsum --format pkgname -- -tags=integration -cover ./...
+# ==================== Help Target ====================
+# Default target shows help
+.DEFAULT_GOAL := help
 
-test-e2e:
-	go test --tags=e2e -v ./test/e2e
+# Help command with automatic documentation extraction
+.PHONY: help
+help: ## Show this help message
+	@echo "Testkube Makefile - Build System"
+	@echo "================================"
+	@echo ""
+	@echo "Usage: make [target] [VAR=value ...]"
+	@echo ""
+	@echo "Detected Configuration:"
+	@echo "  OS:           $(OS)"
+	@echo "  Architecture: $(ARCH)"
+	@echo "  Go Version:   run 'go version' to check"
+	@echo ""
+	@echo "Available Targets by Category:"
+	@awk 'BEGIN {FS = ":.*##"; current_group = ""} \
+		/^##@/ { \
+			group = substr($$0, 5); \
+			gsub(/^[ \t]+|[ \t]+$$/, "", group); \
+			if (group != current_group) { \
+				current_group = group; \
+				printf "\n\033[1m%s\033[0m\n", group; \
+			} \
+		} \
+		/^[a-zA-Z_-]+:.*?##/ { \
+			target = $$1; \
+			desc = $$2; \
+			gsub(/^[ \t]+|[ \t]+$$/, "", desc); \
+			printf "  \033[36m%-28s\033[0m %s\n", target, desc; \
+		}' $(MAKEFILE_LIST)
 
-test-e2e-namespace:
-	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e
+# ==================== Quick Start ====================
+##@ Quick Start
 
-create-examples:
-	test/create.sh
+.PHONY: all
+all: clean build test ## Clean, build, and test everything
 
-execute-testkube-cli-test-suite:
-	test/run.sh
+# ==================== Release  ====================
+##@ Release
 
-test-reload-sanity-test:
-	kubectl delete secrets sanity-secrets -ntestkube
-	kubectl delete test sanity -ntestkube || true
-	kubectl testkube create test -f test/postman/Testkube-Sanity.postman_collection.json --name sanity
-
-
-# test local api server intance - need local-postman/collection type registered to local postman executor
-test-api-local:
-	newman run test/postman/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var test_api_uri=http://localhost:8088 --env-var execution_name=fill --verbose
-
-# run by newman but on top of port-forwarded cluster service to api-server
-# e.g. kubectl port-forward svc/testkube-api-server 8088
-test-api-port-forwarded:
-	newman run test/postman/Testkube-Sanity.postman_collection.json --env-var test_name=fill-me --env-var test_type=postman/collection  --env-var api_uri=http://localhost:8088 --env-var execution_name=fill --env-var test_api_uri=http://testkube-api-server:8088 --verbose
-
-# run test by testkube plugin
-test-api-on-cluster:
-	kubectl testkube run test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
-
-cover:
-	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt
-	open testCoverage.html
-
+.PHONY: version-bump
 version-bump: version-bump-patch
 
+.PHONY: version-bump-patch
 version-bump-patch:
 	go run cmd/tools/main.go bump -k patch
 
+.PHONY: version-bump-minor
 version-bump-minor:
 	go run cmd/tools/main.go bump -k minor
 
+.PHONY: version-bump-major
 version-bump-major:
 	go run cmd/tools/main.go bump -k major
 
+.PHONY: version-bump-dev
 version-bump-dev:
 	go run cmd/tools/main.go bump --dev
 
-commands-reference:
-	mkdir -p gen/docs/cli
-	go run cmd/kubectl-testkube/main.go generate doc
+# ==================== Primary Build Targets ====================
+##@ Build
+
+.PHONY: build
+build: build-api-server build-testkube-cli build-toolkit build-init ## Build all binaries
+
+.PHONY: build-api-server
+build-api-server: ## Build API server binary
+	@echo "Building API server ($(GOOS)/$(GOARCH))..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='$(LD_FLAGS_API)' \
+		-o $(API_SERVER_BIN) \
+		./cmd/api-server/
+	@echo "API server built: $(API_SERVER_BIN)"
+
+.PHONY: build-testkube-cli
+build-testkube-cli: $(CLI_BIN) ## Build CLI binary (testkube)
+$(CLI_BIN): $(LOCALBIN_APP)
+	@echo "Building testkube CLI ($(GOOS)/$(GOARCH))..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='$(LD_FLAGS_API)' \
+		-o $(CLI_BIN) \
+		cmd/kubectl-testkube/main.go
+	@echo "testkube CLI built: $(CLI_BIN)"
+
+.PHONY: build-kubectl-testkube-cli
+build-kubectl-testkube-cli: $(KUBECTL_TESTKUBE_CLI_BIN) ## Build CLI binary (kubectl-testkube)
+$(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
+	@echo "Building kubectl-testkube CLI ($(GOOS)/$(GOARCH))..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='$(LD_FLAGS_API)' \
+		-o $(KUBECTL_TESTKUBE_CLI_BIN) \
+		cmd/kubectl-testkube/main.go
+	@echo "kubectl-testkube CLI built: $(KUBECTL_TESTKUBE_CLI_BIN)"
+
+.PHONY: rebuild-kubectl-testkube-cli
+rebuild-kubectl-testkube-cli: ## Delete and rebuild kubectl-testkube CLI binary
+	@echo "Removing existing kubectl-testkube CLI binary..."
+	@rm -f $(KUBECTL_TESTKUBE_CLI_BIN)
+	@$(MAKE) build-kubectl-testkube-cli
+
+.PHONY: build-toolkit
+build-toolkit: ## Build testworkflow toolkit
+	@echo "Building testworkflow toolkit..."
+	@CGO_ENABLED=0 $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='$(LD_FLAGS_API)' \
+		-o $(TOOLKIT_BIN) \
+		cmd/testworkflow-toolkit/main.go
+	@echo "Toolkit built: $(TOOLKIT_BIN)"
+
+.PHONY: build-init
+build-init: ## Build testworkflow init
+	@echo "Building testworkflow init..."
+	@CGO_ENABLED=0 $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='$(LD_FLAGS_API)' \
+		-o $(INIT_BIN) \
+		cmd/testworkflow-init/main.go
+	@echo "Init built: $(INIT_BIN)"
+
+.PHONY: build-all-platforms
+build-all-platforms: ## Build binaries for all supported platforms
+	@echo "Building for all platforms..."
+	@for os in linux darwin windows; do \
+		for arch in amd64 arm64; do \
+			echo "Building for $$os/$$arch..."; \
+			$(MAKE) build GOOS=$$os GOARCH=$$arch BIN_DIR=$(DIST_DIR)/$$os-$$arch; \
+		done; \
+	done
+
+# ==================== Development ====================
+##@ Development
+
+.PHONY: run-api
+run-api: ## Run API server locally
+	@echo "Starting API server..."
+	$(GO) run -ldflags='$(LD_FLAGS_API)' ./cmd/api-server/
+
+.PHONY: run-api-race
+run-api-race: ## Run API server with race detector
+	@echo "Starting API server with race detector..."
+	$(GO) run -race -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
+
+.PHONY: run-mongo
+run-mongo: ## Run MongoDB in Docker for development (detached)
+	@echo "Starting MongoDB container..."
+	@$(DOCKER) run --name mongodb -p 27017:27017 --rm --detach mongo
+
+.PHONY: run-nats
+run-nats: ## Run NATS server in Docker for development (detached)
+	@echo "Starting NATS server container..."
+	@$(DOCKER) run --name nats -p 4222:4222 --rm --detach nats:latest
+
+.PHONY: stop-mongo
+stop-mongo: ## Stop MongoDB Docker container
+	@echo "Stopping MongoDB container..."
+	@$(DOCKER) stop mongodb || true
+
+.PHONY: stop-nats
+stop-nats: ## Stop NATS Docker container
+	@echo "Stopping NATS server container..."
+	@$(DOCKER) stop nats || true
+
+.PHONY: login-local
+login-local: $(CLI_BIN) ## Login to local Control Plane instance for CLI operations
+	@echo "Logging in to local Control Plane instance..."
+	@$(CLI_BIN) login --api-uri-override=http://localhost:8099 --agent-uri-override=http://testkube-enterprise-api.tk-dev.svc.cluster.local:8089 --auth-uri-override=http://localhost:5556 --custom-auth
+
+.PHONY: devbox
+devbox: $(CLI_BIN) ## Start development environment using devbox (Control Plane needs to be running and also you need to be logged in via CLI, see 'make login-local' target)
+	@echo "Starting development agent with in $${DEVBOX_NAMESPACE} namespace..."
+	@$(CLI_BIN) devbox --namespace $${DEVBOX_NAMESPACE}
+
+.PHONY: dev
+dev: run-mongo run-nats run-api ## Start development environment
+
+# ==================== Testing ====================
+##@ Testing
+
+.PHONY: test
+test: unit-tests ## Run all tests
+
+.PHONY: unit-tests
+unit-tests: ## Run unit tests with coverage
+	@echo "Running unit tests..."
+	@$(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
+		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
+
+.PHONY: integration-tests
+integration-tests: build-init build-toolkit ## Run integration tests (only tests ending with _Integration)
+	@echo "Running integration tests (only tests ending with _Integration)..."
+	@INTEGRATION="true" \
+		TESTKUBE_PROJECT_ROOT="$(PWD)" \
+		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
+		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
+		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
+		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/... ./test/integration/components/...
+
+.PHONY: cover
+cover: unit-tests ## Generate and open test coverage report
+	@echo "Generating coverage report..."
+	@$(GO) tool cover -html=coverage.out -o coverage.html
+	@$(OPEN_CMD) coverage.html
+
+# ==================== Linting ====================
+##@ Linting
+
+.PHONY: lint
+lint: ## Run golangci-lint
+	@echo "Running golangci-lint..."
+	@$(GOLANGCI_LINT) run ./... --timeout 10m
+
+.PHONY: lint-fix
+lint-fix: ## Run golangci-lint with automatic fixes
+	@echo "Running golangci-lint with fixes..."
+	@$(GOLANGCI_LINT) run ./... --timeout 10m --fix
+
+# ==================== Code Generation ====================
+##@ Code Generation
+
+.PHONY: generate
+generate: generate-protobuf generate-openapi generate-mocks generate-sqlc generate-crds ## Generate all code
+
+.PHONY: generate-protobuf
+generate-protobuf: ## Generate protobuf code
+	@echo "Generating protobuf code..."
+	@go generate ./proto
+
+.PHONY: generate-openapi
+generate-openapi: swagger-codegen-check ## Generate OpenAPI models
+	@echo "Generating OpenAPI models..."
+	@$(SWAGGER_CODEGEN) generate --model-package testkube \
+		-i api/v1/testkube.yaml -l go -o $(TMP_DIR)/api/testkube
+	@bash scripts/openapi-postprocess.sh
+	@$(GO) fmt pkg/api/v1/testkube/*.go
+
+.PHONY: generate-mocks
+generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, and ./pkg
+	@echo "Generating mock files..."
+	@go generate -run mockgen -x ./...
+
+.PHONY: generate-sqlc
+generate-sqlc: ## Generate sqlc package with sql queries
+	@echo "Generating sqlc queries..."
+	@$(SQLC) generate
+
+.PHONY: generate-crds
+generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
+	# Generate CRDs
+	go tool controller-gen crd:allowDangerousTypes=true object paths="./api/..." output:crd:dir=k8s/crd
+
+    # Reduce size of TestWorkflow CRDs to fit in the "last-applied" annotation which has a limit of 262144 bytes.
+	@for file in testworkflows.testkube.io_testworkflows.yaml testworkflows.testkube.io_testworkflowtemplates.yaml testworkflows.testkube.io_testworkflowexecutions.yaml; do \
+		for key in securityContext volumes dnsPolicy affinity tolerations hostAliases dnsConfig topologySpreadConstraints schedulingGates resourceClaims imagePullSecrets volumeMounts fieldRef resourceFieldRef configMapKeyRef secretKeyRef pvcs matchExpressions matchLabels env envFrom fileKeyRef readinessProbe; do \
+			go tool yq --no-colors -i "del(.. | select(has(\"$$key\")).$$key | .. | select(has(\"description\")).description)" "k8s/crd/$$file"; \
+		done; \
+		go tool yq --no-colors -i \
+		'with(..; . | select(has("additionalProperties")) | select(.additionalProperties | has("type")) | select(.additionalProperties.type == "dynamicList") | \
+			.["x-kubernetes-preserve-unknown-fields"] = true | \
+			del(.additionalProperties) \
+		) | \
+		with(..; . | select(has("properties")) | select(.properties | to_entries | filter(.value | has("type")) | filter(.value.type == "dynamicList") | length > 0) | \
+			.["x-kubernetes-preserve-unknown-fields"] = true | \
+			del(.properties) \
+		)' \
+		"k8s/crd/$$file"; \
+	done
+
+	# Copy to testkube-operator chart as Helm Templated
+	node js/scripts/crd-postprocess.js
+
+# ==================== Docker ====================
+##@ Docker
+
+.PHONY: docker-build
+docker-build: docker-build-api docker-build-cli ## Build all Docker images
+
+.PHONY: docker-build-api
+docker-build-api: ## Build API server Docker image
+	@echo "Building API server Docker image..."
+	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
+		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
+		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
+		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-api-server:latest \
+		ALPINE_IMAGE=alpine:3.20.8 \
+		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
+
+.PHONY: docker-build-cli
+docker-build-cli: ## Build CLI Docker image
+	@echo "Building CLI Docker image..."
+	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
+		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
+		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
+		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-cli:latest \
+		ALPINE_IMAGE=alpine:3.20.8 \
+		$(GORELEASER) release -f .builds-linux.goreleaser.yml --clean --snapshot
+
+# ==================== Kubernetes ====================
+##@ Kubernetes
+
+.PHONY: port-forward-api
+port-forward-api: ## Port forward to API server
+	@echo "Port forwarding to API server..."
+	@kubectl port-forward svc/testkube-api-server 8088 -n$(NAMESPACE)
+
+.PHONY: port-forward-mongo
+port-forward-mongo: ## Port forward to MongoDB
+	@echo "Port forwarding to MongoDB..."
+	@kubectl port-forward svc/testkube-mongodb 27017 -n$(NAMESPACE)
+
+.PHONY: port-forward-minio
+port-forward-minio: ## Port forward to MinIO
+	@echo "Port forwarding to MinIO..."
+	@kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -n$(NAMESPACE)
+
+# ==================== Documentation ====================
+##@ Documentation
 
 .PHONY: docs
-docs: commands-reference
+docs: commands-reference ## Generate documentation
 
-prerelease:
-	go run cmd/tools/main.go release -d -a $(CHART_NAME)
+.PHONY: commands-reference
+commands-reference: ## Generate CLI command reference
+	@echo "Generating command reference..."
+	@mkdir -p gen/docs/cli
+	@$(GO) run cmd/kubectl-testkube/main.go generate doc
 
-release:
-	go run cmd/tools/main.go release -a $(CHART_NAME)
+# ==================== Maintenance ====================
+##@ Maintenance
 
-video:
-	gource \
+.PHONY: clean
+clean: ## Clean build artifacts
+	@echo "Cleaning build artifacts..."
+	@rm -rf $(BUILD_DIR) $(DIST_DIR) $(TMP_DIR)
+	@rm -f coverage.html coverage.out integration-coverage.out
+	@rm -f unit-tests.xml unit-tests.json
+	@rm -f integration-tests.xml integration-tests.json
+	@echo "Clean complete"
+
+.PHONY: clean-all
+clean-all: clean ## Deep clean including Go cache
+	@echo "Performing deep clean..."
+	@go clean -cache -testcache -modcache
+	@echo "Deep clean complete"
+
+# ==================== Tool Installation ====================
+##@ Tools
+
+# Tool installation targets
+.PHONY: swagger-codegen-check
+swagger-codegen-check: ## Check if swagger-codegen is installed
+ifndef SWAGGER_CODEGEN
+	$(error swagger-codegen is not installed. Please install it manually from https://github.com/swagger-api/swagger-codegen)
+endif
+
+# ==================== Utility Functions ====================
+# Color output helpers
+define print_info
+	@printf "\033[36m%s\033[0m\n" "$(1)"
+endef
+
+define print_success
+	@printf "\033[32m✓ %s\033[0m\n" "$(1)"
+endef
+
+define print_error
+	@printf "\033[31m✗ %s\033[0m\n" "$(1)"
+endef
+
+# ==================== Special/Experimental ====================
+##@ Special
+
+.PHONY: video
+video: ## Generate project activity video using gource
+	@echo "Generating project activity video..."
+	@gource \
 		-s .5 \
 		-1280x720 \
 		--auto-skip-seconds .1 \
@@ -246,39 +563,10 @@ video:
 		--date-format "%d/%m/%y" \
 		--hide mouse,filenames \
 		--file-idle-time 0 \
-		--max-files 0  \
+		--max-files 0 \
 		--background-colour 000000 \
 		--font-size 25 \
 		--output-ppm-stream stream.out \
 		--output-framerate 30
-
-	ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
-
-port-forward-minio:
-	kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -ntestkube
-
-port-forward-mongo:
-	kubectl port-forward svc/testkube-mongodb 27017 -ntestkube
-
-port-forward-api:
-	kubectl port-forward svc/testkube-api-server 8088 -ntestkube
-
-run-proxy:
-	go run cmd/proxy/main.go --namespace $(NAMESPACE)
-
-define install-protoc
-@[ -f "${PROTOC}" ] || { \
-set -e ;\
-echo "[INFO] Installing protoc compiler to ${BIN_DIR}/protoc" ;\
-mkdir -pv "${BIN_DIR}/" ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-PB_REL="https://github.com/protocolbuffers/protobuf/releases" ;\
-VERSION=3.19.4 ;\
-if [ "$$(uname)" == "Darwin" ];then FILENAME=protoc-$${VERSION}-osx-x86_64.zip ;fi ;\
-if [ "$$(uname)" == "Linux" ];then FILENAME=protoc-$${VERSION}-linux-x86_64.zip;fi ;\
-echo "Downloading $${FILENAME} to $${TMP_DIR}" ;\
-curl -LO $${PB_REL}/download/v$${VERSION}/$${FILENAME} ; unzip $${FILENAME} -d ${BIN_DIR}/protoc ; \
-rm -rf $${TMP_DIR} ;\
-}
-endef
+	@ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
+	@rm stream.out

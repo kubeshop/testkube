@@ -64,7 +64,7 @@ func (r *BinaryStorage) Create(ctx context.Context) error {
 					Name:            "binary-storage",
 					Image:           "busybox:1.36.1-musl",
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"/bin/sh", "-c", fmt.Sprintf("while [ ! -f /app/server-ready ]; do sleep 1; done\n/app/server")},
+					Command:         []string{"/bin/sh", "-c", "while [ ! -f /app/server-ready ]; do sleep 1; done\n/app/server"},
 					VolumeMounts: []corev1.VolumeMount{
 						{Name: "server", MountPath: "/app"},
 						{Name: "storage", MountPath: "/storage"},

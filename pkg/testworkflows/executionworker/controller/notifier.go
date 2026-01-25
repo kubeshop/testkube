@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	log2 "github.com/kubeshop/testkube/pkg/log"
 	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -97,7 +98,8 @@ func (n *notifier) Error(err error) {
 	n.error(err)
 }
 
-func (n *notifier) Event(ref string, ts time.Time, level, reason, message string) {
+func (n *notifier) Event(ref string, ts time.Time, level, reason, message, execution string) {
+	log2.DefaultLogger.Debugw("notify event while watching pod", "execution", execution, "reason", reason, "level", level, "message", message, "timestamp", ts)
 	color := color2.FgGray.Render
 	if level != "Normal" {
 		color = color2.FgYellow.Render
@@ -127,6 +129,8 @@ func (n *notifier) useActionGroups(actions actiontypes.ActionGroups) {
 }
 
 func (n *notifier) Align(state watchers2.ExecutionState) {
+	log2.DefaultLogger.Debugw("notify alignment while watching pod", "execution", getExecutionId(state))
+
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -161,7 +165,8 @@ func (n *notifier) Align(state watchers2.ExecutionState) {
 }
 
 // Instruction applies the precise hint information about the action that took place
-func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
+func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, executionId string) {
+	log2.DefaultLogger.Debugw("notify instruction while watching pod", "execution", executionId, "hint", hint.Name)
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -189,7 +194,7 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
 	case constants.InstructionEnd:
 		status := testkube.TestWorkflowStepStatus(hint.Value.(string))
 		if status == "" {
-			status = testkube.PASSED_TestWorkflowStepStatus
+			status = testkube.ABORTED_TestWorkflowStepStatus
 		}
 		step.Status = common.Ptr(status)
 		step.FinishedAt = ts
@@ -272,7 +277,7 @@ func (n *notifier) fillGaps(force bool) {
 	}
 
 	// Mark the initialization step as running
-	if n.state.PodCreated() && n.result.Initialization.NotStarted() {
+	if n.state.PodCreated() && n.result.Initialization.Status.NotStarted() {
 		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 	}
 
@@ -288,9 +293,9 @@ func (n *notifier) fillGaps(force bool) {
 	} else {
 		for i := range n.sigSequence {
 			step := n.result.Steps[n.sigSequence[i].Ref]
-			if !step.NotStarted() {
+			if !step.Status.NotStarted() {
 				processedStepsCount = i
-				if step.Finished() {
+				if step.Status.Finished() {
 					processedStepsCount++
 				}
 			}
@@ -374,14 +379,14 @@ func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult,
 	if initialResult.Steps == nil {
 		initialResult.Steps = make(map[string]testkube.TestWorkflowStepResult)
 	}
-	if initialResult.Status == nil {
-		initialResult.Status = common.Ptr(testkube.QUEUED_TestWorkflowStatus)
-	}
 
-	// Mark initial as non-finished, as the state is not yet marked as ended
-	if initialResult.Status.Finished() {
-		initialResult.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
-	}
+	// Once a result has reached this stage it can be considered to be in a SCHEDULING state,
+	// as the associated Job and Pod have not yet been scheduled by Kubernetes.
+	// By setting the initial status to SCHEDULING we can ensure that more executions can be
+	// sent to be processed, even if Kubernetes still has to wait for resources to start
+	// the execution.
+	initialResult.Status = common.Ptr(testkube.SCHEDULING_TestWorkflowStatus)
+
 	if !initialResult.FinishedAt.IsZero() {
 		initialResult.FinishedAt = time.Time{}
 	}
@@ -393,4 +398,12 @@ func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult,
 		ch:  make(chan ChannelMessage[Notification]),
 		ctx: ctx,
 	}
+}
+
+func getExecutionId(state watchers2.ExecutionState) string {
+	job := state.Job()
+	if job == nil {
+		return ""
+	}
+	return job.Name()
 }

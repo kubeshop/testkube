@@ -6,14 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/logs/config"
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 
 // tests based on real NATS event bus
 
-func GetTestNATSEmitter() *Emitter {
+func GetTestNATSEmitter(mockCtrl *gomock.Controller) *Emitter {
 	os.Setenv("DEBUG", "true")
 	// configure NATS event bus
 	nc, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
@@ -32,20 +33,26 @@ func GetTestNATSEmitter() *Emitter {
 	if err != nil {
 		panic(err)
 	}
-	return NewEmitter(bus.NewNATSBus(nc), "")
+	mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+	mockLeaseRepository.EXPECT().
+		TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(true, nil).AnyTimes()
+	return NewEmitter(bus.NewNATSBus(nc), mockLeaseRepository, "agentevents", "")
 }
 
 func TestEmitter_NATS_Register_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("Register adds new listener", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
 		// then
-		assert.Equal(t, 1, len(emitter.Listeners))
+		assert.Equal(t, 1, len(emitter.listeners))
 
 		t.Log("T1 completed")
 	})
@@ -55,8 +62,10 @@ func TestEmitter_NATS_Listen_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("listener handles only given events based on selectors", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=OnlyMe"}
 		// and listener with non-matching selector
@@ -67,16 +76,16 @@ func TestEmitter_NATS_Listen_Integration(t *testing.T) {
 		emitter.Register(listener2)
 
 		// listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 
 		// events
 		event1 := newExampleTestEvent3()
-		event1.TestExecution.Labels = map[string]string{"type": "OnlyMe"}
+		event1.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "OnlyMe"}
 		event2 := newExampleTestEvent4()
 
 		// when
@@ -97,8 +106,10 @@ func TestEmitter_NATS_Notify_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("notifies listeners in queue groups", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l3", NotificationCount: 0}
@@ -109,10 +120,10 @@ func TestEmitter_NATS_Notify_Integration(t *testing.T) {
 		emitter.Register(listener2)
 
 		// and listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 
@@ -130,8 +141,10 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 		// given
-		emitter := GetTestNATSEmitter()
+		emitter := GetTestNATSEmitter(mockCtrl)
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matic selector
@@ -142,18 +155,18 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 		emitter.Register(listener2)
 
 		// listening emitter
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		emitter.Listen(ctx)
+		go emitter.Listen(ctx)
 		// wait for listeners to start
 		time.Sleep(time.Millisecond * 50)
 
 		// events
 		event1 := newExampleTestEvent3()
-		event1.TestExecution.Labels = map[string]string{"type": "listener1"}
+		event1.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "listener1"}
 		event2 := newExampleTestEvent4()
-		event2.TestExecution.Labels = map[string]string{"type": "listener2"}
+		event2.TestWorkflowExecution.Workflow.Labels = map[string]string{"type": "listener2"}
 
 		// when
 		emitter.Notify(event1)
@@ -170,16 +183,16 @@ func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
 
 func newExampleTestEvent3() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID3",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID3", "test/test", "test"),
+		Id:                    "eventID3",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID3", "test"),
 	}
 }
 
 func newExampleTestEvent4() testkube.Event {
 	return testkube.Event{
-		Id:            "eventID4",
-		Type_:         testkube.EventStartTest,
-		TestExecution: testkube.NewExecutionWithID("executionID4", "test/test", "test"),
+		Id:                    "eventID4",
+		Type_:                 testkube.EventStartTestWorkflow,
+		TestWorkflowExecution: testkube.NewExecutionWithID("executionID4", "test"),
 	}
 }

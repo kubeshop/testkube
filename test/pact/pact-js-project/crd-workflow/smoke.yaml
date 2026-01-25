@@ -5,6 +5,9 @@ metadata:
   labels:
     core-tests: workflows
     tool: pact
+    category: api-testing
+  annotations:
+    testkube.io/icon: pact
 spec:
   content:
     git:
@@ -15,6 +18,10 @@ spec:
   container:
     image: node:23.11.0
     workingDir: /data/repo/test/pact/pact-js-project
+    resources:
+      requests:
+        cpu: 512m
+        memory: 300Mi
   job:
     activeDeadlineSeconds: 300
   steps:

@@ -11,7 +11,10 @@ package testkube
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -93,4 +96,55 @@ func printPayloadTemplate(text string) (string, error) {
 	}
 
 	return string(yamlData), nil
+}
+
+func (w *Webhook) Equals(other *Webhook) bool {
+	// Avoid check when there is one existing and the other one not
+	if (w == nil) != (other == nil) {
+		return false
+	}
+
+	// Reset timestamps to avoid influence
+	wCreated := w.Created
+	otherCreated := other.Created
+	w.Created = time.Time{}
+	other.Created = time.Time{}
+
+	// Compare
+	result := cmp.Equal(w, other)
+
+	// Restore values
+	w.Created = wCreated
+	other.Created = otherCreated
+
+	return result
+}
+
+func (w *Webhook) ConvertDots(fn func(string) string) *Webhook {
+	if w == nil {
+		return w
+	}
+
+	if w.Labels != nil {
+		w.Labels = convertDotsInMap(w.Labels, fn)
+	}
+	if w.Annotations != nil {
+		w.Annotations = convertDotsInMap(w.Annotations, fn)
+	}
+	if w.Headers != nil {
+		w.Headers = convertDotsInMap(w.Headers, fn)
+	}
+	if w.Config != nil {
+		w.Config = convertDotsInMap(w.Config, fn)
+	}
+
+	return w
+}
+
+func (w *Webhook) EscapeDots() *Webhook {
+	return w.ConvertDots(utils.EscapeDots)
+}
+
+func (w *Webhook) UnscapeDots() *Webhook {
+	return w.ConvertDots(utils.UnescapeDots)
 }

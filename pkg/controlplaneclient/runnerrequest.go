@@ -1,3 +1,4 @@
+//nolint:staticcheck
 package controlplaneclient
 
 import "github.com/kubeshop/testkube/pkg/cloud"
@@ -58,6 +59,7 @@ type RunnerRequestConsider interface {
 type RunnerRequestStart interface {
 	RunnerRequestData
 	Token() string
+	Runtime() *cloud.TestWorkflowRuntime
 	Send(response *cloud.RunnerStartResponse) error
 }
 
@@ -74,7 +76,7 @@ type RunnerRequestData interface {
 	SendError(err error) error
 }
 
-//go:generate mockgen -destination=./mock_runnerrequest.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" RunnerRequest
+//go:generate go tool mockgen -destination=./mock_runnerrequest.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" RunnerRequest
 type RunnerRequest interface {
 	RunnerRequestData
 	Ping() RunnerRequestOK
@@ -135,6 +137,10 @@ type runnerRequestStart struct {
 
 func (r *runnerRequestStart) Token() string {
 	return r.data.GetRequest().(*cloud.RunnerRequest_Start).Start.Token
+}
+
+func (r *runnerRequestStart) Runtime() *cloud.TestWorkflowRuntime {
+	return r.data.GetRequest().(*cloud.RunnerRequest_Start).Start.Runtime
 }
 
 func (r *runnerRequestStart) Send(response *cloud.RunnerStartResponse) error {

@@ -12,15 +12,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	gomock "go.uber.org/mock/gomock"
 
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
 
 func TestCloudLoader_Load(t *testing.T) {
-	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

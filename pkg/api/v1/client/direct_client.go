@@ -13,8 +13,6 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
@@ -139,11 +137,11 @@ func (t DirectClient[A]) ExecuteMultiple(method, uri string, body []byte, params
 
 // Delete is a method to make delete api call
 func (t DirectClient[A]) Delete(uri, selector string, isContentExpected bool) error {
-	return t.ExecuteMethod(http.MethodDelete, uri, selector, isContentExpected)
+	return t.ExecuteMethod(http.MethodDelete, uri, map[string]string{"selector": selector}, isContentExpected)
 }
 
-func (t DirectClient[A]) ExecuteMethod(method, uri string, selector string, isContentExpected bool) error {
-	resp, err := t.baseExec(method, uri, uri, nil, map[string]string{"selector": selector})
+func (t DirectClient[A]) ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error {
+	resp, err := t.baseExec(method, uri, uri, nil, params)
 	if err != nil {
 		return err
 	}
@@ -165,56 +163,6 @@ func (t DirectClient[A]) ExecuteMethod(method, uri string, selector string, isCo
 func (t DirectClient[A]) GetURI(pathTemplate string, params ...interface{}) string {
 	path := fmt.Sprintf(pathTemplate, params...)
 	return fmt.Sprintf("%s%s%s", t.apiURI, t.apiPathPrefix, path)
-}
-
-// GetLogs returns logs stream from job pods, based on job pods logs
-func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Accept", "text/event-stream")
-	resp, err := t.sseClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer close(logs)
-		defer resp.Body.Close()
-
-		StreamToLogsChannel(resp.Body, logs)
-	}()
-
-	return nil
-}
-
-// GetLogsV2 returns logs stream version 2 from log server, based on job pods logs
-func (t DirectClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Accept", "text/event-stream")
-	resp, err := t.sseClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("error getting logs, invalid status code: " + resp.Status)
-	}
-
-	go func() {
-		defer close(logs)
-		defer resp.Body.Close()
-
-		StreamToLogsChannelV2(resp.Body, logs)
-	}()
-
-	return nil
 }
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs

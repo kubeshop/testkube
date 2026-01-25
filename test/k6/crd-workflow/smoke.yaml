@@ -5,6 +5,10 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -13,6 +17,7 @@ spec:
       paths:
       - test/k6/k6-smoke-test.js
   container:
+    image: grafana/k6:1.1.0
     resources:
       requests:
         cpu: 128m
@@ -22,16 +27,23 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run test
-    run:
-      image: grafana/k6:0.43.1
-      args:
-      - run
-      - k6-smoke-test.js
-      - -e
-      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
-      env:
-      - name: K6_SYSTEM_ENV
-        value: K6_SYSTEM_ENV_value
+    steps:
+    - shell: mkdir /data/artifacts
+    - run:
+        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 30s
+        env:
+        - name: K6_SYSTEM_ENV
+          value: K6_SYSTEM_ENV_value
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report.html"
+      steps:
+      - name: Saving artifacts
+        workingDir: /data/artifacts
+        artifacts:
+          paths:
+          - '*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -40,6 +52,9 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   container:
     resources:
@@ -64,7 +79,7 @@ spec:
     template:
       name: official/k6/v1
       config:
-        version: 0.48.0
+        version: 1.1.0
         run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
 ---
 apiVersion: testworkflows.testkube.io/v1
@@ -74,6 +89,9 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -98,16 +116,61 @@ spec:
     template:
       name: official/k6/v1
       config:
-        version: 0.48.0
+        version: 1.1.0
         run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: k6-workflow-smoke-content-file
+  labels:
+    core-tests: workflows
+    tool: k6
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
+spec:
+  content:
+    files:
+      - path: /data/k6-test.js
+        content: |-
+          import http from 'k6/http';
+          import { sleep } from 'k6';
+          export default function () {
+              http.get('https://testkube-test-page-lipsum.pages.dev');
+              sleep(1);
+          };
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  steps:
+    - name: Run Tests
+      workingDir: /data
+      run:
+        image: grafana/k6:1.1.0
+        env:
+          - name: K6_WEB_DASHBOARD
+            value: 'true'
+          - name: K6_WEB_DASHBOARD_EXPORT
+            value: k6-test-report.html
+        shell: k6 run k6-test.js --duration 30s
+      artifacts:
+        paths:
+          - k6-test-report.html
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-smoke-artifacts
+  name: k6-workflow-smoke-latest-image
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   content:
     git:
@@ -125,29 +188,46 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run test
-    container:
-      image: grafana/k6:0.49.0
-    steps:
-    - shell: mkdir /data/artifacts
-    - run:
-        args:
-        - run
-        - k6-smoke-test.js
-        - -e
-        - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
-        env:
-        - name: K6_SYSTEM_ENV
-          value: K6_SYSTEM_ENV_value
-        - name: K6_WEB_DASHBOARD
-          value: "true"
-        - name: K6_WEB_DASHBOARD_EXPORT
-          value: "/data/artifacts/k6-test-report.html"
-      steps:
-      - name: Saving artifacts
-        workingDir: /data/artifacts
-        artifacts:
-          paths:
-          - '*'
+    run:
+      image: grafana/k6:latest
+      shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-workflow-smoke-master-image
+  labels:
+    core-tests: workflows
+    tool: k6
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:master
+      shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -156,64 +236,25 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
 spec:
   config:
     vus: {type: integer, default: 2}
     duration: {type: string, default: '2s'}
-    workers: {type: integer, default: 3}
+    workers: {type: integer, default: 2}
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
       - test/k6/k6-smoke-test.js
-  job:
-    activeDeadlineSeconds: 300
-  steps:
-  - name: Run test
-    parallel:
-      count: 'config.workers'
-      transfer:
-      - from: /data/repo
-      use:
-      - name: distribute/evenly
-      container:
-        workingDir: /data/repo/test/k6
-        resources:
-          requests:
-            cpu: 128m
-            memory: 128Mi
-        env:
-        - name: K6_SYSTEM_ENV
-          value: K6_SYSTEM_ENV_value
-      paused: true # synchronize running all workers
-      run:
-        image: grafana/k6:0.49.0
-        shell: |
-          k6 run k6-smoke-test.js \
-            -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value \
-            --vus {{ shellquote(config.vus) }} \
-            --duration {{ shellquote(config.duration) }} \
-            --execution-segment {{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: distributed-k6-workflow-smoke-artifacts
-  labels:
-    core-tests: workflows
-    tool: k6
-spec:
-  config:
-    vus: {type: integer, default: 2}
-    duration: {type: string, default: '2s'}
-    workers: {type: integer, default: 3}
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -231,27 +272,52 @@ spec:
             memory: 128Mi
       paused: true # synchronise running all workers
       run:
-        image: grafana/k6:0.49.0
+        image: grafana/k6:1.1.0
         workingDir: /data/repo/test/k6
-        args:
-        - run
-        - k6-smoke-test.js
-        - -e
-        - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
-        - --vus
-        - '{{ config.vus }}'
-        - --duration
-        - '{{ config.duration }}'
-        - --execution-segment
-        - '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
+        shell: |
+          k6 run k6-smoke-test.js \
+            -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value \
+            --vus {{ shellquote(config.vus) }} \
+            --duration {{ shellquote(config.duration) }} \
+            --execution-segment {{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}
         env:
         - name: K6_SYSTEM_ENV
           value: K6_SYSTEM_ENV_value
-        - name: K6_WEB_DASHBOARD
-          value: "true"
-        - name: K6_WEB_DASHBOARD_EXPORT
-          value: "/data/k6-test-report.html"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-browser-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: k6-browser
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: k6
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/k6/k6-browser-smoke-test.js
+  container:
+    image: grafana/k6:1.3.0-with-browser
+    workingDir: /data/repo/test/k6
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Create artifacts directory
+      shell: mkdir -p /data/artifacts
+    - name: Run test
+      run:
+        shell: |
+          k6 run k6-browser-smoke-test.js --out json=/data/artifacts/k6-browser-result.json --tag test_type=browser
       artifacts:
-        workingDir: /data
         paths:
-        - '*.html'
+          - '*'

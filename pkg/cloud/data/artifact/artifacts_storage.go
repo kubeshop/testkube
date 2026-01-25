@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/archive"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -26,8 +27,8 @@ type CloudArtifactsStorage struct {
 
 var ErrOperationNotSupported = errors.New("operation not supported")
 
-func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudArtifactsStorage {
-	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
+func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, proContext *intconfig.ProContext) *CloudArtifactsStorage {
+	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, proContext)}
 }
 
 func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error) {

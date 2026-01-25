@@ -1,0 +1,98 @@
+# Additional special cases that shouldn't be cron-triggered along with "standard" special cases
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-cron-trigger-with-timezone
+  labels:
+    core-tests: special-case
+description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
+spec:
+  events:
+  - cronjob:
+      cron: 5 12 * * * # 12:05 PM every day
+      timezone: Europe/Warsaw
+  - cronjob:
+      cron: 5 12 * * * # 12:05 PM every day
+      timezone: America/New_York
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step - should just pass" && exit 0'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-30m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 30 minutes"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      for iteration in $(seq 1 1800); do
+        echo "Iteration $iteration, sleep (1 second)"
+        sleep 1
+      done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-90m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 90 minutes"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      for iteration in $(seq 1 5400); do
+        echo "Iteration $iteration, sleep (1 second)"
+        sleep 1
+      done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-sleep-90m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 90 minutes sleep + echo in the end"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      sleep 5400 && echo "Sleep finished after 90 minutes"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-service-name-with-dash  # only . notation is supported (https://linear.app/kubeshop/issue/TKC-4047/)
+  labels:
+    core-tests: special-cases
+description: "Service name with dash"
+spec:
+  container:
+    image: alpine:3.22.0
+  services:
+    service-name-with-dash:
+      image: alpine:3.22.0
+      logs: always
+      count: 1
+      shell: 'echo "started service" && sleep 60'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: |
+        echo "Service IP: {{ at(services, "service-name-with-dash").0.ip }}"
+        echo "Service ENV: $SERVICE_IP"
+        [ -z "$SERVICE_IP" ] && { echo "ERROR: SERVICE_IP empty"; exit 1; } || echo OK
+      env:
+        - name: SERVICE_IP
+          value: '{{ at(services, "service-name-with-dash").0.ip }}'

@@ -6,279 +6,97 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
-	"github.com/kubeshop/testkube/cmd/api-server/services"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
+	faketestkube "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/fake"
 )
 
-func TestService_runWatcher_lease(t *testing.T) {
-	t.Parallel()
-
-	t.Run("create and delete a test trigger", func(t *testing.T) {
-		t.Parallel()
-
-		clientset := fake.NewSimpleClientset()
-		testKubeClientset := faketestkube.NewSimpleClientset()
-
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-
-		s := &Service{
-			deprecatedSystem:  &services.DeprecatedSystem{},
-			triggerStatus:     make(map[statusKey]*triggerStatus),
-			clientset:         clientset,
-			testKubeClientset: testKubeClientset,
-			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
-			eventsBus:         &bus.EventBusMock{},
-			metrics:           metrics.NewMetrics(),
-		}
-
-		leaseChan := make(chan bool)
-		go func() { time.Sleep(50 * time.Millisecond); leaseChan <- true }()
-		go s.runWatcher(ctx, leaseChan)
-
-		time.Sleep(100 * time.Millisecond)
-
-		testNamespace := "testkube"
-		testTrigger := testtriggersv1.TestTrigger{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-1"},
-			Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
-		}
-		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
-		assert.NotNil(t, createdTestTrigger)
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-
-		assert.Len(t, s.triggerStatus, 1)
-		key := newStatusKey(testNamespace, "test-trigger-1")
-		assert.Contains(t, s.triggerStatus, key)
-
-		err = testKubeClientset.TestsV1().TestTriggers(testNamespace).Delete(ctx, "test-trigger-1", metav1.DeleteOptions{})
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-
-		assert.Len(t, s.triggerStatus, 0)
-	})
-
-	t.Run("create a test trigger for pod created and match event on pod creation", func(t *testing.T) {
-		t.Parallel()
-
-		clientset := fake.NewSimpleClientset()
-		testKubeClientset := faketestkube.NewSimpleClientset()
-
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-
-		testNamespace := "testkube"
-
-		match := false
-		testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
-			assert.Equal(t, testNamespace, trigger.Namespace)
-			assert.Equal(t, "test-trigger-2", trigger.Name)
-			match = true
-			return nil
-		}
-		s := &Service{
-			deprecatedSystem:  &services.DeprecatedSystem{},
-			triggerExecutor:   testExecutorF,
-			identifier:        "testkube-api",
-			clusterID:         "testkube",
-			triggerStatus:     make(map[statusKey]*triggerStatus),
-			clientset:         clientset,
-			testKubeClientset: testKubeClientset,
-			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
-			eventsBus:         &bus.EventBusMock{},
-			metrics:           metrics.NewMetrics(),
-		}
-
-		leaseChan := make(chan bool)
-		go func() { time.Sleep(50 * time.Millisecond); leaseChan <- true }()
-		go s.runWatcher(ctx, leaseChan)
-
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- true
-		time.Sleep(50 * time.Millisecond)
-
-		testTrigger := testtriggersv1.TestTrigger{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-2"},
-			Spec: testtriggersv1.TestTriggerSpec{
-				Resource:          "pod",
-				ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
-				Event:             "created",
-				Action:            "run",
-				Execution:         "test",
-				ConcurrencyPolicy: "allow",
-				TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
-				Disabled:          false,
-			},
-		}
-		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
-		assert.NotNil(t, createdTestTrigger)
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-
-		assert.Len(t, s.triggerStatus, 1)
-		key := newStatusKey(testNamespace, "test-trigger-2")
-		assert.Contains(t, s.triggerStatus, key)
-
-		testPod := corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-pod"}}
-		_, err = clientset.CoreV1().Pods(testNamespace).Create(ctx, &testPod, metav1.CreateOptions{})
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-		assert.True(t, match, "pod created event should match the test trigger condition")
-	})
+func newWatcherTestService(clientset *fake.Clientset, testKubeClientset *faketestkube.Clientset, namespace string) *Service {
+	return &Service{
+		triggerStatus:     make(map[statusKey]*triggerStatus),
+		clientset:         clientset,
+		testKubeClientset: testKubeClientset,
+		logger:            log.DefaultLogger,
+		eventsBus:         &bus.EventBusMock{},
+		metrics:           metrics.NewMetrics(),
+		proContext:        &intconfig.ProContext{},
+		testkubeNamespace: namespace,
+		watcherNamespaces: []string{namespace},
+	}
 }
 
-func TestService_runWatcher_noLease(t *testing.T) {
-	t.Parallel()
+func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 
-	t.Run("watcher will not start if lease is not acquired", func(t *testing.T) {
-		t.Parallel()
+	clientset := fake.NewSimpleClientset()
+	testKubeClientset := faketestkube.NewSimpleClientset()
+	namespace := "testkube"
 
-		clientset := fake.NewSimpleClientset()
-		testKubeClientset := faketestkube.NewSimpleClientset()
+	service := newWatcherTestService(clientset, testKubeClientset, namespace)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
-		s := &Service{
-			deprecatedSystem:  &services.DeprecatedSystem{},
-			triggerStatus:     make(map[statusKey]*triggerStatus),
-			identifier:        "testkube-api",
-			clusterID:         "testkube",
-			clientset:         clientset,
-			testKubeClientset: testKubeClientset,
-			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
-			eventsBus:         &bus.EventBusMock{},
-			metrics:           metrics.NewMetrics(),
-		}
+	go service.runWatcher(ctx)
 
-		leaseChan := make(chan bool)
-		go s.runWatcher(ctx, leaseChan)
+	require.Eventually(t, func() bool {
+		return service.informers != nil
+	}, time.Second, 10*time.Millisecond)
 
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- false
-		time.Sleep(50 * time.Millisecond)
+	trigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "test-trigger"},
+		Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
+	}
+	_, err := testKubeClientset.TestsV1().TestTriggers(namespace).Create(ctx, trigger, metav1.CreateOptions{})
+	require.NoError(t, err)
 
-		testNamespace := "testkube"
-		testTrigger := testtriggersv1.TestTrigger{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-1"},
-			Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
-		}
-		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
-		assert.NotNil(t, createdTestTrigger)
-		assert.NoError(t, err)
+	assert.Eventually(t, func() bool {
+		_, ok := service.triggerStatus[newStatusKey(namespace, "test-trigger")]
+		return ok
+	}, time.Second, 10*time.Millisecond)
 
-		time.Sleep(50 * time.Millisecond)
+	err = testKubeClientset.TestsV1().TestTriggers(namespace).Delete(ctx, "test-trigger", metav1.DeleteOptions{})
+	require.NoError(t, err)
 
-		assert.Len(t, s.triggerStatus, 0)
-	})
+	assert.Eventually(t, func() bool {
+		return len(service.triggerStatus) == 0
+	}, time.Second, 10*time.Millisecond)
+}
 
-	t.Run("watcher should stop when lease is lost", func(t *testing.T) {
-		t.Parallel()
+func TestService_runWatcher_stopsOnContextCancellation(t *testing.T) {
 
-		clientset := fake.NewSimpleClientset()
-		testKubeClientset := faketestkube.NewSimpleClientset()
+	clientset := fake.NewSimpleClientset()
+	testKubeClientset := faketestkube.NewSimpleClientset()
+	namespace := "testkube"
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
+	service := newWatcherTestService(clientset, testKubeClientset, namespace)
 
-		s := &Service{
-			deprecatedSystem:  &services.DeprecatedSystem{},
-			triggerStatus:     make(map[statusKey]*triggerStatus),
-			identifier:        "testkube-api",
-			clusterID:         "testkube",
-			clientset:         clientset,
-			testKubeClientset: testKubeClientset,
-			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
-			eventsBus:         &bus.EventBusMock{},
-			metrics:           metrics.NewMetrics(),
-		}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		service.runWatcher(ctx)
+		close(done)
+	}()
 
-		leaseChan := make(chan bool)
-		go s.runWatcher(ctx, leaseChan)
+	require.Eventually(t, func() bool {
+		return service.informers != nil
+	}, time.Second, 10*time.Millisecond)
 
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- true
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- false
-		time.Sleep(50 * time.Millisecond)
+	cancel()
 
-		testNamespace := "testkube"
-		testTrigger := testtriggersv1.TestTrigger{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-1"},
-			Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
-		}
-		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
-		assert.NotNil(t, createdTestTrigger)
-		assert.NoError(t, err)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatalf("expected watcher to stop after context cancellation")
+	}
 
-		time.Sleep(50 * time.Millisecond)
-
-		assert.Len(t, s.triggerStatus, 0)
-	})
-
-	t.Run("watcher should successfully restart on a newly acquired lease", func(t *testing.T) {
-		t.Parallel()
-
-		clientset := fake.NewSimpleClientset()
-		testKubeClientset := faketestkube.NewSimpleClientset()
-
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-
-		s := &Service{
-			deprecatedSystem:  &services.DeprecatedSystem{},
-			triggerStatus:     make(map[statusKey]*triggerStatus),
-			identifier:        "testkube-api",
-			clusterID:         "testkube",
-			clientset:         clientset,
-			testKubeClientset: testKubeClientset,
-			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
-			eventsBus:         &bus.EventBusMock{},
-			metrics:           metrics.NewMetrics(),
-		}
-
-		leaseChan := make(chan bool)
-		go s.runWatcher(ctx, leaseChan)
-
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- true
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- false
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- true
-		time.Sleep(50 * time.Millisecond)
-
-		testNamespace := "testkube"
-		testTrigger := testtriggersv1.TestTrigger{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-1"},
-			Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
-		}
-		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
-		assert.NotNil(t, createdTestTrigger)
-		assert.NoError(t, err)
-
-		time.Sleep(50 * time.Millisecond)
-
-		assert.Len(t, s.triggerStatus, 1)
-		key := newStatusKey(testNamespace, "test-trigger-1")
-		assert.Contains(t, s.triggerStatus, key)
-	})
+	require.Eventually(t, func() bool {
+		return service.informers == nil
+	}, time.Second, 10*time.Millisecond)
 }

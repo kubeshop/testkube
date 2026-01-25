@@ -1,0 +1,1750 @@
+{{- if .Values.installCRD }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: testsuites.tests.testkube.io
+spec:
+  group: tests.testkube.io
+  names:
+    kind: TestSuite
+    listKind: TestSuiteList
+    plural: testsuites
+    singular: testsuite
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: TestSuite is the Schema for the testsuites API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TestSuiteSpec defines the desired state of TestSuite
+            properties:
+              after:
+                description: After steps is list of tests which will be sequentially
+                  orchestrated
+                items:
+                  description: TestSuiteStepSpec will of particular type will have
+                    config for possible step types
+                  properties:
+                    delay:
+                      description: TestSuiteStepDelay contains step delay parameters
+                      properties:
+                        duration:
+                          description: Duration in ms
+                          format: int32
+                          type: integer
+                      type: object
+                    execute:
+                      description: TestSuiteStepExecute defines step to be executed
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        stopOnFailure:
+                          type: boolean
+                      type: object
+                    type:
+                      type: string
+                  type: object
+                type: array
+              before:
+                description: Before steps is list of tests which will be sequentially
+                  orchestrated
+                items:
+                  description: TestSuiteStepSpec will of particular type will have
+                    config for possible step types
+                  properties:
+                    delay:
+                      description: TestSuiteStepDelay contains step delay parameters
+                      properties:
+                        duration:
+                          description: Duration in ms
+                          format: int32
+                          type: integer
+                      type: object
+                    execute:
+                      description: TestSuiteStepExecute defines step to be executed
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        stopOnFailure:
+                          type: boolean
+                      type: object
+                    type:
+                      type: string
+                  type: object
+                type: array
+              description:
+                type: string
+              params:
+                additionalProperties:
+                  type: string
+                description: DEPRECATED execution params passed to executor
+                type: object
+              repeats:
+                type: integer
+              schedule:
+                description: schedule in cron job format for scheduled test execution
+                type: string
+              steps:
+                description: Steps is list of tests which will be sequentially orchestrated
+                items:
+                  description: TestSuiteStepSpec will of particular type will have
+                    config for possible step types
+                  properties:
+                    delay:
+                      description: TestSuiteStepDelay contains step delay parameters
+                      properties:
+                        duration:
+                          description: Duration in ms
+                          format: int32
+                          type: integer
+                      type: object
+                    execute:
+                      description: TestSuiteStepExecute defines step to be executed
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        stopOnFailure:
+                          type: boolean
+                      type: object
+                    type:
+                      type: string
+                  type: object
+                type: array
+              variables:
+                additionalProperties:
+                  properties:
+                    name:
+                      description: variable name
+                      type: string
+                    type:
+                      description: variable type
+                      type: string
+                    value:
+                      description: variable string value
+                      type: string
+                    valueFrom:
+                      description: or load it from var source
+                      properties:
+                        configMapKeyRef:
+                          description: Selects a key of a ConfigMap.
+                          properties:
+                            key:
+                              description: The key to select.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the ConfigMap or its key
+                                must be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        fieldRef:
+                          description: |-
+                            Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                            spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                          properties:
+                            apiVersion:
+                              description: Version of the schema the FieldPath is
+                                written in terms of, defaults to "v1".
+                              type: string
+                            fieldPath:
+                              description: Path of the field to select in the specified
+                                API version.
+                              type: string
+                          required:
+                          - fieldPath
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        fileKeyRef:
+                          description: |-
+                            FileKeyRef selects a key of the env file.
+                            Requires the EnvFiles feature gate to be enabled.
+                          properties:
+                            key:
+                              description: |-
+                                The key within the env file. An invalid key will prevent the pod from starting.
+                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                              type: string
+                            optional:
+                              default: false
+                              description: |-
+                                Specify whether the file or its key must be defined. If the file or key
+                                does not exist, then the env var is not published.
+                                If optional is set to true and the specified key does not exist,
+                                the environment variable will not be set in the Pod's containers.
+
+                                If optional is set to false and the specified key does not exist,
+                                an error will be returned during Pod creation.
+                              type: boolean
+                            path:
+                              description: |-
+                                The path within the volume from which to select the file.
+                                Must be relative and may not contain the '..' path or start with '..'.
+                              type: string
+                            volumeName:
+                              description: The name of the volume mount containing
+                                the env file.
+                              type: string
+                          required:
+                          - key
+                          - path
+                          - volumeName
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        resourceFieldRef:
+                          description: |-
+                            Selects a resource of the container: only resources limits and requests
+                            (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                          properties:
+                            containerName:
+                              description: 'Container name: required for volumes,
+                                optional for env vars'
+                              type: string
+                            divisor:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Specifies the output format of the exposed
+                                resources, defaults to "1"
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            resource:
+                              description: 'Required: resource to select'
+                              type: string
+                          required:
+                          - resource
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        secretKeyRef:
+                          description: Selects a key of a secret in the pod's namespace
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                  type: object
+                description: Variables are new params with secrets attached
+                type: object
+            type: object
+          status:
+            description: TestSuiteStatus defines the observed state of TestSuite
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v2
+    schema:
+      openAPIV3Schema:
+        description: TestSuite is the Schema for the testsuites API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TestSuiteSpec defines the desired state of TestSuite
+            properties:
+              after:
+                description: After steps is list of tests which will be sequentially
+                  orchestrated
+                items:
+                  description: TestSuiteStepSpec for particular type will have config
+                    for possible step types
+                  properties:
+                    delay:
+                      description: TestSuiteStepDelay contains step delay parameters
+                      properties:
+                        duration:
+                          description: Duration in ms
+                          format: int32
+                          type: integer
+                      type: object
+                    execute:
+                      description: TestSuiteStepExecute defines step to be executed
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        stopOnFailure:
+                          type: boolean
+                      type: object
+                    type:
+                      description: TestSuiteStepType defines different type of test
+                        suite steps
+                      enum:
+                      - execute
+                      - delay
+                      type: string
+                  type: object
+                type: array
+              before:
+                description: Before steps is list of tests which will be sequentially
+                  orchestrated
+                items:
+                  description: TestSuiteStepSpec for particular type will have config
+                    for possible step types
+                  properties:
+                    delay:
+                      description: TestSuiteStepDelay contains step delay parameters
+                      properties:
+                        duration:
+                          description: Duration in ms
+                          format: int32
+                          type: integer
+                      type: object
+                    execute:
+                      description: TestSuiteStepExecute defines step to be executed
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        stopOnFailure:
+                          type: boolean
+                      type: object
+                    type:
+                      description: TestSuiteStepType defines different type of test
+                        suite steps
+                      enum:
+                      - execute
+                      - delay
+                      type: string
+                  type: object
+                type: array
+              description:
+                type: string
+              executionRequest:
+                description: TestSuiteExecutionRequest defines the execution request
+                  body
+                properties:
+                  cronJobTemplate:
+                    description: cron job template extensions
+                    type: string
+                  executionLabels:
+                    additionalProperties:
+                      type: string
+                    description: execution labels
+                    type: object
+                  httpProxy:
+                    description: http proxy for executor containers
+                    type: string
+                  httpsProxy:
+                    description: https proxy for executor containers
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: test suite labels
+                    type: object
+                  name:
+                    description: test execution custom name
+                    type: string
+                  namespace:
+                    description: test kubernetes namespace (\"testkube\" when not
+                      set)
+                    type: string
+                  secretUUID:
+                    description: secret uuid
+                    type: string
+                  sync:
+                    description: whether to start execution sync or async
+                    type: boolean
+                  timeout:
+                    description: timeout for test suite execution
+                    format: int32
+                    type: integer
+                  variables:
+                    additionalProperties:
+                      properties:
+                        name:
+                          description: variable name
+                          type: string
+                        type:
+                          description: variable type
+                          type: string
+                        value:
+                          description: variable string value
+                          type: string
+                        valueFrom:
+                          description: or load it from var source
+                          properties:
+                            configMapKeyRef:
+                              description: Selects a key of a ConfigMap.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              description: |-
+                                Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                              properties:
+                                apiVersion:
+                                  description: Version of the schema the FieldPath
+                                    is written in terms of, defaults to "v1".
+                                  type: string
+                                fieldPath:
+                                  description: Path of the field to select in the
+                                    specified API version.
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              description: |-
+                                FileKeyRef selects a key of the env file.
+                                Requires the EnvFiles feature gate to be enabled.
+                              properties:
+                                key:
+                                  description: |-
+                                    The key within the env file. An invalid key will prevent the pod from starting.
+                                    The keys defined within a source may consist of any printable ASCII characters except '='.
+                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                  type: string
+                                optional:
+                                  default: false
+                                  description: |-
+                                    Specify whether the file or its key must be defined. If the file or key
+                                    does not exist, then the env var is not published.
+                                    If optional is set to true and the specified key does not exist,
+                                    the environment variable will not be set in the Pod's containers.
+
+                                    If optional is set to false and the specified key does not exist,
+                                    an error will be returned during Pod creation.
+                                  type: boolean
+                                path:
+                                  description: |-
+                                    The path within the volume from which to select the file.
+                                    Must be relative and may not contain the '..' path or start with '..'.
+                                  type: string
+                                volumeName:
+                                  description: The name of the volume mount containing
+                                    the env file.
+                                  type: string
+                              required:
+                              - key
+                              - path
+                              - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              description: |-
+                                Selects a resource of the container: only resources limits and requests
+                                (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                              properties:
+                                containerName:
+                                  description: 'Container name: required for volumes,
+                                    optional for env vars'
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: Specifies the output format of the
+                                    exposed resources, defaults to "1"
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  description: 'Required: resource to select'
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              description: Selects a key of a secret in the pod's
+                                namespace
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                      type: object
+                    type: object
+                type: object
+              repeats:
+                type: integer
+              schedule:
+                description: schedule in cron job format for scheduled test execution
+                type: string
+              steps:
+                description: Steps is list of tests which will be sequentially orchestrated
+                items:
+                  description: TestSuiteStepSpec for particular type will have config
+                    for possible step types
+                  properties:
+                    delay:
+                      description: TestSuiteStepDelay contains step delay parameters
+                      properties:
+                        duration:
+                          description: Duration in ms
+                          format: int32
+                          type: integer
+                      type: object
+                    execute:
+                      description: TestSuiteStepExecute defines step to be executed
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        stopOnFailure:
+                          type: boolean
+                      type: object
+                    type:
+                      description: TestSuiteStepType defines different type of test
+                        suite steps
+                      enum:
+                      - execute
+                      - delay
+                      type: string
+                  type: object
+                type: array
+            type: object
+          status:
+            description: TestSuiteStatus defines the observed state of TestSuite
+            properties:
+              latestExecution:
+                description: latest execution result
+                properties:
+                  endTime:
+                    description: test suite execution end time
+                    format: date-time
+                    type: string
+                  id:
+                    description: execution id
+                    type: string
+                  startTime:
+                    description: test suite execution start time
+                    format: date-time
+                    type: string
+                  status:
+                    enum:
+                    - queued
+                    - running
+                    - passed
+                    - failed
+                    - aborting
+                    - aborted
+                    - timeout
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v3
+    schema:
+      openAPIV3Schema:
+        description: TestSuite is the Schema for the testsuites API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TestSuiteSpec defines the desired state of TestSuite
+            properties:
+              after:
+                description: After batch steps is list of batch tests which will be
+                  sequentially orchestrated for parallel tests in each batch
+                items:
+                  description: TestSuiteBatchStep is set of steps run in parallel
+                  properties:
+                    downloadArtifacts:
+                      description: options to download artifacts from previous steps
+                      properties:
+                        allPreviousSteps:
+                          type: boolean
+                        previousStepNumbers:
+                          description: previous step numbers starting from 1
+                          items:
+                            format: int32
+                            type: integer
+                          type: array
+                        previousTestNames:
+                          description: previous test names
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    execute:
+                      items:
+                        description: TestSuiteStepSpec for particular type will have
+                          config for possible step types
+                        properties:
+                          delay:
+                            description: delay duration in time units
+                            format: duration
+                            type: string
+                          executionRequest:
+                            description: |-
+                              TestSuiteStepExecutionRequest contains parameters to be used by the executions.
+                              These fields will be passed to the execution when a Test Suite is queued for execution.
+                              TestSuiteStepExecutionRequest parameters have the highest priority. They override the
+                              values coming from Test Suites, Tests, and Test Executions.
+                            properties:
+                              args:
+                                description: additional executor binary arguments
+                                items:
+                                  type: string
+                                type: array
+                              argsMode:
+                                description: usage mode for arguments
+                                enum:
+                                - append
+                                - override
+                                - replace
+                                type: string
+                              command:
+                                description: executor binary command
+                                items:
+                                  type: string
+                                type: array
+                              cronJobTemplate:
+                                description: cron job template extensions
+                                type: string
+                              cronJobTemplateReference:
+                                description: cron job template extensions reference
+                                type: string
+                              disableWebhooks:
+                                description: |-
+                                  whether webhooks should be called on execution
+                                  Deprecated: field is not used
+                                type: boolean
+                              executionLabels:
+                                additionalProperties:
+                                  type: string
+                                description: test execution labels
+                                type: object
+                              httpProxy:
+                                description: http proxy for executor containers
+                                type: string
+                              httpsProxy:
+                                description: https proxy for executor containers
+                                type: string
+                              jobTemplate:
+                                description: job template extensions
+                                type: string
+                              jobTemplateReference:
+                                description: job template extensions reference
+                                type: string
+                              negativeTest:
+                                description: negative test will fail the execution
+                                  if it is a success and it will succeed if it is
+                                  a failure
+                                type: boolean
+                              pvcTemplate:
+                                description: pvc template extensions
+                                type: string
+                              pvcTemplateReference:
+                                description: pvc template extensions reference
+                                type: string
+                              runningContext:
+                                description: RunningContext for test or test suite
+                                  execution
+                                properties:
+                                  context:
+                                    description: Context value depending from its
+                                      type
+                                    type: string
+                                  type:
+                                    description: One of possible context types
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              scraperTemplate:
+                                description: scraper template extensions
+                                type: string
+                              scraperTemplateReference:
+                                description: scraper template extensions reference
+                                type: string
+                              sync:
+                                description: whether to start execution sync or async
+                                type: boolean
+                              variables:
+                                additionalProperties:
+                                  properties:
+                                    name:
+                                      description: variable name
+                                      type: string
+                                    type:
+                                      description: variable type
+                                      type: string
+                                    value:
+                                      description: variable string value
+                                      type: string
+                                    valueFrom:
+                                      description: or load it from var source
+                                      properties:
+                                        configMapKeyRef:
+                                          description: Selects a key of a ConfigMap.
+                                          properties:
+                                            key:
+                                              description: The key to select.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the ConfigMap
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          description: |-
+                                            Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                            spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                                          properties:
+                                            apiVersion:
+                                              description: Version of the schema the
+                                                FieldPath is written in terms of,
+                                                defaults to "v1".
+                                              type: string
+                                            fieldPath:
+                                              description: Path of the field to select
+                                                in the specified API version.
+                                              type: string
+                                          required:
+                                          - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          description: |-
+                                            FileKeyRef selects a key of the env file.
+                                            Requires the EnvFiles feature gate to be enabled.
+                                          properties:
+                                            key:
+                                              description: |-
+                                                The key within the env file. An invalid key will prevent the pod from starting.
+                                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                              type: string
+                                            optional:
+                                              default: false
+                                              description: |-
+                                                Specify whether the file or its key must be defined. If the file or key
+                                                does not exist, then the env var is not published.
+                                                If optional is set to true and the specified key does not exist,
+                                                the environment variable will not be set in the Pod's containers.
+
+                                                If optional is set to false and the specified key does not exist,
+                                                an error will be returned during Pod creation.
+                                              type: boolean
+                                            path:
+                                              description: |-
+                                                The path within the volume from which to select the file.
+                                                Must be relative and may not contain the '..' path or start with '..'.
+                                              type: string
+                                            volumeName:
+                                              description: The name of the volume
+                                                mount containing the env file.
+                                              type: string
+                                          required:
+                                          - key
+                                          - path
+                                          - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          description: |-
+                                            Selects a resource of the container: only resources limits and requests
+                                            (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                                          properties:
+                                            containerName:
+                                              description: 'Container name: required
+                                                for volumes, optional for env vars'
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                              - type: integer
+                                              - type: string
+                                              description: Specifies the output format
+                                                of the exposed resources, defaults
+                                                to "1"
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              description: 'Required: resource to
+                                                select'
+                                              type: string
+                                          required:
+                                          - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          description: Selects a key of a secret in
+                                            the pod's namespace
+                                          properties:
+                                            key:
+                                              description: The key of the secret to
+                                                select from.  Must be a valid secret
+                                                key.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the Secret
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                  type: object
+                                type: object
+                            type: object
+                          test:
+                            description: object name
+                            type: string
+                        type: object
+                      type: array
+                    stopOnFailure:
+                      type: boolean
+                  required:
+                  - stopOnFailure
+                  type: object
+                type: array
+              before:
+                description: Before batch steps is list of batch tests which will
+                  be sequentially orchestrated for parallel tests in each batch
+                items:
+                  description: TestSuiteBatchStep is set of steps run in parallel
+                  properties:
+                    downloadArtifacts:
+                      description: options to download artifacts from previous steps
+                      properties:
+                        allPreviousSteps:
+                          type: boolean
+                        previousStepNumbers:
+                          description: previous step numbers starting from 1
+                          items:
+                            format: int32
+                            type: integer
+                          type: array
+                        previousTestNames:
+                          description: previous test names
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    execute:
+                      items:
+                        description: TestSuiteStepSpec for particular type will have
+                          config for possible step types
+                        properties:
+                          delay:
+                            description: delay duration in time units
+                            format: duration
+                            type: string
+                          executionRequest:
+                            description: |-
+                              TestSuiteStepExecutionRequest contains parameters to be used by the executions.
+                              These fields will be passed to the execution when a Test Suite is queued for execution.
+                              TestSuiteStepExecutionRequest parameters have the highest priority. They override the
+                              values coming from Test Suites, Tests, and Test Executions.
+                            properties:
+                              args:
+                                description: additional executor binary arguments
+                                items:
+                                  type: string
+                                type: array
+                              argsMode:
+                                description: usage mode for arguments
+                                enum:
+                                - append
+                                - override
+                                - replace
+                                type: string
+                              command:
+                                description: executor binary command
+                                items:
+                                  type: string
+                                type: array
+                              cronJobTemplate:
+                                description: cron job template extensions
+                                type: string
+                              cronJobTemplateReference:
+                                description: cron job template extensions reference
+                                type: string
+                              disableWebhooks:
+                                description: |-
+                                  whether webhooks should be called on execution
+                                  Deprecated: field is not used
+                                type: boolean
+                              executionLabels:
+                                additionalProperties:
+                                  type: string
+                                description: test execution labels
+                                type: object
+                              httpProxy:
+                                description: http proxy for executor containers
+                                type: string
+                              httpsProxy:
+                                description: https proxy for executor containers
+                                type: string
+                              jobTemplate:
+                                description: job template extensions
+                                type: string
+                              jobTemplateReference:
+                                description: job template extensions reference
+                                type: string
+                              negativeTest:
+                                description: negative test will fail the execution
+                                  if it is a success and it will succeed if it is
+                                  a failure
+                                type: boolean
+                              pvcTemplate:
+                                description: pvc template extensions
+                                type: string
+                              pvcTemplateReference:
+                                description: pvc template extensions reference
+                                type: string
+                              runningContext:
+                                description: RunningContext for test or test suite
+                                  execution
+                                properties:
+                                  context:
+                                    description: Context value depending from its
+                                      type
+                                    type: string
+                                  type:
+                                    description: One of possible context types
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              scraperTemplate:
+                                description: scraper template extensions
+                                type: string
+                              scraperTemplateReference:
+                                description: scraper template extensions reference
+                                type: string
+                              sync:
+                                description: whether to start execution sync or async
+                                type: boolean
+                              variables:
+                                additionalProperties:
+                                  properties:
+                                    name:
+                                      description: variable name
+                                      type: string
+                                    type:
+                                      description: variable type
+                                      type: string
+                                    value:
+                                      description: variable string value
+                                      type: string
+                                    valueFrom:
+                                      description: or load it from var source
+                                      properties:
+                                        configMapKeyRef:
+                                          description: Selects a key of a ConfigMap.
+                                          properties:
+                                            key:
+                                              description: The key to select.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the ConfigMap
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          description: |-
+                                            Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                            spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                                          properties:
+                                            apiVersion:
+                                              description: Version of the schema the
+                                                FieldPath is written in terms of,
+                                                defaults to "v1".
+                                              type: string
+                                            fieldPath:
+                                              description: Path of the field to select
+                                                in the specified API version.
+                                              type: string
+                                          required:
+                                          - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          description: |-
+                                            FileKeyRef selects a key of the env file.
+                                            Requires the EnvFiles feature gate to be enabled.
+                                          properties:
+                                            key:
+                                              description: |-
+                                                The key within the env file. An invalid key will prevent the pod from starting.
+                                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                              type: string
+                                            optional:
+                                              default: false
+                                              description: |-
+                                                Specify whether the file or its key must be defined. If the file or key
+                                                does not exist, then the env var is not published.
+                                                If optional is set to true and the specified key does not exist,
+                                                the environment variable will not be set in the Pod's containers.
+
+                                                If optional is set to false and the specified key does not exist,
+                                                an error will be returned during Pod creation.
+                                              type: boolean
+                                            path:
+                                              description: |-
+                                                The path within the volume from which to select the file.
+                                                Must be relative and may not contain the '..' path or start with '..'.
+                                              type: string
+                                            volumeName:
+                                              description: The name of the volume
+                                                mount containing the env file.
+                                              type: string
+                                          required:
+                                          - key
+                                          - path
+                                          - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          description: |-
+                                            Selects a resource of the container: only resources limits and requests
+                                            (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                                          properties:
+                                            containerName:
+                                              description: 'Container name: required
+                                                for volumes, optional for env vars'
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                              - type: integer
+                                              - type: string
+                                              description: Specifies the output format
+                                                of the exposed resources, defaults
+                                                to "1"
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              description: 'Required: resource to
+                                                select'
+                                              type: string
+                                          required:
+                                          - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          description: Selects a key of a secret in
+                                            the pod's namespace
+                                          properties:
+                                            key:
+                                              description: The key of the secret to
+                                                select from.  Must be a valid secret
+                                                key.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the Secret
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                  type: object
+                                type: object
+                            type: object
+                          test:
+                            description: object name
+                            type: string
+                        type: object
+                      type: array
+                    stopOnFailure:
+                      type: boolean
+                  required:
+                  - stopOnFailure
+                  type: object
+                type: array
+              description:
+                type: string
+              executionRequest:
+                description: test suite execution request body
+                properties:
+                  cronJobTemplate:
+                    description: cron job template extensions
+                    type: string
+                  cronJobTemplateReference:
+                    description: name of the template resource
+                    type: string
+                  disableWebhooks:
+                    description: |-
+                      whether webhooks should be called on execution
+                      Deprecated: field is not used
+                    type: boolean
+                  executionLabels:
+                    additionalProperties:
+                      type: string
+                    description: execution labels
+                    type: object
+                  httpProxy:
+                    description: http proxy for executor containers
+                    type: string
+                  httpsProxy:
+                    description: https proxy for executor containers
+                    type: string
+                  jobTemplate:
+                    description: job template extensions
+                    type: string
+                  jobTemplateReference:
+                    description: name of the template resource
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: test suite labels
+                    type: object
+                  name:
+                    description: test execution custom name
+                    type: string
+                  namespace:
+                    description: test kubernetes namespace (\"testkube\" when not
+                      set)
+                    type: string
+                  pvcTemplate:
+                    description: pvc template extensions
+                    type: string
+                  pvcTemplateReference:
+                    description: name of the template resource
+                    type: string
+                  scraperTemplate:
+                    description: scraper template extensions
+                    type: string
+                  scraperTemplateReference:
+                    description: name of the template resource
+                    type: string
+                  secretUUID:
+                    description: secret uuid
+                    type: string
+                  sync:
+                    description: whether to start execution sync or async
+                    type: boolean
+                  timeout:
+                    description: timeout for test suite execution
+                    format: int32
+                    type: integer
+                  variables:
+                    additionalProperties:
+                      properties:
+                        name:
+                          description: variable name
+                          type: string
+                        type:
+                          description: variable type
+                          type: string
+                        value:
+                          description: variable string value
+                          type: string
+                        valueFrom:
+                          description: or load it from var source
+                          properties:
+                            configMapKeyRef:
+                              description: Selects a key of a ConfigMap.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              description: |-
+                                Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                              properties:
+                                apiVersion:
+                                  description: Version of the schema the FieldPath
+                                    is written in terms of, defaults to "v1".
+                                  type: string
+                                fieldPath:
+                                  description: Path of the field to select in the
+                                    specified API version.
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              description: |-
+                                FileKeyRef selects a key of the env file.
+                                Requires the EnvFiles feature gate to be enabled.
+                              properties:
+                                key:
+                                  description: |-
+                                    The key within the env file. An invalid key will prevent the pod from starting.
+                                    The keys defined within a source may consist of any printable ASCII characters except '='.
+                                    During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                  type: string
+                                optional:
+                                  default: false
+                                  description: |-
+                                    Specify whether the file or its key must be defined. If the file or key
+                                    does not exist, then the env var is not published.
+                                    If optional is set to true and the specified key does not exist,
+                                    the environment variable will not be set in the Pod's containers.
+
+                                    If optional is set to false and the specified key does not exist,
+                                    an error will be returned during Pod creation.
+                                  type: boolean
+                                path:
+                                  description: |-
+                                    The path within the volume from which to select the file.
+                                    Must be relative and may not contain the '..' path or start with '..'.
+                                  type: string
+                                volumeName:
+                                  description: The name of the volume mount containing
+                                    the env file.
+                                  type: string
+                              required:
+                              - key
+                              - path
+                              - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              description: |-
+                                Selects a resource of the container: only resources limits and requests
+                                (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                              properties:
+                                containerName:
+                                  description: 'Container name: required for volumes,
+                                    optional for env vars'
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: Specifies the output format of the
+                                    exposed resources, defaults to "1"
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  description: 'Required: resource to select'
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              description: Selects a key of a secret in the pod's
+                                namespace
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                      type: object
+                    type: object
+                type: object
+              repeats:
+                type: integer
+              schedule:
+                description: schedule in cron job format for scheduled test execution
+                type: string
+              steps:
+                description: Batch steps is list of batch tests which will be sequentially
+                  orchestrated for parallel tests in each batch
+                items:
+                  description: TestSuiteBatchStep is set of steps run in parallel
+                  properties:
+                    downloadArtifacts:
+                      description: options to download artifacts from previous steps
+                      properties:
+                        allPreviousSteps:
+                          type: boolean
+                        previousStepNumbers:
+                          description: previous step numbers starting from 1
+                          items:
+                            format: int32
+                            type: integer
+                          type: array
+                        previousTestNames:
+                          description: previous test names
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    execute:
+                      items:
+                        description: TestSuiteStepSpec for particular type will have
+                          config for possible step types
+                        properties:
+                          delay:
+                            description: delay duration in time units
+                            format: duration
+                            type: string
+                          executionRequest:
+                            description: |-
+                              TestSuiteStepExecutionRequest contains parameters to be used by the executions.
+                              These fields will be passed to the execution when a Test Suite is queued for execution.
+                              TestSuiteStepExecutionRequest parameters have the highest priority. They override the
+                              values coming from Test Suites, Tests, and Test Executions.
+                            properties:
+                              args:
+                                description: additional executor binary arguments
+                                items:
+                                  type: string
+                                type: array
+                              argsMode:
+                                description: usage mode for arguments
+                                enum:
+                                - append
+                                - override
+                                - replace
+                                type: string
+                              command:
+                                description: executor binary command
+                                items:
+                                  type: string
+                                type: array
+                              cronJobTemplate:
+                                description: cron job template extensions
+                                type: string
+                              cronJobTemplateReference:
+                                description: cron job template extensions reference
+                                type: string
+                              disableWebhooks:
+                                description: |-
+                                  whether webhooks should be called on execution
+                                  Deprecated: field is not used
+                                type: boolean
+                              executionLabels:
+                                additionalProperties:
+                                  type: string
+                                description: test execution labels
+                                type: object
+                              httpProxy:
+                                description: http proxy for executor containers
+                                type: string
+                              httpsProxy:
+                                description: https proxy for executor containers
+                                type: string
+                              jobTemplate:
+                                description: job template extensions
+                                type: string
+                              jobTemplateReference:
+                                description: job template extensions reference
+                                type: string
+                              negativeTest:
+                                description: negative test will fail the execution
+                                  if it is a success and it will succeed if it is
+                                  a failure
+                                type: boolean
+                              pvcTemplate:
+                                description: pvc template extensions
+                                type: string
+                              pvcTemplateReference:
+                                description: pvc template extensions reference
+                                type: string
+                              runningContext:
+                                description: RunningContext for test or test suite
+                                  execution
+                                properties:
+                                  context:
+                                    description: Context value depending from its
+                                      type
+                                    type: string
+                                  type:
+                                    description: One of possible context types
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              scraperTemplate:
+                                description: scraper template extensions
+                                type: string
+                              scraperTemplateReference:
+                                description: scraper template extensions reference
+                                type: string
+                              sync:
+                                description: whether to start execution sync or async
+                                type: boolean
+                              variables:
+                                additionalProperties:
+                                  properties:
+                                    name:
+                                      description: variable name
+                                      type: string
+                                    type:
+                                      description: variable type
+                                      type: string
+                                    value:
+                                      description: variable string value
+                                      type: string
+                                    valueFrom:
+                                      description: or load it from var source
+                                      properties:
+                                        configMapKeyRef:
+                                          description: Selects a key of a ConfigMap.
+                                          properties:
+                                            key:
+                                              description: The key to select.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the ConfigMap
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          description: |-
+                                            Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+                                            spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+                                          properties:
+                                            apiVersion:
+                                              description: Version of the schema the
+                                                FieldPath is written in terms of,
+                                                defaults to "v1".
+                                              type: string
+                                            fieldPath:
+                                              description: Path of the field to select
+                                                in the specified API version.
+                                              type: string
+                                          required:
+                                          - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          description: |-
+                                            FileKeyRef selects a key of the env file.
+                                            Requires the EnvFiles feature gate to be enabled.
+                                          properties:
+                                            key:
+                                              description: |-
+                                                The key within the env file. An invalid key will prevent the pod from starting.
+                                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                              type: string
+                                            optional:
+                                              default: false
+                                              description: |-
+                                                Specify whether the file or its key must be defined. If the file or key
+                                                does not exist, then the env var is not published.
+                                                If optional is set to true and the specified key does not exist,
+                                                the environment variable will not be set in the Pod's containers.
+
+                                                If optional is set to false and the specified key does not exist,
+                                                an error will be returned during Pod creation.
+                                              type: boolean
+                                            path:
+                                              description: |-
+                                                The path within the volume from which to select the file.
+                                                Must be relative and may not contain the '..' path or start with '..'.
+                                              type: string
+                                            volumeName:
+                                              description: The name of the volume
+                                                mount containing the env file.
+                                              type: string
+                                          required:
+                                          - key
+                                          - path
+                                          - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          description: |-
+                                            Selects a resource of the container: only resources limits and requests
+                                            (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+                                          properties:
+                                            containerName:
+                                              description: 'Container name: required
+                                                for volumes, optional for env vars'
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                              - type: integer
+                                              - type: string
+                                              description: Specifies the output format
+                                                of the exposed resources, defaults
+                                                to "1"
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              description: 'Required: resource to
+                                                select'
+                                              type: string
+                                          required:
+                                          - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          description: Selects a key of a secret in
+                                            the pod's namespace
+                                          properties:
+                                            key:
+                                              description: The key of the secret to
+                                                select from.  Must be a valid secret
+                                                key.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the Secret
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                  type: object
+                                type: object
+                            type: object
+                          test:
+                            description: object name
+                            type: string
+                        type: object
+                      type: array
+                    stopOnFailure:
+                      type: boolean
+                  required:
+                  - stopOnFailure
+                  type: object
+                type: array
+            type: object
+          status:
+            description: TestSuiteStatus defines the observed state of TestSuite
+            properties:
+              latestExecution:
+                description: latest execution result
+                properties:
+                  endTime:
+                    description: test suite execution end time
+                    format: date-time
+                    type: string
+                  id:
+                    description: execution id
+                    type: string
+                  startTime:
+                    description: test suite execution start time
+                    format: date-time
+                    type: string
+                  status:
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

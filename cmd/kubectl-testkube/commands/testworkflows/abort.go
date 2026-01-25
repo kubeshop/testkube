@@ -12,10 +12,11 @@ import (
 
 func NewAbortTestWorkflowExecutionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "testworkflowexecution <executionName>",
-		Aliases: []string{"twe", "testworkflows-execution", "testworkflow-execution"},
-		Short:   "Abort test workflow execution",
-		Args:    validator.ExecutionName,
+		Use:        "testworkflowexecution <executionName>",
+		Deprecated: "use \"cancel\" instead",
+		Aliases:    []string{"twe", "testworkflows-execution", "testworkflow-execution"},
+		Short:      "Abort test workflow execution",
+		Args:       validator.ExecutionName,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
@@ -26,7 +27,7 @@ func NewAbortTestWorkflowExecutionCmd() *cobra.Command {
 			execution, err := client.GetTestWorkflowExecution(executionID)
 			ui.ExitOnError("get execution failed", err)
 
-			err = client.AbortTestWorkflowExecution(execution.Workflow.Name, execution.Id)
+			err = client.AbortTestWorkflowExecution(execution.Workflow.Name, execution.Id, false)
 			ui.ExitOnError(fmt.Sprintf("aborting testworkflow execution %s", executionID), err)
 
 			ui.SuccessAndExit("Succesfully aborted test workflow execution", executionID)
@@ -36,10 +37,11 @@ func NewAbortTestWorkflowExecutionCmd() *cobra.Command {
 
 func NewAbortTestWorkflowExecutionsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "testworkflowexecutions <testWorkflowName>",
-		Aliases: []string{"twes", "testworkflows-executions", "testworkflow-executions"},
-		Short:   "Abort all test workflow executions",
-		Args:    cobra.ExactArgs(1),
+		Use:        "testworkflowexecutions <testWorkflowName>",
+		Deprecated: "use \"cancel\" instead",
+		Aliases:    []string{"twes", "testworkflows-executions", "testworkflow-executions"},
+		Short:      "Abort all test workflow executions",
+		Args:       cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
 			testWorkflowName := args[0]

@@ -3,7 +3,8 @@ kind: TestWorkflow
 metadata:
   name: k6-loadtest
   labels:
-    core-tests: workflows
+    category: performance-testing
+    artifacts: "true"
 spec:
   content:
     git:

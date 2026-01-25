@@ -1,0 +1,173 @@
+{{- if .Values.installCRD }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: webhooktemplates.executor.testkube.io
+spec:
+  group: executor.testkube.io
+  names:
+    kind: WebhookTemplate
+    listKind: WebhookTemplateList
+    plural: webhooktemplates
+    singular: webhooktemplate
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: WebhookTemplate is the Schema for the webhook templates API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: WebhookTemplateSpec defines the desired state of Webhook
+              Template
+            properties:
+              config:
+                additionalProperties:
+                  description: webhook configuration value
+                  properties:
+                    secret:
+                      description: private value stored in secret to use in webhook
+                        template
+                      properties:
+                        key:
+                          description: object key
+                          type: string
+                        name:
+                          description: object name
+                          type: string
+                        namespace:
+                          description: object kubernetes namespace
+                          type: string
+                      required:
+                      - key
+                      - name
+                      type: object
+                    value:
+                      description: public value to use in webhook template
+                      type: string
+                  type: object
+                description: webhook configuration
+                type: object
+              disabled:
+                description: Disabled will disable the webhook
+                type: boolean
+              events:
+                description: Events declare list if events on which webhook should
+                  be called
+                items:
+                  enum:
+                  - start-test
+                  - end-test-success
+                  - end-test-failed
+                  - end-test-aborted
+                  - end-test-timeout
+                  - become-test-up
+                  - become-test-down
+                  - become-test-failed
+                  - become-test-aborted
+                  - become-test-timeout
+                  - start-testsuite
+                  - end-testsuite-success
+                  - end-testsuite-failed
+                  - end-testsuite-aborted
+                  - end-testsuite-timeout
+                  - become-testsuite-up
+                  - become-testsuite-down
+                  - become-testsuite-failed
+                  - become-testsuite-aborted
+                  - become-testsuite-timeout
+                  - start-testworkflow
+                  - queue-testworkflow
+                  - end-testworkflow-success
+                  - end-testworkflow-failed
+                  - end-testworkflow-aborted
+                  - end-testworkflow-canceled
+                  - end-testworkflow-not-passed
+                  - become-testworkflow-up
+                  - become-testworkflow-down
+                  - become-testworkflow-failed
+                  - become-testworkflow-aborted
+                  - become-testworkflow-canceled
+                  - become-testworkflow-not-passed
+                  type: string
+                type: array
+              headers:
+                additionalProperties:
+                  type: string
+                description: webhook headers (golang template supported)
+                type: object
+              parameters:
+                description: webhook parameters
+                items:
+                  description: webhook parameter schema
+                  properties:
+                    default:
+                      description: default parameter value
+                      type: string
+                    description:
+                      description: description for the parameter
+                      type: string
+                    example:
+                      description: example value for the parameter
+                      type: string
+                    name:
+                      description: unique parameter name
+                      type: string
+                    pattern:
+                      description: regular expression to match
+                      type: string
+                    required:
+                      description: whether parameter is required
+                      type: boolean
+                  required:
+                  - name
+                  type: object
+                type: array
+              payloadObjectField:
+                description: will load the generated payload for notification inside
+                  the object
+                type: string
+              payloadTemplate:
+                description: golang based template for notification payload
+                type: string
+              payloadTemplateReference:
+                description: name of the template resource
+                type: string
+              selector:
+                description: Labels to filter for tests and test suites
+                type: string
+              uri:
+                description: Uri is address where webhook should be made (golang template
+                  supported)
+                type: string
+            type: object
+          status:
+            description: WebhookTemplateStatus defines the observed state of Webhook
+              Template
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

@@ -15,7 +15,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -23,43 +22,6 @@ import (
 )
 
 func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
-	if env.IsNewArchitecture() {
-		return executeTestWorkflowGrpc(workflowName, request)
-	}
-	return executeTestWorkflowApi(workflowName, request)
-}
-
-func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
-	cfg := config.Config()
-	client := env.Testkube()
-
-	parentIds := make([]string, 0)
-	if cfg.Execution.ParentIds != "" {
-		parentIds = strings.Split(cfg.Execution.ParentIds, "/")
-	}
-	parentIds = append(parentIds, cfg.Execution.Id)
-
-	request.ParentExecutionIds = parentIds
-	request.RunningContext = &testkube.TestWorkflowRunningContext{
-		Interface_: &testkube.TestWorkflowRunningContextInterface{
-			Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
-		},
-		Actor: &testkube.TestWorkflowRunningContextActor{
-			Name:          cfg.Workflow.Name,
-			ExecutionId:   cfg.Execution.Id,
-			ExecutionPath: strings.Join(parentIds, "/"),
-			Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
-		},
-	}
-
-	execution, err := client.ExecuteTestWorkflow(workflowName, request)
-	if err != nil {
-		return nil, err
-	}
-	return []testkube.TestWorkflowExecution{execution}, nil
-}
-
-func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
 	client, err := env.Cloud()
 	if err != nil {
@@ -70,8 +32,15 @@ func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowE
 		targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*request.Target})
 	}
 
+	var runtime *cloud.TestWorkflowRuntime
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtime = &cloud.TestWorkflowRuntime{
+			EnvVars: request.Runtime.Variables,
+		}
+	}
+
 	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, &cloud.ScheduleRequest{
-		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Targets: targets}},
+		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Runtime: runtime, Targets: targets}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
 	}).All()

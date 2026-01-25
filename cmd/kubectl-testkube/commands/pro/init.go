@@ -136,8 +136,7 @@ func NewInitCmd() *cobra.Command {
 }
 
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
-	var errorStackTrace string
-	errorStackTrace = fmt.Sprintf("%+v", errorLogs)
+	var errorStackTrace = fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
 		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)

@@ -19,7 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -137,6 +137,13 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
 	}
 
+	var runtimeOptions *testworkflowprocessor.RuntimeOptions
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtimeOptions = &testworkflowprocessor.RuntimeOptions{
+			Variables: request.Runtime.Variables,
+		}
+	}
+
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
 		Config:                 cfg,
@@ -144,6 +151,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		ScheduledAt:            scheduledAt,
 		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+		Runtime:                runtimeOptions,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
@@ -195,6 +203,13 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
 	}
 
+	var runtimeOptions *testworkflowprocessor.RuntimeOptions
+	if request.Runtime != nil && len(request.Runtime.Variables) > 0 {
+		runtimeOptions = &testworkflowprocessor.RuntimeOptions{
+			Variables: request.Runtime.Variables,
+		}
+	}
+
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
 		Config:                 cfg,
@@ -202,6 +217,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 		ScheduledAt:            scheduledAt,
 		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
 		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+		Runtime:                runtimeOptions,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
@@ -245,7 +261,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 func (w *worker) Notifications(ctx context.Context, id string, opts executionworkertypes.NotificationsOptions) executionworkertypes.NotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -280,7 +296,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 func (w *worker) StatusNotifications(ctx context.Context, id string, opts executionworkertypes.StatusNotificationsOptions) executionworkertypes.StatusNotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewStatusNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -370,10 +386,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 // TODO: Allow fetching temporary logs too?
 func (w *worker) Logs(ctx context.Context, id string, options executionworkertypes.LogsOptions) utils.LogsReader {
 	reader := utils.NewLogsReader()
-	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
-		Hints:    options.Hints,
-		NoFollow: options.NoFollow,
-	})
+	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions(options))
 	if notifications.Err() != nil {
 		reader.End(notifications.Err())
 		return reader
@@ -398,7 +411,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 func (w *worker) Get(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, options.Hints)
 	if err != nil {
 		return nil, err
 	}
@@ -437,7 +450,7 @@ func (w *worker) Get(ctx context.Context, id string, options executionworkertype
 func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	ctrl, recycle, err := w.registry.Connect(ctx, id, options.Hints)
 	if err != nil {
 		return nil, err
 	}

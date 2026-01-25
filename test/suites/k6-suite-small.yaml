@@ -1,0 +1,17 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-workflow-suite-small
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: k6
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: k6-workflow-smoke
+      - name: k6-workflow-smoke-template
+      - name: k6-workflow-smoke-content-file
+      - name: distributed-k6-workflow-smoke

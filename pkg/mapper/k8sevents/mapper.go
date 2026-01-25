@@ -7,9 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -27,24 +25,6 @@ func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) co
 		Namespace: namespace,
 	}
 
-	if event.TestExecution != nil {
-		labels = event.TestExecution.Labels
-		message = fmt.Sprintf("executionId=%s", event.TestExecution.Id)
-		objectReference.APIVersion = testsv3.Group + "/" + testsv3.Version
-		objectReference.Kind = testsv3.Resource
-		objectReference.Name = event.TestExecution.TestName
-	}
-
-	if event.TestSuiteExecution != nil {
-		labels = event.TestSuiteExecution.Labels
-		message = fmt.Sprintf("executionId=%s", event.TestSuiteExecution.Id)
-		objectReference.APIVersion = testsuitesv3.Group + "/" + testsuitesv3.Version
-		objectReference.Kind = testsuitesv3.Resource
-		if event.TestSuiteExecution.TestSuite != nil {
-			objectReference.Name = event.TestSuiteExecution.TestSuite.Name
-		}
-	}
-
 	if event.TestWorkflowExecution != nil {
 		message = fmt.Sprintf("executionId=%s", event.TestWorkflowExecution.Id)
 		objectReference.APIVersion = testworkflowsv1.Group + "/" + testworkflowsv1.Version
@@ -58,16 +38,14 @@ func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) co
 	if event.Type_ != nil {
 		reason = string(*event.Type_)
 		switch *event.Type_ {
-		case *testkube.EventStartTest, *testkube.EventStartTestSuite, *testkube.EventStartTestWorkflow:
+		case *testkube.EventStartTestWorkflow:
 			action = "started"
-		case *testkube.EventEndTestSuccess, *testkube.EventEndTestSuiteSuccess, *testkube.EventEndTestWorkflowSuccess:
+		case *testkube.EventEndTestWorkflowSuccess:
 			action = "succeed"
-		case *testkube.EventEndTestFailed, *testkube.EventEndTestSuiteFailed, *testkube.EventEndTestWorkflowFailed:
+		case *testkube.EventEndTestWorkflowFailed:
 			action = "failed"
-		case *testkube.EventEndTestAborted, *testkube.EventEndTestSuiteAborted, *testkube.EventEndTestWorkflowAborted:
+		case *testkube.EventEndTestWorkflowAborted:
 			action = "aborted"
-		case *testkube.EventEndTestTimeout, *testkube.EventEndTestSuiteTimeout:
-			action = "timeouted"
 		case *testkube.EventQueueTestWorkflow:
 			action = "queued"
 		case *testkube.EventCreated:

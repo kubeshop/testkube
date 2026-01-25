@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -181,7 +181,7 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 		}
 
 		// Get the secret details
-		secret, err := s.SecretManager.Get(c.Context(), namespace, name)
+		secret, err := s.SecretManager.Get(c.Context(), namespace, name, secretmanager.GetOptions{})
 		if apiutils.IsNotFound(err) {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
 		} else if errors.Is(err, secretmanager.ErrManagementDisabled) {
@@ -194,7 +194,8 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 }
 
 func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerReference, error) {
-	if kind == testworkflowsv1.Resource {
+	switch kind {
+	case testworkflowsv1.Resource:
 		obj, err := s.TestWorkflowsK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
@@ -210,7 +211,7 @@ func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerRefere
 			UID:        obj.UID,
 		}
 		return ownerRef, nil
-	} else if kind == testworkflowsv1.ResourceTemplate {
+	case testworkflowsv1.ResourceTemplate:
 		obj, err := s.TestWorkflowTemplatesK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")

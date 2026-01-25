@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package cloud;
 
-option go_package = "pkg/cloud";
-
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
@@ -27,8 +25,14 @@ service TestKubeCloudAPI {
     // Runner
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
-    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
-    rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest) {
+      // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.GetExecutionUpdates instead.
+      option deprecated = true;
+    };
+    rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse) {
+      // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.SetExecutionScheduling instead.
+      option deprecated = true;
+    };
     rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
     rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
     rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
@@ -59,6 +63,58 @@ service TestKubeCloudAPI {
     rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
     rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
     rpc WatchTestWorkflowTemplateUpdates(WatchTestWorkflowTemplateUpdatesRequest) returns (stream TestWorkflowTemplateUpdate);
+    // -- Test Triggers
+    rpc GetTestTrigger(GetTestTriggerRequest) returns (GetTestTriggerResponse);
+    rpc ListTestTriggers(ListTestTriggersRequest) returns (stream TestTriggerListItem);
+    rpc ListTestTriggerLabels(ListTestTriggerLabelsRequest) returns (ListTestTriggerLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc CreateTestTrigger(CreateTestTriggerRequest) returns (CreateTestTriggerResponse);
+    rpc UpdateTestTrigger(UpdateTestTriggerRequest) returns (UpdateTestTriggerResponse);
+    rpc DeleteTestTrigger(DeleteTestTriggerRequest) returns (DeleteTestTriggerResponse);
+    rpc DeleteAllTestTriggers(DeleteAllTestTriggersRequest) returns (DeleteAllTestTriggersResponse);
+    rpc DeleteTestTriggersByLabels(DeleteTestTriggersByLabelsRequest) returns (DeleteTestTriggersByLabelsResponse);
+    rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate) {
+      option deprecated = true;
+    };
+    // -- Webhook
+    rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem) {
+      option deprecated = true;
+    };
+    rpc ListWebhooksV2(ListWebhooksV2Request) returns (ListWebhooksResponse);
+    rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteAllWebhooks(DeleteAllWebhooksRequest) returns (DeleteAllWebhooksResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteWebhooksByLabels(DeleteWebhooksByLabelsRequest) returns (DeleteWebhooksByLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate) {
+      option deprecated = true;
+    };
+
+    // MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+    // to indicate to a server that it has succesfully performed all pre-migration operations
+    // and should now be considered to be a regular agent with capabilities.
+    // This RPC is defined as part of the legacy Service as it will be removed after "Super"
+    // Agents are no longer an applicable Agent type.
+    rpc MigrateSuperAgent(MigrateSuperAgentRequest) returns (MigrateSuperAgentResponse) {
+      option deprecated = true;
+    };
 }
 
 enum LogsStreamRequestType {
@@ -151,10 +207,11 @@ message ProContextEnvironment {
 message ProContextAgent {
   string id = 1;
   string name = 2;
-  string type = 3;
+  string type = 3 [deprecated = true]; // Superseded by agent capabilities
   bool disabled = 4;
   map<string, string> labels = 5;
   repeated ProContextEnvironment environments = 6;
+  bool is_super_agent = 7;
 }
 
 message ProContextResponse {
@@ -201,6 +258,7 @@ message WebsocketData {
 message CredentialRequest {
   string name = 1;
   string execution_id = 2;
+  string source = 3; // "credential" or "vault"
 }
 
 message CredentialResponse {
@@ -248,12 +306,18 @@ message ScheduleResourceSelector {
   map<string, string> labels = 2;
 }
 
+// Runtime configuration for test workflow execution
+message TestWorkflowRuntime {
+  map<string, string> env_vars = 1; // Runtime environment variables overrides
+}
+
 message ScheduleExecution {
   ScheduleResourceSelector selector = 1;
   map<string, string> config = 2;
   string execution_name = 3;
   map<string, string> tags = 4;
   repeated ExecutionTarget targets = 5;
+  TestWorkflowRuntime runtime = 6; // Runtime configuration overrides for the execution
 }
 
 // map<string, []string> is not supported in protobuf
@@ -289,6 +353,19 @@ message UserSignature {
   string email = 2;
 }
 
+message SilentMode {
+  // disable webhooks for this execution
+  bool webhooks = 1;
+  // exclude from insights and analytics dashboards
+  bool insights = 2;
+  // exclude from health and flakiness calculations
+  bool health = 3;
+  // exclude from prometheus metrics
+  bool metrics = 4;
+  // disable CDEvents for this execution
+  bool cdevents = 5;
+}
+
 message ScheduleRequest {
   // Test Workflow details
   repeated ScheduleExecution executions = 2;
@@ -308,6 +385,9 @@ message ScheduleRequest {
 
   // Test Workflow resolved spec
   bytes resolvedWorkflow = 11;
+
+  // Silent mode settings
+  optional SilentMode silent_mode = 12;
 }
 
 message ScheduleResponse {
@@ -335,58 +415,81 @@ message Event {
   bytes data = 5;
 }
 
+// Capabilities supported by an Agent
+enum AgentCapability {
+  AGENT_CAPABILITY_UNSPECIFIED = 0;
+  AGENT_CAPABILITY_RUNNER = 1;
+  AGENT_CAPABILITY_LISTENER = 2;
+  AGENT_CAPABILITY_GITOPS = 3;
+  AGENT_CAPABILITY_WEBHOOKS = 4;
+  AGENT_CAPABILITY_CLOUD_WEBHOOKS = 5;
+}
+
 message RegisterRequest {
   string registration_token = 1;
   string runner_name = 2;
   string organization_id = 3;
   bool floating = 4;
+  repeated AgentCapability capabilities = 5;
+  string runner_group = 6;
+  bool is_global = 7;
+  map<string, string> labels = 8;
 }
 
 message RegisterResponse {
   string runner_id = 1;
   string runner_key = 2;
+  string organization_id = 3;
+  string runner_name = 4;
 }
 
 enum RunnerRequestType {
-  PING = 0; // Heartbeat
-  CONSIDER = 1; // Consider a new execution to be run
-  START = 2; // Start
-  ABORT = 3; // Abort the execution
-  RESUME = 4; // Resume the execution
-  PAUSE = 5; // Pause the execution
-  CANCEL = 6; // Cancel the execution (API call)
+  option deprecated = true;
+  PING = 0 [deprecated = true]; // Heartbeat
+  CONSIDER = 1  [deprecated = true]; // Consider a new execution to be run
+  START = 2  [deprecated = true]; // Start
+  ABORT = 3  [deprecated = true]; // Abort the execution
+  RESUME = 4  [deprecated = true]; // Resume the execution
+  PAUSE = 5  [deprecated = true]; // Pause the execution
+  CANCEL = 6  [deprecated = true]; // Cancel the execution (API call)
 }
 
 message RunnerStartRequest {
-  string token = 1;
+  option deprecated = true;
+  string token = 1 [deprecated = true];
+  TestWorkflowRuntime runtime = 2 [deprecated = true]; // Runtime configuration for the execution
 }
 
 message RunnerRequest {
-  string message_id = 1;
-  string environment_id = 2;
-  string execution_id = 3;
-  RunnerRequestType type = 4;
+  option deprecated = true;
+  string message_id = 1 [deprecated = true];
+  string environment_id = 2 [deprecated = true];
+  string execution_id = 3 [deprecated = true];
+  RunnerRequestType type = 4 [deprecated = true];
   oneof request {
-    RunnerStartRequest start = 5;
+    RunnerStartRequest start = 5 [deprecated = true];
   }
 }
 
 message RunnerConsiderResponse {
-  bool ok = 1;
+  option deprecated = true;
+  bool ok = 1  [deprecated = true];
 }
 
 message RunnerStartResponse {
+  option deprecated = true;
 }
 
 message RunnerResponse {
-  string message_id = 1;
-  string environment_id = 2;
-  string execution_id = 3;
-  RunnerRequestType type = 4;
+  option deprecated = true;
+  string message_id = 1 [deprecated = true];
+  string environment_id = 2 [deprecated = true];
+  string execution_id = 3 [deprecated = true];
+  RunnerRequestType type = 4 [deprecated = true];
   oneof response {
-    string error = 5;
-    RunnerConsiderResponse consider = 6;
-    RunnerStartResponse start = 7;
+    string error = 5 [deprecated = true];
+    RunnerConsiderResponse consider = 6 [deprecated = true];
+    RunnerStartResponse start = 7 [deprecated = true];
   }
 }
 
@@ -404,12 +507,14 @@ message GetExecutionResponse {
 }
 
 message InitExecutionRequest {
-  string id = 1;
-  string namespace = 2;
-  bytes signature = 3; // []TestWorkflowSignature
+  option deprecated = true;
+  string id = 1 [deprecated = true];
+  string namespace = 2 [deprecated = true];
+  bytes signature = 3 [deprecated = true]; // []TestWorkflowSignature
 }
 
 message InitExecutionResponse {
+  option deprecated = true;
 }
 
 message UpdateExecutionResultRequest {
@@ -622,3 +727,213 @@ message TestWorkflowTemplateUpdate {
   UpdateType type = 3;
   bytes resource = 4; // TestWorkflowTemplate
 }
+
+// CRD Synchronisation -- Test Triggers
+
+message GetTestTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message ListTestTriggersRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message TestTriggerListItem {
+  bytes trigger = 1; // TestTrigger
+}
+
+message ListTestTriggerLabelsRequest {
+  option deprecated = true;
+  string namespace = 1;
+}
+
+message ListTestTriggerLabelsResponse {
+  option deprecated = true;
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestTriggerRequest {
+  bytes trigger = 1; // TestTrigger
+}
+
+message CreateTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message UpdateTestTriggerRequest {
+  bytes trigger = 1; // TestTrigger
+}
+
+message UpdateTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message DeleteTestTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteTestTriggerResponse {}
+
+message DeleteAllTestTriggersRequest {
+  string namespace = 1;
+}
+
+message DeleteAllTestTriggersResponse {
+  uint32 count = 1;
+}
+
+message DeleteTestTriggersByLabelsRequest {
+  string selector = 1;
+  string namespace = 2;
+}
+
+message DeleteTestTriggersByLabelsResponse {
+  uint32 count = 1;
+}
+
+message WatchTestTriggerUpdatesRequest {
+  option deprecated = true;
+  bool include_initial_data = 1;
+  string namespace = 2;
+}
+
+message TestTriggerUpdate {
+  option deprecated = true;
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestTrigger
+}
+
+// CRD Synchronisation -- Webhooks
+
+message GetWebhookRequest {
+  option deprecated = true;
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetWebhookResponse {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksRequest {
+  option deprecated = true;
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message ListWebhooksV2Request {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message WebhookListItem {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksResponse {
+  repeated WebhookListItem items = 1;
+  uint32 total = 2;
+}
+
+message ListWebhookLabelsRequest {
+  option deprecated = true;
+  string namespace = 1;
+}
+
+message ListWebhookLabelsResponse {
+  option deprecated = true;
+  repeated LabelListItem labels = 1;
+}
+
+message CreateWebhookRequest {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message CreateWebhookResponse {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message UpdateWebhookRequest {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message UpdateWebhookResponse {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message DeleteWebhookRequest {
+  option deprecated = true;
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteWebhookResponse {
+  option deprecated = true;
+}
+
+message DeleteAllWebhooksRequest {
+  option deprecated = true;
+  string namespace = 1;
+}
+
+message DeleteAllWebhooksResponse {
+  option deprecated = true;
+  uint32 count = 1;
+}
+
+message DeleteWebhooksByLabelsRequest {
+  option deprecated = true;
+  map<string, string> labels = 1;
+}
+
+message DeleteWebhooksByLabelsResponse {
+  option deprecated = true;
+  uint32 count = 1;
+}
+
+message WatchWebhookUpdatesRequest {
+  option deprecated = true;
+  bool include_initial_data = 1;
+  string namespace = 2;
+}
+
+message WebhookUpdate {
+  option deprecated = true;
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // Webhook
+}
+
+message MigrateSuperAgentRequest {
+  bool rollback = 1;
+}
+
+message MigrateSuperAgentResponse {}

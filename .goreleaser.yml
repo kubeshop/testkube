@@ -77,9 +77,6 @@ changelog:
       order: 9999
 
 release:
-  # Create a thread in the General category in the repo's discussion tab.
-  discussion_category_name: General
-
   # Tags that have the format v1.0.0-rc1 will mark the release as a pre-release (i.e. not ready for production)
   # Other tags will be marked as ready for production
   prerelease: auto

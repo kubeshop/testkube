@@ -35,7 +35,16 @@ type AgentInput struct {
 	Environments []string           `json:"environments,omitempty"`
 	RunnerPolicy *RunnerPolicy      `json:"runnerPolicy,omitempty"`
 	Floating     bool               `json:"floating,omitempty"`
+	Capabilities []AgentCapability  `json:"capabilities"`
 }
+
+type AgentCapability string
+
+const (
+	AgentCapabilityRunner   AgentCapability = "runner"
+	AgentCapabilityListener AgentCapability = "listener"
+	AgentCapabilityGitops   AgentCapability = "gitops"
+)
 
 type RunnerPolicy struct {
 	RequiredMatch []string `json:"requiredMatch,omitempty"`
@@ -54,6 +63,7 @@ type Agent struct {
 	Type         string             `json:"type"`
 	Labels       map[string]string  `json:"labels"`
 	Environments []AgentEnvironment `json:"environments"`
+	Capabilities []AgentCapability  `json:"capabilities,omitempty"`
 	AccessedAt   *time.Time         `json:"accessedAt,omitempty"`
 	DeletedAt    *time.Time         `json:"deletedAt,omitempty"`
 	CreatedAt    time.Time          `json:"createdAt"`
@@ -105,8 +115,9 @@ func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]
 		Type:         AgentRunnerType,
 		Labels:       common.Ptr(labels),
 		Floating:     floating,
+		Capabilities: []AgentCapability{AgentCapabilityRunner},
 	}
-	return c.RESTClient.Create(agent)
+	return c.Create(agent)
 }
 
 func (c AgentsClient) CreateGitOpsAgent(envId string, name string, labels map[string]string) (Agent, error) {
@@ -115,6 +126,7 @@ func (c AgentsClient) CreateGitOpsAgent(envId string, name string, labels map[st
 		Name:         name,
 		Type:         AgentGitOpsType,
 		Labels:       common.Ptr(labels),
+		Capabilities: []AgentCapability{AgentCapabilityGitops},
 	}
-	return c.RESTClient.Create(agent)
+	return c.Create(agent)
 }

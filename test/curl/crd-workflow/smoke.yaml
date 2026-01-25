@@ -5,6 +5,9 @@ metadata:
   labels:
     core-tests: workflows
     tool: curl
+    category: api-testing
+  annotations:
+    testkube.io/icon: curl
 spec:
   container:
     resources:
@@ -26,6 +29,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: curl
+    category: api-testing
 spec:
   pod:
     imagePullSecrets:
@@ -50,6 +54,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: curl
+    category: api-testing
 spec:
   container:
     resources:

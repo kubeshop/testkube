@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/singleflight"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -55,7 +55,7 @@ type RunnerExecute interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 }
 
-//go:generate mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
+//go:generate go tool mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
 type Runner interface {
 	RunnerExecute
 	Monitor(ctx context.Context, organizationId, environmentId, id string) error
@@ -126,7 +126,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs, r.proContext.NewArchitecture)
+	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 				index := int(findex)
 				if status == string(testkube.RUNNING_TestWorkflowStatus) {
 					parallel[SubRef{GroupId: n.Output.Ref, Index: index}] = struct{}{}
-				} else if status == string(testkube.PASSED_TestWorkflowStatus) || status == string(testkube.FAILED_TestWorkflowStatus) || status == string(testkube.ABORTED_TestWorkflowStatus) {
+				} else if testkube.TestWorkflowStatus(status).Finished() {
 					delete(parallel, SubRef{GroupId: n.Output.Ref, Index: index})
 				}
 			}
@@ -260,6 +260,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 	}
 
+	log.DefaultLogger.Infow("Saving execution", "id", execution.Id)
 	for i := 0; i < SaveEndResultRetryCount; i++ {
 		err = saver.End(ctx, *lastResult)
 		if err == nil {
@@ -280,25 +281,6 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to save execution data", "id", execution.Id, "error", err)
 		return errors.Wrapf(err, "failed to save execution '%s' data", execution.Id)
-	}
-
-	// Try to substitute execution data
-	execution.Output = nil
-	execution.Result = lastResult
-	execution.StatusAt = lastResult.FinishedAt
-
-	// Emit data, if the Control Plane doesn't support informing about status by itself
-	if !r.proContext.NewArchitecture {
-		switch {
-		case lastResult.IsPassed():
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
-		case lastResult.IsAborted():
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-		case lastResult.IsCanceled():
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
-		default:
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
-		}
 	}
 
 	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
@@ -450,7 +432,7 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 
 	// Load the execution
 	var execution *testkube.TestWorkflowExecution
-	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func() (err error) {
+	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
 			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "id", id, "error", err)
@@ -462,7 +444,6 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		log.DefaultLogger.Errorw("failed to get execution for monitoring", "id", id, "error", err)
 		return err
 	}
-
 	return r.monitor(ctx, organizationId, environmentId, *execution)
 }
 
@@ -507,7 +488,7 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		go func() {
-			err := retry(MonitorRetryCount, MonitorRetryDelay, func() error {
+			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
 					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)
@@ -568,11 +549,6 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 
 	if err = r.Abort(executionID); err != nil {
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
-	}
-
-	// Emit data, if the Control Plane doesn't support informing about status by itself
-	if !r.proContext.NewArchitecture {
-		r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
 	}
 
 	return nil

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
 func testSecret(name, key string) *corev1.EnvVarSource {
@@ -174,11 +174,7 @@ func TestExtract_ParallelContent(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{Parallel: &testworkflowsv1.StepParallel{
-					TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGitCreate("some-username", "some-token", ""),
-						},
-					},
+					Content: testGitCreate("some-username", "some-token", ""),
 				}},
 			},
 		},
@@ -190,11 +186,7 @@ func TestExtract_ParallelContent(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{Parallel: &testworkflowsv1.StepParallel{
-					TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
-						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
-						},
-					},
+					Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
 				}},
 			},
 		},

@@ -303,7 +303,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.56.1
     resources:
       requests:
         cpu: 2
@@ -315,6 +315,9 @@ spec:
   - name: Run tests
     timeout: 1s
     shell: "npx playwright test"
+  - name: Run tests
+    condition: always
+    shell: 'echo "this step should be always executed because of condition: always"'
   - name: Save artifacts
     workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
@@ -399,43 +402,283 @@ spec:
   - name: Run test
     run:
       image: postman/newman:6-alpine
-      args:
-      - run
-      - postman-executor-smoke.postman_collection.json
-      - "--env-var"
-      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+      shell: echo "The workflow should fail before executing this command"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-missing-env-secret
+  name: expected-fail-missing-template
   labels:
     core-tests: expected-fail
 spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/postman/postman-executor-smoke.postman_collection.json
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/artillery/artillery-smoke-test.yaml
+    workingDir: /data/repo/test/artillery
+    template:
+      name: some-non-existant-template-name
+      config:
+        run: "echo 'test'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-exit-code # https://linear.app/kubeshop/issue/TKC-3897/
+  labels:
+    core-tests: expected-fail
+spec:
+  container:
+    image: alpine:3.22.0
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:3.22.0
+      logs: always
+      count: 2
+      shell: 'echo "expected fail - non-zero exit code" && exit 1'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step"'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-step-retry
+  labels:
+    core-tests: expected-fail
+description: "step retry (until step failed)"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Random pass/fail
+    retry:
+      count: 20
+      until: self.failed
+    shell: |
+      code=$((RANDOM % 2))
+      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
+      exit $code
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-negative-step
+  labels:
+    core-tests: expected-fail
+description: "negative step passed - inverting step result to failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step (passed before inverting)
+    negative: true
+    shell: |
+      echo "command" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-volume-not-mounted
+  labels:
+    core-tests: expected-fail
+description: "volumeMount references missing volume"
+spec:
+  container:
+    image: alpine:3.22.0
+    volumeMounts:
+      - name: missing-volume
+        mountPath: /non-existent
+  steps:
+    - name: Check directory
+      shell: 'test -e /non-existent && echo FAIL && exit 1 || echo OK'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: expected-fail-required-config-template
+spec:
+  config:
+    message:
+      type: string
+  steps:
+    - name: Print message
+      run:
+        shell: echo "{{ config.message }}"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-template-missing-config-options
+  labels:
+    core-tests: expected-fail
+description: "Required template config missing"
+spec:
+  steps:
+    - name: Missing required config
+      template:
+        name: expected-fail-required-config-template
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-template-not-defined-config-options
+  labels:
+    core-tests: expected-fail
+description: "Not defined template config params passed"
+spec:
+  steps:
+    - name: Missing required config
+      template:
+        name: expected-fail-required-config-template
+        config:
+          version: "asdf"
+          other: "asdf"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-readiness-probe
+  labels:
+    core-tests: expected-fail
+description: "Service with failing readiness probe"
+spec:
+  services:
+    broken-service:
+      image: alpine:3.22.0
+      shell: sleep 5
+      readinessProbe:
+        tcpSocket:
+          port: 9999  # probe on cloded port
+        initialDelaySeconds: 1
+        timeoutSeconds: 1
+        failureThreshold: 1
+  steps:
+    - name: Check
+      shell: echo "Should not reach this step if probe fails as expected"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-conditional-step-failed
+  labels:
+    core-tests: expected-fail
+description: "conditional step failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be executed and fail)
+    condition: "true"
+    shell: echo "Should fail" && exit 1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-failed
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps failed"
+spec:
   container:
     resources:
       requests:
-        cpu: 256m
+        cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/test/postman
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run test
-    run:
-      image: postman/newman:6-alpine
-      env:
-      - name: EXAMPLE_ENV
-        valueFrom:
-          secretKeyRef:
-            name: non-existant-secret
-            key: key
-      args:
-      - run
-      - postman-executor-smoke.postman_collection.json
-      - "--env-var"
-      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - expected fail" && exit 1 || echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-timed-out
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps timed out"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      timeout: 5s
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - 10s sleep" && exit 1 || sleep 1 && echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-oomkilled
+  labels:
+    core-tests: expected-fail
+description: "one of parallel steps oomkilled"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 3
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          limits:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: python:3.11-slim
+        shell: |
+          ([ "{{ index }}" = "2" ] && sleep 5 && echo "parallel step - worker 3 - expected oomkilled" && python3 -c "a = ' ' * 10**9") || (sleep 10 && echo "passed")

@@ -6,15 +6,13 @@ on:
       - opened
       - edited
       - synchronize
-      
+
 jobs:
   prlint:
     name: Lint PR
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
     steps:
-      # Please look up the latest version from
-      # https://github.com/amannn/action-semantic-pull-request/releases
       - name: Lint PR
-        uses: amannn/action-semantic-pull-request@v5.5.3
+        uses: amannn/action-semantic-pull-request@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

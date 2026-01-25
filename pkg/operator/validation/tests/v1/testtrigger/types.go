@@ -1,0 +1,47 @@
+package testtrigger
+
+type EventType string
+type ResourceType string
+type Cause string
+
+const (
+	ExecutionTestWorkflow                       = "testworkflow"
+	ActionRun                                   = "run"
+	ConcurrencyPolicyAllow                      = "allow"
+	ConcurrencyPolicyForbid                     = "forbid"
+	ConcurrencyPolicyReplace                    = "replace"
+	ResourcePod                                 = "pod"
+	ResourceDeployment                          = "deployment"
+	ResourceStatefulSet                         = "statefulset"
+	ResourceDaemonSet                           = "daemonset"
+	ResourceService                             = "service"
+	ResourceIngress                             = "ingress"
+	ResourceEvent                               = "event"
+	ResourceConfigMap                           = "configmap"
+	DefaultNamespace                            = "testkube"
+	EventCreated                      EventType = "created"
+	EventModified                     EventType = "modified"
+	EventDeleted                      EventType = "deleted"
+	CauseDeploymentScaleUpdate        Cause     = "deployment-scale-update"
+	CauseDeploymentImageUpdate        Cause     = "deployment-image-update"
+	CauseDeploymentEnvUpdate          Cause     = "deployment-env-update"
+	CauseDeploymentContainersModified Cause     = "deployment-containers-modified"
+	CauseDeploymentGenerationModified Cause     = "deployment-generation-modified"
+	CauseDeploymentResourceModified   Cause     = "deployment-resource-modified"
+	CauseEventQueueTestWorkflow       Cause     = "event-queue-testworkflow"
+	CauseEventStartTestWorkflow       Cause     = "event-start-testworkflow"
+	CauseEventEndTestWorkflowSuccess  Cause     = "event-end-testworkflow-success"
+	CauseEventEndTestWorkflowFailed   Cause     = "event-end-testworkflow-failed"
+	CauseEventEndTestWorkflowAborted  Cause     = "event-end-testworkflow-aborted"
+	CauseEventCreated                 Cause     = "event-created"
+	CauseEventUpdated                 Cause     = "event-updated"
+	CauseEventDeleted                 Cause     = "event-deleted"
+	ConditionAvailable                          = "Available"
+	ConditionProgressing                        = "Progressing"
+	ConditionReplicaFailure                     = "ReplicaFailure"
+	ConditionPodScheduled                       = "PodScheduled"
+	ConditionPodHasNetwork                      = "PodHasNetwork"
+	ConditionContainersReady                    = "ContainersReady"
+	ConditionInitialized                        = "Initialized"
+	ConditionReady                              = "Ready"
+)

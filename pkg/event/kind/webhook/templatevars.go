@@ -3,7 +3,6 @@ package webhook
 import (
 	"fmt"
 
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -18,7 +17,7 @@ type TemplateVars struct {
 	Config           map[string]string
 }
 
-func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config map[string]string) TemplateVars {
+func NewTemplateVars(event testkube.Event, dashboardURI, orgID, envID string, config map[string]string) TemplateVars {
 	vars := TemplateVars{
 		Event:  event,
 		Config: config,
@@ -37,19 +36,19 @@ func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config
 		vars.LogsCommand = fmt.Sprintf("kubectl testkube get testworkflowexecution %s", event.TestWorkflowExecution.Id)
 	}
 
-	if proContext == nil || proContext.DashboardURI == "" || proContext.OrgID == "" || proContext.EnvID == "" {
+	if dashboardURI == "" || orgID == "" || envID == "" {
 		return vars
 	}
 
 	switch {
 	case event.TestExecution != nil:
-		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/tests/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestExecution.TestName, event.TestExecution.Id)
+		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/tests/%s/executions/%s", dashboardURI, orgID, envID, event.TestExecution.TestName, event.TestExecution.Id)
 		vars.ArtifactURL = fmt.Sprintf("%s/artifacts", vars.ExecutionURL)
 		vars.LogsURL = fmt.Sprintf("%s/log-output", vars.ExecutionURL)
 	case event.TestSuiteExecution != nil:
-		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/test-suites/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.Id)
+		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/test-suites/%s/executions/%s", dashboardURI, orgID, envID, event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.Id)
 	case event.TestWorkflowExecution != nil:
-		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/test-workflows/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.Id)
+		vars.ExecutionURL = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard/test-workflows/%s/executions/%s", dashboardURI, orgID, envID, event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.Id)
 		vars.ArtifactURL = fmt.Sprintf("%s/artifacts", vars.ExecutionURL)
 		vars.LogsURL = fmt.Sprintf("%s/log-output", vars.ExecutionURL)
 	}

@@ -5,6 +5,9 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -38,6 +41,9 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -67,10 +73,14 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: jmeter-workflow-smoke-shell-artifacts
+  name: jmeter-workflow-smoke-shell
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -105,6 +115,10 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
+    artifacts: "true"
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -136,6 +150,10 @@ metadata:
   name: jmeter-workflow-smoke-from-template-v1
   labels:
     core-tests: workflows
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -167,6 +185,10 @@ metadata:
   name: jmeter-workflow-smoke-from-template-separate-artifacts-step
   labels:
     core-tests: workflows
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -198,10 +220,49 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: jmeter-workflow-smoke-latest-image
+  labels:
+    core-tests: workflows
+    tool: jmeter
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run tests
+    run:
+      image: alpine/jmeter:latest
+      command:
+      - jmeter
+      args:
+      - -n
+      - -t
+      - jmeter-executor-smoke.jmx
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: distributed-jmeter-workflow-smoke
   labels:
     core-tests: workflows
     tool: jmeter
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -211,11 +272,15 @@ spec:
       - test/jmeter/jmeter-executor-smoke.jmx
   container:
     workingDir: /data/repo/test/jmeter
+    resources:
+        requests:
+          cpu: 128m
+          memory: 128Mi
   services:
     slave:
       use:
       - name: distribute/evenly
-      count: 5
+      count: 2
       timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
@@ -226,8 +291,8 @@ spec:
       - -Jserver.rmi.ssl.disable=true
       resources:
         requests:
-          cpu: 128m
-          memory: 128Mi
+          cpu: 512m
+          memory: 300Mi
       readinessProbe:
         tcpSocket:
           port: 1099
@@ -253,10 +318,14 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: distributed-jmeter-workflow-smoke-shell-artifacts
+  name: distributed-jmeter-workflow-smoke-shell
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: "true"
+    category: performance-testing
+  annotations:
+    testkube.io/icon: jmeter
 spec:
   content:
     git:
@@ -266,19 +335,29 @@ spec:
       - test/jmeter/jmeter-executor-smoke.jmx
   container:
     workingDir: /data/repo/test/jmeter
+    resources:
+      requests:
+        cpu: 512m
+        memory: 300Mi
   services:
     slave:
       use:
       - name: distribute/evenly
-      count: 5
+      count: 2
+      pod:
+        tolerations:
+        - key: kubernetes.io/arch
+          operator: Equal
+          value: arm64
+          effect: NoSchedule
+        - key: kubernetes.io/arch
+          operator: Equal
+          value: amd64
+          effect: NoSchedule
       timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
-      command:
-      - jmeter-server
-      - -Dserver.rmi.localport=60000
-      - -Dserver_port=1099
-      - -Jserver.rmi.ssl.disable=true
+      shell: jmeter-server -Dserver.rmi.localport=60000 -Dserver_port=1099 -Jserver.rmi.ssl.disable=true
       resources:
         requests:
           cpu: 128m

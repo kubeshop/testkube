@@ -18,19 +18,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	config2 "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/internal/common"
 	config3 "github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
-	"github.com/kubeshop/testkube/pkg/controlplaneclient"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -40,70 +37,23 @@ import (
 )
 
 var (
-	capabilitiesMu         sync.Mutex
-	internalProContext     config3.ProContext
-	proContext             *cloud.ProContextResponse
-	proContextLoaded       bool
-	isNewArchitectureCache *bool
-	isExternalStorageCache *bool
+	proContextMu    sync.Mutex
+	proContextCache *cloud.ProContextResponse
+
+	cloudMu     sync.Mutex
+	cloudClient cloud.TestKubeCloudAPIClient
+	cloudConn   *grpc.ClientConn
 )
 
-func loadDefaultProContext() {
+func loadProContext() (*cloud.ProContextResponse, error) {
+	proContextMu.Lock()
+	defer proContextMu.Unlock()
+
+	if proContextCache != nil {
+		return proContextCache, nil
+	}
+
 	cfg := config2.Config()
-	internalProContext = config3.ProContext{
-		APIKey:          cfg.Worker.Connection.ApiKey,
-		URL:             cfg.Worker.Connection.Url,
-		TLSInsecure:     cfg.Worker.Connection.TlsInsecure,
-		SkipVerify:      cfg.Worker.Connection.SkipVerify,
-		EnvID:           cfg.Execution.EnvironmentId,
-		EnvName:         cfg.Execution.EnvironmentId,
-		EnvSlug:         cfg.Execution.EnvironmentId,
-		OrgID:           cfg.Execution.OrganizationId,
-		OrgName:         cfg.Execution.OrganizationId,
-		OrgSlug:         cfg.Execution.OrganizationId,
-		DashboardURI:    cfg.ControlPlane.DashboardUrl,
-		NewArchitecture: false,
-		CloudStorage:    false,
-		Agent: config3.ProContextAgent{
-			ID:   cfg.Worker.Connection.AgentID,
-			Name: cfg.Worker.Connection.AgentID,
-			Environments: []config3.ProContextAgentEnvironment{
-				{
-					ID:   cfg.Execution.EnvironmentId,
-					Slug: cfg.Execution.EnvironmentId,
-					Name: cfg.Execution.EnvironmentId,
-				},
-			},
-		},
-	}
-}
-
-// FIXME: avoid loading if not necessary (lazy load in client)
-func loadProContext() error {
-	capabilitiesMu.Lock()
-	defer capabilitiesMu.Unlock()
-
-	defer func() {
-		loadDefaultProContext()
-		internalProContext.NewArchitecture = *isNewArchitectureCache
-		internalProContext.CloudStorage = *isExternalStorageCache
-	}()
-
-	// Block if the instance doesn't support that
-	cfg := config2.Config()
-	if isNewArchitectureCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewArchitecture] != "true" {
-		isNewArchitectureCache = common.Ptr(false)
-	}
-	if isExternalStorageCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagCloudStorage] != "true" {
-		isExternalStorageCache = common.Ptr(false)
-	}
-
-	// Do not check Cloud support if its already predefined
-	if isNewArchitectureCache != nil && isExternalStorageCache != nil {
-		return nil
-	}
-
-	// Check support in the cloud
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{
 		"api-key":         cfg.Worker.Connection.ApiKey,
 		"organization-id": cfg.Execution.OrganizationId,
@@ -111,44 +61,29 @@ func loadProContext() error {
 		"execution-id":    cfg.Execution.Id,
 		"agent-id":        cfg.Worker.Connection.AgentID,
 	}))
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if !proContextLoaded {
-		cloudInternal, err := CloudInternal()
-		if err != nil {
-			return err
-		}
-		proContext, _ = cloudInternal.GetProContext(ctx, &emptypb.Empty{})
-		proContextLoaded = true
+
+	cloudInternal, err := CloudInternal()
+	if err != nil {
+		return nil, err
 	}
-	if proContext != nil {
-		if isNewArchitectureCache == nil {
-			isNewArchitectureCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewArchitecture))
-		}
-		if isExternalStorageCache == nil {
-			isExternalStorageCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityCloudStorage))
-		}
-	} else {
-		isNewArchitectureCache = common.Ptr(false)
-		isExternalStorageCache = common.Ptr(false)
+	proContext, err := cloudInternal.GetProContext(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
-}
-
-func IsNewArchitecture() bool {
-	loadProContext()
-	return *isNewArchitectureCache
+	proContextCache = proContext
+	return proContext, nil
 }
 
 func IsExternalStorage() bool {
-	loadProContext()
-	return *isExternalStorageCache
+	return capabilities.Enabled(GetCapabilities(), capabilities.CapabilityCloudStorage)
 }
 
 func GetCapabilities() []*cloud.Capability {
-	loadProContext()
-	if proContext == nil {
+	proContext, err := loadProContext()
+	if err != nil {
 		return nil
 	}
 	return proContext.Capabilities
@@ -215,12 +150,6 @@ func Testkube() client.Client {
 	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", host, port), "")
 }
 
-var (
-	cloudMu     sync.Mutex
-	cloudClient cloud.TestKubeCloudAPIClient
-	cloudConn   *grpc.ClientConn
-)
-
 func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
 	cloudMu.Lock()
 	defer cloudMu.Unlock()
@@ -229,10 +158,10 @@ func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
 	if cloudClient == nil {
 		cfg := config2.Config().Worker.Connection
 		logger := log.NewSilent()
-		// TODO(dejan): now metrics are scrapped on each workflow exetucution and we get an error when connecting to Control Plane even with publicly trusted certificates.
+		// TODO(dejan): now metrics are scrapped on each workflow execution and we get an error when connecting to Control Plane even with publicly trusted certificates.
 		// Until a better solution is implemented, TLS verification will be skipped.
 		cfg.SkipVerify = true
-		cloudConn, err = agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		cloudConn, err = agentclient.NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWhatYouAreDoing(context.Background(), cfg.TlsInsecure, cfg.Url, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect with Cloud: %w", err)
 		}
@@ -247,11 +176,51 @@ func Cloud() (controlplaneclient.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	loadProContext() // FIXME: do it lazily
-	return controlplaneclient.New(grpcClient, internalProContext, controlplaneclient.ClientOptions{
+	proContext, err := loadProContext()
+	if err != nil {
+		return nil, err
+	}
+
+	proContextInternal := mapProContext(proContext)
+
+	return controlplaneclient.New(grpcClient, proContextInternal, controlplaneclient.ClientOptions{
 		StorageSkipVerify:  true, // FIXME?
 		ExecutionID:        cfg.Execution.Id,
 		WorkflowName:       cfg.Workflow.Name,
 		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
-	}), nil
+	}, log.DefaultLogger), nil
+}
+
+func mapProContext(context *cloud.ProContextResponse) config3.ProContext {
+	cfg := config2.Config()
+	cloudStorage := capabilities.Enabled(context.Capabilities, capabilities.CapabilityCloudStorage)
+
+	return config3.ProContext{
+		// From the control plane's pro context.
+		EnvID:        context.EnvId,
+		OrgID:        context.OrgId,
+		CloudStorage: cloudStorage,
+		OrgSlug:      context.OrgSlug,
+		DashboardURI: context.PublicDashboardUrl,
+
+		// From the execution pod's annotations.
+		APIKey:      cfg.Worker.Connection.ApiKey,
+		URL:         cfg.Worker.Connection.Url,
+		TLSInsecure: cfg.Worker.Connection.TlsInsecure,
+		SkipVerify:  cfg.Worker.Connection.SkipVerify,
+		EnvName:     cfg.Execution.EnvironmentId,
+		EnvSlug:     cfg.Execution.EnvironmentId,
+		OrgName:     cfg.Execution.OrganizationId,
+		Agent: config3.ProContextAgent{
+			ID:   cfg.Worker.Connection.AgentID,
+			Name: cfg.Worker.Connection.AgentID,
+			Environments: []config3.ProContextAgentEnvironment{
+				{
+					ID:   cfg.Execution.EnvironmentId,
+					Slug: cfg.Execution.EnvironmentId,
+					Name: cfg.Execution.EnvironmentId,
+				},
+			},
+		},
+	}
 }

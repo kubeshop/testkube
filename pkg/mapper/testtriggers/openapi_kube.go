@@ -3,7 +3,7 @@ package testtriggers
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -37,6 +37,58 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Labels:    request.Labels,
 		},
 		Spec: testsv1.TestTriggerSpec{
+			Selector:          mapLabelSelectorToCRD(request.Selector),
+			Resource:          resource,
+			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
+			Event:             testsv1.TestTriggerEvent(request.Event),
+			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
+			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			Action:            action,
+			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
+			Execution:         execution,
+			TestSelector:      mapSelectorToCRD(request.TestSelector),
+			ConcurrencyPolicy: concurrencyPolicy,
+			Disabled:          request.Disabled,
+		},
+	}
+}
+
+// MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta creates a TestTrigger CRD from an upsert request
+// while preserving the existing ObjectMeta (including ResourceVersion) from the original CRD
+func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkube.TestTriggerUpsertRequest, existingMeta metav1.ObjectMeta) testsv1.TestTrigger {
+	var resource testsv1.TestTriggerResource
+	if request.Resource != nil {
+		resource = testsv1.TestTriggerResource(*request.Resource)
+	}
+
+	var action testsv1.TestTriggerAction
+	if request.Action != nil {
+		action = testsv1.TestTriggerAction(*request.Action)
+	}
+
+	var execution testsv1.TestTriggerExecution
+	if request.Execution != nil {
+		execution = testsv1.TestTriggerExecution(*request.Execution)
+	}
+
+	var concurrencyPolicy testsv1.TestTriggerConcurrencyPolicy
+	if request.ConcurrencyPolicy != nil {
+		concurrencyPolicy = testsv1.TestTriggerConcurrencyPolicy(*request.ConcurrencyPolicy)
+	}
+
+	// Preserve existing metadata but update labels and annotations
+	updatedMeta := existingMeta.DeepCopy()
+	if request.Labels != nil {
+		updatedMeta.Labels = request.Labels
+	}
+	if request.Annotations != nil {
+		updatedMeta.Annotations = request.Annotations
+	}
+
+	return testsv1.TestTrigger{
+		ObjectMeta: *updatedMeta,
+		Spec: testsv1.TestTriggerSpec{
+			Selector:          mapLabelSelectorToCRD(request.Selector),
 			Resource:          resource,
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
@@ -53,20 +105,19 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
-	var labelSelector *metav1.LabelSelector
-	if selector.LabelSelector != nil {
-		labelSelector = mapLabelSelectorToCRD(selector.LabelSelector)
-	}
 	return testsv1.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
 		Namespace:      selector.Namespace,
 		NamespaceRegex: selector.NamespaceRegex,
-		LabelSelector:  labelSelector,
+		LabelSelector:  mapLabelSelectorToCRD(selector.LabelSelector),
 	}
 }
 
 func mapLabelSelectorToCRD(labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector) *metav1.LabelSelector {
+	if labelSelector == nil {
+		return nil
+	}
 	var matchExpressions []metav1.LabelSelectorRequirement
 	for _, e := range labelSelector.MatchExpressions {
 		expression := metav1.LabelSelectorRequirement{

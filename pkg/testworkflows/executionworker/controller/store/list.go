@@ -98,9 +98,7 @@ func (v *list[T]) Channel() <-chan *T {
 			}
 
 			// Wait for updates
-			select {
-			case <-v.update.Next():
-			}
+			<-v.update.Next()
 		}
 	}()
 	return ch

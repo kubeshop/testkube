@@ -1,0 +1,444 @@
+{{- if .Values.installCRD }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: testtriggers.tests.testkube.io
+spec:
+  group: tests.testkube.io
+  names:
+    kind: TestTrigger
+    listKind: TestTriggerList
+    plural: testtriggers
+    singular: testtrigger
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.resource
+      name: Resource
+      type: string
+    - jsonPath: .spec.event
+      name: Event
+      type: string
+    - jsonPath: .spec.execution
+      name: Execution
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: TestTrigger is the Schema for the testtriggers API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TestTriggerSpec defines the desired state of TestTrigger
+            properties:
+              action:
+                description: Action represents what needs to be executed for selected
+                  Execution
+                enum:
+                - run
+                type: string
+              actionParameters:
+                description: supported action parameters for test triggers
+                properties:
+                  config:
+                    additionalProperties:
+                      type: string
+                    description: configuration to pass for the workflow
+                    type: object
+                  tags:
+                    additionalProperties:
+                      type: string
+                    description: test workflow execution tags
+                    type: object
+                  target:
+                    description: Target helps decide on which runner the execution
+                      is scheduled.
+                    properties:
+                      match:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        type: object
+                      not:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        type: object
+                      replicate:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                type: object
+              concurrencyPolicy:
+                description: ConcurrencyPolicy defines concurrency policy for selected
+                  Execution
+                enum:
+                - allow
+                - forbid
+                - replace
+                type: string
+              conditionSpec:
+                description: What resource conditions should be matched
+                properties:
+                  conditions:
+                    description: list of test trigger conditions
+                    items:
+                      description: TestTriggerCondition is used for definition of
+                        the condition for test triggers
+                      properties:
+                        reason:
+                          description: test trigger condition reason
+                          type: string
+                        status:
+                          description: TestTriggerConditionStatuses defines condition
+                            statuses for test triggers
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        ttl:
+                          description: duration in seconds in the past from current
+                            time when the condition is still valid
+                          format: int32
+                          type: integer
+                        type:
+                          description: test trigger condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                  delay:
+                    description: duration in seconds the test trigger waits between
+                      condition check
+                    format: int32
+                    type: integer
+                  timeout:
+                    description: duration in seconds the test trigger waits for conditions,
+                      until its stopped
+                    format: int32
+                    type: integer
+                type: object
+              delay:
+                description: Delay is a duration string which specifies how long should
+                  the test be delayed after a trigger is matched
+                format: duration
+                type: string
+              disabled:
+                description: whether test trigger is disabled
+                type: boolean
+              event:
+                description: On which Event for a Resource should an Action be triggered
+                enum:
+                - created
+                - modified
+                - deleted
+                - deployment-scale-update
+                - deployment-image-update
+                - deployment-env-update
+                - deployment-containers-modified
+                - deployment-generation-modified
+                - deployment-resource-modified
+                - event-start-test
+                - event-end-test-success
+                - event-end-test-failed
+                - event-end-test-aborted
+                - event-end-test-timeout
+                - event-start-testsuite
+                - event-end-testsuite-success
+                - event-end-testsuite-failed
+                - event-end-testsuite-aborted
+                - event-end-testsuite-timeout
+                - event-queue-testworkflow
+                - event-start-testworkflow
+                - event-end-testworkflow-success
+                - event-end-testworkflow-failed
+                - event-end-testworkflow-aborted
+                - event-end-testworkflow-canceled
+                - event-end-testworkflow-not-passed
+                - event-created
+                - event-updated
+                - event-deleted
+                type: string
+              execution:
+                description: Execution identifies for which test execution should
+                  an Action be executed
+                enum:
+                - test
+                - testsuite
+                - testworkflow
+                type: string
+              probeSpec:
+                description: What resource probes should be matched
+                properties:
+                  delay:
+                    description: duration in seconds the test trigger waits between
+                      probes
+                    format: int32
+                    type: integer
+                  probes:
+                    description: list of test trigger probes
+                    items:
+                      description: TestTriggerProbe is used for definition of the
+                        probe for test triggers
+                      properties:
+                        headers:
+                          additionalProperties:
+                            type: string
+                          description: test trigger condition probe headers to submit
+                          type: object
+                        host:
+                          description: test trigger condition probe host, default
+                            is pod ip or service name
+                          type: string
+                        path:
+                          description: test trigger condition probe path to check,
+                            default is /
+                          type: string
+                        port:
+                          description: test trigger condition probe port to connect
+                          format: int32
+                          type: integer
+                        scheme:
+                          description: test trigger condition probe scheme to connect
+                            to host, default is http
+                          type: string
+                      type: object
+                    type: array
+                  timeout:
+                    description: duration in seconds the test trigger waits for probes,
+                      until its stopped
+                    format: int32
+                    type: integer
+                type: object
+              resource:
+                description: For which Resource do we monitor Event which triggers
+                  an Action on certain conditions
+                enum:
+                - pod
+                - deployment
+                - statefulset
+                - daemonset
+                - service
+                - ingress
+                - event
+                - configmap
+                type: string
+              resourceSelector:
+                description: ResourceSelector identifies which Kubernetes Objects
+                  should be watched
+                properties:
+                  labelSelector:
+                    description: LabelSelector is used to identify a group of Kubernetes
+                      Objects based on their metadata labels
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  name:
+                    description: Name selector is used to identify a Kubernetes Object
+                      based on the metadata name
+                    type: string
+                  nameRegex:
+                    description: kubernetes resource name regex
+                    type: string
+                  namespace:
+                    description: Namespace of the Kubernetes object
+                    type: string
+                  namespaceRegex:
+                    description: kubernetes resource namespace regex
+                    type: string
+                type: object
+              selector:
+                description: Selector is used to select events which trigger an action
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              testSelector:
+                description: TestSelector identifies on which Testkube Kubernetes
+                  Objects an Action should be taken
+                properties:
+                  labelSelector:
+                    description: LabelSelector is used to identify a group of Kubernetes
+                      Objects based on their metadata labels
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  name:
+                    description: Name selector is used to identify a Kubernetes Object
+                      based on the metadata name
+                    type: string
+                  nameRegex:
+                    description: kubernetes resource name regex
+                    type: string
+                  namespace:
+                    description: Namespace of the Kubernetes object
+                    type: string
+                  namespaceRegex:
+                    description: kubernetes resource namespace regex
+                    type: string
+                type: object
+            required:
+            - action
+            - event
+            - execution
+            - testSelector
+            type: object
+          status:
+            description: TestTriggerStatus defines the observed state of TestTrigger
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

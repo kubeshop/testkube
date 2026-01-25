@@ -8,12 +8,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/log"
-	configrepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
@@ -44,19 +42,18 @@ type service struct {
 
 type Service interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
-	Start(ctx context.Context) error
+	Start(ctx context.Context, withRunnerRequests bool) error
 }
 
 func NewService(
 	logger *zap.SugaredLogger,
 	eventsEmitter event.Interface,
-	metricsClient metrics.Metrics,
-	configClient configrepo.Repository,
 	client controlplaneclient.Client,
 	controlPlaneConfig testworkflowconfig.ControlPlaneConfig,
 	proContext config.ProContext,
 	executionWorker executionworkertypes.Worker,
 	opts Options,
+	runner Runner,
 ) Service {
 	return &service{
 		logger:             logger,
@@ -66,16 +63,7 @@ func NewService(
 		proContext:         proContext,
 		worker:             executionWorker,
 		opts:               opts,
-		runner: New(
-			executionWorker,
-			configClient,
-			client,
-			eventsEmitter,
-			metricsClient,
-			proContext,
-			opts.StorageSkipVerify,
-			opts.GlobalTemplate,
-		),
+		runner:             runner,
 	}
 }
 
@@ -90,6 +78,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 		go func(environmentId string, executionId string) {
 			err := s.runner.Monitor(context.Background(), s.proContext.OrgID, environmentId, executionId)
 			if err == nil {
+				s.logger.Infow("Reattached execution", "executionId", executionId)
 				return
 			}
 			if !errors.Is(err, registry.ErrResourceNotFound) && !errors.Is(err, controller.ErrJobAborted) {
@@ -133,7 +122,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			if err = s.client.FinishExecutionResult(ctx, environmentId, executionId, execution.Result); err != nil {
 				s.logger.Errorw("failed to recover execution: saving execution", "id", executionId, "error", err)
 			} else {
-				s.logger.Infow("recovered execution", "id", executionId, "status", "error", err)
+				s.logger.Infow("recovered execution", "id", executionId, "error", err)
 			}
 		}(exec.EnvironmentId, exec.Id)
 	}
@@ -141,7 +130,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 	return
 }
 
-func (s *service) start(ctx context.Context) (err error) {
+func (s *service) start(ctx context.Context, withRunnerRequests bool) (err error) {
 	return newAgentLoop(
 		s.runner,
 		s.worker,
@@ -152,10 +141,10 @@ func (s *service) start(ctx context.Context) (err error) {
 		s.proContext,
 		s.proContext.OrgID,
 		s.proContext.EnvID,
-	).Start(ctx)
+	).Start(ctx, withRunnerRequests)
 }
 
-func (s *service) Start(ctx context.Context) error {
+func (s *service) Start(ctx context.Context, withRunnerRequests bool) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
@@ -163,7 +152,7 @@ func (s *service) Start(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
-		return s.start(ctx)
+		return s.start(ctx, withRunnerRequests)
 	})
 
 	return g.Wait()

@@ -33,16 +33,24 @@ var (
 	ErrNotControlled      = errors.New("secret is not controlled by Testkube")
 )
 
+type GetOptions struct {
+	// Bypass allows bypassing the permissions provided to the secret manager
+	Bypass bool
+}
+
 type CreateOptions struct {
 	Type   string
 	Labels map[string]string
 	Owner  *metav1.OwnerReference
+	// Bypass allows bypassing the permissions provided to the secret manager
 	Bypass bool
 }
 
 type UpdateOptions struct {
 	Labels map[string]string
 	Owner  *metav1.OwnerReference
+	// Bypass allows bypassing the permissions provided to the secret manager
+	Bypass bool
 }
 
 type secretManager struct {
@@ -54,7 +62,7 @@ type SecretManager interface {
 	Batch(prefix, name string) *batch
 	InsertBatch(ctx context.Context, namespace string, batch *batch, owner *metav1.OwnerReference) error
 	List(ctx context.Context, namespace string, all bool) ([]testkube.Secret, error)
-	Get(ctx context.Context, namespace, name string) (testkube.Secret, error)
+	Get(ctx context.Context, namespace, name string, opts GetOptions) (testkube.Secret, error)
 	Delete(ctx context.Context, namespace, name string) error
 	Create(ctx context.Context, namespace, name string, data map[string]string, opts CreateOptions) (testkube.Secret, error)
 	Update(ctx context.Context, namespace, name string, data map[string]string, opts UpdateOptions) (testkube.Secret, error)
@@ -125,13 +133,13 @@ func (s *secretManager) List(ctx context.Context, namespace string, all bool) ([
 	return results, nil
 }
 
-func (s *secretManager) Get(ctx context.Context, namespace, name string) (testkube.Secret, error) {
-	if !s.config.List {
+func (s *secretManager) Get(ctx context.Context, namespace, name string, opts GetOptions) (testkube.Secret, error) {
+	if !s.config.List && !opts.Bypass {
 		return testkube.Secret{}, ErrManagementDisabled
 	}
 
 	// Get the secret details
-	secret, err := s.clientSet.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	secret, err := s.clientSet.CoreV1().Secrets(namespace).Get(ctx, s.config.Prefix+name, metav1.GetOptions{})
 	mayAccess := secret == nil || secret.Labels[secretCreatedByLabelName] == secretCreatedByTestkubeValue || s.config.ListAll
 
 	// When no permissions, make it the same as when it's actually not found, to avoid blind search
@@ -155,7 +163,7 @@ func (s *secretManager) Delete(ctx context.Context, namespace, name string) erro
 	}
 
 	// Get the secret details
-	secret, err := s.clientSet.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	secret, err := s.clientSet.CoreV1().Secrets(namespace).Get(ctx, s.config.Prefix+name, metav1.GetOptions{})
 	isControlled := secret != nil && secret.Labels[secretCreatedByLabelName] == secretCreatedByTestkubeValue
 	mayAccess := secret == nil || isControlled || s.config.ListAll
 
@@ -176,7 +184,7 @@ func (s *secretManager) Delete(ctx context.Context, namespace, name string) erro
 		return ErrNotControlled
 	}
 
-	return s.clientSet.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{
+	return s.clientSet.CoreV1().Secrets(namespace).Delete(ctx, s.config.Prefix+name, metav1.DeleteOptions{
 		GracePeriodSeconds: common.Ptr(int64(0)),
 		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
 	})
@@ -192,7 +200,7 @@ func (s *secretManager) Create(ctx context.Context, namespace, name string, data
 	maps.Copy(labels, opts.Labels)
 	labels[secretCreatedByLabelName] = secretCreatedByTestkubeValue
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: s.config.Prefix + name, Labels: opts.Labels},
+		ObjectMeta: metav1.ObjectMeta{Name: s.config.Prefix + name, Labels: labels},
 		Type:       corev1.SecretType(opts.Type),
 		StringData: data,
 	}
@@ -209,12 +217,12 @@ func (s *secretManager) Create(ctx context.Context, namespace, name string, data
 }
 
 func (s *secretManager) Update(ctx context.Context, namespace, name string, data map[string]string, opts UpdateOptions) (testkube.Secret, error) {
-	if !s.config.Modify {
+	if !s.config.Modify && !opts.Bypass {
 		return testkube.Secret{}, ErrModifyDisabled
 	}
 
 	// Get the secret details
-	secret, err := s.clientSet.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	secret, err := s.clientSet.CoreV1().Secrets(namespace).Get(ctx, s.config.Prefix+name, metav1.GetOptions{})
 	isControlled := secret != nil && secret.Labels[secretCreatedByLabelName] == secretCreatedByTestkubeValue
 	mayAccess := secret == nil || isControlled || s.config.ListAll
 

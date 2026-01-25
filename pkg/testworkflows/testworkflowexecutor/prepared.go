@@ -9,8 +9,10 @@ import (
 	errors2 "github.com/go-errors/errors"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -57,14 +59,16 @@ type IntermediateExecution struct {
 	sensitiveData *IntermediateExecutionSensitiveData
 	prepended     []string
 	tags          map[string]string
+	variables     map[string]string
 }
 
 // Handling different execution state
 
 func NewIntermediateExecution() *IntermediateExecution {
 	return &IntermediateExecution{
-		tags:  make(map[string]string),
-		dirty: true,
+		tags:      make(map[string]string),
+		variables: make(map[string]string),
+		dirty:     true,
 		execution: &testkube.TestWorkflowExecution{
 			Signature: []testkube.TestWorkflowSignature{},
 			Result: &testkube.TestWorkflowResult{
@@ -112,6 +116,23 @@ func (e *IntermediateExecution) SetName(name string) *IntermediateExecution {
 	return e
 }
 
+func (e *IntermediateExecution) SetVariables(variables map[string]string) *IntermediateExecution {
+	if e.execution.Runtime == nil {
+		e.execution.Runtime = &testkube.TestWorkflowExecutionRuntime{}
+	}
+	if e.execution.Runtime.Variables == nil {
+		e.execution.Runtime.Variables = make(map[string]string)
+	}
+	if e.variables == nil {
+		e.variables = make(map[string]string)
+	}
+	for k, v := range variables {
+		e.execution.Runtime.Variables[k] = v
+		e.variables[k] = v
+	}
+	return e
+}
+
 func (e *IntermediateExecution) SetGroupID(groupID string) *IntermediateExecution {
 	if groupID == "" {
 		e.execution.GroupId = e.execution.Id
@@ -134,6 +155,11 @@ func (e *IntermediateExecution) SetKubernetesObjectName(name string) *Intermedia
 
 func (e *IntermediateExecution) SetDisabledWebhooks(disabled bool) *IntermediateExecution {
 	e.execution.DisableWebhooks = disabled
+	return e
+}
+
+func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *IntermediateExecution {
+	e.execution.SilentMode = silentMode
 	return e
 }
 
@@ -216,7 +242,14 @@ func (e *IntermediateExecution) ApplyDynamicConfig(config map[string]string) err
 func (e *IntermediateExecution) ApplyConfig(config map[string]string) error {
 	dynamicConfig := make(map[string]string)
 	for k, v := range config {
-		dynamicConfig[k] = expressions.NewStringValue(v).Template()
+		// Detect JSON values (start with { or [ but NOT {{) and wrap in tojson(json()) to prevent colon tokenization
+		isJSON := len(v) > 0 && ((v[0] == '{' && (len(v) < 2 || v[1] != '{')) || v[0] == '[')
+
+		if isJSON {
+			dynamicConfig[k] = "tojson(json(" + expressions.NewStringValue(v).String() + "))"
+		} else {
+			dynamicConfig[k] = expressions.NewStringValue(v).Template()
+		}
 	}
 	return e.ApplyDynamicConfig(dynamicConfig)
 }
@@ -253,6 +286,22 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		return errors.New("execution is not ready yet")
 	}
 
+	if len(e.variables) > 0 {
+		if e.cr.Spec.Container == nil {
+			e.cr.Spec.Container = &testworkflowsv1.ContainerConfig{}
+		}
+
+		for k, v := range e.variables {
+			e.cr.Spec.Container.Env = append(e.cr.Spec.Container.Env, testworkflowsv1.EnvVar{
+				EnvVar: corev1.EnvVar{
+					Name:  k,
+					Value: expressions.NewStringValue(v).Template(),
+				},
+			})
+		}
+		e.dirty = true
+	}
+
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
 		Id:               e.execution.Id,
 		GroupId:          e.execution.GroupId,
@@ -266,6 +315,7 @@ func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, enviro
 		EnvironmentId:    environmentId,
 		EnvironmentSlug:  environmentSlug,
 		ParentIds:        strings.Join(parentExecutionIds, "/"),
+		RunningContext:   e.execution.RunningContext,
 	})
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
 		Id:     e.execution.Id,
@@ -310,6 +360,14 @@ func (e *IntermediateExecution) SetOriginalTarget(target testkube.ExecutionTarge
 
 func (e *IntermediateExecution) SetSequenceNumber(number int32) *IntermediateExecution {
 	e.execution.Number = number
+	return e
+}
+
+func (e *IntermediateExecution) Assign(ts time.Time, runnerId string) *IntermediateExecution {
+	e.execution.AssignedAt = ts
+	e.execution.StatusAt = ts
+	e.execution.Result.Status = ptr.To(testkube.ASSIGNED_TestWorkflowStatus)
+	e.execution.RunnerId = runnerId
 	return e
 }
 
@@ -360,5 +418,6 @@ func (e *IntermediateExecution) Clone() *IntermediateExecution {
 		execution:     e.execution.Clone(),
 		prepended:     e.prepended,
 		sensitiveData: e.sensitiveData.Clone(),
+		variables:     maps.Clone(e.variables),
 	}
 }

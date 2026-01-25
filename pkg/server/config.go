@@ -8,8 +8,9 @@ import (
 
 // Config for HTTP server
 type Config struct {
-	Port int
-	Http fiber.Config
+	Port          int
+	Http          fiber.Config
+	EnableTracing bool
 }
 
 // Addr returns port based address

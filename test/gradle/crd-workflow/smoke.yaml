@@ -5,29 +5,29 @@ metadata:
   labels:
     core-tests: workflows
     tool: gradle
+    category: build-integration
+  annotations:
+    testkube.io/icon: gradle
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - contrib/executor/gradle/examples/hello-gradle
+      - test/gradle/projects/hello-gradle
   container:
+    workingDir: /data/repo/test/gradle/projects/hello-gradle
+    image: gradle:8.5.0-jdk11
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
   job:
     activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     run:
-      image: gradle:8.5.0-jdk11
-      command:
-      - gradle
-      - --no-daemon
-      - test
+      shell: gradle --no-daemon test
       env:
       - name: TESTKUBE_GRADLE
         value: "true"
@@ -39,25 +39,28 @@ metadata:
   labels:
     core-tests: workflows
     tool: gradle
+    category: build-integration
+  annotations:
+    testkube.io/icon: gradle
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - contrib/executor/gradle/examples/hello-gradle
+      - test/gradle/projects/hello-gradle
   container:
+    image: gradle:8.5.0-jdk11
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+    workingDir: /data/repo/test/gradle/projects/hello-gradle
   job:
     activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     run:
-      image: gradle:8.5.0-jdk11
       env:
       - name: TESTKUBE_GRADLE
         value: "true"
@@ -69,19 +72,22 @@ metadata:
   labels:
     core-tests: workflows
     tool: gradle
+    category: build-integration
+  annotations:
+    testkube.io/icon: gradle
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - contrib/executor/gradle/examples/hello-gradle
+      - test/gradle/projects/hello-gradle
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+    workingDir: /data/repo/test/gradle/projects/hello-gradle
     env:
     - name: TESTKUBE_GRADLE
       value: "true"

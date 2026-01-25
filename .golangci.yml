@@ -1,25 +1,36 @@
-# .golangci.yml
-
-run:
-  build-tags:
-    - integration
+version: "2"
 
 linters:
-  disable-all: true
+  default: none
+  enable:
+    - govet
+    - revive
+    - staticcheck
+    - unused
+    - ineffassign
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+  settings:
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: exported
+          disabled: true
+formatters:
   enable:
     - goimports
-    - revive
-    - govet
-    - unused
-    - staticcheck
-
-linters-settings:
-  govet:
-    check-shadowing: false
-  revive:
-    ignore-generated-header: true
-  goimports:
-    local-prefixes: github.com/kubeshop/testkube
-
-issues:
-  exclude-use-default: false
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/kubeshop/testkube
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

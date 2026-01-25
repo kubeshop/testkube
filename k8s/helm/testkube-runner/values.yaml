@@ -1,0 +1,235 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  labels: {}
+  annotations: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  podDisruptionBudget:
+    enabled: false
+
+runner:
+  ## Enable or disable the runner
+  enabled: true
+  ## Agent ID
+  id: ""
+  ## Organization ID
+  orgId: ""
+  ## Environment ID
+  envId: ""
+  ## Secret Key
+  secret: ""
+  ## Retrieve credential information from an existing secret
+  secretRef:
+    ## Name of the secret. If set, this will be used instead of the above values
+    name: ""
+    ## Key for the Agent ID
+    idKey: "id"
+    ## Key for the Organization ID
+    orgIdKey: "orgId"
+    ## Key for the Environment ID
+    envIdKey: "envId"
+    ## Key for the Secret Key
+    secretKey: "secret"
+  ## Self-registration using API token
+  register:
+    ## Control Plane API token
+    token: ""
+    ## Control Plane API token provided via k8s secret
+    tokenSecret:
+      name: ""
+      key: token
+    ## Whether to register as a Floating runner
+    floating: false
+    ## Whether to register with mode Global
+    global: false
+    ## Whether to register with mode Group, global must be disabled
+    # groupName: ""
+    ## Label key prefix to filter the ones that will be used for the runner, example: runner.testkube.io/env: testing --> env=testing
+    labelPrefix: runner.testkube.io/
+    ## Whether to register with labels
+    # labels:
+    #   env: testing
+
+## Global TestWorkflowTemplate that will be automatically included for all executions
+globalTemplate:
+  ## Is global template enabled
+  enabled: false
+  ## Specification for the global template
+  spec: {}
+  # spec:
+  #   pod:
+  #     imagePullSecrets:
+  #     - name: regcred
+
+## Listener configuration for triggers
+listener:
+  ## Enable listener functionality
+  enabled: false
+  ## Watch all namespaces instead of a specific list
+  watchAllNamespaces: false
+  ## Custom event labels which to put on events emitted from this listener
+  eventLabels: {}
+  ## Additional namespaces to watch
+  additionalNamespaces: []
+
+execution:
+  default:
+    ## Default namespace to run executions
+    namespace: ""
+    serviceAccount:
+      ## Auto-create service account, roles, and role bindings to allow running the execution
+      autoCreate: true
+      ## Use an external service account for executions
+      name: ""
+  ## Allow run in other namespaces
+  additionalNamespaces:
+  # another:
+  #   serviceAccount:
+  #     autoCreate: true
+  #     name: ""
+
+cloud:
+  ## URL of the Cloud Saas Control Plane
+  url: "agent.testkube.io:443"
+  tls:
+    ## Toggle should the connection to Agent API in Cloud/Enterprise use secure GRPC (GRPCS) (if false, it will use insecure GRPC)
+    enabled: true
+    ## Toggle should the client skip verifying the Agent API server cert in Cloud/Enterprise
+    skipVerify: false
+    customCa:
+      secretRef:
+        ## If specified, injects a custom CA into the list of trusted CAs. Specify a secret with the PEM encoded CA under the key specified by customCaSecretKey.
+        name: ""
+        ## Specify the key for the PEM encoded CA in the secret specified by customCaSecretRef.
+        key: "ca.crt"
+      # -- Specifies the path to the directory (skip the trailing slash) where CA certificates should be mounted. The mounted file should container a PEM encoded CA certificate.
+      dirPath: ""
+    certificate:
+      ## When provided, it will use the provided certificates when authenticating with the Agent (gRPC) API (secret should contain cert.crt, key.crt and ca.crt)
+      secretRef: ""
+      ## Default path for a certificate file
+      certFile: /tmp/agent-cert/cert.crt
+      ## Default path for a certificate key file
+      keyFile: /tmp/agent-cert/cert.key
+      ## Default path for a ca file
+      caFile: /tmp/agent-cert/ca.crt
+
+nameOverride: ""
+fullnameOverride: ""
+
+deployment:
+  labels: {}
+  annotations: {}
+
+images:
+  agent:
+    registry: docker.io
+    repository: kubeshop/testkube-api-server
+    pullPolicy: IfNotPresent
+    ## Overrides the image tag whose default is the chart appVersion.
+    # tag: "2.1.147"
+    digest: ""
+    tagSuffix: ""
+    pullSecrets: []
+
+  toolkit:
+    registry: docker.io
+    repository: kubeshop/testkube-tw-toolkit
+    ## Overrides the image tag whose default is the api-server version.
+    # tag: "2.1.147"
+    digest: ""
+    tagSuffix: ""
+
+  init:
+    registry: docker.io
+    repository: kubeshop/testkube-tw-init
+    ## Overrides the image tag whose default is the api-server version.
+    # tag: "2.1.147"
+    digest: ""
+    tagSuffix: ""
+
+## Persistent cache for Docker
+imageInspectionCache:
+  ## Status of the persistent cache
+  enabled: true
+  ## ConfigMap name to persist cache
+  name: "testkube-image-cache"
+  ## TTL for image pull secrets cache (set to 0 to disable)
+  ttl: 30m
+
+pod:
+  serviceAccount:
+    ## Automatically create service account, roles, and role bindings
+    autoCreate: true
+    ## Use an external service account
+    name: ""
+  ## Extra labels for Testkube Agent pod
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  labels: {}
+  ## Extra labels for Testkube Agent pod
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  annotations: {}
+  ## Node labels for Testkube Agent pod assignment
+  nodeSelector: {}
+  ## Tolerations for Testkube Agent assignment
+  tolerations: []
+  ## Affinity for Testkube Agent pod assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and nodeAffinityPreset will be ignored when it's set
+  affinity: {}
+  ## Specify priorityClassName for Testkube Agent pod
+  priorityClassName: ""
+  ## Specify hostNetwork for Testkube Agent pod
+  hostNetwork: ""
+  ## Specify dnsPolicy for Testkube Agent pod
+  dnsPolicy: ""
+  ## Additional volumes to be added
+  ## ref: https://kubernetes.io/docs/concepts/storage/volumes/
+  additionalVolumes: []
+  ## Additional volume mounts to be added
+  ## ref: https://kubernetes.io/docs/concepts/storage/volumes/
+  additionalVolumeMounts: []
+  ## Pod Security Context for Testkube Agent
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  securityContext: {}
+  ## Configure Container Security Context for Testkube Agent
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  containerSecurityContext: {}
+  ## Testkube Agent Liveness probe
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+  readinessProbe:
+    enabled: true
+  ## Testkube Agent resource requests and limits
+  resources: {}
+  # We usually recommend not specifying default resources and to leave this as a conscious
+  # choice for the user. This also increases the chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+  ## Extra Environment Variables which will be injected into the Testkube Agent container
+  extraEnvVars: []
+  # - name: FOO
+  #   value: BAR
+
+## Enable a [pod disruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
+podDisruptionBudget:
+  enabled: false
+  # -- (int/percentage) Number or percentage of pods that must remain available.
+  minAvailable: ""
+  # -- (int/percentage) Number or percentage of pods that can be unavailable.
+  maxUnavailable: ""
+
+## Enable analytics for Testkube
+analyticsEnabled: true
+
+## allow using low-security fields for test workflow pod and container configurations
+allowLowSecurityFields: false

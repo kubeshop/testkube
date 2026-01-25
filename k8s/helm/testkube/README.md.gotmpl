@@ -1,0 +1,137 @@
+{{ template "chart.header" . }}
+{{ template "chart.description" . }}
+
+{{ template "chart.versionBadge" . }}{{ template "chart.typeBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+## Install
+
+Add `kubeshop` Helm repository and fetch latest charts info:
+
+```sh
+helm repo add kubeshop https://kubeshop.github.io/helm-charts
+helm repo update
+```
+
+### TLS
+
+Testkube API needs to have additional configuration if NATS or MinIO (or any S3-compatible storage) is used.
+THe following sections describe how to configure TLS for NATS and MinIO.
+
+#### NATS
+
+If you want to provision NATS server with TLS, first you will need to create a Kubernetes secret which contains the
+server certificate, certificate key and CA certificate, and then you can use the following configuration
+
+```yaml
+nats:
+  nats:
+    tls:
+      allowNonTLS: false
+      secret:
+        name: nats-server-cert
+      ca: "ca.crt"
+      cert: "cert.crt"
+      key: "cert.key"
+```
+
+If NATS is configured to use TLS, Testkube API needs to set the `secure` flag so it uses a secure protocol when connecting to NATS.
+
+```yaml
+testkube-api:
+  nats:
+    tls:
+      enabled: true
+```
+
+Additionally, if NATS is configured to use a self-signed certificate, Testkube API needs to have the CA & client certificate in order to verify the NATS server certificate.
+You will need to create a Kubernetes secret which contains the client certificate, certificate key and CA certificate.
+
+```yaml
+testkube-api:
+  nats:
+    tls:
+      enabled: true
+      mountCACertificate: true
+      certSecret:
+        enabled: true
+```
+
+It is also possible to skip the verification of the NATS server certificate by setting the `skipVerify` flag to `true`.
+
+```yaml
+testkube-api:
+  nats:
+    tls:
+      enabled: true
+      skipVerify: true
+```
+
+#### MinIO/S3
+
+Currently, Testkube doesn't support provisioning MinIO with TLS. However, if you use an external MinIO (or any S3-compatible storage)
+you can configure Testkube API to use TLS when connecting to it.
+
+```yaml
+testkube-api:
+  storage:
+    SSL: true
+```
+
+Additionally, if S3 server is configured to use a self-signed certificate, Testkube API needs to have the CA & client certificate in order to verify the S3 server certificate.
+You will need to create a Kubernetes secret which contains the client certificate, certificate key and CA certificate.
+
+```yaml
+testkube-api:
+  storage:
+    SSL: true
+    mountCACertificate: true
+    certSecret:
+      enabled: true
+```
+
+It is also possible to skip the verification of the S3 server certificate by setting the `skipVerify` flag to `true`.
+
+```yaml
+testkube-api:
+  storage:
+    SSL: true
+    skipVerify: true
+```
+
+NOTE:
+This will add CustomResourceDefinitions and RBAC roles and RoleBindings to the cluster.
+This installation requires having cluster administrative rights.
+
+```sh
+helm install testkube kubeshop/testkube --create-namespace --namespace testkube
+```
+
+## Uninstall
+
+NOTE: Uninstalling Testkube will also delete all CRDs and all resources created by Testkube.
+
+```sh
+helm delete testkube -n testkube
+kubectl delete namespace testkube
+```
+
+## Migration to upgradable CRDs Helm chart
+
+Originally Helm chart stored CRDs in a special crds/ folder. In order to make them upgradable they were moved
+into the regular templates/ folder. Unfortunately Helm uses different annotations and labels for resources located
+in crds/ and templates/ folders. Please run these commands to fix it:
+
+```sh
+kubectl annotate --overwrite crds executors.executor.testkube.io meta.helm.sh/release-name="testkube" meta.helm.sh/release-namespace="testkube"
+kubectl annotate --overwrite crds tests.tests.testkube.io meta.helm.sh/release-name="testkube" meta.helm.sh/release-namespace="testkube"
+kubectl annotate --overwrite crds scripts.tests.testkube.io meta.helm.sh/release-name="testkube" meta.helm.sh/release-namespace="testkube"
+kubectl label --overwrite crds executors.executor.testkube.io app.kubernetes.io/managed-by=Helm
+kubectl label --overwrite crds tests.tests.testkube.io app.kubernetes.io/managed-by=Helm
+kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/managed-by=Helm
+```
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}

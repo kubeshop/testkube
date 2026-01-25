@@ -5,6 +5,7 @@
 *.dll
 *.so
 *.dylib
+*.tgz
 
 # Test binary, built with `go test -c`
 *.test
@@ -25,12 +26,12 @@ vendor/
 
 /gen
 
+# Local binary directories
+bin
+
 ### JetBrains
 .idea
 *.iml
-
-# Helm
-Chart.lock
 
 .DS_Store
 bin/
@@ -45,5 +46,12 @@ movie.mp4
 /dist
 .vscode
 
-
+# Local
 build/_local/values.dev.yaml
+depot-build-meta.json
+
+# Environment files
+.env
+
+# GitHub Actions temporary Google credentials
+gha-creds-*.json

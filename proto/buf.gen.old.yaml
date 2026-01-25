@@ -1,0 +1,22 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package
+      path: service.proto
+      value: pkg/cloud
+    - file_option: go_package
+      path: logs.proto
+      value: pkg/logs/pb
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.32.0
+    out: ..
+    opt:
+      - paths=import
+  - remote: buf.build/grpc/go:v1.2.0
+    out: ..
+    opt:
+      - paths=import
+inputs:
+  - proto_file: service.proto
+  - proto_file: logs.proto

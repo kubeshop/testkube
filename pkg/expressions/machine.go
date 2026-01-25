@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -destination=./mock_machine.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Machine
+//go:generate go tool mockgen -destination=./mock_machine.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Machine
 type Machine interface {
 	Get(name string) (Expression, bool, error)
 	Call(name string, args []CallArgument) (Expression, bool, error)
@@ -77,7 +77,7 @@ func (m *machine) RegisterAccessor(fn MachineAccessor) *machine {
 
 func areArgsResolved(args []CallArgument) bool {
 	for i := range args {
-		if args[i].Expression.Static() == nil {
+		if args[i].Static() == nil {
 			return false
 		}
 	}
@@ -87,7 +87,7 @@ func areArgsResolved(args []CallArgument) bool {
 func resolveArgs(args []CallArgument) ([]StaticValue, error) {
 	v := make([]StaticValue, 0)
 	for _, vv := range args {
-		value := vv.Expression.Static()
+		value := vv.Static()
 		if vv.Spread {
 			if value.IsNone() {
 				continue

@@ -55,10 +55,10 @@ func NewDevBoxCommand() *cobra.Command {
 		runnersCount         uint16
 		gitopsEnabled        bool
 		disableDefaultAgent  bool
-		disableCloudStorage  bool
 		enableTestTriggers   bool
 		enableCronjobs       bool
 		enableK8sControllers bool
+		enableWebhooks       bool
 		forcedOs             string
 		forcedArchitecture   string
 		executionNamespace   string
@@ -152,7 +152,7 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin, executionNamespace)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers, executionNamespace)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, executionNamespace)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -198,7 +198,7 @@ func NewDevBoxCommand() *cobra.Command {
 			// Create environment in the Cloud
 			if !oss {
 				fmt.Println("Creating environment in Cloud...")
-				env, err = cloud.CreateEnvironment(namespace.Name(), disableCloudStorage)
+				env, err = cloud.CreateEnvironment(namespace.Name())
 				if err != nil {
 					fail(errors.Wrap(err, "failed to create Cloud environment"))
 				}
@@ -543,10 +543,8 @@ func NewDevBoxCommand() *cobra.Command {
 					fail(errors.Wrap(err, "failed to watch for YAML changes"))
 				}
 				go func() {
-					for {
-						if ctx.Err() != nil {
-							break
-						}
+					for ctx.Err() == nil {
+
 						file, err := yamlWatcher.Next(ctx)
 						if !strings.HasSuffix(file, ".yml") && !strings.HasSuffix(file, ".yaml") {
 							continue
@@ -632,10 +630,8 @@ func NewDevBoxCommand() *cobra.Command {
 						}
 						<-parallel
 					}
-					for {
-						if ctx.Err() != nil {
-							break
-						}
+					for ctx.Err() == nil {
+
 						update, err := sync.Next(ctx)
 						if err != nil {
 							continue
@@ -851,10 +847,8 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			_, rebuildCtxCancel := context.WithCancel(ctx)
-			for {
-				if ctx.Err() != nil {
-					break
-				}
+			for ctx.Err() == nil {
+
 				file, err := goWatcher.Next(ctx)
 				if err != nil {
 					fmt.Println("file system watcher error:", err.Error())
@@ -887,9 +881,9 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "where runners should execute test workflows")
 	cmd.Flags().Uint16Var(&runnersCount, "runners", 0, "additional runners count")
 	cmd.Flags().BoolVar(&disableDefaultAgent, "disable-agent", false, "should disable default agent")
-	cmd.Flags().BoolVar(&disableCloudStorage, "disable-cloud-storage", false, "should disable storage in Cloud")
 	cmd.Flags().BoolVar(&enableTestTriggers, "enable-test-triggers", false, "should enable Test Triggers (remember to install CRDs)")
 	cmd.Flags().BoolVar(&enableCronjobs, "enable-cronjobs", false, "should enable cron resolution of Test Workflows")
+	cmd.Flags().BoolVar(&enableWebhooks, "enable-webhooks", false, "should enable webhooks")
 	cmd.Flags().StringVar(&forcedOs, "os", "", "force different OS for binary builds")
 	cmd.Flags().StringVar(&forcedArchitecture, "arch", "", "force different architecture for binary builds")
 	cmd.Flags().BoolVar(&enableK8sControllers, "enable-k8s-controllers", false, "should enable Kubernetes controllers")

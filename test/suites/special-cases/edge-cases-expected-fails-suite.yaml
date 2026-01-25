@@ -1,0 +1,36 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: edge-cases-expected-failure-suite
+  labels:
+    core-tests: expected-fail-suite
+    type: suite
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: expected-fail-cypress-incorrect-repo-path
+      - name: expected-fail-cypress-incorrect-repo-path-cone-mode
+      - name: expected-fail-cypress-incorrect-image-name
+      - name: expected-fail-cypress-incorrect-workingdir
+      - name: expected-fail-cypress-resource-limits
+      - name: expected-fail-cypress-artifacts-condition-always-with-artifacts
+      - name: expected-fail-k6-test-report-condition-always-no-artifacts
+      - name: expected-fail-timeout-activedeadlineseconds
+      - name: expected-fail-timeout-step
+      - name: expected-fail-private-registry-auth
+      - name: expected-fail-private-repo-auth
+      - name: expected-fail-missing-git-secret
+      - name: expected-fail-missing-template
+      - name: expected-fail-service-exit-code
+      - name: expected-fail-step-retry
+      - name: expected-fail-negative-step
+      - name: expected-fail-volume-not-mounted
+      - name: expected-fail-template-missing-config-options
+      - name: expected-fail-template-not-defined-config-options
+      - name: expected-fail-service-readiness-probe
+      - name: expected-fail-conditional-step-failed
+      - name: expected-fail-parallel-step-failed
+      - name: expected-fail-parallel-step-timed-out
+      - name: expected-fail-parallel-oomkilled

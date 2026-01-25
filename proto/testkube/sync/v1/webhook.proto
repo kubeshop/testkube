@@ -1,0 +1,23 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// Webhook contains a protobuf encoded representation of a
+// Webhook object.
+message Webhook {
+  // payload contains the following Go struct as JSON encoded data:
+  //   github.com/kubeshop/testkube/api/executor/v1.Webhook
+  // WARNING: A mismatch in versions between Agent and Control Plane
+  // may result in a failed or partial marshaling of this data in
+  // potentially incompatible ways. Please ensure that client and
+  // server representations are passing the same data across this
+  // message.
+  // The rationale for this lazy implementation is that creating
+  // a protobuf implementation of CRD data structures is both
+  // time consuming, and similarly capable of causing incompatibilities
+  // between the protobuf and CRD implementations. As a result this
+  // loose data format will be used until CRD definition is moved
+  // to a single source from which all required usages can be
+  // automatically generated to ensure compatibility.
+  bytes payload = 1;
+}

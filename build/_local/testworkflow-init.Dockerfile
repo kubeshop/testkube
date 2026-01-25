@@ -3,7 +3,7 @@ ARG BUSYBOX_IMAGE="busybox:1.36.1-musl"
 ###################################
 ## Build testworkflow init
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Build testworkflow toolkit
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -43,21 +43,21 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.23-alpine AS debug
+FROM golang:1.25.0-alpine AS debug
 
 ENV GOTRACEBACK=all
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
+RUN cp -rf /bin /.tktw-bin
+COPY --from=builder /app/build/_local/workflow-init /init
 
-COPY --from=builder /app/build/_local/workflow-init /testkube/
-
-ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/testkube/workflow-init"]
+ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/init"]
 
 ###################################
 ## Distribution
 ###################################
 FROM ${BUSYBOX_IMAGE} AS dist
 RUN cp -rf /bin /.tktw-bin
-COPY --from=builder /app/build/_local/workflow-init /testkube/init
+COPY --from=builder /app/build/_local/workflow-init /init
 USER 1001
 ENTRYPOINT ["/init"]
 

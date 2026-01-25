@@ -92,6 +92,8 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("host", params.Host).
 		Set("dockerImageVersion", params.Context.DockerImageVersion).
 		Set("contextType", params.Context.Type).
+		Set("cliContext", params.CliContext).
+		Set("toolName", params.ToolName).
 		Set("cloudOrganizationId", params.Context.OrganizationId).
 		Set("cloudEnvironmentId", params.Context.EnvironmentId).
 		Set("machineId", params.MachineID).

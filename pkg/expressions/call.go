@@ -35,7 +35,7 @@ func (s *call) Type() Type {
 func (s *call) String() string {
 	args := make([]string, len(s.args))
 	for i, arg := range s.args {
-		args[i] = arg.Expression.String()
+		args[i] = arg.String()
 		if arg.Spread {
 			args[i] += "..."
 		}
@@ -51,7 +51,7 @@ func (s *call) Template() string {
 	if s.name == stringCastStdFn {
 		args := make([]string, len(s.args))
 		for i, a := range s.args {
-			args[i] = a.Expression.Template()
+			args[i] = a.Template()
 		}
 		return strings.Join(args, "")
 	}
@@ -61,7 +61,7 @@ func (s *call) Template() string {
 func (s *call) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	var ch bool
 	for i := range s.args {
-		s.args[i].Expression, ch, err = s.args[i].Expression.SafeResolve(m...)
+		s.args[i].Expression, ch, err = s.args[i].SafeResolve(m...)
 		changed = changed || ch
 		if err != nil {
 			return nil, changed, err
@@ -100,7 +100,7 @@ func (s *call) Static() StaticValue {
 func (s *call) Accessors() map[string]struct{} {
 	result := make(map[string]struct{})
 	for i := range s.args {
-		maps.Copy(result, s.args[i].Expression.Accessors())
+		maps.Copy(result, s.args[i].Accessors())
 	}
 	return result
 }
@@ -108,7 +108,7 @@ func (s *call) Accessors() map[string]struct{} {
 func (s *call) Functions() map[string]struct{} {
 	result := make(map[string]struct{})
 	for i := range s.args {
-		maps.Copy(result, s.args[i].Expression.Functions())
+		maps.Copy(result, s.args[i].Functions())
 	}
 	result[s.name] = struct{}{}
 	return result

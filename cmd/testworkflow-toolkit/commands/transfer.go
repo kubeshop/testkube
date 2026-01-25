@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewTransferCmd() *cobra.Command {
@@ -19,43 +18,83 @@ func NewTransferCmd() *cobra.Command {
 		Short: "Send files as tarball",
 
 		Run: func(cmd *cobra.Command, pairs []string) {
-			if len(pairs) == 0 {
-				fmt.Println("nothing to send")
-				os.Exit(0)
-			}
-
-			for _, pair := range pairs {
-				dirPath, patternsAndUrl, found := strings.Cut(pair, ":")
-				if !found {
-					ui.Fail(fmt.Errorf("invalid files request: %s", pair))
-				}
-				patternsStr, url, found := strings.Cut(patternsAndUrl, "=")
-				if !found {
-					ui.Fail(fmt.Errorf("invalid files request: %s", pair))
-				}
-				patterns := strings.Split(patternsStr, ",")
-				if len(patterns) == 0 {
-					patterns = []string{"**/*"}
-				}
-				fmt.Printf("Packing and sending %s to %s...\n", dirPath, url)
-
-				// Start downloading the file
-				reader, writer := io.Pipe()
-				go func() {
-					err := common.WriteTarball(writer, dirPath, patterns)
-					_ = writer.Close()
-					ui.ExitOnError("write the tarball stream", err)
-				}()
-				resp, err := http.Post(url, "application/tar+gzip", reader)
-				ui.ExitOnError("send the tarball request", err)
-				_ = resp.Body.Close()
-
-				if resp.StatusCode != http.StatusNoContent {
-					ui.Fail(fmt.Errorf("failed to send the tarball: status code %d", resp.StatusCode))
-				}
-			}
+			exitCode := ProcessTransfers(pairs, cmd.OutOrStdout())
+			os.Exit(exitCode)
 		},
 	}
 
 	return cmd
+}
+
+// ProcessTransfers handles multiple transfer pairs
+// Returns 0 if all succeed, 1 if any fail
+func ProcessTransfers(pairs []string, output io.Writer) int {
+	if len(pairs) == 0 {
+		fmt.Fprintln(output, "nothing to send")
+		return 0
+	}
+
+	for _, pair := range pairs {
+		if exitCode := ProcessTransferPair(pair, output); exitCode != 0 {
+			return exitCode
+		}
+	}
+	return 0
+}
+
+// ProcessTransferPair sends a single tarball to the specified URL
+// Returns 0 on success, 1 on failure
+func ProcessTransferPair(pair string, output io.Writer) int {
+	dirPath, patternsAndUrl, found := strings.Cut(pair, ":")
+	if !found {
+		fmt.Fprintf(output, "error: invalid files request: %s\n", pair)
+		return 1
+	}
+	patternsStr, url, found := strings.Cut(patternsAndUrl, "=")
+	if !found {
+		fmt.Fprintf(output, "error: invalid files request: %s\n", pair)
+		return 1
+	}
+	patterns := strings.Split(patternsStr, ",")
+	if len(patterns) == 0 || (len(patterns) == 1 && patterns[0] == "") {
+		patterns = []string{"**/*"}
+	}
+	fmt.Fprintf(output, "Packing and sending %s to %s...\n", dirPath, url)
+
+	// Create a channel to capture errors from goroutine
+	errChan := make(chan error, 1)
+
+	// Start packing the files
+	reader, writer := io.Pipe()
+	go func() {
+		err := common.WriteTarball(writer, dirPath, patterns)
+		_ = writer.Close()
+		if err != nil {
+			errChan <- err
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// Send the tarball
+	resp, err := http.Post(url, "application/tar+gzip", reader)
+	if err != nil {
+		fmt.Fprintf(output, "error: send the tarball request - %s\n", err.Error())
+		return 1
+	}
+	defer resp.Body.Close()
+
+	// Check for write errors
+	writeErr := <-errChan
+	if writeErr != nil {
+		fmt.Fprintf(output, "error: write the tarball stream - %s\n", writeErr.Error())
+		return 1
+	}
+
+	if resp.StatusCode != http.StatusNoContent {
+		fmt.Fprintf(output, "error: failed to send the tarball: status code %d\n", resp.StatusCode)
+		return 1
+	}
+
+	return 0
 }

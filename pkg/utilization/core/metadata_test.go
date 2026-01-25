@@ -11,8 +11,6 @@ import (
 )
 
 func TestMetadataString(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name string
 		meta Metadata
@@ -71,8 +69,6 @@ func TestMetadataString(t *testing.T) {
 }
 
 func TestParseMetadataFromFilename(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name       string
 		filename   string
@@ -147,8 +143,6 @@ func TestParseMetadataFromFilename(t *testing.T) {
 }
 
 func TestParseMetadataFromHeader(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name           string
 		fileName       string
@@ -200,8 +194,6 @@ func TestParseMetadataFromHeader(t *testing.T) {
 }
 
 func TestParseMetadata(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name       string
 		input      string

@@ -12,7 +12,7 @@ import (
 	"maps"
 	"strings"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
 func GetInternalTemplateName(name string) string {
@@ -37,7 +37,7 @@ func listStepTemplates(cr testworkflowsv1.Step) map[string]struct{} {
 		}
 	}
 	if cr.Parallel != nil {
-		maps.Copy(v, listSpecTemplates(cr.Parallel.TestWorkflowSpec))
+		maps.Copy(v, listSpecTemplates(*cr.Parallel.NewTestWorkflowSpec()))
 		if cr.Parallel.Template != nil {
 			v[GetInternalTemplateName(cr.Parallel.Template.Name)] = struct{}{}
 		}
