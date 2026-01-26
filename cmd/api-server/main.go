@@ -795,7 +795,12 @@ func main() {
 		})
 	}
 
-	if commons.CronJobsEnabled(cfg) {
+	// When Control Plane has Source of Truth capability, cron scheduling is delegated to CP.
+	// The agent should not run its own cron scheduler to avoid double executions.
+	// This only applies to Source of Truth environments where CP manages workflow definitions.
+	if proContext.HasSourceOfTruthCapability {
+		log.DefaultLogger.Infow("Control Plane has Source of Truth capability - cron scheduling delegated to cloud")
+	} else if commons.CronJobsEnabled(cfg) {
 		schedulableResourceWatcher := cronjobtestworkflow.New(
 			log.DefaultLogger,
 			testWorkflowsClient,
@@ -813,7 +818,6 @@ func main() {
 			schedulableResourceWatcher.WatchTestWorkflows,
 			schedulableResourceWatcher.WatchTestWorkflowTemplates,
 		)
-		// Start the new scheduler.
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {
