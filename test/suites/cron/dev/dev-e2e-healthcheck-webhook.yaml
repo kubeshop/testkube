@@ -1,0 +1,17 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: dev-e2e-healthcheck-webhook
+  labels:
+    core-tests: healthcheck
+    healthcheck-type: e2e-webhook
+    environment: dev
+spec:
+  container:
+    image: alpine:3.23.2
+  steps:
+    - name: Step - should pass
+      shell: echo "Should pass" && exit 0
+  events:
+  - cronjob:
+      cron: "15,45 * * * *" # every 30m + alert on no webhook received
