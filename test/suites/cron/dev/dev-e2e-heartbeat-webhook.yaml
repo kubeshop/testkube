@@ -1,7 +1,7 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: dev-e2e-healthcheck-webhook
+  name: dev-e2e-heartbeats-webhook
   labels:
     core-tests: heartbeat
     heartbeat-type: dev-e2e-webhook
