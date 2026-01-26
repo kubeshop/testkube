@@ -9,8 +9,8 @@
  */
 package testkube
 
-// test workflow execution tag definition
-type TestWorkflowTagSchema struct {
+// test workflow execution configuration
+type TestWorkflowExecutionSchema struct {
 	Tags   map[string]string `json:"tags,omitempty"`
 	Target *ExecutionTarget  `json:"target,omitempty"`
 	Silent *bool             `json:"silent,omitempty"`
