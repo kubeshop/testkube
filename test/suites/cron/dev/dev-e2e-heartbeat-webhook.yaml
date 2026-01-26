@@ -3,8 +3,8 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: dev-e2e-healthcheck-webhook
   labels:
-    core-tests: healthcheck
-    healthcheck-type: e2e-webhook
+    core-tests: heartbeat
+    heartbeat-type: dev-e2e-webhook
     environment: dev
 spec:
   container:

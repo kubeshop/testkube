@@ -2,12 +2,12 @@
 apiVersion: executor.testkube.io/v1
 kind: Webhook
 metadata:
-  name: e2e-healthcheck-webhook
+  name: e2e-heartbeat-webhook
 spec:
   events:
   - end-testworkflow-success
   uri: '{{credential("webhook-e2e-tests-heartbeat-url")}}'
-  selector: healthcheck-type= e2e-webhook
+  selector: heartbeat-type=dev-e2e-webhook
   headers:
     Content-Type: application/json
     X-Heartbeat-Token: '{{credential("webhook-e2e-tests-heartbeat-key")}}'
