@@ -804,6 +804,11 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	silentMode, err := toJSONB(execution.SilentMode)
+	if err != nil {
+		return err
+	}
+
 	runtime, err := toJSONB(execution.Runtime)
 	if err != nil {
 		return err
@@ -826,6 +831,7 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		Tags:                      tags,
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
+		SilentMode:                silentMode,
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
 		Runtime:                   runtime,
