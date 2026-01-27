@@ -145,10 +145,25 @@ func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowN
 		sortField = "statusat"
 	}
 
+	silentFilter := bson.M{
+		"$or": bson.A{
+			bson.M{"silentmode": bson.M{"$exists": false}},
+			bson.M{"silentmode": nil},
+			bson.M{"$and": bson.A{
+				bson.M{"silentmode.webhooks": bson.M{"$ne": true}},
+				bson.M{"silentmode.insights": bson.M{"$ne": true}},
+				bson.M{"silentmode.health": bson.M{"$ne": true}},
+				bson.M{"silentmode.metrics": bson.M{"$ne": true}},
+				bson.M{"silentmode.cdevents": bson.M{"$ne": true}},
+			}},
+		},
+	}
+
 	opts := options.Aggregate()
 	pipeline := []bson.M{
 		{"$sort": bson.M{sortField: -1}},
 		{"$match": bson.M{"workflow.name": workflowName}},
+		{"$match": silentFilter},
 		{"$limit": 1},
 	}
 	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
@@ -176,6 +191,20 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 		documents = append(documents, bson.M{"workflow.name": workflowName})
 	}
 
+	silentFilter := bson.M{
+		"$or": bson.A{
+			bson.M{"silentmode": bson.M{"$exists": false}},
+			bson.M{"silentmode": nil},
+			bson.M{"$and": bson.A{
+				bson.M{"silentmode.webhooks": bson.M{"$ne": true}},
+				bson.M{"silentmode.insights": bson.M{"$ne": true}},
+				bson.M{"silentmode.health": bson.M{"$ne": true}},
+				bson.M{"silentmode.metrics": bson.M{"$ne": true}},
+				bson.M{"silentmode.cdevents": bson.M{"$ne": true}},
+			}},
+		},
+	}
+
 	pipeline := []bson.M{
 		{"$sort": bson.M{"scheduledat": -1}},
 		{"$project": bson.M{
@@ -188,6 +217,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 			"resolvedWorkflow":      0,
 		}},
 		{"$match": bson.M{"$or": documents}},
+		{"$match": silentFilter},
 		{"$group": bson.M{"_id": "$workflow.name", "execution": bson.M{"$first": "$$ROOT"}}},
 		{"$replaceRoot": bson.M{"newRoot": "$execution"}},
 	}

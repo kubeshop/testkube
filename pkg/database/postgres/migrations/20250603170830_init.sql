@@ -18,6 +18,7 @@ CREATE TABLE test_workflow_executions (
     tags JSONB,
     running_context JSONB,
     config_params JSONB,
+    silent_mode JSONB,
 
     scheduled_at TIMESTAMP WITH TIME ZONE,
     assigned_at TIMESTAMP WITH TIME ZONE,

@@ -717,11 +717,11 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id, runtime
+    tags, running_context, config_params, silent_mode, organization_id, environment_id, runtime
 ) VALUES (
     @id, @group_id, @runner_id, @runner_target, @runner_original_target, @name, @namespace, @number,
     @scheduled_at, @assigned_at, @status_at, @test_workflow_execution_name, @disable_webhooks,
-    @tags, @running_context, @config_params, @organization_id, @environment_id, @runtime
+    @tags, @running_context, @config_params, @silent_mode, @organization_id, @environment_id, @runtime
 );
 
 -- name: InsertTestWorkflowSignature :one
