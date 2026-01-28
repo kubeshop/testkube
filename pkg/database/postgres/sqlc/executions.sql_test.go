@@ -614,6 +614,19 @@ WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
             \) = jsonb_array_length\(\$22::jsonb\)
         \)
     \)
+    AND \(
+        COALESCE\(\$23::boolean, false\) = false
+        OR \(
+            e.silent_mode IS NULL
+            OR \(
+                \(e.silent_mode->>'webhooks'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'insights'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'health'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'metrics'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'cdevents'\)::boolean IS NOT TRUE
+            \)
+        \)
+    \)
 GROUP BY r\.status`
 
 	rows := mock.NewRows([]string{"status", "count"}).
@@ -642,6 +655,7 @@ GROUP BY r\.status`
 		LabelConditions:    []byte{},
 		SelectorKeys:       []byte{},
 		SelectorConditions: []byte{},
+		SkipSilentMode:     pgtype.Bool{Bool: false, Valid: true},
 		OrganizationID:     "org-id",
 		EnvironmentID:      "env-id",
 	}
@@ -669,6 +683,7 @@ GROUP BY r\.status`
 		params.LabelConditions,
 		params.SelectorKeys,
 		params.SelectorConditions,
+		params.SkipSilentMode,
 	).WillReturnRows(rows)
 
 	// Execute query
