@@ -461,6 +461,19 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
     )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
@@ -558,6 +571,19 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
         )
     )
 GROUP BY r.status;
@@ -708,6 +734,19 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -1192,6 +1231,19 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
         )
     )
 ORDER BY e.scheduled_at DESC

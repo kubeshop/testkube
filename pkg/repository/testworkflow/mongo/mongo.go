@@ -743,6 +743,23 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 		}
 	}
 
+	if filter.SkipSilentModeDefined() && filter.SkipSilentMode() {
+		silentFilter := bson.M{
+			"$or": bson.A{
+				bson.M{"silentmode": bson.M{"$exists": false}},
+				bson.M{"silentmode": nil},
+				bson.M{"$and": bson.A{
+					bson.M{"silentmode.webhooks": bson.M{"$ne": true}},
+					bson.M{"silentmode.insights": bson.M{"$ne": true}},
+					bson.M{"silentmode.health": bson.M{"$ne": true}},
+					bson.M{"silentmode.metrics": bson.M{"$ne": true}},
+					bson.M{"silentmode.cdevents": bson.M{"$ne": true}},
+				}},
+			},
+		}
+		query = bson.M{"$and": bson.A{query, silentFilter}}
+	}
+
 	if filter.GroupIDDefined() {
 		query = bson.M{"$and": bson.A{
 			bson.M{"$expr": bson.M{"$or": bson.A{
