@@ -692,7 +692,35 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
+	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams{
+		OrganizationID:     params.OrganizationID,
+		EnvironmentID:      params.EnvironmentID,
+		WorkflowName:       params.WorkflowName,
+		WorkflowNames:      params.WorkflowNames,
+		TextSearch:         params.TextSearch,
+		StartDate:          params.StartDate,
+		EndDate:            params.EndDate,
+		LastNDays:          params.LastNDays,
+		Statuses:           params.Statuses,
+		RunnerID:           params.RunnerID,
+		Assigned:           params.Assigned,
+		ActorName:          params.ActorName,
+		ActorType:          params.ActorType,
+		GroupID:            params.GroupID,
+		Initialized:        params.Initialized,
+		HealthRanges:       params.HealthRanges,
+		TagKeys:            params.TagKeys,
+		TagConditions:      params.TagConditions,
+		LabelKeys:          params.LabelKeys,
+		LabelConditions:    params.LabelConditions,
+		SelectorKeys:       params.SelectorKeys,
+		SelectorConditions: params.SelectorConditions,
+		SkipSilentMode:     params.SkipSilentMode,
+		Fst:                params.Fst,
+		Lmt:                params.Lmt,
+	}
+
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, summaryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -1801,6 +1829,7 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		LabelConditions:    params.LabelConditions,
 		SelectorKeys:       params.SelectorKeys,
 		SelectorConditions: params.SelectorConditions,
+		SkipSilentMode:     params.SkipSilentMode,
 	})
 }
 
@@ -1882,6 +1911,11 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
+	params.SkipSilentMode = pgtype.Bool{}
+	if filter.SkipSilentModeDefined() {
+		params.SkipSilentMode = toPgBool(filter.SkipSilentMode())
+	}
+
 	// Health filters - convert [][2]float64 to JSONB array
 	if filter.HealthRangesDefined() {
 		ranges := filter.HealthRanges()
@@ -1896,6 +1930,11 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		if err != nil {
 			return params, err
 		}
+	}
+
+	params.SkipSilentMode = pgtype.Bool{}
+	if filter.SkipSilentModeDefined() {
+		params.SkipSilentMode = toPgBool(filter.SkipSilentMode())
 	}
 
 	if filter.Selector() != "" {

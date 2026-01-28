@@ -202,6 +202,19 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($22::jsonb)
         )
     )
+    AND (
+        COALESCE($23::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 `
 
 type CountTestWorkflowExecutionsParams struct {
@@ -227,6 +240,7 @@ type CountTestWorkflowExecutionsParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	SkipSilentMode     interface{}        `db:"skip_silent_mode" json:"skip_silent_mode"`
 }
 
 func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error) {
@@ -253,6 +267,7 @@ func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTest
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
+		arg.SkipSilentMode,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -609,8 +624,21 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
             ) = jsonb_array_length($22::jsonb)
         )
     )
+    AND (
+        COALESCE($23::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
-LIMIT NULLIF($24, 0) OFFSET $23
+LIMIT NULLIF($25, 0) OFFSET $24
 `
 
 type GetFinishedTestWorkflowExecutionsParams struct {
@@ -636,6 +664,7 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	SkipSilentMode     interface{}        `db:"skip_silent_mode" json:"skip_silent_mode"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -724,6 +753,7 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
+		arg.SkipSilentMode,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -2249,8 +2279,21 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($22::jsonb)
         )
     )
+    AND (
+        COALESCE($23::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
-LIMIT NULLIF($24, 0) OFFSET $23
+LIMIT NULLIF($25, 0) OFFSET $24
 `
 
 type GetTestWorkflowExecutionsParams struct {
@@ -2276,6 +2319,7 @@ type GetTestWorkflowExecutionsParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	SkipSilentMode     interface{}        `db:"skip_silent_mode" json:"skip_silent_mode"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2364,6 +2408,7 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
+		arg.SkipSilentMode,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -2591,8 +2636,21 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($22::jsonb)
         )
     )
+    AND (
+        COALESCE($23::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
-LIMIT NULLIF($24, 0) OFFSET $23
+LIMIT NULLIF($25, 0) OFFSET $24
 `
 
 type GetTestWorkflowExecutionsSummaryParams struct {
@@ -2618,6 +2676,7 @@ type GetTestWorkflowExecutionsSummaryParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	SkipSilentMode     interface{}        `db:"skip_silent_mode" json:"skip_silent_mode"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2706,6 +2765,7 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
+		arg.SkipSilentMode,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -2881,6 +2941,19 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($22::jsonb)
         )
     )
+    AND (
+        COALESCE($23::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 GROUP BY r.status
 `
 
@@ -2907,6 +2980,7 @@ type GetTestWorkflowExecutionsTotalsParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	SkipSilentMode     interface{}        `db:"skip_silent_mode" json:"skip_silent_mode"`
 }
 
 type GetTestWorkflowExecutionsTotalsRow struct {

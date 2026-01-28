@@ -489,6 +489,14 @@ func (m *MockFilter) HealthRangesDefined() bool {
 	return m.Called().Bool(0)
 }
 
+func (m *MockFilter) SkipSilentMode() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) SkipSilentModeDefined() bool {
+	return m.Called().Bool(0)
+}
+
 // Helper functions for tests
 func createTestExecution() *testkube.TestWorkflowExecution {
 	status := testkube.PASSED_TestWorkflowStatus
@@ -533,6 +541,7 @@ func createTestFilter() *MockFilter {
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
 	filter.On("HealthRangesDefined").Return(false)
+	filter.On("SkipSilentModeDefined").Return(false)
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))
@@ -1217,7 +1226,9 @@ func TestTypeConversionHelpers(t *testing.T) {
 
 func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 	repo := &PostgresRepository{}
-	filter := testworkflow.NewExecutionsFilter().WithName("test-workflow")
+	filter := createTestFilter()
+	filter.On("NameDefined").Return(true)
+	filter.On("Name").Return("test-workflow")
 
 	params, err := repo.buildTestWorkflowExecutionParams(filter)
 
