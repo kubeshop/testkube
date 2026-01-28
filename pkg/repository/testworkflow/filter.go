@@ -7,26 +7,26 @@ import (
 )
 
 type FilterImpl struct {
-	FName          string
-	FNames         []string
-	FLastNDays     int
-	FStartDate     *time.Time
-	FEndDate       *time.Time
-	FStatuses      []testkube.TestWorkflowStatus
-	FPage          int
-	FPageSize      int
-	FSkip          *int
-	FTextSearch    string
-	FSelector      string
-	FTagSelector   string
-	FLabelSelector *LabelSelector
-	FActorName     string
-	FActorType     testkube.TestWorkflowRunningContextActorType
-	FGroupID       string
-	FRunnerID      string
-	FInitialized   *bool
-	FAssigned      *bool
-	FHealthRanges  [][2]float64
+	FName           string
+	FNames          []string
+	FLastNDays      int
+	FStartDate      *time.Time
+	FEndDate        *time.Time
+	FStatuses       []testkube.TestWorkflowStatus
+	FPage           int
+	FPageSize       int
+	FSkip           *int
+	FTextSearch     string
+	FSelector       string
+	FTagSelector    string
+	FLabelSelector  *LabelSelector
+	FActorName      string
+	FActorType      testkube.TestWorkflowRunningContextActorType
+	FGroupID        string
+	FRunnerID       string
+	FInitialized    *bool
+	FAssigned       *bool
+	FHealthRanges   [][2]float64
 	FSkipSilentMode *bool
 }
 
@@ -292,11 +292,11 @@ func (f FilterImpl) HealthRanges() [][2]float64 {
 	return f.FHealthRanges
 }
 
-func (f *FilterImpl) SkipSilentModeDefined() bool {
+func (f FilterImpl) SkipSilentModeDefined() bool {
 	return f.FSkipSilentMode != nil
 }
 
-func (f *FilterImpl) SkipSilentMode() bool {
+func (f FilterImpl) SkipSilentMode() bool {
 	if f.FSkipSilentMode == nil {
 		return false
 	}
