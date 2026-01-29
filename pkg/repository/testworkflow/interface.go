@@ -91,6 +91,8 @@ type Filter interface {
 	InitializedDefined() bool
 	HealthRanges() [][2]float64
 	HealthRangesDefined() bool
+	SkipSilentMode() bool
+	SkipSilentModeDefined() bool
 }
 
 //go:generate go tool mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository

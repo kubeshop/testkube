@@ -614,6 +614,19 @@ WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
             \) = jsonb_array_length\(\$22::jsonb\)
         \)
     \)
+    AND \(
+        COALESCE\(\$23::boolean, false\) = false
+        OR \(
+            e.silent_mode IS NULL
+            OR \(
+                \(e.silent_mode->>'webhooks'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'insights'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'health'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'metrics'\)::boolean IS NOT TRUE
+                AND \(e.silent_mode->>'cdevents'\)::boolean IS NOT TRUE
+            \)
+        \)
+    \)
 GROUP BY r\.status`
 
 	rows := mock.NewRows([]string{"status", "count"}).
@@ -642,6 +655,7 @@ GROUP BY r\.status`
 		LabelConditions:    []byte{},
 		SelectorKeys:       []byte{},
 		SelectorConditions: []byte{},
+		SkipSilentMode:     pgtype.Bool{Bool: false, Valid: true},
 		OrganizationID:     "org-id",
 		EnvironmentID:      "env-id",
 	}
@@ -669,6 +683,7 @@ GROUP BY r\.status`
 		params.LabelConditions,
 		params.SelectorKeys,
 		params.SelectorConditions,
+		params.SkipSilentMode,
 	).WillReturnRows(rows)
 
 	// Execute query
@@ -693,11 +708,11 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 	expectedQuery := `INSERT INTO test_workflow_executions \(
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id, runtime
+    tags, running_context, config_params, silent_mode, organization_id, environment_id, runtime
 \) VALUES \(
     \$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8,
     \$9, \$10, \$11, \$12, \$13,
-    \$14, \$15, \$16, \$17, \$18, \$19
+    \$14, \$15, \$16, \$17, \$18, \$19, \$20
 \)`
 
 	params := InsertTestWorkflowExecutionParams{
@@ -717,6 +732,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 		Tags:                      []byte(`{"env":"test"}`),
 		RunningContext:            []byte(`{}`),
 		ConfigParams:              []byte(`{}`),
+		SilentMode:                []byte(`{}`),
 		OrganizationID:            "org-id",
 		EnvironmentID:             "env-id",
 		Runtime:                   []byte(`{}`),
@@ -739,6 +755,7 @@ func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing
 		params.Tags,
 		params.RunningContext,
 		params.ConfigParams,
+		params.SilentMode,
 		params.OrganizationID,
 		params.EnvironmentID,
 		params.Runtime,
