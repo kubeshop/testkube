@@ -57,7 +57,7 @@ type ExecutionLister interface {
 func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_executions",
 		mcp.WithDescription(ListExecutionsDescription),
-		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
