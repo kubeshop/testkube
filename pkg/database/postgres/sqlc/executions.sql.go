@@ -3012,6 +3012,7 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
+		arg.SkipSilentMode,
 	)
 	if err != nil {
 		return nil, err
