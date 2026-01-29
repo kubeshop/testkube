@@ -1227,6 +1227,7 @@ func TestTypeConversionHelpers(t *testing.T) {
 func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 	repo := &PostgresRepository{}
 	filter := createTestFilter()
+	filter.ExpectedCalls = removeExpectedCall(filter.ExpectedCalls, "NameDefined")
 	filter.On("NameDefined").Return(true)
 	filter.On("Name").Return("test-workflow")
 
@@ -1234,6 +1235,17 @@ func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "test-workflow", params.WorkflowName)
+}
+
+func removeExpectedCall(calls []*mock.Call, method string) []*mock.Call {
+	out := calls[:0]
+	for _, call := range calls {
+		if call.Method == method {
+			continue
+		}
+		out = append(out, call)
+	}
+	return out
 }
 
 func TestPopulateConfigParams(t *testing.T) {
