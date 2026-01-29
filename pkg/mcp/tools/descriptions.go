@@ -42,7 +42,7 @@ to find items containing all terms`
 
 	// Execution tool descriptions
 	FetchExecutionLogsDescription     = "Retrieves the full logs of a test workflow execution for debugging and analysis."
-	ListExecutionsDescription         = "List executions for a specific test workflow with filtering and pagination options. Returns execution summaries with status, timing, and results."
+	ListExecutionsDescription         = "List executions with filtering and pagination options. Optionally filter by workflow name, status, or text search. Returns execution summaries with status, timing, and results."
 	GetExecutionInfoDescription       = "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
 	WaitForExecutionsDescription      = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
