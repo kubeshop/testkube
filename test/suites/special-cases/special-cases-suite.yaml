@@ -30,6 +30,7 @@ spec:
       - name: special-cases-no-initial-output
       - name: special-cases-artifact-double-asterisk
       - name: special-cases-execution-tags
+      - name: special-cases-execute-workflows-selector-matchlabels
   - name: Execute .dev-specific workflows
     condition: 'environment.id == "tkcenv_03e3ff499f13ccba"' # execute only at .dev environment
     execute:
