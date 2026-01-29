@@ -94,7 +94,7 @@ spec:
       requests:
         cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/testkube/k6
+    workingDir: /data/repo/testkube
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -102,17 +102,7 @@ spec:
     steps:
     - shell: mkdir /data/artifacts
     - run:
-        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 30s
+        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 2s
         env:
         - name: K6_SYSTEM_ENV
           value: K6_SYSTEM_ENV_value
-        - name: K6_WEB_DASHBOARD
-          value: "true"
-        - name: K6_WEB_DASHBOARD_EXPORT
-          value: "/data/artifacts/k6-test-report.html"
-      steps:
-      - name: Saving artifacts
-        workingDir: /data/artifacts
-        artifacts:
-          paths:
-          - '*'
