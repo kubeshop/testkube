@@ -595,7 +595,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: special-cases-unique-labels # don't target it specifically
+  name: special-cases-unique-labels # don't target it specifically - just a dependency for special-cases-execute-workflows-selector-matchlabels
   labels:
     unique-label: unique-label-value
     core-tests: special-cases
