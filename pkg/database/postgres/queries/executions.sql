@@ -461,6 +461,19 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
     )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
@@ -558,6 +571,19 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
         )
     )
 GROUP BY r.status;
@@ -710,6 +736,19 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
     )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
@@ -717,11 +756,11 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id, runtime
+    tags, running_context, config_params, silent_mode, organization_id, environment_id, runtime
 ) VALUES (
     @id, @group_id, @runner_id, @runner_target, @runner_original_target, @name, @namespace, @number,
     @scheduled_at, @assigned_at, @status_at, @test_workflow_execution_name, @disable_webhooks,
-    @tags, @running_context, @config_params, @organization_id, @environment_id, @runtime
+    @tags, @running_context, @config_params, @silent_mode, @organization_id, @environment_id, @runtime
 );
 
 -- name: InsertTestWorkflowSignature :one
@@ -1192,6 +1231,19 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@skip_silent_mode::boolean, false) = false
+        OR (
+            e.silent_mode IS NULL
+            OR (
+                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            )
         )
     )
 ORDER BY e.scheduled_at DESC
