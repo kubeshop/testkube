@@ -7,6 +7,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
 // convertConfigValuesToStrings converts all values in the config map to strings
@@ -82,7 +84,12 @@ func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHan
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list workflows: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatListWorkflows(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format workflows: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
