@@ -738,3 +738,24 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 		}
 	}
 }
+
+func (c *APIClient) GetWorkflowResourceHistory(ctx context.Context, params tools.WorkflowResourceHistoryParams) (string, error) {
+	queryParams := make(map[string]string)
+
+	if params.LastN > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.LastN)
+	} else {
+		queryParams["pageSize"] = "50"
+	}
+	queryParams["page"] = "0"
+
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/agent/test-workflows/{workflowName}/executions",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": params.WorkflowName,
+		},
+		QueryParams: queryParams,
+	})
+}

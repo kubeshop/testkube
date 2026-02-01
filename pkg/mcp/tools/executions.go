@@ -11,6 +11,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
 type ExecutionLogger interface {
@@ -87,7 +89,12 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list executions: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatListExecutions(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format executions: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -120,7 +127,12 @@ func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get execution info: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatExecutionInfo(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format execution info: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -233,7 +245,12 @@ func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, han
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to abort workflow execution: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatAbortExecution(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format abort result: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -281,7 +298,12 @@ func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.To
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to wait for executions: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatWaitForExecutions(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format wait results: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
