@@ -45,6 +45,10 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Query tools (yq-based bulk queries)
+	mcpServer.AddTool(tools.QueryWorkflowsYq(client))
+	mcpServer.AddTool(tools.QueryExecutionsYq(client))
+
 	// Labels tools
 	mcpServer.AddTool(tools.ListLabels(client))
 

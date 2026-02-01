@@ -62,4 +62,45 @@ to find items containing all terms`
 	ListLabelsDescription         = "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."
 	ListResourceGroupsDescription = "Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools."
 	ListAgentsDescription         = "Retrieve all available agents from the current Testkube organization that can be used when specifying target agent(s) in run_workflow. Returns a list of agents with their IDs, names, types, capabilities, labels, and environment information. This is useful for discovering what agents are available for workflow execution targeting."
+
+	// Query tool descriptions
+	QueryWorkflowsYqDescription = `Run a yq expression against multiple workflow definitions to extract structured data in bulk. 
+This tool fetches workflow YAML definitions and applies a yq query to each workflow (or aggregates them).
+
+Use cases:
+- Extract all container images used across workflows: '.spec.steps[].container.image'
+- List step names from all workflows: '.spec.steps[].name'
+- Find services defined in workflows: '.spec.services | keys'
+- Filter workflows using specific images: 'select(.spec.steps[].container.image | contains("python"))'
+- Extract resource requirements: '.spec.steps[].container.resources'
+- Get all environment variables: '.spec.steps[].container.env[].name'
+
+Parameters:
+- expression: The yq expression to apply (required)
+- selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
+- resourceGroup: Filter by resource group slug
+- limit: Maximum workflows to fetch (default 50)
+- aggregate: If true, combines all workflows into a multi-document YAML and applies expression once; if false, applies expression to each workflow separately
+
+Returns a map of workflow names to query results, or aggregated results if aggregate=true.`
+
+	QueryExecutionsYqDescription = `Run a yq expression against multiple execution records to extract structured data in bulk.
+This tool fetches execution data (as JSON) and applies a yq query to each execution (or aggregates them).
+
+Use cases:
+- Extract execution statuses: '.result.status'
+- Get execution durations: '.result.duration'
+- List failed step names: '.result.steps[] | select(.result.status == "failed") | .name'
+- Find executions with specific errors: 'select(.result.errorMessage | contains("timeout"))'
+- Extract resource consumption: '.resourceUsage'
+- Get execution configuration: '.request.config'
+
+Parameters:
+- expression: The yq expression to apply (required)
+- workflowName: Filter executions by workflow name
+- status: Filter by status (passed/failed/running/aborted)
+- limit: Maximum executions to fetch (default 50)
+- aggregate: If true, combines all executions into a JSON array and applies expression once; if false, applies expression to each execution separately
+
+Returns a map of execution IDs to query results, or aggregated results if aggregate=true.`
 )
