@@ -292,6 +292,65 @@ func TestFormatGetWorkflow(t *testing.T) {
 		_, err := FormatGetWorkflow(input)
 		assert.Error(t, err)
 	})
+
+	t.Run("parses TestWorkflowWithExecutionSummary format", func(t *testing.T) {
+		// This is the format returned by /agent/test-workflow-with-executions/{name}
+		input := `{
+			"workflow": {
+				"name": "k6-workflow-smoke",
+				"namespace": "testkube-agent",
+				"labels": {"tool": "k6"},
+				"description": "Performance test",
+				"spec": {"steps": [{"name": "run test", "shell": "k6 run test.js"}]}
+			},
+			"latestExecution": {
+				"id": "abc123",
+				"name": "k6-workflow-smoke-1",
+				"status": "passed"
+			}
+		}`
+
+		result, err := FormatGetWorkflow(input)
+		require.NoError(t, err)
+
+		var output formattedWorkflowDetails
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+
+		assert.Equal(t, "k6-workflow-smoke", output.Name)
+		assert.Equal(t, "testkube-agent", output.Namespace)
+		assert.Equal(t, "Performance test", output.Description)
+		assert.Equal(t, map[string]string{"tool": "k6"}, output.Labels)
+		require.NotNil(t, output.Spec)
+	})
+
+	t.Run("handles wrapped workflow with health status", func(t *testing.T) {
+		input := `{
+			"workflow": {
+				"name": "test-workflow",
+				"status": {
+					"health": {
+						"passRate": 0.95,
+						"flipRate": 0.05,
+						"overallHealth": 0.9
+					}
+				}
+			}
+		}`
+
+		result, err := FormatGetWorkflow(input)
+		require.NoError(t, err)
+
+		var output formattedWorkflowDetails
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+
+		assert.Equal(t, "test-workflow", output.Name)
+		require.NotNil(t, output.Health)
+		assert.Equal(t, 0.95, output.Health.PassRate)
+		assert.Equal(t, 0.05, output.Health.FlipRate)
+		assert.Equal(t, 0.9, output.Health.OverallHealth)
+	})
 }
 
 func TestFormatGetWorkflowDefinition(t *testing.T) {

@@ -106,15 +106,31 @@ type formattedWorkflowDetails struct {
 }
 
 // FormatGetWorkflow parses a raw API response (JSON or YAML) containing
-// testkube.TestWorkflow and returns a compact JSON representation.
+// either testkube.TestWorkflow or testkube.TestWorkflowWithExecutionSummary
+// and returns a compact JSON representation.
 // It preserves the spec (needed for understanding the workflow) but strips annotations.
 func FormatGetWorkflow(raw string) (string, error) {
-	wf, isEmpty, err := ParseJSON[testkube.TestWorkflow](raw)
+	// First try parsing as TestWorkflowWithExecutionSummary (the format returned by
+	// /agent/test-workflow-with-executions/{workflowName})
+	wfWithExec, isEmpty, err := ParseJSON[testkube.TestWorkflowWithExecutionSummary](raw)
 	if err != nil {
 		return "", err
 	}
 	if isEmpty {
 		return "{}", nil
+	}
+
+	// If the response has a workflow wrapper, use it
+	var wf *testkube.TestWorkflow
+	if wfWithExec.Workflow != nil {
+		wf = wfWithExec.Workflow
+	} else {
+		// Fallback: try parsing directly as TestWorkflow (for backward compatibility)
+		directWf, _, err := ParseJSON[testkube.TestWorkflow](raw)
+		if err != nil {
+			return "", err
+		}
+		wf = &directWf
 	}
 
 	formatted := formattedWorkflowDetails{
