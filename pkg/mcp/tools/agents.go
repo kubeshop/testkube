@@ -6,6 +6,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
 type ListAgentsParams struct {
@@ -63,7 +65,12 @@ func ListAgents(client AgentsLister) (tool mcp.Tool, handler server.ToolHandlerF
 			return mcp.NewToolResultError("Error listing agents: " + err.Error()), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatListAgents(result)
+		if err != nil {
+			return mcp.NewToolResultError("Error formatting agents: " + err.Error()), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler

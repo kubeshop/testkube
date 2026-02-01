@@ -1,11 +1,7 @@
 package formatters
 
 import (
-	"encoding/json"
-	"strings"
 	"time"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -43,26 +39,12 @@ type formattedLatest struct {
 // []testkube.TestWorkflowWithExecutionSummary and returns a compact JSON
 // representation with only essential fields.
 func FormatListWorkflows(raw string) (string, error) {
-	if raw == "" {
-		return "[]", nil
+	workflows, isEmpty, err := ParseJSON[[]testkube.TestWorkflowWithExecutionSummary](raw)
+	if err != nil {
+		return "", err
 	}
-
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" || trimmed == "null" {
+	if isEmpty {
 		return "[]", nil
-	}
-
-	var workflows []testkube.TestWorkflowWithExecutionSummary
-
-	// Detect input format: JSON starts with [ or {
-	if strings.HasPrefix(trimmed, "[") || strings.HasPrefix(trimmed, "{") {
-		if err := json.Unmarshal([]byte(raw), &workflows); err != nil {
-			return "", err
-		}
-	} else {
-		if err := yaml.Unmarshal([]byte(raw), &workflows); err != nil {
-			return "", err
-		}
 	}
 
 	formatted := make([]formattedWorkflow, 0, len(workflows))
@@ -105,9 +87,5 @@ func FormatListWorkflows(raw string) (string, error) {
 		formatted = append(formatted, f)
 	}
 
-	out, err := json.Marshal(formatted)
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
+	return FormatJSON(formatted)
 }

@@ -11,6 +11,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
 type ExecutionLogger interface {
@@ -87,7 +89,12 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list executions: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatListExecutions(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format executions: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler

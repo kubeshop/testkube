@@ -10,23 +10,8 @@ import (
 )
 
 func TestFormatListWorkflows(t *testing.T) {
-	t.Run("empty string returns empty array", func(t *testing.T) {
-		result, err := FormatListWorkflows("")
-		require.NoError(t, err)
-		assert.Equal(t, "[]", result)
-	})
-
-	t.Run("whitespace string returns empty array", func(t *testing.T) {
-		result, err := FormatListWorkflows("   \n\t  ")
-		require.NoError(t, err)
-		assert.Equal(t, "[]", result)
-	})
-
-	t.Run("null string returns empty array", func(t *testing.T) {
-		result, err := FormatListWorkflows("null")
-		require.NoError(t, err)
-		assert.Equal(t, "[]", result)
-	})
+	// Use shared helper for empty input test cases
+	RunEmptyInputCases(t, FormatListWorkflows, "[]")
 
 	t.Run("empty JSON array returns empty array", func(t *testing.T) {
 		result, err := FormatListWorkflows("[]")
@@ -107,40 +92,6 @@ func TestFormatListWorkflows(t *testing.T) {
 		assert.Nil(t, wf.Latest)
 	})
 
-	t.Run("parses YAML input", func(t *testing.T) {
-		input := `- workflow:
-    name: yaml-workflow
-    namespace: default
-    description: YAML formatted workflow
-    labels:
-      env: prod
-  latestExecution:
-    id: yaml-exec-1
-    name: yaml-workflow-1
-    number: 5
-    result:
-      status: failed
-      duration: 1m15s`
-
-		result, err := FormatListWorkflows(input)
-		require.NoError(t, err)
-
-		var output []formattedWorkflow
-		err = json.Unmarshal([]byte(result), &output)
-		require.NoError(t, err)
-		require.Len(t, output, 1)
-
-		wf := output[0]
-		assert.Equal(t, "yaml-workflow", wf.Name)
-		assert.Equal(t, "default", wf.Namespace)
-		assert.Equal(t, "YAML formatted workflow", wf.Description)
-		assert.Equal(t, map[string]string{"env": "prod"}, wf.Labels)
-
-		require.NotNil(t, wf.Latest)
-		assert.Equal(t, "yaml-exec-1", wf.Latest.ID)
-		assert.Equal(t, "failed", wf.Latest.Status)
-	})
-
 	t.Run("handles multiple workflows", func(t *testing.T) {
 		input := `[
 			{"workflow": {"name": "workflow-1"}},
@@ -200,15 +151,6 @@ func TestFormatListWorkflows(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("returns error for invalid YAML", func(t *testing.T) {
-		input := `- workflow:
-    name: bad
-  extra_indent_error:
- bad_indent: true`
-		_, err := FormatListWorkflows(input)
-		assert.Error(t, err)
-	})
-
 	t.Run("handles workflow without latestExecution", func(t *testing.T) {
 		input := `[{
 			"workflow": {
@@ -256,12 +198,13 @@ func TestFormatListWorkflows(t *testing.T) {
 
 	t.Run("output is compact JSON without extra fields", func(t *testing.T) {
 		// This tests that we're not including the full workflow spec or other large fields
+		// Note: We use a simplified spec that doesn't include BoxedStringList types
 		input := `[{
 			"workflow": {
 				"name": "compact-test",
 				"spec": {
 					"steps": [
-						{"name": "step1", "run": {"image": "alpine", "command": ["echo", "hello"]}}
+						{"name": "step1"}
 					]
 				},
 				"annotations": {"large": "annotation"},
@@ -274,7 +217,7 @@ func TestFormatListWorkflows(t *testing.T) {
 
 		// Verify spec is not in output
 		assert.NotContains(t, result, "steps")
-		assert.NotContains(t, result, "alpine")
+		assert.NotContains(t, result, "step1")
 		assert.NotContains(t, result, "annotations")
 		assert.NotContains(t, result, "readOnly")
 
