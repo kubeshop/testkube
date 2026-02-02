@@ -88,14 +88,16 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
 - resourceGroup: Filter by resource group slug
-- limit: Maximum workflows to fetch (default 50)
+- limit: Maximum workflows to fetch (default 50, max 100)
 - aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
 
 Returns:
 - Per-workflow: Map of workflow name → extracted values
 - Aggregate mode: Combined results from all workflows
 
-Missing paths return empty arrays, not errors.`
+Missing paths return empty arrays, not errors.
+
+For large datasets (100+ workflows): Use selector or resourceGroup filters to query subsets, as this tool fetches up to 100 workflows per call.`
 
 	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
 Fetches execution JSON data and extracts data matching the path.
@@ -121,12 +123,14 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - workflowName: Filter executions by workflow name
 - status: Filter by status (passed/failed/running/aborted)
-- limit: Maximum executions to fetch (default 50)
+- limit: Maximum executions to fetch (default 50, max 100)
 - aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
 
 Returns:
 - Per-execution: Map of execution ID → extracted values
 - Aggregate mode: Combined results from all executions
 
-Missing paths return empty arrays, not errors.`
+Missing paths return empty arrays, not errors.
+
+For large datasets: Use workflowName or status filters to query subsets, as this tool fetches up to 100 executions per call.`
 )
