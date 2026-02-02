@@ -1007,6 +1007,7 @@ func TestPostgresRepository_GetTestWorkflowMetrics(t *testing.T) {
 				Name:        "execution1",
 				StartTime:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 				RunnerID:    pgtype.Text{String: "runner1", Valid: true},
+				SilentMode:  []byte(`{"metrics":true}`),
 			},
 		}
 

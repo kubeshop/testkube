@@ -911,7 +911,8 @@ SELECT
     r.status,
     e.name,
     e.scheduled_at as start_time,
-    e.runner_id
+    e.runner_id,
+    e.silent_mode
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'

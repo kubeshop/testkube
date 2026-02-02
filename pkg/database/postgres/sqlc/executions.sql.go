@@ -3041,7 +3041,8 @@ SELECT
     r.status,
     e.name,
     e.scheduled_at as start_time,
-    e.runner_id
+    e.runner_id,
+    e.silent_mode
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -3068,6 +3069,7 @@ type GetTestWorkflowMetricsRow struct {
 	Name        string             `db:"name" json:"name"`
 	StartTime   pgtype.Timestamptz `db:"start_time" json:"start_time"`
 	RunnerID    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	SilentMode  []byte             `db:"silent_mode" json:"silent_mode"`
 }
 
 func (q *Queries) GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflowMetricsParams) ([]GetTestWorkflowMetricsRow, error) {
@@ -3094,6 +3096,7 @@ func (q *Queries) GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflo
 			&i.Name,
 			&i.StartTime,
 			&i.RunnerID,
+			&i.SilentMode,
 		); err != nil {
 			return nil, err
 		}

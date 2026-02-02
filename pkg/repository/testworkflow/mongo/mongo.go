@@ -857,6 +857,7 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 			"name":        1,
 			"starttime":   "$scheduledat",
 			"runnerid":    1,
+			"silentmode":  1,
 		}},
 	}
 

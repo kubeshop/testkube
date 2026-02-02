@@ -22,4 +22,5 @@ type ExecutionsMetricsExecutions struct {
 	Name        string    `json:"name,omitempty"`
 	StartTime   time.Time `json:"startTime,omitempty"`
 	RunnerId    string    `json:"runnerId,omitempty"`
+	SilentMode  *SilentMode `json:"silentMode,omitempty"`
 }

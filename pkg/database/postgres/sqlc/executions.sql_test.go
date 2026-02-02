@@ -1112,7 +1112,8 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowMetrics(t *testing.T) {
     r\.status,
     e\.name,
     e\.scheduled_at as start_time,
-    e\.runner_id
+    e\.runner_id,
+    e\.silent_mode
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
@@ -1130,9 +1131,9 @@ LIMIT NULLIF\(\$5, 0\)`
 	}
 
 	rows := mock.NewRows([]string{
-		"execution_id", "group_id", "duration", "duration_ms", "status", "name", "start_time", "runner_id",
+	"execution_id", "group_id", "duration", "duration_ms", "status", "name", "start_time", "runner_id", "silent_mode",
 	}).AddRow(
-		"exec-1", "group-1", "5m", int64(300000), "passed", "test-execution", time.Now(), "runner-1",
+	"exec-1", "group-1", "5m", int64(300000), "passed", "test-execution", time.Now(), "runner-1", []byte(`{}`),
 	)
 
 	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.OrganizationID, params.EnvironmentID, params.LastNDays, params.Lmt).WillReturnRows(rows)
