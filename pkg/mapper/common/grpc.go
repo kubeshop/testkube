@@ -75,3 +75,16 @@ func MapTargetKubeToGrpc(t *commonv1.Target) *cloud.ExecutionTarget {
 
 	return &target
 }
+
+func MapSilentModeApiToGrpc(sm *testkube.SilentMode) *cloud.SilentMode {
+	if sm == nil {
+		return nil
+	}
+	return &cloud.SilentMode{
+		Webhooks: sm.Webhooks,
+		Insights: sm.Insights,
+		Health:   sm.Health,
+		Metrics:  sm.Metrics,
+		Cdevents: sm.Cdevents,
+	}
+}

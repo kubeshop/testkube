@@ -591,3 +591,52 @@ spec:
   steps:
   - name: Step
     shell: echo "Step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-unique-labels # don't target it specifically - just a dependency for special-cases-execute-workflows-selector-matchlabels
+  labels:
+    unique-label: unique-label-value
+    core-tests: special-cases
+description: "Special-cases workflow for execute.selector.matchLabels test"
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step
+    shell: echo "Step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-execute-workflows-selector-matchlabels
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step with execute.workflows.selector.matchLabels
+    execute:
+      workflows:
+      - selector:
+          matchLabels:
+            unique-label: unique-label-value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-silent-workflow
+  labels:
+    core-tests: special-cases
+    manual: "true
+description: "Silent workflow - should be excluded from metrics/insights/health, shouldn't trigger webhooks"
+spec:
+  execution:
+    silent: true
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step
+    shell: echo "Step" && exit 0

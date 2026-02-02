@@ -13,6 +13,7 @@ type Client interface {
 	tools.ExecutionWaiter
 	tools.WorkflowExecutionAborter
 	tools.WorkflowExecutionMetricsGetter
+	tools.WorkflowResourceHistoryGetter
 
 	tools.LabelsLister
 	tools.ResourceGroupsLister

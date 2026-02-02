@@ -32,7 +32,7 @@ type TestWorkflowSpecBase struct {
 	Notifications *NotificationsConfig `json:"notifications,omitempty" expr:"include"`
 
 	// values to be used for test workflow execution
-	Execution *TestWorkflowTagSchema `json:"execution,omitempty" expr:"include"`
+	Execution *TestWorkflowExecutionSchema `json:"execution,omitempty" expr:"include"`
 }
 
 type TestWorkflowSystem struct {

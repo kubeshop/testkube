@@ -7,6 +7,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
 // convertConfigValuesToStrings converts all values in the config map to strings
@@ -82,7 +84,12 @@ func ListWorkflows(client WorkflowLister) (tool mcp.Tool, handler server.ToolHan
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list workflows: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatListWorkflows(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format workflows: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -109,7 +116,12 @@ func CreateWorkflow(client WorkflowCreator) (tool mcp.Tool, handler server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create workflow: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatCreateWorkflow(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format workflow: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -136,7 +148,12 @@ func GetWorkflowDefinition(client WorkflowDefinitionGetter) (tool mcp.Tool, hand
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow definition: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatGetWorkflowDefinition(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format workflow definition: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -163,7 +180,12 @@ func GetWorkflow(client WorkflowGetter) (tool mcp.Tool, handler server.ToolHandl
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatGetWorkflow(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format workflow: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -221,7 +243,12 @@ func RunWorkflow(client WorkflowRunner) (tool mcp.Tool, handler server.ToolHandl
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to run workflow: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatRunWorkflow(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format execution: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -254,7 +281,12 @@ func UpdateWorkflow(client WorkflowUpdater) (tool mcp.Tool, handler server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update workflow: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatUpdateWorkflow(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format workflow: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -281,7 +313,12 @@ func GetWorkflowMetrics(client WorkflowMetricsGetter) (tool mcp.Tool, handler se
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow metrics: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatGetWorkflowMetrics(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format metrics: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -314,7 +351,12 @@ func GetWorkflowExecutionMetrics(client WorkflowExecutionMetricsGetter) (tool mc
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow execution metrics: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatGetWorkflowExecutionMetrics(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format execution metrics: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
