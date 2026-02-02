@@ -64,6 +64,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
 		mcp.WithString("status", mcp.Description(StatusDescription)),
+		mcp.WithString("since", mcp.Description(SinceDescription)),
 		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
 		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
 	)
@@ -73,6 +74,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 			WorkflowName: request.GetString("workflowName", ""),
 			TextSearch:   request.GetString("textSearch", ""),
 			Status:       request.GetString("status", ""),
+			Since:        request.GetString("since", ""),
 			StartDate:    request.GetString("startDate", ""),
 			EndDate:      request.GetString("endDate", ""),
 		}
