@@ -48,6 +48,8 @@ type ListExecutionsParams struct {
 	Page         int
 	Status       string
 	Since        string
+	StartDate    string
+	EndDate      string
 }
 
 type ExecutionLister interface {
@@ -62,6 +64,8 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
 		mcp.WithString("status", mcp.Description(StatusDescription)),
+		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
+		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -69,6 +73,8 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 			WorkflowName: request.GetString("workflowName", ""),
 			TextSearch:   request.GetString("textSearch", ""),
 			Status:       request.GetString("status", ""),
+			StartDate:    request.GetString("startDate", ""),
+			EndDate:      request.GetString("endDate", ""),
 		}
 
 		if pageSizeStr := request.GetString("pageSize", "10"); pageSizeStr != "" {

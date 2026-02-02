@@ -28,6 +28,10 @@ to find items containing all terms`
 
 	SinceDescription = "Filter executions created after this time (ISO 8601 format)"
 
+	StartDateDescription = "Filter executions scheduled on or after this date (YYYY-MM-DD format, e.g., '2024-01-15')"
+
+	EndDateDescription = "Filter executions scheduled on or before this date (YYYY-MM-DD format, e.g., '2024-01-31')"
+
 	FilenameDescription = "The name of the artifact file to retrieve"
 
 	// Workflow tool descriptions
