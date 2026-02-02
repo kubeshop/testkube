@@ -64,43 +64,68 @@ to find items containing all terms`
 	ListAgentsDescription         = "Retrieve all available agents from the current Testkube organization that can be used when specifying target agent(s) in run_workflow. Returns a list of agents with their IDs, names, types, capabilities, labels, and environment information. This is useful for discovering what agents are available for workflow execution targeting."
 
 	// Query tool descriptions
-	QueryWorkflowsYqDescription = `Run a yq expression against multiple workflow definitions to extract structured data in bulk. 
-This tool fetches workflow YAML definitions and applies a yq query to each workflow (or aggregates them).
+	QueryWorkflowsDescription = `Query multiple workflow definitions using JSONPath expressions.
+Fetches workflow YAML definitions and extracts data matching the path.
 
-Use cases:
-- Extract all container images used across workflows: '.spec.steps[].container.image'
-- List step names from all workflows: '.spec.steps[].name'
-- Find services defined in workflows: '.spec.services | keys'
-- Filter workflows using specific images: 'select(.spec.steps[].container.image | contains("python"))'
-- Extract resource requirements: '.spec.steps[].container.resources'
-- Get all environment variables: '.spec.steps[].container.env[].name'
+Supported JSONPath syntax:
+  $                   - Root element (the workflow)
+  $.spec.steps        - Direct path to steps array
+  $.spec.steps[0]     - First step
+  $.spec.steps[*]     - All steps
+  $..image            - All 'image' fields anywhere (recursive)
+  $[?(@.name=='x')]   - Filter by field value
+
+Common paths for workflows:
+  $..image                          - All container images
+  $.spec.steps[*].name              - All step names
+  $.spec.services                   - Service definitions
+  $.spec.content.git.uri            - Git repository URL
+  $.metadata.labels                 - Workflow labels
+  $.spec.steps[*].run.image         - Images in run steps
+  $.spec.steps[*].shell             - Shell commands
 
 Parameters:
-- expression: The yq expression to apply (required)
+- expression: The JSONPath expression to apply (required)
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
 - resourceGroup: Filter by resource group slug
 - limit: Maximum workflows to fetch (default 50)
-- aggregate: If true, combines all workflows into a multi-document YAML and applies expression once; if false, applies expression to each workflow separately
+- aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
 
-Returns a map of workflow names to query results, or aggregated results if aggregate=true.`
+Returns:
+- Per-workflow: Map of workflow name → extracted values
+- Aggregate mode: Combined results from all workflows
 
-	QueryExecutionsYqDescription = `Run a yq expression against multiple execution records to extract structured data in bulk.
-This tool fetches execution data (as JSON) and applies a yq query to each execution (or aggregates them).
+Missing paths return empty arrays, not errors.`
 
-Use cases:
-- Extract execution statuses: '.result.status'
-- Get execution durations: '.result.duration'
-- List failed step names: '.result.steps[] | select(.result.status == "failed") | .name'
-- Find executions with specific errors: 'select(.result.errorMessage | contains("timeout"))'
-- Extract resource consumption: '.resourceUsage'
-- Get execution configuration: '.request.config'
+	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
+Fetches execution JSON data and extracts data matching the path.
+
+Supported JSONPath syntax:
+  $                   - Root element (the execution)
+  $.result.status     - Direct path to status
+  $.result.steps[*]   - All step results
+  $..duration         - All duration fields (recursive)
+  $[?(@.status=='failed')] - Filter by status
+
+Common paths for executions:
+  $.result.status                   - Execution status
+  $.result.duration                 - Total duration
+  $.result.steps[*].name            - Step names
+  $.result.steps[*].status          - Step statuses
+  $.result.errorMessage             - Error if failed
+  $.workflow.name                   - Workflow name
+  $.scheduledAt                     - Start time
 
 Parameters:
-- expression: The yq expression to apply (required)
+- expression: The JSONPath expression to apply (required)
 - workflowName: Filter executions by workflow name
 - status: Filter by status (passed/failed/running/aborted)
 - limit: Maximum executions to fetch (default 50)
-- aggregate: If true, combines all executions into a JSON array and applies expression once; if false, applies expression to each execution separately
+- aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
 
-Returns a map of execution IDs to query results, or aggregated results if aggregate=true.`
+Returns:
+- Per-execution: Map of execution ID → extracted values
+- Aggregate mode: Combined results from all executions
+
+Missing paths return empty arrays, not errors.`
 )
