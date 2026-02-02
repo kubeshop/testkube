@@ -69,56 +69,6 @@ func TestGetWorkflowSchema(t *testing.T) {
 	})
 }
 
-func TestGetTemplateSchema(t *testing.T) {
-	tool, handler := GetTemplateSchema()
-
-	t.Run("tool has correct name and description", func(t *testing.T) {
-		assert.Equal(t, "get_template_schema", tool.Name)
-		assert.NotEmpty(t, tool.Description)
-		assert.Contains(t, tool.Description, "TestWorkflowTemplate")
-	})
-
-	t.Run("returns template schema content", func(t *testing.T) {
-		request := mcp.CallToolRequest{}
-		result, err := handler(context.Background(), request)
-
-		require.NoError(t, err)
-		require.NotNil(t, result)
-		require.Len(t, result.Content, 1)
-
-		textContent, ok := result.Content[0].(mcp.TextContent)
-		require.True(t, ok, "expected TextContent")
-
-		// Verify essential template schema elements are present
-		assert.Contains(t, textContent.Text, "apiVersion")
-		assert.Contains(t, textContent.Text, "TestWorkflowTemplate")
-		assert.Contains(t, textContent.Text, "metadata")
-		assert.Contains(t, textContent.Text, "spec")
-		assert.Contains(t, textContent.Text, "steps")
-	})
-
-	t.Run("schema contains key template fields", func(t *testing.T) {
-		request := mcp.CallToolRequest{}
-		result, err := handler(context.Background(), request)
-
-		require.NoError(t, err)
-		textContent := result.Content[0].(mcp.TextContent)
-
-		// Check for important template fields
-		keyFields := []string{
-			"container",
-			"config",
-			"steps",
-			"setup",
-		}
-
-		for _, field := range keyFields {
-			assert.True(t, strings.Contains(textContent.Text, field),
-				"expected schema to contain field: %s", field)
-		}
-	})
-}
-
 func TestGetExecutionSchema(t *testing.T) {
 	tool, handler := GetExecutionSchema()
 
@@ -208,7 +158,6 @@ func TestSchemaToolsNoParameters(t *testing.T) {
 		getTool func() (mcp.Tool, server.ToolHandlerFunc)
 	}{
 		{"get_workflow_schema", GetWorkflowSchema},
-		{"get_template_schema", GetTemplateSchema},
 		{"get_execution_schema", GetExecutionSchema},
 	}
 
@@ -238,11 +187,6 @@ func TestSchemaEmbedding(t *testing.T) {
 	t.Run("workflow schema is embedded", func(t *testing.T) {
 		assert.NotEmpty(t, workflowSchema, "workflow schema should be embedded")
 		assert.True(t, len(workflowSchema) > 1000, "workflow schema should be substantial")
-	})
-
-	t.Run("template schema is embedded", func(t *testing.T) {
-		assert.NotEmpty(t, templateSchema, "template schema should be embedded")
-		assert.True(t, len(templateSchema) > 1000, "template schema should be substantial")
 	})
 
 	t.Run("execution schema is embedded", func(t *testing.T) {
