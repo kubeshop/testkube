@@ -1,6 +1,6 @@
 // Package jsonpath provides a JSONPath query interface for extracting data from JSON/YAML structures.
 // It wraps the underlying JSONPath implementation to provide consistent error handling,
-// null-safe results, and safety limits (timeouts, output size).
+// null-safe results, and safety limits (timeouts, input size).
 package jsonpath
 
 import (
@@ -13,9 +13,6 @@ import (
 const (
 	// DefaultTimeout is the default query timeout.
 	DefaultTimeout = 10 * time.Second
-
-	// DefaultMaxOutputSize is the default maximum output size in bytes.
-	DefaultMaxOutputSize = 100 * 1024 // 100KB
 
 	// DefaultMaxInputSize is the default maximum input size in bytes.
 	DefaultMaxInputSize = 10 * 1024 * 1024 // 10MB
@@ -36,9 +33,6 @@ type Options struct {
 	// Timeout is the maximum time allowed for query execution.
 	Timeout time.Duration
 
-	// MaxOutputSize is the maximum allowed output size in bytes.
-	MaxOutputSize int
-
 	// MaxInputSize is the maximum allowed input size in bytes.
 	MaxInputSize int
 }
@@ -46,9 +40,8 @@ type Options struct {
 // DefaultOptions returns the default query options.
 func DefaultOptions() Options {
 	return Options{
-		Timeout:       DefaultTimeout,
-		MaxOutputSize: DefaultMaxOutputSize,
-		MaxInputSize:  DefaultMaxInputSize,
+		Timeout:      DefaultTimeout,
+		MaxInputSize: DefaultMaxInputSize,
 	}
 }
 

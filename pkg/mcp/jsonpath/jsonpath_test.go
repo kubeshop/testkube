@@ -577,7 +577,6 @@ func TestDefaultOptions(t *testing.T) {
 	opts := DefaultOptions()
 
 	assert.Equal(t, DefaultTimeout, opts.Timeout)
-	assert.Equal(t, DefaultMaxOutputSize, opts.MaxOutputSize)
 	assert.Equal(t, DefaultMaxInputSize, opts.MaxInputSize)
 }
 
