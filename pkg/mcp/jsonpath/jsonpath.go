@@ -5,6 +5,7 @@ package jsonpath
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -98,6 +99,17 @@ func QueryWithContext(ctx context.Context, path string, data any, opts Options) 
 		defer cancel()
 	}
 
+	// Check input size limit to prevent memory issues with very large data
+	if opts.MaxInputSize > 0 {
+		inputSize := estimateSize(data)
+		if inputSize > opts.MaxInputSize {
+			return nil, &QueryError{
+				Path:    path,
+				Message: fmt.Sprintf("input data exceeds maximum size (%d > %d bytes)", inputSize, opts.MaxInputSize),
+			}
+		}
+	}
+
 	// Use the default engine
 	engine := defaultEngine()
 
@@ -136,4 +148,19 @@ func QueryWithContext(ctx context.Context, path string, data any, opts Options) 
 type queryResult struct {
 	result []any
 	err    error
+}
+
+// estimateSize returns an approximate size of the data in bytes.
+// Uses JSON marshaling as a reasonable estimate for memory usage.
+func estimateSize(data any) int {
+	if data == nil {
+		return 0
+	}
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		// If marshaling fails, return 0 to skip size check
+		// (the query will likely fail later with a more specific error)
+		return 0
+	}
+	return len(bytes)
 }

@@ -605,3 +605,85 @@ func TestQueryError(t *testing.T) {
 		assert.Nil(t, err.Unwrap())
 	})
 }
+
+func TestQueryWithContext_InputSizeLimit(t *testing.T) {
+	t.Run("rejects input exceeding size limit", func(t *testing.T) {
+		// Create data that exceeds a small limit
+		largeData := map[string]any{
+			"items": make([]string, 1000),
+		}
+		for i := range largeData["items"].([]string) {
+			largeData["items"].([]string)[i] = "item-with-some-content-to-increase-size"
+		}
+
+		opts := Options{
+			Timeout:      DefaultTimeout,
+			MaxInputSize: 100, // Very small limit
+		}
+
+		result, err := QueryWithContext(context.Background(), "$.items", largeData, opts)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "exceeds maximum size")
+	})
+
+	t.Run("allows input within size limit", func(t *testing.T) {
+		smallData := map[string]any{
+			"name": "test",
+		}
+
+		opts := Options{
+			Timeout:      DefaultTimeout,
+			MaxInputSize: 1024 * 1024, // 1MB limit
+		}
+
+		result, err := QueryWithContext(context.Background(), "$.name", smallData, opts)
+
+		require.NoError(t, err)
+		assert.Equal(t, []any{"test"}, result)
+	})
+
+	t.Run("skips check when MaxInputSize is 0", func(t *testing.T) {
+		data := map[string]any{
+			"name": "test",
+		}
+
+		opts := Options{
+			Timeout:      DefaultTimeout,
+			MaxInputSize: 0, // Disabled
+		}
+
+		result, err := QueryWithContext(context.Background(), "$.name", data, opts)
+
+		require.NoError(t, err)
+		assert.Equal(t, []any{"test"}, result)
+	})
+}
+
+func TestEstimateSize(t *testing.T) {
+	t.Run("returns size for simple data", func(t *testing.T) {
+		data := map[string]any{"key": "value"}
+		size := estimateSize(data)
+		assert.Greater(t, size, 0)
+	})
+
+	t.Run("returns 0 for nil", func(t *testing.T) {
+		size := estimateSize(nil)
+		assert.Equal(t, 0, size)
+	})
+
+	t.Run("larger data has larger size", func(t *testing.T) {
+		small := map[string]any{"a": "b"}
+		large := map[string]any{
+			"key1": "value1",
+			"key2": "value2",
+			"key3": "value3",
+		}
+
+		smallSize := estimateSize(small)
+		largeSize := estimateSize(large)
+
+		assert.Greater(t, largeSize, smallSize)
+	})
+}
