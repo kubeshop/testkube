@@ -60,6 +60,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 	tool = mcp.NewTool("list_executions",
 		mcp.WithDescription(ListExecutionsDescription),
 		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
@@ -72,6 +73,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params := ListExecutionsParams{
 			WorkflowName: request.GetString("workflowName", ""),
+			Selector:     request.GetString("selector", ""),
 			TextSearch:   request.GetString("textSearch", ""),
 			Status:       request.GetString("status", ""),
 			Since:        request.GetString("since", ""),
@@ -151,7 +153,7 @@ func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.To
 		}
 
 		if !isValidExecutionName(executionName) {
-			return mcp.NewToolResultError(fmt.Sprintf("fnvalid execution name format: \"%s\" expected format: \"workflow-name-number\".", executionName)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Invalid execution name format: \"%s\" expected format: \"workflow-name-number\".", executionName)), nil
 		}
 
 		result, err := client.LookupExecutionID(ctx, executionName)
