@@ -1,0 +1,434 @@
+# String. APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info https//git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+apiVersion: "testworkflows.testkube.io/v1"
+# String. Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info https//git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+kind: "TestWorkflowTemplate"
+# Object. 
+metadata: {}
+# Object. TestWorkflowTemplate specification
+spec:
+  # Array. Steps to run at the end of the workflow. Follows the schema of spec.steps
+  after: []
+  # Object. Make the instance configurable with some input data for scheduling it
+  config: {}
+  # Object. Defaults for the containers for all the TestWorkflow steps
+  container:
+    # Array. Override default command in the image (empty string to default CMD of the image)
+    args: []
+    # Array. Override default command in the image (empty string to default ENTRYPOINT of the image)
+    command: []
+    # Array. 
+    env:
+      # Object. Item in the array
+      -
+        # String. 
+        name: ""
+        # String. 
+        value: ""
+        # Object. 
+        valueFrom:
+    # Array. 
+    envFrom:
+      # Object. Item in the array
+      -
+        # Object. 
+        configMapRef:
+        # String. 
+        prefix: ""
+        # Object. 
+        secretRef:
+    # String. Image to be used for the container
+    image: ""
+    # String. Pulling policy for the image
+    imagePullPolicy: ""
+    # Object. Expected resources for the container
+    resources:
+      # Object. Resource limits for the container
+      limits: {}
+      # Object. Resource requests for the container
+      requests: {}
+    # Object. 
+    securityContext:
+      # Boolean. 
+      allowPrivilegeEscalation: false
+      # Object. Required type. 
+      appArmorProfile:
+        # String. 
+        localhostProfile: ""
+        # String. 
+        type: ""
+      # Object. 
+      capabilities:
+        # Array. 
+        add: []
+        # Array. 
+        drop: []
+      # Boolean. 
+      privileged: false
+      # String. 
+      procMount: ""
+      # Boolean. 
+      readOnlyRootFilesystem: false
+      # Integer. 
+      runAsGroup: 0
+      # Boolean. 
+      runAsNonRoot: false
+      # Integer. 
+      runAsUser: 0
+      # Object. 
+      seLinuxOptions:
+        # String. 
+        level: ""
+        # String. 
+        role: ""
+        # String. 
+        type: ""
+        # String. 
+        user: ""
+      # Object. Required type. 
+      seccompProfile:
+        # String. 
+        localhostProfile: ""
+        # String. 
+        type: ""
+      # Object. 
+      windowsOptions:
+        # String. 
+        gmsaCredentialSpec: ""
+        # String. 
+        gmsaCredentialSpecName: ""
+        # Boolean. 
+        hostProcess: false
+        # String. 
+        runAsUserName: ""
+    # Array. 
+    volumeMounts:
+      # Object. Item in the array
+      -
+        # String. 
+        mountPath: ""
+        # String. 
+        mountPropagation: ""
+        # String. 
+        name: ""
+        # Boolean. 
+        readOnly: false
+        # String. 
+        recursiveReadOnly: ""
+        # String. 
+        subPath: ""
+        # String. 
+        subPathExpr: ""
+    # String. Override default working directory in the image (empty string to default WORKDIR for the image)
+    workingDir: ""
+  # Object. Global content that should be fetched into all containers
+  content:
+    # Array. Files to load
+    files:
+      # Object. Item in the array
+      -
+        # String. Plain-text content to put inside
+        content: ""
+        # Object. External source to use
+        contentFrom:
+        # Integer. Mode to use for the file
+        mode: 0
+        # String. Path where the file should be accessible at
+        path: ""
+    # Object. Git repository details
+    git:
+      # String. Authorization type for the credentials
+      authType: ""
+      # Boolean. Enable cone mode for sparse checkout with paths
+      cone: false
+      # String. Where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
+      mountPath: ""
+      # Array. Paths to fetch for the sparse checkout
+      paths: []
+      # String. Branch, commit or a tag name to fetch
+      revision: ""
+      # String. Plain text SSH private key to fetch with
+      sshKey: ""
+      # Object. External SSH private key to fetch with
+      sshKeyFrom:
+        # Object. Required key. 
+        configMapKeyRef:
+          # String. 
+          key: ""
+          # String. 
+          name: ""
+          # Boolean. 
+          optional: false
+        # Object. Required fieldPath. 
+        fieldRef:
+          # String. 
+          apiVersion: ""
+          # String. 
+          fieldPath: ""
+        # Object. Required resource. 
+        resourceFieldRef:
+          # String. 
+          containerName: ""
+          # Object. 
+          divisor: {}
+          # String. 
+          resource: ""
+        # Object. Required key. 
+        secretKeyRef:
+          # String. 
+          key: ""
+          # String. 
+          name: ""
+          # Boolean. 
+          optional: false
+      # String. Plain text token to fetch with
+      token: ""
+      # Object. External token to fetch with
+      tokenFrom:
+        # Object. Required key. 
+        configMapKeyRef:
+          # String. 
+          key: ""
+          # String. 
+          name: ""
+          # Boolean. 
+          optional: false
+        # Object. Required fieldPath. 
+        fieldRef:
+          # String. 
+          apiVersion: ""
+          # String. 
+          fieldPath: ""
+        # Object. Required resource. 
+        resourceFieldRef:
+          # String. 
+          containerName: ""
+          # Object. 
+          divisor: {}
+          # String. 
+          resource: ""
+        # Object. Required key. 
+        secretKeyRef:
+          # String. 
+          key: ""
+          # String. 
+          name: ""
+          # Boolean. 
+          optional: false
+      # String. Uri for the Git repository
+      uri: ""
+      # String. Plain text username to fetch with
+      username: ""
+      # Object. External username to fetch with
+      usernameFrom:
+        # Object. Required key. 
+        configMapKeyRef:
+          # String. 
+          key: ""
+          # String. 
+          name: ""
+          # Boolean. 
+          optional: false
+        # Object. Required fieldPath. 
+        fieldRef:
+          # String. 
+          apiVersion: ""
+          # String. 
+          fieldPath: ""
+        # Object. Required resource. 
+        resourceFieldRef:
+          # String. 
+          containerName: ""
+          # Object. 
+          divisor: {}
+          # String. 
+          resource: ""
+        # Object. Required key. 
+        secretKeyRef:
+          # String. 
+          key: ""
+          # String. 
+          name: ""
+          # Boolean. 
+          optional: false
+    # Array. Tarballs to unpack
+    tarball:
+      # Object. Item in the array
+      -
+        # Boolean. Should it mount a new volume there
+        mount: false
+        # String. Path where the tarball should be extracted
+        path: ""
+        # String. Url for the tarball to extract
+        url: ""
+  # Array. Events triggering execution of the test workflow
+  events:
+    # Object. Item in the array
+    -
+      # Object. Required cron. Cron job configuration
+      cronjob:
+  # Object. Values to be used for test workflow execution
+  execution:
+    # Object. Test workflow execution tags
+    tags: {}
+  # Object. Configuration for the scheduled job
+  job:
+    # Integer. Duration in seconds the job may be active on the node
+    activeDeadlineSeconds: 0
+    # Object. Annotations added to the scheduled job
+    annotations: {}
+    # Object. Labels added to the scheduled job
+    labels: {}
+    # String. Namespace for execution of test workflow
+    namespace: ""
+  # Object. Configuration for notifications Deprecated field is not used
+  notifications:
+    # Boolean. 
+    disableWebhooks: false
+  # Object. Configuration for the scheduled pod
+  pod:
+    # Integer. Duration in seconds the pod may be active on the node
+    activeDeadlineSeconds: 0
+    # Object. 
+    affinity: {}
+    # Object. Annotations added to the scheduled pod
+    annotations: {}
+    # Object. 
+    dnsConfig:
+      # Array. 
+      nameservers: []
+      # Array. 
+      options:
+        # Object. Item in the array
+        -
+          # String. 
+          name: ""
+          # String. 
+          value: ""
+      # Array. 
+      searches: []
+    # String. 
+    dnsPolicy: ""
+    # Array. 
+    hostAliases:
+      # Object. Item in the array
+      -
+        # Array. 
+        hostnames:
+        # String. 
+        ip: ""
+    # String. Specifies the hostname of the Pod
+    hostname: ""
+    # Array. References to secrets with credentials for pulling the images from registry
+    imagePullSecrets:
+      # Object. Item in the array
+      -
+        # String. Name of the referent. This field is effectively required, but due to backwards compatibility is allowed to be empty. Instances of this type with an empty value here are almost certainly wrong. More info https//kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+        name: ""
+    # Object. Labels added to the scheduled pod
+    labels: {}
+    # String. NodeName is a request to schedule this pod onto a specific node.
+    nodeName: ""
+    # Object. Node selector to define on which node the pod should land
+    nodeSelector: {}
+    # String. PreemptionPolicy is the Policy for preempting pods with lower priority.
+    preemptionPolicy: ""
+    # Integer. The priority value. Various system components use this field to find the priority of the pod.
+    priority: 0
+    # String. If specified, indicates the pod's priority.
+    priorityClassName: ""
+    # Array. 
+    resourceClaims:
+      # Object. Item in the array
+      -
+        # String. 
+        name: ""
+        # String. 
+        resourceClaimName: ""
+        # String. 
+        resourceClaimTemplateName: ""
+    # Array. 
+    schedulingGates:
+      # Object. Item in the array
+      -
+        # String. 
+        name: ""
+    # Object. . Follows the schema of spec.container.securityContext
+    securityContext: {}
+    # String. Default service account name for the scheduled pod
+    serviceAccountName: ""
+    # String. If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
+    subdomain: ""
+    # Array. 
+    tolerations:
+      # Object. Item in the array
+      -
+        # String. 
+        effect: ""
+        # String. 
+        key: ""
+        # String. 
+        operator: ""
+        # Integer. 
+        tolerationSeconds: 0
+        # String. 
+        value: ""
+    # Object. 
+    topologySpreadConstraints: {}
+    # Object. 
+    volumes: {}
+  # Object. 
+  pvcs: {}
+  # Object. List of accompanying services to start
+  services: {}
+  # Array. Steps for setting up the workflow. Follows the schema of spec.steps
+  setup: []
+  # Array. Steps to execute in the workflow
+  steps:
+    # Object. Item in the array
+    -
+      # Object. Scrape artifacts from the volumes
+      artifacts:
+      # String. Expression to declare under which conditions the step should be run defaults to "passed", except artifacts where it defaults to "always"
+      condition: ""
+      # Object. Defaults for the containers in this step. Follows the schema of spec.container
+      container:
+      # Object. Content that should be fetched for this step. Follows the schema of spec.content
+      content:
+      # String. Delay before the step
+      delay: ""
+      # Object. Execute other Testkube resources
+      execute:
+      # String. Readable name for the step
+      name: ""
+      # Boolean. Is the step expected to fail
+      negative: false
+      # Boolean. Is the step optional, so its failure won't affect the TestWorkflow result
+      optional: false
+      # Object. Instructions for parallel execution
+      parallel:
+      # Boolean. Pause the step initially
+      paused: false
+      # Boolean. Mark the step as pure, applying optimizations to merge the containers together
+      pure: false
+      # Object. Required count. Policy for retrying the step
+      retry:
+      # Object. Run specific container in the current step
+      run:
+      # Object. List of accompanying services to start
+      services:
+      # Object. Steps to run before other operations in this step
+      setup:
+      # String. Script to run in a default shell for the container
+      shell: ""
+      # Object. Sub-steps to run
+      steps:
+      # String. Maximum time this step may take
+      timeout: ""
+      # String. Working directory to use for this step
+      workingDir: ""
+  # Object. System configuration to define the orchestration behavior
+  system:
+    # Boolean. Disable the behavior of merging multiple operations in a single container
+    isolatedContainers: false
+    # Boolean. Assume all the steps are pure by default
+    pureByDefault: false

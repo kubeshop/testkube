@@ -1,0 +1,448 @@
+# String. APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info https//git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+apiVersion: "testworkflows.testkube.io/v1"
+# String. Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info https//git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+kind: "TestWorkflow"
+# Object. Standard Kubernetes metadata including name, labels, and annotations for organizing and filtering your TestWorkflows.
+metadata: {}
+# Object. TestWorkflow specification defining the complete test execution pipeline including content sources, container configuration, steps, and orchestration settings.
+spec:
+  # Array. Steps to run at the end of the workflow. Follows the schema of spec.steps. These steps will execute after all main steps, even if previous steps have failed, making them ideal for cleanup operations or post-test processing.
+  after: []
+  # Object. Make the instance configurable with some input data for scheduling it. Allows passing parameters to the workflow when triggered via events or manual execution. Can include parameters like version, environment variables, or test-specific options.
+  config: {}
+  # Object. Defaults for the containers for all the TestWorkflow steps. Sets global container configuration that applies to all steps unless overridden at the step level. This avoids having to repeat common settings across multiple steps.
+  container:
+    # Array. Override default command in the image (empty string to default CMD of the image). Used to customize the container's execution without modifying the image. Args are passed to the container's entrypoint command.
+    args: []
+    # Array. Override default command in the image (empty string to default ENTRYPOINT of the image). Defines the executable to run when the container starts. Use this to replace the container's default entrypoint.
+    command: []
+    # Array. Environment variables to be set in all containers across all steps unless overridden at the step level. Useful for setting global configuration like API endpoints, credentials, or feature flags.
+    env:
+      # Object. Item in the array representing a single environment variable.
+      -
+        # String. Name of the environment variable. Must be a valid environment variable name consisting of uppercase letters, numbers, and underscores.
+        name: ""
+        # String. Literal value for the environment variable. The actual string that will be set as the variable's value in the container environment.
+        value: ""
+        # Object. Reference to get environment variable value from external sources like configmaps or secrets. Allows secure management of credentials and other sensitive data.
+        valueFrom:
+    # Array. Import multiple environment variables from ConfigMaps or Secrets. A more efficient way to import multiple environment variables at once from external configuration.
+    envFrom:
+      # Object. Item in the array representing a source of environment variables.
+      -
+        # Object. Reference to a ConfigMap to import all its keys as environment variables. All keys and values from the ConfigMap will be added as environment variables.
+        configMapRef:
+        # String. Prefix to add to all imported environment variable names. Useful to avoid name collisions when importing from multiple sources.
+        prefix: ""
+        # Object. Reference to a Secret to import all its keys as environment variables. All keys and values from the Secret will be added as environment variables with appropriate conversion.
+        secretRef:
+    # String. Image to be used for the container. The image must be stored in a Docker registry (public or private). Local images are not supported unless they are hosted in a registry. Format should be "repository:tag".
+    image: ""
+    # String. Pulling policy for the image. Determines when the image should be pulled (Always, IfNotPresent, Never). IfNotPresent is typically used to save bandwidth if the image is already available.
+    imagePullPolicy: ""
+    # Object. Expected resources for the container. Defines CPU and memory requests and limits for optimizing resource allocation and preventing resource starvation. Important for ensuring proper performance.
+    resources:
+      # Object. Resource limits for the container. Maximum resources the container can use. If exceeded, the container might be terminated depending on the cluster's configuration.
+      limits: {}
+      # Object. Resource requests for the container. Minimum resources guaranteed to the container. Helps the scheduler place the container on a node with sufficient resources.
+      requests: {}
+    # Object. Security context for the container. Controls the security settings for the container execution environment. Defines privileges and capabilities for the container.
+    securityContext:
+      # Boolean. If true, allows the process to gain more privileges than its parent process. Generally recommended to be set to false for security.
+      allowPrivilegeEscalation: false
+      # Object. Required type. AppArmor profile settings for the container. Provides mandatory access control for the container.
+      appArmorProfile:
+        # String. The profile from the local AppArmor instance to use. References an AppArmor profile that must exist on the host.
+        localhostProfile: ""
+        # String. Type of the AppArmor profile to use (e.g., "RuntimeDefault", "Unconfined"). Controls how AppArmor restricts the container.
+        type: ""
+      # Object. Linux capabilities settings for the container. Fine-grained control over specific Linux capabilities granted to the container.
+      capabilities:
+        # Array. Capabilities to add to the container beyond the default set. Grants specific privileges like NET_ADMIN or SYS_PTRACE.
+        add: []
+        # Array. Capabilities to remove from the container's default set. Restricts specific privileges for better security.
+        drop: []
+      # Boolean. Runs the container in privileged mode, giving it almost the same access as processes on the host. Highly discouraged for security reasons unless absolutely necessary.
+      privileged: false
+      # String. ProcMount type to use for the container. Controls how /proc is mounted inside the container.
+      procMount: ""
+      # Boolean. If true, mounts the container's root filesystem as read-only. Improves security by preventing modifications to the container's filesystem.
+      readOnlyRootFilesystem: false
+      # Integer. The GID to run the entrypoint of the container process. Sets the group ID for processes in the container.
+      runAsGroup: 0
+      # Boolean. If true, validates that the container must run as a non-root user. Important security measure to reduce the impact of container breaches.
+      runAsNonRoot: false
+      # Integer. The UID to run the entrypoint of the container process. Sets the user ID for processes in the container.
+      runAsUser: 0
+      # Object. SELinux options for the container. Security-Enhanced Linux settings for advanced access control.
+      seLinuxOptions:
+        # String. SELinux level label. Part of the SELinux security context.
+        level: ""
+        # String. SELinux role label. Part of the SELinux security context.
+        role: ""
+        # String. SELinux type label. Part of the SELinux security context.
+        type: ""
+        # String. SELinux user label. Part of the SELinux security context.
+        user: ""
+      # Object. Required type. Seccomp profile settings for the container. System call filtering for improved security.
+      seccompProfile:
+        # String. The profile from the local seccomp instance to use. References a seccomp profile that must exist on the host.
+        localhostProfile: ""
+        # String. Type of the seccomp profile to use (e.g., "RuntimeDefault", "Unconfined"). Controls how seccomp restricts system calls.
+        type: ""
+      # Object. Windows-specific security options. Only applicable when running on Windows nodes.
+      windowsOptions:
+        # String. GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec referenced by the GMSACredentialSpecName field. Windows authentication credential specification.
+        gmsaCredentialSpec: ""
+        # String. GMSACredentialSpecName is the name of the GMSA credential spec to use. References a Windows authentication credential specification.
+        gmsaCredentialSpecName: ""
+        # Boolean. If true, run the container as a host process that has access to the host network namespace, loopback, and other host resources. Only applicable to Windows containers.
+        hostProcess: false
+        # String. The UserName in Windows to run the entrypoint of the container process. Specifies the Windows user account for the container.
+        runAsUserName: ""
+    # Array. Volume mounts for the container. Specifies how volumes should be mounted within the container. Allows access to persistent storage, config files, and shared data.
+    volumeMounts:
+      # Object. Item in the array representing a single volume mount.
+      -
+        # String. Path within the container at which the volume should be mounted. The directory inside the container where the volume will be accessible.
+        mountPath: ""
+        # String. Mount propagation mode for the volume. Controls how mounts are propagated from the host to the container and vice versa.
+        mountPropagation: ""
+        # String. Name of the volume to mount. Must match the name of a volume defined in spec.pod.volumes. Identifies which volume to mount at the specified path.
+        name: ""
+        # Boolean. If true, the volume is mounted as read-only. Prevents modifications to the mounted volume, useful for configuration files or reference data.
+        readOnly: false
+        # String. Experimental: recursiveReadOnly setting for the volume mount. Advanced option for controlling read-only behavior recursively.
+        recursiveReadOnly: ""
+        # String. Path within the volume from which the container's mount should be sourced. Allows mounting only a specific directory from the volume.
+        subPath: ""
+        # String. Expression to expand the subPath dynamically. Allows using environment variables or other dynamic values to determine the subPath.
+        subPathExpr: ""
+    # String. Override default working directory in the image (empty string to default WORKDIR for the image). Sets the directory where commands will be executed in the container. Changing this will affect where relative paths are resolved.
+    workingDir: ""
+  # Object. Global content that should be fetched into all containers. Defines test files, Git repositories, and other content sources that will be available to all steps. Content is automatically mounted and available at /data/repo by default for Git repositories. This eliminates the need to manually configure checkout commands or volume mounting.
+  content:
+    # Array. Files to load directly into the containers. Useful for creating test scripts, configuration files, or any other files needed for testing without requiring external sources. Files are created in the container before test execution begins.
+    files:
+      # Object. Item in the array representing a single file to create.
+      -
+        # String. Plain-text content to put inside the file. The content will be created as specified and mounted to the path location. Supports multi-line text using YAML's | or > syntax.
+        content: ""
+        # Object. External source to use for file content. Similar to Kubernetes valueFrom, allows referencing content from ConfigMaps or Secrets. Useful for sensitive or externally managed configuration.
+        contentFrom:
+        # Integer. Mode to use for the file. Represents file permissions in octal format (e.g., 0644 for read-write owner, read-only others).
+        mode: 0
+        # String. Path where the file should be accessible at. When the path is relative, it will be mounted in the container's working directory. Absolute paths will be created at the specified location. Use /etc paths for system configs.
+        path: ""
+    # Object. Git repository details. When specified, the repository will be automatically cloned and made available to all containers at /data/repo by default. You don't need to run git commands manually - Testkube handles the checkout process automatically.
+    git:
+      # String. Authorization type for the credentials. Specifies how authentication should be handled for private repositories. Options include "header" for bearer tokens or "github" for GitHub App authentication.
+      authType: ""
+      # Boolean. Enable cone mode for sparse checkout with paths. Optimizes Git clone by fetching only specified directories when using paths. Reduces network transfer and checkout time for large repositories.
+      cone: false
+      # String. Where to mount the fetched repository contents (defaults to "repo" directory in the data volume). The full path will be /data/{mountPath}. You can change this to customize where the repository is mounted.
+      mountPath: ""
+      # Array. Paths to fetch for the sparse checkout. Only fetches specified directories, useful for large monorepos to save time and resources. Each path is relative to the repository root.
+      paths: []
+      # String. Branch, commit or a tag name to fetch. Controls which version of the code is checked out. Can use expressions like "{{ config.branch }}" for dynamic revision selection.
+      revision: ""
+      # String. Plain text SSH private key to fetch with. Used for SSH authentication with the Git repository. Should include the entire key including BEGIN/END lines.
+      sshKey: ""
+      # Object. External SSH private key to fetch with. References an SSH key stored in Kubernetes secrets or config maps. More secure than embedding keys directly in the workflow.
+      sshKeyFrom:
+        # Object. Required key. Reference to a key in a ConfigMap. Specifies which ConfigMap and key contain the SSH private key.
+        configMapKeyRef:
+          # String. The key to select. The specific key within the ConfigMap that contains the SSH private key.
+          key: ""
+          # String. Name of the referent ConfigMap. The name of the ConfigMap in the same namespace.
+          name: ""
+          # Boolean. If the ConfigMap or its key doesn't exist, whether to ignore this reference. When true, missing ConfigMap won't cause errors.
+          optional: false
+        # Object. Required fieldPath. Reference to a field of the pod. Gets value from the pod's field.
+        fieldRef:
+          # String. API version of the field. Version of the field being referenced.
+          apiVersion: ""
+          # String. Path of the field to select. Path to the specific field in the pod spec.
+          fieldPath: ""
+        # Object. Required resource. Reference to a container's resources. Gets value from container's resource requests or limits.
+        resourceFieldRef:
+          # String. Name of the container to select resources from. The container within the pod to get resources from.
+          containerName: ""
+          # Object. Defines the divisor for the resource value. Used to convert resource values to the desired scale.
+          divisor: {}
+          # String. Name of the resource to select from. The resource to get (e.g., cpu, memory).
+          resource: ""
+        # Object. Required key. Reference to a key in a Secret. Specifies which Secret and key contain the SSH private key.
+        secretKeyRef:
+          # String. The key to select. The specific key within the Secret that contains the SSH private key.
+          key: ""
+          # String. Name of the referent Secret. The name of the Secret in the same namespace.
+          name: ""
+          # Boolean. If the Secret or its key doesn't exist, whether to ignore this reference. When true, missing Secret won't cause errors.
+          optional: false
+      # String. Plain text token to fetch with. Used for token-based authentication with the Git repository. Can be a personal access token or other authentication token.
+      token: ""
+      # Object. External token to fetch with. References a token stored in Kubernetes secrets or config maps. More secure than embedding tokens directly in the workflow.
+      tokenFrom:
+        # Object. Required key. Reference to a key in a ConfigMap. Specifies which ConfigMap and key contain the token.
+        configMapKeyRef:
+          # String. The key to select. The specific key within the ConfigMap that contains the token.
+          key: ""
+          # String. Name of the referent ConfigMap. The name of the ConfigMap in the same namespace.
+          name: ""
+          # Boolean. If the ConfigMap or its key doesn't exist, whether to ignore this reference. When true, missing ConfigMap won't cause errors.
+          optional: false
+        # Object. Required fieldPath. Reference to a field of the pod. Gets value from the pod's field.
+        fieldRef:
+          # String. API version of the field. Version of the field being referenced.
+          apiVersion: ""
+          # String. Path of the field to select. Path to the specific field in the pod spec.
+          fieldPath: ""
+        # Object. Required resource. Reference to a container's resources. Gets value from container's resource requests or limits.
+        resourceFieldRef:
+          # String. Name of the container to select resources from. The container within the pod to get resources from.
+          containerName: ""
+          # Object. Defines the divisor for the resource value. Used to convert resource values to the desired scale.
+          divisor: {}
+          # String. Name of the resource to select from. The resource to get (e.g., cpu, memory).
+          resource: ""
+        # Object. Required key. Reference to a key in a Secret. Specifies which Secret and key contain the token.
+        secretKeyRef:
+          # String. The key to select. The specific key within the Secret that contains the token.
+          key: ""
+          # String. Name of the referent Secret. The name of the Secret in the same namespace.
+          name: ""
+          # Boolean. If the Secret or its key doesn't exist, whether to ignore this reference. When true, missing Secret won't cause errors.
+          optional: false
+      # String. Uri for the Git repository. The URL of the Git repository to clone. Supports HTTPS and SSH protocols (e.g., https://github.com/org/repo.git or git@github.com:org/repo.git).
+      uri: ""
+      # String. Plain text username to fetch with. Used for username/password authentication with the Git repository. For HTTPS URLs with basic authentication.
+      username: ""
+      # Object. External username to fetch with. References a username stored in Kubernetes secrets or config maps. More secure than embedding usernames directly in the workflow.
+      usernameFrom:
+        # Object. Required key. Reference to a key in a ConfigMap. Specifies which ConfigMap and key contain the username.
+        configMapKeyRef:
+          # String. The key to select. The specific key within the ConfigMap that contains the username.
+          key: ""
+          # String. Name of the referent ConfigMap. The name of the ConfigMap in the same namespace.
+          name: ""
+          # Boolean. If the ConfigMap or its key doesn't exist, whether to ignore this reference. When true, missing ConfigMap won't cause errors.
+          optional: false
+        # Object. Required fieldPath. Reference to a field of the pod. Gets value from the pod's field.
+        fieldRef:
+          # String. API version of the field. Version of the field being referenced.
+          apiVersion: ""
+          # String. Path of the field to select. Path to the specific field in the pod spec.
+          fieldPath: ""
+        # Object. Required resource. Reference to a container's resources. Gets value from container's resource requests or limits.
+        resourceFieldRef:
+          # String. Name of the container to select resources from. The container within the pod to get resources from.
+          containerName: ""
+          # Object. Defines the divisor for the resource value. Used to convert resource values to the desired scale.
+          divisor: {}
+          # String. Name of the resource to select from. The resource to get (e.g., cpu, memory).
+          resource: ""
+        # Object. Required key. Reference to a key in a Secret. Specifies which Secret and key contain the username.
+        secretKeyRef:
+          # String. The key to select. The specific key within the Secret that contains the username.
+          key: ""
+          # String. Name of the referent Secret. The name of the Secret in the same namespace.
+          name: ""
+          # Boolean. If the Secret or its key doesn't exist, whether to ignore this reference. When true, missing Secret won't cause errors.
+          optional: false
+    # Array. Tarballs to unpack. Allows downloading and extracting compressed archives directly into the container. Useful for test data, binaries, or other pre-packaged content.
+    tarball:
+      # Object. Item in the array representing a single tarball to extract.
+      -
+        # Boolean. Should it mount a new volume there. If true, creates a dedicated volume for the extracted contents. Useful for large archives to avoid container filesystem size limits.
+        mount: false
+        # String. Path where the tarball should be extracted. Destination directory for the unpacked contents. Creates the directory if it doesn't exist.
+        path: ""
+        # String. Url for the tarball to extract. Source URL to download the tarball from. Supports HTTP and HTTPS protocols.
+        url: ""
+  # Array. Events triggering execution of the test workflow. Defines automatic triggers like cronjobs for scheduled test executions. Allows running tests on a regular schedule without manual intervention.
+  events:
+    # Object. Item in the array representing a single event trigger.
+    -
+      # Object. Required cron. Cron job configuration for scheduled execution of the workflow. Uses standard cron syntax like "*/5 * * * *" for running every 5 minutes. Follows Kubernetes CronJob format.
+      cronjob:
+  # Object. Values to be used for test workflow execution. Contains settings for the test execution process, including tags for filtering and organization.
+  execution:
+    # Object. Test workflow execution tags. Tags help with filtering and organizing workflow executions for easier management and reporting. Custom metadata in key-value format.
+    tags: {}
+  # Object. Configuration for the scheduled job. Settings for the Kubernetes Job that will execute the TestWorkflow. Controls how the Job is created and managed.
+  job:
+    # Integer. Duration in seconds the job may be active on the node. After this time, the job will be terminated regardless of completion state. Prevents stuck jobs from consuming resources indefinitely.
+    activeDeadlineSeconds: 0
+    # Object. Annotations added to the scheduled job. Metadata that can be used by tools or for your own organizational purposes. Non-identifying information for Jobs.
+    annotations: {}
+    # Object. Labels added to the scheduled job. Key-value pairs for filtering and organizing jobs. Identifying metadata that can be used with kubectl selectors.
+    labels: {}
+    # String. Namespace for execution of test workflow. If specified, the workflow will execute in this namespace rather than the one it's defined in. Requires proper RBAC configuration for cross-namespace execution.
+    namespace: ""
+  # Object. Configuration for notifications Deprecated field is not used. This field is kept for backward compatibility but has no effect. Use external notification systems instead.
+  notifications:
+    # Boolean. Disable webhooks for notifications. If true, webhook notifications for this workflow will not be sent. Legacy field with no effect.
+    disableWebhooks: false
+  # Object. Configuration for the scheduled pod. Detailed settings for the Pod that will run the workflow containers. Controls how the Pod is created and managed.
+  pod:
+    # Integer. Duration in seconds the pod may be active on the node. After this time, the pod will be terminated regardless of completion state. Prevents stuck pods from consuming resources indefinitely.
+    activeDeadlineSeconds: 0
+    # Object. Affinity rules for pod scheduling. Controls which nodes the pod can or cannot be scheduled on based on node characteristics. Enables advanced placement strategies for performance or isolation.
+    affinity: {}
+    # Object. Annotations added to the scheduled pod. Metadata that can be used by tools or for your own organizational purposes. Non-identifying information for Pods.
+    annotations: {}
+    # Object. DNS configuration options for the pod. Allows customizing DNS settings for the pod. Controls how domain name resolution works within the pod.
+    dnsConfig:
+      # Array. List of DNS server IP addresses. Custom nameservers to use for DNS resolution within the pod.
+      nameservers: []
+      # Array. List of DNS resolver options. Additional options for the DNS resolver configuration.
+      options:
+        # Object. Item in the array representing a single DNS resolver option.
+        -
+          # String. Name of the DNS resolver option. The option name as defined in resolv.conf.
+          name: ""
+          # String. Value of the DNS resolver option. The option value as defined in resolv.conf.
+          value: ""
+      # Array. List of DNS search domains. Domain suffixes to try when resolving hostnames within the pod.
+      searches: []
+    # String. DNS policy for the pod. Determines how DNS resolution should work (Default, ClusterFirst, ClusterFirstWithHostNet, None). Controls name resolution strategy.
+    dnsPolicy: ""
+    # Array. Host aliases to add to the pod's /etc/hosts file. Allows mapping custom hostnames to IP addresses within the pod. Useful for local development or testing.
+    hostAliases:
+      # Object. Item in the array representing a single host alias.
+      -
+        # Array. List of hostnames for the IP address. Multiple hostnames that should resolve to the same IP address.
+        hostnames:
+        # String. IP address for the host aliases. The IP address that the hostnames should resolve to.
+        ip: ""
+    # String. Specifies the hostname of the Pod. If not specified, the pod's hostname will be set to a system-defined value. Custom hostname useful for specific networking requirements.
+    hostname: ""
+    # Array. References to secrets with credentials for pulling the images from registry. Required for private container registries. Allows using images from private repositories.
+    imagePullSecrets:
+      # Object. Item in the array representing a single image pull secret.
+      -
+        # String. Name of the referent. This field is effectively required, but due to backwards compatibility is allowed to be empty. Instances of this type with an empty value here are almost certainly wrong. More info https//kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+        name: ""
+    # Object. Labels added to the scheduled pod. Key-value pairs for filtering and organizing pods. Identifying metadata that can be used with kubectl selectors.
+    labels: {}
+    # String. NodeName is a request to schedule this pod onto a specific node. If specified, the scheduler will ignore other constraints and place the pod on the requested node. Hard constraint for pod placement.
+    nodeName: ""
+    # Object. Node selector to define on which node the pod should land. Key-value pairs that must match a node's labels for the pod to be scheduled on that node. Simple way to control pod placement.
+    nodeSelector: {}
+    # String. PreemptionPolicy is the Policy for preempting pods with lower priority. Controls whether pods can be preempted by higher priority pods. Affects scheduling behavior during resource contention.
+    preemptionPolicy: ""
+    # Integer. The priority value. Various system components use this field to find the priority of the pod. Higher values indicate higher priority. Influences scheduling decisions.
+    priority: 0
+    # String. If specified, indicates the pod's priority. The PriorityClass name must exist as it will be checked at admission time. References a cluster-wide PriorityClass resource.
+    priorityClassName: ""
+    # Array. Resource claims for the pod. Used to request specific resources beyond standard CPU and memory. For specialized hardware or custom resources.
+    resourceClaims:
+      # Object. Item in the array representing a single resource claim.
+      -
+        # String. Name of the resource claim within the pod. Identifier for the resource claim.
+        name: ""
+        # String. Name of the ResourceClaim to use. References an existing ResourceClaim.
+        resourceClaimName: ""
+        # String. Name of the ResourceClaimTemplate from which to create a ResourceClaim. For dynamically creating a ResourceClaim.
+        resourceClaimTemplateName: ""
+    # Array. Scheduling gates for the pod. Controls when the pod becomes available for scheduling. Advanced scheduling control mechanism.
+    schedulingGates:
+      # Object. Item in the array representing a single scheduling gate.
+      -
+        # String. Name of the scheduling gate. Identifier for the scheduling gate.
+        name: ""
+    # Object. . Follows the schema of spec.container.securityContext. Security context at the pod level, applies to all containers in the pod. Pod-wide security settings.
+    securityContext: {}
+    # String. Default service account name for the scheduled pod. The service account determines the permissions the pod has within the cluster. Controls pod identity and API access.
+    serviceAccountName: ""
+    # String. If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>". Useful for stateful workloads that need stable DNS names. Enables predictable internal DNS naming.
+    subdomain: ""
+    # Array. Tolerations for the pod. Allow the pod to be scheduled onto nodes with matching taints. Enables pods to run on nodes that would otherwise be off-limits.
+    tolerations:
+      # Object. Item in the array representing a single toleration.
+      -
+        # String. Effect to tolerate (NoSchedule, PreferNoSchedule, NoExecute). The taint effect that is being tolerated.
+        effect: ""
+        # String. Taint key to tolerate. The key part of the taint being tolerated.
+        key: ""
+        # String. Operator represents a key's relationship to the value (Exists, Equal). How to match the key and value.
+        operator: ""
+        # Integer. TolerationSeconds represents the period of time a pod will tolerate the taint before being evicted. Only applicable for NoExecute taints.
+        tolerationSeconds: 0
+        # String. Taint value to match. The value part of the taint being tolerated.
+        value: ""
+    # Object. Topology spread constraints for the pod. Controls how pods are spread across the cluster topology. Ensures pods are distributed for high availability.
+    topologySpreadConstraints: {}
+    # Object. Volumes for the pod. Defines storage volumes that can be mounted by containers in the pod. Provides persistent and shared storage.
+    volumes: {}
+  # Object. Persistent Volume Claims configuration. Defines persistent storage that can be used across workflow executions. Long-term storage that survives beyond a single workflow run.
+  pvcs: {}
+  # Object. List of accompanying services to start. Services that will be created alongside the workflow for testing purposes like databases, mock APIs, etc. Each service runs in its own pod with independent lifecycle.
+  services: {}
+  # Array. Steps for setting up the workflow. Follows the schema of spec.steps. Setup steps run before the main workflow steps and are useful for environment preparation, such as installing dependencies, configuring test data, or preparing the environment.
+  setup: []
+  # Array. Steps to execute in the workflow. The main sequence of operations that make up the test workflow. Each step is executed sequentially by default, though parallel execution is possible with specialized steps.
+  steps:
+    # Object. Item in the array representing a single workflow step.
+    -
+      # Object. Scrape artifacts from the volumes. Collects files matching specified patterns from the container's filesystem for later access and storage. Artifacts are automatically saved and accessible after workflow completion. Supports glob patterns like "**/*" for recursive collection.
+      artifacts:
+      # String. Expression to declare under which conditions the step should be run defaults to "passed", except artifacts where it defaults to "always". Controls when the step executes based on previous step results. Valid values include "passed", "failed", and "always". Use "always" to ensure important steps like artifact collection still run even if previous steps failed.
+      condition: ""
+      # Object. Defaults for the containers in this step. Follows the schema of spec.container. Sets container configuration specifically for this step, overriding global settings. Useful for step-specific environment variables or resource requirements.
+      container:
+      # Object. Content that should be fetched for this step. Follows the schema of spec.content. Defines step-specific content sources that will only be available to this step. Step-level content does not affect other steps and is isolated to this step only.
+      content:
+      # String. Delay before the step. Introduces a waiting period before executing this step, useful for allowing services to start up or resources to become available. Accepts time duration format like "30s" or "5m".
+      delay: ""
+      # Object. Execute other Testkube resources. Allows running other tests or workflows as part of this step, enabling composition of test suites. Can reference existing Tests or TestWorkflows by name.
+      execute:
+      # String. Readable name for the step. Provides a human-friendly identifier for improved clarity in logs and UI. Good names improve workflow readability and troubleshooting.
+      name: ""
+      # Boolean. Is the step expected to fail. When true, the step will be considered successful only if it fails, useful for negative testing. Inverts the success/failure criteria.
+      negative: false
+      # Boolean. Is the step optional, so its failure won't affect the TestWorkflow result. When true, the step can fail without causing the entire workflow to fail. Useful for non-critical steps.
+      optional: false
+      # Object. Instructions for parallel execution. Configures how multiple instances of this step should run concurrently. Useful for distributing test load or running tests against multiple configurations simultaneously using matrix or sharding.
+      parallel:
+      # Boolean. Pause the step initially. When true, the workflow will pause before this step and require manual intervention to continue. Creates a synchronization point for manual verification or control.
+      paused: false
+      # Boolean. Mark the step as pure, applying optimizations to merge the containers together. Pure steps don't have side effects and can be optimized for performance. Enables container reuse for better efficiency.
+      pure: false
+      # Object. Required count. Policy for retrying the step. Configures automatic retry behavior when the step fails. Useful for flaky tests or operations that might fail due to transient issues.
+      retry:
+      # Object. Run specific container in the current step. Defines the container configuration for this specific step execution. Most common way to define what a step should do.
+      run:
+      # Object. List of accompanying services to start. Step-specific services that will be created only for the duration of this step. Useful for databases, API mocks, or other dependencies needed just for this step.
+      services:
+      # Object. Steps to run before other operations in this step. Nested steps that execute before the main step operations. Allows organizing complex steps into sub-steps.
+      setup:
+      # String. Script to run in a default shell for the container. A convenient shorthand for running shell commands in the container without using command/args syntax. Automatically prepended with "set -e" to fail on any error by default.
+      shell: ""
+      # Object. Sub-steps to run. Nested steps that will execute as part of this parent step, allowing for hierarchical workflow organization. Useful for logical grouping of related steps.
+      steps:
+      # Object. Required name. Single template to run in this step. References a predefined TestWorkflowTemplate to use for this step. Templates enable reusing common test patterns across multiple workflows.
+      template:
+      # String. Maximum time this step may take. Defines a timeout after which the step will be terminated and considered failed. Prevents long-running or stuck steps from blocking the workflow indefinitely.
+      timeout: ""
+      # Array. Multiple templates to include in this step. Allows including multiple TestWorkflowTemplates in a single step. Each template can provide different functionality or configuration.
+      use:
+      # Object. Item in the array representing a single template to include in the step.
+      use[0]:
+      # String. Working directory to use for this step. Overrides the container's default working directory for commands executed in this step. Affects where relative paths are resolved during this step.
+      workingDir: ""
+  # Object. System configuration to define the orchestration behavior. Controls the overall execution behavior of the TestWorkflow. Advanced settings for workflow execution and optimization.
+  system:
+    # Boolean. Disable the behavior of merging multiple operations in a single container. When true, forces each operation to run in its own container for better isolation. Provides stronger isolation at the cost of efficiency.
+    isolatedContainers: false
+    # Boolean. Assume all the steps are pure by default. When true, all steps will be considered pure unless explicitly marked otherwise, enabling optimization. Improves performance through container reuse.
+    pureByDefault: false
+  # Array. Templates to include at a top-level of workflow. References to TestWorkflowTemplates that will be included in the workflow. Enables composition and reuse of workflow components.
+  use:
+    # Object. Item in the array representing a single template to include.
+    -
+      # Object. Trait configuration values if needed. Parameters to customize the included template. Allows passing specific values to configure the template's behavior.
+      config:
+      # String. Name of the template to include. Identifies which TestWorkflowTemplate to use. Can include a namespace prefix for templates in different namespaces.
+      name: ""
