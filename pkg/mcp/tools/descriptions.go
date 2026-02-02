@@ -75,15 +75,6 @@ Supported JSONPath syntax:
   $..image            - All 'image' fields anywhere (recursive)
   $[?(@.name=='x')]   - Filter by field value
 
-Common paths for workflows:
-  $..image                          - All container images
-  $.spec.steps[*].name              - All step names
-  $.spec.services                   - Service definitions
-  $.spec.content.git.uri            - Git repository URL
-  $.metadata.labels                 - Workflow labels
-  $.spec.steps[*].run.image         - Images in run steps
-  $.spec.steps[*].shell             - Shell commands
-
 Parameters:
 - expression: The JSONPath expression to apply (required)
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
@@ -91,13 +82,7 @@ Parameters:
 - limit: Maximum workflows to fetch (default 50, max 100)
 - aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
 
-Returns:
-- Per-workflow: Map of workflow name → extracted values
-- Aggregate mode: Combined results from all workflows
-
-Missing paths return empty arrays, not errors.
-
-For large datasets (100+ workflows): Use selector or resourceGroup filters to query subsets, as this tool fetches up to 100 workflows per call.`
+Returns: Map of workflow name → extracted values. Missing paths return empty arrays, not errors.`
 
 	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
 Fetches execution JSON data and extracts data matching the path.
@@ -105,19 +90,9 @@ Fetches execution JSON data and extracts data matching the path.
 Supported JSONPath syntax:
   $                   - Root element (the execution)
   $.result.status     - Direct path to status
-  $.result.steps[*]   - All step results
+  $.result.steps.*    - All step results (steps is a map, not array)
   $..duration         - All duration fields (recursive)
   $[?(@.status=='failed')] - Filter by status
-
-Common paths for executions:
-  $.result.status                   - Execution status
-  $.result.duration                 - Total duration (e.g., '1m30s')
-  $.result.durationMs               - Duration in milliseconds
-  $.result.steps.*                  - Step results (steps is a map keyed by ref, not an array)
-  $..errorMessage                   - Error messages from any step or initialization
-  $.result.initialization.status    - Initialization step status
-  $.workflow.name                   - Workflow name
-  $.scheduledAt                     - When execution was scheduled (ISO 8601)
 
 Parameters:
 - expression: The JSONPath expression to apply (required)
@@ -126,11 +101,9 @@ Parameters:
 - limit: Maximum executions to fetch (default 50, max 100)
 - aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
 
-Returns:
-- Per-execution: Map of execution ID → extracted values
-- Aggregate mode: Combined results from all executions
+Returns: Map of execution ID → extracted values. Missing paths return empty arrays, not errors.`
 
-Missing paths return empty arrays, not errors.
-
-For large datasets: Use workflowName or status filters to query subsets, as this tool fetches up to 100 executions per call.`
+	// Schema tool descriptions
+	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use this to understand workflow structure when creating, updating, or querying workflows."
+	GetExecutionSchemaDescription = "Get the YAML schema for TestWorkflowExecution data. Returns all available fields, their types, and descriptions. Use this to understand execution data structure when analyzing results or querying executions."
 )

@@ -51,7 +51,6 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 
 	// Schema tools (static content, no client needed)
 	mcpServer.AddTool(tools.GetWorkflowSchema())
-	mcpServer.AddTool(tools.GetTemplateSchema())
 	mcpServer.AddTool(tools.GetExecutionSchema())
 
 	// Labels tools
