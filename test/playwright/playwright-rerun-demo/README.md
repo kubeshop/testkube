@@ -4,27 +4,19 @@ Fifty Playwright tests that pass or fail randomly (about 70% pass, 30% fail). Us
 
 ## Demo flow
 
-1. **Run all 50 tests** (some will fail):
+1. **Go to Testkube:** 
    ```bash
-   npm run test:all
-   # or: npx playwright test
+   https://app.testkube.io/organization/testkube-internal-demo/environment/paris/dashboard/test-workflows/playwright-rerun-demo/overview
    ```
-   Playwright writes failed test info to `test-results/.last-run.json`.
 
-2. **Re-run only the tests that failed**:
-   ```bash
-   npm run test:failed
-   # or: npx playwright test --last-failed
-   ```
-   This uses `test-results/.last-run.json` to run just the failed tests from the previous run.
+   See reference docs: https://docs.testkube.io/articles/examples/playwright-rerun
 
-## Requirements
+2. **Generate failed tests:**
+   Run the workflow as is - this will generate a test execution with about 15 failed test cases
 
-- Node and npm
-- `npm install` (or `npm ci`) once
-- Playwright 1.56.1 (`@playwright/test` in package.json)
+3. **Rerun the workflow:**
+   Run the workflow again with 'rerunFailed' flag set to true.
 
-## CI / Testkube
+   Thats it. 
 
-- Set `PLAYWRIGHT_OUTPUT_DIR` if you want `.last-run.json` written somewhere else (e.g. an artifacts directory).
-- Persist `test-results/` (or your output dir) between the “run all” and “run failed” steps so `.last-run.json` is available for the second run.
+
