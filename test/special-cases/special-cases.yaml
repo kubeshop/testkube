@@ -623,3 +623,19 @@ spec:
       - selector:
           matchLabels:
             unique-label: unique-label-value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-silent-workflow
+  labels:
+    core-tests: special-cases
+description: "Silent workflow - should be excluded from metrics/insights/health, shouldn't trigger webhooks"
+spec:
+  execution:
+    silent: true
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step
+    shell: echo "Step" && exit 0
