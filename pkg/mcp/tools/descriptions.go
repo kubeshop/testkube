@@ -109,12 +109,13 @@ Supported JSONPath syntax:
 
 Common paths for executions:
   $.result.status                   - Execution status
-  $.result.duration                 - Total duration
-  $.result.steps[*].name            - Step names
-  $.result.steps[*].status          - Step statuses
-  $.result.errorMessage             - Error if failed
+  $.result.duration                 - Total duration (e.g., '1m30s')
+  $.result.durationMs               - Duration in milliseconds
+  $.result.steps.*                  - Step results (steps is a map keyed by ref, not an array)
+  $..errorMessage                   - Error messages from any step or initialization
+  $.result.initialization.status    - Initialization step status
   $.workflow.name                   - Workflow name
-  $.scheduledAt                     - Start time
+  $.scheduledAt                     - When execution was scheduled (ISO 8601)
 
 Parameters:
 - expression: The JSONPath expression to apply (required)
