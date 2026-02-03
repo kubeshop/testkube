@@ -630,7 +630,7 @@ metadata:
   name: special-cases-silent-workflow
   labels:
     core-tests: special-cases
-    manual: "true
+    manual: "true"
 description: "Silent workflow - should be excluded from metrics/insights/health, shouldn't trigger webhooks"
 spec:
   execution:
