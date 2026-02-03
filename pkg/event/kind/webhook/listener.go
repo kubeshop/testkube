@@ -592,7 +592,7 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name))
-			return false, nil
+			return true, nil
 		}
 
 		return event.Type_.IsBecomeTestWorkflowExecutionStatus(prevStatus), nil

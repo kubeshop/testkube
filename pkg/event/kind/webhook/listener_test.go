@@ -190,7 +190,7 @@ func exampleExecution() *testkube.TestWorkflowExecution {
 }
 
 func TestWebhookListener_hasBecomeState(t *testing.T) {
-	t.Run("should return false when no previous finished state exists", func(t *testing.T) {
+	t.Run("should return true when no previous finished state exists (first execution)", func(t *testing.T) {
 		// given
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
@@ -231,7 +231,7 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 
 		// then
 		assert.NoError(t, err)
-		assert.False(t, became, "should return false when there is no previous finished state")
+		assert.True(t, became, "should return true for first execution (no previous state)")
 	})
 
 	t.Run("should return true when previous state is passed and current is failed", func(t *testing.T) {
@@ -320,5 +320,49 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 		// then
 		assert.NoError(t, err)
 		assert.False(t, became, "should return false when state hasn't changed (failed to failed)")
+	})
+
+	t.Run("should return false when previous state is queued (not a valid transition)", func(t *testing.T) {
+		// given
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		mockRepo := testworkflow.NewMockRepository(mockCtrl)
+		mockRepo.EXPECT().
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			Return(testkube.QUEUED_TestWorkflowStatus, nil)
+
+		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
+		l := NewWebhookListener(
+			"test-listener",
+			"http://example.com",
+			"",
+			[]testkube.EventType{testkube.BECOME_TESTWORKFLOW_FAILED_EventType},
+			"",
+			"",
+			nil,
+			false,
+			nil,
+			nil,
+			listenerWithTestWorkflowResultsRepository(mockRepo),
+			listenerWithMetrics(v1.NewMetrics()),
+			listenerWithWebhookResultsRepository(mockWebhookRepository),
+		)
+
+		event := testkube.Event{
+			Type_: testkube.EventTypePtr(testkube.BECOME_TESTWORKFLOW_FAILED_EventType),
+			TestWorkflowExecution: &testkube.TestWorkflowExecution{
+				Workflow: &testkube.TestWorkflow{
+					Name: "test-workflow",
+				},
+			},
+		}
+
+		// when
+		became, err := l.hasBecomeState(event)
+
+		// then
+		assert.NoError(t, err)
+		assert.False(t, became, "should return false when transitioning from queued to failed (not a 'become' event)")
 	})
 }
