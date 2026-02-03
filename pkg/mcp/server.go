@@ -45,6 +45,14 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Query tools (JSONPath-based bulk queries)
+	mcpServer.AddTool(tools.QueryWorkflows(client))
+	mcpServer.AddTool(tools.QueryExecutions(client))
+
+	// Schema tools (static content, no client needed)
+	mcpServer.AddTool(tools.GetWorkflowSchema())
+	mcpServer.AddTool(tools.GetExecutionSchema())
+
 	// Labels tools
 	mcpServer.AddTool(tools.ListLabels(client))
 

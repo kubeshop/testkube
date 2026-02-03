@@ -759,3 +759,142 @@ func (c *APIClient) GetWorkflowResourceHistory(ctx context.Context, params tools
 		QueryParams: queryParams,
 	})
 }
+
+// GetWorkflowDefinitions fetches multiple workflow definitions in bulk
+// It first lists workflows matching the params, then fetches each definition in parallel
+func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.ListWorkflowsParams) (map[string]string, error) {
+	// First, list workflows to get their names
+	listResult, err := c.ListWorkflows(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	// Parse the list result to extract workflow names
+	var workflows []struct {
+		Workflow struct {
+			Name string `json:"name"`
+		} `json:"workflow"`
+	}
+	if err := json.Unmarshal([]byte(listResult), &workflows); err != nil {
+		return nil, fmt.Errorf("failed to parse workflow list: %w", err)
+	}
+
+	if len(workflows) == 0 {
+		return map[string]string{}, nil
+	}
+
+	// Fetch each workflow definition in parallel with limited concurrency
+	type result struct {
+		name       string
+		definition string
+		err        error
+	}
+
+	results := make(chan result, len(workflows))
+	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent requests
+
+	for _, wf := range workflows {
+		go func(workflowName string) {
+			semaphore <- struct{}{}        // Acquire
+			defer func() { <-semaphore }() // Release
+
+			def, err := c.GetWorkflowDefinition(ctx, workflowName)
+			results <- result{name: workflowName, definition: def, err: err}
+		}(wf.Workflow.Name)
+	}
+
+	// Collect results
+	definitions := make(map[string]string)
+	var firstErr error
+	for i := 0; i < len(workflows); i++ {
+		r := <-results
+		if r.err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("failed to get definition for %s: %w", r.name, r.err)
+			}
+			continue
+		}
+		definitions[r.name] = r.definition
+	}
+
+	// Return partial results even if some failed, but report the first error
+	if len(definitions) == 0 && firstErr != nil {
+		return nil, firstErr
+	}
+
+	return definitions, nil
+}
+
+// GetExecutions fetches multiple execution records in bulk
+// It first lists executions matching the params, then fetches each execution's full data in parallel
+func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutionsParams) (map[string]string, error) {
+	// First, list executions
+	listResult, err := c.ListExecutions(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list executions: %w", err)
+	}
+
+	// Parse the list result to extract execution IDs and workflow names
+	var listResponse struct {
+		Results []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(listResult), &listResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse execution list: %w", err)
+	}
+
+	if len(listResponse.Results) == 0 {
+		return map[string]string{}, nil
+	}
+
+	// Fetch each execution's full data in parallel with limited concurrency
+	type result struct {
+		id   string
+		data string
+		err  error
+	}
+
+	results := make(chan result, len(listResponse.Results))
+	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent requests
+
+	for _, exec := range listResponse.Results {
+		go func(executionID string) {
+			semaphore <- struct{}{}        // Acquire
+			defer func() { <-semaphore }() // Release
+
+			// Get full execution data
+			data, err := c.makeRequest(ctx, APIRequest{
+				Method: "GET",
+				Path:   "/agent/test-workflow-executions/{executionId}",
+				Scope:  ApiScopeOrgEnv,
+				PathParams: map[string]string{
+					"executionId": executionID,
+				},
+			})
+			results <- result{id: executionID, data: data, err: err}
+		}(exec.ID)
+	}
+
+	// Collect results
+	executions := make(map[string]string)
+	var firstErr error
+	for i := 0; i < len(listResponse.Results); i++ {
+		r := <-results
+		if r.err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("failed to get execution %s: %w", r.id, r.err)
+			}
+			continue
+		}
+		executions[r.id] = r.data
+	}
+
+	// Return partial results even if some failed, but report the first error
+	if len(executions) == 0 && firstErr != nil {
+		return nil, firstErr
+	}
+
+	return executions, nil
+}

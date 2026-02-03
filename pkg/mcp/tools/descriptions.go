@@ -62,4 +62,48 @@ to find items containing all terms`
 	ListLabelsDescription         = "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."
 	ListResourceGroupsDescription = "Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools."
 	ListAgentsDescription         = "Retrieve all available agents from the current Testkube organization that can be used when specifying target agent(s) in run_workflow. Returns a list of agents with their IDs, names, types, capabilities, labels, and environment information. This is useful for discovering what agents are available for workflow execution targeting."
+
+	// Query tool descriptions
+	QueryWorkflowsDescription = `Query multiple workflow definitions using JSONPath expressions.
+Fetches workflow YAML definitions and extracts data matching the path.
+
+Supported JSONPath syntax:
+  $                   - Root element (the workflow)
+  $.spec.steps        - Direct path to steps array
+  $.spec.steps[0]     - First step
+  $.spec.steps[*]     - All steps
+  $..image            - All 'image' fields anywhere (recursive)
+  $[?(@.name=='x')]   - Filter by field value
+
+Parameters:
+- expression: The JSONPath expression to apply (required)
+- selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
+- resourceGroup: Filter by resource group slug
+- limit: Maximum workflows to fetch (default 50, max 100)
+- aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
+
+Returns: Map of workflow name → extracted values. Missing paths return empty arrays, not errors.`
+
+	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
+Fetches execution JSON data and extracts data matching the path.
+
+Supported JSONPath syntax:
+  $                   - Root element (the execution)
+  $.result.status     - Direct path to status
+  $.result.steps.*    - All step results (steps is a map, not array)
+  $..duration         - All duration fields (recursive)
+  $[?(@.status=='failed')] - Filter by status
+
+Parameters:
+- expression: The JSONPath expression to apply (required)
+- workflowName: Filter executions by workflow name
+- status: Filter by status (passed/failed/running/aborted)
+- limit: Maximum executions to fetch (default 50, max 100)
+- aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
+
+Returns: Map of execution ID → extracted values. Missing paths return empty arrays, not errors.`
+
+	// Schema tool descriptions
+	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use this to understand workflow structure when creating, updating, or querying workflows."
+	GetExecutionSchemaDescription = "Get the YAML schema for TestWorkflowExecution data. Returns all available fields, their types, and descriptions. Use this to understand execution data structure when analyzing results or querying executions."
 )
