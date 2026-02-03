@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -793,23 +794,45 @@ func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.Lis
 	results := make(chan result, len(workflows))
 	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent requests
 
+	var wg sync.WaitGroup
 	for _, wf := range workflows {
+		wg.Add(1)
 		go func(workflowName string) {
-			semaphore <- struct{}{}        // Acquire
+			defer wg.Done()
+
+			// Check context before acquiring semaphore
+			select {
+			case <-ctx.Done():
+				results <- result{name: workflowName, err: ctx.Err()}
+				return
+			case semaphore <- struct{}{}: // Acquire
+			}
 			defer func() { <-semaphore }() // Release
+
+			// Check context again after acquiring semaphore
+			if ctx.Err() != nil {
+				results <- result{name: workflowName, err: ctx.Err()}
+				return
+			}
 
 			def, err := c.GetWorkflowDefinition(ctx, workflowName)
 			results <- result{name: workflowName, definition: def, err: err}
 		}(wf.Workflow.Name)
 	}
 
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
 	// Collect results
 	definitions := make(map[string]string)
 	var firstErr error
-	for i := 0; i < len(workflows); i++ {
-		r := <-results
+	for r := range results {
 		if r.err != nil {
-			if firstErr == nil {
+			// Skip context cancellation errors when reporting
+			if firstErr == nil && r.err != context.Canceled && r.err != context.DeadlineExceeded {
 				firstErr = fmt.Errorf("failed to get definition for %s: %w", r.name, r.err)
 			}
 			continue
@@ -859,10 +882,26 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 	results := make(chan result, len(listResponse.Results))
 	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent requests
 
+	var wg sync.WaitGroup
 	for _, exec := range listResponse.Results {
+		wg.Add(1)
 		go func(executionID string) {
-			semaphore <- struct{}{}        // Acquire
+			defer wg.Done()
+
+			// Check context before acquiring semaphore
+			select {
+			case <-ctx.Done():
+				results <- result{id: executionID, err: ctx.Err()}
+				return
+			case semaphore <- struct{}{}: // Acquire
+			}
 			defer func() { <-semaphore }() // Release
+
+			// Check context again after acquiring semaphore
+			if ctx.Err() != nil {
+				results <- result{id: executionID, err: ctx.Err()}
+				return
+			}
 
 			// Get full execution data
 			data, err := c.makeRequest(ctx, APIRequest{
@@ -877,13 +916,19 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 		}(exec.ID)
 	}
 
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
 	// Collect results
 	executions := make(map[string]string)
 	var firstErr error
-	for i := 0; i < len(listResponse.Results); i++ {
-		r := <-results
+	for r := range results {
 		if r.err != nil {
-			if firstErr == nil {
+			// Skip context cancellation errors when reporting
+			if firstErr == nil && r.err != context.Canceled && r.err != context.DeadlineExceeded {
 				firstErr = fmt.Errorf("failed to get execution %s: %w", r.id, r.err)
 			}
 			continue
