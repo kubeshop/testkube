@@ -194,12 +194,12 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 		// given
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		
+
 		mockRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockRepo.EXPECT().
 			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
 			Return(testkube.TestWorkflowStatus(""), nil)
-		
+
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		l := NewWebhookListener(
 			"test-listener",
@@ -216,7 +216,7 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 			listenerWithMetrics(v1.NewMetrics()),
 			listenerWithWebhookResultsRepository(mockWebhookRepository),
 		)
-		
+
 		event := testkube.Event{
 			Type_: testkube.EventTypePtr(testkube.BECOME_TESTWORKFLOW_FAILED_EventType),
 			TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -225,25 +225,25 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// when
 		became, err := l.hasBecomeState(event)
-		
+
 		// then
 		assert.NoError(t, err)
 		assert.False(t, became, "should return false when there is no previous finished state")
 	})
-	
+
 	t.Run("should return true when previous state is passed and current is failed", func(t *testing.T) {
 		// given
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		
+
 		mockRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockRepo.EXPECT().
 			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
 			Return(testkube.PASSED_TestWorkflowStatus, nil)
-		
+
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		l := NewWebhookListener(
 			"test-listener",
@@ -260,7 +260,7 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 			listenerWithMetrics(v1.NewMetrics()),
 			listenerWithWebhookResultsRepository(mockWebhookRepository),
 		)
-		
+
 		event := testkube.Event{
 			Type_: testkube.EventTypePtr(testkube.BECOME_TESTWORKFLOW_FAILED_EventType),
 			TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -269,25 +269,25 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// when
 		became, err := l.hasBecomeState(event)
-		
+
 		// then
 		assert.NoError(t, err)
 		assert.True(t, became, "should return true when transitioning from passed to failed")
 	})
-	
+
 	t.Run("should return false when previous state is failed and current is failed", func(t *testing.T) {
 		// given
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		
+
 		mockRepo := testworkflow.NewMockRepository(mockCtrl)
 		mockRepo.EXPECT().
 			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
 			Return(testkube.FAILED_TestWorkflowStatus, nil)
-		
+
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		l := NewWebhookListener(
 			"test-listener",
@@ -304,7 +304,7 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 			listenerWithMetrics(v1.NewMetrics()),
 			listenerWithWebhookResultsRepository(mockWebhookRepository),
 		)
-		
+
 		event := testkube.Event{
 			Type_: testkube.EventTypePtr(testkube.BECOME_TESTWORKFLOW_FAILED_EventType),
 			TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -313,10 +313,10 @@ func TestWebhookListener_hasBecomeState(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// when
 		became, err := l.hasBecomeState(event)
-		
+
 		// then
 		assert.NoError(t, err)
 		assert.False(t, became, "should return false when state hasn't changed (failed to failed)")
