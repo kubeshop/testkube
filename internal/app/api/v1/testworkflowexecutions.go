@@ -685,10 +685,9 @@ func (s *TestkubeAPI) abortAllTestWorkflowExecutionsHandlerStandalone() fiber.Ha
 		errPrefix := fmt.Sprintf("failed to abort test workflow executions '%s'", name)
 
 		// Fetch executions
-		executions, err := s.TestWorkflowResults.GetExecutions(ctx, testworkflow2.FilterImpl{
-			FName:     name,
-			FStatuses: testkube.TestWorkflowExecutingStatus,
-		})
+		filter := testworkflow2.NewExecutionsFilter().WithName(name)
+		filter.FStatuses = testkube.TestWorkflowExecutingStatus
+		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
 			if apiutils.IsNotFound(err) {
 				c.Status(http.StatusNoContent)
