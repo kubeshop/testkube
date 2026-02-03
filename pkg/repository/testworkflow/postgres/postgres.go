@@ -1920,9 +1920,8 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
-	params.SilentModeFilter = pgtype.Text{}
 	if filter.SilentModeFilterDefined() {
-		params.SilentModeFilter = pgtype.Text{String: string(filter.SilentModeFilter()), Valid: true}
+		params.SilentModeFilter = string(filter.SilentModeFilter())
 	}
 
 	// Health filters - convert [][2]float64 to JSONB array
@@ -1939,11 +1938,6 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		if err != nil {
 			return params, err
 		}
-	}
-
-	params.SilentModeFilter = pgtype.Text{}
-	if filter.SilentModeFilterDefined() {
-		params.SilentModeFilter = pgtype.Text{String: string(filter.SilentModeFilter()), Valid: true}
 	}
 
 	if filter.Selector() != "" {
@@ -2164,6 +2158,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 	params.Initialized = pgtype.Bool{}
 	if filter.InitializedDefined() {
 		params.Initialized = toPgBool(filter.Initialized())
+	}
+
+	if filter.SilentModeFilterDefined() {
+		params.SilentModeFilter = string(filter.SilentModeFilter())
 	}
 
 	if filter.Selector() != "" {

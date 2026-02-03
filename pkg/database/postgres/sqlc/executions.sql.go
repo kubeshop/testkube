@@ -202,6 +202,33 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($22::jsonb)
         )
     )
+    AND (
+        COALESCE($23::text, '') = ''
+        OR $23::text = 'all'
+        OR (
+            $23::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            $23::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                OR (e.silent_mode->>'insights')::boolean IS TRUE
+                OR (e.silent_mode->>'health')::boolean IS TRUE
+                OR (e.silent_mode->>'metrics')::boolean IS TRUE
+                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
+            )
+        )
+    )
 `
 
 type CountTestWorkflowExecutionsParams struct {
@@ -227,6 +254,7 @@ type CountTestWorkflowExecutionsParams struct {
 	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	SilentModeFilter   string             `db:"silent_mode_filter" json:"silent_mode_filter"`
 }
 
 func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error) {
@@ -253,6 +281,7 @@ func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTest
 		arg.LabelConditions,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
+		arg.SilentModeFilter,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -629,10 +658,10 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
             $23::text = 'only'
             AND (
                 (e.silent_mode->>'webhooks')::boolean IS TRUE
-                OR (e.silent_mode->>'insights')::boolean IS TRUE
-                OR (e.silent_mode->>'health')::boolean IS TRUE
-                OR (e.silent_mode->>'metrics')::boolean IS TRUE
-                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
