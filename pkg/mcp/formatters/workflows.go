@@ -287,16 +287,7 @@ func FormatGetWorkflowMetrics(raw string) (string, error) {
 		return "{}", nil
 	}
 
-	formatted := formattedWorkflowMetrics{
-		PassFailRatio:        metrics.PassFailRatio,
-		TotalExecutions:      metrics.TotalExecutions,
-		ExecutionDurationP50: metrics.ExecutionDurationP50,
-		ExecutionDurationP90: metrics.ExecutionDurationP90,
-		ExecutionDurationP95: metrics.ExecutionDurationP95,
-		ExecutionDurationP99: metrics.ExecutionDurationP99,
-	}
-
-	return FormatJSON(formatted)
+	return FormatJSON(formattedWorkflowMetrics(metrics))
 }
 
 // formattedExecutionMetrics is a compact representation of execution resource metrics.
@@ -318,11 +309,6 @@ type formattedMetricStat struct {
 	Min float64 `json:"min"`
 	Max float64 `json:"max"`
 	Avg float64 `json:"avg"`
-}
-
-// executionMetricsResponse mirrors the API response for execution metrics.
-type executionMetricsResponse struct {
-	ResourceAggregations *resourceAggregations `json:"resourceAggregations,omitempty"`
 }
 
 type resourceAggregations struct {
