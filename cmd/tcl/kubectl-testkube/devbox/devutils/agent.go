@@ -86,7 +86,7 @@ func (r *Agent) generatePodSpec(env *client.Environment) *corev1.Pod {
 			{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},
 			{Name: "TESTKUBE_PRO_URL", Value: r.cloud.AgentURI()},
 			{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: tlsInsecure},
-			{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
+			{Name: "TESTKUBE_PRO_SKIP_VERIFY", Value: "true"},
 		}...)
 	} else {
 		envVariables = append(envVariables, []corev1.EnvVar{
