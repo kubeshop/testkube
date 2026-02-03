@@ -73,8 +73,8 @@ func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) co
 		FirstTimestamp:      metav1.NewTime(eventTime),
 		LastTimestamp:       metav1.NewTime(eventTime),
 		Type:                "Normal",
-		ReportingController: "testkkube.io/services",
-		ReportingInstance:   "testkkube.io/services/testkube-api-server",
+		ReportingController: "testkube.io/services",
+		ReportingInstance:   "testkube.io/services/testkube-api-server",
 	}
 }
 

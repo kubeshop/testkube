@@ -1,6 +1,7 @@
 package k8sevents
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,10 +93,10 @@ func TestSanitizeLabels(t *testing.T) {
 		{
 			name: "label with very long value",
 			input: map[string]string{
-				"app": "a" + string(make([]byte, 100)),
+				"app": strings.Repeat("a", 100),
 			},
 			expected: map[string]string{
-				"app": "a",
+				"app": strings.Repeat("a", 63), // LabelValueMaxLength is 63
 			},
 		},
 		{
