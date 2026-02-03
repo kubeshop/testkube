@@ -462,15 +462,29 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
         )
     )
     AND (
-        COALESCE(@skip_silent_mode::boolean, false) = false
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
         OR (
-            e.silent_mode IS NULL
-            OR (
-                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
@@ -574,15 +588,29 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        COALESCE(@skip_silent_mode::boolean, false) = false
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
         OR (
-            e.silent_mode IS NULL
-            OR (
-                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                OR (e.silent_mode->>'insights')::boolean IS TRUE
+                OR (e.silent_mode->>'health')::boolean IS TRUE
+                OR (e.silent_mode->>'metrics')::boolean IS TRUE
+                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
@@ -737,15 +765,29 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        COALESCE(@skip_silent_mode::boolean, false) = false
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
         OR (
-            e.silent_mode IS NULL
-            OR (
-                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                OR (e.silent_mode->>'insights')::boolean IS TRUE
+                OR (e.silent_mode->>'health')::boolean IS TRUE
+                OR (e.silent_mode->>'metrics')::boolean IS TRUE
+                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
@@ -1235,15 +1277,29 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        COALESCE(@skip_silent_mode::boolean, false) = false
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
         OR (
-            e.silent_mode IS NULL
-            OR (
-                (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'health')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
-                AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                OR (e.silent_mode->>'insights')::boolean IS TRUE
+                OR (e.silent_mode->>'health')::boolean IS TRUE
+                OR (e.silent_mode->>'metrics')::boolean IS TRUE
+                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )

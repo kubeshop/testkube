@@ -6,3 +6,4 @@ func IsWorkflowSilent(workflow *TestWorkflow) bool {
 	}
 	return *workflow.Spec.Execution.Silent
 }
+

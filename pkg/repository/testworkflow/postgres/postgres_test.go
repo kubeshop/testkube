@@ -489,11 +489,11 @@ func (m *MockFilter) HealthRangesDefined() bool {
 	return m.Called().Bool(0)
 }
 
-func (m *MockFilter) SkipSilentMode() bool {
-	return m.Called().Bool(0)
+func (m *MockFilter) SilentModeFilter() testworkflow.SilentModeFilter {
+	return m.Called().Get(0).(testworkflow.SilentModeFilter)
 }
 
-func (m *MockFilter) SkipSilentModeDefined() bool {
+func (m *MockFilter) SilentModeFilterDefined() bool {
 	return m.Called().Bool(0)
 }
 
@@ -541,7 +541,7 @@ func createTestFilter() *MockFilter {
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
 	filter.On("HealthRangesDefined").Return(false)
-	filter.On("SkipSilentModeDefined").Return(false)
+	filter.On("SilentModeFilterDefined").Return(false)
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))

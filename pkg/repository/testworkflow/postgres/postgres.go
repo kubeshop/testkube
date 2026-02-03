@@ -715,7 +715,7 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		LabelConditions:    params.LabelConditions,
 		SelectorKeys:       params.SelectorKeys,
 		SelectorConditions: params.SelectorConditions,
-		SkipSilentMode:     params.SkipSilentMode,
+		SilentModeFilter:   params.SilentModeFilter,
 		Fst:                params.Fst,
 		Lmt:                params.Lmt,
 	}
@@ -1838,7 +1838,7 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		LabelConditions:    params.LabelConditions,
 		SelectorKeys:       params.SelectorKeys,
 		SelectorConditions: params.SelectorConditions,
-		SkipSilentMode:     params.SkipSilentMode,
+		SilentModeFilter:   params.SilentModeFilter,
 	})
 }
 
@@ -1920,9 +1920,9 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
-	params.SkipSilentMode = pgtype.Bool{}
-	if filter.SkipSilentModeDefined() {
-		params.SkipSilentMode = toPgBool(filter.SkipSilentMode())
+	params.SilentModeFilter = pgtype.Text{}
+	if filter.SilentModeFilterDefined() {
+		params.SilentModeFilter = pgtype.Text{String: string(filter.SilentModeFilter()), Valid: true}
 	}
 
 	// Health filters - convert [][2]float64 to JSONB array
@@ -1941,9 +1941,9 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		}
 	}
 
-	params.SkipSilentMode = pgtype.Bool{}
-	if filter.SkipSilentModeDefined() {
-		params.SkipSilentMode = toPgBool(filter.SkipSilentMode())
+	params.SilentModeFilter = pgtype.Text{}
+	if filter.SilentModeFilterDefined() {
+		params.SilentModeFilter = pgtype.Text{String: string(filter.SilentModeFilter()), Valid: true}
 	}
 
 	if filter.Selector() != "" {

@@ -615,15 +615,29 @@ WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
         \)
     \)
     AND \(
-        COALESCE\(\$23::boolean, false\) = false
+        COALESCE\(\$23::text, ''\) = ''
+        OR \$23::text = 'all'
         OR \(
-            e.silent_mode IS NULL
-            OR \(
-                \(e.silent_mode->>'webhooks'\)::boolean IS NOT TRUE
-                AND \(e.silent_mode->>'insights'\)::boolean IS NOT TRUE
-                AND \(e.silent_mode->>'health'\)::boolean IS NOT TRUE
-                AND \(e.silent_mode->>'metrics'\)::boolean IS NOT TRUE
-                AND \(e.silent_mode->>'cdevents'\)::boolean IS NOT TRUE
+            \$23::text = 'exclude'
+            AND \(
+                e.silent_mode IS NULL
+                OR \(
+                    \(e.silent_mode->>'webhooks'\)::boolean IS NOT TRUE
+                    AND \(e.silent_mode->>'insights'\)::boolean IS NOT TRUE
+                    AND \(e.silent_mode->>'health'\)::boolean IS NOT TRUE
+                    AND \(e.silent_mode->>'metrics'\)::boolean IS NOT TRUE
+                    AND \(e.silent_mode->>'cdevents'\)::boolean IS NOT TRUE
+                \)
+            \)
+        \)
+        OR \(
+            \$23::text = 'only'
+            AND \(
+                \(e.silent_mode->>'webhooks'\)::boolean IS TRUE
+                AND \(e.silent_mode->>'insights'\)::boolean IS TRUE
+                AND \(e.silent_mode->>'health'\)::boolean IS TRUE
+                AND \(e.silent_mode->>'metrics'\)::boolean IS TRUE
+                AND \(e.silent_mode->>'cdevents'\)::boolean IS TRUE
             \)
         \)
     \)
@@ -655,7 +669,7 @@ GROUP BY r\.status`
 		LabelConditions:    []byte{},
 		SelectorKeys:       []byte{},
 		SelectorConditions: []byte{},
-		SkipSilentMode:     pgtype.Bool{Bool: false, Valid: true},
+		SilentModeFilter:   pgtype.Text{Valid: false},
 		OrganizationID:     "org-id",
 		EnvironmentID:      "env-id",
 	}
@@ -683,7 +697,7 @@ GROUP BY r\.status`
 		params.LabelConditions,
 		params.SelectorKeys,
 		params.SelectorConditions,
-		params.SkipSilentMode,
+		params.SilentModeFilter,
 	).WillReturnRows(rows)
 
 	// Execute query
@@ -1131,9 +1145,9 @@ LIMIT NULLIF\(\$5, 0\)`
 	}
 
 	rows := mock.NewRows([]string{
-	"execution_id", "group_id", "duration", "duration_ms", "status", "name", "start_time", "runner_id", "silent_mode",
+		"execution_id", "group_id", "duration", "duration_ms", "status", "name", "start_time", "runner_id", "silent_mode",
 	}).AddRow(
-	"exec-1", "group-1", "5m", int64(300000), "passed", "test-execution", time.Now(), "runner-1", []byte(`{}`),
+		"exec-1", "group-1", "5m", int64(300000), "passed", "test-execution", time.Now(), "runner-1", []byte(`{}`),
 	)
 
 	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.OrganizationID, params.EnvironmentID, params.LastNDays, params.Lmt).WillReturnRows(rows)

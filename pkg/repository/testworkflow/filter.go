@@ -27,8 +27,16 @@ type FilterImpl struct {
 	FInitialized    *bool
 	FAssigned       *bool
 	FHealthRanges   [][2]float64
-	FSkipSilentMode *bool
+	FSilentModeFilter *SilentModeFilter
 }
+
+type SilentModeFilter string
+
+const (
+	SilentModeFilterAll     SilentModeFilter = "all"
+	SilentModeFilterOnly    SilentModeFilter = "only"
+	SilentModeFilterExclude SilentModeFilter = "exclude"
+)
 
 func NewExecutionsFilter() *FilterImpl {
 	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
@@ -138,8 +146,8 @@ func (f *FilterImpl) WithHealthRanges(ranges [][2]float64) *FilterImpl {
 	return f
 }
 
-func (f *FilterImpl) WithSkipSilentMode(skipSilentMode bool) *FilterImpl {
-	f.FSkipSilentMode = &skipSilentMode
+func (f *FilterImpl) WithSilentModeFilter(filter SilentModeFilter) *FilterImpl {
+	f.FSilentModeFilter = &filter
 	return f
 }
 
@@ -292,13 +300,13 @@ func (f FilterImpl) HealthRanges() [][2]float64 {
 	return f.FHealthRanges
 }
 
-func (f FilterImpl) SkipSilentModeDefined() bool {
-	return f.FSkipSilentMode != nil
+func (f FilterImpl) SilentModeFilterDefined() bool {
+	return f.FSilentModeFilter != nil
 }
 
-func (f FilterImpl) SkipSilentMode() bool {
-	if f.FSkipSilentMode == nil {
-		return false
+func (f FilterImpl) SilentModeFilter() SilentModeFilter {
+	if f.FSilentModeFilter == nil {
+		return SilentModeFilterAll
 	}
-	return *f.FSkipSilentMode
+	return *f.FSilentModeFilter
 }
