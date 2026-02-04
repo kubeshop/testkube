@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer := server.NewMCPServer(
 		"testkube-mcp",
 		cfg.Version,
+		server.WithRecovery(),
 		server.WithToolCapabilities(true),
 		server.WithToolHandlerMiddleware(DebugMiddleware(&cfg)),
 		server.WithToolHandlerMiddleware(TelemetryMiddleware(&cfg)),
@@ -46,8 +48,20 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
 	// Query tools (JSONPath-based bulk queries)
-	mcpServer.AddTool(tools.QueryWorkflows(client))
-	mcpServer.AddTool(tools.QueryExecutions(client))
+	// Only register if control plane supports bulk endpoints for backwards compatibility
+	ctx := context.Background()
+	if apiClient, ok := client.(*APIClient); ok {
+		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflows/definitions") {
+			mcpServer.AddTool(tools.QueryWorkflows(client))
+		}
+		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflow-executions/summaries") {
+			mcpServer.AddTool(tools.QueryExecutions(client))
+		}
+	} else {
+		// Non-API clients (like HandlerClient in cloud-api) always support new endpoints
+		mcpServer.AddTool(tools.QueryWorkflows(client))
+		mcpServer.AddTool(tools.QueryExecutions(client))
+	}
 
 	// Schema tools (static content, no client needed)
 	mcpServer.AddTool(tools.GetWorkflowSchema())
