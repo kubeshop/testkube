@@ -14,10 +14,10 @@ import (
 func TestAbortFilterType(t *testing.T) {
 	// Create a filter using the same pattern as abortAllTestWorkflowExecutionsHandlerStandalone
 	filter := testworkflow2.NewExecutionsFilter().WithName("test-workflow")
-	
+
 	// Verify that the filter is a pointer type
 	assert.IsType(t, &testworkflow2.FilterImpl{}, filter, "Filter should be a pointer to FilterImpl")
-	
+
 	// Verify that type assertion to *FilterImpl succeeds (this would panic if it's a value type)
 	var iface testworkflow2.Filter = filter
 	_, ok := iface.(*testworkflow2.FilterImpl)
