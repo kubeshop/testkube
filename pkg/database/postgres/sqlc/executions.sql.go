@@ -222,10 +222,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             $23::text = 'only'
             AND (
                 (e.silent_mode->>'webhooks')::boolean IS TRUE
-                OR (e.silent_mode->>'insights')::boolean IS TRUE
-                OR (e.silent_mode->>'health')::boolean IS TRUE
-                OR (e.silent_mode->>'metrics')::boolean IS TRUE
-                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
@@ -2327,10 +2327,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             $23::text = 'only'
             AND (
                 (e.silent_mode->>'webhooks')::boolean IS TRUE
-                OR (e.silent_mode->>'insights')::boolean IS TRUE
-                OR (e.silent_mode->>'health')::boolean IS TRUE
-                OR (e.silent_mode->>'metrics')::boolean IS TRUE
-                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
@@ -2698,10 +2698,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             $23::text = 'only'
             AND (
                 (e.silent_mode->>'webhooks')::boolean IS TRUE
-                OR (e.silent_mode->>'insights')::boolean IS TRUE
-                OR (e.silent_mode->>'health')::boolean IS TRUE
-                OR (e.silent_mode->>'metrics')::boolean IS TRUE
-                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )
@@ -3017,10 +3017,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             $23::text = 'only'
             AND (
                 (e.silent_mode->>'webhooks')::boolean IS TRUE
-                OR (e.silent_mode->>'insights')::boolean IS TRUE
-                OR (e.silent_mode->>'health')::boolean IS TRUE
-                OR (e.silent_mode->>'metrics')::boolean IS TRUE
-                OR (e.silent_mode->>'cdevents')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
             )
         )
     )

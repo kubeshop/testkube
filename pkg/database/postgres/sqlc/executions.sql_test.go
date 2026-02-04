@@ -669,7 +669,7 @@ GROUP BY r\.status`
 		LabelConditions:    []byte{},
 		SelectorKeys:       []byte{},
 		SelectorConditions: []byte{},
-		SilentModeFilter:   pgtype.Text{Valid: false},
+		SilentModeFilter:   "",
 		OrganizationID:     "org-id",
 		EnvironmentID:      "env-id",
 	}
