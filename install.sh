@@ -1,9 +1,26 @@
 #!/bin/bash
+set -eo pipefail
+
 echo "Getting kubectl-testkube plugin"
 
 if [ ! -z "${DEBUG}" ];
 then set -x
 fi
+
+_check_required_tools() {
+  local MISSING_TOOLS=""
+  for CMD in curl jq; do
+    if !(which ${CMD} &>/dev/null); then
+      MISSING_TOOLS="${MISSING_TOOLS}${CMD} "
+    fi
+  done
+
+  if [[ ${MISSING_TOOLS} != "" ]]; then
+    echo "Missing required tools: ${MISSING_TOOLS}"
+    echo Please install these using your package manager and try again.
+    exit 1
+  fi
+}
 
 _detect_arch() {
     case $(uname -m) in
@@ -69,6 +86,8 @@ _download_url() {
   echo "https://github.com/kubeshop/testkube/releases/download/${tag}/testkube_${version:-1}_${os}_$arch.tar.gz"
 }
 
+_check_required_tools
+
 if [ "$1" = "beta" ]; then
   url="$(_download_url "beta")"
   echo "Downloading testkube from URL: $url"
@@ -78,17 +97,32 @@ else
   curl -sSLf "$(_download_url)" > testkube.tar.gz
 fi
 
+INSTALL_DIR=/usr/local/bin
+
+echo "Installing testkube into ${INSTALL_DIR}"
+INSTALL_PREFIX=""
+if ! [[ -w "$INSTALL_DIR" ]]; then
+  echo -e "\e[1;38;5;208m"
+  echo "Looks like the current user does not have write access to ${INSTALL_DIR}"
+  echo "You might be prompted to enter your password below by sudo"
+  echo -e "\e[0m"
+  INSTALL_PREFIX=sudo
+fi
+
 tar -xzf testkube.tar.gz kubectl-testkube
 rm testkube.tar.gz
-mv kubectl-testkube /usr/local/bin/kubectl-testkube
-ln -s /usr/local/bin/kubectl-testkube /usr/local/bin/testkube
-ln -s /usr/local/bin/kubectl-testkube /usr/local/bin/tk
+${INSTALL_PREFIX} mv kubectl-testkube ${INSTALL_DIR}/kubectl-testkube
+${INSTALL_PREFIX} ln -sf ${INSTALL_DIR}/kubectl-testkube ${INSTALL_DIR}/testkube
+${INSTALL_PREFIX} ln -sf ${INSTALL_DIR}/kubectl-testkube ${INSTALL_DIR}/tk
 
 echo "kubectl-testkube installed in:"
-echo "- /usr/local/bin/kubectl-testkube"
-echo "- /usr/local/bin/testkube"
-echo "- /usr/local/bin/tk"
+echo "- ${INSTALL_DIR}/kubectl-testkube"
+echo "- ${INSTALL_DIR}/testkube"
+echo "- ${INSTALL_DIR}/tk"
 echo ""
-echo "You'll also need `helm` and Kubernetes `kubectl` installed."
-echo "- Install Helm: https://helm.sh/docs/intro/install/"
-echo "- Install kubectl: https://kubernetes.io/docs/tasks/tools/#kubectl"
+
+if ! (which helm  &>/dev/null) || ! (which kubectl &>/dev/null); then
+  echo "You'll also need to install \`helm\` and \`kubectl\`."
+  echo "- Install Helm: https://helm.sh/docs/intro/install/"
+  echo "- Install kubectl: https://kubernetes.io/docs/tasks/tools/#kubectl"
+fi
