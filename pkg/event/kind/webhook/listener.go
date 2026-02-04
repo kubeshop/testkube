@@ -303,6 +303,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}()
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
+		// Verify execution is actually finished before checking become state
+		if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Result != nil &&
+			event.TestWorkflowExecution.Result.Status != nil && !event.TestWorkflowExecution.Result.Status.Finished() {
+			return testkube.NewSuccessEventResult(event.Id, "execution not in finished state")
+		}
+
 		became, err := l.hasBecomeState(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)
