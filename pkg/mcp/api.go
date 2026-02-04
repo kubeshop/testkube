@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -46,6 +45,18 @@ func NewAPIClient(cfg *MCPServerConfig, client *http.Client) *APIClient {
 		config: cfg,
 		client: client,
 	}
+}
+
+// SupportsEndpoint checks if the control plane supports a specific endpoint.
+// Used for backwards compatibility with older control plane versions.
+func (c *APIClient) SupportsEndpoint(ctx context.Context, path string) bool {
+	req := APIRequest{
+		Method: http.MethodHead,
+		Path:   path,
+		Scope:  ApiScopeOrgEnv,
+	}
+	_, err := c.makeRequest(ctx, req)
+	return err == nil // 2xx = supported, 4xx/5xx = not supported
 }
 
 func (c *APIClient) buildApiUrl(path string, pathParams map[string]string, scope ApiScope) string {
@@ -761,184 +772,74 @@ func (c *APIClient) GetWorkflowResourceHistory(ctx context.Context, params tools
 	})
 }
 
-// GetWorkflowDefinitions fetches multiple workflow definitions in bulk
-// It first lists workflows matching the params, then fetches each definition in parallel
+// GetWorkflowDefinitions fetches multiple workflow definitions in bulk from the control plane.
+// It calls the bulk endpoint that returns all workflow YAML definitions in a single request.
 func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.ListWorkflowsParams) (map[string]string, error) {
-	// First, list workflows to get their names
-	listResult, err := c.ListWorkflows(ctx, params)
+	queryParams := make(map[string]string)
+
+	if params.Selector != "" {
+		queryParams["selector"] = params.Selector
+	}
+	if params.ResourceGroup != "" {
+		queryParams["resourceGroup"] = params.ResourceGroup
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	} else {
+		queryParams["pageSize"] = "50" // Default limit
+	}
+
+	result, err := c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/agent/test-workflows/definitions",
+		Scope:       ApiScopeOrgEnv,
+		QueryParams: queryParams,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list workflows: %w", err)
+		return nil, fmt.Errorf("failed to fetch workflow definitions: %w", err)
 	}
 
-	// Parse the list result to extract workflow names
-	var workflows []struct {
-		Workflow struct {
-			Name string `json:"name"`
-		} `json:"workflow"`
-	}
-	if err := json.Unmarshal([]byte(listResult), &workflows); err != nil {
-		return nil, fmt.Errorf("failed to parse workflow list: %w", err)
-	}
-
-	if len(workflows) == 0 {
-		return map[string]string{}, nil
-	}
-
-	// Fetch each workflow definition in parallel with limited concurrency
-	type result struct {
-		name       string
-		definition string
-		err        error
-	}
-
-	results := make(chan result, len(workflows))
-	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent requests
-
-	var wg sync.WaitGroup
-	for _, wf := range workflows {
-		wg.Add(1)
-		go func(workflowName string) {
-			defer wg.Done()
-
-			// Check context before acquiring semaphore
-			select {
-			case <-ctx.Done():
-				results <- result{name: workflowName, err: ctx.Err()}
-				return
-			case semaphore <- struct{}{}: // Acquire
-			}
-			defer func() { <-semaphore }() // Release
-
-			// Check context again after acquiring semaphore
-			if ctx.Err() != nil {
-				results <- result{name: workflowName, err: ctx.Err()}
-				return
-			}
-
-			def, err := c.GetWorkflowDefinition(ctx, workflowName)
-			results <- result{name: workflowName, definition: def, err: err}
-		}(wf.Workflow.Name)
-	}
-
-	// Close results channel when all goroutines complete
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	// Collect results
-	definitions := make(map[string]string)
-	var firstErr error
-	for r := range results {
-		if r.err != nil {
-			// Skip context cancellation errors when reporting
-			if firstErr == nil && r.err != context.Canceled && r.err != context.DeadlineExceeded {
-				firstErr = fmt.Errorf("failed to get definition for %s: %w", r.name, r.err)
-			}
-			continue
-		}
-		definitions[r.name] = r.definition
-	}
-
-	// Return partial results even if some failed, but report the first error
-	if len(definitions) == 0 && firstErr != nil {
-		return nil, firstErr
+	var definitions map[string]string
+	if err := json.Unmarshal([]byte(result), &definitions); err != nil {
+		return nil, fmt.Errorf("failed to parse workflow definitions: %w", err)
 	}
 
 	return definitions, nil
 }
 
-// GetExecutions fetches multiple execution records in bulk
-// It first lists executions matching the params, then fetches each execution's full data in parallel
+// GetExecutions fetches multiple execution summary records in bulk from the control plane.
+// It calls the bulk endpoint that returns all execution summaries in a single request.
 func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutionsParams) (map[string]string, error) {
-	// First, list executions
-	listResult, err := c.ListExecutions(ctx, params)
+	queryParams := make(map[string]string)
+
+	if params.WorkflowName != "" {
+		queryParams["workflowName"] = params.WorkflowName
+	}
+	if params.Status != "" {
+		queryParams["status"] = params.Status
+	}
+	if params.TextSearch != "" {
+		queryParams["textSearch"] = params.TextSearch
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	} else {
+		queryParams["pageSize"] = "50" // Default limit
+	}
+
+	result, err := c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/agent/test-workflow-executions/summaries",
+		Scope:       ApiScopeOrgEnv,
+		QueryParams: queryParams,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list executions: %w", err)
+		return nil, fmt.Errorf("failed to fetch execution summaries: %w", err)
 	}
 
-	// Parse the list result to extract execution IDs and workflow names
-	var listResponse struct {
-		Results []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"results"`
-	}
-	if err := json.Unmarshal([]byte(listResult), &listResponse); err != nil {
-		return nil, fmt.Errorf("failed to parse execution list: %w", err)
-	}
-
-	if len(listResponse.Results) == 0 {
-		return map[string]string{}, nil
-	}
-
-	// Fetch each execution's full data in parallel with limited concurrency
-	type result struct {
-		id   string
-		data string
-		err  error
-	}
-
-	results := make(chan result, len(listResponse.Results))
-	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent requests
-
-	var wg sync.WaitGroup
-	for _, exec := range listResponse.Results {
-		wg.Add(1)
-		go func(executionID string) {
-			defer wg.Done()
-
-			// Check context before acquiring semaphore
-			select {
-			case <-ctx.Done():
-				results <- result{id: executionID, err: ctx.Err()}
-				return
-			case semaphore <- struct{}{}: // Acquire
-			}
-			defer func() { <-semaphore }() // Release
-
-			// Check context again after acquiring semaphore
-			if ctx.Err() != nil {
-				results <- result{id: executionID, err: ctx.Err()}
-				return
-			}
-
-			// Get full execution data
-			data, err := c.makeRequest(ctx, APIRequest{
-				Method: "GET",
-				Path:   "/agent/test-workflow-executions/{executionId}",
-				Scope:  ApiScopeOrgEnv,
-				PathParams: map[string]string{
-					"executionId": executionID,
-				},
-			})
-			results <- result{id: executionID, data: data, err: err}
-		}(exec.ID)
-	}
-
-	// Close results channel when all goroutines complete
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	// Collect results
-	executions := make(map[string]string)
-	var firstErr error
-	for r := range results {
-		if r.err != nil {
-			// Skip context cancellation errors when reporting
-			if firstErr == nil && r.err != context.Canceled && r.err != context.DeadlineExceeded {
-				firstErr = fmt.Errorf("failed to get execution %s: %w", r.id, r.err)
-			}
-			continue
-		}
-		executions[r.id] = r.data
-	}
-
-	// Return partial results even if some failed, but report the first error
-	if len(executions) == 0 && firstErr != nil {
-		return nil, firstErr
+	var executions map[string]string
+	if err := json.Unmarshal([]byte(result), &executions); err != nil {
+		return nil, fmt.Errorf("failed to parse execution summaries: %w", err)
 	}
 
 	return executions, nil
