@@ -10,7 +10,7 @@ fi
 _check_required_tools() {
   local MISSING_TOOLS=""
   for CMD in curl jq; do
-    if !(which ${CMD} &>/dev/null); then
+    if ! which "${CMD}" &>/dev/null; then
       MISSING_TOOLS="${MISSING_TOOLS}${CMD} "
     fi
   done
@@ -121,7 +121,7 @@ echo "- ${INSTALL_DIR}/testkube"
 echo "- ${INSTALL_DIR}/tk"
 echo ""
 
-if ! (which helm  &>/dev/null) || ! (which kubectl &>/dev/null); then
+if ! which helm &>/dev/null || ! which kubectl &>/dev/null; then
   echo "You'll also need to install \`helm\` and \`kubectl\`."
   echo "- Install Helm: https://helm.sh/docs/intro/install/"
   echo "- Install kubectl: https://kubernetes.io/docs/tasks/tools/#kubectl"
