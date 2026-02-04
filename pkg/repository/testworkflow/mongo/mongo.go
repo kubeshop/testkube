@@ -835,13 +835,13 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 	return metrics, nil
 }
 
-// GetPreviousFinishedState gets previous execution state by test workflow
+// GetPreviousFinishedState gets previous finished execution state by test workflow
 func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
-	opts := options.FindOne().SetProjection(bson.M{"result.status": 1}).SetSort(bson.D{{Key: "statusat", Value: -1}})
+	opts := options.FindOne().SetProjection(bson.M{"result.status": 1}).SetSort(bson.D{{Key: "result.finishedat", Value: -1}})
 	filter := bson.D{
 		{Key: "workflow.name", Value: testWorkflowName},
-		{Key: "statusat", Value: bson.M{"$lt": date}},
-		{Key: "result.status", Value: bson.M{"$ne": nil}},
+		{Key: "result.finishedat", Value: bson.M{"$lt": date}},
+		{Key: "result.status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "canceled", "timeout"}}},
 	}
 
 	var result testkube.TestWorkflowExecution
@@ -850,7 +850,7 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWork
 		return "", nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("error decoding previous execution status: %w", err)
+		return "", fmt.Errorf("error decoding previous finished execution status: %w", err)
 	}
 
 	if result.Result == nil || result.Result.Status == nil {

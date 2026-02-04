@@ -887,9 +887,9 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-    AND e.status_at < @date
-    AND r.status IS NOT NULL
-ORDER BY e.status_at DESC
+    AND r.finished_at < @date
+    AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
+ORDER BY r.finished_at DESC
 LIMIT 1;
 
 -- name: GetTestWorkflowExecutionTags :many
