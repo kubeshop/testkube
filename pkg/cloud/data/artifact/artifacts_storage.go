@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -119,85 +120,36 @@ func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID
 	}
 
 	// Download files concurrently with controlled parallelism
-	// Limit concurrent downloads to avoid overwhelming the server
 	const maxConcurrentDownloads = 10
-	var (
-		wg        sync.WaitGroup
-		mu        sync.Mutex
-		semaphore = make(chan struct{}, maxConcurrentDownloads)
-		errOnce   sync.Once
-		dlErr     error
-	)
+	var mu sync.Mutex
 
-	// Check if context is already cancelled before starting downloads
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxConcurrentDownloads)
 
 	for i := range files {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-
-			// Acquire semaphore slot
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-
-			// Check if another goroutine has already encountered an error
-			mu.Lock()
-			if dlErr != nil {
-				mu.Unlock()
-				return
-			}
-			mu.Unlock()
-
-			// Check context again before expensive operation
-			select {
-			case <-ctx.Done():
-				errOnce.Do(func() {
-					mu.Lock()
-					dlErr = ctx.Err()
-					mu.Unlock()
-				})
-				return
-			default:
-			}
-
+		idx := i
+		g.Go(func() error {
 			reader, err := c.DownloadFile(ctx, files[idx].Name, executionID, testName, testSuiteName, testWorkflowName)
 			if err != nil {
-				errOnce.Do(func() {
-					mu.Lock()
-					dlErr = err
-					mu.Unlock()
-				})
-				return
+				return err
 			}
 			defer reader.Close()
 
 			buf := &bytes.Buffer{}
 			if _, err = buf.ReadFrom(reader); err != nil {
-				errOnce.Do(func() {
-					mu.Lock()
-					dlErr = err
-					mu.Unlock()
-				})
-				return
+				return err
 			}
 
-			// Safely assign the buffer to the file
 			mu.Lock()
 			files[idx].Data = buf
 			mu.Unlock()
-		}(i)
+
+			return nil
+		})
 	}
 
-	wg.Wait()
-
-	// Check if any error occurred during concurrent downloads
-	if dlErr != nil {
-		return nil, dlErr
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	service := archive.NewTarballService()
