@@ -27,10 +27,9 @@ func TestConcurrentDownloadSafety(t *testing.T) {
 		}
 	}
 
-	ctx := context.Background()
 	var mu sync.Mutex
 
-	g, ctx := errgroup.WithContext(ctx)
+	g, _ := errgroup.WithContext(context.Background())
 	g.SetLimit(maxConcurrent)
 
 	for i := range files {
@@ -121,18 +120,19 @@ func TestConcurrentDownloadContextCancellation(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	var mu sync.Mutex
 	var completedCount atomic.Int32
 
-	g, ctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(maxConcurrent)
 
 	for i := range files {
 		idx := i
 		g.Go(func() error {
 			select {
-			case <-ctx.Done():
-				return ctx.Err()
+			case <-gctx.Done():
+				return gctx.Err()
 			case <-time.After(10 * time.Millisecond):
 			}
 
