@@ -3,6 +3,11 @@ kind: TestTrigger
 metadata:
   name: trigger-small-suite-on-cloud-deployment
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   selector:
     matchLabels:
       testkube.io/resource-kind: Deployment

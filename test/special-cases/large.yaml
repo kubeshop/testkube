@@ -1,3 +1,4 @@
+# TODO: check the actual resource usage and update resource requests
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
@@ -6,6 +7,11 @@ metadata:
     core-tests: large
 description: "Logs: 1 MB"
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Run test
     run:
@@ -23,6 +29,11 @@ metadata:
     core-tests: large
 description: "Logs: 1 MB"
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Run test
     run:
@@ -40,6 +51,11 @@ metadata:
     core-tests: large
 description: "Logs: 11 MB"
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Run test
     run:
@@ -57,6 +73,11 @@ metadata:
     core-tests: large
 description: "Logs: 11 MB"
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Run test
     run:
@@ -74,6 +95,11 @@ metadata:
     core-tests: large
 description: "Logs: 22 MB"
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Run test
     run:
@@ -91,6 +117,11 @@ metadata:
     core-tests: large
 description: "Artifacts: 1GB file generated with openssl"
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   container:
     image: alpine/openssl
   steps:
@@ -111,6 +142,10 @@ metadata:
 description: "Artifacts: 100MB file generated with openssl"
 spec:
   container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
     image: alpine/openssl
   steps:
   - name: Generate 100MB artifact

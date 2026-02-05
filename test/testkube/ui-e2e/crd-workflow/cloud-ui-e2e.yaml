@@ -89,6 +89,10 @@ spec:
   container:
     workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.55.1-noble
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
     env:
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'

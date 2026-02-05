@@ -7,6 +7,11 @@ metadata:
     type: suite
     tool: pytest
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       parallelism: 2

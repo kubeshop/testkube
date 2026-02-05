@@ -18,8 +18,8 @@ spec:
   container:
     resources:
       requests:
-        cpu: "500m"
-        memory: "256Mi"
+        cpu: 500m
+        memory: 256Mi
   use:
     - name: setup-dind-kind-cluster-template
   steps:
@@ -97,6 +97,10 @@ spec:
       paths:
       - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
   container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
     workingDir: /data/repo/test/testkube/installation-tests
   job:

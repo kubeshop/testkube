@@ -6,6 +6,11 @@ metadata:
     core-tests: healthcheck
     environment: prod
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   system:
     pureByDefault: true
   job:
