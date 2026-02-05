@@ -166,7 +166,7 @@ spec:
       - name: distribute/evenly
       container:
         workingDir: /data/repo/test/locust/locust-project
-        resource:
+        resources:
           requests:
             cpu: 128m
             memory: 128Mi
