@@ -7,26 +7,26 @@ import (
 )
 
 type FilterImpl struct {
-	FName           string
-	FNames          []string
-	FLastNDays      int
-	FStartDate      *time.Time
-	FEndDate        *time.Time
-	FStatuses       []testkube.TestWorkflowStatus
-	FPage           int
-	FPageSize       int
-	FSkip           *int
-	FTextSearch     string
-	FSelector       string
-	FTagSelector    string
-	FLabelSelector  *LabelSelector
-	FActorName      string
-	FActorType      testkube.TestWorkflowRunningContextActorType
-	FGroupID        string
-	FRunnerID       string
-	FInitialized    *bool
-	FAssigned       *bool
-	FHealthRanges   [][2]float64
+	FName             string
+	FNames            []string
+	FLastNDays        int
+	FStartDate        *time.Time
+	FEndDate          *time.Time
+	FStatuses         []testkube.TestWorkflowStatus
+	FPage             int
+	FPageSize         int
+	FSkip             *int
+	FTextSearch       string
+	FSelector         string
+	FTagSelector      string
+	FLabelSelector    *LabelSelector
+	FActorName        string
+	FActorType        testkube.TestWorkflowRunningContextActorType
+	FGroupID          string
+	FRunnerID         string
+	FInitialized      *bool
+	FAssigned         *bool
+	FHealthRanges     [][2]float64
 	FSilentModeFilter *SilentModeFilter
 }
 
