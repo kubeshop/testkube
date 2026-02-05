@@ -122,7 +122,6 @@ spec:
       requests:
         cpu: 32m
         memory: 32Mi
-  container:
     image: alpine/openssl
   steps:
   - name: Generate 1GB artifact
