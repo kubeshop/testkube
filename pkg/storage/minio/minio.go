@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -372,20 +373,94 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 		})
 	}
 
+	// Download files concurrently with controlled parallelism
+	// Limit concurrent downloads to avoid overwhelming the server
+	const maxConcurrentDownloads = 10
+	var (
+		wg        sync.WaitGroup
+		mu        sync.Mutex
+		semaphore = make(chan struct{}, maxConcurrentDownloads)
+		errOnce   sync.Once
+		dlErr     error
+	)
+
 	for i := range files {
-		reader, err := c.minioClient.GetObject(ctx, bucket, files[i].Name, minio.GetObjectOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive GetObject error: %w", err)
+		// Check if context is already cancelled
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("minio DownloadArchive context cancelled: %w", ctx.Err())
+		default:
 		}
 
-		if _, err = reader.Stat(); err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive Stat error: %w", err)
-		}
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
 
-		files[i].Data = &bytes.Buffer{}
-		if _, err = files[i].Data.ReadFrom(reader); err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive Read error: %w", err)
-		}
+			// Acquire semaphore slot
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// Check if another goroutine has already encountered an error
+			mu.Lock()
+			if dlErr != nil {
+				mu.Unlock()
+				return
+			}
+			mu.Unlock()
+
+			// Check context again before expensive operation
+			select {
+			case <-ctx.Done():
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = fmt.Errorf("minio DownloadArchive context cancelled: %w", ctx.Err())
+					mu.Unlock()
+				})
+				return
+			default:
+			}
+
+			reader, err := c.minioClient.GetObject(ctx, bucket, files[idx].Name, minio.GetObjectOptions{})
+			if err != nil {
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = fmt.Errorf("minio DownloadArchive GetObject error: %w", err)
+					mu.Unlock()
+				})
+				return
+			}
+
+			if _, err = reader.Stat(); err != nil {
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = fmt.Errorf("minio DownloadArchive Stat error: %w", err)
+					mu.Unlock()
+				})
+				return
+			}
+
+			buf := &bytes.Buffer{}
+			if _, err = buf.ReadFrom(reader); err != nil {
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = fmt.Errorf("minio DownloadArchive Read error: %w", err)
+					mu.Unlock()
+				})
+				return
+			}
+
+			// Safely assign the buffer to the file
+			mu.Lock()
+			files[idx].Data = buf
+			mu.Unlock()
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Check if any error occurred during concurrent downloads
+	if dlErr != nil {
+		return nil, dlErr
 	}
 
 	service := archive.NewTarballService()

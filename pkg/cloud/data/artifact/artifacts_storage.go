@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -117,16 +118,85 @@ func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID
 		})
 	}
 
+	// Download files concurrently with controlled parallelism
+	// Limit concurrent downloads to avoid overwhelming the server
+	const maxConcurrentDownloads = 10
+	var (
+		wg        sync.WaitGroup
+		mu        sync.Mutex
+		semaphore = make(chan struct{}, maxConcurrentDownloads)
+		errOnce   sync.Once
+		dlErr     error
+	)
+
 	for i := range files {
-		reader, err := c.DownloadFile(ctx, files[i].Name, executionID, testName, testSuiteName, testWorkflowName)
-		if err != nil {
-			return nil, err
+		// Check if context is already cancelled
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
 		}
 
-		files[i].Data = &bytes.Buffer{}
-		if _, err = files[i].Data.ReadFrom(reader); err != nil {
-			return nil, err
-		}
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			// Acquire semaphore slot
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// Check if another goroutine has already encountered an error
+			mu.Lock()
+			if dlErr != nil {
+				mu.Unlock()
+				return
+			}
+			mu.Unlock()
+
+			// Check context again before expensive operation
+			select {
+			case <-ctx.Done():
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = ctx.Err()
+					mu.Unlock()
+				})
+				return
+			default:
+			}
+
+			reader, err := c.DownloadFile(ctx, files[idx].Name, executionID, testName, testSuiteName, testWorkflowName)
+			if err != nil {
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = err
+					mu.Unlock()
+				})
+				return
+			}
+
+			buf := &bytes.Buffer{}
+			if _, err = buf.ReadFrom(reader); err != nil {
+				errOnce.Do(func() {
+					mu.Lock()
+					dlErr = err
+					mu.Unlock()
+				})
+				return
+			}
+
+			// Safely assign the buffer to the file
+			mu.Lock()
+			files[idx].Data = buf
+			mu.Unlock()
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Check if any error occurred during concurrent downloads
+	if dlErr != nil {
+		return nil, dlErr
 	}
 
 	service := archive.NewTarballService()
