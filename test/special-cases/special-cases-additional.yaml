@@ -4,7 +4,7 @@ kind: TestWorkflow
 metadata:
   name: special-cases-cron-trigger-with-timezone
   labels:
-    core-tests: special-case
+    core-tests: special-cases
 description: "Cron trigger with timezone - workflow should run at 12:05 PM Europe/Warsaw and 12:05 PM America/New_York"
 spec:
   events:

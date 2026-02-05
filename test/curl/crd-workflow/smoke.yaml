@@ -75,3 +75,7 @@ spec:
         shell: curl -f -LI '{{ matrix.url }}'
         container:
           image: curlimages/curl:8.7.1
+          resources:
+            requests:
+              cpu: 32m
+              memory: 32Mi
