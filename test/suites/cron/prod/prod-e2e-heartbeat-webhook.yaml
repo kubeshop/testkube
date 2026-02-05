@@ -12,7 +12,6 @@ spec:
       requests:
         cpu: 32m
         memory: 32Mi
-  container:
     image: alpine:3.23.2
   steps:
     - name: Step - should pass

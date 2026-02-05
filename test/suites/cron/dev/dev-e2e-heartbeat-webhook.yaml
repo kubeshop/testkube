@@ -11,6 +11,7 @@ spec:
     resources:
       requests:
         cpu: 32m
+        memory: 32Mi
     image: alpine:3.23.2
   steps:
     - name: Step - should pass
