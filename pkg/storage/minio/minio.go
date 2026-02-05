@@ -429,6 +429,7 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 				})
 				return
 			}
+			defer reader.Close()
 
 			if _, err = reader.Stat(); err != nil {
 				errOnce.Do(func() {

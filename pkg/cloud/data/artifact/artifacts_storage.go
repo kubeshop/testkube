@@ -174,6 +174,7 @@ func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID
 				})
 				return
 			}
+			defer reader.Close()
 
 			buf := &bytes.Buffer{}
 			if _, err = buf.ReadFrom(reader); err != nil {
