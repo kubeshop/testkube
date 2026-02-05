@@ -129,14 +129,14 @@ func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID
 		dlErr     error
 	)
 
-	for i := range files {
-		// Check if context is already cancelled
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
+	// Check if context is already cancelled before starting downloads
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 
+	for i := range files {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()

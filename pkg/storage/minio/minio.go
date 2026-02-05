@@ -384,14 +384,14 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 		dlErr     error
 	)
 
-	for i := range files {
-		// Check if context is already cancelled
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("minio DownloadArchive context cancelled: %w", ctx.Err())
-		default:
-		}
+	// Check if context is already cancelled before starting downloads
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("minio DownloadArchive context cancelled: %w", ctx.Err())
+	default:
+	}
 
+	for i := range files {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
