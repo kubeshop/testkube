@@ -68,7 +68,7 @@ func (s *accessor) SafeResolve(m ...Machine) (v Expression, changed bool, err er
 			}
 		}
 		if err != nil {
-			return nil, false, fmt.Errorf("error while accessing %s: %s", s.String(), err.Error())
+			return nil, false, fmt.Errorf("error while accessing %s: %w", s.String(), err)
 		}
 	}
 	return s, false, nil
