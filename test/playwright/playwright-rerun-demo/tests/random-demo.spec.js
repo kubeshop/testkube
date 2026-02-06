@@ -1,12 +1,33 @@
 // @ts-check
 // 50 individual tests for demo: first run, then re-run only failed via --last-failed.
-// Each test passes with 70% probability, fails with 30%.
+//
+// IMPORTANT:
+// This suite is intentionally "flaky" to demonstrate reruns, but it must be *reproducible*
+// so that a rerun can consistently target the same failing tests.
+//
+// We therefore use a deterministic pseudo-random generator seeded by an environment variable.
+// In CI/Testkube, set RANDOM_DEMO_SEED to keep the failing set stable across runs.
+//
+// If RANDOM_DEMO_SEED is not set, we default to "1" (still deterministic).
 const { test, expect } = require('@playwright/test');
 
 const PASS_CHANCE = 0.7;
 
+// Simple deterministic PRNG (Mulberry32)
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const seed = Number.parseInt(process.env.RANDOM_DEMO_SEED || '1', 10);
+const rand = mulberry32(Number.isFinite(seed) ? seed : 1);
+
 function shouldPass() {
-  return Math.random() < PASS_CHANCE;
+  return rand() < PASS_CHANCE;
 }
 
 test('random-demo-1', async () => {
