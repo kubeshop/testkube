@@ -1,0 +1,152 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: copilot-ai-tests
+  labels:
+    component: copilot
+    category: ai-testing
+spec:
+  config:
+    copilotImage:
+      type: string
+      description: "Copilot Docker image to test (required)"
+    orgId:
+      type: string
+      default: "tkcorg_9deb42dda2197657"
+    envId:
+      type: string
+      default: "tkcenv_03e3ff499f13ccba"
+    testCount:
+      type: integer
+      default: "3"
+
+  services:
+    copilot:
+      image: "{{ config.copilotImage }}"
+      env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: USE_TLS
+          value: "false"
+        - name: CONTROL_PLANE_ENDPOINT
+          value: "https://api.testkube.dev"
+        - name: OIDC_CONFIGURATION_URL
+          value: "https://api.testkube.dev/idp/.well-known/openid-configuration"
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: testkube-agent-secrets
+              key: DEV_LLM_API_KEY
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 9090
+        periodSeconds: 2
+        initialDelaySeconds: 10
+      logs: always
+
+    receiver:
+      image: "{{ config.copilotImage }}"
+      command: ["npm", "run", "test:receiver"]
+      env:
+        - name: TEST_RECEIVER_PORT
+          value: "9999"
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 9999
+        periodSeconds: 1
+      logs: always
+
+  container:
+    image: curlimages/curl:8.7.1
+    resources:
+      requests:
+        cpu: 64m
+        memory: 64Mi
+    env:
+      - name: AUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: testkube-agent-secrets
+            key: TESTKUBE-CLOUD-TEST-BASIC-RUN-TOKEN-FOR-DEV
+
+  job:
+    activeDeadlineSeconds: 600
+
+  steps:
+    - name: Send test requests
+      parallel:
+        matrix:
+          test:
+            - name: analyze-failure
+              prompt: "Why did the catalin-gotest workflow fail?"
+            - name: explain-workflow
+              prompt: "Explain what the k6-workflow-smoke workflow does"
+            - name: list-workflows
+              prompt: "List all workflows in this environment"
+        description: "Send: {{ matrix.test.name }}"
+        run:
+          shell: |
+            curl -sf -X POST \
+              "http://{{services.copilot.0.ip}}:9090/copilot/test" \
+              -H "Authorization: Bearer ${AUTH_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "message": "{{ matrix.test.prompt }}",
+                "callbackUrl": "http://{{services.receiver.0.ip}}:9999/callback/{{ matrix.test.name }}",
+                "readable": {
+                  "orgId": "{{ config.orgId }}",
+                  "envId": "{{ config.envId }}"
+                }
+              }'
+            echo "✅ Sent: {{ matrix.test.name }}"
+
+    - name: Collect results
+      run:
+        shell: |
+          mkdir -p /data/artifacts
+          EXPECTED={{ config.testCount }}
+          TIMEOUT=300
+          ELAPSED=0
+
+          echo "⏳ Waiting for $EXPECTED results..."
+
+          while true; do
+            COUNT=$(curl -sf "http://{{services.receiver.0.ip}}:9999/" | grep -o '"resultCount":[0-9]*' | cut -d: -f2 || echo "0")
+            echo "   Received: $COUNT / $EXPECTED"
+            
+            if [ "$COUNT" -ge "$EXPECTED" ]; then
+              break
+            fi
+            
+            if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+              echo "❌ Timeout waiting for results"
+              exit 1
+            fi
+            
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+
+          curl -sf "http://{{services.receiver.0.ip}}:9999/results" > /data/artifacts/results.json
+
+          FAILURES=$(cat /data/artifacts/results.json | grep -o '"success":false' | wc -l || echo "0")
+
+          if [ "$FAILURES" -gt "0" ]; then
+            echo "❌ $FAILURES test(s) failed"
+            cat /data/artifacts/results.json
+            exit 1
+          fi
+
+          echo "✅ All tests passed!"
+          cat /data/artifacts/results.json
+
+    - name: Save artifacts
+      condition: always
+      artifacts:
+        workingDir: /data/artifacts
+        paths:
+          - "*.json"
