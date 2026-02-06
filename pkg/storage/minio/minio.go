@@ -375,11 +375,10 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 	}
 
 	// Download files concurrently with controlled parallelism
-	const maxConcurrentDownloads = 10
 	var mu sync.Mutex
 
 	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(maxConcurrentDownloads)
+	g.SetLimit(storage.MaxConcurrentDownloads)
 
 	for i := range files {
 		idx := i
