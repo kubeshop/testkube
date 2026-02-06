@@ -541,7 +541,6 @@ func main() {
 	}
 	websocketLoader := ws.NewWebsocketLoader()
 	eventsEmitter.RegisterLoader(websocketLoader)
-	eventsEmitter.RegisterLoader(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
 		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {

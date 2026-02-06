@@ -35,14 +35,6 @@ data:
 {{- end }}
   pvc-template.yml: |-
 {{ include "testkube-api.pvc-template" . | indent 4 }}
-  slack-config.json: |-
-{{- if .Values.slackConfig }}
-  {{ toJson .Values.slackConfig | indent 4 }}
-{{- else }}
-{{ .Files.Get "slack-config.json" | indent 4 }}
-{{- end }}
-  slack-template.json: |-
-{{ .Files.Get "slack-template.json.tmpl" | indent 4 }}
   slave-pod-template.yml: |-
 {{ include "testkube-api.slave-pod-template" . | indent 4 }}
 {{- $executors := "" }}

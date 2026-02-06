@@ -81,20 +81,6 @@ spec:
               value: "{{ .Values.postmanExecutorURI }}"
             - name: TESTKUBE_ANALYTICS_ENABLED
               value: "{{ .Values.analyticsEnabled }}"
-            {{- if .Values.slackSecret }}
-            - name: SLACK_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ .Values.slackSecret }}"
-                  key: SLACK_TOKEN
-            {{- else }}
-            - name: SLACK_TOKEN
-              value: "{{ .Values.slackToken }}"
-            {{- end }}
-            {{- if .Values.slackTemplate }}
-            - name: SLACK_TEMPLATE
-              value:  "{{ .Values.slackTemplate }}"
-            {{- end }}
             {{- if .Values.executors }}
             - name: TESTKUBE_DEFAULT_EXECUTORS
               value:  "{{ .Values.executors }}"

@@ -107,8 +107,6 @@ func (b *Binary) Build(ctx context.Context) (string, error) {
 		"go", "build",
 		"-o", b.alternatingOutputPath,
 		fmt.Sprintf("-ldflags=%s", strings.Join([]string{
-			"-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=",
-			"-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=",
 			"-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=",
 			"-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=",
 			"-X github.com/kubeshop/testkube/internal/pkg/api.Version=devbox",
