@@ -26,7 +26,6 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -35,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -340,22 +338,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 
 	return proContext, nil
-}
-
-func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
-	slackTemplate, err := parser.LoadConfigFromStringOrFile(
-		cfg.SlackTemplate,
-		cfg.TestkubeConfigDir,
-		"slack-template.json",
-		"slack template",
-	)
-	ExitOnError("Creating slack loader", err)
-
-	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
-	ExitOnError("Creating slack loader", err)
-
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
-		testkube.AllEventTypes, envs)
 }
 
 func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck

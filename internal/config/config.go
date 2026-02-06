@@ -142,12 +142,6 @@ type DeprecatedControlPlaneConfig struct {
 	TestkubeCloudMigrate string `envconfig:"TESTKUBE_CLOUD_MIGRATE" default:"false"`
 }
 
-type SlackIntegrationConfig struct {
-	SlackToken    string `envconfig:"SLACK_TOKEN" default:""`
-	SlackConfig   string `envconfig:"SLACK_CONFIG" default:""`
-	SlackTemplate string `envconfig:"SLACK_TEMPLATE" default:""`
-}
-
 type SecretManagementConfig struct {
 	EnableSecretsEndpoint   bool   `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	EnableListingAllSecrets bool   `envconfig:"ENABLE_LISTING_ALL_SECRETS" default:"false"`
@@ -197,7 +191,6 @@ type Config struct {
 	KubernetesEventListenerConfig
 	LogServerConfig
 	ControlPlaneConfig
-	SlackIntegrationConfig
 	SecretManagementConfig
 	RunnerConfig
 	ImageInspectorConfig

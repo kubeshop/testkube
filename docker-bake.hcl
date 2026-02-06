@@ -5,8 +5,6 @@ variable "ALPINE_IMAGE"  { default = "alpine:3.20.8" }
 variable "VERSION"       { default = "0.0.0-unknown"}
 
 variable "GIT_SHA"                 { default = ""}
-variable "SLACK_BOT_CLIENT_ID"     { default = ""}
-variable "SLACK_BOT_CLIENT_SECRET" { default = ""}
 variable "ANALYTICS_TRACKING_ID"   { default = ""}
 variable "ANALYTICS_API_KEY"       { default = ""}
 variable "SEGMENTIO_KEY"           { default = ""}
@@ -26,8 +24,6 @@ target "api" {
   args = {
     VERSION = "${VERSION}"
     GIT_SHA = "${GIT_SHA}"
-    SLACK_BOT_CLIENT_ID = "${SLACK_BOT_CLIENT_ID}"
-    SLACK_BOT_CLIENT_SECRET = "${SLACK_BOT_CLIENT_SECRET}"
     ANALYTICS_TRACKING_ID = "${ANALYTICS_TRACKING_ID}"
     ANALYTICS_API_KEY = "${ANALYTICS_API_KEY}"
     SEGMENTIO_KEY = "${SEGMENTIO_KEY}"
@@ -88,8 +84,6 @@ target "agent-server" {
     GOMODCACHE = "${GOMODCACHE}"
     VERSION = "${VERSION}"
     GIT_SHA = "${GIT_SHA}"
-    SLACK_BOT_CLIENT_ID = "${SLACK_BOT_CLIENT_ID}"
-    SLACK_BOT_CLIENT_SECRET = "${SLACK_BOT_CLIENT_SECRET}"
     ANALYTICS_TRACKING_ID = "${ANALYTICS_TRACKING_ID}"
     ANALYTICS_API_KEY = "${ANALYTICS_API_KEY}"
     SEGMENTIO_KEY = "${SEGMENTIO_KEY}"
