@@ -461,6 +461,33 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
     )
+    AND (
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
+        OR (
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
@@ -558,6 +585,33 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
+        OR (
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
+            )
         )
     )
 GROUP BY r.status;
@@ -710,6 +764,33 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
     )
+    AND (
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
+        OR (
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
+            )
+        )
+    )
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
@@ -717,11 +798,11 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
     scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id, runtime
+    tags, running_context, config_params, silent_mode, organization_id, environment_id, runtime
 ) VALUES (
     @id, @group_id, @runner_id, @runner_target, @runner_original_target, @name, @namespace, @number,
     @scheduled_at, @assigned_at, @status_at, @test_workflow_execution_name, @disable_webhooks,
-    @tags, @running_context, @config_params, @organization_id, @environment_id, @runtime
+    @tags, @running_context, @config_params, @silent_mode, @organization_id, @environment_id, @runtime
 );
 
 -- name: InsertTestWorkflowSignature :one
@@ -872,7 +953,8 @@ SELECT
     r.status,
     e.name,
     e.scheduled_at as start_time,
-    e.runner_id
+    e.runner_id,
+    e.silent_mode
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -1192,6 +1274,33 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
+        )
+    )
+    AND (
+        COALESCE(@silent_mode_filter::text, '') = ''
+        OR @silent_mode_filter::text = 'all'
+        OR (
+            @silent_mode_filter::text = 'exclude'
+            AND (
+                e.silent_mode IS NULL
+                OR (
+                    (e.silent_mode->>'webhooks')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'insights')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'health')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'metrics')::boolean IS NOT TRUE
+                    AND (e.silent_mode->>'cdevents')::boolean IS NOT TRUE
+                )
+            )
+        )
+        OR (
+            @silent_mode_filter::text = 'only'
+            AND (
+                (e.silent_mode->>'webhooks')::boolean IS TRUE
+                AND (e.silent_mode->>'insights')::boolean IS TRUE
+                AND (e.silent_mode->>'health')::boolean IS TRUE
+                AND (e.silent_mode->>'metrics')::boolean IS TRUE
+                AND (e.silent_mode->>'cdevents')::boolean IS TRUE
+            )
         )
     )
 ORDER BY e.scheduled_at DESC

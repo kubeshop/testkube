@@ -692,7 +692,9 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
+	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams(params)
+
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, summaryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -804,6 +806,11 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	silentMode, err := toJSONB(execution.SilentMode)
+	if err != nil {
+		return err
+	}
+
 	runtime, err := toJSONB(execution.Runtime)
 	if err != nil {
 		return err
@@ -826,6 +833,7 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		Tags:                      tags,
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
+		SilentMode:                silentMode,
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
 		Runtime:                   runtime,
@@ -1572,6 +1580,14 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 
 	executions := make([]testkube.ExecutionsMetricsExecutions, len(rows))
 	for i, row := range rows {
+		var silentMode *testkube.SilentMode
+		if len(row.SilentMode) > 0 {
+			silentMode, err = fromJSONB[testkube.SilentMode](row.SilentMode)
+			if err != nil {
+				return metrics, fmt.Errorf("failed to parse silent mode: %w", err)
+			}
+		}
+
 		executions[i] = testkube.ExecutionsMetricsExecutions{
 			ExecutionId: row.ExecutionID,
 			GroupId:     fromPgText(row.GroupID),
@@ -1581,6 +1597,7 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 			Name:        row.Name,
 			StartTime:   fromPgTimestamp(row.StartTime),
 			RunnerId:    fromPgText(row.RunnerID),
+			SilentMode:  silentMode,
 		}
 	}
 
@@ -1795,6 +1812,7 @@ func (r *PostgresRepository) Count(ctx context.Context, filter testworkflow.Filt
 		LabelConditions:    params.LabelConditions,
 		SelectorKeys:       params.SelectorKeys,
 		SelectorConditions: params.SelectorConditions,
+		SilentModeFilter:   params.SilentModeFilter,
 	})
 }
 
@@ -1874,6 +1892,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	params.Initialized = pgtype.Bool{}
 	if filter.InitializedDefined() {
 		params.Initialized = toPgBool(filter.Initialized())
+	}
+
+	if filter.SilentModeFilterDefined() {
+		params.SilentModeFilter = string(filter.SilentModeFilter())
 	}
 
 	// Health filters - convert [][2]float64 to JSONB array
@@ -2110,6 +2132,10 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 	params.Initialized = pgtype.Bool{}
 	if filter.InitializedDefined() {
 		params.Initialized = toPgBool(filter.Initialized())
+	}
+
+	if filter.SilentModeFilterDefined() {
+		params.SilentModeFilter = string(filter.SilentModeFilter())
 	}
 
 	if filter.Selector() != "" {
