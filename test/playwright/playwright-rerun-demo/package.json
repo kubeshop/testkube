@@ -1,0 +1,17 @@
+{
+  "name": "playwright-rerun-demo",
+  "version": "1.0.0",
+  "description": "Playwright demo with 50 tests that randomly pass (70%) or fail (30%)",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:all": "playwright test",
+    "test:failed": "playwright test --last-failed"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
