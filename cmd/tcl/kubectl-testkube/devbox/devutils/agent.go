@@ -20,33 +20,33 @@ import (
 )
 
 type Agent struct {
-	pod                  *PodObject
-	cloud                *CloudObject
-	agentImage           string
-	initProcessImage     string
-	toolkitImage         string
-	enableCronjobs       bool
-	enableTestTriggers   bool
-	enableK8sControllers bool
-	enableWebhooks       bool
+	pod                          *PodObject
+	cloud                        *CloudObject
+	agentImage                   string
+	initProcessImage             string
+	toolkitImage                 string
+	enableCronjobs               bool
+	enableTestTriggers           bool
+	enableK8sControllers         bool
+	enableWebhooks               bool
 	enableSourceOfTruthMigration bool
-	executionNamespace   string
-	env                  *client.Environment // Store environment for pod recreation
+	executionNamespace           string
+	env                          *client.Environment // Store environment for pod recreation
 }
 
 func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, enableSourceOfTruthMigration bool, executionNamespace string) *Agent {
 	return &Agent{
-		pod:                  pod,
-		cloud:                cloud,
-		agentImage:           agentImage,
-		initProcessImage:     initProcessImage,
-		toolkitImage:         toolkitImage,
-		enableCronjobs:       enableCronjobs,
-		enableTestTriggers:   enableTestTriggers,
-		enableK8sControllers: enableK8sControllers,
-		enableWebhooks:       enableWebhooks,
+		pod:                          pod,
+		cloud:                        cloud,
+		agentImage:                   agentImage,
+		initProcessImage:             initProcessImage,
+		toolkitImage:                 toolkitImage,
+		enableCronjobs:               enableCronjobs,
+		enableTestTriggers:           enableTestTriggers,
+		enableK8sControllers:         enableK8sControllers,
+		enableWebhooks:               enableWebhooks,
 		enableSourceOfTruthMigration: enableSourceOfTruthMigration,
-		executionNamespace:   executionNamespace,
+		executionNamespace:           executionNamespace,
 	}
 }
 
