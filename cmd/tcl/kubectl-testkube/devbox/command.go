@@ -45,24 +45,24 @@ const (
 
 func NewDevBoxCommand() *cobra.Command {
 	var (
-		oss                  bool
-		rawDevboxName        string
-		open                 bool
-		baseAgentImage       string
-		baseInitImage        string
-		baseToolkitImage     string
-		syncLocalResources   []string
-		runnersCount         uint16
-		gitopsEnabled        bool
-		disableDefaultAgent  bool
-		enableTestTriggers   bool
-		enableCronjobs       bool
-		enableK8sControllers bool
-		enableWebhooks       bool
+		oss                          bool
+		rawDevboxName                string
+		open                         bool
+		baseAgentImage               string
+		baseInitImage                string
+		baseToolkitImage             string
+		syncLocalResources           []string
+		runnersCount                 uint16
+		gitopsEnabled                bool
+		disableDefaultAgent          bool
+		enableTestTriggers           bool
+		enableCronjobs               bool
+		enableK8sControllers         bool
+		enableWebhooks               bool
 		enableSourceOfTruthMigration bool
-		forcedOs             string
-		forcedArchitecture   string
-		executionNamespace   string
+		forcedOs                     string
+		forcedArchitecture           string
+		executionNamespace           string
 	)
 
 	cmd := &cobra.Command{
