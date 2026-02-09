@@ -49,6 +49,6 @@ spec:
     - name: Apply TestWorkflow
       shell: |
         kubectl apply -f smoke.yaml -n testkube
-        kubectl get testworkflow kpostman-workflow-smoke-junit -n testkube && echo "found" || kubectl get all -n testkube
+        kubectl get testworkflow postman-workflow-smoke-junit -n testkube && echo "found" || kubectl get all -n testkube
     - name: Run TestWorkflow
       shell: testkube run tw postman-workflow-smoke-junit --watch && echo "executed correctly"
