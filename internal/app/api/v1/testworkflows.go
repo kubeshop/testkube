@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,11 +77,11 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 		}
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
+			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(ctx, name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflow(context.Background(), name)
+			err = s.TestWorkflowResults.DeleteByTestWorkflow(ctx, name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
@@ -144,11 +143,11 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				return t.Name
 			})
 
-			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names)
+			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(ctx, names)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflows(context.Background(), names)
+			err = s.TestWorkflowResults.DeleteByTestWorkflows(ctx, names)
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
@@ -221,7 +220,7 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 			}
 			err = s.SecretManager.InsertBatch(ctx, execNamespace, secrets, ref)
 			if err != nil {
-				_ = s.TestWorkflowsClient.Delete(context.Background(), environmentId, obj.Name)
+				_ = s.TestWorkflowsClient.Delete(ctx, environmentId, obj.Name)
 				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 			}
 		}
@@ -343,7 +342,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 			}
 			err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, ref)
 			if err != nil {
-				err = s.TestWorkflowsClient.Update(context.Background(), environmentId, *initial)
+				err = s.TestWorkflowsClient.Update(ctx, environmentId, *initial)
 				if err != nil {
 					s.Log.Errorf("failed to recover previous TestWorkflow state: %v", err)
 				}
