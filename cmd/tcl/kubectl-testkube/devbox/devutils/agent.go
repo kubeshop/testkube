@@ -29,11 +29,12 @@ type Agent struct {
 	enableTestTriggers   bool
 	enableK8sControllers bool
 	enableWebhooks       bool
+	enableSourceOfTruthMigration bool
 	executionNamespace   string
 	env                  *client.Environment // Store environment for pod recreation
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks bool, executionNamespace string) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, enableSourceOfTruthMigration bool, executionNamespace string) *Agent {
 	return &Agent{
 		pod:                  pod,
 		cloud:                cloud,
@@ -44,6 +45,7 @@ func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, 
 		enableTestTriggers:   enableTestTriggers,
 		enableK8sControllers: enableK8sControllers,
 		enableWebhooks:       enableWebhooks,
+		enableSourceOfTruthMigration: enableSourceOfTruthMigration,
 		executionNamespace:   executionNamespace,
 	}
 }
@@ -74,6 +76,9 @@ func (r *Agent) generatePodSpec(env *client.Environment) *corev1.Pod {
 	}
 	if r.enableK8sControllers {
 		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_K8S_CONTROLLERS", Value: "true"})
+	}
+	if r.enableSourceOfTruthMigration {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "WARNING_UNSAFE_FORCE_SUPERAGENT_MODE", Value: "false"})
 	}
 	if env != nil {
 		tlsInsecure := "false"

@@ -160,6 +160,11 @@ func (n *NamespaceObject) createRole() error {
 				APIGroups: []string{"tests.testkube.io"},
 				Resources: []string{"testtriggers", "testexecutions", "testsuiteexecutions"},
 			},
+			{
+				Verbs:     []string{"get", "watch", "list", "delete"},
+				APIGroups: []string{"executor.testkube.io"},
+				Resources: []string{"webhooks", "webhooktemplates"},
+			},
 		},
 	}, metav1.CreateOptions{})
 	if err != nil && !k8serrors.IsAlreadyExists(err) {

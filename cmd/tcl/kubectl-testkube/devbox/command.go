@@ -59,6 +59,7 @@ func NewDevBoxCommand() *cobra.Command {
 		enableCronjobs       bool
 		enableK8sControllers bool
 		enableWebhooks       bool
+		enableSourceOfTruthMigration bool
 		forcedOs             string
 		forcedArchitecture   string
 		executionNamespace   string
@@ -152,7 +153,7 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin, executionNamespace)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, executionNamespace)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, enableSourceOfTruthMigration, executionNamespace)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -887,6 +888,7 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVar(&forcedOs, "os", "", "force different OS for binary builds")
 	cmd.Flags().StringVar(&forcedArchitecture, "arch", "", "force different architecture for binary builds")
 	cmd.Flags().BoolVar(&enableK8sControllers, "enable-k8s-controllers", false, "should enable Kubernetes controllers")
+	cmd.Flags().BoolVar(&enableSourceOfTruthMigration, "enable-source-of-truth-migration", false, "enable source of truth migration (disables forced superagent mode)")
 
 	return cmd
 }
