@@ -243,6 +243,7 @@ func (l *WebhookListener) Match(event testkube.Event) bool {
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var statusCode int
 	var err error
+	var skippedBecomeEvent bool
 
 	log := l.Log.With(event.Log()...)
 
@@ -273,8 +274,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		if result.Error() != "" {
 			res = "error"
 		}
-		// Only increment metrics if webhook actually executed (statusCode != 0)
-		if statusCode != 0 {
+		// Only increment metrics if webhook actually executed
+		if !skippedBecomeEvent && statusCode != 0 {
 			l.metrics.IncWebhookEventCount(l.name, eventType, res)
 		}
 
@@ -285,8 +286,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 				"event_type", eventType,
 				"status_code", statusCode,
 				"error", result.Error())
-		} else if statusCode == 0 {
-			// Webhook was skipped (e.g., become event that didn't match criteria)
+		} else if skippedBecomeEvent {
+			// Webhook was skipped because become event didn't match criteria
 			log.Debugw("webhook execution skipped",
 				"webhook_name", l.name,
 				"event_type", eventType,
@@ -306,8 +307,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		if err != nil {
 			errorMessage = err.Error()
 		}
-		// Only collect telemetry if webhook actually executed (statusCode != 0)
-		if statusCode != 0 {
+		// Only collect telemetry if webhook actually executed
+		if !skippedBecomeEvent && statusCode != 0 {
 			if err = l.webhookResultsRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
 				log.Errorw("webhook collecting execution result error", "error", err)
 			}
@@ -319,6 +320,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		finished := (event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Result != nil &&
 			event.TestWorkflowExecution.Result.Status != nil && event.TestWorkflowExecution.Result.Status.Finished())
 		if !finished {
+			skippedBecomeEvent = true
 			return testkube.NewSuccessEventResult(event.Id, "test workflow execution is not in finished state")
 		}
 
@@ -327,6 +329,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)
 		}
 		if !became {
+			skippedBecomeEvent = true
 			return testkube.NewSuccessEventResult(event.Id, "webhook is set to become state only; state has not become")
 		}
 	}
