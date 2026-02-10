@@ -44,6 +44,16 @@ EXPOSE 8080 8088 8089 56268
 ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/testkube/agent-server"]
 
 ###################################
+## Live (Tilt live_update — needs shell for restart_process)
+###################################
+FROM busybox:1.36 AS live
+
+COPY --from=builder /app/build/_local/agent-server /testkube/agent-server
+
+EXPOSE 8080 8088 8089
+ENTRYPOINT ["/testkube/agent-server"]
+
+###################################
 ## Distribution
 ###################################
 FROM gcr.io/distroless/static AS dist

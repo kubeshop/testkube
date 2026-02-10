@@ -60,4 +60,3 @@ RUN cp -rf /bin /.tktw-bin
 COPY --from=builder /app/build/_local/workflow-init /init
 USER 1001
 ENTRYPOINT ["/init"]
-
