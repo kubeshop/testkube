@@ -155,6 +155,26 @@ spec:
               selector:
                 description: Labels to filter for tests and test suites
                 type: string
+              target:
+                description: target defines agent matching rules for webhook execution
+                properties:
+                  match:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    type: object
+                  not:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    type: object
+                  replicate:
+                    items:
+                      type: string
+                    type: array
+                type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
                   supported)

@@ -82,3 +82,30 @@ spec:
     {{- end }}
   {{- end }}
   {{- end }}
+  {{- if .Target }}
+  target:
+    {{- if .Target.Match }}
+    match:
+      {{- range $key, $value := .Target.Match }}
+      {{ $key }}:
+        {{- range $value }}
+        - {{ . }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .Target.Not }}
+    not:
+      {{- range $key, $value := .Target.Not }}
+      {{ $key }}:
+        {{- range $value }}
+        - {{ . }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .Target.Replicate }}
+    replicate:
+      {{- range .Target.Replicate }}
+      - {{ . }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
