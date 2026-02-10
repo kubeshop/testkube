@@ -275,7 +275,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			res = "error"
 		}
 		// Only increment metrics if webhook actually executed
-		if !skippedBecomeEvent && statusCode != 0 {
+		if !skippedBecomeEvent {
 			l.metrics.IncWebhookEventCount(l.name, eventType, res)
 		}
 
@@ -308,7 +308,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			errorMessage = err.Error()
 		}
 		// Only collect telemetry if webhook actually executed
-		if !skippedBecomeEvent && statusCode != 0 {
+		if !skippedBecomeEvent {
 			if err = l.webhookResultsRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
 				log.Errorw("webhook collecting execution result error", "error", err)
 			}
