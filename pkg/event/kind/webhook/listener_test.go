@@ -192,7 +192,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		mockTestWorkflowRepo.EXPECT().
 			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
 			Return(testkube.PASSED_TestWorkflowStatus, nil).
-			AnyTimes()
+			Times(1)
 
 		// Mock webhook repository - should NOT be called since webhook won't execute
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
@@ -241,13 +241,13 @@ func TestWebhookListener_Notify(t *testing.T) {
 		mockTestWorkflowRepo.EXPECT().
 			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
 			Return(testkube.FAILED_TestWorkflowStatus, nil).
-			AnyTimes()
+			Times(1)
 
 		// Mock webhook repository - expecting HTTP 200 since webhook should execute
 		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhookRepository.EXPECT().
 			CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", "", http.StatusOK).
-			AnyTimes()
+			Times(1)
 
 		// Create webhook endpoint
 		callCount := 0
