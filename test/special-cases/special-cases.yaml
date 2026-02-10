@@ -20,7 +20,7 @@ spec:
       logs: always
       count: 1
       shell: |
-        if [ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && \
+        if [ "${EXAMPLE_GLOBAL_ENV}" = "GLOBAL_ENV_VALUE" ] && \
           [ "${EXAMPLE_NON_GLOBAL_ENV+x}" = "" ]; then
           echo ENV values: OK
           exit 0
@@ -34,8 +34,8 @@ spec:
   - name: Step
     run:
       shell: |
-        if [ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && \
-          [ "$EXAMPLE_NON_GLOBAL_ENV" = "NON_GLOBAL_ENV_VALUE" ]; then
+        if [ "${EXAMPLE_GLOBAL_ENV}" = "GLOBAL_ENV_VALUE" ] && \
+          [ "${EXAMPLE_NON_GLOBAL_ENV}" = "NON_GLOBAL_ENV_VALUE" ]; then
           echo ENV values: OK
           exit 0
         else
