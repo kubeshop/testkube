@@ -38,6 +38,8 @@ func NewInstallAgentCommand() *cobra.Command {
 
 		runner    bool
 		listener  bool
+		gitops    bool
+		webhooks  bool
 		agentType string
 	)
 	cmd := &cobra.Command{
@@ -47,10 +49,11 @@ func NewInstallAgentCommand() *cobra.Command {
 			// Check for deprecated --type flag usage
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
-				ui.Info("Please use --runner and/or --listener flags instead:")
+				ui.Info("Please use capability flags instead:")
 				ui.Info("  --runner    : Enable runner capability")
 				ui.Info("  --listener  : Enable listener capability")
-				ui.Info("  (both flags): Enable both capabilities")
+				ui.Info("  --gitops    : Enable GitOps capability")
+				ui.Info("  --webhooks  : Enable webhooks capability")
 				ui.NL()
 				return
 			}
@@ -82,10 +85,12 @@ func NewInstallAgentCommand() *cobra.Command {
 	// Components selection
 	cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
 	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
+	cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
+	cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use --runner and/or --listener instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner and/or --listener flags instead")
+	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
 
 	return cmd
 }
@@ -125,6 +130,8 @@ func NewInstallRunnerCommand() *cobra.Command {
 				ui.Info("For more flexibility, use 'kubectl testkube install agent' with:")
 				ui.Info("  --runner    : Enable runner capability")
 				ui.Info("  --listener  : Enable listener capability")
+				ui.Info("  --gitops    : Enable GitOps capability")
+				ui.Info("  --webhooks  : Enable webhooks capability")
 				ui.NL()
 				return
 			}
@@ -232,9 +239,13 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 	// Component flags
 	runnerChanged := cmd.Flags().Changed("runner")
 	listenerChanged := cmd.Flags().Changed("listener")
-	anyChanged := runnerChanged || listenerChanged
+	gitopsChanged := cmd.Flags().Changed("gitops")
+	webhooksChanged := cmd.Flags().Changed("webhooks")
+	anyChanged := runnerChanged || listenerChanged || gitopsChanged || webhooksChanged
 	enableRunner, _ := cmd.Flags().GetBool("runner")
 	enableListener, _ := cmd.Flags().GetBool("listener")
+	enableGitops, _ := cmd.Flags().GetBool("gitops")
+	enableWebhooks, _ := cmd.Flags().GetBool("webhooks")
 	// we default to both capabilities if none flags are set
 	if !anyChanged {
 		enableRunner = true
@@ -276,7 +287,19 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 	if agent == nil && autoCreate {
 		labels, _ := cmd.Flags().GetStringSlice("label")
 		environmentIds, _ := cmd.Flags().GetStringSlice("env")
-		agent = UiCreateAgent(cmd, name, labels, environmentIds, isGlobalRunner, runnerGroup, floating, enableRunner, enableListener)
+		agent = UiCreateAgent(
+			cmd,
+			name,
+			labels,
+			environmentIds,
+			isGlobalRunner,
+			runnerGroup,
+			floating,
+			enableRunner,
+			enableListener,
+			enableGitops,
+			enableWebhooks,
+		)
 	}
 
 	// Load agents from the Control Plane and select one
@@ -377,6 +400,8 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 	helmOpts := CreateRunnerHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
 		"runner.enabled":   enableRunner,
 		"listener.enabled": enableListener,
+		"gitops.enabled":   enableGitops,
+		"webhooks.enabled": enableWebhooks,
 	})
 	// When listener capability is enabled, pass the environment ID to the runner
 	if enableListener && controlPlane.EnvironmentID != "" {

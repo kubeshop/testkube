@@ -74,6 +74,16 @@ listener:
   ## Additional namespaces to watch
   additionalNamespaces: []
 
+## Webhooks capability configuration
+webhooks:
+  ## Enable webhooks functionality
+  enabled: false
+
+## GitOps capability configuration
+gitops:
+  ## Enable Kubernetes to Control Plane sync
+  enabled: false
+
 execution:
   default:
     ## Default namespace to run executions
