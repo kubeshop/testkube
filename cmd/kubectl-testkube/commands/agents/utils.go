@@ -519,7 +519,19 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 	}
 }
 
-func UiCreateAgent(cmd *cobra.Command, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string, floating bool, enableRunner bool, enableListener bool) *cloudclient.Agent {
+func UiCreateAgent(
+	cmd *cobra.Command,
+	name string,
+	labelPairs []string,
+	environmentIds []string,
+	isGlobalRunner bool,
+	runnerGroup string,
+	floating bool,
+	enableRunner bool,
+	enableListener bool,
+	enableGitops bool,
+	enableWebhooks bool,
+) *cloudclient.Agent {
 	if name == "" {
 		name = ui.TextInput("agent name")
 		if name == "" {
@@ -546,6 +558,12 @@ func UiCreateAgent(cmd *cobra.Command, name string, labelPairs []string, environ
 	}
 	if enableListener {
 		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityListener)
+	}
+	if enableGitops {
+		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityGitops)
+	}
+	if enableWebhooks {
+		input.Capabilities = append(input.Capabilities, cloudclient.AgentCapabilityWebhooks)
 	}
 
 	if runnerGroup != "" {
