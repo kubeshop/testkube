@@ -14,6 +14,7 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 const executionID = "id-1"
@@ -180,10 +181,119 @@ func TestWebhookListener_Notify(t *testing.T) {
 		// then
 		assert.False(t, match)
 	})
+
+	t.Run("become event - state did not change - webhook should not execute", func(t *testing.T) {
+		// given
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		// Mock repository to return previous status as PASSED
+		mockTestWorkflowRepo := testworkflow.NewMockRepository(mockCtrl)
+		mockTestWorkflowRepo.EXPECT().
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			Return(testkube.PASSED_TestWorkflowStatus, nil).
+			AnyTimes()
+
+		// Mock webhook repository - should NOT be called since webhook won't execute
+		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
+		// No expectation set - if it's called, the test will fail
+
+		// Create a webhook that will never be called
+		callCount := 0
+		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusOK)
+		})
+		svr := httptest.NewServer(testHandler)
+		defer svr.Close()
+
+		// Setup listener with become event
+		becomeUpEvent := testkube.BECOME_TESTWORKFLOW_UP_EventType
+		l := NewWebhookListener("l1", svr.URL, "", []testkube.EventType{becomeUpEvent}, "", "", nil, false, nil, nil,
+			listenerWithMetrics(v1.NewMetrics()),
+			listenerWithWebhookResultsRepository(mockWebhookRepository),
+			listenerWithTestWorkflowResultsRepository(mockTestWorkflowRepo))
+
+		// Current execution is PASSED, previous was also PASSED
+		currentStatus := testkube.PASSED_TestWorkflowStatus
+		execution := exampleFinishedExecution(currentStatus)
+
+		// when - notify with become-testworkflow-up event
+		result := l.Notify(testkube.Event{
+			Type_:                 &becomeUpEvent,
+			TestWorkflowExecution: execution,
+		})
+
+		// then
+		// Webhook should return success but NOT execute the HTTP call
+		assert.Equal(t, "", result.Error(), "Expected no error")
+		assert.Equal(t, "webhook is set to become state only; state has not become", result.Result, "Expected skip message")
+		assert.Equal(t, 0, callCount, "Webhook HTTP handler should not have been called")
+	})
+
+	t.Run("become event - state changed from failed to passed - webhook should execute", func(t *testing.T) {
+		// given
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		// Mock repository to return previous status as FAILED
+		mockTestWorkflowRepo := testworkflow.NewMockRepository(mockCtrl)
+		mockTestWorkflowRepo.EXPECT().
+			GetPreviousFinishedState(gomock.Any(), "test-workflow", gomock.Any()).
+			Return(testkube.FAILED_TestWorkflowStatus, nil).
+			AnyTimes()
+
+		// Mock webhook repository - expecting HTTP 200 since webhook should execute
+		mockWebhookRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
+		mockWebhookRepository.EXPECT().
+			CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", "", http.StatusOK).
+			AnyTimes()
+
+		// Create webhook endpoint
+		callCount := 0
+		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusOK)
+		})
+		svr := httptest.NewServer(testHandler)
+		defer svr.Close()
+
+		// Setup listener with become event
+		becomeUpEvent := testkube.BECOME_TESTWORKFLOW_UP_EventType
+		l := NewWebhookListener("l1", svr.URL, "", []testkube.EventType{becomeUpEvent}, "", "", nil, false, nil, nil,
+			listenerWithMetrics(v1.NewMetrics()),
+			listenerWithWebhookResultsRepository(mockWebhookRepository),
+			listenerWithTestWorkflowResultsRepository(mockTestWorkflowRepo))
+
+		// Current execution is PASSED, previous was FAILED
+		currentStatus := testkube.PASSED_TestWorkflowStatus
+		execution := exampleFinishedExecution(currentStatus)
+
+		// when - notify with become-testworkflow-up event
+		result := l.Notify(testkube.Event{
+			Type_:                 &becomeUpEvent,
+			TestWorkflowExecution: execution,
+		})
+
+		// then
+		// Webhook SHOULD execute the HTTP call
+		assert.Equal(t, "", result.Error(), "Expected no error")
+		assert.Equal(t, 1, callCount, "Webhook HTTP handler should have been called exactly once")
+	})
 }
 
 func exampleExecution() *testkube.TestWorkflowExecution {
 	execution := testkube.NewQueuedExecution()
 	execution.Id = executionID
+	return execution
+}
+
+func exampleFinishedExecution(status testkube.TestWorkflowStatus) *testkube.TestWorkflowExecution {
+	execution := testkube.NewQueuedExecution()
+	execution.Id = executionID
+	execution.Workflow = &testkube.TestWorkflow{Name: "test-workflow"}
+	execution.Result = &testkube.TestWorkflowResult{
+		Status: &status,
+	}
 	return execution
 }
