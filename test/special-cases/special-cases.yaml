@@ -682,7 +682,7 @@ spec:
   steps:
   - name: Step
     shell: |
-      STEP_VALIDATION={{ shellquote(config.step_validation) }}
+      STEP_VALIDATION="{{ shellquote(config.step_validation) }}"
       echo "$STEP_VALIDATION"
       [ "$STEP_VALIDATION" = "override" ] && exit 0 || { echo "validation failed"; exit 1; }
   - name: Parallel step
