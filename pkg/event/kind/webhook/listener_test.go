@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -294,8 +293,7 @@ func exampleFinishedExecution(status testkube.TestWorkflowStatus) *testkube.Test
 	execution.Id = executionID
 	execution.Workflow = &testkube.TestWorkflow{Name: "test-workflow"}
 	execution.Result = &testkube.TestWorkflowResult{
-		Status:     &status,
-		FinishedAt: time.Now(),
+		Status: &status,
 	}
 	return execution
 }
