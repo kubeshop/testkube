@@ -12,20 +12,36 @@ spec:
     - name: EXAMPLE_GLOBAL_ENV
       value: "GLOBAL_ENV_VALUE"
       global: true
+    - name: EXAMPLE_NON_GLOBAL_ENV
+      value: "NON_GLOBAL_ENV_VALUE"
   services:
-    slave:
-      use:
-      - name: distribute/evenly
+    service:
       image: alpine:3.22.0
       logs: always
-      count: 2
-      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+      count: 1
+      shell: |
+        if [ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && \
+          [ "${EXAMPLE_NON_GLOBAL_ENV+x}" = "" ]; then
+          echo ENV values: OK
+          exit 0
+        else
+          echo ENV validation failed
+          exit 1
+        fi
   job:
     activeDeadlineSeconds: 30
   steps:
   - name: Step
     run:
-      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+      shell: |
+        if [ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && \
+          [ "$EXAMPLE_NON_GLOBAL_ENV" = "NON_GLOBAL_ENV_VALUE" ]; then
+          echo ENV values: OK
+          exit 0
+        else
+          echo ENVs validation failed
+          exit 1
+        fi
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
@@ -640,3 +656,57 @@ spec:
   steps:
   - name: Step
     shell: echo "Step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-config-override-target # don't target it specifically - just a dependency for special-cases-config-override
+  labels:
+    core-tests: special-cases
+description: "Shouldn't be triggered directly (will fail then) - requires specific config overrides to pass"
+spec:
+  config:
+    service_count: {type: integer, default: -1}
+    workers: {type: integer, default: -1}
+    step_validation: {type: string, default: "default_value"}
+  container:
+    image: alpine:3.22.0
+  services:
+    service:
+      image: alpine:3.22.0
+      logs: always
+      count: 'config.service_count'
+      shell: echo "Service" && exit 0
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Step
+    shell: |
+      STEP_VALIDATION={{ shellquote(config.step_validation) }}
+      echo "$STEP_VALIDATION"
+      [ "$STEP_VALIDATION" = "override" ] && exit 0 || { echo "validation failed"; exit 1; }
+  - name: Parallel step
+    parallel:
+      count: 'config.workers'
+      run:
+        image: alpine:3.22.0
+        shell: echo "Parallel step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-config-override
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Trigger workflow requiring config override to pass
+    execute:
+      workflows:
+      - name: special-cases-config-override-target
+        config:
+          service_count: 1
+          workers: 1
+          step_validation: "override"
