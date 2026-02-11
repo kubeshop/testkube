@@ -411,6 +411,8 @@ metadata:
   labels:
     core-tests: expected-fail
 spec:
+  use:
+    - name: special-cases-template-default-resources
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -430,10 +432,12 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-service-exit-code # https://linear.app/kubeshop/issue/TKC-3897/
+  name: expected-fail-service-exit-code
   labels:
     core-tests: expected-fail
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   services:
@@ -459,6 +463,8 @@ metadata:
     core-tests: expected-fail
 description: "step retry (until step failed)"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -481,6 +487,8 @@ metadata:
     core-tests: expected-fail
 description: "negative step passed - inverting step result to failed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -529,6 +537,8 @@ metadata:
     core-tests: expected-fail
 description: "Required template config missing"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   steps:
     - name: Missing required config
       template:
@@ -542,6 +552,8 @@ metadata:
     core-tests: expected-fail
 description: "Not defined template config params passed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   steps:
     - name: Missing required config
       template:
@@ -558,6 +570,8 @@ metadata:
     core-tests: expected-fail
 description: "Service with failing readiness probe"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   services:
     broken-service:
       image: alpine:3.22.0
@@ -580,6 +594,8 @@ metadata:
     core-tests: expected-fail
 description: "conditional step failed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
