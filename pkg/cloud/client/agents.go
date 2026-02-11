@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	nethttp "net/http"
+	"net/url"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -119,7 +120,7 @@ type RegenerateSecretKeyResponse struct {
 func (c AgentsClient) RegenerateSecretKey(idOrName, gracePeriod string) (RegenerateSecretKeyResponse, error) {
 	path := c.BaseUrl + c.Path + "/" + idOrName + "/secret-key"
 	if gracePeriod != "" {
-		path += "?gracePeriod=" + gracePeriod
+		path += "?gracePeriod=" + url.QueryEscape(gracePeriod)
 	}
 	req, err := nethttp.NewRequest("DELETE", path, nil)
 	if err != nil {
