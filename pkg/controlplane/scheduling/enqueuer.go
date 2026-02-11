@@ -394,21 +394,6 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExecution) {
 	for _, execution := range executions {
 		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-
-		switch {
-		case execution.Result.IsPassed():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, ""))
-		case execution.Result.IsAborted():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, ""))
-		case execution.Result.IsCanceled():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, ""))
-		default:
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, ""))
-		}
-
-		if execution.Result.IsNotPassed() {
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, ""))
-		}
 	}
 }
 
