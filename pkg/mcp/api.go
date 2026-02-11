@@ -654,15 +654,36 @@ func (c *APIClient) GetWorkflowMetrics(ctx context.Context, workflowName string)
 }
 
 func (c *APIClient) GetWorkflowExecutionMetrics(ctx context.Context, workflowName, executionID string) (string, error) {
-	return c.makeRequest(ctx, APIRequest{
+	// Get the execution info which contains pre-computed resourceAggregations.
+	// The raw /metrics endpoint returns time-series data (AggregatedMetrics) which has a
+	// different shape than what the MCP formatter expects (resourceAggregations with
+	// global min/max/avg). The resourceAggregations are computed by the worker
+	// post-execution and stored on the execution object.
+	body, err := c.makeRequest(ctx, APIRequest{
 		Method: "GET",
-		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}/metrics",
+		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"workflowName": workflowName,
 			"executionId":  executionID,
 		},
 	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get execution info: %w", err)
+	}
+
+	// Extract the resourceAggregations field from the execution response.
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(body), &raw); err != nil {
+		return "", fmt.Errorf("failed to parse execution response: %w", err)
+	}
+
+	raData, ok := raw["resourceAggregations"]
+	if !ok || string(raData) == "null" {
+		return "{}", nil
+	}
+
+	return string(raData), nil
 }
 
 func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string) (string, error) {
