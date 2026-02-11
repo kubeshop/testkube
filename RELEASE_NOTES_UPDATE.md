@@ -107,8 +107,11 @@ cd testkube
 # Set your GitHub token
 export GITHUB_TOKEN=your_github_personal_access_token
 
-# Run the update script
+# Run the update script (with default tag 2.6.1)
 ./update-release-notes.sh
+
+# Or specify tag and notes file explicitly
+./update-release-notes.sh 2.6.1 docs/release-notes/2.6.1.md
 
 # The script will show success/failure status
 ```
@@ -117,6 +120,8 @@ export GITHUB_TOKEN=your_github_personal_access_token
 - Simple shell script
 - Uses curl and jq (commonly available)
 - Good for Unix-like systems
+- Dynamically fetches release ID from tag
+- Can be reused for other releases
 
 ## Verification
 

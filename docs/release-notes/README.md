@@ -41,7 +41,11 @@ python3 update_release.py --tag 2.6.1 --notes-file docs/release-notes/2.6.1.md
 
 ```bash
 export GITHUB_TOKEN=your_github_token
+# Run with defaults (tag 2.6.1)
 ./update-release-notes.sh
+
+# Or specify tag and notes file
+./update-release-notes.sh 2.6.1 docs/release-notes/2.6.1.md
 ```
 
 ### Method 4: GitHub CLI
