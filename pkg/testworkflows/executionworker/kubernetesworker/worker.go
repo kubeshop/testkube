@@ -171,7 +171,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
-	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
@@ -246,7 +246,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
-	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
@@ -675,7 +675,7 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options execution
 			cond.L.Lock()
 			defer cond.L.Unlock()
 
-			client, err := control.NewClient(context.Background(), address, initconstants.ControlServerPort)
+			client, err := control.NewClient(ctx, address, initconstants.ControlServerPort)
 			ready()
 			defer func() {
 				if client != nil {

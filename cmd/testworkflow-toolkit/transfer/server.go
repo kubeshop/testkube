@@ -135,7 +135,7 @@ func (t *server) handler() http.Handler {
 func (t *server) Listen() (func(), error) {
 	addr := fmt.Sprintf(":%d", t.port)
 	srv := http.Server{Addr: addr, Handler: t.handler()}
-	listener, err := net.Listen("tcp", addr)
+	listener, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
