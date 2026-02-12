@@ -702,7 +702,7 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 		require.NoError(t, err)
 
 		series := output.Steps[0].Series[0]
-		assert.Equal(t, 200, series.SampleCount)                              // original count preserved
+		assert.Equal(t, 200, series.SampleCount)                               // original count preserved
 		assert.LessOrEqual(t, len(series.Samples), defaultMaxSamplesPerSeries) // downsampled to default
 		assert.Equal(t, values[0], series.Samples[0])                          // first point kept
 		assert.Equal(t, values[199], series.Samples[len(series.Samples)-1])    // last point kept
@@ -738,9 +738,9 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 		require.NoError(t, err)
 
 		series := output.Steps[0].Series[0]
-		assert.Equal(t, 100, series.SampleCount)    // original count preserved
-		assert.Equal(t, 10, len(series.Samples))     // downsampled to requested 10
-		assert.Equal(t, values[0], series.Samples[0]) // first point kept
+		assert.Equal(t, 100, series.SampleCount)       // original count preserved
+		assert.Equal(t, 10, len(series.Samples))       // downsampled to requested 10
+		assert.Equal(t, values[0], series.Samples[0])  // first point kept
 		assert.Equal(t, values[99], series.Samples[9]) // last point kept
 
 		// Request 200 samples (more than available) — should return all

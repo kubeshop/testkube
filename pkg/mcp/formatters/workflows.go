@@ -297,10 +297,10 @@ const defaultMaxSamplesPerSeries = 50
 
 // formattedExecutionMetrics is a compact representation of execution resource metrics time-series.
 type formattedExecutionMetrics struct {
-	Workflow  string                `json:"workflow,omitempty"`
-	Execution string               `json:"execution,omitempty"`
-	Result    *formattedTimeRange   `json:"result,omitempty"`
-	Steps     []formattedStepData   `json:"steps,omitempty"`
+	Workflow  string              `json:"workflow,omitempty"`
+	Execution string              `json:"execution,omitempty"`
+	Result    *formattedTimeRange `json:"result,omitempty"`
+	Steps     []formattedStepData `json:"steps,omitempty"`
 }
 
 // formattedTimeRange contains execution timing info.
@@ -317,9 +317,9 @@ type formattedStepData struct {
 
 // formattedMetricSeries is a single metric time-series with summary statistics.
 type formattedMetricSeries struct {
-	Metric      string      `json:"metric"` // e.g. "cpu.millicores", "memory.used"
-	SampleCount int         `json:"sampleCount"`
-	Summary     metricStats `json:"summary"`
+	Metric      string       `json:"metric"` // e.g. "cpu.millicores", "memory.used"
+	SampleCount int          `json:"sampleCount"`
+	Summary     metricStats  `json:"summary"`
 	Samples     [][2]float64 `json:"samples"` // [timestamp_ms, value]
 }
 
@@ -349,8 +349,8 @@ type linkedMetricInput struct {
 
 // dataPointInput represents a single metric data point series.
 type dataPointInput struct {
-	Measurement string      `json:"measurement"`
-	Field       string      `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
+	Measurement string       `json:"measurement"`
+	Field       string       `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
 	Values      [][2]float64 `json:"values"` // [timestamp_ms, value]
 }
 
