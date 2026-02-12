@@ -9,7 +9,6 @@ linters:
     - unused
     - ineffassign
     - noctx
-    - contextcheck
   exclusions:
     generated: lax
     paths:
