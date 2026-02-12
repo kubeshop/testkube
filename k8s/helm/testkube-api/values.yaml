@@ -763,6 +763,15 @@ testConnection:
   tolerations: []
   nodeSelector: {}
 
+## Testkube API Startup probe
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 3
+  periodSeconds: 3
+  timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 200
+
 ## Testkube API Liveness probe
 livenessProbe:
   enabled: true

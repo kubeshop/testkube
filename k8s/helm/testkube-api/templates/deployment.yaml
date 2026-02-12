@@ -257,15 +257,18 @@ spec:
             - name: grpc
               containerPort: 8089
               protocol: TCP
+          {{- if .Values.startupProbe.enabled }}
           startupProbe:
-            initialDelaySeconds: 3
-            periodSeconds: 3
-            timeoutSeconds: 3
-            failureThreshold: 20
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.startupProbe.successThreshold }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             httpGet:
               path: /health
               port: {{ .Values.service.port }}
               scheme: HTTP
+          {{- end }}
           {{- if .Values.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
           {{- else if .Values.readinessProbe.enabled }}
