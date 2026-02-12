@@ -47,6 +47,12 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Workflow template tools
+	mcpServer.AddTool(tools.ListWorkflowTemplates(client))
+	mcpServer.AddTool(tools.GetWorkflowTemplateDefinition(client))
+	mcpServer.AddTool(tools.CreateWorkflowTemplate(client))
+	mcpServer.AddTool(tools.UpdateWorkflowTemplate(client))
+
 	// Query tools (JSONPath-based bulk queries)
 	// Only register if control plane supports bulk endpoints for backwards compatibility
 	ctx := context.Background()

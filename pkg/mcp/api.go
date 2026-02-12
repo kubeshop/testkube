@@ -772,6 +772,63 @@ func (c *APIClient) GetWorkflowResourceHistory(ctx context.Context, params tools
 	})
 }
 
+// WorkflowTemplate methods
+
+func (c *APIClient) ListWorkflowTemplates(ctx context.Context, selector string) (string, error) {
+	queryParams := make(map[string]string)
+	if selector != "" {
+		queryParams["selector"] = selector
+	}
+
+	return c.makeRequest(ctx, APIRequest{
+		Method:      "GET",
+		Path:        "/test-workflow-templates",
+		Scope:       ApiScopeOrgEnv,
+		QueryParams: queryParams,
+	})
+}
+
+func (c *APIClient) GetWorkflowTemplateDefinition(ctx context.Context, templateName string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/test-workflow-templates/{templateName}",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"templateName": templateName,
+		},
+		Headers: map[string]string{
+			"Accept": "text/yaml",
+		},
+	})
+}
+
+func (c *APIClient) CreateWorkflowTemplate(ctx context.Context, templateDefinition string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "POST",
+		Path:   "/test-workflow-templates",
+		Scope:  ApiScopeOrgEnv,
+		Body:   templateDefinition,
+		Headers: map[string]string{
+			"Content-Type": "text/yaml",
+		},
+	})
+}
+
+func (c *APIClient) UpdateWorkflowTemplate(ctx context.Context, templateName, templateDefinition string) (string, error) {
+	return c.makeRequest(ctx, APIRequest{
+		Method: "PUT",
+		Path:   "/test-workflow-templates/{templateName}",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"templateName": templateName,
+		},
+		Body: templateDefinition,
+		Headers: map[string]string{
+			"Content-Type": "text/yaml",
+		},
+	})
+}
+
 // GetWorkflowDefinitions fetches multiple workflow definitions in bulk from the control plane.
 // It calls the bulk endpoint that returns all workflow YAML definitions in a single request.
 func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.ListWorkflowsParams) (map[string]string, error) {
