@@ -975,6 +975,21 @@ testkube-api:
     # -- Key for SSL Cert Secret k8s Secret
     # sslCertSecretSecretKey: sslCertSecretSecretKey
 
+  # -- Testkube API Startup probe parameters
+  startupProbe:
+    # -- Whether startup probe is enabled
+    enabled: true
+    # -- Initial delay for startup probe
+    initialDelaySeconds: 3
+    # -- Period between probe checks
+    periodSeconds: 3
+    # -- Probe timeout for startup probe
+    timeoutSeconds: 10
+    # -- Success threshold for startup probe
+    successThreshold: 1
+    # -- Failure threshold for startup probe
+    failureThreshold: 200
+
   # -- Testkube API Liveness probe parameters
   livenessProbe:
     # -- Initial delay for liveness probe
