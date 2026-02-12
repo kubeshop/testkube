@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sync/atomic"
 	"testing"
@@ -170,6 +171,48 @@ func TestWatchContainerLogsReopensOnEOF(t *testing.T) {
 			}
 		case <-deadline.C:
 			t.Fatal("timed out waiting for log stream to close")
+		}
+	}
+}
+
+func TestWatchContainerLogsProxyErrorPropagates(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			return nil, fmt.Errorf("proxy error from 127.0.0.1:9345, code 502: Bad Gateway")
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		5,
+		func() bool { return false },
+		func(*instructions.Instruction) bool { return false },
+		500*time.Millisecond,
+	)
+
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+
+	var gotErr bool
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				assert.True(t, gotErr, "expected proxy error before channel close")
+				return
+			}
+			if msg.Error != nil {
+				gotErr = true
+				assert.Contains(t, msg.Error.Error(), "proxy error")
+			}
+		case <-deadline.C:
+			t.Fatal("timed out waiting for proxy error to propagate")
 		}
 	}
 }
