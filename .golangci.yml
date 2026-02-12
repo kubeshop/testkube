@@ -8,6 +8,7 @@ linters:
     - staticcheck
     - unused
     - ineffassign
+    - contextcheck
   exclusions:
     generated: lax
     paths:
