@@ -41,7 +41,7 @@ func TestGetTLSOptions(t *testing.T) {
 		// Create a temporary CA certificate file for testing
 		tmpDir := t.TempDir()
 		caFile := filepath.Join(tmpDir, "ca.pem")
-		
+
 		// Generate a simple PEM certificate for testing
 		certPEM := []byte(`-----BEGIN CERTIFICATE-----
 MIIBhTCCASugAwIBAgIQIRi6zePL6mKjOipn+dNuaTAKBggqhkjOPQQDAjASMRAw
@@ -54,7 +54,7 @@ NDUzgg4xMjcuMC4wLjE6NTQ1MzAKBggqhkjOPQQDAgNIADBFAiEA2zpJEPQyz6/l
 Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 6MF9+Yw1Yy0t
 -----END CERTIFICATE-----`)
-		
+
 		err := os.WriteFile(caFile, certPEM, 0644)
 		require.NoError(t, err)
 
@@ -75,7 +75,7 @@ Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 		tmpDir := t.TempDir()
 		certFile := filepath.Join(tmpDir, "client.crt")
 		keyFile := filepath.Join(tmpDir, "client.key")
-		
+
 		// Generate a simple self-signed certificate and key for testing
 		certPEM := []byte(`-----BEGIN CERTIFICATE-----
 MIIBhTCCASugAwIBAgIQIRi6zePL6mKjOipn+dNuaTAKBggqhkjOPQQDAjASMRAw
@@ -88,13 +88,13 @@ NDUzgg4xMjcuMC4wLjE6NTQ1MzAKBggqhkjOPQQDAgNIADBFAiEA2zpJEPQyz6/l
 Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 6MF9+Yw1Yy0t
 -----END CERTIFICATE-----`)
-		
+
 		keyPEM := []byte(`-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIIrYSSNQFaA2Hwf1duRSxKtLYX5CB04fSeQ6tF1aY/PuoAoGCCqGSM49
 AwEHoUQDQgAEPR3tU2Fta9ktY+6P9G0cWO+0kETA6SFs38GecTyudlHz6xvCdz8q
 EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 -----END EC PRIVATE KEY-----`)
-		
+
 		err := os.WriteFile(certFile, certPEM, 0644)
 		require.NoError(t, err)
 		err = os.WriteFile(keyFile, keyPEM, 0600)
@@ -118,7 +118,7 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		certFile := filepath.Join(tmpDir, "client.crt")
 		keyFile := filepath.Join(tmpDir, "client.key")
 		caFile := filepath.Join(tmpDir, "ca.pem")
-		
+
 		// Generate certificates
 		certPEM := []byte(`-----BEGIN CERTIFICATE-----
 MIIBhTCCASugAwIBAgIQIRi6zePL6mKjOipn+dNuaTAKBggqhkjOPQQDAjASMRAw
@@ -131,13 +131,13 @@ NDUzgg4xMjcuMC4wLjE6NTQ1MzAKBggqhkjOPQQDAgNIADBFAiEA2zpJEPQyz6/l
 Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 6MF9+Yw1Yy0t
 -----END CERTIFICATE-----`)
-		
+
 		keyPEM := []byte(`-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIIrYSSNQFaA2Hwf1duRSxKtLYX5CB04fSeQ6tF1aY/PuoAoGCCqGSM49
 AwEHoUQDQgAEPR3tU2Fta9ktY+6P9G0cWO+0kETA6SFs38GecTyudlHz6xvCdz8q
 EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 -----END EC PRIVATE KEY-----`)
-		
+
 		err := os.WriteFile(certFile, certPEM, 0644)
 		require.NoError(t, err)
 		err = os.WriteFile(keyFile, keyPEM, 0600)
@@ -204,7 +204,7 @@ func TestRootCAsOption(t *testing.T) {
 		// Create a temporary CA certificate file for testing
 		tmpDir := t.TempDir()
 		caFile := filepath.Join(tmpDir, "ca.pem")
-		
+
 		certPEM := []byte(`-----BEGIN CERTIFICATE-----
 MIIBhTCCASugAwIBAgIQIRi6zePL6mKjOipn+dNuaTAKBggqhkjOPQQDAjASMRAw
 DgYDVQQKEwdBY21lIENvMB4XDTE3MTAyMDE5NDMwNloXDTE4MTAyMDE5NDMwNlow
@@ -216,7 +216,7 @@ NDUzgg4xMjcuMC4wLjE6NTQ1MzAKBggqhkjOPQQDAgNIADBFAiEA2zpJEPQyz6/l
 Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 6MF9+Yw1Yy0t
 -----END CERTIFICATE-----`)
-		
+
 		err := os.WriteFile(caFile, certPEM, 0644)
 		require.NoError(t, err)
 
@@ -224,7 +224,7 @@ Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 		connecter := &Connecter{}
 		err = opt(connecter)
 		require.NoError(t, err)
-		
+
 		assert.True(t, connecter.Ssl)
 		assert.NotNil(t, connecter.TlsConfig)
 		assert.NotNil(t, connecter.TlsConfig.RootCAs)
@@ -238,7 +238,7 @@ func TestInsecureOption(t *testing.T) {
 		connecter := &Connecter{}
 		err := opt(connecter)
 		require.NoError(t, err)
-		
+
 		assert.True(t, connecter.Ssl)
 		assert.NotNil(t, connecter.TlsConfig)
 		assert.True(t, connecter.TlsConfig.InsecureSkipVerify)
@@ -251,11 +251,11 @@ func TestInsecureOption(t *testing.T) {
 				RootCAs: x509.NewCertPool(),
 			},
 		}
-		
+
 		opt := Insecure()
 		err := opt(connecter)
 		require.NoError(t, err)
-		
+
 		assert.True(t, connecter.Ssl)
 		assert.NotNil(t, connecter.TlsConfig)
 		assert.True(t, connecter.TlsConfig.InsecureSkipVerify)
