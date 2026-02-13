@@ -405,7 +405,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	}
 	return imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(),
+		imageinspector.NewCraneFetcher(strings.Split(cfg.InsecureRegistries, ",")...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)

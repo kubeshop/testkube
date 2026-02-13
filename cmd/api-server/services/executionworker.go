@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,12 +31,19 @@ func CreateExecutionWorker(
 	for n, s := range serviceAccountNames {
 		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
 	}
+	var insecureRegistries []string
+	for _, r := range strings.Split(cfg.InsecureRegistries, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			insecureRegistries = append(insecureRegistries, r)
+		}
+	}
 	return executionworker.NewKubernetes(clientSet, processor, kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
-			Id:               clusterId,
-			DefaultNamespace: defaultNamespace,
-			DefaultRegistry:  cfg.TestkubeRegistry,
-			Namespaces:       namespacesConfig,
+			Id:                 clusterId,
+			DefaultNamespace:   defaultNamespace,
+			DefaultRegistry:    cfg.TestkubeRegistry,
+			InsecureRegistries: insecureRegistries,
+			Namespaces:         namespacesConfig,
 		},
 		ImageInspector: kubernetesworker.ImageInspectorConfig{
 			CacheEnabled: cfg.EnableImageDataPersistentCache,

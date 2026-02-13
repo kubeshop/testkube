@@ -79,11 +79,12 @@ type ContainerResources struct {
 }
 
 type WorkerConfig struct {
-	Namespace             string `json:"n,omitempty"`
-	DefaultRegistry       string `json:"R,omitempty"` // TODO: think if that shouldn't be Control Plane setup
-	DefaultServiceAccount string `json:"s,omitempty"`
-	ClusterID             string `json:"c,omitempty"`
-	RunnerID              string `json:"r,omitempty"`
+	Namespace             string   `json:"n,omitempty"`
+	DefaultRegistry       string   `json:"R,omitempty"` // TODO: think if that shouldn't be Control Plane setup
+	InsecureRegistries    []string `json:"x,omitempty"`
+	DefaultServiceAccount string   `json:"s,omitempty"`
+	ClusterID             string   `json:"c,omitempty"`
+	RunnerID              string   `json:"r,omitempty"`
 
 	InitImage                         string        `json:"i,omitempty"`
 	ToolkitImage                      string        `json:"t,omitempty"`

@@ -13,10 +13,11 @@ type NamespaceConfig struct {
 }
 
 type ClusterConfig struct {
-	Id               string
-	DefaultNamespace string
-	DefaultRegistry  string
-	Namespaces       map[string]NamespaceConfig
+	Id                 string
+	DefaultNamespace   string
+	DefaultRegistry    string
+	InsecureRegistries []string
+	Namespaces         map[string]NamespaceConfig
 }
 
 type ImageInspectorConfig struct {
