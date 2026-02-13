@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jellydator/ttlcache/v3"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -19,11 +20,16 @@ import (
 const (
 	reconcileInterval            = time.Second
 	eventEmitterQueueName string = "emitter"
+	defaultEventTTL              = 24 * time.Hour
 )
 
 // NewEmitter returns new emitter instance
 func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
 	instanceId := utils.RandAlphanum(10)
+	cache := ttlcache.New[string, bool](
+		ttlcache.WithTTL[string, bool](defaultEventTTL),
+	)
+	go cache.Start()
 	return &Emitter{
 		loader:              NewLoader(),
 		log:                 log.DefaultLogger.With("instance_id", instanceId),
@@ -34,6 +40,8 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		registeredListeners: make(common.Listeners, 0),
 		listeners:           make(common.Listeners, 0),
 		clusterName:         clusterName,
+		eventCache:          cache,
+		eventTTL:            defaultEventTTL,
 	}
 }
 
@@ -54,6 +62,8 @@ type Emitter struct {
 	leaseBackend        leasebackend.Repository
 	subjectRoot         string
 	clusterName         string
+	eventCache          *ttlcache.Cache[string, bool]
+	eventTTL            time.Duration
 }
 
 // uniqueListeners keeps a unique set of listeners by kind, group and name.
@@ -182,6 +192,8 @@ func (e *Emitter) Listen(ctx context.Context) {
 		} else {
 			e.log.Info("event emitter closed event bus")
 		}
+		e.log.Info("event emitter stopping event cache")
+		e.eventCache.Stop()
 	}()
 
 	// Start lease check loop
@@ -272,7 +284,20 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 		"event_type", eventType,
 		"resource", event.Resource,
 		"resource_id", event.ResourceId,
-		"event_groupid", event.GroupId)
+		"event_groupid", event.GroupId,
+		"event_id", event.Id)
+
+	// Check for duplicate event using event.Id for idempotency
+	if event.Id != "" {
+		if e.eventCache.Has(event.Id) {
+			e.log.Debugw("skipping duplicate event",
+				"event_id", event.Id,
+				"event_type", eventType)
+			return nil
+		}
+		// Store event.Id in cache to prevent duplicate processing
+		e.eventCache.Set(event.Id, true, e.eventTTL)
+	}
 
 	// Current set of listeners
 	e.mutex.Lock()
