@@ -63,7 +63,7 @@ func TestEmitter_Listen(t *testing.T) {
 		defer emitter.eventCache.Stop()
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
-		// and listener with second matic selector
+		// and listener with second matching selector
 		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=listener2"}
 
 		// and emitter with registered listeners
@@ -455,17 +455,25 @@ func TestEmitter_Idempotency(t *testing.T) {
 		// when - sending the same event twice with the same ID
 		event := newExampleTestEvent1()
 		emitter.Notify(event)
-		time.Sleep(50 * time.Millisecond)
+
+		// then - wait for first event to be processed
+		retryCount := 100
+		for i := 0; i < retryCount; i++ {
+			if listener.GetNotificationCount() >= 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
 
 		// Store the notification count after first event
 		firstCount := listener.GetNotificationCount()
+		assert.Equal(t, 1, firstCount, "listener should have been notified once after first event")
 
 		// Send the same event again (duplicate)
 		emitter.Notify(event)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
-		// then - listener should be notified only once
-		assert.Equal(t, 1, firstCount, "listener should have been notified once after first event")
+		// then - listener should still be notified only once
 		assert.Equal(t, 1, listener.GetNotificationCount(), "listener should still have been notified only once after duplicate event")
 	})
 

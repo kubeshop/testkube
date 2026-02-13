@@ -296,7 +296,7 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			return nil
 		}
 		// Store event.Id in cache to prevent duplicate processing
-		e.eventCache.Set(event.Id, true, e.eventTTL)
+		e.eventCache.Set(event.Id, true, ttlcache.DefaultTTL)
 	}
 
 	// Current set of listeners
