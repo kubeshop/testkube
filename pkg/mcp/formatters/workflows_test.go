@@ -572,116 +572,208 @@ func TestFormatGetWorkflowMetrics(t *testing.T) {
 }
 
 func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
-	// Use shared helper for empty input test cases
-	RunEmptyInputCases(t, FormatGetWorkflowExecutionMetrics, "{}")
+	// Use shared helper for empty input test cases (wrap to match expected signature)
+	RunEmptyInputCases(t, func(s string) (string, error) {
+		return FormatGetWorkflowExecutionMetrics(s, 0)
+	}, "{}")
 
-	t.Run("parses execution metrics from resourceAggregations", func(t *testing.T) {
+	t.Run("parses AggregatedMetrics with time-series data", func(t *testing.T) {
 		input := `{
-			"resourceAggregations": {
-				"global": {
-					"cpu": {
-						"millicores": {"min": 16, "max": 112, "avg": 27.9, "total": 837}
-					},
-					"memory": {
-						"used": {"min": 87801856, "max": 92520448, "avg": 90460023.47}
-					},
-					"network": {
-						"bytes_recv_per_s": {"min": 132, "max": 9044, "avg": 8417.07},
-						"bytes_sent_per_s": {"min": 102, "max": 579, "avg": 323.17}
-					}
-				},
-				"step": [{"ref": "step1", "aggregations": {}}]
-			}
-		}`
-
-		result, err := FormatGetWorkflowExecutionMetrics(input)
-		require.NoError(t, err)
-
-		var output formattedExecutionMetrics
-		err = json.Unmarshal([]byte(result), &output)
-		require.NoError(t, err)
-
-		require.NotNil(t, output.Global)
-		require.NotNil(t, output.Global.CPUMillicores)
-		assert.Equal(t, 16.0, output.Global.CPUMillicores.Min)
-		assert.Equal(t, 112.0, output.Global.CPUMillicores.Max)
-		assert.Equal(t, 27.9, output.Global.CPUMillicores.Avg)
-
-		require.NotNil(t, output.Global.MemoryUsedBytes)
-		assert.Equal(t, 87801856.0, output.Global.MemoryUsedBytes.Min)
-	})
-
-	t.Run("parses direct global structure", func(t *testing.T) {
-		input := `{
-			"global": {
-				"cpu": {
-					"millicores": {"min": 10, "max": 100, "avg": 50}
-				},
-				"memory": {
-					"used": {"min": 1000000, "max": 2000000, "avg": 1500000}
+			"workflow": "test-workflow",
+			"execution": "exec-123",
+			"result": {
+				"startedAt": "2025-01-20T15:00:00Z",
+				"finishedAt": "2025-01-20T15:02:30Z"
+			},
+			"metrics": [
+				{
+					"step": "run-tests",
+					"tags": {},
+					"data": [
+						{
+							"measurement": "cpu",
+							"fields": "millicores",
+							"values": [[1706000000000, 25.5], [1706000001000, 50.0], [1706000002000, 75.5]]
+						},
+						{
+							"measurement": "memory",
+							"fields": "used",
+							"values": [[1706000000000, 87801856], [1706000001000, 90000000], [1706000002000, 92520448]]
+						}
+					]
 				}
-			}
+			]
 		}`
 
-		result, err := FormatGetWorkflowExecutionMetrics(input)
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
 		require.NoError(t, err)
 
 		var output formattedExecutionMetrics
 		err = json.Unmarshal([]byte(result), &output)
 		require.NoError(t, err)
 
-		require.NotNil(t, output.Global)
-		require.NotNil(t, output.Global.CPUMillicores)
-		assert.Equal(t, 50.0, output.Global.CPUMillicores.Avg)
+		assert.Equal(t, "test-workflow", output.Workflow)
+		assert.Equal(t, "exec-123", output.Execution)
+		require.NotNil(t, output.Result)
+		assert.Equal(t, "2025-01-20T15:00:00Z", output.Result.StartedAt)
+		assert.Equal(t, "2025-01-20T15:02:30Z", output.Result.FinishedAt)
+
+		require.Len(t, output.Steps, 1)
+		assert.Equal(t, "run-tests", output.Steps[0].Step)
+		require.Len(t, output.Steps[0].Series, 2)
+
+		// CPU series
+		cpuSeries := output.Steps[0].Series[0]
+		assert.Equal(t, "cpu.millicores", cpuSeries.Metric)
+		assert.Equal(t, 3, cpuSeries.SampleCount)
+		assert.Equal(t, 25.5, cpuSeries.Summary.Min)
+		assert.Equal(t, 75.5, cpuSeries.Summary.Max)
+		assert.Equal(t, 50.33, cpuSeries.Summary.Avg)
+		assert.Len(t, cpuSeries.Samples, 3) // fewer than default, all kept
+
+		// Memory series
+		memSeries := output.Steps[0].Series[1]
+		assert.Equal(t, "memory.used", memSeries.Metric)
+		assert.Equal(t, 3, memSeries.SampleCount)
+		assert.Equal(t, 87801856.0, memSeries.Summary.Min)
+		assert.Equal(t, 92520448.0, memSeries.Summary.Max)
 	})
 
-	t.Run("strips step-level metrics", func(t *testing.T) {
+	t.Run("preserves multiple steps", func(t *testing.T) {
 		input := `{
-			"resourceAggregations": {
-				"global": {
-					"cpu": {"millicores": {"min": 10, "max": 100, "avg": 50}}
+			"workflow": "multi-step",
+			"execution": "exec-456",
+			"metrics": [
+				{
+					"step": "step1",
+					"data": [
+						{"measurement": "cpu", "fields": "millicores", "values": [[1000, 10], [2000, 20]]}
+					]
 				},
-				"step": [
-					{"ref": "step1", "aggregations": {"cpu": {"millicores": {"min": 5}}}},
-					{"ref": "step2", "aggregations": {"cpu": {"millicores": {"min": 5}}}}
-				]
-			}
-		}`
-
-		result, err := FormatGetWorkflowExecutionMetrics(input)
-		require.NoError(t, err)
-
-		assert.NotContains(t, result, "step1")
-		assert.NotContains(t, result, "step2")
-		assert.NotContains(t, result, "ref")
-	})
-
-	t.Run("converts network bytes to KB", func(t *testing.T) {
-		input := `{
-			"global": {
-				"network": {
-					"bytes_recv_per_s": {"min": 1024, "max": 10240, "avg": 5120},
-					"bytes_sent_per_s": {"min": 512, "max": 2048, "avg": 1024}
+				{
+					"step": "step2",
+					"data": [
+						{"measurement": "cpu", "fields": "millicores", "values": [[3000, 30], [4000, 40]]}
+					]
 				}
-			}
+			]
 		}`
 
-		result, err := FormatGetWorkflowExecutionMetrics(input)
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
 		require.NoError(t, err)
 
 		var output formattedExecutionMetrics
 		err = json.Unmarshal([]byte(result), &output)
 		require.NoError(t, err)
 
-		require.NotNil(t, output.Global.NetworkRecvKBps)
-		assert.Equal(t, 1.0, output.Global.NetworkRecvKBps.Min)  // 1024/1024 = 1
-		assert.Equal(t, 10.0, output.Global.NetworkRecvKBps.Max) // 10240/1024 = 10
-		assert.Equal(t, 5.0, output.Global.NetworkRecvKBps.Avg)  // 5120/1024 = 5
+		require.Len(t, output.Steps, 2)
+		assert.Equal(t, "step1", output.Steps[0].Step)
+		assert.Equal(t, "step2", output.Steps[1].Step)
+		assert.Equal(t, 10.0, output.Steps[0].Series[0].Summary.Min)
+		assert.Equal(t, 30.0, output.Steps[1].Series[0].Summary.Min)
+	})
+
+	t.Run("downsamples large time-series with default", func(t *testing.T) {
+		// Build a series with 200 data points (more than defaultMaxSamplesPerSeries)
+		values := make([][2]float64, 200)
+		for i := 0; i < 200; i++ {
+			values[i] = [2]float64{float64(1000 + i*1000), float64(i)}
+		}
+		valuesJSON, _ := json.Marshal(values)
+
+		input := `{
+			"workflow": "big-run",
+			"execution": "exec-789",
+			"metrics": [
+				{
+					"step": "step1",
+					"data": [
+						{"measurement": "cpu", "fields": "millicores", "values": ` + string(valuesJSON) + `}
+					]
+				}
+			]
+		}`
+
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0) // 0 = use default
+		require.NoError(t, err)
+
+		var output formattedExecutionMetrics
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+
+		series := output.Steps[0].Series[0]
+		assert.Equal(t, 200, series.SampleCount)                               // original count preserved
+		assert.LessOrEqual(t, len(series.Samples), defaultMaxSamplesPerSeries) // downsampled to default
+		assert.Equal(t, values[0], series.Samples[0])                          // first point kept
+		assert.Equal(t, values[199], series.Samples[len(series.Samples)-1])    // last point kept
+	})
+
+	t.Run("respects custom maxSamples parameter", func(t *testing.T) {
+		// Build a series with 100 data points
+		values := make([][2]float64, 100)
+		for i := 0; i < 100; i++ {
+			values[i] = [2]float64{float64(1000 + i*1000), float64(i)}
+		}
+		valuesJSON, _ := json.Marshal(values)
+
+		input := `{
+			"workflow": "custom-run",
+			"execution": "exec-custom",
+			"metrics": [
+				{
+					"step": "step1",
+					"data": [
+						{"measurement": "cpu", "fields": "millicores", "values": ` + string(valuesJSON) + `}
+					]
+				}
+			]
+		}`
+
+		// Request only 10 samples
+		result, err := FormatGetWorkflowExecutionMetrics(input, 10)
+		require.NoError(t, err)
+
+		var output formattedExecutionMetrics
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+
+		series := output.Steps[0].Series[0]
+		assert.Equal(t, 100, series.SampleCount)       // original count preserved
+		assert.Equal(t, 10, len(series.Samples))       // downsampled to requested 10
+		assert.Equal(t, values[0], series.Samples[0])  // first point kept
+		assert.Equal(t, values[99], series.Samples[9]) // last point kept
+
+		// Request 200 samples (more than available) — should return all
+		result, err = FormatGetWorkflowExecutionMetrics(input, 200)
+		require.NoError(t, err)
+
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+		assert.Equal(t, 100, len(output.Steps[0].Series[0].Samples)) // all points returned
+	})
+
+	t.Run("returns empty for non-AggregatedMetrics input", func(t *testing.T) {
+		input := `{"someOtherField": "value"}`
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
+		require.NoError(t, err)
+		assert.Equal(t, "{}", result)
+	})
+
+	t.Run("handles empty metrics array", func(t *testing.T) {
+		input := `{"workflow": "test", "execution": "exec-1", "metrics": []}`
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
+		require.NoError(t, err)
+
+		var output formattedExecutionMetrics
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+		assert.Equal(t, "test", output.Workflow)
+		assert.Empty(t, output.Steps)
 	})
 
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
 		input := `{"invalid json`
-		_, err := FormatGetWorkflowExecutionMetrics(input)
+		_, err := FormatGetWorkflowExecutionMetrics(input, 0)
 		assert.Error(t, err)
 	})
 }

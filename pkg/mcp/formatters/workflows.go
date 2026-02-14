@@ -2,6 +2,7 @@ package formatters
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -290,132 +291,177 @@ func FormatGetWorkflowMetrics(raw string) (string, error) {
 	return FormatJSON(formattedWorkflowMetrics(metrics))
 }
 
-// formattedExecutionMetrics is a compact representation of execution resource metrics.
+// defaultMaxSamplesPerSeries is the default maximum number of time-series data points per metric.
+// If a series has more samples, it will be evenly downsampled (always keeping first and last).
+const defaultMaxSamplesPerSeries = 50
+
+// formattedExecutionMetrics is a compact representation of execution resource metrics time-series.
 type formattedExecutionMetrics struct {
-	ExecutionID string                  `json:"executionId,omitempty"`
-	Global      *formattedResourceStats `json:"global,omitempty"`
+	Workflow  string              `json:"workflow,omitempty"`
+	Execution string              `json:"execution,omitempty"`
+	Result    *formattedTimeRange `json:"result,omitempty"`
+	Steps     []formattedStepData `json:"steps,omitempty"`
 }
 
-// formattedResourceStats contains summarized resource usage.
-type formattedResourceStats struct {
-	CPUMillicores   *formattedMetricStat `json:"cpuMillicores,omitempty"`
-	MemoryUsedBytes *formattedMetricStat `json:"memoryUsedBytes,omitempty"`
-	NetworkRecvKBps *formattedMetricStat `json:"networkRecvKBps,omitempty"`
-	NetworkSentKBps *formattedMetricStat `json:"networkSentKBps,omitempty"`
+// formattedTimeRange contains execution timing info.
+type formattedTimeRange struct {
+	StartedAt  string `json:"startedAt,omitempty"`
+	FinishedAt string `json:"finishedAt,omitempty"`
 }
 
-// formattedMetricStat contains min/max/avg for a metric.
-type formattedMetricStat struct {
+// formattedStepData contains time-series metrics for a single execution step.
+type formattedStepData struct {
+	Step   string                  `json:"step"`
+	Series []formattedMetricSeries `json:"series"`
+}
+
+// formattedMetricSeries is a single metric time-series with summary statistics.
+type formattedMetricSeries struct {
+	Metric      string       `json:"metric"` // e.g. "cpu.millicores", "memory.used"
+	SampleCount int          `json:"sampleCount"`
+	Summary     metricStats  `json:"summary"`
+	Samples     [][2]float64 `json:"samples"` // [timestamp_ms, value]
+}
+
+// metricStats contains min/max/avg for a metric series.
+type metricStats struct {
 	Min float64 `json:"min"`
 	Max float64 `json:"max"`
 	Avg float64 `json:"avg"`
 }
 
-type resourceAggregations struct {
-	Global *resourceGlobal `json:"global,omitempty"`
+// aggregatedMetricsInput is the shape returned by the /metrics endpoint.
+type aggregatedMetricsInput struct {
+	Workflow  string `json:"workflow"`
+	Execution string `json:"execution"`
+	Result    *struct {
+		StartedAt  string `json:"startedAt"`
+		FinishedAt string `json:"finishedAt"`
+	} `json:"result"`
+	Metrics []linkedMetricInput `json:"metrics"`
 }
 
-type resourceGlobal struct {
-	CPU     *resourceCPU     `json:"cpu,omitempty"`
-	Memory  *resourceMemory  `json:"memory,omitempty"`
-	Network *resourceNetwork `json:"network,omitempty"`
+// linkedMetricInput represents per-step metric data from the /metrics endpoint.
+type linkedMetricInput struct {
+	Step string           `json:"step"`
+	Data []dataPointInput `json:"data"`
 }
 
-type resourceCPU struct {
-	Millicores *resourceMetric `json:"millicores,omitempty"`
-}
-
-type resourceMemory struct {
-	Used *resourceMetric `json:"used,omitempty"`
-}
-
-type resourceNetwork struct {
-	BytesRecvPerS *resourceMetric `json:"bytes_recv_per_s,omitempty"`
-	BytesSentPerS *resourceMetric `json:"bytes_sent_per_s,omitempty"`
-}
-
-type resourceMetric struct {
-	Min float64 `json:"min"`
-	Max float64 `json:"max"`
-	Avg float64 `json:"avg"`
+// dataPointInput represents a single metric data point series.
+type dataPointInput struct {
+	Measurement string       `json:"measurement"`
+	Field       string       `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
+	Values      [][2]float64 `json:"values"` // [timestamp_ms, value]
 }
 
 // FormatGetWorkflowExecutionMetrics parses a raw API response containing execution metrics.
-// Returns a compact JSON with global resource usage summary.
-// Strips: per-step metrics (verbose), detailed disk I/O stats, totals and stdDev.
-func FormatGetWorkflowExecutionMetrics(raw string) (string, error) {
-	// First try to parse as the direct resourceAggregations structure
-	// (which is what the execution info API returns)
-	var rawData map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(raw), &rawData); err != nil {
-		// If it fails, check if input is empty
-		if IsEmptyInput(raw) {
-			return "{}", nil
-		}
-		return "", err
-	}
-
+// Handles the AggregatedMetrics shape from the /metrics endpoint (time-series data)
+// and returns a compact JSON with per-step metric series, downsampled to avoid large payloads.
+// maxSamples controls the maximum number of data points per metric series (0 uses default of 50).
+func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, error) {
 	if IsEmptyInput(raw) {
 		return "{}", nil
 	}
 
-	// Check if we have resourceAggregations directly or nested
-	var agg *resourceAggregations
-	if raData, ok := rawData["resourceAggregations"]; ok {
-		var ra resourceAggregations
-		if err := json.Unmarshal(raData, &ra); err != nil {
-			return "", err
-		}
-		agg = &ra
-	} else if globalData, ok := rawData["global"]; ok {
-		// The response IS the resourceAggregations object
-		var global resourceGlobal
-		if err := json.Unmarshal(globalData, &global); err != nil {
-			return "", err
-		}
-		agg = &resourceAggregations{Global: &global}
+	if maxSamples <= 0 {
+		maxSamples = defaultMaxSamplesPerSeries
 	}
 
-	if agg == nil || agg.Global == nil {
+	var input aggregatedMetricsInput
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		return "", err
+	}
+
+	// Check if this looks like an AggregatedMetrics response (has "metrics" field with data)
+	if len(input.Metrics) == 0 && input.Workflow == "" {
+		// Not an AggregatedMetrics response — return empty
 		return "{}", nil
 	}
 
 	formatted := formattedExecutionMetrics{
-		Global: &formattedResourceStats{},
+		Workflow:  input.Workflow,
+		Execution: input.Execution,
 	}
 
-	if agg.Global.CPU != nil && agg.Global.CPU.Millicores != nil {
-		formatted.Global.CPUMillicores = &formattedMetricStat{
-			Min: agg.Global.CPU.Millicores.Min,
-			Max: agg.Global.CPU.Millicores.Max,
-			Avg: agg.Global.CPU.Millicores.Avg,
+	if input.Result != nil {
+		formatted.Result = &formattedTimeRange{
+			StartedAt:  input.Result.StartedAt,
+			FinishedAt: input.Result.FinishedAt,
 		}
 	}
 
-	if agg.Global.Memory != nil && agg.Global.Memory.Used != nil {
-		formatted.Global.MemoryUsedBytes = &formattedMetricStat{
-			Min: agg.Global.Memory.Used.Min,
-			Max: agg.Global.Memory.Used.Max,
-			Avg: agg.Global.Memory.Used.Avg,
+	for _, m := range input.Metrics {
+		step := formattedStepData{
+			Step: m.Step,
 		}
-	}
 
-	if agg.Global.Network != nil {
-		if agg.Global.Network.BytesRecvPerS != nil {
-			formatted.Global.NetworkRecvKBps = &formattedMetricStat{
-				Min: agg.Global.Network.BytesRecvPerS.Min / 1024,
-				Max: agg.Global.Network.BytesRecvPerS.Max / 1024,
-				Avg: agg.Global.Network.BytesRecvPerS.Avg / 1024,
+		for _, dp := range m.Data {
+			metricName := dp.Measurement
+			if dp.Field != "" {
+				metricName += "." + dp.Field
 			}
-		}
-		if agg.Global.Network.BytesSentPerS != nil {
-			formatted.Global.NetworkSentKBps = &formattedMetricStat{
-				Min: agg.Global.Network.BytesSentPerS.Min / 1024,
-				Max: agg.Global.Network.BytesSentPerS.Max / 1024,
-				Avg: agg.Global.Network.BytesSentPerS.Avg / 1024,
+
+			series := formattedMetricSeries{
+				Metric:      metricName,
+				SampleCount: len(dp.Values),
+				Summary:     computeStats(dp.Values),
+				Samples:     downsample(dp.Values, maxSamples),
 			}
+
+			step.Series = append(step.Series, series)
 		}
+
+		formatted.Steps = append(formatted.Steps, step)
 	}
 
 	return FormatJSON(formatted)
+}
+
+// computeStats calculates min/max/avg from a time-series of [timestamp, value] pairs.
+func computeStats(values [][2]float64) metricStats {
+	if len(values) == 0 {
+		return metricStats{}
+	}
+
+	minVal := values[0][1]
+	maxVal := values[0][1]
+	sum := 0.0
+
+	for _, v := range values {
+		val := v[1]
+		if val < minVal {
+			minVal = val
+		}
+		if val > maxVal {
+			maxVal = val
+		}
+		sum += val
+	}
+
+	return metricStats{
+		Min: math.Round(minVal*100) / 100,
+		Max: math.Round(maxVal*100) / 100,
+		Avg: math.Round(sum/float64(len(values))*100) / 100,
+	}
+}
+
+// downsample reduces a time-series to at most maxPoints, evenly spaced.
+// Always preserves the first and last data points.
+func downsample(values [][2]float64, maxPoints int) [][2]float64 {
+	if len(values) <= maxPoints {
+		return values
+	}
+
+	result := make([][2]float64, 0, maxPoints)
+	result = append(result, values[0])
+
+	// Evenly pick interior points
+	step := float64(len(values)-1) / float64(maxPoints-1)
+	for i := 1; i < maxPoints-1; i++ {
+		idx := int(math.Round(float64(i) * step))
+		result = append(result, values[idx])
+	}
+
+	result = append(result, values[len(values)-1])
+	return result
 }
