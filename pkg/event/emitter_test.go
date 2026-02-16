@@ -425,7 +425,7 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 	t.Run("should notify all webhooks with correct event types when multiple webhooks match", func(t *testing.T) {
 		// This test reproduces the issue from https://github.com/kubeshop/testkube/issues/7055
 		// where webhooks don't send events when multiple webhooks with different event types are configured
-		
+
 		// given
 		eventBus := bus.NewEventBusMock()
 		mockCtrl := gomock.NewController(t)
@@ -435,7 +435,7 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
 		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
-		
+
 		// Create listeners that match the issue scenario:
 		// 1. Webhook for become-testworkflow-up (matches with selector)
 		becomeUpListener := &dummy.DummyListener{
@@ -445,7 +445,7 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 			},
 			SelectorString: "ataccama.com/incident-policy=warning-when-state-change",
 		}
-		
+
 		// 2. Webhook for end-testworkflow-success (no selector, matches all)
 		endSuccessListener := &dummy.DummyListener{
 			Id: "otel-webhook",
@@ -454,16 +454,16 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 			},
 			SelectorString: "",
 		}
-		
+
 		emitter.Register(becomeUpListener)
 		emitter.Register(endSuccessListener)
-		
+
 		// Start listening
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		go emitter.Listen(ctx)
 		time.Sleep(50 * time.Millisecond)
-		
+
 		// Create an event for a successful test workflow with the matching label
 		event := testkube.Event{
 			Id:    "event-multi-webhook",
@@ -478,25 +478,25 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// when
 		emitter.Notify(event)
-		
+
 		// then - wait for notifications
 		time.Sleep(100 * time.Millisecond)
-		
+
 		// Both listeners should have been notified
 		becomeUpReceivedTypes := becomeUpListener.GetReceivedEventTypes()
 		endSuccessReceivedTypes := endSuccessListener.GetReceivedEventTypes()
-		
+
 		// The become-up listener should receive the BECOME_TESTWORKFLOW_UP event
 		assert.Contains(t, becomeUpReceivedTypes, testkube.BECOME_TESTWORKFLOW_UP_EventType,
 			"become-up webhook should receive BECOME_TESTWORKFLOW_UP event")
-		
+
 		// The end-success listener should receive the END_TESTWORKFLOW_SUCCESS event
 		assert.Contains(t, endSuccessReceivedTypes, testkube.END_TESTWORKFLOW_SUCCESS_EventType,
 			"otel webhook should receive END_TESTWORKFLOW_SUCCESS event")
-		
+
 		// Verify each listener received exactly the event type it subscribed to
 		assert.Len(t, becomeUpReceivedTypes, 1, "become-up webhook should receive exactly 1 event")
 		assert.Len(t, endSuccessReceivedTypes, 1, "otel webhook should receive exactly 1 event")

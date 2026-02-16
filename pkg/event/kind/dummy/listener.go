@@ -12,10 +12,10 @@ import (
 var _ common.Listener = (*DummyListener)(nil)
 
 type DummyListener struct {
-	Id                string
-	NotificationCount int32
-	SelectorString    string
-	Types             []testkube.EventType
+	Id                 string
+	NotificationCount  int32
+	SelectorString     string
+	Types              []testkube.EventType
 	ReceivedEventTypes []testkube.EventType
 	mu                 sync.Mutex
 }
@@ -41,14 +41,14 @@ func (l *DummyListener) Match(event testkube.Event) bool {
 func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
 	log.DefaultLogger.Infow("DummyListener notified", "listenerId", l.Id, "event", event)
 	atomic.AddInt32(&l.NotificationCount, 1)
-	
+
 	// Track received event types for testing
 	l.mu.Lock()
 	if event.Type_ != nil {
 		l.ReceivedEventTypes = append(l.ReceivedEventTypes, *event.Type_)
 	}
 	l.mu.Unlock()
-	
+
 	return testkube.EventResult{Id: event.Id}
 }
 
