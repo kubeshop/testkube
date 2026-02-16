@@ -1,6 +1,7 @@
 package dummy
 
 import (
+	"sync"
 	"sync/atomic"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -15,11 +16,21 @@ type DummyListener struct {
 	NotificationCount int32
 	SelectorString    string
 	Types             []testkube.EventType
+	ReceivedEventTypes []testkube.EventType
+	mu                 sync.Mutex
 }
 
 func (l *DummyListener) GetNotificationCount() int {
 	cnt := atomic.LoadInt32(&l.NotificationCount)
 	return int(cnt)
+}
+
+func (l *DummyListener) GetReceivedEventTypes() []testkube.EventType {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	result := make([]testkube.EventType, len(l.ReceivedEventTypes))
+	copy(result, l.ReceivedEventTypes)
+	return result
 }
 
 func (l *DummyListener) Match(event testkube.Event) bool {
@@ -30,6 +41,14 @@ func (l *DummyListener) Match(event testkube.Event) bool {
 func (l *DummyListener) Notify(event testkube.Event) testkube.EventResult {
 	log.DefaultLogger.Infow("DummyListener notified", "listenerId", l.Id, "event", event)
 	atomic.AddInt32(&l.NotificationCount, 1)
+	
+	// Track received event types for testing
+	l.mu.Lock()
+	if event.Type_ != nil {
+		l.ReceivedEventTypes = append(l.ReceivedEventTypes, *event.Type_)
+	}
+	l.mu.Unlock()
+	
 	return testkube.EventResult{Id: event.Id}
 }
 

@@ -302,13 +302,16 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			continue
 		}
 		for i := range matchedEventTypes {
-			event.Type_ = &matchedEventTypes[i]
+			// Create a copy of the event for this listener to avoid race conditions
+			// when multiple goroutines are spawned with different event types
+			listenerEvent := event
+			listenerEvent.Type_ = &matchedEventTypes[i]
 			matchedCount++
 			e.log.Debugw("notifying listener",
 				"listener_name", l.Name(),
 				"listener_kind", l.Kind(),
 				"event_type", string(matchedEventTypes[i]))
-			go notifyListener(logger, l, event)
+			go notifyListener(logger, l, listenerEvent)
 		}
 	}
 
