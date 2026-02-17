@@ -309,7 +309,8 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			// from these fields, they don't modify them. The only field we modify is Type_,
 			// which is replaced with a new pointer for each listener.
 			listenerEvent := event
-			listenerEvent.Type_ = &matchedEventTypes[i]
+			eventType := matchedEventTypes[i]
+			listenerEvent.Type_ = &eventType
 			matchedCount++
 			e.log.Debugw("notifying listener",
 				"listener_name", l.Name(),
