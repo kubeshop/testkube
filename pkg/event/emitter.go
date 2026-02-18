@@ -41,7 +41,6 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		listeners:           make(common.Listeners, 0),
 		clusterName:         clusterName,
 		eventCache:          cache,
-		eventTTL:            eventTTL,
 	}
 }
 
@@ -63,7 +62,6 @@ type Emitter struct {
 	subjectRoot         string
 	clusterName         string
 	eventCache          *ttlcache.Cache[string, bool]
-	eventTTL            time.Duration
 }
 
 // uniqueListeners keeps a unique set of listeners by kind, group and name.
@@ -289,7 +287,7 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 
 	// Check for duplicate event using event.Id for idempotency
 	if event.Id != "" {
-		_, loaded := e.eventCache.GetOrSet(event.Id, true, ttlcache.WithTTL[string, bool](e.eventTTL))
+		_, loaded := e.eventCache.GetOrSet(event.Id, true)
 		if loaded {
 			e.log.Debugw("skipping duplicate event",
 				"event_id", event.Id,
