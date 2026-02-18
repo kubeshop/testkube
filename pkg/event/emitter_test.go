@@ -502,3 +502,111 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 		assert.Len(t, endSuccessReceivedTypes, 1, "otel webhook should receive exactly 1 event")
 	})
 }
+
+func TestEmitter_ThreeWebhooksRealScenario(t *testing.T) {
+t.Run("should correctly handle three webhooks: failed, up, and otel with end-testworkflow-success event", func(t *testing.T) {
+// This test reproduces the exact scenario from the issue report
+// where three webhooks are configured and an end-testworkflow-success event fires
+
+// given
+eventBus := bus.NewEventBusMock()
+mockCtrl := gomock.NewController(t)
+defer mockCtrl.Finish()
+mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+mockLeaseRepository.EXPECT().
+TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+Return(true, nil).AnyTimes()
+emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+
+// Webhook 1: "failed" - become-testworkflow-failed with selector
+failedWebhook := &dummy.DummyListener{
+Id: "failed",
+Types: []testkube.EventType{
+testkube.BECOME_TESTWORKFLOW_FAILED_EventType,
+},
+SelectorString: "ataccama.com/incident-policy=warning-when-state-change",
+}
+
+// Webhook 2: "up" - become-testworkflow-up with selector
+upWebhook := &dummy.DummyListener{
+Id: "up",
+Types: []testkube.EventType{
+testkube.BECOME_TESTWORKFLOW_UP_EventType,
+},
+SelectorString: "ataccama.com/incident-policy=warning-when-state-change",
+}
+
+// Webhook 3: "testkube-otel-webhook" - multiple events, no selector
+otelWebhook := &dummy.DummyListener{
+Id: "testkube-otel-webhook",
+Types: []testkube.EventType{
+testkube.START_TESTWORKFLOW_EventType,
+testkube.END_TESTWORKFLOW_SUCCESS_EventType,
+testkube.END_TESTWORKFLOW_FAILED_EventType,
+testkube.END_TESTWORKFLOW_ABORTED_EventType,
+},
+SelectorString: "", // No selector - matches all
+}
+
+emitter.Register(failedWebhook)
+emitter.Register(upWebhook)
+emitter.Register(otelWebhook)
+
+// listening emitter
+ctx, cancel := context.WithCancel(t.Context())
+defer cancel()
+go emitter.Listen(ctx)
+time.Sleep(50 * time.Millisecond)
+
+// when: an end-testworkflow-success event fires with the matching label
+event := testkube.Event{
+Id:    "test-event-success",
+Type_: testkube.EventEndTestWorkflowSuccess,
+TestWorkflowExecution: &testkube.TestWorkflowExecution{
+Id: "exec-success-1",
+Workflow: &testkube.TestWorkflow{
+Name: "test-workflow",
+Labels: map[string]string{
+"ataccama.com/incident-policy": "warning-when-state-change",
+},
+},
+},
+}
+
+emitter.Notify(event)
+
+// then - wait for notifications
+time.Sleep(100 * time.Millisecond)
+
+// Get received event types
+failedReceivedTypes := failedWebhook.GetReceivedEventTypes()
+upReceivedTypes := upWebhook.GetReceivedEventTypes()
+otelReceivedTypes := otelWebhook.GetReceivedEventTypes()
+
+t.Logf("failed webhook received: %v (count: %d)", failedReceivedTypes, len(failedReceivedTypes))
+t.Logf("up webhook received: %v (count: %d)", upReceivedTypes, len(upReceivedTypes))
+t.Logf("otel webhook received: %v (count: %d)", otelReceivedTypes, len(otelReceivedTypes))
+
+// Verify expectations:
+// 1. "failed" webhook should NOT receive any event (become-testworkflow-failed doesn't map to success)
+assert.Empty(t, failedReceivedTypes,
+"failed webhook should NOT receive any event for end-testworkflow-success")
+
+// 2. "up" webhook SHOULD receive become-testworkflow-up (maps to end-testworkflow-success)
+assert.Contains(t, upReceivedTypes, testkube.BECOME_TESTWORKFLOW_UP_EventType,
+"up webhook should receive BECOME_TESTWORKFLOW_UP event")
+assert.Len(t, upReceivedTypes, 1,
+"up webhook should receive exactly 1 event")
+
+// 3. "otel" webhook SHOULD receive end-testworkflow-success (direct match, no selector)
+assert.Contains(t, otelReceivedTypes, testkube.END_TESTWORKFLOW_SUCCESS_EventType,
+"otel webhook should receive END_TESTWORKFLOW_SUCCESS event")
+assert.Len(t, otelReceivedTypes, 1,
+"otel webhook should receive exactly 1 event")
+
+// Total: 2 webhooks should be notified (up + otel)
+totalNotifications := len(failedReceivedTypes) + len(upReceivedTypes) + len(otelReceivedTypes)
+assert.Equal(t, 2, totalNotifications,
+"Total notifications should be 2 (up webhook + otel webhook)")
+})
+}
