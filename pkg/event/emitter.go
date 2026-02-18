@@ -289,14 +289,13 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 
 	// Check for duplicate event using event.Id for idempotency
 	if event.Id != "" {
-		if e.eventCache.Has(event.Id) {
+		_, loaded := e.eventCache.GetOrSet(event.Id, true, ttlcache.WithTTL[string, bool](e.eventTTL))
+		if loaded {
 			e.log.Debugw("skipping duplicate event",
 				"event_id", event.Id,
 				"event_type", eventType)
 			return nil
 		}
-		// Store event.Id in cache to prevent duplicate processing
-		e.eventCache.Set(event.Id, true, ttlcache.DefaultTTL)
 	}
 
 	// Current set of listeners
