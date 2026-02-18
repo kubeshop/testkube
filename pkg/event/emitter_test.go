@@ -401,7 +401,6 @@ func (l *FakeListener) Metadata() map[string]string {
 
 func TestEmitter_eventTopic(t *testing.T) {
 	emitter := NewEmitter(nil, nil, "agentevents", "", DefaultEventTTL)
-	defer emitter.eventCache.Stop()
 
 	t.Run("should return events topic if explicitly set", func(t *testing.T) {
 		evt := testkube.Event{Type_: testkube.EventEndTestWorkflowSuccess, StreamTopic: "topic"}

@@ -29,7 +29,6 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 	cache := ttlcache.New[string, bool](
 		ttlcache.WithTTL[string, bool](eventTTL),
 	)
-	go cache.Start()
 	return &Emitter{
 		loader:              NewLoader(),
 		log:                 log.DefaultLogger.With("instance_id", instanceId),
@@ -180,6 +179,10 @@ func (e *Emitter) leaseCheck(ctx context.Context, leaseChan chan<- bool) {
 // notifications.
 func (e *Emitter) Listen(ctx context.Context) {
 	e.log.Info("event emitter starting")
+	
+	// Start event cache
+	go e.eventCache.Start()
+	
 	// Clean up
 	go func() {
 		<-ctx.Done()
