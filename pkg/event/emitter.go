@@ -20,7 +20,7 @@ import (
 const (
 	reconcileInterval            = time.Second
 	eventEmitterQueueName string = "emitter"
-	defaultEventTTL              = 24 * time.Hour
+	defaultEventTTL              = 1 * time.Hour
 )
 
 // NewEmitter returns new emitter instance
