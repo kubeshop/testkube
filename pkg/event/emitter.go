@@ -179,10 +179,10 @@ func (e *Emitter) leaseCheck(ctx context.Context, leaseChan chan<- bool) {
 // notifications.
 func (e *Emitter) Listen(ctx context.Context) {
 	e.log.Info("event emitter starting")
-	
+
 	// Start event cache
 	go e.eventCache.Start()
-	
+
 	// Clean up
 	go func() {
 		<-ctx.Done()
