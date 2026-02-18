@@ -18,18 +18,18 @@ import (
 )
 
 const (
-	reconcileInterval            = time.Second
-	eventEmitterQueueName string = "emitter"
-	DefaultEventTTL              = 1 * time.Hour
-	defaultEventCacheCapacity    = 100000
+	reconcileInterval              = time.Second
+	eventEmitterQueueName   string = "emitter"
+	DefaultEventTTL                = 1 * time.Hour
+	DefaultEventCacheCapacity      = 100000
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string, eventTTL time.Duration) *Emitter {
+func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string, eventTTL time.Duration, cacheCapacity uint64) *Emitter {
 	instanceId := utils.RandAlphanum(10)
 	cache := ttlcache.New[string, bool](
 		ttlcache.WithTTL[string, bool](eventTTL),
-		ttlcache.WithCapacity[string, bool](defaultEventCacheCapacity),
+		ttlcache.WithCapacity[string, bool](cacheCapacity),
 	)
 	return &Emitter{
 		loader:              NewLoader(),

@@ -37,7 +37,7 @@ func TestEmitter_Register(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
@@ -59,7 +59,7 @@ func TestEmitter_Listen(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
@@ -116,7 +116,7 @@ func TestEmitter_Notify(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
@@ -154,7 +154,7 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
@@ -195,7 +195,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1"})
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy2"})
@@ -225,7 +225,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
 			testkube.BECOME_TESTWORKFLOW_UP_EventType,
@@ -259,7 +259,7 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 		loader := &dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v1"}
 		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
@@ -304,7 +304,7 @@ func TestEmitterCreatesK8sEvents(t *testing.T) {
 	listener := k8sevent.NewK8sEventListener("k8sevent", "", "tk-dev",
 		[]testkube.EventType{*testkube.EventStartTestWorkflow}, clientset)
 
-	emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+	emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 	defer emitter.eventCache.Stop()
 	emitter.Register(listener)
 
@@ -439,7 +439,7 @@ func TestEmitter_Idempotency(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 
 		listener := &dummy.DummyListener{Id: "l1"}
@@ -485,7 +485,7 @@ func TestEmitter_Idempotency(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 
 		listener := &dummy.DummyListener{Id: "l1"}
@@ -527,7 +527,7 @@ func TestEmitter_Idempotency(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL)
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 		defer emitter.eventCache.Stop()
 
 		listener := &dummy.DummyListener{Id: "l1"}
