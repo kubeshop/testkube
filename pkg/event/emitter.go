@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jellydator/ttlcache/v3"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -17,13 +18,19 @@ import (
 )
 
 const (
-	reconcileInterval            = time.Second
-	eventEmitterQueueName string = "emitter"
+	reconcileInterval                = time.Second
+	eventEmitterQueueName     string = "emitter"
+	DefaultEventTTL                  = 1 * time.Hour
+	DefaultEventCacheCapacity        = 100000
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
+func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string, eventTTL time.Duration, cacheCapacity uint64) *Emitter {
 	instanceId := utils.RandAlphanum(10)
+	cache := ttlcache.New[string, bool](
+		ttlcache.WithTTL[string, bool](eventTTL),
+		ttlcache.WithCapacity[string, bool](cacheCapacity),
+	)
 	return &Emitter{
 		loader:              NewLoader(),
 		log:                 log.DefaultLogger.With("instance_id", instanceId),
@@ -34,6 +41,7 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		registeredListeners: make(common.Listeners, 0),
 		listeners:           make(common.Listeners, 0),
 		clusterName:         clusterName,
+		eventCache:          cache,
 	}
 }
 
@@ -54,6 +62,7 @@ type Emitter struct {
 	leaseBackend        leasebackend.Repository
 	subjectRoot         string
 	clusterName         string
+	eventCache          *ttlcache.Cache[string, bool]
 }
 
 // uniqueListeners keeps a unique set of listeners by kind, group and name.
@@ -172,6 +181,10 @@ func (e *Emitter) leaseCheck(ctx context.Context, leaseChan chan<- bool) {
 // notifications.
 func (e *Emitter) Listen(ctx context.Context) {
 	e.log.Info("event emitter starting")
+
+	// Start event cache
+	go e.eventCache.Start()
+
 	// Clean up
 	go func() {
 		<-ctx.Done()
@@ -182,6 +195,8 @@ func (e *Emitter) Listen(ctx context.Context) {
 		} else {
 			e.log.Info("event emitter closed event bus")
 		}
+		e.log.Info("event emitter stopping event cache")
+		e.eventCache.Stop()
 	}()
 
 	// Start lease check loop
@@ -272,7 +287,19 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 		"event_type", eventType,
 		"resource", event.Resource,
 		"resource_id", event.ResourceId,
-		"event_groupid", event.GroupId)
+		"event_groupid", event.GroupId,
+		"event_id", event.Id)
+
+	// Check for duplicate event using event.Id for idempotency
+	if event.Id != "" {
+		_, loaded := e.eventCache.GetOrSet(event.Id, true)
+		if loaded {
+			e.log.Debugw("skipping duplicate event",
+				"event_id", event.Id,
+				"event_type", eventType)
+			return nil
+		}
+	}
 
 	// Current set of listeners
 	e.mutex.Lock()
