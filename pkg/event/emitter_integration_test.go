@@ -37,7 +37,7 @@ func GetTestNATSEmitter(mockCtrl *gomock.Controller) *Emitter {
 	mockLeaseRepository.EXPECT().
 		TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(true, nil).AnyTimes()
-	return NewEmitter(bus.NewNATSBus(nc), mockLeaseRepository, "agentevents", "")
+	return NewEmitter(bus.NewNATSBus(nc), mockLeaseRepository, "agentevents", "", DefaultEventTTL)
 }
 
 func TestEmitter_NATS_Register_Integration(t *testing.T) {

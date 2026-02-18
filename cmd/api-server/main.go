@@ -175,7 +175,7 @@ func main() {
 	}
 	// TODO(emil): do we need a mongo/postgres backend for leases like for test triggers?
 	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent-"+cfg.APIServerFullname, cfg.TestkubeNamespace)
-	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName)
+	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL)
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn

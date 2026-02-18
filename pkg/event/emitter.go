@@ -20,14 +20,14 @@ import (
 const (
 	reconcileInterval            = time.Second
 	eventEmitterQueueName string = "emitter"
-	defaultEventTTL              = 1 * time.Hour
+	DefaultEventTTL              = 1 * time.Hour
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string) *Emitter {
+func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string, eventTTL time.Duration) *Emitter {
 	instanceId := utils.RandAlphanum(10)
 	cache := ttlcache.New[string, bool](
-		ttlcache.WithTTL[string, bool](defaultEventTTL),
+		ttlcache.WithTTL[string, bool](eventTTL),
 	)
 	go cache.Start()
 	return &Emitter{
@@ -41,7 +41,7 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		listeners:           make(common.Listeners, 0),
 		clusterName:         clusterName,
 		eventCache:          cache,
-		eventTTL:            defaultEventTTL,
+		eventTTL:            eventTTL,
 	}
 }
 
