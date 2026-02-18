@@ -626,8 +626,14 @@ func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
 		// when
 		emitter.Notify(event)
 
-		// then - wait for notifications
-		time.Sleep(100 * time.Millisecond)
+		// then - wait for notifications using retry loop
+		retryCount := 100
+		for i := 0; i < retryCount; i++ {
+			if becomeUpListener.GetNotificationCount() >= 1 && endSuccessListener.GetNotificationCount() >= 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
 
 		// Both listeners should have been notified
 		becomeUpReceivedTypes := becomeUpListener.GetReceivedEventTypes()
