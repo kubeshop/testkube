@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	reconcileInterval              = time.Second
-	eventEmitterQueueName   string = "emitter"
-	DefaultEventTTL                = 1 * time.Hour
-	DefaultEventCacheCapacity      = 100000
+	reconcileInterval                = time.Second
+	eventEmitterQueueName     string = "emitter"
+	DefaultEventTTL                  = 1 * time.Hour
+	DefaultEventCacheCapacity        = 100000
 )
 
 // NewEmitter returns new emitter instance
