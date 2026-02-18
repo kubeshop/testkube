@@ -21,6 +21,7 @@ const (
 	reconcileInterval            = time.Second
 	eventEmitterQueueName string = "emitter"
 	DefaultEventTTL              = 1 * time.Hour
+	defaultEventCacheCapacity    = 100000
 )
 
 // NewEmitter returns new emitter instance
@@ -28,6 +29,7 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 	instanceId := utils.RandAlphanum(10)
 	cache := ttlcache.New[string, bool](
 		ttlcache.WithTTL[string, bool](eventTTL),
+		ttlcache.WithCapacity[string, bool](defaultEventCacheCapacity),
 	)
 	return &Emitter{
 		loader:              NewLoader(),
