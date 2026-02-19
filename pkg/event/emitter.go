@@ -329,13 +329,21 @@ func (e *Emitter) leaderEventHandler(event testkube.Event) error {
 			continue
 		}
 		for i := range matchedEventTypes {
-			event.Type_ = &matchedEventTypes[i]
+			// Create a copy of the event for this listener to avoid race conditions
+			// when multiple goroutines are spawned with different event types.
+			// Note: This is a shallow copy - pointer fields (like TestWorkflowExecution)
+			// are shared across listeners, but this is safe because listeners only read
+			// from these fields, they don't modify them. The only field we modify is Type_,
+			// which is replaced with a new pointer for each listener.
+			listenerEvent := event
+			eventType := matchedEventTypes[i]
+			listenerEvent.Type_ = &eventType
 			matchedCount++
 			e.log.Debugw("notifying listener",
 				"listener_name", l.Name(),
 				"listener_kind", l.Kind(),
 				"event_type", string(matchedEventTypes[i]))
-			go notifyListener(logger, l, event)
+			go notifyListener(logger, l, listenerEvent)
 		}
 	}
 
