@@ -254,8 +254,6 @@ func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 		}
 
 		select {
-
-		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(delay):
