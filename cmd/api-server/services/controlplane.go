@@ -125,8 +125,6 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		}
 
 		select {
-
-		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(delay):
