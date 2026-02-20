@@ -160,7 +160,7 @@ spec:
         cpu: 128m
         memory: 50Mi
   steps:
-  - name: Allocate 1GB RAM # TODO: update with python, TODO: check with incorrect image - workflow seems to be failing immediately at init then
+  - name: Allocate 1GB RAM
     shell: echo "Expected oomkilled" && python3 -c "a = ' ' * 10**9" && echo "This should not be printed if OOMKill happened"
 ---
 apiVersion: testworkflows.testkube.io/v1
