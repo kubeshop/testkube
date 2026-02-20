@@ -239,12 +239,19 @@ func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
 func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 	delay := 1 * time.Second
 	maxDelay := 30 * time.Second
+	maxAttempts := 10
+	attempt := 0
 
 	for {
+		attempt++
 		if err := runPostgresMigrations(ctx, db); err == nil {
 			return
 		} else {
 			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err, "backoff", delay)
+		}
+		if attempt >= maxAttempts {
+			log.DefaultLogger.Errorw("failed to apply Postgres migrations after max retries", "attempts", attempt)
+			return
 		}
 
 		select {

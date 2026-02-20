@@ -105,8 +105,11 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 
 	delay := 1 * time.Second
 	maxDelay := 30 * time.Second
+	maxAttempts := 10
+	attempt := 0
 
 	for {
+		attempt++
 		remaining := 0
 		for _, bucket := range active {
 			if !ensureBucket(ctx, storageClient, bucket) {
@@ -115,6 +118,10 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		}
 
 		if remaining == 0 {
+			return
+		}
+		if attempt >= maxAttempts {
+			log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", attempt, "remaining", remaining)
 			return
 		}
 
