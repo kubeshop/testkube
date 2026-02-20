@@ -103,12 +103,22 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		return
 	}
 
+func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Client, buckets []bucketSpec) {
+	var active []bucketSpec
+	for _, bucket := range buckets {
+		if bucket.name != "" {
+			active = append(active, bucket)
+		}
+	}
+	if len(active) == 0 {
+		return
+	}
+
 	delay := 1 * time.Second
 	maxDelay := 30 * time.Second
 	maxAttempts := 10
-	attempt := 0
 
-	for {
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		remaining := 0
 		for _, bucket := range active {
 			if !ensureBucket(ctx, storageClient, bucket) {
@@ -117,10 +127,6 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		}
 
 		if remaining == 0 {
-			return
-		}
-		if attempt >= maxAttempts {
-			log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", attempt, "remaining", remaining)
 			return
 		}
 
@@ -137,6 +143,8 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 			}
 		}
 	}
+	log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", maxAttempts, "remaining", remaining)
+}
 }
 
 func ensureBucket(ctx context.Context, storageClient domainstorage.Client, bucket bucketSpec) bool {
