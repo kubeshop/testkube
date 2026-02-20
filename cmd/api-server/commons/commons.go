@@ -245,9 +245,6 @@ func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 	for {
 		if err := runPostgresMigrations(ctx, db); err == nil {
 			return
-		}
-		if err := runPostgresMigrations(ctx, db); err == nil {
-			return
 		} else {
 			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err, "backoff", delay)
 		}
