@@ -143,7 +143,7 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 			}
 		}
 	}
-	log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", maxAttempts, "remaining", remaining)
+	log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", maxAttempts)
 }
 }
 
