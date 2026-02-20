@@ -149,40 +149,46 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-cypress-resource-limits # OOMKilled
+  name: expected-fail-step-oomkilled
   labels:
     core-tests: expected-fail
 spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/cypress/cypress-13
   container:
+    image: python:3.14.3-slim-trixie
     resources:
       limits:
-        cpu: 2
+        cpu: 128m
         memory: 50Mi
-    workingDir: /data/repo/test/cypress/cypress-13
+  steps:
+  - name: Allocate 1GB RAM # TODO: update with python, TODO: check with incorrect image - workflow seems to be failing immediately at init then
+    shell: echo "Expected oomkilled" && python3 -c "a = ' ' * 10**9" && echo "This should not be printed if OOMKill happened"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-oomkilled
+  labels:
+    core-tests: expected-fail
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  services:
+    service:
+      image: python:3.14.3-slim-trixie
+      resources:
+        limits:
+          cpu: 128m
+          memory: 50Mi
+      logs: always
+      count: 1
+      shell: echo "Expected oomkilled" && sleep 3 && python3 -c "a = ' ' * 10**9" && echo "This should not be printed if OOMKill happened"
   steps:
   - name: Run tests
-    run:
-      image: cypress/included:13.6.4
-      args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
-      env:
-      - name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-    steps:
-    - name: Saving artifacts
-      workingDir: /data/artifacts
-      artifacts:
-        paths:
-        - '**/*'
+    shell: echo "Running step while service is expected to be oomkilled" && sleep 30s
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
