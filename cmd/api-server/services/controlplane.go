@@ -103,17 +103,6 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 		return
 	}
 
-func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Client, buckets []bucketSpec) {
-	var active []bucketSpec
-	for _, bucket := range buckets {
-		if bucket.name != "" {
-			active = append(active, bucket)
-		}
-	}
-	if len(active) == 0 {
-		return
-	}
-
 	delay := 1 * time.Second
 	maxDelay := 30 * time.Second
 	maxAttempts := 10
