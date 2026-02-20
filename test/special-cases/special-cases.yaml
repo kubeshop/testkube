@@ -598,17 +598,17 @@ metadata:
   name: special-cases-no-initial-output
   labels:
     core-tests: special-cases
-description: "No output at the beginning (just sleep)"
+description: "No output for 60s"
 spec:
   use:
     - name: special-cases-template-default-resources
   steps:
-  - name: Run test 1
+  - name: Sleep (60s) and echo
     shell: |
-      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
-  - name: Run test 2
+      sleep 60 && echo "Sleep finished after 60 seconds"
+  - name: Echo, sleep (60s) and echo
     shell: |
-      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+      echo "Initial text" && sleep 60 && echo "Sleep finished after 60 seconds"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
