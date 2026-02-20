@@ -208,7 +208,8 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 	if migrate {
 		db := stdlib.OpenDBFromPool(pool)
 		if err := runPostgresMigrations(ctx, db); err != nil {
-			log.DefaultLogger.Warnf("failed to apply Postgres migrations: %v", err)
+			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err)
+			go retryPostgresMigrations(ctx, db)
 		}
 	}
 
@@ -233,6 +234,32 @@ func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
+	delay := 1 * time.Second
+	maxDelay := 30 * time.Second
+
+	for {
+		if err := runPostgresMigrations(ctx, db); err == nil {
+			return
+		} else {
+			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err, "backoff", delay)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+
+		if delay < maxDelay {
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
 }
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
