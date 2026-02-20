@@ -243,7 +243,9 @@ func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 	attempt := 0
 
 	for {
-		attempt++
+		if err := runPostgresMigrations(ctx, db); err == nil {
+			return
+		}
 		if err := runPostgresMigrations(ctx, db); err == nil {
 			return
 		} else {
