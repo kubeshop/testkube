@@ -262,7 +262,6 @@ func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 	}
 	log.DefaultLogger.Errorw("failed to apply Postgres migrations after max retries", "attempts", maxAttempts)
 }
-}
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
