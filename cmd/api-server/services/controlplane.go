@@ -109,7 +109,7 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 	attempt := 0
 
 	for {
-		attempt++
+		remaining := 0
 		remaining := 0
 		for _, bucket := range active {
 			if !ensureBucket(ctx, storageClient, bucket) {
