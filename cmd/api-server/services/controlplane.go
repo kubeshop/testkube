@@ -145,7 +145,6 @@ func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Cli
 	}
 	log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", maxAttempts)
 }
-}
 
 func ensureBucket(ctx context.Context, storageClient domainstorage.Client, bucket bucketSpec) bool {
 	exists, err := storageClient.BucketExists(ctx, bucket.name)
