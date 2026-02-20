@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -58,7 +59,7 @@ func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mc
 		baseDashboardPath := fmt.Sprintf("/organization/%s/environment/%s/dashboard", orgId, envId)
 
 		// Build URL based on resource type
-		var url string
+		var resultURL string
 		switch resourceType {
 		case "workflow":
 			workflowPath := fmt.Sprintf("%s/test-workflows/%s", baseDashboardPath, workflowName)
@@ -69,10 +70,10 @@ func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mc
 					workflowPath += fmt.Sprintf("/%s", executionTab)
 				}
 				if stepRef != "" {
-					workflowPath += fmt.Sprintf("?ref=%s", stepRef)
+					workflowPath += fmt.Sprintf("?ref=%s", url.QueryEscape(stepRef))
 				}
 			}
-			url = fmt.Sprintf("%s%s", dashboardUrl, workflowPath)
+			resultURL = fmt.Sprintf("%s%s", dashboardUrl, workflowPath)
 		case "execution":
 			if executionID == "" {
 				return mcp.NewToolResultError("executionId is required for execution URLs"), nil
@@ -82,15 +83,15 @@ func BuildDashboardUrl(dashboardUrl string, orgId string, envId string) (tool mc
 				executionPath += fmt.Sprintf("/%s", executionTab)
 			}
 			if stepRef != "" {
-				executionPath += fmt.Sprintf("?ref=%s", stepRef)
+				executionPath += fmt.Sprintf("?ref=%s", url.QueryEscape(stepRef))
 			}
-			url = fmt.Sprintf("%s%s", dashboardUrl, executionPath)
+			resultURL = fmt.Sprintf("%s%s", dashboardUrl, executionPath)
 		default:
 			return mcp.NewToolResultError(fmt.Sprintf("unsupported resource type: %s. Use 'workflow' or 'execution'", resourceType)), nil
 		}
 
 		result := map[string]string{
-			"url": url,
+			"url": resultURL,
 		}
 
 		jsonResponse, err := json.Marshal(result)
