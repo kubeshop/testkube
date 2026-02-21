@@ -13,6 +13,7 @@ type Client interface {
 	tools.ExecutionWaiter
 	tools.WorkflowExecutionAborter
 	tools.WorkflowExecutionMetricsGetter
+	tools.WorkflowResourceHistoryGetter
 
 	tools.LabelsLister
 	tools.ResourceGroupsLister
@@ -25,4 +26,8 @@ type Client interface {
 	tools.WorkflowGetter
 	tools.WorkflowRunner
 	tools.WorkflowMetricsGetter
+
+	// Bulk getters for yq query tools
+	tools.WorkflowDefinitionBulkGetter
+	tools.ExecutionBulkGetter
 }

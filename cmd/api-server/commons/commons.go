@@ -26,7 +26,6 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -35,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -210,7 +208,8 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 	if migrate {
 		db := stdlib.OpenDBFromPool(pool)
 		if err := runPostgresMigrations(ctx, db); err != nil {
-			log.DefaultLogger.Warnf("failed to apply Postgres migrations: %v", err)
+			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err)
+			go retryPostgresMigrations(ctx, db)
 		}
 	}
 
@@ -235,6 +234,33 @@ func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
 	}
 
 	return nil
+}
+func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
+	delay := 1 * time.Second
+	maxDelay := 30 * time.Second
+	maxAttempts := 10
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if err := runPostgresMigrations(ctx, db); err == nil {
+			return
+		} else {
+			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err, "backoff", delay, "attempt", attempt+1)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+
+		if delay < maxDelay {
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
+	log.DefaultLogger.Errorw("failed to apply Postgres migrations after max retries", "attempts", maxAttempts)
 }
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
@@ -340,22 +366,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 
 	return proContext, nil
-}
-
-func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
-	slackTemplate, err := parser.LoadConfigFromStringOrFile(
-		cfg.SlackTemplate,
-		cfg.TestkubeConfigDir,
-		"slack-template.json",
-		"slack template",
-	)
-	ExitOnError("Creating slack loader", err)
-
-	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
-	ExitOnError("Creating slack loader", err)
-
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
-		testkube.AllEventTypes, envs)
 }
 
 func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck

@@ -112,7 +112,7 @@ mongodb:
     # -- MongoDB image repository
     repository: testkube-cloud-372110/testkube/mongodb
     # -- MongoDB image tag
-    tag: 8.0.15
+    tag: 8.2.3
     # -- MongoDB image pull Secret
     pullSecrets: []
   # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
@@ -975,6 +975,21 @@ testkube-api:
     # -- Key for SSL Cert Secret k8s Secret
     # sslCertSecretSecretKey: sslCertSecretSecretKey
 
+  # -- Testkube API Startup probe parameters
+  startupProbe:
+    # -- Whether startup probe is enabled
+    enabled: true
+    # -- Initial delay for startup probe
+    initialDelaySeconds: 3
+    # -- Period between probe checks
+    periodSeconds: 3
+    # -- Probe timeout for startup probe
+    timeoutSeconds: 10
+    # -- Success threshold for startup probe
+    successThreshold: 1
+    # -- Failure threshold for startup probe
+    failureThreshold: 200
+
   # -- Testkube API Liveness probe parameters
   livenessProbe:
     # -- Initial delay for liveness probe
@@ -985,15 +1000,6 @@ testkube-api:
 
   # -- Testkube timeout for pod start
   podStartTimeout: "30m"
-
-  # Integration with Slack.
-  # ref: https://kubeshop.github.io/testkube/integrations/slack-integration/
-  # -- Slack token from the testkube authentication endpoint
-  slackToken: ""
-  # -- Slack secret to store slackToken, the key name should be SLACK_TOKEN
-  slackSecret: ""
-  # -- Slack config for the events, tests, testsuites, testworkflows and channels
-  slackConfig:
   # -- default executors as base64-encoded string
   executors: ""
   # -- SA that is used by a job. Can be annotated with the IAM Role Arn to access S3 service in AWS Cloud.

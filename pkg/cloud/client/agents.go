@@ -41,9 +41,11 @@ type AgentInput struct {
 type AgentCapability string
 
 const (
-	AgentCapabilityRunner   AgentCapability = "runner"
-	AgentCapabilityListener AgentCapability = "listener"
-	AgentCapabilityGitops   AgentCapability = "gitops"
+	AgentCapabilityRunner        AgentCapability = "runner"
+	AgentCapabilityListener      AgentCapability = "listener"
+	AgentCapabilityGitops        AgentCapability = "gitops"
+	AgentCapabilityWebhooks      AgentCapability = "webhooks"
+	AgentCapabilityCloudWebhooks AgentCapability = "cloud-webhooks"
 )
 
 type RunnerPolicy struct {

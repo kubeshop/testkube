@@ -1,4 +1,17 @@
 apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: special-cases-template-default-resources
+  labels:
+    core-tests: special-cases-template
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+---
+apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: special-cases-global-env
@@ -6,26 +19,44 @@ metadata:
     core-tests: special-cases
 description: "Global ENV - set for both pods and slave pods"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     env:
     - name: EXAMPLE_GLOBAL_ENV
       value: "GLOBAL_ENV_VALUE"
       global: true
+    - name: EXAMPLE_NON_GLOBAL_ENV
+      value: "NON_GLOBAL_ENV_VALUE"
   services:
-    slave:
-      use:
-      - name: distribute/evenly
+    service:
       image: alpine:3.22.0
       logs: always
-      count: 2
-      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+      count: 1
+      shell: |
+        if [ "${EXAMPLE_GLOBAL_ENV}" = "GLOBAL_ENV_VALUE" ] && \
+          [ "${EXAMPLE_NON_GLOBAL_ENV+x}" = "" ]; then
+          echo ENV values: OK
+          exit 0
+        else
+          echo ENV validation failed
+          exit 1
+        fi
   job:
     activeDeadlineSeconds: 30
   steps:
   - name: Step
     run:
-      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+      shell: |
+        if [ "${EXAMPLE_GLOBAL_ENV}" = "GLOBAL_ENV_VALUE" ] && \
+          [ "${EXAMPLE_NON_GLOBAL_ENV}" = "NON_GLOBAL_ENV_VALUE" ]; then
+          echo ENV values: OK
+          exit 0
+        else
+          echo ENVs validation failed
+          exit 1
+        fi
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
@@ -47,6 +78,7 @@ description: "ENV override - container ENV vs expression ENV in steps, services 
 spec:
   use:
     - name: special-cases-template-with-env
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     env:
@@ -122,6 +154,8 @@ metadata:
     core-tests: special-cases
 description: "ENV expression - ENV variable not set - should default to empty"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   steps:
@@ -140,6 +174,8 @@ metadata:
     core-tests: special-cases
 description: "workingDir - override at step level"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     workingDir: /data/global
@@ -166,6 +202,8 @@ metadata:
     core-tests: special-cases
 description: "securityContext - runAsUser and runAsGroup"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     securityContext:
@@ -228,6 +266,8 @@ metadata:
     core-tests: special-cases
 description: "Git - multiple repositories (one on step level), custom mountPath"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   content:
     git:
       uri: https://github.com/kubeshop/testkube
@@ -271,6 +311,8 @@ metadata:
     core-tests: special-cases
 description: "optional step failed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -290,6 +332,8 @@ metadata:
     core-tests: special-cases
 description: "optional step failed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -310,6 +354,8 @@ metadata:
     core-tests: special-cases
 description: "optional step passed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -327,6 +373,8 @@ metadata:
     core-tests: special-cases
 description: "conditional step skipped"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -346,6 +394,8 @@ metadata:
     core-tests: special-cases
 description: "conditional step passed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -363,6 +413,8 @@ metadata:
     core-tests: special-cases
 description: "conditional step failed but optional"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -383,6 +435,8 @@ metadata:
     core-tests: special-cases
 description: "step retry (until step passed)"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -405,6 +459,8 @@ metadata:
     core-tests: special-cases
 description: "negative step failed - inverting step result to passed"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   job:
@@ -423,6 +479,8 @@ metadata:
     core-tests: special-cases
 description: "sharing custom volume between steps"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   pod:
     volumes:
       - name: shared-volume
@@ -466,6 +524,8 @@ metadata:
   labels:
     core-tests: special-cases
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   steps:
@@ -481,6 +541,8 @@ metadata:
     core-tests: special-cases
 description: "Missing Secret - ENV should default to empty string"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     resources:
@@ -509,6 +571,8 @@ metadata:
     core-tests: special-cases
 description: "Missing ConfigMap - ENV should default to empty string"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     resources:
@@ -534,15 +598,17 @@ metadata:
   name: special-cases-no-initial-output
   labels:
     core-tests: special-cases
-description: "No output at the beginning (just sleep)"
+description: "No output for 60s"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   steps:
-  - name: Run test 1
+  - name: Sleep (60s) and echo
     shell: |
-      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
-  - name: Run test 2
+      sleep 60 && echo "Sleep finished after 60 seconds"
+  - name: Echo, sleep (60s) and echo
     shell: |
-      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+      echo "Initial text" && sleep 60 && echo "Sleep finished after 60 seconds"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -554,6 +620,8 @@ metadata:
     manual: "true"
 description: "Artifacts path with double asterisks (/data/example/directory/aaa/bbb should contain file1.txt and file2.log)"
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
     workingDir: /data
@@ -581,6 +649,8 @@ metadata:
   labels:
     core-tests: special-cases
 spec:
+  use:
+    - name: special-cases-template-default-resources
   container:
     image: alpine:3.22.0
   execution:
@@ -591,3 +661,116 @@ spec:
   steps:
   - name: Step
     shell: echo "Step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-unique-labels # don't target it specifically - just a dependency for special-cases-execute-workflows-selector-matchlabels
+  labels:
+    unique-label: unique-label-value
+    core-tests: special-cases
+description: "Special-cases workflow for execute.selector.matchLabels test"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step
+    shell: echo "Step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-execute-workflows-selector-matchlabels
+  labels:
+    core-tests: special-cases
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step with execute.workflows.selector.matchLabels
+    execute:
+      workflows:
+      - selector:
+          matchLabels:
+            unique-label: unique-label-value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-silent-workflow
+  labels:
+    core-tests: special-cases
+    manual: "true"
+description: "Silent workflow - should be excluded from metrics/insights/health, shouldn't trigger webhooks"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  execution:
+    silent: true
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Step
+    shell: echo "Step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-config-override-target # don't target it specifically - just a dependency for special-cases-config-override
+  labels:
+    core-tests: special-cases
+description: "Shouldn't be triggered directly (will fail then) - requires specific config overrides to pass"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  config:
+    service_count: {type: integer, default: -1}
+    workers: {type: integer, default: -1}
+    step_validation: {type: string, default: "default_value"}
+  container:
+    image: alpine:3.22.0
+  services:
+    service:
+      image: alpine:3.22.0
+      logs: always
+      count: 'config.service_count'
+      shell: echo "Service" && exit 0
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Step
+    shell: |
+      STEP_VALIDATION="{{ shellquote(config.step_validation) }}"
+      echo "$STEP_VALIDATION"
+      [ "$STEP_VALIDATION" = "override" ] && exit 0 || { echo "validation failed"; exit 1; }
+  - name: Parallel step
+    parallel:
+      count: 'config.workers'
+      run:
+        image: alpine:3.22.0
+        shell: echo "Parallel step" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-config-override
+  labels:
+    core-tests: special-cases
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Trigger workflow requiring config override to pass
+    execute:
+      workflows:
+      - name: special-cases-config-override-target
+        config:
+          service_count: 1
+          workers: 1
+          step_validation: "override"

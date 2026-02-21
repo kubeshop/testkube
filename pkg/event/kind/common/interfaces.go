@@ -6,7 +6,6 @@ import (
 
 const (
 	ListenerKindWebsocket string = "websocket"
-	ListenerKindSlack     string = "slack"
 	ListenerKindWebhook   string = "webhook"
 )
 

@@ -175,7 +175,7 @@ next:
   # - tkcsync_*** - GitOps Agent
   gitops:
     ## Should it copy data from Kubernetes to Control Plane
-    syncKubernetesToCloud: false
+    syncKubernetesToCloud: true
 
   # Configure the legacy Tests and Test Suites execution
   # - tkcagnt_*** - Super Agent
@@ -273,17 +273,6 @@ additionalNamespaces: []
 analyticsEnabled: true
 # -- Testkube timeout for pod start
 podStartTimeout: "30m"
-
-## Integration with Slack.
-##ref: https://kubeshop.github.io/testkube/integrations/slack-integration/
-## Slack token from the testkube authentication endpoint
-slackToken: ""
-
-## Slack secret to store slackToken, the key name should be SLACK_TOKEN
-slackSecret: ""
-
-## Slack config for the events, tests, testsuites and channels
-slackConfig: ""
 
 templates:
   ## Base64 encoded Job template
@@ -773,6 +762,15 @@ testConnection:
   affinity: {}
   tolerations: []
   nodeSelector: {}
+
+## Testkube API Startup probe
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 3
+  periodSeconds: 3
+  timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 200
 
 ## Testkube API Liveness probe
 livenessProbe:

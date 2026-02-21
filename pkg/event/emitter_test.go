@@ -37,7 +37,8 @@ func TestEmitter_Register(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
@@ -58,10 +59,11 @@ func TestEmitter_Listen(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
-		// and listener with second matic selector
+		// and listener with second matching selector
 		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=listener2"}
 
 		// and emitter with registered listeners
@@ -114,7 +116,8 @@ func TestEmitter_Notify(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l3"}
@@ -151,7 +154,8 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
@@ -191,7 +195,8 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy1"})
 		emitter.RegisterLoader(&dummy.DummyLoader{IdPrefix: "dummy2"})
 
@@ -220,7 +225,8 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
 			testkube.BECOME_TESTWORKFLOW_UP_EventType,
 		}}
@@ -253,7 +259,8 @@ func TestEmitter_Listen_reconciliation(t *testing.T) {
 		mockLeaseRepository.EXPECT().
 			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(true, nil).AnyTimes()
-		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
 		loader := &dummy.DummyLoader{IdPrefix: "dummy1", SelectorString: "v1"}
 		registeredListener := &dummy.DummyListener{Id: "registered", Types: []testkube.EventType{
 			testkube.BECOME_TESTWORKFLOW_UP_EventType,
@@ -297,7 +304,8 @@ func TestEmitterCreatesK8sEvents(t *testing.T) {
 	listener := k8sevent.NewK8sEventListener("k8sevent", "", "tk-dev",
 		[]testkube.EventType{*testkube.EventStartTestWorkflow}, clientset)
 
-	emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "")
+	emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+	defer emitter.eventCache.Stop()
 	emitter.Register(listener)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -392,7 +400,7 @@ func (l *FakeListener) Metadata() map[string]string {
 }
 
 func TestEmitter_eventTopic(t *testing.T) {
-	emitter := NewEmitter(nil, nil, "agentevents", "")
+	emitter := NewEmitter(nil, nil, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
 
 	t.Run("should return events topic if explicitly set", func(t *testing.T) {
 		evt := testkube.Event{Type_: testkube.EventEndTestWorkflowSuccess, StreamTopic: "topic"}
@@ -418,5 +426,344 @@ func TestEmitter_eventTopic(t *testing.T) {
 			Resource: testkube.EventResourceTestWorkflowExecution,
 		}
 		assert.Equal(t, "agentevents.testworkflowexecution", emitter.eventTopic(evt))
+	})
+}
+
+func TestEmitter_Idempotency(t *testing.T) {
+	t.Run("should process event with same ID only once", func(t *testing.T) {
+		// given
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+
+		listener := &dummy.DummyListener{Id: "l1"}
+		emitter.Register(listener)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		// when - sending the same event twice with the same ID
+		event := newExampleTestEvent1()
+		emitter.Notify(event)
+
+		// then - wait for first event to be processed
+		retryCount := 100
+		for i := 0; i < retryCount; i++ {
+			if listener.GetNotificationCount() >= 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		// Store the notification count after first event
+		firstCount := listener.GetNotificationCount()
+		assert.Equal(t, 1, firstCount, "listener should have been notified once after first event")
+
+		// Send the same event again (duplicate)
+		emitter.Notify(event)
+		time.Sleep(100 * time.Millisecond)
+
+		// then - listener should still be notified only once
+		assert.Equal(t, 1, listener.GetNotificationCount(), "listener should still have been notified only once after duplicate event")
+	})
+
+	t.Run("should process events with different IDs", func(t *testing.T) {
+		// given
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+
+		listener := &dummy.DummyListener{Id: "l1"}
+		emitter.Register(listener)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		// when - sending two different events
+		event1 := newExampleTestEvent1()
+		event2 := newExampleTestEvent2()
+
+		emitter.Notify(event1)
+		emitter.Notify(event2)
+
+		// then - wait for notifications
+		retryCount := 100
+		notificationsCount := 0
+		for i := 0; i < retryCount; i++ {
+			notificationsCount = listener.GetNotificationCount()
+			if notificationsCount == 2 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		assert.Equal(t, 2, notificationsCount, "listener should have been notified twice for two different events")
+	})
+
+	t.Run("should process event without ID normally", func(t *testing.T) {
+		// given
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+
+		listener := &dummy.DummyListener{Id: "l1"}
+		emitter.Register(listener)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		// when - sending event without ID (idempotency check should be skipped)
+		event := testkube.Event{
+			Id:                    "", // No ID
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: testkube.NewExecutionWithID("executionID3", "test"),
+		}
+
+		emitter.Notify(event)
+		emitter.Notify(event) // Send again
+
+		// then - both should be processed
+		retryCount := 100
+		notificationsCount := 0
+		for i := 0; i < retryCount; i++ {
+			notificationsCount = listener.GetNotificationCount()
+			if notificationsCount == 2 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		assert.Equal(t, 2, notificationsCount, "listener should have been notified twice when event has no ID")
+	})
+}
+
+func TestEmitter_MultipleWebhooksWithDifferentEventTypes(t *testing.T) {
+	t.Run("should notify all webhooks with correct event types when multiple webhooks match", func(t *testing.T) {
+		// This test reproduces the issue from https://github.com/kubeshop/testkube/issues/7055
+		// where webhooks don't send events when multiple webhooks with different event types are configured
+
+		// given
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+
+		// Create listeners that match the issue scenario:
+		// 1. Webhook for become-testworkflow-up (matches with selector)
+		becomeUpListener := &dummy.DummyListener{
+			Id: "become-up-webhook",
+			Types: []testkube.EventType{
+				testkube.BECOME_TESTWORKFLOW_UP_EventType,
+			},
+			SelectorString: "ataccama.com/incident-policy=warning-when-state-change",
+		}
+
+		// 2. Webhook for end-testworkflow-success (no selector, matches all)
+		endSuccessListener := &dummy.DummyListener{
+			Id: "otel-webhook",
+			Types: []testkube.EventType{
+				testkube.END_TESTWORKFLOW_SUCCESS_EventType,
+			},
+			SelectorString: "",
+		}
+
+		emitter.Register(becomeUpListener)
+		emitter.Register(endSuccessListener)
+
+		// Start listening
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		// Create an event for a successful test workflow with the matching label
+		event := testkube.Event{
+			Id:    "event-multi-webhook",
+			Type_: testkube.EventEndTestWorkflowSuccess,
+			TestWorkflowExecution: &testkube.TestWorkflowExecution{
+				Id: "exec-multi",
+				Workflow: &testkube.TestWorkflow{
+					Name: "tw1",
+					Labels: map[string]string{
+						"ataccama.com/incident-policy": "warning-when-state-change",
+					},
+				},
+			},
+		}
+
+		// when
+		emitter.Notify(event)
+
+		// then - wait for notifications using retry loop
+		retryCount := 100
+		for i := 0; i < retryCount; i++ {
+			if becomeUpListener.GetNotificationCount() >= 1 && endSuccessListener.GetNotificationCount() >= 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		// Both listeners should have been notified
+		becomeUpReceivedTypes := becomeUpListener.GetReceivedEventTypes()
+		endSuccessReceivedTypes := endSuccessListener.GetReceivedEventTypes()
+
+		// The become-up listener should receive the BECOME_TESTWORKFLOW_UP event
+		assert.Contains(t, becomeUpReceivedTypes, testkube.BECOME_TESTWORKFLOW_UP_EventType,
+			"become-up webhook should receive BECOME_TESTWORKFLOW_UP event")
+
+		// The end-success listener should receive the END_TESTWORKFLOW_SUCCESS event
+		assert.Contains(t, endSuccessReceivedTypes, testkube.END_TESTWORKFLOW_SUCCESS_EventType,
+			"otel webhook should receive END_TESTWORKFLOW_SUCCESS event")
+
+		// Verify each listener received exactly the event type it subscribed to
+		assert.Len(t, becomeUpReceivedTypes, 1, "become-up webhook should receive exactly 1 event")
+		assert.Len(t, endSuccessReceivedTypes, 1, "otel webhook should receive exactly 1 event")
+	})
+}
+
+func TestEmitter_ThreeWebhooksRealScenario(t *testing.T) {
+	t.Run("should correctly handle three webhooks: failed, up, and otel with end-testworkflow-success event", func(t *testing.T) {
+		// This test reproduces the exact scenario from the issue report
+		// where three webhooks are configured and an end-testworkflow-success event fires
+
+		// given
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+
+		// Webhook 1: "failed" - become-testworkflow-failed with selector
+		failedWebhook := &dummy.DummyListener{
+			Id: "failed",
+			Types: []testkube.EventType{
+				testkube.BECOME_TESTWORKFLOW_FAILED_EventType,
+			},
+			SelectorString: "ataccama.com/incident-policy=warning-when-state-change",
+		}
+
+		// Webhook 2: "up" - become-testworkflow-up with selector
+		upWebhook := &dummy.DummyListener{
+			Id: "up",
+			Types: []testkube.EventType{
+				testkube.BECOME_TESTWORKFLOW_UP_EventType,
+			},
+			SelectorString: "ataccama.com/incident-policy=warning-when-state-change",
+		}
+
+		// Webhook 3: "testkube-otel-webhook" - multiple events, no selector
+		otelWebhook := &dummy.DummyListener{
+			Id: "testkube-otel-webhook",
+			Types: []testkube.EventType{
+				testkube.START_TESTWORKFLOW_EventType,
+				testkube.END_TESTWORKFLOW_SUCCESS_EventType,
+				testkube.END_TESTWORKFLOW_FAILED_EventType,
+				testkube.END_TESTWORKFLOW_ABORTED_EventType,
+			},
+			SelectorString: "", // No selector - matches all
+		}
+
+		emitter.Register(failedWebhook)
+		emitter.Register(upWebhook)
+		emitter.Register(otelWebhook)
+
+		// listening emitter
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		go emitter.Listen(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		// when: an end-testworkflow-success event fires with the matching label
+		event := testkube.Event{
+			Id:    "test-event-success",
+			Type_: testkube.EventEndTestWorkflowSuccess,
+			TestWorkflowExecution: &testkube.TestWorkflowExecution{
+				Id: "exec-success-1",
+				Workflow: &testkube.TestWorkflow{
+					Name: "test-workflow",
+					Labels: map[string]string{
+						"ataccama.com/incident-policy": "warning-when-state-change",
+					},
+				},
+			},
+		}
+
+		emitter.Notify(event)
+
+		// then - wait for notifications using retry loop
+		retryCount := 100
+		for i := 0; i < retryCount; i++ {
+			if upWebhook.GetNotificationCount() >= 1 && otelWebhook.GetNotificationCount() >= 1 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		// Get received event types
+		failedReceivedTypes := failedWebhook.GetReceivedEventTypes()
+		upReceivedTypes := upWebhook.GetReceivedEventTypes()
+		otelReceivedTypes := otelWebhook.GetReceivedEventTypes()
+
+		t.Logf("failed webhook received: %v (count: %d)", failedReceivedTypes, len(failedReceivedTypes))
+		t.Logf("up webhook received: %v (count: %d)", upReceivedTypes, len(upReceivedTypes))
+		t.Logf("otel webhook received: %v (count: %d)", otelReceivedTypes, len(otelReceivedTypes))
+
+		// Verify expectations:
+		// 1. "failed" webhook should NOT receive any event (become-testworkflow-failed doesn't map to success)
+		assert.Empty(t, failedReceivedTypes,
+			"failed webhook should NOT receive any event for end-testworkflow-success")
+
+		// 2. "up" webhook SHOULD receive become-testworkflow-up (maps to end-testworkflow-success)
+		assert.Contains(t, upReceivedTypes, testkube.BECOME_TESTWORKFLOW_UP_EventType,
+			"up webhook should receive BECOME_TESTWORKFLOW_UP event")
+		assert.Len(t, upReceivedTypes, 1,
+			"up webhook should receive exactly 1 event")
+
+		// 3. "otel" webhook SHOULD receive end-testworkflow-success (direct match, no selector)
+		assert.Contains(t, otelReceivedTypes, testkube.END_TESTWORKFLOW_SUCCESS_EventType,
+			"otel webhook should receive END_TESTWORKFLOW_SUCCESS event")
+		assert.Len(t, otelReceivedTypes, 1,
+			"otel webhook should receive exactly 1 event")
+
+		// Total: 2 webhooks should be notified (up + otel)
+		totalNotifications := len(failedReceivedTypes) + len(upReceivedTypes) + len(otelReceivedTypes)
+		assert.Equal(t, 2, totalNotifications,
+			"Total notifications should be 2 (up webhook + otel webhook)")
 	})
 }

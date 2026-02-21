@@ -12,6 +12,10 @@ spec:
     activeDeadlineSeconds: 180
   container:
     image: alpine:3.22.2
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   events:
   - cronjob:
       cron: "*/15 * * * *" # every 15 minutes

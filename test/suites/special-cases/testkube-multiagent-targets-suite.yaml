@@ -8,6 +8,11 @@ metadata:
     tool: testkube-multi-agent
 description: Run only at .dev where these runners are created!
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       parallelism: 2

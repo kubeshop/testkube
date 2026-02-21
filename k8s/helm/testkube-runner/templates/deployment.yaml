@@ -218,7 +218,7 @@ spec:
             - name: "TESTKUBE_PRO_TLS_INSECURE"
               value: "true"
             {{- end }}
-            - name: "TESTKUBE_PRO_TLS_SKIP_VERIFY"
+            - name: "TESTKUBE_PRO_SKIP_VERIFY"
               value: "{{ .Values.cloud.tls.skipVerify }}"
 
             # Server
@@ -307,20 +307,18 @@ spec:
             {{- end }}
 
             # Constants
-            - name: "SLACK_CONFIG"
-              value: "[]"
             - name: "ENABLE_K8S_EVENTS"
               value: "false"
             - name: "DISABLE_TEST_TRIGGERS"
               value: "{{ if .Values.listener.enabled }}false{{ else }}true{{ end }}"
             - name: "DISABLE_WEBHOOKS"
-              value: "true"
+              value: "{{ if .Values.webhooks.enabled }}false{{ else }}true{{ end }}"
             - name: "DISABLE_DEPRECATED_TESTS"
               value: "true"
             - name: "DISABLE_DEFAULT_AGENT"
               value: "true"
             - name: "GITOPS_KUBERNETES_TO_CLOUD_ENABLED"
-              value: "false"
+              value: "{{ if .Values.gitops.enabled }}true{{ else }}false{{ end }}"
             - name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED"
               value: "false"
             - name: "ENABLE_CRON_JOBS"

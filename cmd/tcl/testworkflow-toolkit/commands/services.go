@@ -140,7 +140,7 @@ func NewServicesCmd() *cobra.Command {
 			// Initialize dependencies from singletons in the command handler only
 			deps := ServicesDependencies{
 				Config:          config.Config(),
-				BaseMachine:     spawn.CreateBaseMachine(),
+				BaseMachine:     spawn.CreateBaseMachineWithoutEnv(),
 				TransferSrv:     transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort),
 				ExecutionWorker: spawn.ExecutionWorker(),
 				Ref:             config.Ref(),
@@ -167,7 +167,7 @@ func RunServicesWithOptions(specContent string, cfg *config.ConfigV2, base64Enco
 
 	deps := ServicesDependencies{
 		Config:          internalCfg,
-		BaseMachine:     spawn.CreateBaseMachine(),
+		BaseMachine:     spawn.CreateBaseMachineWithoutEnv(),
 		TransferSrv:     transfer.NewServer(constants.DefaultTransferDirPath, cfg.IP(), constants.DefaultTransferPort),
 		ExecutionWorker: spawn.ParallelExecutionWorker(cfg),
 		Ref:             internalCfg.Resource.Id,

@@ -142,9 +142,6 @@ SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 # ==================== Environment Configuration ====================
 DASHBOARD_URI ?= https://demo.testkube.io
 BUSYBOX_IMAGE ?= busybox:latest
-# Slack bot
-SLACK_BOT_CLIENT_ID ?=
-SLACK_BOT_CLIENT_SECRET ?=
 # Analytics
 TESTKUBE_ANALYTICS_ENABLED ?= false
 ANALYTICS_TRACKING_ID ?=
@@ -165,8 +162,6 @@ LD_FLAGS_COMMON := -s -w \
 LD_FLAGS_API := $(LD_FLAGS_COMMON) \
     -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION) \
     -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT) \
-    -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
-    -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
     -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID) \
     -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
     -X github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)
@@ -457,21 +452,19 @@ docker-build: docker-build-api docker-build-cli ## Build all Docker images
 .PHONY: docker-build-api
 docker-build-api: ## Build API server Docker image
 	@echo "Building API server Docker image..."
-	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
-		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
+	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
 		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-api-server:latest \
-		ALPINE_IMAGE=alpine:3.20.8 \
+		ALPINE_IMAGE=alpine:3.23.3 \
 		$(GORELEASER) release -f goreleaser_files/.goreleaser-docker-build-api.yml --clean --snapshot
 
 .PHONY: docker-build-cli
 docker-build-cli: ## Build CLI Docker image
 	@echo "Building CLI Docker image..."
-	@env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** \
-		ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
+	@env ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** \
 		SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** \
 		DOCKER_BUILDX_CACHE_FROM=type=registry,ref=$(DOCKER_REGISTRY)/testkube-cli:latest \
-		ALPINE_IMAGE=alpine:3.20.8 \
+		ALPINE_IMAGE=alpine:3.23.3 \
 		$(GORELEASER) release -f .builds-linux.goreleaser.yml --clean --snapshot
 
 # ==================== Kubernetes ====================

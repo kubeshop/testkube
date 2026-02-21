@@ -203,6 +203,10 @@ spec:
   container:
     image: mcr.microsoft.com/playwright:v1.56.1
     workingDir: /data/repo/test/playwright/playwright-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -253,6 +257,10 @@ spec:
   container:
     image: mcr.microsoft.com/playwright:v1.56.1
     workingDir: /data/repo/test/playwright/playwright-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
   job:
     activeDeadlineSeconds:  600
   steps:

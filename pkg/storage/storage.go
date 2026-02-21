@@ -10,6 +10,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// MaxConcurrentDownloads is the maximum number of concurrent file downloads
+// allowed when building artifact archives.
+const MaxConcurrentDownloads = 10
+
 // Client is storage client abstraction
 //
 //go:generate go tool mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" Client

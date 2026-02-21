@@ -175,7 +175,7 @@ func main() {
 	}
 	// TODO(emil): do we need a mongo/postgres backend for leases like for test triggers?
 	eventsEmitterLeaseBackend := leasebackendk8s.NewK8sLeaseBackend(clientset, "testkube-agent-"+cfg.APIServerFullname, cfg.TestkubeNamespace)
-	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName)
+	eventsEmitter := event.NewEmitter(eventBus, eventsEmitterLeaseBackend, "agentevents", cfg.TestkubeClusterName, event.DefaultEventTTL, event.DefaultEventCacheCapacity)
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
@@ -541,7 +541,6 @@ func main() {
 	}
 	websocketLoader := ws.NewWebsocketLoader()
 	eventsEmitter.RegisterLoader(websocketLoader)
-	eventsEmitter.RegisterLoader(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
 		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {
@@ -795,7 +794,13 @@ func main() {
 		})
 	}
 
-	if commons.CronJobsEnabled(cfg) {
+	// When Control Plane has Source of Truth capability and the agent has been migrated
+	// (no longer a SuperAgent), cron scheduling is delegated to CP.
+	// The agent should not run its own cron scheduler to avoid double executions.
+	// SuperAgents must continue running local cron until migration completes.
+	if proContext.HasSourceOfTruthCapability && !proContext.Agent.IsSuperAgent {
+		log.DefaultLogger.Infow("Control Plane has Source of Truth capability - cron scheduling delegated to cloud")
+	} else if commons.CronJobsEnabled(cfg) {
 		schedulableResourceWatcher := cronjobtestworkflow.New(
 			log.DefaultLogger,
 			testWorkflowsClient,
@@ -813,7 +818,6 @@ func main() {
 			schedulableResourceWatcher.WatchTestWorkflows,
 			schedulableResourceWatcher.WatchTestWorkflowTemplates,
 		)
-		// Start the new scheduler.
 		leaderTasks = append(leaderTasks, leader.Task{
 			Name: "cron-scheduler",
 			Start: func(taskCtx context.Context) error {

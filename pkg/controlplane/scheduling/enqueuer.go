@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -204,6 +205,16 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 		SetKubernetesObjectName(req.KubernetesObjectName).
 		SetRunningContext(testworkflowexecutor.GetLegacyRunningContext(req))
 
+	if req.SilentMode != nil {
+		executionBase.SetSilentMode(&testkube.SilentMode{
+			Webhooks: req.SilentMode.Webhooks,
+			Insights: req.SilentMode.Insights,
+			Health:   req.SilentMode.Health,
+			Metrics:  req.SilentMode.Metrics,
+			Cdevents: req.SilentMode.Cdevents,
+		})
+	}
+
 	hasResolvedWorkflow := len(req.ResolvedWorkflow) != 0
 	if hasResolvedWorkflow {
 		var workflow testkube.TestWorkflow
@@ -270,6 +281,11 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 				current.SetError("Cannot inline Test Workflow Templates", err)
 				continue
 			}
+		}
+
+		// Apply silent flag from workflow spec to SilentMode
+		if current.IsSilent() {
+			current.SetSilentMode(testworkflows.NewSilenceAllSilentMode())
 		}
 	}
 
@@ -378,21 +394,6 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExecution) {
 	for _, execution := range executions {
 		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-
-		switch {
-		case execution.Result.IsPassed():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, ""))
-		case execution.Result.IsAborted():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, ""))
-		case execution.Result.IsCanceled():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, ""))
-		default:
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, ""))
-		}
-
-		if execution.Result.IsNotPassed() {
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, ""))
-		}
 	}
 }
 

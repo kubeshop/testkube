@@ -6,6 +6,11 @@ metadata:
     core-tests: special-cases-suite
     type: suite
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       parallelism: 2
@@ -30,3 +35,13 @@ spec:
       - name: special-cases-no-initial-output
       - name: special-cases-artifact-double-asterisk
       - name: special-cases-execution-tags
+      - name: special-cases-execute-workflows-selector-matchlabels
+      - name: special-cases-silent-workflow
+      - name: special-cases-config-override
+  - name: Execute .dev-specific workflows
+    condition: 'environment.id == "tkcenv_03e3ff499f13ccba"' # execute only at .dev environment
+    execute:
+      parallelism: 2
+      workflows:
+      - name: special-cases-dev-credentials-private-git-repository
+      - name: special-cases-dev-credentials

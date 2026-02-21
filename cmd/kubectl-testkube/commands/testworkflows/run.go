@@ -204,16 +204,28 @@ func runTestWorkflow(opts *RunOptions) func(*cobra.Command, []string) {
 
 		var silentMode *testkube.SilentMode
 		if opts.Silent {
-			silentMode = &testkube.SilentMode{
-				Webhooks: true,
-				Insights: true,
-				Health:   true,
-				Metrics:  true,
-				Cdevents: true,
-			}
+			silentMode = testworkflows.NewSilenceAllSilentMode()
 		} else if opts.DisableWebhooks {
 			silentMode = &testkube.SilentMode{
 				Webhooks: true,
+			}
+		}
+
+		var workflowName string
+		if len(args) > 0 {
+			workflowName = args[0]
+		}
+		if workflowName != "" {
+			workflow, err := client.GetTestWorkflow(workflowName)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrInvalidRuntimeParameter,
+					"Failed to find workflow by name",
+					"Check if workflow name is valid.",
+					err,
+				))
+			} else if testworkflows.IsWorkflowSilent(&workflow) {
+				silentMode = testworkflows.NewSilenceAllSilentMode()
 			}
 		}
 
