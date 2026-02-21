@@ -82,7 +82,8 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 **PostgreSQL** (Future Primary Database, currently in Preview)
 
 - Stores test definitions, executions, webhooks, and metadata
-- Repository layer: [`pkg/repository/postgres/`](pkg/repository/postgres/)
+- Repository layer: [`pkg/repository/testworkflow/postgres/`](pkg/repository/testworkflow/postgres/), [`pkg/repository/leasebackend/postgres/`](pkg/repository/leasebackend/postgres/), [`pkg/repository/sequence/postgres/`](pkg/repository/sequence/postgres/)
+- Factory: [`pkg/repository/postgres_factory.go`](pkg/repository/postgres_factory.go)
 - Migration: [`pkg/dbmigrator/`](pkg/dbmigrator/)
 
 **MongoDB** (Current Primary Database)
@@ -109,7 +110,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 
 The event system publishes and listens to test execution events:
 
-- **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, Slack, K8s events, CD events, WebSockets
+- **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, K8s events, CD events, WebSockets
 - **Event Emitter**: [`pkg/event/emitter.go`](pkg/event/emitter.go) - Publishes execution lifecycle events
 
 ### 6. REST API
@@ -118,16 +119,11 @@ Testkube exposes REST APIs for interacting with core resources and functionality
 
 **OpenAPI Definition**: [`api/v1/testkube.yaml`](api/v1/testkube.yaml)
 
-- Defines the agent's REST API contract
-- Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
-
-**Framework**: Uses [Fiber](https://gofiber.io/) web framework for HTTP routing and middleware
-
-**OpenAPI Definition**: [`api/v1/testkube.yaml`](api/v1/testkube.yaml)
-
 - Defines the complete REST API contract
 - Used for client code generation and documentation
 - Generated models: [`pkg/api/v1/testkube/`](pkg/api/v1/testkube/)
+
+**Framework**: Uses [Fiber](https://gofiber.io/) web framework for HTTP routing and middleware
 
 **Route Registration**: [`internal/app/api/v1/server.go`](internal/app/api/v1/server.go) - `TestkubeAPI.Init()`
 
@@ -262,7 +258,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 1. **Definition**: CRDs are defined in Go using Kubebuilder annotations (`+kubebuilder:object:root=true`)
 2. **Generation**: `controller-gen` generates CRD YAML files in `k8s/crd/`
 3. **Post-processing**: CRD files are optimized to reduce size (for Kubernetes annotation limits)
-4. **Deployment**: CRDs are installed via Helm chart (`k8s/helm/testkube/crds/`)
+4. **Deployment**: CRDs are installed via the Helm chart ([`k8s/helm/testkube/`](k8s/helm/testkube/))
 5. **API Server**: Kubernetes API server validates and stores CRD instances
 6. **Controllers**: Controllers watch CRDs and take actions (see [Kubernetes Controllers](#2-kubernetes-controllers))
 
