@@ -160,7 +160,7 @@ mongodb:
       # -- MongoDB metrics image repository
       repository: testkube-cloud-372110/testkube/mongodb
       # -- MongoDB metrics image tag
-      tag: "8.0.15"
+      tag: "8.2.3"
 
 # PostgreSQL parameters
 # For more configuration parameters of PostgreSQL chart please look here: https://github.com/bitnami/charts/tree/main/bitnami/postgresql#parameters
