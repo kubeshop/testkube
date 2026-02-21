@@ -14,7 +14,7 @@ You can read more about the differences between the two deployment modes in the 
 - [Core Components](#core-components)
   - [1. API Server](#1-api-server)
   - [2. Kubernetes Controllers](#2-kubernetes-controllers)
-  - [3. Workflow Execution Runtime](#3-workflow-execution-runtime)
+  - [3. TestWorkflow Execution Runtime](#3-testworkflow-execution-runtime)
   - [4. Storage Layer](#4-storage-layer)
   - [5. Event System](#5-event-system)
   - [6. REST API](#6-rest-api)
@@ -34,7 +34,7 @@ You can read more about the differences between the two deployment modes in the 
 The API server is the main service that:
 
 - Exposes REST (HTTP) and gRPC APIs for managing tests, workflows, and executions
-- Handles test/workflow execution requests
+- Handles TestWorkflow execution requests
 - Manages storage connections (MongoDB/PostgreSQL, MinIO, NATS)
 - Runs Kubernetes controllers for watching CRDs
 - Processes events and webhooks
@@ -51,18 +51,18 @@ The API server is the main service that:
 
 Controllers watch Kubernetes Custom Resource Definitions (CRDs) and trigger actions:
 
-- **TestWorkflowExecution Controller** (`testworkflowexecutionexecutor.go`) - Watches `TestWorkflowExecution` CRDs and schedules workflow runs when CRDs are created/updated
+- **TestWorkflowExecution Controller** (`testworkflowexecutionexecutor.go`) - Watches `TestWorkflowExecution` CRDs and schedules TestWorkflow executions when CRDs are created/updated
 
 Controllers are enabled via `ENABLE_K8S_CONTROLLERS=true` and use [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime).
 
-### 3. Workflow Execution Runtime
+### 3. TestWorkflow Execution Runtime
 
 Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows) as an abstraction layer for running any kind of test inside Kubernetes.
 
 **TestWorkflow Init**: [`cmd/testworkflow-init/`](cmd/testworkflow-init/)
 
 - Initializes TestWorkflow execution containers
-- Orchestrates workflow step groups and parallel execution
+- Orchestrates TestWorkflow step groups and parallel execution
 - Handles container lifecycle and coordination
 
 **TestWorkflow Toolkit**: [`cmd/testworkflow-toolkit/`](cmd/testworkflow-toolkit/)
@@ -81,21 +81,21 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
 
-- Stores test definitions, executions, webhooks, and metadata
+- Stores TestWorkflow definitions, executions, webhooks, and metadata
 - Repository layer: [`pkg/repository/testworkflow/postgres/`](pkg/repository/testworkflow/postgres/), [`pkg/repository/leasebackend/postgres/`](pkg/repository/leasebackend/postgres/), [`pkg/repository/sequence/postgres/`](pkg/repository/sequence/postgres/)
 - Factory: [`pkg/repository/postgres_factory.go`](pkg/repository/postgres_factory.go)
 - Migration: [`pkg/dbmigrator/`](pkg/dbmigrator/)
 
 **MongoDB** (Current Primary Database)
 
-- Alternative to PostgreSQL for storing test definitions, executions, webhooks, and metadata
+- Alternative to PostgreSQL for storing TestWorkflow definitions, executions, webhooks, and metadata
 - Repository layer: [`pkg/repository/testworkflow/mongo/`](pkg/repository/testworkflow/mongo/)
 - Lease backend: [`pkg/repository/leasebackend/mongo/`](pkg/repository/leasebackend/mongo/)
 - Factory: [`pkg/repository/mongo_factory.go`](pkg/repository/mongo_factory.go)
 
 **MinIO** (Object Storage)
 
-- Stores test artifacts (logs, reports, files)
+- Stores TestWorkflow execution artifacts (logs, reports, files)
 - Buckets: `testkube-artifacts`, `testkube-logs`
 - Storage interface: [`pkg/storage/`](pkg/storage/)
 
@@ -108,7 +108,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 
 **Location**: [`pkg/event/`](pkg/event/)
 
-The event system publishes and listens to test execution events:
+The event system publishes and listens to TestWorkflow execution events:
 
 - **Event Listeners**: [`pkg/event/kind/`](pkg/event/kind/) - Webhooks, K8s events, CD events, WebSockets
 - **Event Emitter**: [`pkg/event/emitter.go`](pkg/event/emitter.go) - Publishes execution lifecycle events
@@ -199,7 +199,7 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 **Definition Location**: [`api/`](api/)
 **Generated CRDs**: [`k8s/crd/`](k8s/crd/)
 
-Testkube extends Kubernetes with Custom Resource Definitions to enable declarative test management. CRDs are defined using [Kubebuilder](https://book.kubebuilder.io/) annotations and generated from Go types.
+Testkube extends Kubernetes with Custom Resource Definitions to enable declarative TestWorkflow management. CRDs are defined using [Kubebuilder](https://book.kubebuilder.io/) annotations and generated from Go types.
 
 **CRD Generation**: Run `make generate-crds` to regenerate CRDs after modifying types in `api/`.
 
@@ -209,18 +209,18 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 
 - **`TestWorkflow`** (`testworkflows.testkube.io/v1`)
   - **Definition**: [`api/testworkflows/v1/testworkflow_types.go`](api/testworkflows/v1/testworkflow_types.go)
-  - **Purpose**: Defines a test workflow with setup, steps, and after phases
+  - **Purpose**: Defines a TestWorkflow with setup, steps, and after phases
   - **Features**: Template inclusion, parallel execution, service dependencies, PVCs
   - **Status**: Tracks latest execution and health metrics
 
 - **`TestWorkflowTemplate`** (`testworkflows.testkube.io/v1`)
   - **Definition**: [`api/testworkflows/v1/testworkflowtemplate_types.go`](api/testworkflows/v1/testworkflowtemplate_types.go)
-  - **Purpose**: Reusable workflow templates with configurable parameters
+  - **Purpose**: Reusable TestWorkflow templates with configurable parameters
   - **Usage**: Can be included in `TestWorkflow` specs via `use` field
 
 - **`TestWorkflowExecution`** (`testworkflows.testkube.io/v1`)
   - **Definition**: [`api/testworkflows/v1/testworkflowexecution_types.go`](api/testworkflows/v1/testworkflowexecution_types.go)
-  - **Purpose**: Represents an execution of a test workflow
+  - **Purpose**: Represents an execution of a TestWorkflow
   - **Controller**: Watched by `TestWorkflowExecutionController` (see [Kubernetes Controllers](#2-kubernetes-controllers))
   - **Status**: Tracks execution state, results, logs, and artifacts
 
@@ -228,7 +228,7 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 
 - **`Webhook`** (`executor.testkube.io/v1`)
   - **Definition**: [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go)
-  - **Purpose**: Defines webhooks triggered by test execution events
+  - **Purpose**: Defines webhooks triggered by TestWorkflow execution events
 
 - **`WebhookTemplate`** (`executor.testkube.io/v1`)
   - **Definition**: [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go)
@@ -305,4 +305,4 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 ## Related Documentation
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines
-- [Workflow Execution Architecture](https://docs.testkube.io/articles/test-workflows-high-level-architecture) - How TestWorkflows are executed.
+- [TestWorkflow Execution Architecture](https://docs.testkube.io/articles/test-workflows-high-level-architecture) - How TestWorkflows are executed.
