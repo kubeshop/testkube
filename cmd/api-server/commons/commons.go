@@ -395,7 +395,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 
 // Components
 
-func trimAndFilterRegistries(csv string) []string {
+func TrimAndFilterRegistries(csv string) []string {
 	var result []string
 	for _, r := range strings.Split(csv, ",") {
 		if r = strings.TrimSpace(r); r != "" {
@@ -414,7 +414,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	}
 	return imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(trimAndFilterRegistries(cfg.InsecureRegistries)...),
+		imageinspector.NewCraneFetcher(TrimAndFilterRegistries(cfg.InsecureRegistries)...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
