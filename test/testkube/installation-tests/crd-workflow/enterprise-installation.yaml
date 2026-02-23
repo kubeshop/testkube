@@ -9,7 +9,7 @@ spec:
   system:
     pureByDefault: true
   job:
-    activeDeadlineSeconds: 1200
+    activeDeadlineSeconds: 600
   content:
     git:
       uri: https://github.com/kubeshop/testkube
