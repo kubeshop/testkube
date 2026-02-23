@@ -137,3 +137,36 @@ func TestTestWorkflowSyncReconcilerSkipsWhenNoGitOpsSyncAnnotationIsSet(t *testi
 		t.Errorf("TestTestWorkflowSyncReconcilerSkipsWhenNoGitOpsSyncAnnotationIsSet: expected no delete call, got %q", store.Deleted)
 	}
 }
+
+func TestTestWorkflowSyncReconcilerDeletesWhenMarkedForDeletionEvenWithNoGitOpsSyncAnnotation(t *testing.T) {
+	store := &fakeStore{}
+	name := "foobar"
+	now := metav1.Now()
+
+	reconciler := testWorkflowSyncReconciler(
+		fakeKubernetesClient{
+			TestWorkflow: testworkflowsv1.TestWorkflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              name,
+					DeletionTimestamp: &now,
+					Annotations: map[string]string{
+						noGitOpsSyncAnnotation: "true",
+					},
+				},
+			},
+		},
+		store,
+	)
+
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+
+	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+		t.Errorf("TestTestWorkflowSyncReconcilerDeletesWhenMarkedForDeletionEvenWithNoGitOpsSyncAnnotation: -want, +got:\n%s", diff)
+	}
+
+	if store.UpdateCalls != 0 {
+		t.Errorf("TestTestWorkflowSyncReconcilerDeletesWhenMarkedForDeletionEvenWithNoGitOpsSyncAnnotation: expected 0 update calls, got %d", store.UpdateCalls)
+	}
+}
