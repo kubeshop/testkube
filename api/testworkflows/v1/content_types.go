@@ -25,6 +25,18 @@ type ContentGit struct {
 	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty" expr:"force"`
 	// authorization type for the credentials
 	AuthType testsv3.GitAuthType `json:"authType,omitempty" expr:"template"`
+	// plain text CA certificate to verify repository TLS connection
+	CaCert string `json:"caCert,omitempty"`
+	// external CA certificate to verify repository TLS connection
+	CaCertFrom *corev1.EnvVarSource `json:"caCertFrom,omitempty" expr:"force"`
+	// plain text client certificate to verify client (testkube) TLS connection
+	ClientCert string `json:"clientCert,omitempty"`
+	// external client certificate to verify client (testkube) TLS connection
+	ClientCertFrom *corev1.EnvVarSource `json:"clientCertFrom,omitempty" expr:"force"`
+	// plain text client key to verify client (testkube) TLS connection
+	ClientKey string `json:"clientKey,omitempty"`
+	// external client key to verify client (testkube) TLS connection
+	ClientKeyFrom *corev1.EnvVarSource `json:"clientKeyFrom,omitempty" expr:"force"`
 	// where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
 	MountPath string `json:"mountPath,omitempty" expr:"template"`
 	// enable cone mode for sparse checkout with paths

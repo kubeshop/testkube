@@ -24,6 +24,15 @@ type TestWorkflowContentGit struct {
 	SshKey     string              `json:"sshKey,omitempty"`
 	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
 	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
+	// plain text CA certificate to verify repository TLS connection
+	CaCert     string        `json:"caCert,omitempty"`
+	CaCertFrom *EnvVarSource `json:"caCertFrom,omitempty"`
+	// plain text client certificate to verify client (testkube) TLS connection
+	ClientCert     string        `json:"clientCert,omitempty"`
+	ClientCertFrom *EnvVarSource `json:"clientCertFrom,omitempty"`
+	// plain text client key to verify client (testkube) TLS connection
+	ClientKey     string        `json:"clientKey,omitempty"`
+	ClientKeyFrom *EnvVarSource `json:"clientKeyFrom,omitempty"`
 	// where to mount the fetched repository contents (defaults to \"repo\" directory in the data volume)
 	MountPath string `json:"mountPath,omitempty"`
 	// enable cone mode for sparse checkout with paths
