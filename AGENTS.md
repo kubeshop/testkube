@@ -63,7 +63,7 @@ PR titles **must** follow [Conventional Commits](https://www.conventionalcommits
 - `fix: Retry log stream on 502 errors`
 - `chore: Add contextcheck linter`
 
-Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `ci`, `chore`
 
 ## Tips
 
