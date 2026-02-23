@@ -218,8 +218,8 @@ The Tiltfile automatically detects kind clusters and loads images appropriately.
 
 From the Tilt UI, you can trigger manual resources:
 
-- **go-test**: Runs `go test` on the API server packages
-- **go-vet**: Runs `go vet` for static analysis
+- **make test**: Runs `go test` on the API server packages
+- **make lint**: Runs linting for static analysis
 
 Or run tests directly:
 

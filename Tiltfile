@@ -39,6 +39,7 @@ allow_k8s_contexts([
     "docker-for-desktop",
     "minikube",
     "kind-kind",
+    "kind-testkube-dev",
     "rancher-desktop",
 ])
 
