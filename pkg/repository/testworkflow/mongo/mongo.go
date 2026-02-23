@@ -804,7 +804,7 @@ func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNam
 	filter := bson.M{"$or": conditions, "deletedat": nil}
 
 	if r.sequenceRepository != nil {
-		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, workflowNames, sequence.ExecutionTypeTestSuite)
+		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, workflowNames, sequence.ExecutionTypeTestWorkflow)
 		if err != nil {
 			return
 		}
@@ -1050,4 +1050,37 @@ func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool
 		return false, err
 	}
 	return res.ModifiedCount > 0, nil
+}
+
+func (r *MongoRepository) GetSoftDeletedExecutionIDs(ctx context.Context, olderThan time.Time, limit int32) ([]string, error) {
+	opts := options.Find().
+		SetProjection(bson.M{"id": 1, "_id": 0}).
+		SetLimit(int64(limit))
+
+	cursor, err := r.Coll.Find(ctx, bson.M{
+		"deletedat": bson.M{"$ne": nil, "$lt": olderThan},
+	}, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []struct {
+		ID string `bson:"id"`
+	}
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, len(results))
+	for i, r := range results {
+		ids[i] = r.ID
+	}
+	return ids, nil
+}
+
+func (r *MongoRepository) HardDeleteSoftDeletedExecutions(ctx context.Context, olderThan time.Time) error {
+	_, err := r.Coll.DeleteMany(ctx, bson.M{
+		"deletedat": bson.M{"$ne": nil, "$lt": olderThan},
+	})
+	return err
 }
