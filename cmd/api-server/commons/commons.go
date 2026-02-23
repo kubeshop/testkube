@@ -208,8 +208,7 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 	if migrate {
 		db := stdlib.OpenDBFromPool(pool)
 		if err := runPostgresMigrations(ctx, db); err != nil {
-			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err)
-			go retryPostgresMigrations(ctx, db)
+			log.DefaultLogger.Warnf("failed to apply Postgres migrations: %v", err)
 		}
 	}
 
@@ -235,34 +234,6 @@ func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
 
 	return nil
 }
-func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
-	delay := 1 * time.Second
-	maxDelay := 30 * time.Second
-	maxAttempts := 10
-
-	for attempt := 0; attempt < maxAttempts; attempt++ {
-		if err := runPostgresMigrations(ctx, db); err == nil {
-			return
-		} else {
-			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err, "backoff", delay, "attempt", attempt+1)
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-
-		if delay < maxDelay {
-			delay *= 2
-			if delay > maxDelay {
-				delay = maxDelay
-			}
-		}
-	}
-	log.DefaultLogger.Errorw("failed to apply Postgres migrations after max retries", "attempts", maxAttempts)
-}
-
 func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 	delay := 1 * time.Second
 	maxDelay := 30 * time.Second
