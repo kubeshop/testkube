@@ -32,10 +32,7 @@ Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkub
 
 # Welcome to Testkube!
 
-Testkube is a Test Orchestration and Execution Framework for Cloud-Native Applications. 
-It provides a single platform for defining, running and analyzing test executions, using 
-your existing testing tools/scripts, leveraging your existing CI/CD/GitOps pipelines and 
-Kubernetes infrastructure.
+Testkube is a Test Orchestration Platform for Cloud-Native Applications. It provides a single platform for defining, running and analyzing test executions, using your existing testing tools/scripts, running in your existing infrastructure.
 
 Testkube consists of a **Control Plane** and any number of **Testkube Agents**. The Control Plane exposes a 
 Dashboard for easy and centralized access to most Testkube features.
@@ -78,6 +75,8 @@ more about different ways to deploy and run the Testkube Control Plane.
 Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io).
 
 ### Contributing
+
+Check out our [Contributors Guide](CONTRIBUTING.md) and the [Agent Architecture](ARCHITECTURE.md) to find your way around our codebase and process.
 
 Shout-out to our contributors 🎉 - you're great!
 
