@@ -47,10 +47,6 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 			return ctrl.Result{}, fmt.Errorf("retrieve TestWorkflow %q from Kubernetes: %w", req.NamespacedName, err)
 		}
 
-		if hasNoGitOpsSyncAnnotation(&workflow) {
-			return ctrl.Result{}, nil
-		}
-
 		// Resource has been marked for deletion, we may not get an event when it finally goes so this
 		// is the moment when we should update the Control Plane.
 		// Kubernetes is a funny thing, when a resource is marked for deletion then the DeletionTimestamp
@@ -68,6 +64,10 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 				// the store then we should handle them here.
 				return ctrl.Result{}, fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err)
 			}
+			return ctrl.Result{}, nil
+		}
+
+		if hasNoGitOpsSyncAnnotation(&workflow) {
 			return ctrl.Result{}, nil
 		}
 
