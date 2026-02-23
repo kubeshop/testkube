@@ -113,7 +113,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = $1 AND e.environment_id = $2)
+WHERE (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
     AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
     AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
@@ -260,7 +260,8 @@ func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTest
 }
 
 const deleteAllTestWorkflowExecutions = `-- name: DeleteAllTestWorkflowExecutions :exec
-DELETE FROM test_workflow_executions WHERE organization_id = $1 AND environment_id = $2
+UPDATE test_workflow_executions SET deleted_at = NOW()
+WHERE organization_id = $1 AND environment_id = $2 AND deleted_at IS NULL
 `
 
 type DeleteAllTestWorkflowExecutionsParams struct {
@@ -288,10 +289,12 @@ func (q *Queries) DeleteTestWorkflow(ctx context.Context, arg DeleteTestWorkflow
 }
 
 const deleteTestWorkflowExecutionsByTestWorkflow = `-- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
-DELETE FROM test_workflow_executions e
-USING test_workflows w
+UPDATE test_workflow_executions e
+SET deleted_at = NOW()
+FROM test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = $1 AND e.environment_id = $2)
-  AND w.workflow_type = 'workflow' 
+  AND e.deleted_at IS NULL
+  AND w.workflow_type = 'workflow'
   AND w.name = $3::text
 `
 
@@ -307,10 +310,12 @@ func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context
 }
 
 const deleteTestWorkflowExecutionsByTestWorkflows = `-- name: DeleteTestWorkflowExecutionsByTestWorkflows :exec
-DELETE FROM test_workflow_executions e
-USING test_workflows w
+UPDATE test_workflow_executions e
+SET deleted_at = NOW()
+FROM test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = $1 AND e.environment_id = $2)
-  AND w.workflow_type = 'workflow' 
+  AND e.deleted_at IS NULL
+  AND w.workflow_type = 'workflow'
   AND w.name = ANY($3::text[])
 `
 
@@ -371,7 +376,7 @@ func (q *Queries) DeleteTestWorkflowSignatures(ctx context.Context, executionID 
 }
 
 const finishExecutionStatusAtStrict = `-- name: FinishExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
 `
@@ -520,7 +525,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AND e.environment_id = $2)
+WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
     AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
     AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
@@ -862,7 +867,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
+WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3) AND e.deleted_at IS NULL
 ORDER BY
     CASE
         WHEN $4::boolean = true AND $5::boolean = false THEN e.number
@@ -1071,7 +1076,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE w.name = ANY($1::text[]) AND (e.organization_id = $2 AND e.environment_id = $3)
+WHERE w.name = ANY($1::text[]) AND (e.organization_id = $2 AND e.environment_id = $3) AND e.deleted_at IS NULL
 ORDER BY w.name, e.status_at DESC
 `
 
@@ -1224,7 +1229,7 @@ SELECT r.status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
+WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3) AND e.deleted_at IS NULL
     AND r.finished_at < $4
     AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
 ORDER BY r.finished_at DESC
@@ -1309,7 +1314,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = $1 AND e.environment_id = $2)
+WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
 ORDER BY e.id DESC
 `
 
@@ -1456,6 +1461,48 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context, arg GetR
 	return items, nil
 }
 
+const getSoftDeletedExecutionIDs = `-- name: GetSoftDeletedExecutionIDs :many
+SELECT e.id
+FROM test_workflow_executions e
+WHERE e.deleted_at IS NOT NULL
+  AND e.deleted_at < $1::timestamptz
+  AND (e.organization_id = $2 AND e.environment_id = $3)
+ORDER BY e.deleted_at ASC
+LIMIT $4
+`
+
+type GetSoftDeletedExecutionIDsParams struct {
+	OlderThan      pgtype.Timestamptz `db:"older_than" json:"older_than"`
+	OrganizationID string             `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string             `db:"environment_id" json:"environment_id"`
+	Lmt            int32              `db:"lmt" json:"lmt"`
+}
+
+func (q *Queries) GetSoftDeletedExecutionIDs(ctx context.Context, arg GetSoftDeletedExecutionIDsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, getSoftDeletedExecutionIDs,
+		arg.OlderThan,
+		arg.OrganizationID,
+		arg.EnvironmentID,
+		arg.Lmt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTestWorkflowExecution = `-- name: GetTestWorkflowExecution :one
 SELECT 
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
@@ -1515,7 +1562,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = $1 OR e.name = $1) AND (e.organization_id = $2 AND e.environment_id = $3)
+WHERE (e.id = $1 OR e.name = $1) AND (e.organization_id = $2 AND e.environment_id = $3) AND e.deleted_at IS NULL
 `
 
 type GetTestWorkflowExecutionParams struct {
@@ -1708,7 +1755,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = $1 OR e.name = $1) AND w.name = $2::text AND (e.organization_id = $3 AND e.environment_id = $4)
+WHERE (e.id = $1 OR e.name = $1) AND w.name = $2::text AND (e.organization_id = $3 AND e.environment_id = $4) AND e.deleted_at IS NULL
 `
 
 type GetTestWorkflowExecutionByNameAndTestWorkflowParams struct {
@@ -1858,7 +1905,7 @@ WITH tag_extracts AS (
     FROM test_workflow_executions e
     LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
     CROSS JOIN LATERAL jsonb_each_text(e.tags) AS tag_pair(key, value)
-    WHERE e.tags IS NOT NULL AND (e.organization_id = $2 AND e.environment_id = $3)
+    WHERE e.tags IS NOT NULL AND (e.organization_id = $2 AND e.environment_id = $3) AND e.deleted_at IS NULL
         AND e.tags != '{}'::jsonb
         AND jsonb_typeof(e.tags) = 'object'
 )
@@ -1961,7 +2008,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = $1 OR e.name = $1) AND e.runner_id = $2 AND (e.organization_id = $3 AND e.environment_id = $4)
+WHERE (e.id = $1 OR e.name = $1) AND e.runner_id = $2 AND (e.organization_id = $3 AND e.environment_id = $4) AND e.deleted_at IS NULL
 `
 
 type GetTestWorkflowExecutionWithRunnerParams struct {
@@ -2160,7 +2207,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = $1 AND e.environment_id = $2)
+WHERE (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
     AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
     AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
@@ -2502,7 +2549,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = $1 AND e.environment_id = $2)
+WHERE (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
     AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
     AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
@@ -2792,7 +2839,7 @@ SELECT
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE (e.organization_id = $1 AND e.environment_id = $2)
+WHERE (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
     AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
     AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
@@ -2801,28 +2848,28 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (
+        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition->>'operator' = 'not_exists' THEN
                         NOT (e.tags ? (key_condition->>'key'))
                     ELSE
@@ -2831,7 +2878,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($17::jsonb)
         )
         AND
-        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS condition
                 WHERE e.tags->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
@@ -2840,10 +2887,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
     AND (
-        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition->>'operator' = 'not_exists' THEN
                         NOT (w.labels ? (key_condition->>'key'))
                     ELSE
@@ -2852,7 +2899,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         OR
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
@@ -2861,10 +2908,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
     AND (
-        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements($21::jsonb) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition->>'operator' = 'not_exists' THEN
                         NOT (w.labels ? (key_condition->>'key'))
                     ELSE
@@ -2873,7 +2920,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = jsonb_array_length($21::jsonb)
         )
         AND
-        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements($22::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
@@ -2970,7 +3017,7 @@ SELECT
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
+WHERE w.name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3) AND e.deleted_at IS NULL
     AND ($4::integer = 0 OR e.scheduled_at >= NOW() - ($4::integer || ' days')::interval)
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF($5, 0)
@@ -3089,7 +3136,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status = 'queued' AND (e.organization_id = $1 AND e.environment_id = $2)
+WHERE r.status = 'queued' AND (e.organization_id = $1 AND e.environment_id = $2) AND e.deleted_at IS NULL
     AND (e.runner_id IS NULL OR e.runner_id = '')
 ORDER BY e.id DESC
 `
@@ -3235,6 +3282,24 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg G
 		return nil, err
 	}
 	return items, nil
+}
+
+const hardDeleteSoftDeletedExecutions = `-- name: HardDeleteSoftDeletedExecutions :exec
+DELETE FROM test_workflow_executions
+WHERE deleted_at IS NOT NULL
+  AND deleted_at < $1::timestamptz
+  AND (organization_id = $2 AND environment_id = $3)
+`
+
+type HardDeleteSoftDeletedExecutionsParams struct {
+	OlderThan      pgtype.Timestamptz `db:"older_than" json:"older_than"`
+	OrganizationID string             `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string             `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) HardDeleteSoftDeletedExecutions(ctx context.Context, arg HardDeleteSoftDeletedExecutionsParams) error {
+	_, err := q.db.Exec(ctx, hardDeleteSoftDeletedExecutions, arg.OlderThan, arg.OrganizationID, arg.EnvironmentID)
+	return err
 }
 
 const initTestWorkflowExecution = `-- name: InitTestWorkflowExecution :exec

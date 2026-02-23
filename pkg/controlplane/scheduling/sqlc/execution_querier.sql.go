@@ -11,7 +11,7 @@ import (
 
 const getExecutionsByStatus = `-- name: GetExecutionsByStatus :many
 SELECT
-    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime,
+    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime, e.deleted_at,
     r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at
 FROM
     test_workflow_executions e
@@ -62,6 +62,7 @@ func (q *Queries) GetExecutionsByStatus(ctx context.Context, arg GetExecutionsBy
 			&i.TestWorkflowExecution.OrganizationID,
 			&i.TestWorkflowExecution.EnvironmentID,
 			&i.TestWorkflowExecution.Runtime,
+			&i.TestWorkflowExecution.DeletedAt,
 			&i.TestWorkflowResult.ExecutionID,
 			&i.TestWorkflowResult.Status,
 			&i.TestWorkflowResult.PredictedStatus,
@@ -91,7 +92,7 @@ func (q *Queries) GetExecutionsByStatus(ctx context.Context, arg GetExecutionsBy
 
 const getExecutionsByStatuses = `-- name: GetExecutionsByStatuses :many
 SELECT
-    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime,
+    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime, e.deleted_at,
     r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at
 FROM
     test_workflow_executions e
@@ -136,6 +137,7 @@ func (q *Queries) GetExecutionsByStatuses(ctx context.Context, statuses []string
 			&i.TestWorkflowExecution.OrganizationID,
 			&i.TestWorkflowExecution.EnvironmentID,
 			&i.TestWorkflowExecution.Runtime,
+			&i.TestWorkflowExecution.DeletedAt,
 			&i.TestWorkflowResult.ExecutionID,
 			&i.TestWorkflowResult.Status,
 			&i.TestWorkflowResult.PredictedStatus,
