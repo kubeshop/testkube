@@ -26,6 +26,11 @@ var _ testworkflow.Repository = (*MongoRepository)(nil)
 const (
 	CollectionName       = "testworkflowresults"
 	configParamSizeLimit = 100
+
+	// softDeleteTTLSeconds is 7 days. MongoDB's TTL reaper automatically removes
+	// documents once their deleted_at timestamp is older than this value, so no
+	// separate garbage-collection worker is needed.
+	softDeleteTTLSeconds = 7 * 24 * 60 * 60 // 604800
 )
 
 var (
@@ -66,6 +71,19 @@ func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRe
 }
 
 type MongoRepositoryOpt func(*MongoRepository)
+
+// EnsureIndexes creates required indexes, including the TTL index on deletedat
+// that automatically purges soft-deleted documents after softDeleteTTLSeconds.
+func (r *MongoRepository) EnsureIndexes(ctx context.Context) error {
+	_, err := r.Coll.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "deletedat", Value: 1}},
+		Options: options.Index().
+			SetExpireAfterSeconds(softDeleteTTLSeconds).
+			SetName("deletedat_ttl").
+			SetSparse(true),
+	})
+	return err
+}
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
