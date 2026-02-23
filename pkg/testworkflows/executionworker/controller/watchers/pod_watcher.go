@@ -46,7 +46,7 @@ func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.Pod
 		ctx:       ctx,
 		cancel:    ctxCancel,
 	}
-	go watcher.cycle()
+	go watcher.cycle() //nolint:contextcheck // cycle uses the watcher's internal context (e.ctx) derived from parentCtx
 	return watcher
 }
 

@@ -65,7 +65,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		return errors.New("deprecated: please upgrade to test workflows")
 	}
 
-	testWorkflows, err := s.getTestWorkflows(t)
+	testWorkflows, err := s.getTestWorkflows(ctx, t)
 	if err != nil {
 		return err
 	}
@@ -328,12 +328,12 @@ func (s *Service) getEnvironmentId() string {
 	return ""
 }
 
-func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflowsv1.TestWorkflow, error) {
+func (s *Service) getTestWorkflows(ctx context.Context, t *testtriggersv1.TestTrigger) ([]testworkflowsv1.TestWorkflow, error) {
 	var testWorkflows []testworkflowsv1.TestWorkflow
 	if t.Spec.TestSelector.Name != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv3.TestWorkflow with name %s", t.Spec.TestSelector.Name)
 
-		testWorkflow, err := s.testWorkflowsClient.Get(context.Background(), s.getEnvironmentId(), t.Spec.TestSelector.Name)
+		testWorkflow, err := s.testWorkflowsClient.Get(ctx, s.getEnvironmentId(), t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -342,7 +342,7 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 
 	if t.Spec.TestSelector.NameRegex != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testworkflosv1.TestWorkflow with name regex %s", t.Spec.TestSelector.NameRegex)
-		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
+		testWorkflowsList, err := s.testWorkflowsClient.List(ctx, s.getEnvironmentId(), testworkflowclient.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -364,7 +364,7 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 			return nil, errors.New("error creating selector from test resource label selector: MatchExpressions not supported")
 		}
 		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv1.TestWorkflow with label %s", t.Spec.TestSelector.LabelSelector.MatchLabels)
-		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{
+		testWorkflowsList, err := s.testWorkflowsClient.List(ctx, s.getEnvironmentId(), testworkflowclient.ListOptions{
 			Labels: t.Spec.TestSelector.LabelSelector.MatchLabels,
 		})
 		if err != nil {

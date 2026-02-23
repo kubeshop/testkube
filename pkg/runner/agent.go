@@ -222,7 +222,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	var wg sync.WaitGroup
 	for req := range watcher.Channel() {
 		wg.Add(1)
-		go func(req controlplaneclient.RunnerRequest) {
+		go func(req controlplaneclient.RunnerRequest) { //nolint:contextcheck // intentionally detached from stream context for independent request handling
 			defer wg.Done()
 			switch req.Type() {
 			case cloud.RunnerRequestType_CONSIDER:

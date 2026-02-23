@@ -192,7 +192,7 @@ func (p Provider) startHTTPServer(ctx context.Context, clientChan chan *Authoriz
 	srv := &http.Server{Addr: ":" + strconv.Itoa(p.port)}
 
 	// handle server shutdown signal
-	go func() {
+	go func() { //nolint:contextcheck // shutdown goroutine intentionally uses a fresh context for graceful server shutdown
 		<-shutdownChan
 
 		ui.Info("Shutting down server...")

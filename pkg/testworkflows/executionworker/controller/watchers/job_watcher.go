@@ -46,7 +46,7 @@ func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.Jo
 		ctx:       ctx,
 		cancel:    ctxCancel,
 	}
-	go watcher.cycle()
+	go watcher.cycle() //nolint:contextcheck // cycle uses the watcher's internal context (e.ctx) derived from parentCtx
 	return watcher
 }
 

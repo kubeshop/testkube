@@ -58,7 +58,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	// Build repositories
 	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
-	storageClient := commons.MustGetMinioClient(cfg)
+	storageClient := commons.MustGetMinioClient(cfg) //nolint:contextcheck // MustGetMinioClient does not accept a context parameter
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)

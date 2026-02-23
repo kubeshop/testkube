@@ -153,7 +153,7 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 
 func MustGetMongoDatabase(ctx context.Context, cfg *config.Config, secretClient secret.Interface, migrate bool) *mongo.Database {
 	mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
-	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
+	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig) //nolint:contextcheck // GetMongoDatabase does not accept a context parameter
 	ExitOnError("getting mongo database", err)
 	if migrate {
 		if err = runMongoMigrations(ctx, db); err != nil {
@@ -202,7 +202,7 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
 	// Connect to PostgreSQL
-	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	pool, err := pgxpool.New(ctx, cfg.APIPostgresDSN)
 	ExitOnError("Getting Postgres database", err)
 
 	if migrate {

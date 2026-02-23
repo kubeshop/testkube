@@ -53,7 +53,7 @@ func TelemetryMiddleware(cfg *MCPServerConfig) server.ToolHandlerMiddleware {
 				toolName := request.Params.Name
 
 				// Send telemetry asynchronously to avoid blocking tool execution
-				go func() {
+				go func() { //nolint:contextcheck // fire-and-forget telemetry goroutine, intentionally not propagating request context
 					// Determine context source based on how MCP was configured
 					var runContext telemetry.RunContext
 

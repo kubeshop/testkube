@@ -304,6 +304,7 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 	// Fail if there is no matching agent available
 	if agent == nil {
 		ui.Failf("agent %s not found", name)
+		return
 	}
 
 	if secretKey, _ := cmd.Flags().GetString("secret"); agent.SecretKey == "" && secretKey != "" {
@@ -414,6 +415,7 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 
 	if foundAgent == nil {
 		ui.Failf("not found the agent installed in namespace '%s'", ns)
+		return
 	}
 
 	PrintKubernetesAgent(*foundAgent)

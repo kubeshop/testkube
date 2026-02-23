@@ -76,7 +76,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 
 	for _, exec := range executions {
 		go func(environmentId string, executionId string) {
-			err := s.runner.Monitor(context.Background(), s.proContext.OrgID, environmentId, executionId)
+			err := s.runner.Monitor(context.Background(), s.proContext.OrgID, environmentId, executionId) //nolint:contextcheck // intentionally uses background context for long-running monitoring independent of parent
 			if err == nil {
 				s.logger.Infow("Reattached execution", "executionId", executionId)
 				return

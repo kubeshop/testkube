@@ -171,7 +171,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
-	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace) //nolint:contextcheck // intentionally using background context so deployment completes even if request context is canceled
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
@@ -246,7 +246,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
-	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace) //nolint:contextcheck // intentionally using background context so deployment completes even if request context is canceled
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
@@ -671,7 +671,7 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options execution
 	wg.Add(len(ips))
 	var errsMu sync.Mutex
 	for id, podIp := range ips {
-		go func(id, address string) {
+		go func(id, address string) { //nolint:contextcheck // goroutine manages its own connection lifecycle independent of parent context
 			cond.L.Lock()
 			defer cond.L.Unlock()
 

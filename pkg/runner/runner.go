@@ -283,7 +283,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(err, "failed to save execution '%s' data", execution.Id)
 	}
 
-	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
+	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{}) //nolint:contextcheck // intentionally using background context to ensure cleanup completes regardless of caller context
 	if err != nil {
 		// TODO: what to do on error?
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
@@ -532,7 +532,7 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 
 // abortExecution aborts fetches the execution, updates its result to aborted and finishes it.
 func (r *runner) abortExecution(ctx context.Context, environmentID, executionID string) error {
-	execution, err := r.client.GetExecution(context.Background(), environmentID, executionID)
+	execution, err := r.client.GetExecution(ctx, environmentID, executionID)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get execution '%s'", executionID)
 	}
@@ -548,7 +548,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
 	}
 
-	if err = r.Abort(executionID); err != nil {
+	if err = r.Abort(executionID); err != nil { //nolint:contextcheck // Abort is a Runner interface method that manages its own context
 		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
 	}
 

@@ -19,7 +19,7 @@ const (
 func HandleTelemetryHeartbeat(ctx context.Context, clusterId string, configMapConfig configRepo.Repository) {
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 	if telemetryEnabled {
-		out, err := telemetry.SendServerStartEvent(clusterId, version.Version)
+		out, err := telemetry.SendServerStartEvent(clusterId, version.Version) //nolint:contextcheck // telemetry API does not accept context
 		if err != nil {
 			log.DefaultLogger.Debug("telemetry send error", "error", err.Error())
 		} else {
@@ -42,7 +42,7 @@ func HandleTelemetryHeartbeat(ctx context.Context, clusterId string, configMapCo
 				if err != nil {
 					l.Debugw("getting hostname error", "hostname", host, "error", err)
 				}
-				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
+				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId) //nolint:contextcheck // telemetry API does not accept context
 				if err != nil {
 					l.Debugw("sending heartbeat telemetry event error", "error", err)
 				} else {

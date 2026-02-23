@@ -84,7 +84,7 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 			}
 
 			// Apply expression to the combined array
-			queryResult, err := jsonpath.Query(expression, allWorkflows)
+			queryResult, err := jsonpath.QueryWithContext(ctx, expression, allWorkflows, jsonpath.DefaultOptions())
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("Failed to execute JSONPath query: %v", err)), nil
 			}
@@ -105,7 +105,7 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 					continue
 				}
 
-				queryResult, err := jsonpath.Query(expression, parsed)
+				queryResult, err := jsonpath.QueryWithContext(ctx, expression, parsed, jsonpath.DefaultOptions())
 				if err != nil {
 					results[name] = fmt.Sprintf("ERROR: %v", err)
 				} else {
@@ -184,7 +184,7 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 			}
 
 			// Apply expression to the combined array
-			queryResult, err := jsonpath.Query(expression, allExecutions)
+			queryResult, err := jsonpath.QueryWithContext(ctx, expression, allExecutions, jsonpath.DefaultOptions())
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("Failed to execute JSONPath query: %v", err)), nil
 			}
@@ -205,7 +205,7 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 					continue
 				}
 
-				queryResult, err := jsonpath.Query(expression, parsed)
+				queryResult, err := jsonpath.QueryWithContext(ctx, expression, parsed, jsonpath.DefaultOptions())
 				if err != nil {
 					results[id] = fmt.Sprintf("ERROR: %v", err)
 				} else {
