@@ -238,6 +238,16 @@ func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflow(ctx conte
 	return args.Error(0)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) GetSoftDeletedExecutionIDs(ctx context.Context, arg sqlc.GetSoftDeletedExecutionIDsParams) ([]string, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *MockTestWorkflowExecutionQueriesInterface) HardDeleteSoftDeletedExecutions(ctx context.Context, arg sqlc.HardDeleteSoftDeletedExecutionsParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
 // Mock DatabaseInterface
 type MockDatabaseInterface struct {
 	mock.Mock
