@@ -47,6 +47,10 @@ func webhookSyncReconciler(client client.Reader, store WebhookStore) reconcile.R
 			return ctrl.Result{}, fmt.Errorf("retrieve Webhook %q from Kubernetes: %w", req.NamespacedName, err)
 		}
 
+		if hasNoGitOpsSyncAnnotation(&webhook) {
+			return ctrl.Result{}, nil
+		}
+
 		// Resource has been marked for deletion, we may not get an event when it finally goes so this
 		// is the moment when we should update the Control Plane.
 		// Kubernetes is a funny thing, when a resource is marked for deletion then the DeletionTimestamp

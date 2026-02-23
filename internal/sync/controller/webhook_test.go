@@ -96,3 +96,32 @@ func TestWebhookSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
 		t.Errorf("WebhookSyncReconcilerDeleteWhenMarkedForDeletion: expected 0 update calls, got %d", store.UpdateCalls)
 	}
 }
+
+func TestWebhookSyncReconcilerSkipsWhenNoGitOpsSyncAnnotationIsSet(t *testing.T) {
+	store := &fakeStore{}
+
+	reconciler := webhookSyncReconciler(
+		fakeKubernetesClient{
+			Webhook: executorv1.Webhook{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						noGitOpsSyncAnnotation: "true",
+					},
+				},
+			},
+		},
+		store,
+	)
+
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{}); err != nil {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+
+	if store.UpdateCalls != 0 {
+		t.Errorf("TestWebhookSyncReconcilerSkipsWhenNoGitOpsSyncAnnotationIsSet: expected 0 update calls, got %d", store.UpdateCalls)
+	}
+
+	if store.Deleted != "" {
+		t.Errorf("TestWebhookSyncReconcilerSkipsWhenNoGitOpsSyncAnnotationIsSet: expected no delete call, got %q", store.Deleted)
+	}
+}
