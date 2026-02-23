@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,11 +78,11 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 		}
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(ctx, name)
+			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name) //nolint:contextcheck // persistence ops use background context to avoid partial deletes on client disconnect
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflow(ctx, name)
+			err = s.TestWorkflowResults.DeleteByTestWorkflow(context.Background(), name) //nolint:contextcheck // see above
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
@@ -143,11 +144,11 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				return t.Name
 			})
 
-			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(ctx, names)
+			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names) //nolint:contextcheck // persistence ops use background context to avoid partial deletes on client disconnect
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflows(ctx, names)
+			err = s.TestWorkflowResults.DeleteByTestWorkflows(context.Background(), names) //nolint:contextcheck // see above
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
@@ -220,7 +221,7 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 			}
 			err = s.SecretManager.InsertBatch(ctx, execNamespace, secrets, ref)
 			if err != nil {
-				_ = s.TestWorkflowsClient.Delete(ctx, environmentId, obj.Name)
+				_ = s.TestWorkflowsClient.Delete(context.Background(), environmentId, obj.Name) //nolint:contextcheck // compensating action must complete regardless of client disconnect
 				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 			}
 		}
@@ -342,7 +343,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 			}
 			err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, ref)
 			if err != nil {
-				err = s.TestWorkflowsClient.Update(ctx, environmentId, *initial)
+				err = s.TestWorkflowsClient.Update(context.Background(), environmentId, *initial) //nolint:contextcheck // compensating action must complete regardless of client disconnect
 				if err != nil {
 					s.Log.Errorf("failed to recover previous TestWorkflow state: %v", err)
 				}
