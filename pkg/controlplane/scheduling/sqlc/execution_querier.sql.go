@@ -18,6 +18,7 @@ FROM
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status = $1::text
   AND (COALESCE($2::text, '') = '' OR predicted_status = $2::text)
+  AND e.deleted_at IS NULL
 ORDER BY e.scheduled_at
 `
 
@@ -98,6 +99,7 @@ FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status = ANY($1::text[])
+  AND e.deleted_at IS NULL
 ORDER BY e.scheduled_at
 `
 

@@ -281,8 +281,8 @@ FROM
     test_workflow_executions e
         JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE
-    r.status IS NULL
-   OR r.status IN ('queued', 'assigned', 'starting')
+    (r.status IS NULL OR r.status IN ('queued', 'assigned', 'starting'))
+    AND e.deleted_at IS NULL
 ORDER BY
     e.scheduled_at
 LIMIT
