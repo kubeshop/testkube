@@ -263,6 +263,34 @@ func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
 	log.DefaultLogger.Errorw("failed to apply Postgres migrations after max retries", "attempts", maxAttempts)
 }
 
+func retryPostgresMigrations(ctx context.Context, db *sql.DB) {
+	delay := 1 * time.Second
+	maxDelay := 30 * time.Second
+	maxAttempts := 10
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if err := runPostgresMigrations(ctx, db); err == nil {
+			return
+		} else {
+			log.DefaultLogger.Warnw("failed to apply Postgres migrations; will retry", "error", err, "backoff", delay, "attempt", attempt+1)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+
+		if delay < maxDelay {
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
+	log.DefaultLogger.Errorw("failed to apply Postgres migrations after max retries", "attempts", maxAttempts)
+}
+
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
 		APIKey:                              cfg.TestkubeProAPIKey,
@@ -396,6 +424,16 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 
 // Components
 
+func trimAndFilterRegistries(csv string) []string {
+	var result []string
+	for _, r := range strings.Split(csv, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
 func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
@@ -405,7 +443,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	}
 	return imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(strings.Split(cfg.InsecureRegistries, ",")...),
+		imageinspector.NewCraneFetcher(trimAndFilterRegistries(cfg.InsecureRegistries)...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
