@@ -61,6 +61,10 @@ type TestWorkflowExecutionQueriesInterface interface {
 	GetPreviousFinishedState(ctx context.Context, arg GetPreviousFinishedStateParams) (pgtype.Text, error)
 	GetTestWorkflowExecutionTags(ctx context.Context, arg GetTestWorkflowExecutionTagsParams) ([]GetTestWorkflowExecutionTagsRow, error)
 
+	// Soft-delete reaper
+	GetSoftDeletedExecutionIDs(ctx context.Context, arg GetSoftDeletedExecutionIDsParams) ([]string, error)
+	HardDeleteSoftDeletedExecutions(ctx context.Context, arg HardDeleteSoftDeletedExecutionsParams) error
+
 	// Execution management
 	InitTestWorkflowExecution(ctx context.Context, arg InitTestWorkflowExecutionParams) error
 	AssignTestWorkflowExecution(ctx context.Context, arg AssignTestWorkflowExecutionParams) (string, error)

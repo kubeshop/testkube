@@ -486,3 +486,32 @@ func (mr *MockRepositoryMockRecorder) UpdateResultStrict(ctx, id, runnerId, resu
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResultStrict", reflect.TypeOf((*MockRepository)(nil).UpdateResultStrict), ctx, id, runnerId, result)
 }
+
+// GetSoftDeletedExecutionIDs mocks base method.
+func (m *MockRepository) GetSoftDeletedExecutionIDs(ctx context.Context, olderThan time.Time, limit int32) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSoftDeletedExecutionIDs", ctx, olderThan, limit)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSoftDeletedExecutionIDs indicates an expected call of GetSoftDeletedExecutionIDs.
+func (mr *MockRepositoryMockRecorder) GetSoftDeletedExecutionIDs(ctx, olderThan, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSoftDeletedExecutionIDs", reflect.TypeOf((*MockRepository)(nil).GetSoftDeletedExecutionIDs), ctx, olderThan, limit)
+}
+
+// HardDeleteSoftDeletedExecutions mocks base method.
+func (m *MockRepository) HardDeleteSoftDeletedExecutions(ctx context.Context, olderThan time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HardDeleteSoftDeletedExecutions", ctx, olderThan)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// HardDeleteSoftDeletedExecutions indicates an expected call of HardDeleteSoftDeletedExecutions.
+func (mr *MockRepositoryMockRecorder) HardDeleteSoftDeletedExecutions(ctx, olderThan any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HardDeleteSoftDeletedExecutions", reflect.TypeOf((*MockRepository)(nil).HardDeleteSoftDeletedExecutions), ctx, olderThan)
+}

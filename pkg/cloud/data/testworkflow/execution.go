@@ -248,3 +248,11 @@ func (r *CloudRepository) AbortIfQueued(ctx context.Context, id string) (bool, e
 func (r *CloudRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	return errors.New("not supported")
 }
+
+func (r *CloudRepository) GetSoftDeletedExecutionIDs(ctx context.Context, olderThan time.Time, limit int32) ([]string, error) {
+	return nil, errors.New("not supported")
+}
+
+func (r *CloudRepository) HardDeleteSoftDeletedExecutions(ctx context.Context, olderThan time.Time) error {
+	return errors.New("not supported")
+}
