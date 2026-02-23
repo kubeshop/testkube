@@ -9,7 +9,7 @@ spec:
   system:
     pureByDefault: true
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 1200
   content:
     git:
       uri: https://github.com/kubeshop/testkube
@@ -117,8 +117,6 @@ description: "Enterprise installation test - edge, multi-namespace. Can be run O
 spec:
   system:
     pureByDefault: true
-  job:
-    activeDeadlineSeconds: 600
   concurrency:
     max: 1
   content:
