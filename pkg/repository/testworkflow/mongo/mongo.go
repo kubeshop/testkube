@@ -86,7 +86,7 @@ func (r *MongoRepository) EnsureIndexes(ctx context.Context) error {
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}, "deletedat": nil}).Decode(&result)
 
 	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
@@ -99,7 +99,7 @@ func (r *MongoRepository) GetWithRunner(ctx context.Context, id, runner string) 
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{
 		bson.M{"id": id, "runnerid": runner},
 		bson.M{"name": id, "runnerid": runner},
-	}}).Decode(&result)
+	}, "deletedat": nil}).Decode(&result)
 
 	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
 		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
@@ -149,7 +149,7 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 }
 
 func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
-	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": name}, bson.M{"name": name}}, "workflow.name": workflowName}).Decode(&result)
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": name}, bson.M{"name": name}}, "workflow.name": workflowName, "deletedat": nil}).Decode(&result)
 	return *result.UnscapeDots(), err
 }
 
@@ -166,7 +166,7 @@ func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowN
 	opts := options.Aggregate()
 	pipeline := []bson.M{
 		{"$sort": bson.M{sortField: -1}},
-		{"$match": bson.M{"workflow.name": workflowName}},
+		{"$match": bson.M{"workflow.name": workflowName, "deletedat": nil}},
 		{"$limit": 1},
 	}
 	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
@@ -205,7 +205,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 			"workflow.spec":         0,
 			"resolvedWorkflow":      0,
 		}},
-		{"$match": bson.M{"$or": documents}},
+		{"$match": bson.M{"$or": documents, "deletedat": nil}},
 		{"$group": bson.M{"_id": "$workflow.name", "execution": bson.M{"$first": "$$ROOT"}}},
 		{"$replaceRoot": bson.M{"newRoot": "$execution"}},
 	}
@@ -248,7 +248,7 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 		statuses = append(statuses, status)
 	}
 
-	cursor, err := r.Coll.Find(ctx, bson.M{"result.status": bson.M{"$in": statuses}}, opts)
+	cursor, err := r.Coll.Find(ctx, bson.M{"result.status": bson.M{"$in": statuses}, "deletedat": nil}, opts)
 	if err != nil {
 		return result, err
 	}
@@ -300,7 +300,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 		Count  int    `bson:"count"`
 	}
 
-	query := bson.M{}
+	query := bson.M{"deletedat": nil}
 	if len(filter) > 0 {
 		query, _ = composeQueryAndOpts(filter[0])
 	}
@@ -579,7 +579,7 @@ func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id str
 }
 
 func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptions) {
-	query := bson.M{}
+	query := bson.M{"deletedat": nil}
 	opts := options.Find()
 	startTimeQuery := bson.M{}
 
@@ -752,7 +752,9 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 	return query, opts
 }
 
-// DeleteByTestWorkflow deletes execution results by workflow
+// DeleteByTestWorkflow soft-deletes execution results by workflow.
+// Documents are marked with a deletedat timestamp and will be automatically
+// purged by MongoDB's TTL reaper after softDeleteTTLSeconds.
 func (r *MongoRepository) DeleteByTestWorkflow(ctx context.Context, workflowName string) (err error) {
 	if r.sequenceRepository != nil {
 		err = r.sequenceRepository.DeleteExecutionNumber(ctx, workflowName, sequence.ExecutionTypeTestWorkflow)
@@ -761,11 +763,16 @@ func (r *MongoRepository) DeleteByTestWorkflow(ctx context.Context, workflowName
 		}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, bson.M{"workflow.name": workflowName})
+	_, err = r.Coll.UpdateMany(ctx,
+		bson.M{"workflow.name": workflowName, "deletedat": nil},
+		bson.M{"$set": bson.M{"deletedat": time.Now()}},
+	)
 	return
 }
 
-// DeleteAll deletes all execution results
+// DeleteAll soft-deletes all execution results.
+// Documents are marked with a deletedat timestamp and will be automatically
+// purged by MongoDB's TTL reaper after softDeleteTTLSeconds.
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	if r.sequenceRepository != nil {
 		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTestWorkflow)
@@ -774,11 +781,16 @@ func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 		}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, bson.M{})
+	_, err = r.Coll.UpdateMany(ctx,
+		bson.M{"deletedat": nil},
+		bson.M{"$set": bson.M{"deletedat": time.Now()}},
+	)
 	return
 }
 
-// DeleteByTestWorkflows deletes execution results by workflows
+// DeleteByTestWorkflows soft-deletes execution results by workflows.
+// Documents are marked with a deletedat timestamp and will be automatically
+// purged by MongoDB's TTL reaper after softDeleteTTLSeconds.
 func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNames []string) (err error) {
 	if len(workflowNames) == 0 {
 		return nil
@@ -789,7 +801,7 @@ func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNam
 		conditions = append(conditions, bson.M{"workflow.name": workflowName})
 	}
 
-	filter := bson.M{"$or": conditions}
+	filter := bson.M{"$or": conditions, "deletedat": nil}
 
 	if r.sequenceRepository != nil {
 		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, workflowNames, sequence.ExecutionTypeTestSuite)
@@ -798,13 +810,16 @@ func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNam
 		}
 	}
 
-	_, err = r.Coll.DeleteMany(ctx, filter)
+	_, err = r.Coll.UpdateMany(ctx,
+		filter,
+		bson.M{"$set": bson.M{"deletedat": time.Now()}},
+	)
 	return
 }
 
 // GetTestWorkflowMetrics returns test executions metrics
 func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
-	query := bson.M{"workflow.name": name}
+	query := bson.M{"workflow.name": name, "deletedat": nil}
 
 	if last > 0 {
 		query["scheduledat"] = bson.M{"$gte": time.Now().Add(-time.Duration(last) * 24 * time.Hour)}
@@ -860,6 +875,7 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWork
 		{Key: "workflow.name", Value: testWorkflowName},
 		{Key: "result.finishedat", Value: bson.M{"$lt": date}},
 		{Key: "result.status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "canceled", "timeout"}}},
+		{Key: "deletedat", Value: nil},
 	}
 
 	var result testkube.TestWorkflowExecution
@@ -888,7 +904,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
-	query := bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}
+	query := bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}, "deletedat": nil}
 	if testWorkflowName != "" {
 		query["workflow.name"] = testWorkflowName
 	}
@@ -995,6 +1011,7 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 			{"result.status": testkube.QUEUED_TestWorkflowStatus},
 			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
 		},
+		"deletedat": nil,
 	}, opts)
 	if err != nil {
 		return result, err
