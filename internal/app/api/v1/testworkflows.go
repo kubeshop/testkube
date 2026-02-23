@@ -78,18 +78,19 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 		}
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			// Soft-delete execution records (fast SET operation, safe with request context)
-			err := s.TestWorkflowResults.DeleteByTestWorkflow(ctx, name)
-			if err != nil {
-				return s.ClientError(c, "deleting executions", err)
-			}
-			// Hard-delete MinIO output objects — use background context because this
-			// is a potentially slow multi-object delete that should finish even if
-			// the client disconnects. Output cleanup for soft-deleted records will
-			// also be handled by the background reaper via GetSoftDeletedExecutionIDs.
-			err = s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
+			// Hard-delete MinIO output objects FIRST, while execution records are
+			// still visible to queries (DeleteOutputByTestWorkflow looks up execution
+			// IDs via GetExecutions, which filters deleted_at IS NULL).
+			// Use background context because this is a potentially slow multi-object
+			// delete that should finish even if the client disconnects.
+			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
+			}
+			// Soft-delete execution records (fast UPDATE, safe with request context)
+			err = s.TestWorkflowResults.DeleteByTestWorkflow(ctx, name)
+			if err != nil {
+				return s.ClientError(c, "deleting executions", err)
 			}
 		}
 		return c.SendStatus(http.StatusNoContent)
@@ -149,18 +150,19 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				return t.Name
 			})
 
-			// Soft-delete execution records (fast SET operation, safe with request context)
-			err = s.TestWorkflowResults.DeleteByTestWorkflows(ctx, names)
-			if err != nil {
-				return s.ClientError(c, "deleting executions", err)
-			}
-			// Hard-delete MinIO output objects — use background context because this
-			// is a potentially slow multi-object delete that should finish even if
-			// the client disconnects. Output cleanup for soft-deleted records will
-			// also be handled by the background reaper via GetSoftDeletedExecutionIDs.
+			// Hard-delete MinIO output objects FIRST, while execution records are
+			// still visible to queries (DeleteOutputForTestWorkflows looks up
+			// execution IDs via GetExecutions, which filters deleted_at IS NULL).
+			// Use background context because this is a potentially slow multi-object
+			// delete that should finish even if the client disconnects.
 			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
+			}
+			// Soft-delete execution records (fast UPDATE, safe with request context)
+			err = s.TestWorkflowResults.DeleteByTestWorkflows(ctx, names)
+			if err != nil {
+				return s.ClientError(c, "deleting executions", err)
 			}
 		}
 
