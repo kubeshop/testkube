@@ -57,7 +57,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = @id OR e.name = @id) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
+WHERE (e.id = @id OR e.name = @id) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL;
 
 -- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
 SELECT 
@@ -118,7 +118,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = @name OR e.name = @name) AND w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
+WHERE (e.id = @name OR e.name = @name) AND w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL;
 
 -- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
 SELECT 
@@ -179,7 +179,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
 ORDER BY
     CASE
         WHEN @sort_by_number::boolean = true AND @sort_by_status::boolean = false THEN e.number
@@ -248,7 +248,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE w.name = ANY(@workflow_names::text[]) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE w.name = ANY(@workflow_names::text[]) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
 ORDER BY w.name, e.status_at DESC;
 
 -- name: GetRunningTestWorkflowExecutions :many
@@ -310,7 +310,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
 ORDER BY e.id DESC;
 
 -- name: GetFinishedTestWorkflowExecutions :many
@@ -372,7 +372,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
     AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
@@ -471,7 +471,7 @@ SELECT
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
     AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
@@ -480,28 +480,28 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR 
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE(@assigned, NULL) IS NULL OR
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR 
+    AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (
+        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition->>'operator' = 'not_exists' THEN
                         NOT (e.tags ? (key_condition->>'key'))
                     ELSE
@@ -510,7 +510,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = jsonb_array_length(@tag_keys::jsonb)
         )
         AND
-        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
                 WHERE e.tags->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
@@ -519,10 +519,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements(@label_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition->>'operator' = 'not_exists' THEN
                         NOT (w.labels ? (key_condition->>'key'))
                     ELSE
@@ -531,7 +531,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements(@label_conditions::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
@@ -540,10 +540,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements(@selector_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition->>'operator' = 'not_exists' THEN
                         NOT (w.labels ? (key_condition->>'key'))
                     ELSE
@@ -552,7 +552,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = jsonb_array_length(@selector_keys::jsonb)
         )
         AND
-        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR
             (SELECT COUNT(*) FROM jsonb_array_elements(@selector_conditions::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
@@ -621,7 +621,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
     AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
@@ -847,20 +847,25 @@ SET
 WHERE execution_id = @execution_id;
 
 -- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
-DELETE FROM test_workflow_executions e
-USING test_workflows w
+UPDATE test_workflow_executions e
+SET deleted_at = NOW()
+FROM test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-  AND w.workflow_type = 'workflow' 
+  AND e.deleted_at IS NULL
+  AND w.workflow_type = 'workflow'
   AND w.name = @workflow_name::text;
 
 -- name: DeleteAllTestWorkflowExecutions :exec
-DELETE FROM test_workflow_executions WHERE organization_id = @organization_id AND environment_id = @environment_id;
+UPDATE test_workflow_executions SET deleted_at = NOW()
+WHERE organization_id = @organization_id AND environment_id = @environment_id AND deleted_at IS NULL;
 
 -- name: DeleteTestWorkflowExecutionsByTestWorkflows :exec
-DELETE FROM test_workflow_executions e
-USING test_workflows w
+UPDATE test_workflow_executions e
+SET deleted_at = NOW()
+FROM test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-  AND w.workflow_type = 'workflow' 
+  AND e.deleted_at IS NULL
+  AND w.workflow_type = 'workflow'
   AND w.name = ANY(@workflow_names::text[]);
 
 -- name: GetTestWorkflowMetrics :many
@@ -876,7 +881,7 @@ SELECT
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (@last_n_days::integer = 0 OR e.scheduled_at >= NOW() - (@last_n_days::integer || ' days')::interval)
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0);
@@ -886,7 +891,7 @@ SELECT r.status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND r.finished_at < @date
     AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
 ORDER BY r.finished_at DESC
@@ -902,7 +907,7 @@ WITH tag_extracts AS (
     FROM test_workflow_executions e
     LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
     CROSS JOIN LATERAL jsonb_each_text(e.tags) AS tag_pair(key, value)
-    WHERE e.tags IS NOT NULL AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+    WHERE e.tags IS NOT NULL AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
         AND e.tags != '{}'::jsonb
         AND jsonb_typeof(e.tags) = 'object'
 )
@@ -995,7 +1000,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status = 'queued' AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE r.status = 'queued' AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (e.runner_id IS NULL OR e.runner_id = '')
 ORDER BY e.id DESC;
 
@@ -1105,7 +1110,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
     AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
@@ -1204,7 +1209,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL
     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
     AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
@@ -1353,7 +1358,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = @id OR e.name = @id) AND e.runner_id = @runner_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
+WHERE (e.id = @id OR e.name = @id) AND e.runner_id = @runner_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id) AND e.deleted_at IS NULL;
 
 -- name: UpdateTestWorkflowExecutionResultStrict :one
 UPDATE test_workflow_results 
@@ -1416,6 +1421,21 @@ WHERE test_workflow_results.execution_id = @execution_id
 RETURNING test_workflow_results.execution_id;
 
 -- name: FinishExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = @finished_at
 WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);
+
+-- name: GetSoftDeletedExecutionIDs :many
+SELECT e.id
+FROM test_workflow_executions e
+WHERE e.deleted_at IS NOT NULL
+  AND e.deleted_at < @older_than::timestamptz
+  AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+ORDER BY e.deleted_at ASC
+LIMIT @lmt;
+
+-- name: HardDeleteSoftDeletedExecutions :exec
+DELETE FROM test_workflow_executions
+WHERE deleted_at IS NOT NULL
+  AND deleted_at < @older_than::timestamptz
+  AND (organization_id = @organization_id AND environment_id = @environment_id);
