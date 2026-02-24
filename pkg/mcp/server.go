@@ -48,9 +48,9 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
 	// Query tools (JSONPath-based bulk queries)
-	// Only register if control plane supports bulk endpoints for backwards compatibility
-	ctx := context.Background()
-	if apiClient, ok := client.(*APIClient); ok {
+	// Only check backwards compatibility when using APIClient without SkipEndpointChecks
+	if apiClient, ok := client.(*APIClient); ok && !cfg.SkipEndpointChecks {
+		ctx := context.Background()
 		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflows/definitions") {
 			mcpServer.AddTool(tools.QueryWorkflows(client))
 		}
@@ -58,7 +58,6 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 			mcpServer.AddTool(tools.QueryExecutions(client))
 		}
 	} else {
-		// Non-API clients (like HandlerClient in cloud-api) always support new endpoints
 		mcpServer.AddTool(tools.QueryWorkflows(client))
 		mcpServer.AddTool(tools.QueryExecutions(client))
 	}
