@@ -62,25 +62,20 @@ func (l *WebsocketListener) Match(event testkube.Event) bool {
 }
 
 func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventResult) {
-	var success, failed []string
+	var failed []string
 
 	for _, w := range l.Websockets {
 		l.Log.Debugw("notifying websocket", "id", w.Id, "event", event.Type(), "resourceId", event.ResourceId)
 		err := w.Conn.WriteJSON(event)
 		if err != nil {
 			failed = append(failed, w.Id)
-		} else {
-			success = append(success, w.Id)
 		}
 	}
 
 	if len(failed) > 0 {
 		return testkube.NewFailedEventResult(event.Id, errors.New("message sent to not all clients, failed: "+strings.Join(failed, ", ")))
-	} else if len(success) > 0 {
-		return testkube.NewSuccessEventResult(event.Id, "message sent to websocket clients")
-	} else {
-		return testkube.NewFailedEventResult(event.Id, errors.New("message not sent"))
 	}
+	return testkube.NewSuccessEventResult(event.Id, "message sent to all websocket clients")
 
 }
 
