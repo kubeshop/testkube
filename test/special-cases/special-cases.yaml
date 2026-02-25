@@ -774,3 +774,100 @@ spec:
           service_count: 1
           workers: 1
           step_validation: "override"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-parallel-steps
+  labels:
+    core-tests: special-cases
+spec:
+  config:
+    workers:
+      type: integer
+      default: 3
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: mkdir /data/parallel
+    shell: mkdir -p /data/parallel
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      fetch:
+      - from: /data/parallel
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          mkdir -p /data/parallel && touch /data/parallel/{{ index }}.txt && echo "File {{ index }}" > /data/parallel/{{ index }}.txt
+  - name: Validate files
+    shell: |
+      ls -lah /data/parallel
+      WORKERS={{ config.workers }}
+      for i in $(seq 0 $((WORKERS - 1))); do
+        if [ -f /data/parallel/$i.txt ] && grep -qx "File $i" /data/parallel/$i.txt; then
+          echo "File $i validation: OK"
+        else
+          echo "File $i validation: FAIL"
+          exit 1
+        fi
+      done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-parallel-steps-matrix
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: mkdir /data/parallel
+    shell: mkdir -p /data/parallel
+  - name: Run test
+    parallel:
+      matrix:
+        name: ["0", "1", "2"]
+      fetch:
+      - from: /data/parallel
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          mkdir -p /data/parallel && touch /data/parallel/{{ matrix.name }}.txt && echo "File {{ matrix.name }}" > /data/parallel/{{ matrix.name }}.txt
+  - name: Validate files
+    shell: |
+      ls -lah /data/parallel
+      WORKERS=3
+      for i in $(seq 0 $((WORKERS - 1))); do
+        if [ -f /data/parallel/$i.txt ] && grep -qx "File $i" /data/parallel/$i.txt; then
+          echo "File $i validation: OK"
+        else
+          echo "File $i validation: FAIL"
+          exit 1
+        fi
+      done
