@@ -54,6 +54,27 @@ type ContentTarball struct {
 	Mount *bool `json:"mount,omitempty" expr:"ignore"`
 }
 
+type ContentMinio struct {
+	// endpoint for the MinIO/S3 storage
+	Endpoint string `json:"endpoint,omitempty" expr:"template"`
+	// bucket name to fetch from
+	Bucket string `json:"bucket,omitempty" expr:"template"`
+	// path within the bucket to fetch
+	Path string `json:"path,omitempty" expr:"template"`
+	// region for the storage
+	Region string `json:"region,omitempty" expr:"template"`
+	// plain text access key to fetch with
+	AccessKey string `json:"accessKey,omitempty" expr:"template"`
+	// external access key to fetch with
+	AccessKeyFrom *corev1.EnvVarSource `json:"accessKeyFrom,omitempty" expr:"force"`
+	// plain text secret key to fetch with
+	SecretKey string `json:"secretKey,omitempty" expr:"template"`
+	// external secret key to fetch with
+	SecretKeyFrom *corev1.EnvVarSource `json:"secretKeyFrom,omitempty" expr:"force"`
+	// where to mount the fetched bucket contents (defaults to "minio" directory in the data volume)
+	MountPath string `json:"mountPath,omitempty" expr:"template"`
+}
+
 type Content struct {
 	// git repository details
 	Git *ContentGit `json:"git,omitempty" expr:"include"`
@@ -61,4 +82,6 @@ type Content struct {
 	Files []ContentFile `json:"files,omitempty" expr:"include"`
 	// tarballs to unpack
 	Tarball []ContentTarball `json:"tarball,omitempty" expr:"include"`
+	// MinIO/S3 storage details
+	Minio *ContentMinio `json:"minio,omitempty" expr:"include"`
 }

@@ -279,6 +279,67 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container st
 	return stage, nil
 }
 
+func ProcessContentMinio(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Content == nil || step.Content.Minio == nil {
+		return nil, nil
+	}
+
+	selfContainer := container.CreateChild()
+	stage := stage.NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Fetch MinIO Bucket")
+
+	mountPath := step.Content.Minio.MountPath
+	if mountPath == "" {
+		mountPath = filepath.Join(constants.DefaultDataPath, "minio")
+	}
+
+	volumeMount := layer.AddEmptyDirVolume(nil, mountPath)
+	container.AppendVolumeMounts(volumeMount)
+
+	selfContainer.
+		SetWorkingDir("/").
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "minio").
+		EnableToolkit(stage.Ref())
+
+	args := []string{
+		step.Content.Minio.Endpoint,
+		mountPath,
+	}
+
+	if step.Content.Minio.Region != "" {
+		args = append(args, "-r", step.Content.Minio.Region)
+	}
+
+	if step.Content.Minio.Path != "" {
+		args = append(args, "-p", step.Content.Minio.Path)
+	}
+
+	if step.Content.Minio.Bucket != "" {
+		args = append(args, "-b", step.Content.Minio.Bucket)
+	}
+
+	if step.Content.Minio.AccessKeyFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_MINIO_ACCESS_KEY", ValueFrom: step.Content.Minio.AccessKeyFrom})
+		args = append(args, "-a", "{{env.TK_MINIO_ACCESS_KEY}}")
+	} else if step.Content.Minio.AccessKey != "" {
+		args = append(args, "-a", step.Content.Minio.AccessKey)
+	}
+
+	if step.Content.Minio.SecretKeyFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_MINIO_SECRET_KEY", ValueFrom: step.Content.Minio.SecretKeyFrom})
+		args = append(args, "-s", "{{env.TK_MINIO_SECRET_KEY}}")
+	} else if step.Content.Minio.SecretKey != "" {
+		args = append(args, "-s", step.Content.Minio.SecretKey)
+	}
+
+	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
 func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil
