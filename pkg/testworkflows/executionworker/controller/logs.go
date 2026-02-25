@@ -32,6 +32,7 @@ const (
 	LogRetryOnConnectionLostDelay  = 300 * time.Millisecond
 	LogRetryOnWaitingForStartDelay = 100 * time.Millisecond
 	LogStreamIdleTimeout           = 30 * time.Second
+	LogStreamIdleMaxRetries        = 3
 )
 
 type Comment struct {
@@ -127,10 +128,26 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
 	var mu sync.Mutex
+	var streamCtxMu sync.Mutex
+	var streamCtxCancel context.CancelFunc = func() {}
 	var lastActivity int64
+	var idleTimeoutTriggered atomic.Bool
 	atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
 	touch := func() {
 		atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
+	}
+	cancelStream := func() {
+		streamCtxMu.Lock()
+		streamCtxCancel()
+		streamCtxMu.Unlock()
+	}
+	openStream := func(since *time.Time) (io.Reader, error) {
+		streamCtxMu.Lock()
+		streamCtxCancel()
+		streamCtx, nextStreamCtxCancel := context.WithCancel(ctx)
+		streamCtxCancel = nextStreamCtxCancel
+		streamCtxMu.Unlock()
+		return opener(streamCtx, clientSet, namespace, podName, containerName, isDone, since)
 	}
 
 	sendError := func(err error) {
@@ -171,10 +188,9 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 						continue
 					}
 					last := time.Unix(0, atomic.LoadInt64(&lastActivity))
-					if time.Since(last) >= idleTimeout {
-						sendError(fmt.Errorf("log stream idle timeout after %s", idleTimeout))
-						ctxCancel()
-						return
+					if time.Since(last) >= idleTimeout && idleTimeoutTriggered.CompareAndSwap(false, true) {
+						sendError(newLogStreamIdleTimeoutError(idleTimeout))
+						cancelStream()
 					}
 				}
 			}
@@ -182,13 +198,15 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 	}
 
 	go func() {
+		defer cancelStream()
 		defer ctxCancel()
 		var err error
 
 		var since *time.Time
+		idleRetry := 0
 
 		// Create logs stream request
-		stream, err := opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
+		stream, err := openStream(since)
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -307,10 +325,37 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 			err = tsReader.Read(reader)
 			if err == nil || errors.Is(err, ErrInvalidTimestamp) {
 				touch()
+				if !idleTimeoutTriggered.Load() {
+					idleRetry = 0
+				}
 			}
 
 			// Handle context canceled
 			if errors.Is(err, context.Canceled) {
+				if ctx.Err() != nil {
+					return
+				}
+				if idleTimeoutTriggered.Load() {
+					if idleRetry >= LogStreamIdleMaxRetries {
+						return
+					}
+					idleRetry++
+					since = common.Ptr(lastTs.Add(1))
+					stream, err = openStream(since)
+					if err == io.EOF {
+						return
+					}
+					if err != nil {
+						if !errors.Is(err, context.Canceled) {
+							sendError(err)
+						}
+						return
+					}
+					idleTimeoutTriggered.Store(false)
+					reader.Reset(stream)
+					readerAnyContent = false
+					continue
+				}
 				return
 			}
 
@@ -345,7 +390,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 			// Similarly for GOAWAY, that may be caused by too long connection.
 			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
 				since = common.Ptr(lastTs.Add(1))
-				stream, err = opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
+				stream, err = openStream(since)
 				if err != nil {
 					return
 				}
@@ -435,8 +480,25 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 }
 
 var (
-	ErrInvalidTimestamp = errors.New("invalid timestamp")
+	ErrInvalidTimestamp     = errors.New("invalid timestamp")
+	ErrLogStreamIdleTimeout = errors.New("log stream idle timeout")
 )
+
+type logStreamIdleTimeoutError struct {
+	timeout time.Duration
+}
+
+func (e logStreamIdleTimeoutError) Error() string {
+	return fmt.Sprintf("%s after %s", ErrLogStreamIdleTimeout.Error(), e.timeout)
+}
+
+func (e logStreamIdleTimeoutError) Unwrap() error {
+	return ErrLogStreamIdleTimeout
+}
+
+func newLogStreamIdleTimeoutError(timeout time.Duration) error {
+	return logStreamIdleTimeoutError{timeout: timeout}
+}
 
 type timestampReader struct {
 	buffer []byte
