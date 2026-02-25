@@ -871,3 +871,35 @@ spec:
           exit 1
         fi
       done
+---
+# failFast=false (default) waits for all workers to complete
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-parallel-steps-fail-fast-disabled
+  labels:
+    core-tests: special-cases
+description: "parallel failFast disabled (default) - all workers complete even if one fails quickly"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run parallel with failFast disabled
+    optional: true
+    parallel:
+      count: 3
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          if [ "{{ index }}" = "0" ]; then echo "worker 0 failing" && exit 1; fi
+          sleep 5 && echo "worker {{ index }} completed"

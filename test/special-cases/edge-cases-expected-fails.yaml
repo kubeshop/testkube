@@ -735,3 +735,34 @@ spec:
         image: python:3.11-slim
         shell: |
           ([ "{{ index }}" = "2" ] && sleep 5 && echo "parallel step - worker 3 - expected oomkilled" && python3 -c "a = ' ' * 10**9") || (sleep 10 && echo "passed")
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-parallel-step-fail-fast
+  labels:
+    core-tests: expected-fail
+description: "failFast aborts remaining parallel workers on first failure"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 120
+  steps:
+  - name: Run test
+    parallel:
+      failFast: true
+      count: 4
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          if [ "{{ index }}" = "1" ]; then sleep 2 && echo "worker 1 failing" && exit 1; fi
+          sleep 30 && echo "worker {{ index }} completed"
