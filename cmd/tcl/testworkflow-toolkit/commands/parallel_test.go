@@ -490,3 +490,86 @@ func TestParallelExecution(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestFailFastSpecParsing(t *testing.T) {
+	parser := &ParallelSpecParser{}
+
+	t.Run("failFast defaults to false", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{
+			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+				Count: common.Ptr(intstr.FromInt(3)),
+			},
+		}
+		jsonBytes, _ := json.Marshal(spec)
+		result, err := parser.ParseSpec(string(jsonBytes), false)
+		require.NoError(t, err)
+		assert.False(t, result.FailFast, "failFast should default to false")
+	})
+
+	t.Run("failFast true is parsed correctly", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{
+			FailFast: true,
+			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+				Count: common.Ptr(intstr.FromInt(3)),
+			},
+		}
+		jsonBytes, _ := json.Marshal(spec)
+		result, err := parser.ParseSpec(string(jsonBytes), false)
+		require.NoError(t, err)
+		assert.True(t, result.FailFast, "failFast should be true when set")
+	})
+
+	t.Run("failFast survives base64 encoding", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{
+			FailFast: true,
+			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+				Count: common.Ptr(intstr.FromInt(3)),
+			},
+		}
+		jsonBytes, _ := json.Marshal(spec)
+		encoded := base64.StdEncoding.EncodeToString(jsonBytes)
+		result, err := parser.ParseSpec(encoded, true)
+		require.NoError(t, err)
+		assert.True(t, result.FailFast, "failFast should survive base64 round-trip")
+	})
+
+	t.Run("failFast preserved through normalization", func(t *testing.T) {
+		spec := &testworkflowsv1.StepParallel{
+			FailFast: true,
+			StepOperations: testworkflowsv1.StepOperations{
+				Shell: `echo "test"`,
+			},
+		}
+		parser.NormalizeParallelSpec(spec)
+		assert.True(t, spec.FailFast, "failFast should not be affected by normalization")
+	})
+
+	t.Run("failFast false with zero workers succeeds", func(t *testing.T) {
+		minimalTkConfig := `{
+			"namespace": "test",
+			"resource": {"id": "test", "root": "/tmp", "fsPrefix": "test"},
+			"workflow": {"name": "test", "labels": {}},
+			"execution": {"id": "test", "organizationId": "test", "environmentId": "test", "pvcNames": {}},
+			"controlPlane": {"url": "http://localhost:8088"},
+			"worker": {"namespace": "test", "connection": {"url": "http://localhost:8088"}}
+		}`
+		t.Setenv("TK_CFG", minimalTkConfig)
+
+		cfg, err := config.LoadConfigV2()
+		require.NoError(t, err)
+		storage, err := artifacts.InternalStorageWithProvider(&artifacts.NoOpStorageProvider{}, cfg)
+		require.NoError(t, err)
+
+		spec := &testworkflowsv1.StepParallel{
+			FailFast: true,
+			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+				Count: common.Ptr(intstr.FromInt(0)),
+			},
+		}
+		jsonBytes, _ := json.Marshal(spec)
+		opts := &ParallelOptions{Storage: storage}
+
+		err = RunParallelWithOptions(context.Background(), string(jsonBytes), cfg, false, opts)
+		assert.NoError(t, err, "failFast with zero workers should succeed")
+	})
+}
