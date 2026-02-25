@@ -14,7 +14,7 @@ func TestWebsocketListener(t *testing.T) {
 
 	// given
 	l := NewWebsocketListener()
-	l.Websockets = []Websocket{{
+	l.Websockets = []*Websocket{{
 		Id:   "1",
 		Conn: &websocket.Conn{},
 	}}
