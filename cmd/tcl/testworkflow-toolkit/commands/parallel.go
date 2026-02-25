@@ -214,7 +214,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 		return nil
 	}
 
-	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, cfg, opts.Storage, stateMachine, credentialMachine)
+	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, parallel.FailFast, cfg, opts.Storage, stateMachine, credentialMachine)
 	if err != nil {
 		return err
 	}
@@ -773,7 +773,7 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 }
 
 // executeWorkersWithStorage is like executeWorkers but accepts storage as parameter
-func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
+func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, failFast bool, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
 	for _, worker := range workers {
 		instructions.PrintOutput(cfg.Ref(), "parallel", ParallelStatus{
 			Index:       int(worker.Index),
@@ -816,6 +816,9 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 		if err != nil {
 			fmt.Printf("%d: error: %v\n", index, err)
 		}
+		if !passed && failFast {
+			cancel()
+		}
 		return passed
 	}
 
@@ -829,7 +832,7 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	}
 
 	// Execute workers with parallelism limit - blocks until all complete
-	failed := spawn.ExecuteParallel(run, specs, workerNamespaces, parallelism)
+	failed := spawn.ExecuteParallel(execCtx, run, specs, workerNamespaces, parallelism)
 
 	// Signal orchestrator to exit by closing updates channel
 	close(updates)
