@@ -75,6 +75,9 @@ func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventR
 	if len(failed) > 0 {
 		return testkube.NewFailedEventResult(event.Id, errors.New("message sent to not all clients, failed: "+strings.Join(failed, ", ")))
 	}
+	if len(l.Websockets) == 0 {
+		return testkube.NewSuccessEventResult(event.Id, "no websocket clients connected")
+	}
 	return testkube.NewSuccessEventResult(event.Id, "message sent to all websocket clients")
 
 }
