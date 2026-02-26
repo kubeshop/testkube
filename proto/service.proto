@@ -272,6 +272,7 @@ message TestWorkflowServiceNotificationsRequest {
   string service_name = 3;
   int32 service_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
+  string runner_id = 7;
 }
 
 message TestWorkflowServiceNotificationsResponse {
@@ -290,6 +291,7 @@ message TestWorkflowParallelStepNotificationsRequest {
   string ref = 3;
   int32  worker_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
+  string runner_id = 7;
 }
 
 message TestWorkflowParallelStepNotificationsResponse {
