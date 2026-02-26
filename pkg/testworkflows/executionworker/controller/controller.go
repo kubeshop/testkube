@@ -100,7 +100,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	// Ensure it's not using the resource that is isolated for a different runner
 	if watcher.State().RunnerId() != "" && watcher.State().RunnerId() != expectedRunnerId {
 		ctxCancel()
-		return nil, fmt.Errorf("%w: the execution is assigned to agent '%s'", ErrJobDifferentRunner, watcher.State().RunnerId())
+		return nil, fmt.Errorf("%w: the execution is assigned to runner '%s', current runner is '%s'", ErrJobDifferentRunner, watcher.State().RunnerId(), expectedRunnerId)
 	}
 
 	// Obtain the signature
