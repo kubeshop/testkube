@@ -39,7 +39,7 @@ func AgentCapabilities(cfg *config.Config) []string {
 	if cfg.EnableK8sEvents {
 		caps = append(caps, "k8s-events")
 	}
-	if !strings.EqualFold(cfg.EnableCronJobs, "false") {
+	if strings.EqualFold(cfg.EnableCronJobs, "true") {
 		caps = append(caps, "cron-jobs")
 	}
 	if !cfg.DisableWebhooks {
