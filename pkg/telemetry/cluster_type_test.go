@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,13 +29,14 @@ func TestDetectFromProviderID(t *testing.T) {
 		{"unknown provider", "vmware://datacenter/vm-1", ""},
 	}
 
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cs := fake.NewSimpleClientset(&corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
 				Spec:       corev1.NodeSpec{ProviderID: tt.providerID},
 			})
-			assert.Equal(t, tt.want, detectFromProviderID(cs))
+			assert.Equal(t, tt.want, detectFromProviderID(ctx, cs))
 		})
 	}
 }
@@ -56,21 +58,20 @@ func TestDetectFromNodeLabels(t *testing.T) {
 		{"nil labels", nil, ""},
 	}
 
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cs := fake.NewSimpleClientset(&corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: tt.labels},
 			})
-			assert.Equal(t, tt.want, detectFromNodeLabels(cs))
+			assert.Equal(t, tt.want, detectFromNodeLabels(ctx, cs))
 		})
 	}
 }
 
 func TestDetectFromServerVersion(t *testing.T) {
-	// The fake clientset returns empty version info, so detectFromServerVersion
-	// returns "" for unrecognised versions. We verify it doesn't panic.
 	cs := fake.NewSimpleClientset()
-	assert.Equal(t, "", detectFromServerVersion(cs))
+	assert.Equal(t, "", detectFromServerVersion(context.Background(), cs))
 }
 
 func TestDetectFromKubeSystemPods(t *testing.T) {
@@ -94,10 +95,11 @@ func TestDetectFromKubeSystemPods(t *testing.T) {
 		{"no match", []string{"coredns-abc", "etcd-master"}, ""},
 	}
 
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cs := buildFakeClientWithPods(tt.podNames)
-			assert.Equal(t, tt.want, detectFromKubeSystemPods(cs))
+			assert.Equal(t, tt.want, detectFromKubeSystemPods(ctx, cs))
 		})
 	}
 }
@@ -160,3 +162,4 @@ func TestDetectClusterTypeFromClientset_LayerPriority(t *testing.T) {
 		assert.Equal(t, "others", detectClusterTypeFromClientset(cs))
 	})
 }
+

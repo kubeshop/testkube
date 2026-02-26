@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -11,6 +12,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 )
+
+const clusterTypeDetectionTimeout = 10 * time.Second
 
 var (
 	clusterTypeOnce   sync.Once
@@ -37,9 +40,12 @@ func detectClusterType() string {
 }
 
 // detectClusterTypeFromClientset runs a layered detection chain against the
-// given clientset. Exported-via-lowercase for unit testing within the package.
+// given clientset with a shared timeout so the entire detection is bounded.
 func detectClusterTypeFromClientset(clientset kubernetes.Interface) string {
-	detectors := []func(kubernetes.Interface) string{
+	ctx, cancel := context.WithTimeout(context.Background(), clusterTypeDetectionTimeout)
+	defer cancel()
+
+	detectors := []func(context.Context, kubernetes.Interface) string{
 		detectFromProviderID,
 		detectFromNodeLabels,
 		detectFromServerVersion,
@@ -47,7 +53,11 @@ func detectClusterTypeFromClientset(clientset kubernetes.Interface) string {
 	}
 
 	for _, detect := range detectors {
-		if ct := detect(clientset); ct != "" {
+		if ctx.Err() != nil {
+			log.DefaultLogger.Debugw("cluster type detection: timeout reached before all layers checked")
+			break
+		}
+		if ct := detect(ctx, clientset); ct != "" {
 			return ct
 		}
 	}
@@ -71,8 +81,8 @@ var providerIDPrefixes = []struct {
 	{"openstack://", "openstack"},
 }
 
-func detectFromProviderID(clientset kubernetes.Interface) string {
-	nodes, err := clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{Limit: 5})
+func detectFromProviderID(ctx context.Context, clientset kubernetes.Interface) string {
+	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: 5})
 	if err != nil || len(nodes.Items) == 0 {
 		return ""
 	}
@@ -108,8 +118,8 @@ var labelDetectors = []struct {
 	{"microk8s.io/cluster", "microk8s"},
 }
 
-func detectFromNodeLabels(clientset kubernetes.Interface) string {
-	nodes, err := clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{Limit: 5})
+func detectFromNodeLabels(ctx context.Context, clientset kubernetes.Interface) string {
+	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: 5})
 	if err != nil || len(nodes.Items) == 0 {
 		return ""
 	}
@@ -128,7 +138,7 @@ func detectFromNodeLabels(clientset kubernetes.Interface) string {
 // GKE, EKS, k3s and others embed distribution identifiers in the API
 // server's GitVersion.
 
-func detectFromServerVersion(clientset kubernetes.Interface) string {
+func detectFromServerVersion(_ context.Context, clientset kubernetes.Interface) string {
 	sv, err := clientset.Discovery().ServerVersion()
 	if err != nil {
 		return ""
@@ -171,8 +181,8 @@ var podNameDetectors = []struct {
 	{[]string{"microk8s-"}, "microk8s"},
 }
 
-func detectFromKubeSystemPods(clientset kubernetes.Interface) string {
-	pods, err := clientset.CoreV1().Pods("kube-system").List(context.Background(), metav1.ListOptions{})
+func detectFromKubeSystemPods(ctx context.Context, clientset kubernetes.Interface) string {
+	pods, err := clientset.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return ""
 	}
