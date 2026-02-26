@@ -219,7 +219,6 @@ func getUserID(cmd *cobra.Command) string {
 	return data.CloudContext.EnvironmentId
 }
 
-
 // IsRunningInDocker detects if the CLI is running inside a Docker container
 func IsRunningInDocker() bool {
 	// Method 1: Check for .dockerenv file
