@@ -112,7 +112,7 @@ mongodb:
     # -- MongoDB image repository
     repository: testkube-cloud-372110/testkube/mongodb
     # -- MongoDB image tag
-    tag: 8.2.3
+    tag: 8.2.5
     # -- MongoDB image pull Secret
     pullSecrets: []
   # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
@@ -160,7 +160,7 @@ mongodb:
       # -- MongoDB metrics image repository
       repository: testkube-cloud-372110/testkube/mongodb
       # -- MongoDB metrics image tag
-      tag: "8.2.3"
+      tag: "8.2.5"
 
 # PostgreSQL parameters
 # For more configuration parameters of PostgreSQL chart please look here: https://github.com/bitnami/charts/tree/main/bitnami/postgresql#parameters
@@ -269,7 +269,7 @@ postgresql:
     # -- PostgreSQL image repository
     repository: testkube-cloud-372110/testkube/postgresql
     # -- PostgreSQL image tag
-    tag: 18-debian-12
+    tag: 18.2
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 
