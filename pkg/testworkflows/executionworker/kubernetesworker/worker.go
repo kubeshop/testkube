@@ -60,6 +60,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,
+			InsecureRegistries:                config.Cluster.InsecureRegistries,
 			DefaultServiceAccount:             config.Cluster.Namespaces[config.Cluster.DefaultNamespace].DefaultServiceAccountName,
 			ClusterID:                         config.Cluster.Id,
 			RunnerID:                          config.RunnerId,
