@@ -90,11 +90,11 @@ func TestAgentCapabilities_Features(t *testing.T) {
 		assert.NotContains(t, caps, "tracing")
 	})
 
-	t.Run("cron jobs empty string means enabled", func(t *testing.T) {
+	t.Run("cron jobs empty string means not explicitly enabled", func(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.EnableCronJobs = ""
 		caps := AgentCapabilities(cfg)
-		assert.Contains(t, caps, "cron-jobs")
+		assert.NotContains(t, caps, "cron-jobs")
 	})
 }
 

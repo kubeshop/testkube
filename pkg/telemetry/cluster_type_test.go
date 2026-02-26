@@ -162,4 +162,3 @@ func TestDetectClusterTypeFromClientset_LayerPriority(t *testing.T) {
 		assert.Equal(t, "others", detectClusterTypeFromClientset(cs))
 	})
 }
-
