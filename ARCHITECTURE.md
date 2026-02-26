@@ -194,6 +194,32 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
 
+**Heartbeat**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
+
+- Sends a `testkube_api_start` event on startup and a `testkube_api_heartbeat` event every hour
+- Both events include the detected cluster type and agent capabilities
+
+**Agent Capabilities**: [`cmd/api-server/services/capabilities.go`](cmd/api-server/services/capabilities.go)
+
+Extracts a list of capability tags from the agent's runtime configuration and includes them in heartbeat/start telemetry events. Capabilities are computed once at startup from the `Config` struct. Reported capabilities include:
+
+- Agent persona (`persona:runner`, `persona:sync`, `persona:default`)
+- Deployment mode (`mode:connected`, `mode:standalone`)
+- Feature flags: `runner`, `floating-runner`, `k8s-controllers`, `k8s-events`, `cron-jobs`, `webhooks`, `cloud-webhooks`, `gitops-sync`, `cloud-storage`, `tracing`
+
+**Cluster Type Detection**: [`pkg/telemetry/cluster_type.go`](pkg/telemetry/cluster_type.go)
+
+Identifies the Kubernetes cluster type/provider at runtime via a layered detection chain. The result is cached for the lifetime of the process.
+
+Detection layers (first match wins):
+
+1. **Node `spec.providerID`** — URI prefix set by the cloud-controller-manager (e.g. `gce://`, `aws://`, `azure://`, `kind://`)
+2. **Node labels** — Provider-specific labels (e.g. `eks.amazonaws.com/nodegroup`, `cloud.google.com/gke-nodepool`, `minikube.k8s.io/name`)
+3. **Server version string** — Distribution suffixes in the API server's `GitVersion` (e.g. `-gke.`, `-eks-`, `+k3s`)
+4. **`kube-system` pod names** — Legacy heuristic matching pod name substrings (e.g. `kindnet`, `docker-desktop`)
+
+Supported cluster types: `gke`, `eks`, `aks`, `kind`, `minikube`, `docker-desktop`, `openshift`, `k3s`, `k3d`, `microk8s`, `doks`, `openstack`, `k0s`, `rke2`, `others`, `unidentified`
+
 ### 9. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
