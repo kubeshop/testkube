@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
@@ -99,7 +100,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	// Ensure it's not using the resource that is isolated for a different runner
 	if watcher.State().RunnerId() != "" && watcher.State().RunnerId() != expectedRunnerId {
 		ctxCancel()
-		return nil, ErrJobDifferentRunner
+		return nil, fmt.Errorf("%w: the execution is assigned to agent '%s'", ErrJobDifferentRunner, watcher.State().RunnerId())
 	}
 
 	// Obtain the signature
