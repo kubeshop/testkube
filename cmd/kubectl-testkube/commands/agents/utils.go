@@ -209,6 +209,26 @@ func GetControlPlaneAgentSecretKey(cmd *cobra.Command, idOrName string) (string,
 	return secretKey, nil
 }
 
+func RotateControlPlaneAgentKey(cmd *cobra.Command, idOrName string, gracePeriod string) (cloudclient.RegenerateSecretKeyResponse, error) {
+	_, _, err := common2.GetClient(cmd)
+	if err != nil {
+		return cloudclient.RegenerateSecretKeyResponse{}, errors.Wrap(err, "connecting to cloud")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return cloudclient.RegenerateSecretKeyResponse{}, errors.Wrap(err, "loading config")
+	}
+	if cfg.CloudContext.ApiKey == "" {
+		return cloudclient.RegenerateSecretKeyResponse{}, errors.New("no api key found in config")
+	}
+
+	result, err := common2.RegenerateAgentSecretKey(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, gracePeriod)
+	if err != nil {
+		return cloudclient.RegenerateSecretKeyResponse{}, errors.Wrap(err, "rotating agent secret key")
+	}
+	return result, nil
+}
+
 func CreateAgent(cmd *cobra.Command, input cloudclient.AgentInput) (*cloudclient.Agent, error) {
 	_, _, err := common2.GetClient(cmd)
 	if err != nil {

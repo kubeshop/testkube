@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	nethttp "net/http"
+	"net/url"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -108,6 +109,42 @@ func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
 	}
 	err = json.NewDecoder(resp.Body).Decode(&e)
 	return e.SecretKey, err
+}
+
+type RegenerateSecretKeyResponse struct {
+	SecretKey       string     `json:"secretKey"`
+	GracePeriod     string     `json:"gracePeriod,omitempty"`
+	OldKeyExpiresAt *time.Time `json:"oldKeyExpiresAt,omitempty"`
+}
+
+func (c AgentsClient) RegenerateSecretKey(idOrName, gracePeriod string) (RegenerateSecretKeyResponse, error) {
+	path := c.BaseUrl + c.Path + "/" + idOrName + "/secret-key"
+	if gracePeriod != "" {
+		path += "?gracePeriod=" + url.QueryEscape(gracePeriod)
+	}
+	req, err := nethttp.NewRequest("DELETE", path, nil)
+	if err != nil {
+		return RegenerateSecretKeyResponse{}, err
+	}
+	req.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return RegenerateSecretKeyResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return RegenerateSecretKeyResponse{}, fmt.Errorf("error regenerating secret key %s: can't read response: %s", c.Path, err)
+		}
+		return RegenerateSecretKeyResponse{}, fmt.Errorf("error regenerating secret key %s: %s", path, d)
+	}
+
+	var result RegenerateSecretKeyResponse
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	return result, err
 }
 
 func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]string, floating bool) (Agent, error) {
