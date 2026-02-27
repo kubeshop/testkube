@@ -80,7 +80,7 @@ func (r *blockingReader) Read(p []byte) (int, error) {
 	return 0, r.ctx.Err()
 }
 
-func TestWatchContainerLogsIdleTimeoutCancelsWhenDone(t *testing.T) {
+func TestWatchContainerLogsIdleTimeoutCancelsWhenDoneWithoutError(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -105,17 +105,14 @@ func TestWatchContainerLogsIdleTimeoutCancelsWhenDone(t *testing.T) {
 	deadline := time.NewTimer(500 * time.Millisecond)
 	defer deadline.Stop()
 
-	var gotErr bool
 	for {
 		select {
 		case msg, ok := <-ch:
 			if !ok {
-				assert.True(t, gotErr, "expected idle timeout error before channel close")
 				return
 			}
 			if msg.Error != nil {
-				gotErr = true
-				assert.Contains(t, msg.Error.Error(), "idle timeout")
+				t.Fatalf("unexpected error from logs channel: %v", msg.Error)
 			}
 		case <-deadline.C:
 			t.Fatal("timed out waiting for idle timeout to close the channel")

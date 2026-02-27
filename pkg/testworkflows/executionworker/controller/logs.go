@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -172,7 +171,6 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 					}
 					last := time.Unix(0, atomic.LoadInt64(&lastActivity))
 					if time.Since(last) >= idleTimeout {
-						sendError(fmt.Errorf("log stream idle timeout after %s", idleTimeout))
 						ctxCancel()
 						return
 					}
