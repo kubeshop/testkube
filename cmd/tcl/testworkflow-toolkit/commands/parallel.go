@@ -629,10 +629,18 @@ func (e *WorkerExecutor) processWorkerNotifications(notifications executionworke
 // handleWorkerCleanup performs cleanup operations for a completed worker.
 // Evaluates log condition to determine if logs should be saved.
 // Saves logs to artifact storage if condition is met.
-// Destroys Kubernetes resources (pods, jobs) for the worker.
-// Uses non-blocking operations to prevent hanging during cleanup.
+// If the execution context was cancelled (e.g. fail-fast), aborts the worker
+// (patches termination annotations + destroys K8s resources) instead of just destroying.
+// Uses a separate cleanup context so cleanup always runs even when execution is cancelled.
 // Always executes via defer to ensure cleanup even on failures.
 func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerSpec, lastResult testkube.TestWorkflowResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string)) {
+	// Use a separate context for cleanup - the execution context may be cancelled
+	// by fail-fast but we still need to save logs and clean up K8s resources
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cleanupCancel()
+
+	cancelled := ctx.Err() != nil
+
 	// Default behavior: save logs when no condition specified
 	// Otherwise evaluate the condition expression (e.g., "failed", "always", "never")
 	shouldSaveLogs := worker.LogCondition == nil
@@ -645,27 +653,29 @@ func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerS
 	}
 
 	if shouldSaveLogs {
-		select {
-		case <-ctx.Done():
-			log("warning", "context cancelled, skipping log save")
-		default:
-			logsFilePath, err := spawn.ParallelSaveLogs(e.cfg, ctx, e.storage, worker.Namespace, cfg.Resource.Id, "", worker.Index)
-			if err == nil {
-				instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Logs: e.storage.FullPath(logsFilePath)})
-				log("saved logs")
-			} else {
-				log("warning", "problem saving the logs", err.Error())
-			}
+		logsFilePath, err := spawn.ParallelSaveLogs(e.cfg, cleanupCtx, e.storage, worker.Namespace, cfg.Resource.Id, "", worker.Index)
+		if err == nil {
+			instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Logs: e.storage.FullPath(logsFilePath)})
+			log("saved logs")
+		} else {
+			log("warning", "problem saving the logs", err.Error())
 		}
 	}
 
+	// If cancelled by fail-fast, abort the worker (patches termination annotations + destroys)
+	// Otherwise just destroy resources normally
 	var err error
-	select {
-	case <-ctx.Done():
-		log("warning", "context cancelled, skipping resource cleanup")
-		err = ctx.Err()
-	default:
-		err = spawn.ParallelExecutionWorker(e.cfg).Destroy(ctx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
+	if cancelled {
+		err = spawn.ParallelExecutionWorker(e.cfg).Abort(cleanupCtx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
+			Namespace: worker.Namespace,
+		})
+		if err == nil {
+			log("aborted")
+		} else {
+			log("warning", "problem aborting worker", err.Error())
+		}
+	} else {
+		err = spawn.ParallelExecutionWorker(e.cfg).Destroy(cleanupCtx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
 			Namespace: worker.Namespace,
 		})
 		if err == nil {
@@ -676,7 +686,6 @@ func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerS
 	}
 
 	select {
-	case <-ctx.Done():
 	case e.updates <- Update{index: worker.Index, done: true, err: err}:
 	default:
 		log("warning", "could not send final update for worker", fmt.Sprintf("index=%d", worker.Index))
