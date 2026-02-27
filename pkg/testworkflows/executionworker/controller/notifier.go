@@ -260,15 +260,144 @@ func (n *notifier) End() {
 	// Ensure that the steps without the information are fulfilled and marked as aborted
 	n.fillGaps(true)
 
-	terminationCode := watchers2.GetTerminationCode(n.state.Job().Original())
+	terminationCode := string(testkube.ABORTED_TestWorkflowStatus)
+	if n.state != nil && n.state.Job() != nil {
+		terminationCode = watchers2.GetTerminationCode(n.state.Job().Original())
+	}
 	errorMessage := DefaultErrorMessage
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
-	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, terminationCode)
+
+	podFinished := n.state != nil && n.state.Pod() != nil && n.state.Pod().Finished()
+	podHasError := n.state != nil && n.state.PodExecutionError() != ""
+	allContainersFinished := n.allExecutionContainersFinished()
+	anyStepAborted := n.result.IsAnyStepAborted()
+	anyStepCanceled := n.result.IsAnyStepCanceled()
+	anyRequiredStepFailed := n.result.IsAnyRequiredStepFailed(n.sigSequence)
+
+	if shouldPreferCompletionOverAbortedFallback(
+		terminationCode,
+		errorMessage,
+		podFinished,
+		podHasError,
+		allContainersFinished,
+		anyStepAborted,
+		anyStepCanceled,
+		anyRequiredStepFailed,
+	) {
+		n.finalizeUnfinishedStepsForCompletedExecution()
+	} else {
+		n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, terminationCode)
+	}
 
 	// Finalize the status
 	n.reconcile()
+}
+
+func shouldPreferCompletionOverAbortedFallback(
+	terminationCode string,
+	errorMessage string,
+	podFinished bool,
+	podHasError bool,
+	allContainersFinished bool,
+	anyStepAborted bool,
+	anyStepCanceled bool,
+	anyRequiredStepFailed bool,
+) bool {
+	return terminationCode == string(testkube.ABORTED_TestWorkflowStatus) &&
+		errorMessage == DefaultErrorMessage &&
+		podFinished &&
+		!podHasError &&
+		allContainersFinished &&
+		!anyStepAborted &&
+		!anyStepCanceled &&
+		!anyRequiredStepFailed
+}
+
+func (n *notifier) allExecutionContainersFinished() bool {
+	if n.state == nil || len(n.actions) == 0 {
+		return false
+	}
+
+	for i := range n.actions {
+		if !n.state.ContainerFinished(fmt.Sprintf("%d", i+1)) {
+			return false
+		}
+	}
+	return true
+}
+
+func (n *notifier) finalizeUnfinishedStepsForCompletedExecution() {
+	if !n.result.Initialization.Status.Finished() {
+		n.result.Initialization.Status = common.Ptr(testkube.PASSED_TestWorkflowStepStatus)
+	}
+
+	// Leaf steps: unresolved statuses are marked as skipped, as execution is already known complete.
+	for i := range n.sigSequence {
+		ref := n.sigSequence[i].Ref
+		if ref == constants.InitStepName || !n.result.IsKnownStep(ref) || len(n.sigSequence[i].Children) > 0 {
+			continue
+		}
+		step := n.result.Steps[ref]
+		if !step.Status.Finished() {
+			step.Status = common.Ptr(testkube.SKIPPED_TestWorkflowStepStatus)
+			n.result.Steps[ref] = step
+		}
+	}
+
+	// Group steps: derive status from children, bottom-up.
+	for i := len(n.sigSequence) - 1; i >= 0; i-- {
+		ref := n.sigSequence[i].Ref
+		if ref == constants.InitStepName || !n.result.IsKnownStep(ref) || len(n.sigSequence[i].Children) == 0 {
+			continue
+		}
+		step := n.result.Steps[ref]
+		if step.Status.Finished() {
+			continue
+		}
+
+		allSkipped := true
+		anyKnownChild := false
+		anyFailed := false
+		anyAborted := false
+		anyCanceled := false
+		for _, childSig := range n.sigSequence[i].Children {
+			if !n.result.IsKnownStep(childSig.Ref) {
+				continue
+			}
+			anyKnownChild = true
+			childStep := n.result.Steps[childSig.Ref]
+			if childStep.Status.Failed() {
+				anyFailed = true
+			}
+			if childStep.Status.Aborted() {
+				anyAborted = true
+			}
+			if childStep.Status.Canceled() {
+				anyCanceled = true
+			}
+			if !childStep.Status.Skipped() {
+				allSkipped = false
+			}
+		}
+
+		switch {
+		case anyFailed:
+			step.Status = common.Ptr(testkube.FAILED_TestWorkflowStepStatus)
+		case anyAborted:
+			step.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
+		case anyCanceled:
+			step.Status = common.Ptr(testkube.CANCELED_TestWorkflowStepStatus)
+		case allSkipped:
+			step.Status = common.Ptr(testkube.SKIPPED_TestWorkflowStepStatus)
+		case anyKnownChild:
+			step.Status = common.Ptr(testkube.PASSED_TestWorkflowStepStatus)
+		default:
+			step.Status = common.Ptr(testkube.SKIPPED_TestWorkflowStepStatus)
+		}
+		n.result.Steps[ref] = step
+	}
 }
 
 func (n *notifier) fillGaps(force bool) {
