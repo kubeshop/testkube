@@ -433,7 +433,7 @@ func (e *ServicesExecutor) runServices(
 		return runner.Run()
 	}
 
-	return spawn.ExecuteParallel(run, instances, namespaces, int64(len(instances)))
+	return spawn.ExecuteParallel(context.Background(), run, instances, namespaces, int64(len(instances)))
 }
 
 // reportFinalState reports the final state of all services.

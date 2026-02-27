@@ -190,15 +190,37 @@ func GetServiceByResourceId(jobName string) (string, int64) {
 	return string(v[1]), index
 }
 
-func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
+func ExecuteParallel[T any](ctx context.Context, run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
 	var wg sync.WaitGroup
 	wg.Add(len(items))
 	ch := make(chan struct{}, parallelism)
 	success := atomic.Int64{}
+	skipped := atomic.Int64{}
 
 	// Execute all operations
 	for index := range items {
-		ch <- struct{}{}
+		// Prioritize context cancellation check before acquiring a slot
+		select {
+		case <-ctx.Done():
+			skipped.Add(int64(len(items) - index))
+			for j := index; j < len(items); j++ {
+				wg.Done()
+			}
+			goto wait
+		default:
+		}
+		// Wait for a parallelism slot, but also check for context cancellation
+		select {
+		case ch <- struct{}{}:
+			// Got a slot, proceed with execution
+		case <-ctx.Done():
+			// Context cancelled — skip this and all remaining items
+			skipped.Add(int64(len(items) - index))
+			for j := index; j < len(items); j++ {
+				wg.Done()
+			}
+			goto wait
+		}
 		go func(index int) {
 			if run(int64(index), namespaces[index], &items[index]) {
 				success.Add(1)
@@ -207,8 +229,9 @@ func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespa
 			wg.Done()
 		}(index)
 	}
+wait:
 	wg.Wait()
-	return int64(len(items)) - success.Load()
+	return int64(len(items)) - success.Load() - skipped.Load()
 }
 
 // SaveLogs saves execution logs to the artifact storage.

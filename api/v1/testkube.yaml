@@ -9340,6 +9340,9 @@ components:
           parallelism:
             type: integer
             description: how many resources could be scheduled in parallel
+          failFast:
+            type: boolean
+            description: abort remaining parallel workers on first failure
           description:
             type: string
             description: worker description to display
@@ -9369,6 +9372,9 @@ components:
           parallelism:
             type: integer
             description: how many resources could be scheduled in parallel
+          failFast:
+            type: boolean
+            description: abort remaining parallel workers on first failure
           description:
             type: string
             description: worker description to display

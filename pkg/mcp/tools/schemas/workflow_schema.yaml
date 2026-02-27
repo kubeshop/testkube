@@ -404,8 +404,10 @@ spec:
       negative: false
       # Boolean. Is the step optional, so its failure won't affect the TestWorkflow result. When true, the step can fail without causing the entire workflow to fail. Useful for non-critical steps.
       optional: false
-      # Object. Instructions for parallel execution. Configures how multiple instances of this step should run concurrently. Useful for distributing test load or running tests against multiple configurations simultaneously using matrix or sharding.
+      # Object. Instructions for parallel execution. Configures how multiple instances of this step should run concurrently. Useful for distributing test load or running tests against multiple configurations simultaneously using matrix or sharding. Set failFast: true to abort remaining workers on first failure.
       parallel:
+        # Boolean. When true, abort remaining parallel workers on first non-optional worker failure. Queued workers are skipped and running workers are aborted. Default: false.
+        failFast: false
       # Boolean. Pause the step initially. When true, the workflow will pause before this step and require manual intervention to continue. Creates a synchronization point for manual verification or control.
       paused: false
       # Boolean. Mark the step as pure, applying optimizations to merge the containers together. Pure steps don't have side effects and can be optimized for performance. Enables container reuse for better efficiency.
