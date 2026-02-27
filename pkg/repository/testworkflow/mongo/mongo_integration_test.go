@@ -8,6 +8,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -748,4 +750,153 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 	assert.Equal(t, execution3.Id, result.Id)
 	assert.Equal(t, execution3.Name, result.Name)
 	assert.Equal(t, true, result.ConfigParams["param1"].Sensitive)
+}
+
+func TestNewMongoRepository_SoftDelete_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-soft-delete-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+
+	t.Run("DeleteByTestWorkflow sets deletedat and hides from queries", func(t *testing.T) {
+		execution := testkube.TestWorkflowExecution{
+			Id:   "sd-1",
+			Name: "sd-name-1",
+			Workflow: &testkube.TestWorkflow{
+				Name: "sd-workflow",
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+		}
+		require.NoError(t, repo.Insert(ctx, execution))
+
+		// Verify visible before delete
+		_, err := repo.Get(ctx, "sd-1")
+		require.NoError(t, err)
+
+		// Soft-delete
+		err = repo.DeleteByTestWorkflow(ctx, "sd-workflow")
+		require.NoError(t, err)
+
+		// Verify hidden from Get
+		_, err = repo.Get(ctx, "sd-1")
+		assert.ErrorIs(t, err, mongo.ErrNoDocuments)
+
+		// Verify hidden from GetExecutions
+		results, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithName("sd-workflow"))
+		require.NoError(t, err)
+		assert.Empty(t, results)
+
+		// Verify document still exists in collection with deletedat set
+		var raw bson.M
+		err = repo.Coll.FindOne(ctx, bson.M{"id": "sd-1"}).Decode(&raw)
+		require.NoError(t, err)
+		assert.NotNil(t, raw["deletedat"], "deletedat should be set on soft-deleted document")
+	})
+
+	t.Run("DeleteAll soft-deletes all documents", func(t *testing.T) {
+		execution := testkube.TestWorkflowExecution{
+			Id:   "sd-2",
+			Name: "sd-name-2",
+			Workflow: &testkube.TestWorkflow{
+				Name: "sd-workflow-2",
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+		}
+		require.NoError(t, repo.Insert(ctx, execution))
+
+		err := repo.DeleteAll(ctx)
+		require.NoError(t, err)
+
+		// Verify hidden
+		_, err = repo.Get(ctx, "sd-2")
+		assert.ErrorIs(t, err, mongo.ErrNoDocuments)
+
+		// Verify document exists with deletedat
+		var raw bson.M
+		err = repo.Coll.FindOne(ctx, bson.M{"id": "sd-2"}).Decode(&raw)
+		require.NoError(t, err)
+		assert.NotNil(t, raw["deletedat"])
+	})
+
+	t.Run("DeleteByTestWorkflows soft-deletes matching workflows", func(t *testing.T) {
+		// Clean the collection for this sub-test
+		repo.Coll.Drop(ctx)
+
+		exec1 := testkube.TestWorkflowExecution{
+			Id:   "sd-3a",
+			Name: "sd-name-3a",
+			Workflow: &testkube.TestWorkflow{
+				Name: "wf-a",
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+		}
+		exec2 := testkube.TestWorkflowExecution{
+			Id:   "sd-3b",
+			Name: "sd-name-3b",
+			Workflow: &testkube.TestWorkflow{
+				Name: "wf-b",
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+		}
+		exec3 := testkube.TestWorkflowExecution{
+			Id:   "sd-3c",
+			Name: "sd-name-3c",
+			Workflow: &testkube.TestWorkflow{
+				Name: "wf-c",
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+		}
+		require.NoError(t, repo.Insert(ctx, exec1))
+		require.NoError(t, repo.Insert(ctx, exec2))
+		require.NoError(t, repo.Insert(ctx, exec3))
+
+		// Soft-delete wf-a and wf-b
+		err := repo.DeleteByTestWorkflows(ctx, []string{"wf-a", "wf-b"})
+		require.NoError(t, err)
+
+		// wf-a and wf-b should be hidden
+		_, err = repo.Get(ctx, "sd-3a")
+		assert.ErrorIs(t, err, mongo.ErrNoDocuments)
+		_, err = repo.Get(ctx, "sd-3b")
+		assert.ErrorIs(t, err, mongo.ErrNoDocuments)
+
+		// wf-c should still be visible
+		result, err := repo.Get(ctx, "sd-3c")
+		require.NoError(t, err)
+		assert.Equal(t, "sd-3c", result.Id)
+	})
+
+	t.Run("soft-deleted documents are excluded from count and totals", func(t *testing.T) {
+		repo.Coll.Drop(ctx)
+
+		exec := testkube.TestWorkflowExecution{
+			Id:   "sd-4",
+			Name: "sd-name-4",
+			Workflow: &testkube.TestWorkflow{
+				Name: "wf-count",
+				Spec: &testkube.TestWorkflowSpec{},
+			},
+		}
+		require.NoError(t, repo.Insert(ctx, exec))
+
+		count, err := repo.Count(ctx, testworkflow.NewExecutionsFilter().WithName("wf-count"))
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count)
+
+		err = repo.DeleteByTestWorkflow(ctx, "wf-count")
+		require.NoError(t, err)
+
+		count, err = repo.Count(ctx, testworkflow.NewExecutionsFilter().WithName("wf-count"))
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
 }

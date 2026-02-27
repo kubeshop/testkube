@@ -2342,6 +2342,25 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 	})
 }
 
+// GetSoftDeletedExecutionIDs returns IDs of soft-deleted executions older than olderThan
+func (r *PostgresRepository) GetSoftDeletedExecutionIDs(ctx context.Context, olderThan time.Time, limit int32) ([]string, error) {
+	return r.queries.GetSoftDeletedExecutionIDs(ctx, sqlc.GetSoftDeletedExecutionIDsParams{
+		OlderThan:      toPgTimestamp(olderThan),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+		Lmt:            limit,
+	})
+}
+
+// HardDeleteSoftDeletedExecutions permanently removes soft-deleted executions older than olderThan
+func (r *PostgresRepository) HardDeleteSoftDeletedExecutions(ctx context.Context, olderThan time.Time) error {
+	return r.queries.HardDeleteSoftDeletedExecutions(ctx, sqlc.HardDeleteSoftDeletedExecutionsParams{
+		OlderThan:      toPgTimestamp(olderThan),
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
+}
+
 // populateConfigParams - same as in mongo repository
 func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams map[string]testkube.TestWorkflowExecutionConfigValue) map[string]testkube.TestWorkflowExecutionConfigValue {
 	if configParams == nil {

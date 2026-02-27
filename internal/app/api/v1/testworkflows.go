@@ -78,11 +78,17 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 		}
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name) //nolint:contextcheck // persistence ops use background context to avoid partial deletes on client disconnect
+			// Hard-delete MinIO output objects FIRST, while execution records are
+			// still visible to queries (DeleteOutputByTestWorkflow looks up execution
+			// IDs via GetExecutions, which filters deleted_at IS NULL).
+			// Use background context because this is a potentially slow multi-object
+			// delete that should finish even if the client disconnects.
+			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflow(context.Background(), name) //nolint:contextcheck // see above
+			// Soft-delete execution records (fast UPDATE, safe with request context)
+			err = s.TestWorkflowResults.DeleteByTestWorkflow(ctx, name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}
@@ -144,11 +150,17 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				return t.Name
 			})
 
-			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names) //nolint:contextcheck // persistence ops use background context to avoid partial deletes on client disconnect
+			// Hard-delete MinIO output objects FIRST, while execution records are
+			// still visible to queries (DeleteOutputForTestWorkflows looks up
+			// execution IDs via GetExecutions, which filters deleted_at IS NULL).
+			// Use background context because this is a potentially slow multi-object
+			// delete that should finish even if the client disconnects.
+			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflows(context.Background(), names) //nolint:contextcheck // see above
+			// Soft-delete execution records (fast UPDATE, safe with request context)
+			err = s.TestWorkflowResults.DeleteByTestWorkflows(ctx, names)
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)
 			}

@@ -81,7 +81,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE \(e\.id = \$1 OR e\.name = \$1\) AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)`
+WHERE \(e\.id = \$1 OR e\.name = \$1\) AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\) AND e\.deleted_at IS NULL`
 
 	// Mock expected result
 	rows := mock.NewRows([]string{
@@ -192,7 +192,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2::text AND \(e\.organization_id = \$3 AND e\.environment_id = \$4\)`
+WHERE \(e\.id = \$1 OR e\.name = \$1\) AND w\.name = \$2::text AND \(e\.organization_id = \$3 AND e\.environment_id = \$4\) AND e\.deleted_at IS NULL`
 
 	rows := mock.NewRows([]string{
 		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
@@ -355,7 +355,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE w\.name = ANY\(\$1::text\[\]\) AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
+WHERE w\.name = ANY\(\$1::text\[\]\) AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\) AND e\.deleted_at IS NULL
 ORDER BY w\.name, e\.status_at DESC`
 
 	rows := mock.NewRows([]string{
@@ -467,7 +467,7 @@ LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e\.id = rw\.execution_id AND rw\.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e\.id = ra\.execution_id
-WHERE r\.status IN \('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming'\) AND \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
+WHERE r\.status IN \('queued', 'assigned', 'starting', 'running', 'pausing', 'paused', 'resuming'\) AND \(e\.organization_id = \$1 AND e\.environment_id = \$2\) AND e\.deleted_at IS NULL
 ORDER BY e\.id DESC`
 
 	rows := mock.NewRows([]string{
@@ -525,7 +525,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
+WHERE \(e\.organization_id = \$1 AND e\.environment_id = \$2\) AND e\.deleted_at IS NULL
     AND \(COALESCE\(\$3::text, ''\) = '' OR w.name = \$3::text\)
     AND \(COALESCE\(\$4::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR w.name = ANY\(\$4::text\[\]\)\)
     AND \(COALESCE\(\$5::text, ''\) = '' OR e.name ILIKE '%' \|\| \$5::text \|\| '%'\)
@@ -827,13 +827,15 @@ func TestSQLCTestWorkflowExecutionQueries_DeleteTestWorkflowExecutionsByTestWork
 	queries := New(mock)
 	ctx := context.Background()
 
-	expectedQuery := `DELETE FROM test_workflow_executions e
-USING test_workflows w
+	expectedQuery := `UPDATE test_workflow_executions e
+SET deleted_at = NOW\(\)
+FROM test_workflows w
 WHERE e\.id = w\.execution_id AND \(e\.organization_id = \$1 AND e\.environment_id = \$2\)
-  AND w\.workflow_type = 'workflow' 
+  AND e\.deleted_at IS NULL
+  AND w\.workflow_type = 'workflow'
   AND w\.name = \$3`
 
-	mock.ExpectExec(expectedQuery).WithArgs("org-id", "env-id", "test-workflow").WillReturnResult(pgxmock.NewResult("DELETE", 1))
+	mock.ExpectExec(expectedQuery).WithArgs("org-id", "env-id", "test-workflow").WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	// Execute query
 	err = queries.DeleteTestWorkflowExecutionsByTestWorkflow(ctx, DeleteTestWorkflowExecutionsByTestWorkflowParams{
@@ -855,9 +857,10 @@ func TestSQLCTestWorkflowExecutionQueries_DeleteAllTestWorkflowExecutions(t *tes
 	queries := New(mock)
 	ctx := context.Background()
 
-	expectedQuery := `DELETE FROM test_workflow_executions WHERE organization_id = \$1 AND environment_id = \$2`
+	expectedQuery := `UPDATE test_workflow_executions SET deleted_at = NOW\(\)
+WHERE organization_id = \$1 AND environment_id = \$2 AND deleted_at IS NULL`
 
-	mock.ExpectExec(expectedQuery).WithArgs("org-id", "env-id").WillReturnResult(pgxmock.NewResult("DELETE", 5))
+	mock.ExpectExec(expectedQuery).WithArgs("org-id", "env-id").WillReturnResult(pgxmock.NewResult("UPDATE", 5))
 
 	// Execute query
 	err = queries.DeleteAllTestWorkflowExecutions(ctx, DeleteAllTestWorkflowExecutionsParams{
@@ -1005,7 +1008,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetPreviousFinishedState(t *testing.T)
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
+WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\) AND e\.deleted_at IS NULL
     AND r\.finished_at < \$4
     AND r\.status IN \('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout'\)
 ORDER BY r\.finished_at DESC
@@ -1047,7 +1050,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionTags(t *testin
     FROM test_workflow_executions e
     LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
     CROSS JOIN LATERAL jsonb_each_text\(e.tags\) AS tag_pair\(key, value\)
-    WHERE e.tags IS NOT NULL AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
+    WHERE e.tags IS NOT NULL AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\) AND e\.deleted_at IS NULL
         AND e.tags != '\{\}'::jsonb
         AND jsonb_typeof\(e.tags\) = 'object'
 \)
@@ -1099,7 +1102,7 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowMetrics(t *testing.T) {
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\)
+WHERE w\.name = \$1::text AND \(e\.organization_id = \$2 AND e\.environment_id = \$3\) AND e\.deleted_at IS NULL
     AND \(\$4::integer = 0 OR e\.scheduled_at >= NOW\(\) - \(\$4::integer \|\| ' days'\)::interval\)
 ORDER BY e\.scheduled_at DESC
 LIMIT NULLIF\(\$5, 0\)`

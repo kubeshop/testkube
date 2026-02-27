@@ -67,6 +67,7 @@ type TestWorkflowExecution struct {
 	OrganizationID            string                                               `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string                                               `db:"environment_id" json:"environment_id"`
 	Runtime                   *testkube.TestWorkflowExecutionRuntime               `db:"runtime" json:"runtime"`
+	DeletedAt                 pgtype.Timestamptz                                   `db:"deleted_at" json:"deleted_at"`
 }
 
 type TestWorkflowOutput struct {

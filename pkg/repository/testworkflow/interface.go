@@ -155,6 +155,10 @@ type Repository interface {
 	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error)
 	// AbortIfQueued marks execution as aborted if it's queued
 	AbortIfQueued(ctx context.Context, id string) (bool, error)
+	// GetSoftDeletedExecutionIDs returns IDs of soft-deleted executions older than the given time (for background cleanup)
+	GetSoftDeletedExecutionIDs(ctx context.Context, olderThan time.Time, limit int32) ([]string, error)
+	// HardDeleteSoftDeletedExecutions permanently removes soft-deleted executions older than the given time
+	HardDeleteSoftDeletedExecutions(ctx context.Context, olderThan time.Time) error
 }
 
 type Sequences interface {
