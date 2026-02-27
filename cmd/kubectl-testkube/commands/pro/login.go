@@ -57,6 +57,7 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("requesting control plane info", err)
 
 				v, err := io.ReadAll(req.Body)
+				req.Body.Close()
 				ui.ExitOnError("reading control plane info", err)
 				var result CloudConfig
 				err = json.Unmarshal(v, &result)
@@ -67,6 +68,7 @@ func NewLoginCmd() *cobra.Command {
 					req, err = http.Get(u.String())
 					ui.ExitOnError("requesting control plane info", err)
 					v, err = io.ReadAll(req.Body)
+					req.Body.Close()
 					ui.ExitOnError("reading control plane info", err)
 					err = json.Unmarshal(v, &result)
 				}
