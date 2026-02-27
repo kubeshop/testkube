@@ -763,10 +763,11 @@ func main() {
 	}
 
 	// telemetry based functions
+	capabilities := services.AgentCapabilities(cfg)
 	leaderTasks = append(leaderTasks, leader.Task{
 		Name: "telemetry-heartbeat",
 		Start: func(taskCtx context.Context) error {
-			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig)
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig, capabilities)
 			return nil
 		},
 	})

@@ -194,6 +194,11 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
 
+**Heartbeat**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
+
+- Sends a `testkube_api_start` event on startup and a `testkube_api_heartbeat` event every hour
+- Both events include the detected cluster type and agent capabilities
+
 ### 9. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)

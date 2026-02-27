@@ -100,7 +100,8 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("clusterType", params.ClusterType).
 		Set("errorType", params.ErrorType).
 		Set("errorStackTrace", params.ErrorStackTrace).
-		Set("errorCode", params.ErrorCode)
+		Set("errorCode", params.ErrorCode).
+		Set("agentCapabilities", params.AgentCapabilities)
 
 	if params.License != "" {
 		properties = properties.Set("license", params.License)
