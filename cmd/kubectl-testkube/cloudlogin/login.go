@@ -32,7 +32,7 @@ func getServerAddress(port int) string {
 
 func checkPortAvailable(port int) error {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	l, err := net.Listen("tcp", addr)
+	l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
 	if err != nil {
 		return fmt.Errorf("port %d is not available: %w", port, err)
 	}
@@ -118,7 +118,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 }
 
 func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshToken string) (string, string, error) {
-	provider, err := oidc.NewProvider(context.Background(), providerURL)
+	provider, err := oidc.NewProvider(ctx, providerURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -253,7 +253,12 @@ func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int) (Tok
 		return Tokens{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := http.Post(tokenURL, "application/json", strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, tokenURL, strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return Tokens{}, fmt.Errorf("failed to create token request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Tokens{}, fmt.Errorf("failed to make token request: %w", err)
 	}

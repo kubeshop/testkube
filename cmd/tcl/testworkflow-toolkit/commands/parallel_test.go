@@ -324,11 +324,15 @@ func TestTransferServer(t *testing.T) {
 		var err error
 
 		for i := 0; i < 5; i++ {
+			var req *http.Request
 			switch method {
 			case "GET":
-				resp, err = http.Get(url)
+				req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 			case "POST":
-				resp, err = http.Post(url, "application/octet-stream", body)
+				req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, url, body)
+			}
+			if err == nil {
+				resp, err = http.DefaultClient.Do(req)
 			}
 
 			if err == nil {

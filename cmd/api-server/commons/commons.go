@@ -91,7 +91,7 @@ func MustGetConfig() *config.Config {
 }
 
 func MustFreePort(port int) {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", fmt.Sprintf(":%d", port))
 	ExitOnError(fmt.Sprintf("checking if port %d is free", port), err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
@@ -202,7 +202,7 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
 	// Connect to PostgreSQL
-	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	pool, err := pgxpool.New(ctx, cfg.APIPostgresDSN)
 	ExitOnError("Getting Postgres database", err)
 
 	if migrate {

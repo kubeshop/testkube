@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -45,7 +46,7 @@ type ArtifactURL struct {
 func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
 
 	cloudURI := strings.ReplaceAll(uri, "/agent", "")
-	req, err := http.NewRequest(http.MethodGet, cloudURI, nil)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, cloudURI, nil)
 	if err != nil {
 		return "", err
 	}
@@ -76,7 +77,7 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 		return "", err
 	}
 
-	req, err = http.NewRequest(http.MethodGet, artifactURL.URL, nil)
+	req, err = http.NewRequestWithContext(context.TODO(), http.MethodGet, artifactURL.URL, nil)
 	if err != nil {
 		return "", err
 	}
