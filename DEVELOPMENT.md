@@ -186,10 +186,6 @@ testkube-api:
     limits:
       cpu: 2000m
       memory: 2Gi
-
-# Enable the Testkube Operator for CRD-driven workflow management
-testkube-operator:
-  enabled: true
 ```
 
 ### Tiltfile Constants
