@@ -91,11 +91,6 @@ nats:
   natsBox:
     enabled: false
 
-# Testkube Operator (disabled for local dev by default)
-# Enable if you want to test operator functionality
-testkube-operator:
-  enabled: false
-
 # Global settings
 global:
   # Remove default ARM tolerations for local dev

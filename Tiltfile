@@ -180,7 +180,6 @@ helm_sets = [
     "testkube-api.next.controllers.enabled=true",
     # Standalone mode (no cloud connection)
     "testkube-api.cloud.key=",
-    "testkube-operator.enabled=false",
     "testkube-api.testConnection.enabled=false",
 ]
 
