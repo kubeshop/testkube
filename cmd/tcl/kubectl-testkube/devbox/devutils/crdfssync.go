@@ -222,6 +222,7 @@ func (c *CRDFSSync) loadFile(path string) error {
 		c.deleteFile(path)
 		return nil
 	}
+	defer file.Close()
 
 	prevTemplates := map[string]struct{}{}
 	for i := range c.templates {
@@ -278,7 +279,6 @@ func (c *CRDFSSync) loadFile(path string) error {
 			c.processTemplate(path, tw)
 		}
 	}
-	file.Close()
 
 	for t := range prevTemplates {
 		c.deleteTemplate(t)
