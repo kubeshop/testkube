@@ -337,6 +337,12 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	if params.Since != "" {
 		queryParams["since"] = params.Since
 	}
+	if params.StartDate != "" {
+		queryParams["startDate"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		queryParams["endDate"] = params.EndDate
+	}
 
 	path := "/agent/test-workflow-executions"
 	if params.WorkflowName != "" {
