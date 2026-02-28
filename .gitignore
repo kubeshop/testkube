@@ -48,6 +48,7 @@ movie.mp4
 
 # Local
 build/_local/values.dev.yaml
+build/_local/agent-server
 tilt-values.yaml
 tilt_modules/
 .tiltbuild/
