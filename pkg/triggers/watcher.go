@@ -9,9 +9,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -115,6 +118,8 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		return
 	}
 
+	watchWebhookResources := s.canWatchWebhookResources()
+
 	for i := range s.informers.podInformers {
 		s.informers.podInformers[i].Informer().AddEventHandler(s.podEventHandler(ctx))
 	}
@@ -152,8 +157,10 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	} else {
 		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	}
-	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
-	s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
+	if watchWebhookResources {
+		s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
+		s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
+	}
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -199,10 +206,59 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.logger.Debugf("trigger service: starting test trigger informer")
 		go s.informers.testTriggerInformer.Informer().Run(stop)
 	}
-	s.logger.Debugf("trigger service: starting webhook informer")
-	go s.informers.webhookInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting webhook template informer")
-	go s.informers.webhookTemplateInformer.Informer().Run(stop)
+	if watchWebhookResources {
+		s.logger.Debugf("trigger service: starting webhook informer")
+		go s.informers.webhookInformer.Informer().Run(stop)
+		s.logger.Debugf("trigger service: starting webhook template informer")
+		go s.informers.webhookTemplateInformer.Informer().Run(stop)
+	}
+}
+
+func (s *Service) canWatchWebhookResources() bool {
+	const groupVersion = "executor.testkube.io/v1"
+
+	if s.testKubeClientset == nil {
+		s.logger.Warnf("trigger service: testkube clientset is nil, skipping webhook informers")
+		return false
+	}
+
+	resources, err := s.testKubeClientset.Discovery().ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		// Handle common errors when CRDs are not installed.
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || discovery.IsGroupDiscoveryFailedError(err) {
+			s.logger.Infof(
+				"trigger service: executor CRDs not detected, skipping webhook informers (groupVersion=%s): %v",
+				groupVersion, err,
+			)
+			return false
+		}
+
+		s.logger.Warnf(
+			"trigger service: failed to discover executor resources, skipping webhook informers (groupVersion=%s): %v",
+			groupVersion, err,
+		)
+		return false
+	}
+
+	var hasWebhooks, hasWebhookTemplates bool
+	for _, resource := range resources.APIResources {
+		switch resource.Name {
+		case "webhooks":
+			hasWebhooks = true
+		case "webhooktemplates":
+			hasWebhookTemplates = true
+		}
+	}
+
+	if hasWebhooks && hasWebhookTemplates {
+		return true
+	}
+
+	s.logger.Infof(
+		"trigger service: executor CRDs are incomplete, skipping webhook informers (webhooks=%t webhooktemplates=%t)",
+		hasWebhooks, hasWebhookTemplates,
+	)
+	return false
 }
 
 // startCloudTestTriggerWatch periodically lists triggers and mirrors changes into local handlers

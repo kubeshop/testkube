@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
@@ -82,6 +83,103 @@ func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 
 	assert.Equal(t, *report1, fresh.Reports[0])
 	assert.Equal(t, *report2, fresh.Reports[1])
+}
+
+func TestNewMongoRepository_GetFinished_PreservesFilterAnd_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-getfinished-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+
+	finishedAt := time.Now()
+	passed := testkube.PASSED_TestWorkflowStatus
+	failed := testkube.FAILED_TestWorkflowStatus
+
+	// Execution A: finished passed, env=prod - should be returned with tag filter env=prod
+	execA := testkube.TestWorkflowExecution{
+		Id:   "finished-prod-passed",
+		Name: "finished-prod-passed",
+		Workflow: &testkube.TestWorkflow{
+			Name: "wf1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Result: &testkube.TestWorkflowResult{
+			Status:     &passed,
+			FinishedAt: finishedAt,
+		},
+		Tags: map[string]string{"env": "prod"},
+	}
+	assert.NoError(t, repo.Insert(ctx, execA))
+
+	// Execution B: finished failed, env=staging - should NOT be returned with tag filter env=prod
+	execB := testkube.TestWorkflowExecution{
+		Id:   "finished-staging-failed",
+		Name: "finished-staging-failed",
+		Workflow: &testkube.TestWorkflow{
+			Name: "wf1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Result: &testkube.TestWorkflowResult{
+			Status:     &failed,
+			FinishedAt: finishedAt,
+		},
+		Tags: map[string]string{"env": "staging"},
+	}
+	assert.NoError(t, repo.Insert(ctx, execB))
+
+	// Execution C: finished passed, env=prod, but SilentMode.Health=true - should be excluded by GetFinished
+	execC := testkube.TestWorkflowExecution{
+		Id:   "finished-prod-silent",
+		Name: "finished-prod-silent",
+		Workflow: &testkube.TestWorkflow{
+			Name: "wf1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Result: &testkube.TestWorkflowResult{
+			Status:     &passed,
+			FinishedAt: finishedAt,
+		},
+		Tags:       map[string]string{"env": "prod"},
+		SilentMode: &testkube.SilentMode{Health: true},
+	}
+	assert.NoError(t, repo.Insert(ctx, execC))
+
+	// Execution D: finished passed, env=prod - should be returned with tag filter env=prod
+	execD := testkube.TestWorkflowExecution{
+		Id:   "finished-prod-passed-2",
+		Name: "finished-prod-passed-2",
+		Workflow: &testkube.TestWorkflow{
+			Name: "wf1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Result: &testkube.TestWorkflowResult{
+			Status:     &passed,
+			FinishedAt: finishedAt,
+		},
+		Tags: map[string]string{"env": "prod"},
+	}
+	assert.NoError(t, repo.Insert(ctx, execD))
+
+	filter := testworkflow.NewExecutionsFilter().WithName("wf1").WithTagSelector("env=prod")
+	executions, err := repo.GetFinished(ctx, filter)
+	assert.NoError(t, err)
+
+	assert.Len(t, executions, 2, "expected exactly 2 executions (A and D)")
+	ids := map[string]struct{}{executions[0].Id: {}, executions[1].Id: {}}
+	assert.Contains(t, ids, "finished-prod-passed")
+	assert.Contains(t, ids, "finished-prod-passed-2")
+	assert.NotContains(t, ids, "finished-staging-failed", "execution with env=staging must be excluded by tag filter")
+	assert.NotContains(t, ids, "finished-prod-silent", "execution with SilentMode.Health=true must be excluded")
 }
 
 func TestNewMongoRepository_Executions_Integration(t *testing.T) {

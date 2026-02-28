@@ -44,6 +44,27 @@
 - See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a detailed description of the agent's components, storage layer, event system, CRDs, CLI, and Kubernetes deployment.
 - When making changes that affect the architecture (new entry points, storage backends, event listeners, CRDs, API routes, etc.), update `ARCHITECTURE.md` to keep it in sync.
 
+## Pre-commit checks
+
+Before committing, always verify your changes pass linting and build:
+
+```bash
+make lint          # Run golangci-lint (or `make lint-fix` to auto-fix)
+go build ./...     # Verify compilation
+```
+
+If your changes include tests, also run `make unit-tests` before pushing.
+
+## PR title format
+
+PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/) format with a type prefix. CI will reject PRs without one. Examples:
+
+- `feat: Add soft-delete for workflow executions`
+- `fix: Retry log stream on 502 errors`
+- `chore: Add contextcheck linter`
+
+Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
 ## Tips
 
 - Review the Makefile for additional helper targets when unfamiliar tasks come up.
