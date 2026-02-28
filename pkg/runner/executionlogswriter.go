@@ -100,6 +100,7 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in the object storage")
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return errors.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}

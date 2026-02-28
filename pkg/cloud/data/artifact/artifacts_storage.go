@@ -170,6 +170,7 @@ func (c *CloudArtifactsStorage) getObject(ctx context.Context, url string) (io.R
 		return nil, errors.Wrap(err, "failed to get file from cloud storage")
 	}
 	if rsp.StatusCode != http.StatusOK {
+		_ = rsp.Body.Close()
 		return nil, errors.Errorf("error getting file from presigned url: expected 200 OK response code, got %d", rsp.StatusCode)
 	}
 

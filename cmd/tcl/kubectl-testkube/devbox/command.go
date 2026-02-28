@@ -73,9 +73,13 @@ func NewDevBoxCommand() *cobra.Command {
 			ctx, ctxCancel := context.WithCancel(context.Background())
 			stopSignal := make(chan os.Signal, 1)
 			signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
+			defer signal.Stop(stopSignal)
 			go func() {
-				<-stopSignal
-				ctxCancel()
+				select {
+				case <-stopSignal:
+					ctxCancel()
+				case <-ctx.Done():
+				}
 			}()
 
 			startTs := time.Now()

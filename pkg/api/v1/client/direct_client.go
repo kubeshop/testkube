@@ -102,6 +102,7 @@ func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, par
 	}
 
 	if err = t.responseError(resp); err != nil {
+		_ = resp.Body.Close()
 		return resp, fmt.Errorf("api/%s-%s returned error: %w", method, resource, err)
 	}
 
