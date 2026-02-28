@@ -71,6 +71,7 @@ func NewDevBoxCommand() *cobra.Command {
 		Aliases: []string{"dev"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, ctxCancel := context.WithCancel(context.Background())
+			defer ctxCancel()
 			stopSignal := make(chan os.Signal, 1)
 			signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 			defer signal.Stop(stopSignal)

@@ -102,6 +102,8 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
+		// Drain the response body to allow HTTP connection reuse.
+		_, _ = io.Copy(io.Discard, res.Body)
 		return errors.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
 	e.cleanup()
