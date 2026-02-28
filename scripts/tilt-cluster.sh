@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 # Testkube — Local Kubernetes Cluster Setup for Tilt Development
 #
