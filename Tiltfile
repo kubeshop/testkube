@@ -128,7 +128,7 @@ if live_reload:
     # which hides the sentinel file the extension creates at Docker build time.
     custom_build_with_restart('kubeshop/testkube-api-server',
         command='docker build -t $EXPECTED_REF -f build/_local/agent-server.Dockerfile --target ' + live_target + ' .',
-        deps=['build/_local/agent-server', 'go.mod', 'go.sum'],
+        deps=['build/_local/agent-server', 'build/_local/agent-server.Dockerfile', 'go.mod', 'go.sum'],
         entrypoint=['/testkube/agent-server'],
         live_update=[sync('build/_local/agent-server', '/testkube/agent-server')],
         restart_file='/.restart-proc',
@@ -322,7 +322,7 @@ YAML
 
 local_resource(
     'health-check',
-    cmd='curl -sf http://localhost:8088/health && echo "HEALTHY" || echo "NOT READY"',
+    cmd='curl -sf http://localhost:8088/health && echo "HEALTHY" || { echo "NOT READY: API server is not responding on :8088"; exit 1; }',
     labels=['verify'],
     auto_init=False,
     resource_deps=['testkube-api-server'],
@@ -332,7 +332,7 @@ is_ci = config.tilt_subcommand == 'ci'
 
 local_resource(
     'smoke-test',
-    cmd='curl -sf http://localhost:8088/health && curl -sf http://localhost:8088/v1/test-workflows > /dev/null && echo "SMOKE TEST PASSED"',
+    cmd='curl -sf http://localhost:8088/health || { echo "FAILED: health endpoint not responding"; exit 1; } && curl -sf http://localhost:8088/v1/test-workflows > /dev/null || { echo "FAILED: /v1/test-workflows not responding"; exit 1; } && echo "SMOKE TEST PASSED"',
     labels=['verify'],
     auto_init=is_ci,
     trigger_mode=TRIGGER_MODE_AUTO if is_ci else TRIGGER_MODE_MANUAL,
@@ -341,7 +341,7 @@ local_resource(
 
 if not is_ci:
     cmd_button('health-check:run',
-        argv=['sh', '-c', 'curl -sf http://localhost:8088/health && echo "HEALTHY" || echo "UNHEALTHY"'],
+        argv=['sh', '-c', 'curl -sf http://localhost:8088/health && echo "HEALTHY" || { echo "UNHEALTHY"; exit 1; }'],
         resource='testkube-api-server',
         icon_name='favorite',
         text='Health Check',
