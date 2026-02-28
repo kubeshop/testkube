@@ -264,7 +264,7 @@ k8s_resource(
     "testkube-minio-testkube-dev",
     port_forwards=[
         port_forward(9000, 9000, name="MinIO API"),
-        port_forward(9001, 9001, name="MinIO Console"),
+        port_forward(9001, 9090, name="MinIO Console"),
     ],
     labels=["dependencies"],
 )
