@@ -56,16 +56,10 @@ Before you begin, ensure you have the following installed:
 
 3. **Open the Tilt UI** at http://localhost:10350 to monitor the deployment.
 
-4. **Configure the Testkube CLI**:
+4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI and configures it to talk to the local API server. Use the **Run CLI Command** button on the `configure-cli` resource in the Tilt UI, or run commands directly:
 
    ```bash
-   testkube config api-server-uri http://localhost:8088
-   ```
-
-5. **Verify the setup**:
-
-   ```bash
-   testkube get testworkflows
+   ./build/_local/kubectl-testkube get testworkflows
    ```
 
 ## Options
@@ -238,6 +232,24 @@ The Tilt UI includes verification resources under the **verify** label:
 - **Health Check button** — Click the heart icon on the `testkube-api-server` resource in the Tilt UI
 
 In CI mode (`tilt ci`), the smoke test runs automatically and Tilt exits on success or failure.
+
+### Testkube CLI
+
+When Go is installed, Tilt automatically compiles the Testkube CLI (`kubectl-testkube`) for your host OS and configures it to connect directly to the local API server. The following resources appear under the **cli** label in the Tilt UI:
+
+- **compile:cli** — Compiles `cmd/kubectl-testkube` to `build/_local/kubectl-testkube`. Rebuilds automatically when CLI or shared code changes.
+- **configure-cli** — Runs `set context --kubeconfig` to point the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Runs automatically after compilation.
+- **Run CLI Command** button — Available on the `configure-cli` resource. Prompts for a command (e.g. `get testworkflows`, `run testworkflow <name>`) and executes it with the locally compiled CLI.
+
+You can also use the compiled CLI directly from your terminal:
+
+```bash
+./build/_local/kubectl-testkube get testworkflows
+./build/_local/kubectl-testkube run testworkflow my-test
+./build/_local/kubectl-testkube get testworkflowexecutions
+```
+
+> **Note**: The CLI context is stored in `~/.testkube/config.json`. If you also have a system-installed `testkube` CLI, the `configure-cli` step will update the shared config to point at your local dev environment. Run `testkube set context` again to reconfigure it when you're done with local development.
 
 ### Running Tests and Linting
 

@@ -24,7 +24,7 @@
 # =============================================================================
 
 load('ext://restart_process', 'docker_build_with_restart', 'custom_build_with_restart')
-load('ext://uibutton', 'cmd_button', 'location')
+load('ext://uibutton', 'cmd_button', 'location', 'text_input')
 
 config.define_bool("live-reload", usage="Force live reload on/off (default: auto-detect Go toolchain)")
 config.define_bool("debug", usage="Build with debug symbols and expose Delve debugger ports")
@@ -391,13 +391,14 @@ if has_go:
         resource_deps=['compile:cli'],
     )
 
-    local_resource(
-        'list-workflows',
-        cmd=CLI_BIN + ' get testworkflows',
-        labels=['cli'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-        resource_deps=['configure-cli', 'testkube-api-server'],
+    cmd_button('run-cli-command',
+        argv=['sh', '-c', CLI_BIN + ' $COMMAND'],
+        resource='configure-cli',
+        icon_name='terminal',
+        text='Run CLI Command',
+        inputs=[
+            text_input('COMMAND', placeholder='e.g. get testworkflows, run testworkflow <name>, get testworkflowexecutions'),
+        ],
     )
 
 # =============================================================================
