@@ -229,6 +229,11 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[s
 	if err != nil {
 		return name, err
 	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	if _, err = io.Copy(f, resp.Body); err != nil {
 		return name, err
