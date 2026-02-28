@@ -179,6 +179,14 @@ Each Dockerfile provides multiple build targets:
 
 Create a `tilt-values.yaml` file in the repo root to override any Helm values (this file is not committed):
 
+```bash
+cp tilt-values.yaml.example tilt-values.yaml
+```
+
+> **Warning**: `tilt-values.yaml.example` ships with hardcoded default passwords for MinIO (`minio` / `minio123`) and PostgreSQL (`testkube` / `postgres5432`). These are fine for a throwaway local cluster but should be changed in `tilt-values.yaml` if your cluster is accessible from a network.
+
+You can also start from scratch and only override what you need:
+
 ```yaml
 # tilt-values.yaml
 testkube-api:
