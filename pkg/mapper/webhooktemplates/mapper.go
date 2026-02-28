@@ -6,6 +6,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapCRDToAPI maps WebhookTemplate CRD to OpenAPI spec WebhookTemplate
@@ -24,6 +25,7 @@ func MapCRDToAPI(item executorv1.WebhookTemplate) testkube.WebhookTemplate {
 		Disabled:                 item.Spec.Disabled,
 		Config:                   common.MapMap(item.Spec.Config, MapConfigValueCRDToAPI),
 		Parameters:               common.MapSlice(item.Spec.Parameters, MapParameterSchemaCRDToAPI),
+		Target:                   common.MapPtr(item.Spec.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -99,6 +101,7 @@ func MapAPIToCRD(request testkube.WebhookTemplateCreateRequest) executorv1.Webho
 			Disabled:                 request.Disabled,
 			Config:                   common.MapMap(request.Config, MapConfigValueAPIToCRD),
 			Parameters:               common.MapSlice(request.Parameters, MapParameterSchemaAPIToCRD),
+			Target:                   common.MapPtr(request.Target, commonmapper.MapTargetApiToKube),
 		},
 	}
 }
@@ -218,6 +221,10 @@ func MapUpdateToSpec(request testkube.WebhookTemplateUpdateRequest, webhookTempl
 		webhookTemplate.Spec.Parameters = common.MapSlice(*request.Parameters, MapParameterSchemaAPIToCRD)
 	}
 
+	if request.Target != nil {
+		webhookTemplate.Spec.Target = common.MapPtr(*request.Target, commonmapper.MapTargetApiToKube)
+	}
+
 	return webhookTemplate
 }
 
@@ -270,6 +277,7 @@ func MapSpecToUpdate(webhookTemplate *executorv1.WebhookTemplate) (request testk
 	request.Disabled = &webhookTemplate.Spec.Disabled
 	request.Config = common.Ptr(common.MapMap(webhookTemplate.Spec.Config, MapConfigValueCRDToAPI))
 	request.Parameters = common.Ptr(common.MapSlice(webhookTemplate.Spec.Parameters, MapParameterSchemaCRDToAPI))
+	request.Target = common.Ptr(common.MapPtr(webhookTemplate.Spec.Target, commonmapper.MapTargetKubeToAPI))
 
 	return request
 }

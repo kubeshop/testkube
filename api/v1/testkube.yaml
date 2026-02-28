@@ -7789,6 +7789,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookParameterSchema"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
         sync:
@@ -7861,6 +7863,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookParameterSchema"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
         sync:
           $ref: "#/components/schemas/Syncable"
 
