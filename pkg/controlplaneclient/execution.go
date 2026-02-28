@@ -86,7 +86,10 @@ func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, execution
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in cloud storage")
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
+		// Drain the response body to allow HTTP connection reuse.
+		_, _ = io.Copy(io.Discard, res.Body)
 		return errors.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
 	return nil

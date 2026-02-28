@@ -104,6 +104,7 @@ func ServeStdioMCP(cfg MCPServerConfig, client Client) error {
 	// Set up signal handling for graceful shutdown
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
 	// Start the server in a goroutine
 	serverErrCh := make(chan error, 1)
@@ -146,6 +147,7 @@ func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
 	// Set up signal handling for graceful shutdown
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
 	// Build the address
 	addr := fmt.Sprintf("%s:%d", cfg.SHTTPConfig.Host, cfg.SHTTPConfig.Port)

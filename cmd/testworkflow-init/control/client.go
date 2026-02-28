@@ -63,4 +63,5 @@ func (c *client) Resume() error {
 
 func (c *client) Close() {
 	c.cancel()
+	_ = c.conn.Close()
 }
