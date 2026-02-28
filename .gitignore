@@ -49,6 +49,7 @@ movie.mp4
 # Local
 build/_local/values.dev.yaml
 build/_local/agent-server
+build/_local/kubectl-testkube
 tilt-values.yaml
 tilt_modules/
 .tiltbuild/

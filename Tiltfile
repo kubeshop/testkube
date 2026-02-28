@@ -197,6 +197,9 @@ else:
 if use_postgres:
     helm_sets += [
         "postgresql.enabled=true",
+        "postgresql.auth.username=testkube",
+        "postgresql.auth.password=postgres5432",
+        "postgresql.auth.database=backend",
         "testkube-api.postgresql.enabled=true",
         "testkube-api.postgresql.dsn=postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable",
     ]
@@ -234,6 +237,8 @@ if debug:
     api_port_forwards.append(port_forward(56268, 56268, name="Delve Debugger"))
 
 api_deps = ["create-namespace"]
+if use_postgres:
+    api_deps.append("create-postgres-db")
 if live_reload:
     api_deps.append("compile:agent-server")
 
@@ -250,6 +255,26 @@ if use_postgres:
         "testkube-postgresql",
         port_forwards=[port_forward(5432, 5432, name="PostgreSQL")],
         labels=["dependencies"],
+    )
+
+    # The Bitnami image ignores POSTGRES_DATABASE in some versions, so the
+    # "backend" database may not be created during init.  Ensure it exists.
+    local_resource(
+        "create-postgres-db",
+        cmd="""
+            set -e
+            echo "Waiting for PostgreSQL to be ready..."
+            kubectl wait --for=condition=ready pod/testkube-postgresql-0 -n {} --timeout=120s
+            echo "Ensuring 'backend' database exists..."
+            kubectl exec -n {} testkube-postgresql-0 -- \
+                psql -U testkube -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'backend'" \
+                | grep -q 1 \
+                || kubectl exec -n {} testkube-postgresql-0 -- \
+                    psql -U testkube -d postgres -c "CREATE DATABASE backend"
+            echo "PostgreSQL database 'backend' is ready."
+        """.format(NAMESPACE, NAMESPACE, NAMESPACE),
+        labels=["setup"],
+        resource_deps=["testkube-postgresql"],
     )
 
 if use_mongo:
@@ -344,6 +369,35 @@ if not is_ci:
         resource='testkube-api-server',
         icon_name='favorite',
         text='Health Check',
+    )
+
+# =============================================================================
+# Testkube CLI
+# =============================================================================
+
+CLI_BIN = './build/_local/kubectl-testkube'
+if has_go:
+    local_resource('compile:cli',
+        cmd='go build -o build/_local/kubectl-testkube ./cmd/kubectl-testkube',
+        deps=['cmd/kubectl-testkube', 'pkg', 'internal'],
+        ignore=['**/*_test.go', '**/testdata/**'],
+        labels=['cli'],
+    )
+
+    local_resource(
+        'configure-cli',
+        cmd=CLI_BIN + ' set context --kubeconfig --namespace ' + NAMESPACE + ' --api-uri http://localhost:8088 --client direct',
+        labels=['cli'],
+        resource_deps=['compile:cli'],
+    )
+
+    local_resource(
+        'list-workflows',
+        cmd=CLI_BIN + ' get testworkflows',
+        labels=['cli'],
+        auto_init=False,
+        trigger_mode=TRIGGER_MODE_MANUAL,
+        resource_deps=['configure-cli', 'testkube-api-server'],
     )
 
 # =============================================================================
