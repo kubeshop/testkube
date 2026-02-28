@@ -48,6 +48,7 @@ ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multicl
 ###################################
 FROM ${BUSYBOX_IMAGE:-busybox:1.36} AS live
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/build/_local/agent-server /testkube/agent-server
 
 EXPOSE 8080 8088 8089

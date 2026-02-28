@@ -241,6 +241,7 @@ if use_postgres:
     api_deps.append("create-postgres-db")
 if live_reload:
     api_deps.append("compile:agent-server")
+api_deps.append("create-minio-buckets")    
 
 k8s_resource(
     "testkube-api-server",
@@ -372,6 +373,29 @@ if not is_ci:
     )
 
 # =============================================================================
+# Sample Test Workflows
+# =============================================================================
+
+SAMPLE_WORKFLOWS = [
+    'test/curl/crd-workflow/smoke.yaml',
+    'test/postman/crd-workflow/smoke.yaml',
+    'test/junit/crd-workflow/smoke.yaml',
+    'test/k6/crd-workflow/smoke.yaml',
+]
+
+local_resource(
+    'install-sample-workflows',
+    cmd=' && '.join([
+        "awk '/^---/{{exit}} {{print}}' {} | kubectl apply -n {} -f -".format(f, NAMESPACE)
+        for f in SAMPLE_WORKFLOWS
+    ]) + ' && echo "Sample workflows installed successfully."',
+    labels=['setup'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    resource_deps=['testkube-api-server'],
+)
+
+# =============================================================================
 # Testkube CLI
 # =============================================================================
 
@@ -391,11 +415,20 @@ if has_go:
         resource_deps=['compile:cli'],
     )
 
-    cmd_button('run-cli-command',
+    local_resource(
+        'run-cli-command',
+        cmd='echo "Use the Run button to execute a CLI command."',
+        labels=['cli'],
+        auto_init=False,
+        trigger_mode=TRIGGER_MODE_MANUAL,
+        resource_deps=['configure-cli', 'testkube-api-server'],
+    )
+
+    cmd_button('run-cli-command:run',
         argv=['sh', '-c', CLI_BIN + ' $COMMAND'],
-        resource='configure-cli',
+        resource='run-cli-command',
         icon_name='terminal',
-        text='Run CLI Command',
+        text='Run',
         inputs=[
             text_input('COMMAND', placeholder='e.g. get testworkflows, run testworkflow <name>, get testworkflowexecutions'),
         ],

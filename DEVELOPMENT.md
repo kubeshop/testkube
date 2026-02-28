@@ -239,17 +239,38 @@ When Go is installed, Tilt automatically compiles the Testkube CLI (`kubectl-tes
 
 - **compile:cli** — Compiles `cmd/kubectl-testkube` to `build/_local/kubectl-testkube`. Rebuilds automatically when CLI or shared code changes.
 - **configure-cli** — Runs `set context --kubeconfig` to point the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Runs automatically after compilation.
-- **Run CLI Command** button — Available on the `configure-cli` resource. Prompts for a command (e.g. `get testworkflows`, `run testworkflow <name>`) and executes it with the locally compiled CLI.
+- **run-cli-command** — A dedicated resource for running arbitrary CLI commands. Click the **Run** button, enter any testkube subcommand (e.g. `run testworkflow curl-workflow-smoke`), and the output appears in the resource logs.
 
 You can also use the compiled CLI directly from your terminal:
 
 ```bash
 ./build/_local/kubectl-testkube get testworkflows
-./build/_local/kubectl-testkube run testworkflow my-test
+./build/_local/kubectl-testkube run testworkflow curl-workflow-smoke
 ./build/_local/kubectl-testkube get testworkflowexecutions
 ```
 
 > **Note**: The CLI context is stored in `~/.testkube/config.json`. If you also have a system-installed `testkube` CLI, the `configure-cli` step will update the shared config to point at your local dev environment. Run `testkube set context` again to reconfigure it when you're done with local development.
+
+### Sample Test Workflows
+
+The Tilt UI includes an **install-sample-workflows** resource (under the **setup** label) that installs a set of sample workflows you can use to validate your local environment. Trigger it manually from the Tilt UI to install:
+
+| Workflow | Tool | Description |
+|----------|------|-------------|
+| `curl-workflow-smoke` | curl | Simple HTTP request to a public URL |
+| `postman-workflow-smoke` | Postman/Newman | Runs a Postman collection from the repo |
+| `junit5-workflow-smoke` | JUnit 5 / Maven | Compiles and runs JUnit 5 tests from the repo |
+| `k6-workflow-smoke` | k6 | Runs a k6 load test script from the repo |
+
+After installing, run a workflow using the **run-cli-command** resource or from the terminal:
+
+```bash
+# Via the Run button on run-cli-command:
+#   run testworkflow curl-workflow-smoke
+
+# Or from the terminal:
+./build/_local/kubectl-testkube run testworkflow curl-workflow-smoke
+```
 
 ### Running Tests and Linting
 
