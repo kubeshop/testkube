@@ -2,12 +2,12 @@
 #
 # Prerequisites:
 #   - Docker (with buildx)
-#   - Kubernetes cluster (kind, k3d, minikube, Docker Desktop)
+#   - k3d (https://k3d.io)
 #   - Tilt (https://tilt.dev)
 #   - Helm 3.x
 #
 # Quick Start:
-#   ./scripts/tilt-cluster.sh     # Create a kind cluster (one-time, optional)
+#   ./scripts/tilt-cluster.sh     # Create k3d cluster + local registry (one-time)
 #   tilt up                       # Start development environment
 #
 # Options:
@@ -86,12 +86,10 @@ print("  Database:    " + db_backend)
 # =============================================================================
 
 allow_k8s_contexts([
+    "k3d-testkube-dev",
     "docker-desktop",
     "docker-for-desktop",
     "minikube",
-    "kind-kind",
-    "kind-testkube-dev",
-    "k3d-testkube-dev",
     "rancher-desktop",
 ])
 
@@ -108,6 +106,14 @@ watch_settings(ignore=[
     "k8s/helm/testkube/charts/**",
     "k8s/helm/testkube/Chart.lock",
 ])
+
+# Tilt auto-detects the k3d local registry from the cluster config.
+# We just need to check if it's running so we can tell the API server's
+# image inspector to use HTTP instead of HTTPS for that registry.
+registry_running = str(local(
+    'docker inspect -f "{{{{.State.Running}}}}" testkube-registry 2>/dev/null || echo false',
+    quiet=True,
+)).strip() == 'true'
 
 # =============================================================================
 # Docker Builds
@@ -183,6 +189,7 @@ helm_sets = [
     "testkube-api.testConnection.enabled=false",
 ]
 
+
 if use_mongo:
     helm_sets += [
         "mongodb.enabled=true",
@@ -209,10 +216,23 @@ else:
         "testkube-api.postgresql.enabled=false",
     ]
 
+# Tell the image inspector that the local registry serves HTTP, not HTTPS.
+# Written as a values file because Tilt's helm() doesn't handle --set array syntax.
+if registry_running:
+    local("mkdir -p build/_local", quiet=True, echo_off=True)
+    local("""cat > build/_local/tilt-registry-values.yaml << 'EOF'
+testkube-api:
+  extraEnvVars:
+    - name: TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES
+      value: "testkube-registry:5000"
+EOF""", quiet=True, echo_off=True)
+
 # Optional local overrides (not committed)
 values_files = []
+if registry_running and os.path.exists("./build/_local/tilt-registry-values.yaml"):
+    values_files.append("./build/_local/tilt-registry-values.yaml")
 if os.path.exists("./tilt-values.yaml"):
-    values_files = ["./tilt-values.yaml"]
+    values_files.append("./tilt-values.yaml")
 
 k8s_yaml(
     helm(
@@ -379,7 +399,7 @@ if not is_ci:
 SAMPLE_WORKFLOWS = [
     'test/curl/crd-workflow/smoke.yaml',
     'test/postman/crd-workflow/smoke.yaml',
-    'test/junit/crd-workflow/smoke.yaml',
+    'test/playwright/crd-workflow/smoke.yaml',
     'test/k6/crd-workflow/smoke.yaml',
 ]
 

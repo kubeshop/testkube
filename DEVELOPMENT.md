@@ -15,12 +15,7 @@ The Tilt-driven development environment builds and deploys:
 Before you begin, ensure you have the following installed:
 
 - **Docker** with BuildX support
-- **Kubernetes cluster** — one of:
-  - [kind](https://kind.sigs.k8s.io/) (recommended)
-  - [k3d](https://k3d.io/)
-  - [minikube](https://minikube.sigs.k8s.io/)
-  - [Docker Desktop](https://www.docker.com/products/docker-desktop) with Kubernetes enabled
-  - [Rancher Desktop](https://rancherdesktop.io/)
+- **[k3d](https://k3d.io/)** (recommended — the setup script creates a k3d cluster with a local registry)
 - **[Tilt](https://docs.tilt.dev/install.html)** v0.30.0 or later
 - **[Helm](https://helm.sh/docs/intro/install/)** v3.x
 - **Go** 1.25+ (enables live reload — optional but recommended)
@@ -30,15 +25,10 @@ Before you begin, ensure you have the following installed:
 1. **Create a local Kubernetes cluster** (if you don't have one):
 
    ```bash
-   # Using the provided script (creates a kind cluster)
    ./scripts/tilt-cluster.sh
-
-   # Or manually with kind
-   kind create cluster --name testkube-dev
-
-   # Or with k3d
-   ./scripts/tilt-cluster.sh --k3d
    ```
+
+   This creates a k3d cluster with a local container registry (`localhost:5001`). The registry is required so that Tilt-built images (like `testkube-tw-init` and `testkube-tw-toolkit`) are accessible to the API server's image inspector during Test Workflow execution.
 
 2. **Start the development environment**:
 
@@ -56,7 +46,7 @@ Before you begin, ensure you have the following installed:
 
 3. **Open the Tilt UI** at http://localhost:10350 to monitor the deployment.
 
-4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI and configures it to talk to the local API server. Use the **Run CLI Command** button on the `configure-cli` resource in the Tilt UI, or run commands directly:
+4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI and configures it to talk to the local API server. Use the **Run** button on the `run-cli-command` resource in the Tilt UI (e.g. enter `get testworkflows`), or run commands directly:
 
    ```bash
    ./build/_local/kubectl-testkube get testworkflows
@@ -259,7 +249,7 @@ The Tilt UI includes an **install-sample-workflows** resource (under the **setup
 |----------|------|-------------|
 | `curl-workflow-smoke` | curl | Simple HTTP request to a public URL |
 | `postman-workflow-smoke` | Postman/Newman | Runs a Postman collection from the repo |
-| `junit5-workflow-smoke` | JUnit 5 / Maven | Compiles and runs JUnit 5 tests from the repo |
+| `playwright-workflow-smoke` | Playwright | Runs Playwright browser tests from the repo |
 | `k6-workflow-smoke` | k6 | Runs a k6 load test script from the repo |
 
 After installing, run a workflow using the **run-cli-command** resource or from the terminal:
@@ -387,16 +377,14 @@ rm ./k8s/helm/testkube/Chart.lock
 helm dependency build ./k8s/helm/testkube
 ```
 
-### Image Pull Errors
+### Image Pull or Inspection Errors
 
-Tilt handles image loading into local clusters automatically (kind, k3d, minikube). If you encounter pull errors:
+Tilt auto-detects the k3d local registry and pushes images there. If you encounter pull errors or `MANIFEST_UNKNOWN` / `http: server gave HTTP response to HTTPS client` during Test Workflow execution:
 
-- Ensure your cluster is one of the allowed contexts (see `allow_k8s_contexts` in the Tiltfile)
-- For minikube, you may need to configure Tilt to use minikube's Docker daemon:
-
-  ```bash
-  eval $(minikube docker-env)
-  ```
+- Ensure your cluster was created with `./scripts/tilt-cluster.sh` (sets up the k3d local registry)
+- Ensure your cluster context is one of the allowed contexts (see `allow_k8s_contexts` in the Tiltfile)
+- Check that the registry container is running: `docker ps | grep testkube-registry`
+- The Tiltfile automatically configures the API server's image inspector to treat the local registry as insecure (HTTP). If you see HTTPS-related errors, verify that `build/_local/tilt-registry-values.yaml` was generated and contains the `TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES` setting
 
 ### Port Already in Use
 
@@ -435,11 +423,8 @@ tilt down
 # Delete the namespace
 kubectl delete namespace testkube-dev
 
-# Delete the cluster
+# Delete the cluster and local registry
 ./scripts/tilt-cluster.sh --delete
-
-# Or manually
-kind delete cluster --name testkube-dev
 ```
 
 ## Advanced Topics
@@ -448,10 +433,9 @@ kind delete cluster --name testkube-dev
 
 The Tiltfile permits these contexts by default:
 
+- `k3d-testkube-dev` (recommended)
 - `docker-desktop` / `docker-for-desktop`
 - `minikube`
-- `kind-kind` / `kind-testkube-dev`
-- `k3d-testkube-dev`
 - `rancher-desktop`
 
 To allow additional contexts, modify the `allow_k8s_contexts()` call in the Tiltfile.
