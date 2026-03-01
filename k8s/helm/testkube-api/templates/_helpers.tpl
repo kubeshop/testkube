@@ -89,11 +89,15 @@ Define API image
     {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
-    {{- else -}}
+    {{- else if $registryName -}}
         {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
+    {{- else -}}
+        {{- printf "%s%s%s%s" $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
-{{- else -}}
+{{- else if $registryName -}}
     {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
+{{- else -}}
+    {{- printf "%s%s%s%s" $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
@@ -383,11 +387,15 @@ Define Test Workflows Toolkit Image
     {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
-    {{- else -}}
+    {{- else if $registryName -}}
         {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
+    {{- else -}}
+        {{- printf "%s%s%s%s" $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
-{{- else -}}
+{{- else if $registryName -}}
     {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
+{{- else -}}
+    {{- printf "%s%s%s%s" $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
@@ -411,11 +419,15 @@ Define Test Workflows Init Image
     {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
-    {{- else -}}
+    {{- else if $registryName -}}
         {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
+    {{- else -}}
+        {{- printf "%s%s%s%s" $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
-{{- else -}}
+{{- else if $registryName -}}
     {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
+{{- else -}}
+    {{- printf "%s%s%s%s" $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
