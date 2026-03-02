@@ -179,7 +179,7 @@ next:
     ## Should it copy data from Control Plane to Kubernetes
     syncCloudToKubernetes: false
     ## Should it copy data from Kubernetes to Control Plane
-    syncKubernetesToCloud: false
+    syncKubernetesToCloud: true
 
   # Configure the legacy Tests and Test Suites execution
   # - tkcagnt_*** - Super Agent
