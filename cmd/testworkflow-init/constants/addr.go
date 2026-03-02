@@ -1,5 +1,3 @@
 package constants
 
-const (
-	ControlServerPort = 60434
-)
+var ControlServerPort = 60434
