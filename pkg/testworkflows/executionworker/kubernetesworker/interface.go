@@ -35,4 +35,5 @@ type Config struct {
 	CommonEnvVariables     []corev1.EnvVar
 	LogAbortedDetails      bool
 	AllowLowSecurityFields bool
+	DisableResourceMetrics bool
 }
