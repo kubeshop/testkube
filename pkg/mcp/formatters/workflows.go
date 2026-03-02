@@ -299,7 +299,6 @@ const defaultMaxSamplesPerSeries = 50
 type formattedExecutionMetrics struct {
 	Workflow  string              `json:"workflow,omitempty"`
 	Execution string              `json:"execution,omitempty"`
-	Message   string              `json:"message,omitempty"`
 	Result    *formattedTimeRange `json:"result,omitempty"`
 	Steps     []formattedStepData `json:"steps,omitempty"`
 }
@@ -370,13 +369,11 @@ func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, erro
 		return "{}", nil
 	}
 
-	// Workflow is known but no metrics were collected — return an explicit message
-	// rather than a bare stub so the agent can communicate this clearly.
+	// Workflow is known but no metrics were collected — return structured empty response.
 	if len(input.Metrics) == 0 {
 		return FormatJSON(formattedExecutionMetrics{
 			Workflow:  input.Workflow,
 			Execution: input.Execution,
-			Message:   "No resource metric data was collected for this execution. This typically means the agent did not emit telemetry during the run (e.g. the execution was too short, or metric collection is not enabled for this workflow).",
 		})
 	}
 
