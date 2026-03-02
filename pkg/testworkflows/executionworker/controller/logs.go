@@ -126,11 +126,6 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
 	var mu sync.Mutex
-	var lastActivity int64
-	atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
-	touch := func() {
-		atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
-	}
 
 	sendError := func(err error) {
 		defer func() {
@@ -157,44 +152,11 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 		close(ch)
 	}()
 
-	if idleTimeout > 0 {
-		go func() {
-			ticker := time.NewTicker(idleTimeout)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					if !isDone() {
-						continue
-					}
-					last := time.Unix(0, atomic.LoadInt64(&lastActivity))
-					if time.Since(last) >= idleTimeout {
-						ctxCancel()
-						return
-					}
-				}
-			}
-		}()
-	}
-
 	go func() {
 		defer ctxCancel()
 		var err error
 
 		var since *time.Time
-
-		// Create logs stream request
-		stream, err := opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
-		if err == io.EOF {
-			return
-		} else if err != nil {
-			if !errors.Is(err, context.Canceled) {
-				sendError(err)
-			}
-			return
-		}
 
 		// Build a buffer for logs to avoid scheduling Log notification for each write
 		var logBufferLog bytes.Buffer
@@ -289,143 +251,225 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 			flushLogBuffer()
 		}()
 
-		// Parse and return the logs
-		reader := bufio.NewReaderSize(stream, FlushBufferSize)
-		readerAnyContent := false
-		tsReader := newTimestampReader()
-		lastTs := time.Now()
-		completed := false
-
-		hasNewLine := false
-
 		for {
-			// --- Step 1: READING TIMESTAMP
-
-			// Read next timestamp
-			err = tsReader.Read(reader)
-			if err == nil || errors.Is(err, ErrInvalidTimestamp) {
-				touch()
-			}
-
-			// Handle context canceled
-			if errors.Is(err, context.Canceled) {
+			if ctx.Err() != nil {
 				return
 			}
 
-			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
-			if err == nil && !readerAnyContent {
-				if since != nil && since.After(tsReader.ts) {
-					isPrefix := true
-					for isPrefix && err == nil {
-						_, isPrefix, err = reader.ReadLine()
+			attemptCtx, attemptCancel := context.WithCancel(ctx)
+			var idleTriggered atomic.Bool
+			var lastActivity int64
+			atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
+			touch := func() {
+				atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
+			}
+
+			if idleTimeout > 0 {
+				go func() {
+					ticker := time.NewTicker(idleTimeout)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-attemptCtx.Done():
+							return
+						case <-ticker.C:
+							last := time.Unix(0, atomic.LoadInt64(&lastActivity))
+							if time.Since(last) >= idleTimeout {
+								idleTriggered.Store(true)
+								attemptCancel()
+								return
+							}
+						}
+					}
+				}()
+			}
+
+			// Create logs stream request
+			stream, openErr := opener(attemptCtx, clientSet, namespace, podName, containerName, isDone, since)
+			if openErr == io.EOF {
+				attemptCancel()
+				return
+			} else if openErr != nil {
+				attemptCancel()
+				if errors.Is(openErr, context.Canceled) && idleTriggered.Load() {
+					if isDone() {
+						return
 					}
 					continue
 				}
-				readerAnyContent = true
-			}
-
-			// Save information about the last timestamp
-			if err == nil {
-				lastTs = tsReader.ts
-			}
-
-			// If the stream is finished,
-			// either the logfile has been rotated, or the container actually finished.
-			// Consider the container is done only when either:
-			// - there was EOF without any logs since, or
-			// - the last expected instruction was already delivered
-			if err == io.EOF && (!readerAnyContent || completed) {
+				if !errors.Is(openErr, context.Canceled) {
+					sendError(openErr)
+				}
 				return
 			}
 
-			// If there was EOF, and we are not sure if container is done,
-			// reinitialize the stream from the time we have finished.
-			// Similarly for GOAWAY, that may be caused by too long connection.
-			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
-				since = common.Ptr(lastTs.Add(1))
-				stream, err = opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
-				if err != nil {
+			reopen := false
+			reader := bufio.NewReaderSize(stream, FlushBufferSize)
+			readerAnyContent := false
+			tsReader := newTimestampReader()
+			lastTs := time.Now()
+			haveLastTs := false
+			completed := false
+			hasNewLine := false
+
+			for {
+				// --- Step 1: READING TIMESTAMP
+
+				// Read next timestamp
+				err = tsReader.Read(reader)
+				if err == nil || errors.Is(err, ErrInvalidTimestamp) {
+					touch()
+				}
+
+				// Handle context canceled
+				if errors.Is(err, context.Canceled) {
+					if idleTriggered.Load() {
+						if haveLastTs {
+							since = common.Ptr(lastTs.Add(1))
+						}
+						if isDone() {
+							if closer, ok := stream.(io.Closer); ok {
+								_ = closer.Close()
+							}
+							attemptCancel()
+							return
+						}
+						reopen = true
+						break
+					}
+					if closer, ok := stream.(io.Closer); ok {
+						_ = closer.Close()
+					}
+					attemptCancel()
 					return
 				}
-				reader.Reset(stream)
-				readerAnyContent = false
-				continue
-			}
 
-			// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
-			if errors.Is(err, ErrInvalidTimestamp) && len(tsReader.Prefix()) > 0 {
-				appendLog(lastTs, []byte(tsReader.Format(lastTs)), []byte(" "), tsReader.Prefix())
-				rest, _ := utils.ReadLongLine(reader)
-				appendLog(lastTs, rest, []byte("\n"))
-				hasNewLine = false
-				continue
-			}
-
-			// Push information about any other error
-			if err != nil {
-				sendError(err)
-				continue
-			}
-
-			// --- Step 2: READING THE BEGINNING OF THE LINE
-
-			line, isPrefix, err := reader.ReadLine()
-
-			// Between instructions there may be empty line that should be just ignored
-			if !isPrefix && len(line) == 0 {
-				if hasNewLine {
-					appendLog(lastTs, []byte("\n"))
+				// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
+				if err == nil && !readerAnyContent {
+					if since != nil && since.After(tsReader.ts) {
+						isPrefix := true
+						for isPrefix && err == nil {
+							_, isPrefix, err = reader.ReadLine()
+						}
+						continue
+					}
+					readerAnyContent = true
 				}
-				continue
-			}
 
-			// Fast-track: we know this line won't be an instruction
-			if !instructions.MayBeInstruction(line) {
+				// Save information about the last timestamp
+				if err == nil {
+					lastTs = tsReader.ts
+					haveLastTs = true
+				}
+
+				// If the stream is finished,
+				// either the logfile has been rotated, or the container actually finished.
+				// Consider the container is done only when either:
+				// - there was EOF without any logs since, or
+				// - the last expected instruction was already delivered
+				if err == io.EOF && (!readerAnyContent || completed) {
+					if closer, ok := stream.(io.Closer); ok {
+						_ = closer.Close()
+					}
+					attemptCancel()
+					return
+				}
+
+				// If there was EOF, and we are not sure if container is done,
+				// reinitialize the stream from the time we have finished.
+				// Similarly for GOAWAY, that may be caused by too long connection.
+				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
+					if haveLastTs {
+						since = common.Ptr(lastTs.Add(1))
+					}
+					reopen = true
+					break
+				}
+
+				// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
+				if errors.Is(err, ErrInvalidTimestamp) && len(tsReader.Prefix()) > 0 {
+					appendLog(lastTs, []byte(tsReader.Format(lastTs)), []byte(" "), tsReader.Prefix())
+					rest, _ := utils.ReadLongLine(reader)
+					appendLog(lastTs, rest, []byte("\n"))
+					hasNewLine = false
+					continue
+				}
+
+				// Push information about any other error
+				if err != nil {
+					sendError(err)
+					continue
+				}
+
+				// --- Step 2: READING THE BEGINNING OF THE LINE
+
+				line, isPrefix, err := reader.ReadLine()
+
+				// Between instructions there may be empty line that should be just ignored
+				if !isPrefix && len(line) == 0 {
+					if hasNewLine {
+						appendLog(lastTs, []byte("\n"))
+					}
+					continue
+				}
+
+				// Fast-track: we know this line won't be an instruction
+				if !instructions.MayBeInstruction(line) {
+					if hasNewLine {
+						appendLog(lastTs, []byte("\n"))
+					}
+					appendLog(lastTs, tsReader.Prefix(), line)
+					for isPrefix && err == nil {
+						line, isPrefix, err = reader.ReadLine()
+						appendLog(lastTs, line)
+					}
+					hasNewLine = true
+					continue
+				}
+
+				// --- Step 3: FINISH READING THE LINE AND EXPORT DATA
+
+				// Ensure we read the whole line to buffer to validate if it is instruction
+				for isPrefix && err == nil {
+					var currentLine []byte
+					currentLine, isPrefix, err = reader.ReadLine()
+					line = append(line, currentLine...)
+				}
+
+				// Detect instruction
+				instruction, isHint, err := instructions.DetectInstruction(line)
+				if err == nil && instruction != nil {
+					item := ContainerLog{Time: lastTs}
+					if isHint {
+						item.Hint = instruction
+						if !completed && isLastHint(instruction) {
+							completed = true
+						}
+					} else {
+						item.Output = instruction
+					}
+					flushLogBuffer()
+					sendLog(item)
+					hasNewLine = false
+					continue
+				}
+
+				// Print line if it's not an instruction
 				if hasNewLine {
 					appendLog(lastTs, []byte("\n"))
 				}
 				appendLog(lastTs, tsReader.Prefix(), line)
-				for isPrefix && err == nil {
-					line, isPrefix, err = reader.ReadLine()
-					appendLog(lastTs, line)
-				}
 				hasNewLine = true
-				continue
 			}
 
-			// --- Step 3: FINISH READING THE LINE AND EXPORT DATA
-
-			// Ensure we read the whole line to buffer to validate if it is instruction
-			for isPrefix && err == nil {
-				var currentLine []byte
-				currentLine, isPrefix, err = reader.ReadLine()
-				line = append(line, currentLine...)
+			if closer, ok := stream.(io.Closer); ok {
+				_ = closer.Close()
 			}
+			attemptCancel()
 
-			// Detect instruction
-			instruction, isHint, err := instructions.DetectInstruction(line)
-			if err == nil && instruction != nil {
-				item := ContainerLog{Time: lastTs}
-				if isHint {
-					item.Hint = instruction
-					if !completed && isLastHint(instruction) {
-						completed = true
-					}
-				} else {
-					item.Output = instruction
-				}
-				flushLogBuffer()
-				sendLog(item)
-				hasNewLine = false
-				continue
+			if !reopen {
+				return
 			}
-
-			// Print line if it's not an instruction
-			if hasNewLine {
-				appendLog(lastTs, []byte("\n"))
-			}
-			appendLog(lastTs, tsReader.Prefix(), line)
-			hasNewLine = true
 		}
 	}()
 
