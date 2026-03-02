@@ -269,6 +269,12 @@ func main() {
 			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
 		}
 
+		capabilityNames := make([]string, len(capabilities))
+		for i, c := range capabilities {
+			capabilityNames[i] = c.String()
+		}
+		log.DefaultLogger.Infow("runner capabilities", "capabilities", capabilityNames)
+
 		// Get all labels that matches with prefix
 		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
 		runnerLabels["registration"] = "self"
