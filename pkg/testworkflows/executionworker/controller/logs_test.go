@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -76,6 +77,22 @@ type blockingReader struct {
 }
 
 func (r *blockingReader) Read(p []byte) (int, error) {
+	<-r.ctx.Done()
+	return 0, r.ctx.Err()
+}
+
+type blockingAfterReader struct {
+	ctx    context.Context
+	data   []byte
+	offset int
+}
+
+func (r *blockingAfterReader) Read(p []byte) (int, error) {
+	if r.offset < len(r.data) {
+		n := copy(p, r.data[r.offset:])
+		r.offset += n
+		return n, nil
+	}
 	<-r.ctx.Done()
 	return 0, r.ctx.Err()
 }
@@ -206,6 +223,118 @@ func TestWatchContainerLogsDoneWithNoLogsCloses(t *testing.T) {
 			}
 		case <-deadline.C:
 			t.Fatal("timed out waiting for log stream to close")
+		}
+	}
+}
+
+func TestWatchContainerLogsIdleTimeoutReopensWhenNotDone(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var calls int32
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(ctx context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			call := atomic.AddInt32(&calls, 1)
+			if call == 1 {
+				return &blockingReader{ctx: ctx}, nil
+			}
+			return nil, io.EOF
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		1,
+		func() bool { return false },
+		func(*instructions.Instruction) bool { return false },
+		50*time.Millisecond,
+	)
+
+	deadline := time.NewTimer(2 * time.Second)
+	defer deadline.Stop()
+
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(2))
+				return
+			}
+			if msg.Error != nil {
+				t.Fatalf("unexpected error from logs channel: %v", msg.Error)
+			}
+		case <-deadline.C:
+			t.Fatal("timed out waiting for idle reconnect flow to finish")
+		}
+	}
+}
+
+func TestWatchContainerLogsIdleTimeoutReconnectsWithoutDuplicateLogs(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	firstTs, err := time.Parse(time.RFC3339Nano, "2024-06-07T12:41:49.037275300Z")
+	assert.NoError(t, err)
+
+	var calls int32
+	var secondCallSawValidSince atomic.Bool
+
+	line1 := "2024-06-07T12:41:49.037275300Z hello-1\n"
+	line2 := "2024-06-07T12:41:50.037275300Z hello-2\n"
+
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(ctx context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, since *time.Time) (io.Reader, error) {
+			call := atomic.AddInt32(&calls, 1)
+			if call == 1 {
+				return &blockingAfterReader{ctx: ctx, data: []byte(line1)}, nil
+			}
+			if call == 2 {
+				if since != nil && since.After(firstTs) {
+					secondCallSawValidSince.Store(true)
+				}
+				return &blockingAfterReader{ctx: ctx, data: []byte(line1 + line2)}, nil
+			}
+			return &blockingReader{ctx: ctx}, nil
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		4,
+		func() bool { return false },
+		func(*instructions.Instruction) bool { return false },
+		200*time.Millisecond,
+	)
+
+	deadline := time.NewTimer(3 * time.Second)
+	defer deadline.Stop()
+
+	var out strings.Builder
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				content := out.String()
+				assert.Equal(t, 1, strings.Count(content, "hello-1"))
+				assert.Equal(t, 1, strings.Count(content, "hello-2"))
+				assert.True(t, secondCallSawValidSince.Load(), "expected second open to use since resume timestamp")
+				return
+			}
+			if msg.Error != nil {
+				t.Fatalf("unexpected error from logs channel: %v", msg.Error)
+			}
+			out.Write(msg.Value.Log)
+			if strings.Contains(out.String(), "hello-2") {
+				cancel()
+			}
+		case <-deadline.C:
+			t.Fatal("timed out waiting for logs reconnect flow")
 		}
 	}
 }
