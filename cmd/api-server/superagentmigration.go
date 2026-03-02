@@ -177,12 +177,14 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 				}
 			}
 			b.Reset()
-			for _, t := range testWorkflowList.Items {
+			// Sync templates before workflows so that template-inherited cron schedules
+			// can be resolved when the Control Plane processes workflow inserts.
+			for _, t := range testWorkflowTemplateList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, t); err != nil {
 						retryAfter := b.Duration()
-						log.Errorw("error updating or creating TestWorkflow, unable to migrate SuperAgent, will retry after backoff.",
-							"TestWorkflow", t.Name,
+						log.Errorw("error updating or creating TestWorkflowTemplate, unable to migrate SuperAgent, will retry after backoff.",
+							"TestWorkflowTemplate", t.Name,
 							"backoff", retryAfter,
 							"error", err.Error())
 						time.Sleep(retryAfter)
@@ -192,12 +194,12 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 				}
 			}
 			b.Reset()
-			for _, t := range testWorkflowTemplateList.Items {
+			for _, t := range testWorkflowList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, t); err != nil {
 						retryAfter := b.Duration()
-						log.Errorw("error updating or creating TestWorkflowTemplate, unable to migrate SuperAgent, will retry after backoff.",
-							"TestWorkflowTemplate", t.Name,
+						log.Errorw("error updating or creating TestWorkflow, unable to migrate SuperAgent, will retry after backoff.",
+							"TestWorkflow", t.Name,
 							"backoff", retryAfter,
 							"error", err.Error())
 						time.Sleep(retryAfter)
