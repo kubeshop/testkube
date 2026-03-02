@@ -889,10 +889,14 @@ spec:
   job:
     activeDeadlineSeconds: 60
   steps:
+  - name: mkdir /data/parallel
+    shell: mkdir -p /data/parallel
   - name: Run parallel with failFast disabled
-    optional: true
+    negative: true
     parallel:
       count: 3
+      fetch:
+      - from: /data/parallel
       container:
         resources:
           requests:
@@ -901,5 +905,16 @@ spec:
       run:
         image: alpine:3.22.0
         shell: |
+          mkdir -p /data/parallel
           if [ "{{ index }}" = "0" ]; then echo "worker 0 failing" && exit 1; fi
-          sleep 5 && echo "worker {{ index }} completed"
+          touch /data/parallel/{{ index }}.txt && echo "worker {{ index }} completed"
+  - name: Validate non-failing workers completed
+    shell: |
+      for i in 1 2; do
+        if [ -f /data/parallel/$i.txt ]; then
+          echo "Worker $i: completed"
+        else
+          echo "Worker $i: MISSING - was incorrectly aborted"
+          exit 1
+        fi
+      done
