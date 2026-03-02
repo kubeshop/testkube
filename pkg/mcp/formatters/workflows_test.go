@@ -759,7 +759,7 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 		assert.Equal(t, "{}", result)
 	})
 
-	t.Run("handles empty metrics array", func(t *testing.T) {
+	t.Run("returns message when metrics array is empty", func(t *testing.T) {
 		input := `{"workflow": "test", "execution": "exec-1", "metrics": []}`
 		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
 		require.NoError(t, err)
@@ -768,6 +768,23 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 		err = json.Unmarshal([]byte(result), &output)
 		require.NoError(t, err)
 		assert.Equal(t, "test", output.Workflow)
+		assert.Equal(t, "exec-1", output.Execution)
+		assert.NotEmpty(t, output.Message)
+		assert.Empty(t, output.Steps)
+	})
+
+	t.Run("returns message when metrics key is absent (real-world no-telemetry stub)", func(t *testing.T) {
+		// This is the exact shape returned by the API when no metric files were collected.
+		input := `{"workflow": "nunit-workflow-smoke", "execution": "69a5856290fc8ddbee159e78"}`
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
+		require.NoError(t, err)
+
+		var output formattedExecutionMetrics
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+		assert.Equal(t, "nunit-workflow-smoke", output.Workflow)
+		assert.Equal(t, "69a5856290fc8ddbee159e78", output.Execution)
+		assert.NotEmpty(t, output.Message)
 		assert.Empty(t, output.Steps)
 	})
 
