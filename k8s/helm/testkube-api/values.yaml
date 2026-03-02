@@ -174,10 +174,6 @@ next:
   # - tkcagnt_*** - Super Agent
   # - tkcsync_*** - GitOps Agent
   gitops:
-    ## Should it be enabled
-    enabled: true
-    ## Should it copy data from Control Plane to Kubernetes
-    syncCloudToKubernetes: false
     ## Should it copy data from Kubernetes to Control Plane
     syncKubernetesToCloud: true
 
