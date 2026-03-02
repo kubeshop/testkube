@@ -679,7 +679,7 @@ testkube-api:
       ## Should it copy data from Control Plane to Kubernetes
       syncCloudToKubernetes: false
       ## Should it copy data from Kubernetes to Control Plane
-      syncKubernetesToCloud: false
+      syncKubernetesToCloud: true
       ## Define the naming patterns for resources in different sources
       namePatterns:
         ## Name pattern for resources in the Control Plane
