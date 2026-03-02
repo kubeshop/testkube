@@ -675,9 +675,9 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 
 	t.Run("downsamples large time-series with default", func(t *testing.T) {
 		// Build a series with 200 data points (more than defaultMaxSamplesPerSeries)
-		values := make([][2]float64, 200)
+		values := make([]dataPoint, 200)
 		for i := 0; i < 200; i++ {
-			values[i] = [2]float64{float64(1000 + i*1000), float64(i)}
+			values[i] = dataPoint{float64(1000 + i*1000), float64(i)}
 		}
 		valuesJSON, _ := json.Marshal(values)
 
@@ -710,9 +710,9 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 
 	t.Run("respects custom maxSamples parameter", func(t *testing.T) {
 		// Build a series with 100 data points
-		values := make([][2]float64, 100)
+		values := make([]dataPoint, 100)
 		for i := 0; i < 100; i++ {
-			values[i] = [2]float64{float64(1000 + i*1000), float64(i)}
+			values[i] = dataPoint{float64(1000 + i*1000), float64(i)}
 		}
 		valuesJSON, _ := json.Marshal(values)
 
@@ -784,6 +784,39 @@ func TestFormatGetWorkflowExecutionMetrics(t *testing.T) {
 		assert.Equal(t, "nunit-workflow-smoke", output.Workflow)
 		assert.Equal(t, "69a5856290fc8ddbee159e78", output.Execution)
 		assert.Empty(t, output.Steps)
+	})
+
+	t.Run("parses real wire format with string-encoded values (InfluxDB line protocol)", func(t *testing.T) {
+		// The API serializes values as [int64_timestamp, "string_float"] because
+		// InfluxDB line protocol field values are parsed as strings. This is the
+		// root cause of the original ToolException.
+		input := `{
+			"workflow": "my-workflow",
+			"execution": "exec-real",
+			"metrics": [
+				{
+					"step": "step1",
+					"data": [
+						{
+							"measurement": "cpu",
+							"fields": "millicores",
+							"values": [[1739525804000, "44.0"], [1739525805000, "46.5"], [1739525806000, "43.2"]]
+						}
+					]
+				}
+			]
+		}`
+		result, err := FormatGetWorkflowExecutionMetrics(input, 0)
+		require.NoError(t, err)
+
+		var output formattedExecutionMetrics
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+		require.Len(t, output.Steps, 1)
+		series := output.Steps[0].Series[0]
+		assert.Equal(t, 3, series.SampleCount)
+		assert.Equal(t, 43.2, series.Summary.Min)
+		assert.Equal(t, 46.5, series.Summary.Max)
 	})
 
 	t.Run("returns error for invalid JSON", func(t *testing.T) {

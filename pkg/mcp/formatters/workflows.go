@@ -2,7 +2,9 @@ package formatters
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -314,10 +316,10 @@ type formattedStepData struct {
 }
 
 type formattedMetricSeries struct {
-	Metric      string       `json:"metric"` // e.g. "cpu.millicores", "memory.used"
-	SampleCount int          `json:"sampleCount"`
-	Summary     metricStats  `json:"summary"`
-	Samples     [][2]float64 `json:"samples"` // [timestamp_ms, value]
+	Metric      string      `json:"metric"` // e.g. "cpu.millicores", "memory.used"
+	SampleCount int         `json:"sampleCount"`
+	Summary     metricStats `json:"summary"`
+	Samples     []dataPoint `json:"samples"` // [timestamp_ms, value]
 }
 
 type metricStats struct {
@@ -343,9 +345,44 @@ type linkedMetricInput struct {
 }
 
 type dataPointInput struct {
-	Measurement string       `json:"measurement"`
-	Field       string       `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
-	Values      [][2]float64 `json:"values"` // [timestamp_ms, value]
+	Measurement string      `json:"measurement"`
+	Field       string      `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
+	Values      []dataPoint `json:"values"` // [timestamp_ms, value]
+}
+
+// dataPoint is a [timestamp_ms, value] pair. Values are string-encoded in the
+// wire format (InfluxDB line protocol parses all field values as strings), so we
+// accept both JSON numbers and quoted strings.
+type dataPoint [2]float64
+
+func (dp *dataPoint) UnmarshalJSON(b []byte) error {
+	var raw [2]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	ts, err := rawToFloat64(raw[0])
+	if err != nil {
+		return fmt.Errorf("dataPoint timestamp: %w", err)
+	}
+	v, err := rawToFloat64(raw[1])
+	if err != nil {
+		return fmt.Errorf("dataPoint value: %w", err)
+	}
+	dp[0] = ts
+	dp[1] = v
+	return nil
+}
+
+func rawToFloat64(raw json.RawMessage) (float64, error) {
+	var n json.Number
+	if err := json.Unmarshal(raw, &n); err == nil {
+		return n.Float64()
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return 0, fmt.Errorf("expected number or string, got: %s", string(raw))
+	}
+	return strconv.ParseFloat(s, 64)
 }
 
 // FormatGetWorkflowExecutionMetrics formats raw /metrics API output for the AI agent.
@@ -417,7 +454,7 @@ func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, erro
 }
 
 // computeStats calculates min/max/avg from a time-series of [timestamp, value] pairs.
-func computeStats(values [][2]float64) metricStats {
+func computeStats(values []dataPoint) metricStats {
 	if len(values) == 0 {
 		return metricStats{}
 	}
@@ -446,12 +483,12 @@ func computeStats(values [][2]float64) metricStats {
 
 // downsample reduces a time-series to at most maxPoints, evenly spaced.
 // Always preserves the first and last data points.
-func downsample(values [][2]float64, maxPoints int) [][2]float64 {
+func downsample(values []dataPoint, maxPoints int) []dataPoint {
 	if len(values) <= maxPoints {
 		return values
 	}
 
-	result := make([][2]float64, 0, maxPoints)
+	result := make([]dataPoint, 0, maxPoints)
 	result = append(result, values[0])
 
 	// Evenly pick interior points
