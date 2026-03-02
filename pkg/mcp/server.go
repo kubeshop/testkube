@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,8 +23,9 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer := server.NewMCPServer(
 		"testkube-mcp",
 		cfg.Version,
+		server.WithRecovery(),
 		server.WithToolCapabilities(true),
-		server.WithToolHandlerMiddleware(DebugMiddleware(cfg.Debug)),
+		server.WithToolHandlerMiddleware(DebugMiddleware(&cfg)),
 		server.WithToolHandlerMiddleware(TelemetryMiddleware(&cfg)),
 	)
 
@@ -45,6 +47,25 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Query tools (JSONPath-based bulk queries)
+	// Only check backwards compatibility when using APIClient without SkipEndpointChecks
+	if apiClient, ok := client.(*APIClient); ok && !cfg.SkipEndpointChecks {
+		ctx := context.Background()
+		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflows/definitions") {
+			mcpServer.AddTool(tools.QueryWorkflows(client))
+		}
+		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflow-executions/summaries") {
+			mcpServer.AddTool(tools.QueryExecutions(client))
+		}
+	} else {
+		mcpServer.AddTool(tools.QueryWorkflows(client))
+		mcpServer.AddTool(tools.QueryExecutions(client))
+	}
+
+	// Schema tools (static content, no client needed)
+	mcpServer.AddTool(tools.GetWorkflowSchema())
+	mcpServer.AddTool(tools.GetExecutionSchema())
+
 	// Labels tools
 	mcpServer.AddTool(tools.ListLabels(client))
 
@@ -60,6 +81,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.LookupExecutionId(client))
 	mcpServer.AddTool(tools.GetExecutionInfo(client))
 	mcpServer.AddTool(tools.GetWorkflowExecutionMetrics(client))
+	mcpServer.AddTool(tools.GetWorkflowResourceHistory(client))
 	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
 

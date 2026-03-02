@@ -3,15 +3,12 @@ package v1
 import (
 	"go.uber.org/zap"
 
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
@@ -30,7 +27,6 @@ import (
 func NewTestkubeAPI(
 	isStandalone bool,
 	executionController scheduling.Controller,
-	deprecatedClients commons.DeprecatedClients,
 	clusterId string,
 	namespace string,
 	testWorkflowResults testworkflow.Repository,
@@ -51,7 +47,6 @@ func NewTestkubeAPI(
 	websocketLoader *ws.WebsocketLoader,
 	metrics metrics.Metrics,
 	proContext *config.ProContext,
-	ff featureflags.FeatureFlags,
 	helmchartVersion string,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
@@ -63,7 +58,6 @@ func NewTestkubeAPI(
 		executionController:            executionController,
 		ClusterID:                      clusterId,
 		Log:                            log.DefaultLogger,
-		DeprecatedClients:              deprecatedClients,
 		TestWorkflowResults:            testWorkflowResults,
 		TestWorkflowOutput:             testWorkflowOutput,
 		SecretManager:                  secretManager,
@@ -83,7 +77,6 @@ func NewTestkubeAPI(
 		ArtifactsStorage:               artifactsStorage,
 		helmchartVersion:               helmchartVersion,
 		secretConfig:                   secretConfig,
-		featureFlags:                   ff,
 		ServiceAccountNames:            serviceAccountNames,
 		dockerImageVersion:             dockerImageVersion,
 		proContext:                     proContext,
@@ -96,10 +89,7 @@ type TestkubeAPI struct {
 	Log                            *zap.SugaredLogger
 	TestWorkflowResults            testworkflow.Repository
 	TestWorkflowOutput             testworkflow.OutputRepository
-	Executor                       client.Executor
-	ContainerExecutor              client.Executor
 	ExecutionWorkerClient          executionworkertypes.Worker
-	DeprecatedClients              commons.DeprecatedClients
 	SecretManager                  secretmanager.SecretManager
 	WebhooksClient                 executorsclientv1.WebhooksInterface
 	WebhookTemplatesClient         executorsclientv1.WebhookTemplatesInterface
@@ -116,7 +106,6 @@ type TestkubeAPI struct {
 	ArtifactsStorage               storage.ArtifactsStorage
 	helmchartVersion               string
 	secretConfig                   testkube.SecretConfig
-	featureFlags                   featureflags.FeatureFlags
 	proContext                     *config.ProContext
 	ServiceAccountNames            map[string]string
 	dockerImageVersion             string

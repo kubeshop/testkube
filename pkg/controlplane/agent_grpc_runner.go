@@ -16,13 +16,24 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
 	signaturev1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/signature/v1"
+	testworkflowv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) {
+func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.SetExecutionSchedulingRequest) (*executionv1.SetExecutionSchedulingResponse, error) { //nolint:staticcheck
+	_, err := s.AcceptExecution(ctx, &executionv1.AcceptExecutionRequest{
+		ExecutionId: req.ExecutionId,
+		Namespace:   req.Namespace,
+		Signature:   req.Signature,
+	})
+	return &executionv1.SetExecutionSchedulingResponse{}, err //nolint:staticcheck
+}
+
+func (s *Server) AcceptExecution(ctx context.Context, req *executionv1.AcceptExecutionRequest) (*executionv1.AcceptExecutionResponse, error) {
 	execution, err := s.resultsRepository.Get(ctx, req.GetExecutionId())
 	if err != nil {
 		return nil, errors.Join(
@@ -42,7 +53,38 @@ func (s *Server) SetExecutionScheduling(ctx context.Context, req *executionv1.Se
 		)
 	}
 
-	return &executionv1.SetExecutionSchedulingResponse{}, nil
+	return &executionv1.AcceptExecutionResponse{}, nil
+}
+
+func (s *Server) DeclineExecution(ctx context.Context, req *executionv1.DeclineExecutionRequest) (*executionv1.DeclineExecutionResponse, error) {
+	// Running in Standalone mode so the only option here is to immediately enter an ABORTED state without passing through other transitional states.
+	execution, err := s.resultsRepository.GetWithRunner(ctx, req.GetExecutionId(), common.StandaloneRunner)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "execution %q could not be retrieved: %v", req.GetExecutionId(), err)
+	}
+
+	result := execution.Result
+	if result == nil {
+		// This shouldn't happen but just in case we can set something to avoid nil panics.
+		result = &testkube.TestWorkflowResult{}
+	}
+
+	// Update the result to be aborted immediately.
+	result.FinishedAt = time.Now().UTC()
+	result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+
+	updated, err := s.resultsRepository.FinishResultStrict(ctx, req.GetExecutionId(), common.StandaloneRunner, result)
+	if err != nil || !updated {
+		return nil, status.Errorf(codes.Unknown, "cannot update execution %q result: %v", req.GetExecutionId(), err)
+	}
+
+	// Update in-memory properties which we know has been updated by the query.
+	execution.StatusAt = result.FinishedAt
+	execution.Result = result
+	// Emit the aborted event.
+	s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
+
+	return &executionv1.DeclineExecutionResponse{}, nil
 }
 
 func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSignature {
@@ -58,6 +100,31 @@ func translateSignature(sigs []*signaturev1.Signature) []testkube.TestWorkflowSi
 		})
 	}
 	return ret
+}
+
+func (s *Server) GetExecutionWorkflow(ctx context.Context, req *executionv1.GetExecutionWorkflowRequest) (*executionv1.GetExecutionWorkflowResponse, error) {
+	execution, err := s.resultsRepository.Get(ctx, req.GetExecutionId())
+	if err != nil {
+		return nil, errors.Join(
+			status.Error(codes.FailedPrecondition, "could not get execution"),
+			fmt.Errorf("get execution: %w", err),
+		)
+	}
+
+	workflow := testworkflowmappers.MapAPIToKube(execution.ResolvedWorkflow)
+	data, err := json.Marshal(workflow)
+	if err != nil {
+		return nil, errors.Join(
+			status.Error(codes.FailedPrecondition, "could not marshal workflow execution"),
+			fmt.Errorf("marshal workflow execution: %w", err),
+		)
+	}
+
+	return &executionv1.GetExecutionWorkflowResponse{
+		Workflow: &testworkflowv1.TestWorkflow{
+			Json: data,
+		},
+	}, nil
 }
 
 func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (*cloud.RegisterResponse, error) {
@@ -190,16 +257,16 @@ func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecution
 
 	switch {
 	case execution.Result.IsPassed():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, s.envID))
 	case execution.Result.IsAborted():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, s.envID))
 	case execution.Result.IsCanceled():
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, s.envID))
 	default:
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, s.envID))
 	}
 	if execution.Result.IsNotPassed() {
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, s.envID))
 	}
 
 	return &cloud.FinishExecutionResponse{}, nil

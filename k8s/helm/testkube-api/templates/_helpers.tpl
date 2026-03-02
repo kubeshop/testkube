@@ -77,19 +77,23 @@ Define API image
 {{- $registryName := .Values.image.registry -}}
 {{- $repositoryName := .Values.image.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.image.tag | toString -}}
+{{- $tagSuffix := .Values.image.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.image.digest }}
     {{- $separator = "@" -}}
     {{- $tag = .Values.image.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
@@ -108,7 +112,9 @@ Define API environment in agent mode
     secretKeyRef:
       key: {{ .Values.cloud.existingSecret.key }}
       name: {{ .Values.cloud.existingSecret.name }}
-{{- end -}}
+{{- end }}
+- name: RUNNER_IS_GLOBAL
+  value: "true"
 {{- if .Values.cloud.url }}
 - name: TESTKUBE_CLOUD_URL
   value:  {{ tpl .Values.cloud.url $ | quote }}
@@ -365,19 +371,23 @@ Define Test Workflows Toolkit Image
 {{- $registryName := .Values.imageTwToolkit.registry -}}
 {{- $repositoryName := .Values.imageTwToolkit.repository -}}
 {{- $tag := default .Chart.AppVersion (default .Values.image.tag .Values.imageTwToolkit.tag) | toString -}}
+{{- $tagSuffix := .Values.imageTwToolkit.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.imageTwToolkit.digest }}
     {{- $separator = "@" -}}
     {{- $tag = .Values.imageTwToolkit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 
@@ -389,19 +399,23 @@ Define Test Workflows Init Image
 {{- $registryName := .Values.imageTwInit.registry -}}
 {{- $repositoryName := .Values.imageTwInit.repository -}}
 {{- $tag := default .Chart.AppVersion (default .Values.image.tag .Values.imageTwInit.tag) | toString -}}
+{{- $tagSuffix := .Values.imageTwInit.tagSuffix -}}
 {{- $separator := ":" -}}
 {{- if .Values.imageTwInit.digest }}
     {{- $separator = "@" -}}
     {{- $tag = .Values.imageTwInit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
-        {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
-        {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+        {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
     {{- end -}}
 {{- else -}}
-    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $tag -}}
+    {{- printf "%s/%s%s%s%s" $registryName $repositoryName $separator $tag $tagSuffix -}}
 {{- end -}}
 {{- end -}}
 

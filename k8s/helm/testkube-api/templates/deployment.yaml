@@ -81,20 +81,6 @@ spec:
               value: "{{ .Values.postmanExecutorURI }}"
             - name: TESTKUBE_ANALYTICS_ENABLED
               value: "{{ .Values.analyticsEnabled }}"
-            {{- if .Values.slackSecret }}
-            - name: SLACK_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ .Values.slackSecret }}"
-                  key: SLACK_TOKEN
-            {{- else }}
-            - name: SLACK_TOKEN
-              value: "{{ .Values.slackToken }}"
-            {{- end }}
-            {{- if .Values.slackTemplate }}
-            - name: SLACK_TEMPLATE
-              value:  "{{ .Values.slackTemplate }}"
-            {{- end }}
             {{- if .Values.executors }}
             - name: TESTKUBE_DEFAULT_EXECUTORS
               value:  "{{ .Values.executors }}"
@@ -156,6 +142,10 @@ spec:
               value:  "{{ .Values.podStartTimeout }}"
             - name: CDEVENTS_TARGET
               value: "{{ .Values.cdeventsTarget }}"
+            {{- if not .Values.global.testWorkflows.createOfficialTemplates }}
+            - name: DISABLE_OFFICIAL_TEMPLATES
+              value: "true"
+            {{- end}}
             - name: TESTKUBE_DASHBOARD_URI
               value: "{{ .Values.dashboardUri }}"
             - name: TESTKUBE_CLUSTER_NAME
@@ -245,12 +235,6 @@ spec:
               value: "{{ not .Values.next.legacyTests.enabled }}"
             - name: GITOPS_KUBERNETES_TO_CLOUD_ENABLED
               value: "{{ .Values.next.gitops.syncKubernetesToCloud }}"
-            - name: GITOPS_CLOUD_TO_KUBERNETES_ENABLED
-              value: "{{ .Values.next.gitops.syncCloudToKubernetes }}"
-            - name: GITOPS_CLOUD_NAME_PATTERN
-              value: "{{ .Values.next.gitops.namePatterns.cloud }}"
-            - name: GITOPS_KUBERNETES_NAME_PATTERN
-              value: "{{ .Values.next.gitops.namePatterns.kubernetes }}"
             - name: DISABLE_DEFAULT_AGENT
               value: "{{ not .Values.next.legacyAgent.enabled }}"
             - name: ENABLE_CRON_JOBS
@@ -273,15 +257,18 @@ spec:
             - name: grpc
               containerPort: 8089
               protocol: TCP
+          {{- if .Values.startupProbe.enabled }}
           startupProbe:
-            initialDelaySeconds: 3
-            periodSeconds: 3
-            timeoutSeconds: 3
-            failureThreshold: 20
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.startupProbe.successThreshold }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             httpGet:
               path: /health
               port: {{ .Values.service.port }}
               scheme: HTTP
+          {{- end }}
           {{- if .Values.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
           {{- else if .Values.readinessProbe.enabled }}

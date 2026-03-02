@@ -181,7 +181,7 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 		}
 
 		// Get the secret details
-		secret, err := s.SecretManager.Get(c.Context(), namespace, name)
+		secret, err := s.SecretManager.Get(c.Context(), namespace, name, secretmanager.GetOptions{})
 		if apiutils.IsNotFound(err) {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
 		} else if errors.Is(err, secretmanager.ErrManagementDisabled) {

@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: artillery
     category: performance-testing
+  annotations:
+    testkube.io/icon: artillery
 spec:
   content:
     git:
@@ -34,6 +36,8 @@ metadata:
     core-tests: workflows
     tool: artillery
     category: performance-testing
+  annotations:
+    testkube.io/icon: artillery
 spec:
   content:
     git:
@@ -62,6 +66,8 @@ metadata:
     core-tests: workflows
     tool: artillery
     category: performance-testing
+  annotations:
+    testkube.io/icon: artillery
 spec:
   container:
     resources:
@@ -95,6 +101,8 @@ metadata:
     tool: artillery
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: artillery
 spec:
   config:
     arrivalRatePerWorker:

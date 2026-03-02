@@ -15,7 +15,6 @@ import (
 
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	gomock "go.uber.org/mock/gomock"
-	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockTestTriggerClient is a mock of TestTriggerClient interface.
@@ -115,21 +114,6 @@ func (mr *MockTestTriggerClientMockRecorder) Get(ctx, environmentId, name, names
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTestTriggerClient)(nil).Get), ctx, environmentId, name, namespace)
 }
 
-// GetKubernetesObjectUID mocks base method.
-func (m *MockTestTriggerClient) GetKubernetesObjectUID(ctx context.Context, environmentId, name, namespace string) (types.UID, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKubernetesObjectUID", ctx, environmentId, name, namespace)
-	ret0, _ := ret[0].(types.UID)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetKubernetesObjectUID indicates an expected call of GetKubernetesObjectUID.
-func (mr *MockTestTriggerClientMockRecorder) GetKubernetesObjectUID(ctx, environmentId, name, namespace any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKubernetesObjectUID", reflect.TypeOf((*MockTestTriggerClient)(nil).GetKubernetesObjectUID), ctx, environmentId, name, namespace)
-}
-
 // List mocks base method.
 func (m *MockTestTriggerClient) List(ctx context.Context, environmentId string, options ListOptions, namespace string) ([]testkube.TestTrigger, error) {
 	m.ctrl.T.Helper()
@@ -143,21 +127,6 @@ func (m *MockTestTriggerClient) List(ctx context.Context, environmentId string, 
 func (mr *MockTestTriggerClientMockRecorder) List(ctx, environmentId, options, namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTestTriggerClient)(nil).List), ctx, environmentId, options, namespace)
-}
-
-// ListLabels mocks base method.
-func (m *MockTestTriggerClient) ListLabels(ctx context.Context, environmentId, namespace string) (map[string][]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListLabels", ctx, environmentId, namespace)
-	ret0, _ := ret[0].(map[string][]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListLabels indicates an expected call of ListLabels.
-func (mr *MockTestTriggerClientMockRecorder) ListLabels(ctx, environmentId, namespace any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLabels", reflect.TypeOf((*MockTestTriggerClient)(nil).ListLabels), ctx, environmentId, namespace)
 }
 
 // Update mocks base method.

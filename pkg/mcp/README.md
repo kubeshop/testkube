@@ -1,12 +1,16 @@
+````markdown
 # Testkube MCP (Model Context Protocol) Integration
 
 This package provides MCP integration for Testkube, enabling AI assistants to interact with Testkube workflows, executions, and artifacts through the [Model Context Protocol](https://modelcontextprotocol.io).
 
 ## Overview
 
-The MCP server is exposed via the `testkube mcp serve` CLI command, which leverages the existing OAuth authentication flow for security purposes. The server requires you to be logged in via `testkube login` so it can access your specific Testkube account, permissions, and context (organization and environment). This provides seamless setup since the CLI already has all the necessary configuration after login. API-Key authentication is also supported, use `testkube set context` to set the API-Key used for authentication.
+The MCP integration supports two deployment modes:
 
-The MCP Server supports both `stdio` and `shttp` transports - see configuration examples below.
+1. **CLI Mode** (`testkube mcp serve`): Runs locally with stdio or SHTTP transport, authenticating via OAuth or API keys
+2. **Control Plane Mode**: Embedded HTTP endpoint at `/organizations/{orgId}/environments/{envId}/mcp` with SSE transport
+
+The CLI mode requires authentication via `testkube login` or `testkube set context` with an API key. The control plane mode uses standard bearer token authentication with per-environment feature flags for access control.
 
 This implementation uses the [mcp-go](https://github.com/mark3labs/mcp-go) library, chosen for its proven usage in other projects like [GitHub's MCP server](https://github.com/github/github-mcp-server). The tool design patterns and helper functions draw inspiration from GitHub's implementation while being adapted for Testkube's specific needs.
 
@@ -36,10 +40,68 @@ Each tool function:
 
 The package uses an interface-based client design that supports multiple implementations:
 
-- **HTTP Client** (default): Makes REST API calls to Testkube endpoints
-- **Direct Repository Access** (future): For control plane integration with direct database access
+- **APIClient** (CLI mode): Makes REST API calls to control plane endpoints via HTTP
+- **HandlerClient** (control plane mode): Invokes API handlers directly in-process for low-latency operation
 
-This flexibility allows the same MCP tools to work in different deployment scenarios without code changes.
+This flexibility allows the same MCP tools to work in different deployment scenarios without code changes. The control plane can implement its own client that calls handlers directly while the CLI uses HTTP transport.
+
+### Available Tools
+
+The MCP server exposes 20 tools organized into five categories:
+
+#### Dashboard Tools (1 tool)
+
+- `build_dashboard_url` - Generate dashboard URLs for workflows and executions
+
+#### Workflow Tools (7 tools)
+
+- `list_workflows` - List workflows with filtering (selector, text search, pagination)
+- `get_workflow` - Retrieve specific workflow by name
+- `get_workflow_definition` - Return formatted workflow definition (same as get_workflow)
+- `get_workflow_metrics` - Fetch workflow metrics
+- `create_workflow` - Create new workflow from YAML/JSON definition
+- `update_workflow` - Update existing workflow
+- `run_workflow` - Execute workflow with config and target parameters
+
+#### Execution Tools (7 tools)
+
+- `fetch_execution_logs` - Fetch logs for specific execution
+- `list_executions` - List executions with optional workflow name and filtering
+- `lookup_execution_id` - Look up execution ID by execution name
+- `get_execution_info` - Get detailed execution information
+- `get_workflow_execution_metrics` - Fetch metrics for specific execution
+- `wait_for_executions` - Poll multiple executions until completion (5s interval)
+- `abort_workflow_execution` - Abort running workflow execution
+
+#### Artifact Tools (2 tools)
+
+- `list_artifacts` - List artifacts for an execution
+- `read_artifact` - Read artifact content (handles both direct content and S3 URLs)
+
+#### Metadata Tools (3 tools)
+
+- `list_labels` - List all labels in the environment
+- `list_resource_groups` - List resource groups in the organization
+- `list_agents` - List agents with filtering (type, capability, pagination)
+
+**Note for maintainers:** When adding new tools to `pkg/mcp/tools/`, ensure that:
+
+1. The tool follows the interface-based design pattern (see existing tools for examples)
+2. The tool is registered in both:
+   - `pkg/mcp/server.go` (`NewMCPServer` function) for CLI mode
+   - Control plane's `mcp_handler.go` (`createMCPServer` function) for embedded mode
+3. If the tool requires a new client method, implement it in both:
+   - `pkg/mcp/api.go` (`APIClient`) for HTTP-based CLI access
+   - Control plane's `mcp_client.go` (`HandlerClient`) for direct handler invocation
+
+### Middleware and Debug Support
+
+The MCP server includes middleware for:
+
+- **Debug Middleware**: Adds detailed request/response metadata when debug mode is enabled (via `--debug` flag or `?debug=true` query param)
+- **Telemetry Middleware**: Tracks tool invocations for usage analytics (when telemetry is enabled)
+
+Debug mode attaches metadata to tool responses under `_meta.debug`, showing the data source (HTTP or handler), request details, status codes, and headers.
 
 ### Docker Image
 
@@ -125,3 +187,4 @@ The debug mode enables detailed request/response logging for the API client, mak
   }
 }
 ```
+````

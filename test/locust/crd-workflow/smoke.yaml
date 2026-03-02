@@ -7,6 +7,8 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   content:
     git:
@@ -42,6 +44,8 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   content:
     git:
@@ -77,6 +81,8 @@ metadata:
     tool: locust
     artifacts: "true"
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   content:
     git:
@@ -111,6 +117,8 @@ metadata:
     core-tests: workflows
     tool: locust
     category: performance-testing
+  annotations:
+    testkube.io/icon: locust
 spec:
   config:
     workers: {type: integer, default: 2}
@@ -123,8 +131,8 @@ spec:
   container:
     resources:
       requests:
-        cpu: 128m
-        memory: 128Mi
+        cpu: 256m
+        memory: 256Mi
   services:
     master:
       transfer:
@@ -158,6 +166,10 @@ spec:
       - name: distribute/evenly
       container:
         workingDir: /data/repo/test/locust/locust-project
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
       paused: true # synchronize running all workers - optional
       run:
         image: locustio/locust:2.32.3

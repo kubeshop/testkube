@@ -1,4 +1,4 @@
-//nolint:govet,composites // Allows pragmatic use of bson.D without Key, Value which makes it unreadable. It allows MongoDB Compass code generation.
+//nolint:govet // Allows pragmatic use of bson.D without Key, Value which makes it unreadable. It allows MongoDB Compass code generation.
 package scheduling
 
 import (

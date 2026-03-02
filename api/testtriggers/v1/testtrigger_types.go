@@ -46,9 +46,11 @@ type TestTriggerSpec struct {
 	// Selector is used to select events which trigger an action
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 	// For which Resource do we monitor Event which triggers an Action on certain conditions
-	Resource TestTriggerResource `json:"resource"`
+	// +optional
+	Resource TestTriggerResource `json:"resource,omitempty"`
 	// ResourceSelector identifies which Kubernetes Objects should be watched
-	ResourceSelector TestTriggerSelector `json:"resourceSelector"`
+	// +optional
+	ResourceSelector TestTriggerSelector `json:"resourceSelector,omitempty"`
 	// On which Event for a Resource should an Action be triggered
 	Event TestTriggerEvent `json:"event"`
 	// What resource conditions should be matched

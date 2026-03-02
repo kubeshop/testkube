@@ -60,6 +60,11 @@ func (l *CDEventListener) Metadata() map[string]string {
 	}
 }
 
+func (l *CDEventListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
+	return valid
+}
+
 func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	// Check if CDEvents are silenced for test workflow executions
 	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.SilentMode != nil && event.TestWorkflowExecution.SilentMode.Cdevents {
@@ -82,19 +87,6 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	if event.Type_ != nil && (*event.Type_ == *testkube.EventEndTestAborted || *event.Type_ == *testkube.EventEndTestFailed ||
-		*event.Type_ == *testkube.EventEndTestSuccess || *event.Type_ == *testkube.EventEndTestTimeout) {
-		// Create the output event
-		ev, err = cde.MapTestkubeTestLogToCDEvent(event, l.clusterID, l.dashboardURI)
-		if err != nil {
-			return testkube.NewFailedEventResult(event.Id, err)
-		}
-
-		if err := l.sendCDEvent(ev); err != nil {
-			return testkube.NewFailedEventResult(event.Id, err)
-		}
-	}
-
 	if event.Type_ != nil && (*event.Type_ == *testkube.EventEndTestWorkflowAborted || *event.Type_ == *testkube.EventEndTestWorkflowFailed ||
 		*event.Type_ == *testkube.EventEndTestWorkflowSuccess || *event.Type_ == *testkube.EventEndTestWorkflowCanceled) {
 		// Create the output event
@@ -113,6 +105,10 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 
 func (l *CDEventListener) Kind() string {
 	return "cdevent"
+}
+
+func (l *CDEventListener) Group() string {
+	return ""
 }
 
 func (l *CDEventListener) sendCDEvent(ev cdevents.CDEventReader) error {

@@ -295,7 +295,7 @@ type StepParallel struct {
 	// values to be used for test workflow execution
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
-	Execution *TestWorkflowTagSchema `json:"execution,omitempty" expr:"include"`
+	Execution *TestWorkflowExecutionSchema `json:"execution,omitempty" expr:"include"`
 
 	// list of accompanying services to start
 	// +kubebuilder:pruning:PreserveUnknownFields

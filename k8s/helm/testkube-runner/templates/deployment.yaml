@@ -9,6 +9,11 @@ metadata:
     {{- if .Values.deployment.labels }}
     {{- include "global.tplvalues.render" ( dict "value" .Values.deployment.labels "context" $ ) | nindent 4 }}
     {{- end }}
+    {{- if .Values.runner.register.labels }}
+    {{- range $key, $value := .Values.runner.register.labels }}
+    {{ $.Values.runner.register.labelPrefix }}{{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{- end }}
   annotations:
     {{- if .Values.global.annotations }}
     {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
@@ -30,6 +35,11 @@ spec:
         {{- end }}
         {{- if .Values.pod.labels }}
         {{- include "global.tplvalues.render" ( dict "value" .Values.pod.labels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.runner.register.labels }}
+        {{- range $key, $value := .Values.runner.register.labels }}
+        {{ $.Values.runner.register.labelPrefix }}{{ $key }}: {{ $value | quote }}
+        {{- end }}
         {{- end }}
       annotations:
         {{- if .Values.global.annotations }}
@@ -168,6 +178,7 @@ spec:
               value: "true"
             {{- end }}
             {{- if .Values.runner.secretRef.name }}
+            {{- if not ( or .Values.runner.register.token .Values.runner.register.tokenSecret.name ) }}
             - name: "TESTKUBE_PRO_AGENT_ID"
               valueFrom:
                 secretKeyRef:
@@ -177,19 +188,20 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
-                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
+                  key: "{{ .Values.runner.secretRef.secretKey }}"
+            {{- end }}
             - name: "TESTKUBE_PRO_ORG_ID"
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
-                  key: "{{ .Values.runner.secretRef.secretKey }}"
+                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
             - name: "TESTKUBE_PRO_ENV_ID"
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
                   key: "{{ .Values.runner.secretRef.envIdKey }}"
             {{- else }}
-            {{- if not .Values.runner.register.token }}
+            {{- if not ( or .Values.runner.register.token .Values.runner.register.tokenSecret.name ) }}
             - name: "TESTKUBE_PRO_AGENT_ID"
               value: "{{ .Values.runner.id }}"
             - name: "TESTKUBE_PRO_API_KEY"
@@ -206,7 +218,7 @@ spec:
             - name: "TESTKUBE_PRO_TLS_INSECURE"
               value: "true"
             {{- end }}
-            - name: "TESTKUBE_PRO_TLS_SKIP_VERIFY"
+            - name: "TESTKUBE_PRO_SKIP_VERIFY"
               value: "{{ .Values.cloud.tls.skipVerify }}"
 
             # Server
@@ -295,20 +307,18 @@ spec:
             {{- end }}
 
             # Constants
-            - name: "SLACK_CONFIG"
-              value: "[]"
             - name: "ENABLE_K8S_EVENTS"
               value: "false"
             - name: "DISABLE_TEST_TRIGGERS"
               value: "{{ if .Values.listener.enabled }}false{{ else }}true{{ end }}"
             - name: "DISABLE_WEBHOOKS"
-              value: "true"
+              value: "{{ if .Values.webhooks.enabled }}false{{ else }}true{{ end }}"
             - name: "DISABLE_DEPRECATED_TESTS"
               value: "true"
             - name: "DISABLE_DEFAULT_AGENT"
               value: "true"
             - name: "GITOPS_KUBERNETES_TO_CLOUD_ENABLED"
-              value: "false"
+              value: "{{ if .Values.gitops.enabled }}true{{ else }}false{{ end }}"
             - name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED"
               value: "false"
             - name: "ENABLE_CRON_JOBS"
@@ -341,9 +351,16 @@ spec:
             {{- end }}
 
             # Self registration
-          {{- if .Values.runner.register.token }}
+          {{- if or .Values.runner.register.token .Values.runner.register.tokenSecret.name }}
             - name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+              {{- if .Values.runner.register.token }}
               value: "{{ .Values.runner.register.token }}"
+              {{- else if .Values.runner.register.tokenSecret.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runner.register.tokenSecret.name }}
+                  key: {{ .Values.runner.register.tokenSecret.key | default "token" }}
+              {{- end }}
             - name: RUNNER_NAME
               value: "{{ include "testkube-runner.fullname" . }}"
             - name: ENABLE_SECRETS_ENDPOINT
@@ -354,6 +371,16 @@ spec:
               value: "{{ include "testkube-runner.fullname" . }}-"
             - name: FLOATING_RUNNER
               value: "{{ .Values.runner.register.floating }}"
+            - name: RUNNER_IS_GLOBAL
+              value: "{{ .Values.runner.register.global }}"
+            {{- if .Values.runner.register.labelPrefix }}
+            - name: RUNNER_LABELS_PREFIX
+              value: "{{ .Values.runner.register.labelPrefix }}"
+            {{- end }}
+            {{- if .Values.runner.register.groupName }}
+            - name: RUNNER_GROUP
+              value: "{{ .Values.runner.register.groupName }}"
+            {{- end }}
           envFrom:
             - secretRef:
                 name: "{{ include "testkube-runner.fullname" . }}-self-registration"

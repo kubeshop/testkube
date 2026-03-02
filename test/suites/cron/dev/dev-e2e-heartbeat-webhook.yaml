@@ -1,0 +1,21 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: dev-e2e-heartbeat-webhook
+  labels:
+    core-tests: heartbeat
+    heartbeat-type: dev-e2e-webhook
+    environment: dev
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+    image: alpine:3.23.2
+  steps:
+    - name: Step - should pass
+      shell: echo "Should pass" && exit 0
+  events:
+  - cronjob:
+      cron: "15,45 * * * *" # every 30m + alert on no webhook received

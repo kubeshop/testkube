@@ -1,0 +1,33 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--playwright--beta
+  labels:
+    testkube.io/name: Playwright
+    testkube.io/wizard: disabled
+  annotations:
+    testkube.io/categories: E2E
+    testkube.io/description: Run Playwright tests
+    testkube.io/icon: playwright
+spec:
+  config:
+    dependencies_command:
+      description: Command to install dependencies
+      type: string
+      default: npm ci
+    version:
+      description: Playwright version to use
+      type: string
+      default: 1.43.0
+    run:
+      description: Run command
+      type: string
+      default: "npx playwright test"
+  container:
+    image: "mcr.microsoft.com/playwright:v{{ config.version }}"
+  steps:
+  - name: Install dependencies
+    shell: "{{ config.dependencies_command }}"
+  - name: Run Playwright tests
+    run:
+      shell: "{{ config.run }}"

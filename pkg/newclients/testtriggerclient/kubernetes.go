@@ -3,8 +3,6 @@ package testtriggerclient
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testtriggers"
 	testtriggersclientv1 "github.com/kubeshop/testkube/pkg/operator/client/testtriggers/v1"
@@ -29,12 +27,6 @@ func (c *k8sTestTriggerClient) Get(ctx context.Context, environmentId string, na
 	return &apiTrigger, nil
 }
 
-func (c *k8sTestTriggerClient) GetKubernetesObjectUID(ctx context.Context, environmentId string, name string, namespace string) (types.UID, error) {
-	// This would need to be implemented to get the actual Kubernetes object UID
-	// For now, return empty as this is primarily used for cloud scenarios
-	return "", nil
-}
-
 func (c *k8sTestTriggerClient) List(ctx context.Context, environmentId string, options ListOptions, namespace string) ([]testkube.TestTrigger, error) {
 	selector := ""
 	if options.Selector != "" {
@@ -47,12 +39,6 @@ func (c *k8sTestTriggerClient) List(ctx context.Context, environmentId string, o
 	}
 
 	return testtriggers.MapTestTriggerListKubeToAPI(list), nil
-}
-
-func (c *k8sTestTriggerClient) ListLabels(ctx context.Context, environmentId string, namespace string) (map[string][]string, error) {
-	// This would need to be implemented by querying all triggers and extracting labels
-	// For now, return empty map
-	return make(map[string][]string), nil
 }
 
 func (c *k8sTestTriggerClient) Update(ctx context.Context, environmentId string, trigger testkube.TestTrigger) error {

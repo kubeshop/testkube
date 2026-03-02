@@ -9,7 +9,6 @@ import (
 )
 
 func TestFilterAndAggregateDiskStats(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		name  string

@@ -17,10 +17,6 @@ func (s *Server) ListTestTriggers(_ *cloud.ListTestTriggersRequest, _ cloud.Test
 	return status.Errorf(codes.Unimplemented, "gitops functionality is not supported")
 }
 
-func (s *Server) ListTestTriggerLabels(_ context.Context, _ *cloud.ListTestTriggerLabelsRequest) (*cloud.ListTestTriggerLabelsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "gitops functionality is not supported")
-}
-
 func (s *Server) CreateTestTrigger(_ context.Context, _ *cloud.CreateTestTriggerRequest) (*cloud.CreateTestTriggerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "gitops functionality is not supported")
 }
@@ -39,8 +35,4 @@ func (s *Server) DeleteAllTestTriggers(_ context.Context, _ *cloud.DeleteAllTest
 
 func (s *Server) DeleteTestTriggersByLabels(_ context.Context, _ *cloud.DeleteTestTriggersByLabelsRequest) (*cloud.DeleteTestTriggersByLabelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "gitops functionality is not supported")
-}
-
-func (s *Server) WatchTestTriggerUpdates(_ *cloud.WatchTestTriggerUpdatesRequest, _ cloud.TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error {
-	return status.Errorf(codes.Unimplemented, "gitops functionality is not supported")
 }

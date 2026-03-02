@@ -54,3 +54,18 @@ func (mr *MockCredentialRepositoryMockRecorder) Get(ctx, name any) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCredentialRepository)(nil).Get), ctx, name)
 }
+
+// GetWithSource mocks base method.
+func (m *MockCredentialRepository) GetWithSource(ctx context.Context, name, source string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWithSource", ctx, name, source)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWithSource indicates an expected call of GetWithSource.
+func (mr *MockCredentialRepositoryMockRecorder) GetWithSource(ctx, name, source any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithSource", reflect.TypeOf((*MockCredentialRepository)(nil).GetWithSource), ctx, name, source)
+}

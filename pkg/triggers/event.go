@@ -7,9 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
@@ -20,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const testkubeEventCausePrefix = "event-"
@@ -107,9 +110,9 @@ func (s Service) newWatcherEvent(
 	}
 
 	maps.Copy(w.EventLabels, s.eventLabels)
-	w.EventLabels[eventLabelKeyAgentName] = s.agentName
+	w.EventLabels[eventLabelKeyAgentName] = utils.TruncateName(s.agentName)
 	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
-	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
+	w.EventLabels[eventLabelKeyResourceName] = utils.TruncateName(objectMeta.GetName())
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	if runtimeObject, ok := object.(runtime.Object); ok &&
@@ -127,6 +130,29 @@ func (s Service) newWatcherEvent(
 
 	for _, opt := range opts {
 		opt(w)
+	}
+
+	sanitizeEventLabelValues(w.EventLabels, s.logger)
+	if s.logger != nil {
+		s.logger.Debugw("testtrigger event labels prepared",
+			"eventType", string(eventType),
+
+			"agentName", s.agentName,
+			"agentNameLabel", w.EventLabels[eventLabelKeyAgentName],
+			"agentNamespaceLabel", w.EventLabels[eventLabelKeyAgentNamespace],
+
+			"resourceKindLabel", w.EventLabels[eventLabelKeyResourceKind],
+			"resourceGroupLabel", w.EventLabels[eventLabelKeyResourceGroup],
+			"resourceVersionLabel", w.EventLabels[eventLabelKeyResourceVersion],
+			"resourceNameLabel", w.EventLabels[eventLabelKeyResourceName],
+			"resourceNamespaceLabel", w.EventLabels[eventLabelKeyResourceNamespace],
+			"resourceType", string(resource),
+
+			"objectNamespace", objectMeta.GetNamespace(),
+			"objectName", objectMeta.GetName(),
+
+			"labels", w.EventLabels,
+		)
 	}
 
 	return w
@@ -230,4 +256,77 @@ func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.C
 
 	causes = append(causes, testtrigger.Cause(fmt.Sprintf("%s%s", testkubeEventCausePrefix, event.Reason)))
 	return event.InvolvedObject.Name, causes
+}
+
+func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogger) {
+	for key, value := range labels {
+		errs := validation.IsValidLabelValue(value)
+		if len(errs) == 0 {
+			continue
+		}
+		if logger != nil {
+			logger.Debugw("event label invalid before sanitization",
+				"key", key,
+				"value", value,
+				"errors", errs,
+			)
+		}
+
+		sanitized := strings.Map(func(r rune) rune {
+			if isAllowedLabelRune(r) {
+				return r
+			}
+			return '-'
+		}, value)
+
+		if len(sanitized) > validation.LabelValueMaxLength {
+			sanitized = sanitized[:validation.LabelValueMaxLength]
+		}
+
+		sanitized = strings.TrimLeftFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+		sanitized = strings.TrimRightFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+
+		if logger != nil {
+			logger.Debugw("event label sanitization result",
+				"key", key,
+				"original", value,
+				"sanitized", sanitized,
+			)
+		}
+
+		if sanitized == "" {
+			if logger != nil {
+				logger.Debugf("dropping event label %s because value %q is empty after sanitization", key, value)
+			}
+			delete(labels, key)
+			continue
+		}
+
+		if errs := validation.IsValidLabelValue(sanitized); len(errs) == 0 {
+			if logger != nil && sanitized != value {
+				logger.Debugf(
+					"sanitized event label %s from %q to %q to satisfy Kubernetes label constraints",
+					key, value, sanitized,
+				)
+			}
+			labels[key] = sanitized
+			continue
+		}
+
+		if logger != nil {
+			logger.Warnf(
+				"dropping event label %s=%q because it is invalid after sanitization: %v",
+				key, value, validation.IsValidLabelValue(sanitized),
+			)
+		}
+		delete(labels, key)
+	}
+}
+
+func isAllowedLabelRune(r rune) bool {
+	return isAlphaNumeric(r) || r == '-' || r == '_' || r == '.'
+}
+
+func isAlphaNumeric(r rune) bool {
+	return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
 }

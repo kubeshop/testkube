@@ -89,6 +89,8 @@ type Filter interface {
 	AssignedDefined() bool
 	Initialized() bool
 	InitializedDefined() bool
+	HealthRanges() [][2]float64
+	HealthRangesDefined() bool
 }
 
 //go:generate go tool mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository

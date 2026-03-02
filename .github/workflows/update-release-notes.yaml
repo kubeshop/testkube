@@ -1,0 +1,54 @@
+name: Update Release Notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name (e.g., 2.6.1)'
+        required: true
+        default: '2.6.1'
+      release_notes_file:
+        description: 'Path to release notes file'
+        required: true
+        default: 'docs/release-notes/2.6.1.md'
+
+permissions:
+  contents: write
+
+jobs:
+  update-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read release notes
+        id: read_notes
+        run: |
+          if [ -f "${{ inputs.release_notes_file }}" ]; then
+            echo "Reading release notes from ${{ inputs.release_notes_file }}"
+            # Read the file and escape for GitHub Actions
+            {
+              echo 'RELEASE_NOTES<<EOF'
+              cat "${{ inputs.release_notes_file }}"
+              echo EOF
+            } >> "$GITHUB_ENV"
+          else
+            echo "Error: Release notes file not found"
+            exit 1
+          fi
+
+      - name: Update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ inputs.tag }}" \
+            --notes "${{ env.RELEASE_NOTES }}" \
+            --repo ${{ github.repository }}
+
+      - name: Success message
+        run: |
+          echo "✅ Release notes updated successfully for tag ${{ inputs.tag }}"
+          echo "View at: https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag }}"

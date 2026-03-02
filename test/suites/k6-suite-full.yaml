@@ -7,6 +7,11 @@ metadata:
     type: suite
     tool: k6
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       parallelism: 2
@@ -17,3 +22,4 @@ spec:
       - name: k6-workflow-smoke-content-file
       - name: k6-workflow-smoke-master-image
       - name: distributed-k6-workflow-smoke
+      - name: k6-browser-workflow-smoke

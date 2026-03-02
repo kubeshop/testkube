@@ -7,6 +7,11 @@ metadata:
     type: suite-trigger
     tool: testkube-oss
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       workflows:

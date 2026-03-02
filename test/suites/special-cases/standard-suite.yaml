@@ -6,6 +6,11 @@ metadata:
     core-tests: workflows-suite
     type: suite
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       parallelism: 2

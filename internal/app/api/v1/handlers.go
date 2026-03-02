@@ -63,11 +63,8 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			EnableSecretEndpoint:  s.secretConfig.List,
 			DisableSecretCreation: !s.secretConfig.AutoCreate,
 			Secret:                &s.secretConfig,
-			Features: &testkube.Features{
-				LogsV2: s.featureFlags.LogsV2,
-			},
-			ExecutionNamespaces: executionNamespaces,
-			DockerImageVersion:  s.dockerImageVersion,
+			ExecutionNamespaces:   executionNamespaces,
+			DockerImageVersion:    s.dockerImageVersion,
 		})
 	}
 }

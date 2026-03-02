@@ -23,7 +23,7 @@ func (c Client) UpdateOrCreateWebhookTemplate(ctx context.Context, obj executorv
 	callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 	defer cancel()
 	// Add metadata to the call.
-	callCtx = metadata.AppendToOutgoingContext(callCtx, "organisation-id", c.OrganisationId)
+	callCtx = metadata.AppendToOutgoingContext(callCtx, "organization-id", c.OrganizationId)
 
 	if _, err := c.client.UpdateOrCreate(callCtx, &syncv1.UpdateOrCreateRequest{
 		Payload: &syncv1.UpdateOrCreateRequest_WebhookTemplate{
@@ -31,7 +31,7 @@ func (c Client) UpdateOrCreateWebhookTemplate(ctx context.Context, obj executorv
 				Payload: jsonEncodedObj,
 			},
 		},
-	}); err != nil {
+	}, c.callOpts...); err != nil {
 		return fmt.Errorf("send request to update or create webhooktemplate: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func (c Client) DeleteWebhookTemplate(ctx context.Context, name string) error {
 	callCtx, cancel := context.WithTimeout(ctx, c.callTimeout)
 	defer cancel()
 	// Add metadata to the call.
-	callCtx = metadata.AppendToOutgoingContext(callCtx, "organisation-id", c.OrganisationId)
+	callCtx = metadata.AppendToOutgoingContext(callCtx, "organization-id", c.OrganizationId)
 
 	if _, err := c.client.Delete(callCtx, &syncv1.DeleteRequest{
 		Id: &syncv1.DeleteRequest_WebhookTemplate{
@@ -53,7 +53,7 @@ func (c Client) DeleteWebhookTemplate(ctx context.Context, name string) error {
 				Id: &name,
 			},
 		},
-	}); err != nil {
+	}, c.callOpts...); err != nil {
 		return fmt.Errorf("send request to delete webhooktemplate: %w", err)
 	}
 

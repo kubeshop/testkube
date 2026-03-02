@@ -1,0 +1,26 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--postman--beta
+  labels:
+    testkube.io/name: Postman
+    testkube.io/wizard: disabled
+  annotations:
+    testkube.io/categories: API
+    testkube.io/description: Run Postman tests
+    testkube.io/icon: postman
+spec:
+  config:
+    version:
+      description: Postman version to use
+      type: string
+      default: 6-alpine
+    run:
+      description: Run command
+      type: string
+      default: "newman run"
+  steps:
+  - name: Run Postman tests
+    run:
+      image: "postman/newman:{{ config.version }}"
+      shell: "{{ config.run }}"

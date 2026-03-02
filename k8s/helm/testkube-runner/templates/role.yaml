@@ -29,6 +29,34 @@ rules:
 
 ---
 
+# Allow Agent to access leases for leader election
+{{- if .Values.pod.serviceAccount.autoCreate }}
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: "agent-lease-access-{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    {{- if .Values.global.labels }}
+    {{- toYaml .Values.global.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.global.annotations }}
+    {{- toYaml .Values.global.annotations | nindent 4 }}
+    {{- end }}
+rules:
+- apiGroups:
+    - "coordination.k8s.io"
+  resources:
+    - leases
+  verbs:
+    - get
+    - create
+    - update
+{{- end }}
+
+---
+
 {{- $anyAdditionalNamespaceWithAutoCreate := false -}}
 {{- range $ns, $data := .Values.execution.additionalNamespaces }}
 {{- $anyAdditionalNamespaceWithAutoCreate = or $anyAdditionalNamespaceWithAutoCreate (and $data.serviceAccount $data.serviceAccount.autoCreate) }}
@@ -156,31 +184,9 @@ rules:
 
 ---
 
-# Allow Agent to access leases for triggers functionality
-{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
-apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
-kind: Role
-metadata:
-  name: "triggers-lease-access-{{ .Release.Name }}"
-  namespace: "{{ .Release.Namespace }}"
-  labels:
-    {{- if .Values.global.labels }}
-    {{- toYaml .Values.global.labels | nindent 4 }}
-    {{- end }}
-  annotations:
-    {{- if .Values.global.annotations }}
-    {{- toYaml .Values.global.annotations | nindent 4 }}
-    {{- end }}
-rules:
-- apiGroups: ["coordination.k8s.io"]
-  resources: ["leases"]
-  verbs: ["get", "create", "update"]
-{{- end }}
-
----
-
 # Allow Agent to watch resources for triggers functionality
-{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- $watchersEnabled := or .Values.listener.enabled .Values.gitops.enabled }}
+{{- if and .Values.pod.serviceAccount.autoCreate $watchersEnabled }}
 {{- $watchAll := .Values.listener.watchAllNamespaces }}
 {{- $additional := default (list) .Values.listener.additionalNamespaces }}
 {{- if $watchAll }}
@@ -225,5 +231,3 @@ metadata:
 {{- end }}
 
 ---
-
-

@@ -23,7 +23,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -34,7 +34,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -46,7 +46,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -84,7 +84,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -95,7 +95,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -107,7 +107,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -145,7 +145,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -156,7 +156,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -168,7 +168,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -214,7 +214,7 @@ SELECT DISTINCT ON (w.name)
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -225,7 +225,7 @@ SELECT DISTINCT ON (w.name)
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -237,7 +237,7 @@ SELECT DISTINCT ON (w.name)
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -276,7 +276,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -287,7 +287,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -299,7 +299,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -338,7 +338,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -349,7 +349,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -361,7 +361,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -390,6 +390,14 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -454,7 +462,7 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: GetTestWorkflowExecutionsTotals :many
 SELECT 
@@ -481,6 +489,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -571,7 +587,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -582,7 +598,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -594,7 +610,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -623,6 +639,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -687,7 +711,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
@@ -702,9 +726,9 @@ INSERT INTO test_workflow_executions (
 
 -- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
-    execution_id, ref, name, category, optional, negative, parent_id
+    execution_id, ref, name, category, optional, negative, parent_id, sig_order
 ) VALUES (
-    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id
+    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id, @sig_order
 )
 RETURNING test_workflow_signatures.id;
 
@@ -734,12 +758,12 @@ ON CONFLICT (execution_id) DO UPDATE SET
     steps = EXCLUDED.steps;
 
 -- name: InsertTestWorkflowOutput :exec
-INSERT INTO test_workflow_outputs (execution_id, ref, name, value)
-VALUES (@execution_id, @ref, @name, @value);
+INSERT INTO test_workflow_outputs (execution_id, ref, name, value, out_order)
+VALUES (@execution_id, @ref, @name, @value, @out_order);
 
 -- name: InsertTestWorkflowReport :exec
-INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
-VALUES (@execution_id, @ref, @kind, @file, @summary);
+INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, rep_order)
+VALUES (@execution_id, @ref, @kind, @file, @summary, @rep_order);
 
 -- name: InsertTestWorkflowResourceAggregations :exec
 INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
@@ -786,14 +810,16 @@ SET
     steps = @steps
 WHERE execution_id = @execution_id;
 
+-- name: UpdateExecutionStatus :exec
+UPDATE test_workflow_results 
+SET 
+    status = @status
+WHERE execution_id = @execution_id;
+
 -- name: UpdateExecutionStatusAt :exec
 UPDATE test_workflow_executions 
 SET status_at = @status_at
 WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);
-
--- name: UpdateTestWorkflowExecutionReport :exec
-INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
-VALUES (@execution_id, @ref, @kind, @file, @summary);
 
 -- name: DeleteTestWorkflowSignatures :exec
 DELETE FROM test_workflow_signatures WHERE execution_id = @execution_id;
@@ -853,7 +879,7 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
     AND (@last_n_days::integer = 0 OR e.scheduled_at >= NOW() - (@last_n_days::integer || ' days')::interval)
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt;
+LIMIT NULLIF(@lmt, 0);
 
 -- name: GetPreviousFinishedState :one
 SELECT r.status
@@ -935,7 +961,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json  as signatures_json,
@@ -946,7 +972,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json  as outputs_json,
@@ -958,7 +984,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json  as reports_json,
@@ -1045,7 +1071,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1056,7 +1082,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1068,7 +1094,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,
@@ -1097,6 +1123,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -1161,7 +1195,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: CountTestWorkflowExecutions :one
 SELECT COUNT(*)
@@ -1188,6 +1222,14 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR 
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+         EXISTS (
+             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+         )
+    )
     AND (     
         (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
@@ -1250,9 +1292,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                 )
             ) = jsonb_array_length(@selector_conditions::jsonb)
         )
-    )
-ORDER BY e.scheduled_at DESC
-LIMIT @lmt OFFSET @fst;
+    );
 
 -- name: GetTestWorkflowExecutionWithRunner :one
 SELECT 
@@ -1279,7 +1319,7 @@ SELECT
                 'optional', s.optional,
                 'negative', s.negative,
                 'parent_id', s.parent_id
-            ) ORDER BY s.id
+            ) ORDER BY s.sig_order
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     )::json as signatures_json,
@@ -1290,7 +1330,7 @@ SELECT
                 'ref', o.ref,
                 'name', o.name,
                 'value', o.value
-            ) ORDER BY o.id
+            ) ORDER BY o.out_order
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     )::json as outputs_json,
@@ -1302,7 +1342,7 @@ SELECT
                 'kind', rep.kind,
                 'file', rep.file,
                 'summary', rep.summary
-            ) ORDER BY rep.id
+            ) ORDER BY rep.rep_order
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     )::json as reports_json,

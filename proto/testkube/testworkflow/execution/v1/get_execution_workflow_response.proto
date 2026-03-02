@@ -1,0 +1,14 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "testkube/testworkflow/v1/test_workflow.proto";
+
+// GetExecutionWorkflowResponse is the server response which
+// should contain an enriched workflow to be executed and any
+// additional information that may be related.
+message GetExecutionWorkflowResponse {
+  // workflow is the requested workflow with any potential
+  // enrichments already applied.
+  .testkube.testworkflow.v1.TestWorkflow workflow = 1;
+}

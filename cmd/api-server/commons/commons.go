@@ -3,7 +3,6 @@ package commons
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -19,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
@@ -28,29 +26,21 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
-	"github.com/kubeshop/testkube/pkg/cronjob"
 	postgresmigrations "github.com/kubeshop/testkube/pkg/database/postgres/migrations"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
-	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
-	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func ExitOnError(title string, err error) {
@@ -59,8 +49,6 @@ func ExitOnError(title string, err error) {
 		os.Exit(1)
 	}
 }
-
-// General
 
 func GetEnvironmentVariables() map[string]string {
 	list := os.Environ()
@@ -100,13 +88,6 @@ func MustGetConfig() *config.Config {
 	cfg, err := config.Get()
 	ExitOnError("error getting application config", err)
 	return cfg
-}
-
-func MustGetFeatureFlags() featureflags.FeatureFlags {
-	features, err := featureflags.Get()
-	ExitOnError("error getting application feature flags", err)
-	log.DefaultLogger.Infow("feature flags configured", "ff", features)
-	return features
 }
 
 func MustFreePort(port int) {
@@ -254,79 +235,6 @@ func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-// Actions
-
-func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, images kubeexecutor.Images, err error) {
-	rawExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeDefaultExecutors,
-		cfg.TestkubeConfigDir,
-		"executors.json",
-		"executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
-		return nil, images, err
-	}
-
-	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeEnabledExecutors,
-		cfg.TestkubeConfigDir,
-		"enabledExecutors",
-		"enabled executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	// Load internal images
-	next := make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if executors[i].Name == "logs-sidecar" {
-			images.LogSidecar = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "init-executor" {
-			images.Init = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "scraper-executor" {
-			images.Scraper = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Executor == nil {
-			continue
-		}
-		next = append(next, executors[i])
-	}
-	executors = next
-
-	// When there is no executors selected, enable all
-	if enabledExecutors == "" {
-		return executors, images, nil
-	}
-
-	// Filter enabled executors
-	specifiedExecutors := make(map[string]struct{})
-	for _, executor := range strings.Split(enabledExecutors, ",") {
-		if strings.TrimSpace(executor) == "" {
-			continue
-		}
-		specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
-	}
-
-	next = make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if _, ok := specifiedExecutors[executors[i].Name]; ok {
-			next = append(next, executors[i])
-		}
-	}
-
-	return next, images, nil
-}
-
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
 		APIKey:                              cfg.TestkubeProAPIKey,
@@ -341,7 +249,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		OrgName:                             cfg.TestkubeProOrgID,
 		ConnectionTimeout:                   cfg.TestkubeProConnectionTimeout,
 		WorkerCount:                         cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:                             cfg.TestkubeProMigrate,
 		DashboardURI:                        cfg.TestkubeDashboardURI,
 		CloudStorage:                        false,
@@ -400,9 +307,9 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
 		proContext.Agent.ID = foundProContext.Agent.Id
 		proContext.Agent.Name = foundProContext.Agent.Name
-		proContext.Agent.Type = foundProContext.Agent.Type
 		proContext.Agent.Labels = foundProContext.Agent.Labels
 		proContext.Agent.Disabled = foundProContext.Agent.Disabled
+		proContext.Agent.IsSuperAgent = foundProContext.Agent.IsSuperAgent
 		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
 			return config.ProContextAgentEnvironment{
 				ID:   env.Id,
@@ -426,23 +333,11 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilitySourceOfTruth) {
+		proContext.HasSourceOfTruthCapability = true
+	}
+
 	return proContext, nil
-}
-
-func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
-	slackTemplate, err := parser.LoadConfigFromStringOrFile(
-		cfg.SlackTemplate,
-		cfg.TestkubeConfigDir,
-		"slack-template.json",
-		"slack template",
-	)
-	ExitOnError("Creating slack loader", err)
-
-	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
-	ExitOnError("Creating slack loader", err)
-
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
-		testkube.AllEventTypes, envs)
 }
 
 func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
@@ -473,6 +368,16 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 
 // Components
 
+func TrimAndFilterRegistries(csv string) []string {
+	var result []string
+	for _, r := range strings.Split(csv, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
 func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
@@ -482,18 +387,13 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	}
 	return imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(),
+		imageinspector.NewCraneFetcher(TrimAndFilterRegistries(cfg.InsecureRegistries)...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
 }
 
-func CreateCronJobScheduler(cfg *config.Config,
-	testWorkflowClient testworkflowclient.TestWorkflowClient,
-	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
-	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	logger *zap.SugaredLogger,
-	proContext *config.ProContext) cronjob.Interface {
+func CronJobsEnabled(cfg *config.Config) bool {
 	enableCronJobs := cfg.EnableCronJobs
 	if enableCronJobs == "" {
 		var err error
@@ -502,26 +402,19 @@ func CreateCronJobScheduler(cfg *config.Config,
 			"enable-cron-jobs",
 			"enable cron jobs",
 		)
-		ExitOnError("creating cron job scheduler config loading", err)
+		if err != nil {
+			return false
+		}
 	}
 
 	if enableCronJobs == "" {
-		return nil
+		return false
 	}
 
 	result, err := strconv.ParseBool(enableCronJobs)
-	ExitOnError("creating cron job scheduler config parsing", err)
-
-	if !result {
-		return nil
+	if err != nil {
+		return false
 	}
 
-	scheduler := cronjob.New(testWorkflowClient,
-		testWorkflowTemplateClient,
-		testWorkflowExecutor,
-		logger,
-		proContext,
-	)
-
-	return scheduler
+	return result
 }

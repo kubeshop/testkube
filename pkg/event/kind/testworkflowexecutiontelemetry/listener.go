@@ -42,6 +42,10 @@ func (l *testWorkflowExecutionTelemetryListener) Kind() string {
 	return "TestWorkflowExecutionTelemetry"
 }
 
+func (l *testWorkflowExecutionTelemetryListener) Group() string {
+	return ""
+}
+
 func (l *testWorkflowExecutionTelemetryListener) Events() []testkube.EventType {
 	return []testkube.EventType{
 		testkube.QUEUE_TESTWORKFLOW_EventType,
@@ -58,6 +62,11 @@ func (l *testWorkflowExecutionTelemetryListener) Metadata() map[string]string {
 		"events":   fmt.Sprintf("%v", l.Events()),
 		"selector": l.Selector(),
 	}
+}
+
+func (l *testWorkflowExecutionTelemetryListener) Match(event testkube.Event) bool {
+	_, valid := event.Valid(l.Group(), l.Selector(), l.Events())
+	return valid
 }
 
 func (l *testWorkflowExecutionTelemetryListener) Notify(event testkube.Event) testkube.EventResult {

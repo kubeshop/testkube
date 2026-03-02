@@ -4138,6 +4138,9 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    silent:
+                      description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+                      type: boolean
                     tags:
                       additionalProperties:
                         type: string

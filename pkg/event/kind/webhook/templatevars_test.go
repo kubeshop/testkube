@@ -29,7 +29,7 @@ func TestTemplateVars_ExposeRunningContext(t *testing.T) {
 	require.NoError(t, err)
 
 	var buffer bytes.Buffer
-	err = tmpl.ExecuteTemplate(&buffer, "runningContext", NewTemplateVars(event, nil, nil))
+	err = tmpl.ExecuteTemplate(&buffer, "runningContext", NewTemplateVars(event, "", "", "", nil))
 	require.NoError(t, err)
 
 	require.Equal(t, "Jane Doe|user", buffer.String())

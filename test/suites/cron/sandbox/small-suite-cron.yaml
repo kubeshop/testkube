@@ -6,6 +6,11 @@ metadata:
     core-tests: workflows-suite-trigger
     type: suite-trigger
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - execute:
       workflows:

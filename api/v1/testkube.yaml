@@ -263,6 +263,19 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
+        - name: mode
+          in: query
+          description: |
+            Update mode for the trigger. When set to "replace", the entire trigger 
+            is replaced with the request body (full replacement semantics). When not 
+            set or set to any other value, merge semantics are used where only 
+            non-null fields from the request are applied to the existing trigger.
+            This is used by cloud-api to signal that the original request was YAML.
+          required: false
+          schema:
+            type: string
+            enum:
+              - replace
       tags:
         - test-triggers
         - api
@@ -7340,8 +7353,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - resource
-        - resourceSelector
         - event
         - action
         - execution
@@ -7780,6 +7791,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7848,6 +7861,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookParameterSchema"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     Event:
       description: Event data
@@ -7864,6 +7879,9 @@ components:
         streamTopic:
           type: string
           description: stream topic
+        groupId:
+          description: ID for event group
+          type: string
         resource:
           $ref: "#/components/schemas/EventResource"
         resourceId:
@@ -8118,6 +8136,8 @@ components:
           example:
             - true
             - false
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     LocalObjectReference:
       description: Reference to Kubernetes object
@@ -8648,6 +8668,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -9304,6 +9326,8 @@ components:
           example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+        sync:
+          $ref: "#/components/schemas/Syncable"
 
     TestWorkflowStepParallel:
       type: object
@@ -9512,7 +9536,7 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
-          $ref: "#/components/schemas/TestWorkflowTagSchema"
+          $ref: "#/components/schemas/TestWorkflowExecutionSchema"
         pvcs:
           type: object
           additionalProperties:
@@ -9556,7 +9580,7 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
-          $ref: "#/components/schemas/TestWorkflowTagSchema"
+          $ref: "#/components/schemas/TestWorkflowExecutionSchema"
         pvcs:
           type: object
           additionalProperties:
@@ -10498,14 +10522,18 @@ components:
           description: disable CDEvents for this execution
           default: false
 
-    TestWorkflowTagSchema:
+    TestWorkflowExecutionSchema:
       type: object
-      description: test workflow execution tag definition
+      description: test workflow execution configuration
       properties:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
           $ref: "#/components/schemas/ExecutionTarget"
+        silent:
+          type: boolean
+          description: indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+          default: false
 
     TestWorkflowExecutionTags:
       type: object
@@ -11771,6 +11799,25 @@ components:
       required:
         - name
 
+    Source:
+      description: synchronisation sources
+      type: string
+      enum:
+        - kubernetes
+
+    Syncable:
+      description: |
+        source information about resources that may have been synced from multiple sources.
+        An empty source indicates that the source was the UI/API for backwards compatibility.
+      type: object
+      properties:
+        creationSource:
+          description: the original source from which the resource was created
+          $ref: "#/components/schemas/Source"
+        lastModificationSource:
+          description: the source from which the last modification of the resource originated
+          $ref: "#/components/schemas/Source"
+
     #
     # Errors
     #
@@ -12061,4 +12108,3 @@ components:
               filePath:
                 type: string
                 example: folder/file.txt
-

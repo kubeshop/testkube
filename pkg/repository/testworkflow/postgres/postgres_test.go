@@ -89,9 +89,9 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowExecution(
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) (int32, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) (pgtype.UUID, error) {
 	args := m.Called(ctx, arg)
-	return int32(args.Int(0)), args.Error(1)
+	return args.Get(0).(pgtype.UUID), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResult(ctx context.Context, arg sqlc.InsertTestWorkflowResultParams) error {
@@ -144,12 +144,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAtStric
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionReport(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionReportParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
-
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatus(ctx context.Context, arg sqlc.UpdateExecutionStatusParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
@@ -482,6 +481,14 @@ func (m *MockFilter) AssignedDefined() bool {
 	return m.Called().Bool(0)
 }
 
+func (m *MockFilter) HealthRanges() [][2]float64 {
+	return m.Called().Get(0).([][2]float64)
+}
+
+func (m *MockFilter) HealthRangesDefined() bool {
+	return m.Called().Bool(0)
+}
+
 // Helper functions for tests
 func createTestExecution() *testkube.TestWorkflowExecution {
 	status := testkube.PASSED_TestWorkflowStatus
@@ -525,6 +532,7 @@ func createTestFilter() *MockFilter {
 	filter.On("ActorTypeDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
+	filter.On("HealthRangesDefined").Return(false)
 	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))

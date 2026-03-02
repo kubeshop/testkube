@@ -21,7 +21,7 @@ spec:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 1200
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}
@@ -31,7 +31,7 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.55.1-noble
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
     env:
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'
@@ -49,6 +49,7 @@ spec:
   - name: Install dependencies
     shell: npm install
   - name: Run tests
+    timeout: 15m
     shell: npx playwright test --retries=1
     artifacts:
       paths:
@@ -80,14 +81,18 @@ spec:
           name: 'testkube-agent-secrets'
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 1200
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
     GIT_REVISION: {type: string, default: 'main'}
     SHARDS: {type: integer, default: 10}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.55.1-noble
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
     env:
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'

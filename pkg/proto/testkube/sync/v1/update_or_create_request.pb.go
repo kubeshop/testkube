@@ -7,6 +7,7 @@
 package syncv1
 
 import (
+	v1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -88,7 +89,7 @@ func (x *UpdateOrCreateRequest) GetTestTrigger() *TestTrigger {
 	return nil
 }
 
-func (x *UpdateOrCreateRequest) GetTestWorkflow() *TestWorkflow {
+func (x *UpdateOrCreateRequest) GetTestWorkflow() *v1.TestWorkflow {
 	if x != nil {
 		if x, ok := x.Payload.(*UpdateOrCreateRequest_TestWorkflow); ok {
 			return x.TestWorkflow
@@ -135,7 +136,7 @@ type UpdateOrCreateRequest_TestTrigger struct {
 
 type UpdateOrCreateRequest_TestWorkflow struct {
 	// test_workflow indicates the object is a TestWorkflow
-	TestWorkflow *TestWorkflow `protobuf:"bytes,2,opt,name=test_workflow,json=testWorkflow,oneof"`
+	TestWorkflow *v1.TestWorkflow `protobuf:"bytes,2,opt,name=test_workflow,json=testWorkflow,oneof"`
 }
 
 type UpdateOrCreateRequest_TestWorkflowTemplate struct {
@@ -167,10 +168,10 @@ var File_testkube_sync_v1_update_or_create_request_proto protoreflect.FileDescri
 
 const file_testkube_sync_v1_update_or_create_request_proto_rawDesc = "" +
 	"\n" +
-	"/testkube/sync/v1/update_or_create_request.proto\x12\x10testkube.sync.v1\x1a#testkube/sync/v1/test_trigger.proto\x1a$testkube/sync/v1/test_workflow.proto\x1a-testkube/sync/v1/test_workflow_template.proto\x1a\x1etestkube/sync/v1/webhook.proto\x1a'testkube/sync/v1/webhook_template.proto\"\x94\x03\n" +
+	"/testkube/sync/v1/update_or_create_request.proto\x12\x10testkube.sync.v1\x1a#testkube/sync/v1/test_trigger.proto\x1a-testkube/sync/v1/test_workflow_template.proto\x1a\x1etestkube/sync/v1/webhook.proto\x1a'testkube/sync/v1/webhook_template.proto\x1a,testkube/testworkflow/v1/test_workflow.proto\"\x9c\x03\n" +
 	"\x15UpdateOrCreateRequest\x12B\n" +
-	"\ftest_trigger\x18\x01 \x01(\v2\x1d.testkube.sync.v1.TestTriggerH\x00R\vtestTrigger\x12E\n" +
-	"\rtest_workflow\x18\x02 \x01(\v2\x1e.testkube.sync.v1.TestWorkflowH\x00R\ftestWorkflow\x12^\n" +
+	"\ftest_trigger\x18\x01 \x01(\v2\x1d.testkube.sync.v1.TestTriggerH\x00R\vtestTrigger\x12M\n" +
+	"\rtest_workflow\x18\x02 \x01(\v2&.testkube.testworkflow.v1.TestWorkflowH\x00R\ftestWorkflow\x12^\n" +
 	"\x16test_workflow_template\x18\x03 \x01(\v2&.testkube.sync.v1.TestWorkflowTemplateH\x00R\x14testWorkflowTemplate\x125\n" +
 	"\awebhook\x18\x04 \x01(\v2\x19.testkube.sync.v1.WebhookH\x00R\awebhook\x12N\n" +
 	"\x10webhook_template\x18\x05 \x01(\v2!.testkube.sync.v1.WebhookTemplateH\x00R\x0fwebhookTemplateB\t\n" +
@@ -193,14 +194,14 @@ var file_testkube_sync_v1_update_or_create_request_proto_msgTypes = make([]proto
 var file_testkube_sync_v1_update_or_create_request_proto_goTypes = []any{
 	(*UpdateOrCreateRequest)(nil), // 0: testkube.sync.v1.UpdateOrCreateRequest
 	(*TestTrigger)(nil),           // 1: testkube.sync.v1.TestTrigger
-	(*TestWorkflow)(nil),          // 2: testkube.sync.v1.TestWorkflow
+	(*v1.TestWorkflow)(nil),       // 2: testkube.testworkflow.v1.TestWorkflow
 	(*TestWorkflowTemplate)(nil),  // 3: testkube.sync.v1.TestWorkflowTemplate
 	(*Webhook)(nil),               // 4: testkube.sync.v1.Webhook
 	(*WebhookTemplate)(nil),       // 5: testkube.sync.v1.WebhookTemplate
 }
 var file_testkube_sync_v1_update_or_create_request_proto_depIdxs = []int32{
 	1, // 0: testkube.sync.v1.UpdateOrCreateRequest.test_trigger:type_name -> testkube.sync.v1.TestTrigger
-	2, // 1: testkube.sync.v1.UpdateOrCreateRequest.test_workflow:type_name -> testkube.sync.v1.TestWorkflow
+	2, // 1: testkube.sync.v1.UpdateOrCreateRequest.test_workflow:type_name -> testkube.testworkflow.v1.TestWorkflow
 	3, // 2: testkube.sync.v1.UpdateOrCreateRequest.test_workflow_template:type_name -> testkube.sync.v1.TestWorkflowTemplate
 	4, // 3: testkube.sync.v1.UpdateOrCreateRequest.webhook:type_name -> testkube.sync.v1.Webhook
 	5, // 4: testkube.sync.v1.UpdateOrCreateRequest.webhook_template:type_name -> testkube.sync.v1.WebhookTemplate
@@ -217,7 +218,6 @@ func file_testkube_sync_v1_update_or_create_request_proto_init() {
 		return
 	}
 	file_testkube_sync_v1_test_trigger_proto_init()
-	file_testkube_sync_v1_test_workflow_proto_init()
 	file_testkube_sync_v1_test_workflow_template_proto_init()
 	file_testkube_sync_v1_webhook_proto_init()
 	file_testkube_sync_v1_webhook_template_proto_init()

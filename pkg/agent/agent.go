@@ -25,8 +25,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 )
 
 const (
@@ -34,6 +32,7 @@ const (
 	cloudMigrateMeta       = "migrate"
 	orgIdMeta              = "organization-id"
 	envIdMeta              = "environment-id"
+	agentIdMeta            = "agent-id"
 	healthcheckCommand     = "healthcheck"
 	dockerImageVersionMeta = "docker-image-version"
 
@@ -61,19 +60,12 @@ type Agent struct {
 	requestBuffer  chan *cloud.ExecuteRequest
 	responseBuffer chan *cloud.ExecuteResponse
 
-	logStreamWorkerCount    int
-	logStreamRequestBuffer  chan *cloud.LogsStreamRequest
-	logStreamResponseBuffer chan *cloud.LogsStreamResponse
-	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
-
-	events              chan testkube.Event
-	sendTimeout         time.Duration
-	receiveTimeout      time.Duration
-	healthcheckInterval time.Duration
+	events         chan testkube.Event
+	sendTimeout    time.Duration
+	receiveTimeout time.Duration
 
 	clusterID          string
 	clusterName        string
-	features           featureflags.FeatureFlags
 	dockerImageVersion string
 
 	proContext *config.ProContext
@@ -84,99 +76,107 @@ type Agent struct {
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
-	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	clusterID string,
 	clusterName string,
-	features featureflags.FeatureFlags,
 	proContext *config.ProContext,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
 ) (*Agent, error) {
 	return &Agent{
-		handler:                 handler,
-		logger:                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                  proContext.APIKey,
-		client:                  client,
-		events:                  make(chan testkube.Event),
-		workerCount:             proContext.WorkerCount,
-		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:          5 * time.Minute,
-		sendTimeout:             30 * time.Second,
-		healthcheckInterval:     30 * time.Second,
-		logStreamWorkerCount:    proContext.LogStreamWorkerCount,
-		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamFunc:           logStreamFunc,
-		clusterID:               clusterID,
-		clusterName:             clusterName,
-		features:                features,
-		proContext:              proContext,
-		dockerImageVersion:      dockerImageVersion,
-		eventEmitter:            eventEmitter,
+		handler:            handler,
+		logger:             logger.With("service", "Agent", "environmentId", proContext.EnvID),
+		apiKey:             proContext.APIKey,
+		client:             client,
+		events:             make(chan testkube.Event),
+		workerCount:        proContext.WorkerCount,
+		requestBuffer:      make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:     make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:     5 * time.Minute,
+		sendTimeout:        30 * time.Second,
+		clusterID:          clusterID,
+		clusterName:        clusterName,
+		proContext:         proContext,
+		dockerImageVersion: dockerImageVersion,
+		eventEmitter:       eventEmitter,
 	}, nil
 }
 
 func (ag *Agent) Run(ctx context.Context) error {
-	reconnectionLoop := func(name string, fn func(context.Context) error) func() {
-		return func() {
-			for {
-				// Pre check for already finished context in case it is not correctly handled by the passed function.
-				if ctx.Err() != nil {
-					return
-				}
-
-				ag.logger.Infow("starting reconnection loop",
-					"name", name)
-
-				err := fn(ctx)
-				switch {
-				case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-					// After context cancellation exit the loop.
-					return
-				case err != nil:
-					ag.logger.Errorw("error running agent connection",
-						"name", name,
-						"error", err)
-				}
-
-				ag.logger.Infow("agent connection closed, reconnecting after delay",
-					"name", name,
-					"delay", reconnectionLoopDelay)
-
-				time.Sleep(reconnectionLoopDelay)
-			}
-		}
-	}
-
 	var wg sync.WaitGroup
 
-	wg.Go(reconnectionLoop("command loop", ag.runCommandLoop))
-	wg.Go(reconnectionLoop("worker loop", ag.runWorkers(ag.workerCount)))
-	wg.Go(reconnectionLoop("event loop", ag.runEventLoop))
-
-	wg.Go(reconnectionLoop("event read loop", ag.runEventsReaderLoop))
-
-	if !ag.features.LogsV2 {
-		wg.Go(reconnectionLoop("log stream loop", ag.runLogStreamLoop))
-		wg.Go(reconnectionLoop("log stream worker loop", ag.runLogStreamWorker(ag.logStreamWorkerCount)))
-	}
-
+	wg.Go(func() {
+		_ = ag.runWithReconnect(ctx, "command loop", ag.runCommandLoop)
+	})
+	wg.Go(func() {
+		_ = ag.runWithReconnect(ctx, "worker loop", ag.runWorkers(ag.workerCount))
+	})
+	wg.Go(func() {
+		_ = ag.runWithReconnect(ctx, "event loop", ag.runEventLoop)
+	})
 	wg.Wait()
 
 	// We can only return here if the context has been cancelled.
 	return ctx.Err()
 }
 
-func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
+func (ag *Agent) RunEventReader(ctx context.Context) error {
+	return ag.runWithReconnect(ctx, "event read loop", ag.runEventsReaderLoop)
+}
+
+func (ag *Agent) runWithReconnect(ctx context.Context, name string, fn func(context.Context) error) error {
+	for {
+		// Pre check for already finished context in case it is not correctly handled by the passed function.
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		ag.logger.Infow("starting reconnection loop",
+			"name", name)
+
+		err := fn(ctx)
+		switch {
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+			// After context cancellation exit the loop.
+			return err
+		case err != nil:
+			ag.logger.Errorw("error running agent connection",
+				"name", name,
+				"error", err)
+		}
+
+		ag.logger.Infow("agent connection closed, reconnecting after delay",
+			"name", name,
+			"delay", reconnectionLoopDelay)
+
+		time.Sleep(reconnectionLoopDelay)
+	}
+}
+
+func (ag *Agent) outgoingContext(ctx context.Context) context.Context {
+	if ag.proContext == nil {
+		return ctx
+	}
+	// Auth related metadata
 	if ag.proContext.APIKey != "" {
 		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
 	}
-
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, agentIdMeta, ag.proContext.Agent.ID)
+	// Other metadata
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
 	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
+	if ag.proContext.CloudStorage {
+		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
+	}
+	// Deprecated: always enabled
+	ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
+	return ctx
+}
+
+func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
+	ctx = ag.outgoingContext(ctx)
 
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
@@ -217,20 +217,26 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 		if ev.Resource == nil {
 			ev.Resource = &cloud.EventResource{}
 		}
+
+		// Reconstruct testkube event from gRPC event
+		// Note: ev.Data contains the serialized execution/resource, not the full event
 		tkEvent := testkube.Event{
-			Id:                    ev.Id,
-			Resource:              common.Ptr(testkube.EventResource(ev.Resource.Type)),
-			ResourceId:            ev.Resource.Id,
-			Type_:                 common.Ptr(testkube.EventType(ev.Type)),
-			TestWorkflowExecution: nil,
-			External:              true,
+			Id:         ev.Id,
+			Resource:   common.Ptr(testkube.EventResource(ev.Resource.Type)),
+			ResourceId: ev.Resource.Id,
+			Type_:      common.Ptr(testkube.EventType(ev.Type)),
+			GroupId:    ag.proContext.EnvID, // Set GroupId to agent's environment ID
+			External:   true,
 		}
+
+		// Unmarshal the execution/resource data based on resource type
 		if ev.Resource.Type == string(testkube.TESTWORKFLOWEXECUTION_EventResource) {
 			var v testkube.TestWorkflowExecution
 			if err = json.Unmarshal(ev.Data, &v); err == nil {
 				tkEvent.TestWorkflowExecution = &v
 			}
 		}
+
 		ag.eventEmitter.Notify(tkEvent)
 	}
 }
@@ -270,7 +276,6 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 
 		cmd = resp.resp
 		err := resp.err
-
 		if err != nil {
 			ag.logger.Errorf("agent stream receive: %v", err)
 			return nil, err
@@ -286,20 +291,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	if ag.proContext.APIKey != "" {
-		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-	}
-
-	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
-	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
-	ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true") //nolint
-
-	if ag.proContext.CloudStorage {
-		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
-	}
+	ctx = ag.outgoingContext(ctx)
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

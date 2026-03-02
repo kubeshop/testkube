@@ -82,7 +82,7 @@ func TestNATS_Integration(t *testing.T) {
 
 	// given event
 
-	event := testkube.NewEventStartTest(testkube.NewQueuedExecution())
+	event := testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution())
 	event.Id = "123"
 
 	// and connection

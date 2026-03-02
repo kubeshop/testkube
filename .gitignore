@@ -33,9 +33,6 @@ bin
 .idea
 *.iml
 
-# Helm
-Chart.lock
-
 .DS_Store
 bin/
 site
