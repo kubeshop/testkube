@@ -29,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
 // MockRegistry is a simple in-memory implementation of a worker registry for testing
@@ -401,18 +402,13 @@ func TestTransferServer(t *testing.T) {
 }
 
 func TestParallelExecution(t *testing.T) {
-	minimalTkConfig := `{
-		"namespace": "test",
-		"resource": {"id": "test", "root": "/tmp", "fsPrefix": "test"},
-		"workflow": {"name": "test", "labels": {}},
-		"execution": {"id": "test", "organizationId": "test", "environmentId": "test", "pvcNames": {}},
-		"controlPlane": {"url": "http://localhost:8088"},
-		"worker": {"namespace": "test", "connection": {"url": "http://localhost:8088"}}
-	}`
-	t.Setenv("TK_CFG", minimalTkConfig)
-
-	cfg, err := config.LoadConfigV2()
-	require.NoError(t, err, "Failed to load config")
+	cfg := config.NewConfigV2ForTest(testworkflowconfig.InternalConfig{
+		Resource:     testworkflowconfig.ResourceConfig{Id: "test", RootId: "/tmp", FsPrefix: "test"},
+		Workflow:     testworkflowconfig.WorkflowConfig{Name: "test"},
+		Execution:    testworkflowconfig.ExecutionConfig{Id: "test", OrganizationId: "test", EnvironmentId: "test"},
+		ControlPlane: testworkflowconfig.ControlPlaneConfig{DashboardUrl: "http://localhost:8088"},
+		Worker:       testworkflowconfig.WorkerConfig{Namespace: "test", Connection: testworkflowconfig.WorkerConnectionConfig{Url: "http://localhost:8088"}},
+	})
 
 	// Create NoOp storage for tests
 	storage, err := artifacts.InternalStorageWithProvider(&artifacts.NoOpStorageProvider{}, cfg)
@@ -489,4 +485,102 @@ func TestParallelExecution(t *testing.T) {
 		err = RunParallelWithOptions(context.Background(), encoded, cfg, true, opts)
 		assert.NoError(t, err)
 	})
+}
+
+func TestFailFastSpecParsing(t *testing.T) {
+	parser := &ParallelSpecParser{}
+
+	tests := map[string]struct {
+		spec      *testworkflowsv1.StepParallel
+		base64    bool
+		normalize bool
+		execute   bool // if true, run RunParallelWithOptions
+		expected  bool // expected failFast value
+	}{
+		"failFast defaults to false": {
+			spec: &testworkflowsv1.StepParallel{
+				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+					Count: common.Ptr(intstr.FromInt(3)),
+				},
+			},
+			expected: false,
+		},
+		"failFast true is parsed correctly": {
+			spec: &testworkflowsv1.StepParallel{
+				FailFast: true,
+				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+					Count: common.Ptr(intstr.FromInt(3)),
+				},
+			},
+			expected: true,
+		},
+		"failFast survives base64 encoding": {
+			spec: &testworkflowsv1.StepParallel{
+				FailFast: true,
+				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+					Count: common.Ptr(intstr.FromInt(3)),
+				},
+			},
+			base64:   true,
+			expected: true,
+		},
+		"failFast preserved through normalization": {
+			spec: &testworkflowsv1.StepParallel{
+				FailFast: true,
+				StepOperations: testworkflowsv1.StepOperations{
+					Shell: `echo "test"`,
+				},
+			},
+			normalize: true,
+			expected:  true,
+		},
+		"failFast with zero workers succeeds": {
+			spec: &testworkflowsv1.StepParallel{
+				FailFast: true,
+				StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+					Count: common.Ptr(intstr.FromInt(0)),
+				},
+			},
+			execute:  true,
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.normalize {
+				spec := tc.spec.DeepCopy()
+				parser.NormalizeParallelSpec(spec)
+				assert.Equal(t, tc.expected, spec.FailFast)
+				return
+			}
+
+			if tc.execute {
+				cfg := config.NewConfigV2ForTest(testworkflowconfig.InternalConfig{
+					Resource:     testworkflowconfig.ResourceConfig{Id: "test", RootId: "/tmp", FsPrefix: "test"},
+					Workflow:     testworkflowconfig.WorkflowConfig{Name: "test"},
+					Execution:    testworkflowconfig.ExecutionConfig{Id: "test", OrganizationId: "test", EnvironmentId: "test"},
+					ControlPlane: testworkflowconfig.ControlPlaneConfig{DashboardUrl: "http://localhost:8088"},
+					Worker:       testworkflowconfig.WorkerConfig{Namespace: "test", Connection: testworkflowconfig.WorkerConnectionConfig{Url: "http://localhost:8088"}},
+				})
+				storage, err := artifacts.InternalStorageWithProvider(&artifacts.NoOpStorageProvider{}, cfg)
+				require.NoError(t, err)
+
+				jsonBytes, _ := json.Marshal(tc.spec)
+				opts := &ParallelOptions{Storage: storage}
+				err = RunParallelWithOptions(context.Background(), string(jsonBytes), cfg, false, opts)
+				assert.NoError(t, err)
+				return
+			}
+
+			jsonBytes, _ := json.Marshal(tc.spec)
+			specContent := string(jsonBytes)
+			if tc.base64 {
+				specContent = base64.StdEncoding.EncodeToString(jsonBytes)
+			}
+			result, err := parser.ParseSpec(specContent, tc.base64)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, result.FailFast)
+		})
+	}
 }

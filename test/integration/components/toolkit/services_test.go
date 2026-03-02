@@ -108,7 +108,7 @@ func executeServices(t *testing.T, services map[string]testworkflowsv1.ServiceSp
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- commands.RunServicesWithOptions(encoded, cfg, true, groupRef)
+		errCh <- commands.RunServicesWithOptions(ctx, encoded, cfg, true, groupRef)
 	}()
 
 	select {

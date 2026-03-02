@@ -148,7 +148,7 @@ func NewServicesCmd() *cobra.Command {
 			}
 
 			executor := NewServicesExecutor(groupRef, base64Encoded, deps)
-			if err := executor.Execute(args); err != nil {
+			if err := executor.Execute(cmd.Context(), args); err != nil {
 				ui.Fail(err)
 			}
 		},
@@ -162,7 +162,7 @@ func NewServicesCmd() *cobra.Command {
 
 // RunServicesWithOptions executes services with the provided configuration.
 // This is the testable entry point for integration tests.
-func RunServicesWithOptions(specContent string, cfg *config.ConfigV2, base64Encoded bool, groupRef string) error {
+func RunServicesWithOptions(ctx context.Context, specContent string, cfg *config.ConfigV2, base64Encoded bool, groupRef string) error {
 	internalCfg := cfg.Internal()
 
 	deps := ServicesDependencies{
@@ -175,11 +175,11 @@ func RunServicesWithOptions(specContent string, cfg *config.ConfigV2, base64Enco
 	}
 
 	executor := NewServicesExecutor(groupRef, base64Encoded, deps)
-	return executor.Execute([]string{specContent})
+	return executor.Execute(ctx, []string{specContent})
 }
 
 // Execute runs all services and returns an error if any fail.
-func (e *ServicesExecutor) Execute(args []string) error {
+func (e *ServicesExecutor) Execute(ctx context.Context, args []string) error {
 	if e.groupRef == "" {
 		return errors.New("missing required --group for starting the services")
 	}
@@ -207,7 +207,7 @@ func (e *ServicesExecutor) Execute(args []string) error {
 		return nil
 	}
 
-	failed := e.runServices(instances, namespaces, state, svcParams)
+	failed := e.runServices(ctx, instances, namespaces, state, svcParams)
 	e.reportFinalState(state)
 
 	if failed == 0 {
@@ -423,6 +423,7 @@ func (e *ServicesExecutor) startTransferServer() error {
 
 // runServices executes all service instances in parallel.
 func (e *ServicesExecutor) runServices(
+	ctx context.Context,
 	instances []ServiceInstance,
 	namespaces []string,
 	state map[string][]ServiceState,
@@ -433,7 +434,7 @@ func (e *ServicesExecutor) runServices(
 		return runner.Run()
 	}
 
-	return spawn.ExecuteParallel(run, instances, namespaces, int64(len(instances)))
+	return spawn.ExecuteParallel(ctx, run, instances, namespaces, int64(len(instances)))
 }
 
 // reportFinalState reports the final state of all services.

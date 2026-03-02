@@ -38,6 +38,11 @@ func LoadConfigV2() (*ConfigV2, error) {
 	return &cfg, nil
 }
 
+// NewConfigV2ForTest builds a ConfigV2 from an InternalConfig directly, bypassing the env var.
+func NewConfigV2ForTest(internal testworkflowconfig.InternalConfig) *ConfigV2 {
+	return &ConfigV2{internal: internal}
+}
+
 // Internal returns the internal configuration
 func (c *ConfigV2) Internal() *testworkflowconfig.InternalConfig {
 	return &c.internal
