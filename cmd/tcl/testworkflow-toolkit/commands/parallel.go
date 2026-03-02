@@ -546,7 +546,7 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 
 	log("created")
 
-	return e.processWorkerNotifications(notifications, worker, result.Signature, log, &lastResult)
+	return e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
 }
 
 // processWorkerNotifications processes status updates from a worker.
@@ -554,54 +554,66 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 // Uses non-blocking channel sends to avoid deadlocks during status updates.
 // Handles abnormal termination by setting ABORTED status.
 // Returns worker success status and any notification errors.
-func (e *WorkerExecutor) processWorkerNotifications(notifications executionworkertypes.StatusNotificationsWatcher, worker WorkerSpec, signature []testkube.TestWorkflowSignature, log func(...string), lastResult *testkube.TestWorkflowResult) (bool, error) {
+func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notifications executionworkertypes.StatusNotificationsWatcher, worker WorkerSpec, signature []testkube.TestWorkflowSignature, log func(...string), lastResult *testkube.TestWorkflowResult) (bool, error) {
 	prevStatus := testkube.QUEUED_TestWorkflowStatus
 	prevStep := ""
 	scheduled := false
 	ipAssigned := false
 
-	for v := range notifications.Channel() {
-		if !scheduled && v.NodeName != "" {
-			scheduled = true
-			log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
-		}
-
-		if !ipAssigned && v.PodIp != "" {
-			ipAssigned = true
-			e.registry.SetAddress(worker.Index, v.PodIp)
-		}
-
-		if v.Result != nil {
-			*lastResult = *v.Result
-			status := testkube.QUEUED_TestWorkflowStatus
-			if lastResult.Status != nil {
-				status = *lastResult.Status
+	for {
+		select {
+		case <-ctx.Done():
+			// Context cancelled (e.g. fail-fast triggered) — exit immediately
+			// so handleWorkerCleanup can abort this worker
+			return false, ctx.Err()
+		case v, ok := <-notifications.Channel():
+			if !ok {
+				// Channel closed — fall through to error/abnormal handling below
+				goto done
 			}
-			// Get current step reference from the workflow signature
-			step := lastResult.Current(signature)
+			if !scheduled && v.NodeName != "" {
+				scheduled = true
+				log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
+			}
 
-			if status != prevStatus || step != prevStep {
-				if status != prevStatus {
-					log(string(status))
-				}
-				// Try to send update, but don't block if channel is full
-				// This prevents deadlock if orchestrator is slow to process
-				select {
-				case e.updates <- Update{index: worker.Index, result: v.Result}:
-				default:
-					log("warning", "skipping status update due to full channel")
-				}
-				prevStep = step
-				prevStatus = status
+			if !ipAssigned && v.PodIp != "" {
+				ipAssigned = true
+				e.registry.SetAddress(worker.Index, v.PodIp)
+			}
 
-				if lastResult.IsFinished() {
-					instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Result: v.Result})
-					return v.Result.IsPassed(), nil
+			if v.Result != nil {
+				*lastResult = *v.Result
+				status := testkube.QUEUED_TestWorkflowStatus
+				if lastResult.Status != nil {
+					status = *lastResult.Status
 				}
-				instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Current: step})
+				// Get current step reference from the workflow signature
+				step := lastResult.Current(signature)
+
+				if status != prevStatus || step != prevStep {
+					if status != prevStatus {
+						log(string(status))
+					}
+					// Try to send update, but don't block if channel is full
+					// This prevents deadlock if orchestrator is slow to process
+					select {
+					case e.updates <- Update{index: worker.Index, result: v.Result}:
+					default:
+						log("warning", "skipping status update due to full channel")
+					}
+					prevStep = step
+					prevStatus = status
+
+					if lastResult.IsFinished() {
+						instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Result: v.Result})
+						return v.Result.IsPassed(), nil
+					}
+					instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Current: step})
+				}
 			}
 		}
 	}
+done:
 
 	if notifications.Err() != nil {
 		log("error", notifications.Err().Error())
