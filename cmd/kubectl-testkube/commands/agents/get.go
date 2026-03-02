@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -22,13 +23,8 @@ func NewGetAgentCommand() *cobra.Command {
 		Use:     "agent [name]",
 		Aliases: []string{"agents", "a"},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			// Warn if incompatible flags are used together
 			if allEnvironments && showUnknown {
 				ui.Warn("Note: --all-environments is ignored when using --show-unknown (unknown agents have no environment registration)")
-				allEnvironments = false
-			}
-			if allEnvironments && showDeleted {
-				ui.Warn("Note: --all-environments is ignored when using --show-deleted (showing deleted agents only)")
 				allEnvironments = false
 			}
 		},
@@ -87,8 +83,9 @@ func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnv
 
 	// Filter agents by current environment (matching dashboard behavior) unless --all-environments is set
 	if !allEnvironments {
-		registeredAgents, err = FilterAgentsByCurrentEnvironment(cmd, registeredAgents)
-		ui.ExitOnError("filtering agents by environment", err)
+		cfg, err := config.Load()
+		ui.ExitOnError("loading config", err)
+		registeredAgents = FilterAgentsByEnvironment(registeredAgents, cfg.CloudContext.EnvironmentId)
 	}
 
 	agents, err := GetKubernetesAgents([]string{""})

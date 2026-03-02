@@ -267,14 +267,15 @@ func getAgentRunnerMode(agent *cloudclient.Agent) string {
 		return "Global"
 	}
 
-	for _, m := range match {
-		if m == "name" {
+	if len(match) == 1 {
+		switch match[0] {
+		case "global":
+			return "Global"
+		case "name":
 			return "Independent"
+		case "group":
+			return "Group"
 		}
-	}
-
-	if len(match) == 1 && match[0] == "group" {
-		return "Group"
 	}
 
 	return "Custom Policy"
@@ -376,34 +377,22 @@ func GetControlPlaneAgents(cmd *cobra.Command, includeDeleted bool) ([]cloudclie
 	return registeredAgents, nil
 }
 
-func FilterAgentsByCurrentEnvironment(cmd *cobra.Command, agents []cloudclient.Agent) ([]cloudclient.Agent, error) {
-	_, _, err := common2.GetClient(cmd)
-	if err != nil {
-		return nil, errors.Wrap(err, "connecting to cloud")
-	}
-	cfg, err := config.Load()
-	if err != nil {
-		return nil, errors.Wrap(err, "loading config")
+func FilterAgentsByEnvironment(agents []cloudclient.Agent, environmentID string) []cloudclient.Agent {
+	if environmentID == "" {
+		return agents
 	}
 
-	currentEnvId := cfg.CloudContext.EnvironmentId
-	if currentEnvId == "" {
-		// No environment filter - return all agents
-		return agents, nil
-	}
-
-	// Filter agents that are assigned to the current environment
-	filteredAgents := make([]cloudclient.Agent, 0, len(agents))
+	filtered := make([]cloudclient.Agent, 0, len(agents))
 	for _, agent := range agents {
 		for _, env := range agent.Environments {
-			if env.ID == currentEnvId {
-				filteredAgents = append(filteredAgents, agent)
+			if env.ID == environmentID {
+				filtered = append(filtered, agent)
 				break
 			}
 		}
 	}
 
-	return filteredAgents, nil
+	return filtered
 }
 
 func GetControlPlaneAgent(cmd *cobra.Command, idOrName string) (*cloudclient.Agent, error) {
