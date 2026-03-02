@@ -57,6 +57,31 @@ func (list internalAgents) ToAgentList() []cloudclient.Agent {
 	return result
 }
 
+type unknownAgentInfo struct {
+	PodName        string `json:"podName"`
+	Namespace      string `json:"namespace"`
+	AgentID        string `json:"agentId,omitempty"`
+	OrganizationID string `json:"organizationId,omitempty"`
+	EnvironmentID  string `json:"environmentId,omitempty"`
+	Ready          bool   `json:"ready"`
+}
+
+// ToUnknownAgentList extracts pod-level data for unknown agents (JSON/YAML serialization)
+func (list internalAgents) ToUnknownAgentList() []unknownAgentInfo {
+	result := make([]unknownAgentInfo, 0, len(list))
+	for _, agent := range list {
+		result = append(result, unknownAgentInfo{
+			PodName:        agent.Pod.Name,
+			Namespace:      agent.Pod.Namespace,
+			AgentID:        agent.AgentID.Value,
+			OrganizationID: agent.OrganizationID.Value,
+			EnvironmentID:  agent.EnvironmentID.Value,
+			Ready:          agent.Ready,
+		})
+	}
+	return result
+}
+
 func (list internalAgents) Table() (header []string, output [][]string) {
 	return list.TableWithEnvironments(false)
 }
@@ -80,19 +105,10 @@ func (list internalAgents) TableWithEnvironments(showEnvironments bool) (header 
 		agentLastSeen := "-"
 
 		if e.Registered != nil {
-			// Name - check if it's a superagent
-			isSuperAgentFlag := isSuperAgent(e.Registered)
-			if isSuperAgentFlag {
-				agentName = ui.LightCyan("SuperAgent")
-				// Capabilities - leave empty for superagents
-				agentCapabilities = ""
-			} else {
-				agentName = e.Registered.Name
-				// Capabilities - show for regular agents
-				agentCapabilities = getAgentCapabilitiesString(e.Registered)
-				if agentCapabilities == "" {
-					agentCapabilities = "-"
-				}
+			agentName = e.Registered.Name
+			agentCapabilities = getAgentCapabilitiesString(e.Registered)
+			if agentCapabilities == "" {
+				agentCapabilities = "-"
 			}
 
 			// Environments
@@ -238,14 +254,6 @@ func hasCapability(agent *cloudclient.Agent, capability cloudclient.AgentCapabil
 		}
 	}
 	return false
-}
-
-// isSuperAgent checks if agent is a superagent (the default agent for an environment)
-func isSuperAgent(agent *cloudclient.Agent) bool {
-	if agent == nil {
-		return false
-	}
-	return agent.Labels["runnertype"] == "superagent"
 }
 
 // getAgentRunnerMode returns the runner mode based on runnerPolicy
@@ -557,6 +565,7 @@ func CombineAgents(kubernetesAgents internalAgents, controlPlaneAgents []cloudcl
 	controlPlaneAgentsMap := make(map[string]*cloudclient.Agent)
 	found := make(map[string]bool)
 	for i := range controlPlaneAgents {
+		normalizeLegacySuperAgent(&controlPlaneAgents[i])
 		controlPlaneAgentsMap[controlPlaneAgents[i].ID] = &controlPlaneAgents[i]
 	}
 
@@ -576,6 +585,23 @@ func CombineAgents(kubernetesAgents internalAgents, controlPlaneAgents []cloudcl
 	}
 
 	return kubernetesAgents
+}
+
+// normalizeLegacySuperAgent fills in capabilities for legacy superagents that
+// were migrated from the old architecture. The control plane returns these with
+// an empty capabilities list, but they actually serve all roles.
+func normalizeLegacySuperAgent(agent *cloudclient.Agent) {
+	if agent == nil || agent.Labels["runnertype"] != "superagent" {
+		return
+	}
+	if len(agent.Capabilities) == 0 {
+		agent.Capabilities = []cloudclient.AgentCapability{
+			cloudclient.AgentCapabilityRunner,
+			cloudclient.AgentCapabilityListener,
+			cloudclient.AgentCapabilityGitops,
+			cloudclient.AgentCapabilityWebhooks,
+		}
+	}
 }
 
 type ControlPlaneConfig struct {

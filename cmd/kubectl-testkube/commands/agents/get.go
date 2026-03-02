@@ -140,8 +140,11 @@ func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnv
 
 	// For JSON/YAML/go-template output, serialize the actual agent data
 	if outputType == "json" || outputType == "yaml" || outputType == "go" {
-		agentList := agents.ToAgentList()
-		err = render.List(cmd, agentList, os.Stdout)
+		if showUnknown {
+			err = render.List(cmd, agents.ToUnknownAgentList(), os.Stdout)
+		} else {
+			err = render.List(cmd, agents.ToAgentList(), os.Stdout)
+		}
 		ui.PrintOnError("Rendering list", err)
 		return
 	}
