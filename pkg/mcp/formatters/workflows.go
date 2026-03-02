@@ -303,19 +303,16 @@ type formattedExecutionMetrics struct {
 	Steps     []formattedStepData `json:"steps,omitempty"`
 }
 
-// formattedTimeRange contains execution timing info.
 type formattedTimeRange struct {
 	StartedAt  string `json:"startedAt,omitempty"`
 	FinishedAt string `json:"finishedAt,omitempty"`
 }
 
-// formattedStepData contains time-series metrics for a single execution step.
 type formattedStepData struct {
 	Step   string                  `json:"step"`
 	Series []formattedMetricSeries `json:"series"`
 }
 
-// formattedMetricSeries is a single metric time-series with summary statistics.
 type formattedMetricSeries struct {
 	Metric      string       `json:"metric"` // e.g. "cpu.millicores", "memory.used"
 	SampleCount int          `json:"sampleCount"`
@@ -323,7 +320,6 @@ type formattedMetricSeries struct {
 	Samples     [][2]float64 `json:"samples"` // [timestamp_ms, value]
 }
 
-// metricStats contains min/max/avg for a metric series.
 type metricStats struct {
 	Min float64 `json:"min"`
 	Max float64 `json:"max"`
@@ -341,23 +337,19 @@ type aggregatedMetricsInput struct {
 	Metrics []linkedMetricInput `json:"metrics"`
 }
 
-// linkedMetricInput represents per-step metric data from the /metrics endpoint.
 type linkedMetricInput struct {
 	Step string           `json:"step"`
 	Data []dataPointInput `json:"data"`
 }
 
-// dataPointInput represents a single metric data point series.
 type dataPointInput struct {
 	Measurement string       `json:"measurement"`
 	Field       string       `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
 	Values      [][2]float64 `json:"values"` // [timestamp_ms, value]
 }
 
-// FormatGetWorkflowExecutionMetrics parses a raw API response containing execution metrics.
-// Handles the AggregatedMetrics shape from the /metrics endpoint (time-series data)
-// and returns a compact JSON with per-step metric series, downsampled to avoid large payloads.
-// maxSamples controls the maximum number of data points per metric series (0 uses default of 50).
+// FormatGetWorkflowExecutionMetrics formats raw /metrics API output for the AI agent.
+// Returns compact JSON with per-step metric series, downsampled to maxSamples points (0 = default 50).
 func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, error) {
 	if IsEmptyInput(raw) {
 		return "{}", nil
@@ -372,10 +364,17 @@ func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, erro
 		return "", err
 	}
 
-	// Check if this looks like an AggregatedMetrics response (has "metrics" field with data)
-	if len(input.Metrics) == 0 && input.Workflow == "" {
-		// Not an AggregatedMetrics response — return empty
+	// Unrecognisable response — neither workflow nor metrics present.
+	if input.Workflow == "" && len(input.Metrics) == 0 {
 		return "{}", nil
+	}
+
+	// Workflow is known but no metrics were collected — return structured empty response.
+	if len(input.Metrics) == 0 {
+		return FormatJSON(formattedExecutionMetrics{
+			Workflow:  input.Workflow,
+			Execution: input.Execution,
+		})
 	}
 
 	formatted := formattedExecutionMetrics{
