@@ -76,10 +76,9 @@ func (s *server) Listen() (func(), error) {
 	}
 	go func() {
 		for {
-			// Accept incoming connections
 			conn, err := listener.Accept()
 			if err != nil {
-				continue
+				return
 			}
 			go s.handler(conn)
 		}
