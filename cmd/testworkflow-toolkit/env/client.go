@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -147,7 +148,7 @@ func Testkube() client.Client {
 	}
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
-	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", host, port), "")
+	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s", net.JoinHostPort(host, strconv.Itoa(port))), "")
 }
 
 func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
