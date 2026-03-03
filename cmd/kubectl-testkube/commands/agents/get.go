@@ -21,6 +21,8 @@ func NewGetAgentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Args:    cobra.MaximumNArgs(1),
 		Use:     "agent [name]",
+		Short:   "Get agents registered in the current environment",
+		Long:    `Get details of a specific agent or list all agents. By default only active agents in the current environment are shown. Use --all-environments to list across environments, --show-deleted to view deleted agents, or --show-unknown to find cluster agents not registered in the control plane.`,
 		Aliases: []string{"agents", "a"},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if allEnvironments && showUnknown {
