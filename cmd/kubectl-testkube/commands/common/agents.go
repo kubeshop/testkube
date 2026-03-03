@@ -39,3 +39,8 @@ func UpdateAgent(url, token, orgID string, idOrName string, agent cloudclient.Ag
 	c := cloudclient.NewAgentsClient(url, token, orgID)
 	return c.Patch(idOrName, agent)
 }
+
+func RegenerateAgentSecretKey(url, token, orgID string, idOrName string, gracePeriod string) (cloudclient.RegenerateSecretKeyResponse, error) {
+	c := cloudclient.NewAgentsClient(url, token, orgID)
+	return c.RegenerateSecretKey(idOrName, gracePeriod)
+}
