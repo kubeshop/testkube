@@ -86,7 +86,8 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	s.Routes.Get("/routes", s.RoutesHandler())
 
 	// Start server
-	l, err := net.Listen("tcp", s.Config.Addr())
+	var lc net.ListenConfig
+	l, err := lc.Listen(ctx, "tcp", s.Config.Addr())
 	if err != nil {
 		return err
 	}

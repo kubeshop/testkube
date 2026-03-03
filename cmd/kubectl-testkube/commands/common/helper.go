@@ -652,7 +652,12 @@ func validateSSOConnector(authUri, domain string) error {
 
 	validateURL := fmt.Sprintf("%sauth/validate?connector_id=%s", authUri, url.QueryEscape(domain))
 
-	resp, err := http.Get(validateURL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, validateURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to validate SSO connector request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to validate SSO connector: %w", err)
 	}
@@ -1328,7 +1333,12 @@ type releaseMetadata struct {
 }
 
 func GetLatestVersion() (string, error) {
-	resp, err := http.Get(latestReleaseUrl)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, latestReleaseUrl, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}

@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,11 +30,11 @@ type RESTClient[I All, O All] struct {
 
 func (c RESTClient[I, O]) List() ([]O, error) {
 	path := c.Path
-	r, err := nethttp.NewRequest(nethttp.MethodGet, c.BaseUrl+path, nil)
-	r.Header.Add("Authorization", "Bearer "+c.Token)
+	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodGet, c.BaseUrl+path, nil)
 	if err != nil {
 		return nil, err
 	}
+	r.Header.Add("Authorization", "Bearer "+c.Token)
 	resp, err := c.Client.Do(r)
 	if err != nil {
 		return nil, err
@@ -63,11 +64,11 @@ func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
 		}
 		qs = "?" + strings.Join(q, "&")
 	}
-	r, err := nethttp.NewRequest(nethttp.MethodGet, c.BaseUrl+path+qs, nil)
-	r.Header.Add("Authorization", "Bearer "+c.Token)
+	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodGet, c.BaseUrl+path+qs, nil)
 	if err != nil {
 		return nil, err
 	}
+	r.Header.Add("Authorization", "Bearer "+c.Token)
 	resp, err := c.Client.Do(r)
 	if err != nil {
 		return nil, err
@@ -88,11 +89,11 @@ func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
 
 func (c RESTClient[I, O]) Get(id string) (e O, err error) {
 	path := c.BaseUrl + c.Path + "/" + id
-	req, err := nethttp.NewRequest(nethttp.MethodGet, path, nil)
-	req.Header.Add("Authorization", "Bearer "+c.Token)
+	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodGet, path, nil)
 	if err != nil {
 		return e, err
 	}
+	req.Header.Add("Authorization", "Bearer "+c.Token)
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return e, err
@@ -122,7 +123,7 @@ func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err err
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest(nethttp.MethodPost, c.BaseUrl+path, bytes.NewBuffer(d))
+	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodPost, c.BaseUrl+path, bytes.NewBuffer(d))
 	if err != nil {
 		return e, err
 	}
@@ -162,7 +163,7 @@ func (c RESTClient[I, O]) Patch(id string, entity I, overridePath ...string) (er
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest(nethttp.MethodPatch, c.BaseUrl+path+"/"+id, bytes.NewBuffer(d))
+	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodPatch, c.BaseUrl+path+"/"+id, bytes.NewBuffer(d))
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func (c RESTClient[I, O]) Delete(id string, overridePath ...string) (err error) 
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest(nethttp.MethodDelete, c.BaseUrl+path, nil)
+	r, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodDelete, c.BaseUrl+path, nil)
 	if err != nil {
 		return err
 	}

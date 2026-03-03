@@ -66,7 +66,7 @@ func TestCloneWithRevision_Integration(t *testing.T) {
 			revision: testBranch,
 			verify: func(t *testing.T, outputDir string) {
 				// Check current branch
-				cmd := exec.Command("git", "-C", outputDir, "branch", "--show-current")
+				cmd := exec.CommandContext(context.Background(), "git", "-C", outputDir, "branch", "--show-current")
 				output, err := cmd.Output()
 				require.NoError(t, err)
 				branch := strings.TrimSpace(string(output))
