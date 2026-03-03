@@ -327,7 +327,10 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 
 			host := probe.Host
 			if probe.Port != 0 {
-				host = net.JoinHostPort(host, strconv.Itoa(int(probe.Port)))
+				host = net.JoinHostPort(probe.Host, strconv.Itoa(int(probe.Port)))
+			} else if ip := net.ParseIP(probe.Host); ip != nil && ip.To4() == nil {
+				// IPv6 address without a port needs bracket notation in URL host
+				host = "[" + probe.Host + "]"
 			}
 
 			if host == "" {
