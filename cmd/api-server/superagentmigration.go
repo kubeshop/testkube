@@ -42,12 +42,61 @@ type superAgentMigrationKubernetesResourceLister interface {
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
 }
 
+type superAgentMigrationLeaseBackend interface {
+	TryAcquire(ctx context.Context, identifier string, clusterID string) (bool, error)
+}
+
 type superAgentMigrationSyncStore interface {
 	UpdateOrCreateTestTrigger(context.Context, testtriggersv1.TestTrigger) error
 	UpdateOrCreateTestWorkflow(context.Context, testworkflowsv1.TestWorkflow) error
 	UpdateOrCreateTestWorkflowTemplate(context.Context, testworkflowsv1.TestWorkflowTemplate) error
 	UpdateOrCreateWebhook(context.Context, executorv1.Webhook) error
 	UpdateOrCreateWebhookTemplate(context.Context, executorv1.WebhookTemplate) error
+}
+
+func shouldRunSuperAgentMigration(cfg superAgentMigrationConfig) bool {
+	isOrWasSuperAgent := strings.HasPrefix(cfg.agentId, "tkcroot_")
+	if !isOrWasSuperAgent || !cfg.proContextControlPlaneHasSourceOfTruthCapability {
+		return false
+	}
+
+	return (cfg.proContextAgentIsSuperAgent && !cfg.forceSuperAgentMode) || (!cfg.proContextAgentIsSuperAgent && cfg.forceSuperAgentMode)
+}
+
+func shouldRunSuperAgentMigrationOnLeader(
+	ctx context.Context,
+	log superAgentMigrationLogger,
+	cfg superAgentMigrationConfig,
+	leaseBackend superAgentMigrationLeaseBackend,
+	leaderIdentifier string,
+	leaderClusterID string,
+) bool {
+	if !shouldRunSuperAgentMigration(cfg) {
+		return false
+	}
+
+	if leaseBackend == nil {
+		log.Errorw("Missing leader lease backend for Super Agent migration. Proceeding without leader gating.")
+		return true
+	}
+
+	leased, err := leaseBackend.TryAcquire(ctx, leaderIdentifier, leaderClusterID)
+	if err != nil {
+		log.Errorw("Failed to acquire leader lease for Super Agent migration. Proceeding without leader gating.",
+			"leaderIdentifier", leaderIdentifier,
+			"leaderClusterID", leaderClusterID,
+			"error", err.Error())
+		return true
+	}
+
+	if !leased {
+		log.Infow("Skipping Super Agent migration on non-leader replica.",
+			"leaderIdentifier", leaderIdentifier,
+			"leaderClusterID", leaderClusterID)
+		return false
+	}
+
+	return true
 }
 
 // migrateSuperAgent checks to see whether the current agent is a super agent and runs migration if so.
