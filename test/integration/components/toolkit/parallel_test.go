@@ -71,7 +71,8 @@ func setupK8sClient() {
 // setupTestWithControlPlane sets up a test with its own mock control plane
 func setupTestWithControlPlane(t *testing.T, namespace string) (*mockControlPlane, int, func()) {
 	// Find an available port
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
@@ -620,7 +621,8 @@ func newMockControlPlane() *mockControlPlane {
 }
 
 func (m *mockControlPlane) start(port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	var lc net.ListenConfig
+	lis, err := lc.Listen(context.Background(), "tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}

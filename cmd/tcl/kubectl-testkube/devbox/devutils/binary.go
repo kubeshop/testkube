@@ -103,7 +103,7 @@ func (b *Binary) Build(ctx context.Context) (string, error) {
 	b.buildMu.Lock()
 	defer b.buildMu.Unlock()
 
-	cmd := exec.Command(
+	cmd := exec.CommandContext(ctx,
 		"go", "build",
 		"-o", b.alternatingOutputPath,
 		fmt.Sprintf("-ldflags=%s", strings.Join([]string{

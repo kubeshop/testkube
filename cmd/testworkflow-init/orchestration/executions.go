@@ -49,7 +49,7 @@ func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup
 func (e *executionGroup) Create(cmd string, args []string) *execution {
 	// Instantiate the execution
 	ex := &execution{group: e}
-	ex.cmd = exec.Command(cmd, args...)
+	ex.cmd = exec.CommandContext(context.Background(), cmd, args...)
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 

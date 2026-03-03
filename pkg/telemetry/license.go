@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 )
@@ -24,7 +25,12 @@ func GetEmail(license string) string {
 	if LicenseEndpoint != "" {
 		payload := EmailRequest{License: license}
 		jsonPayload, _ := json.Marshal(payload)
-		resp, err := http.Post(LicenseEndpoint, "application/json", bytes.NewBuffer(jsonPayload))
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, LicenseEndpoint, bytes.NewBuffer(jsonPayload))
+		if err != nil {
+			return ""
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return ""
 		}

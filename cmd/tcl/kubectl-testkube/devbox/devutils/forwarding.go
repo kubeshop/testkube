@@ -76,7 +76,8 @@ func ForwardPod(config *rest.Config, namespace, podName string, clusterPort, loc
 	// Hack to handle Kubernetes Port Forwarding issue.
 	// Stream through a different server, to ensure that both connections are fully read, with no broken pipe.
 	// @see {@link https://github.com/kubernetes/kubernetes/issues/74551}
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", localPort))
+	var lc net.ListenConfig
+	ln, err := lc.Listen(context.Background(), "tcp", fmt.Sprintf(":%d", localPort))
 	if err != nil {
 		return err
 	}

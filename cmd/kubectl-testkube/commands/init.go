@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -121,7 +122,9 @@ func NewInitCmdDemo() *cobra.Command {
 		Aliases: []string{"on-premise-demo", "on-prem-demo", "enterprise-demo"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
-				valuesResp, err := http.Get(demoValuesUrl)
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, demoValuesUrl, nil)
+				ui.ExitOnError("cannot create values request", err)
+				valuesResp, err := http.DefaultClient.Do(req)
 				ui.ExitOnError("cannot fetch values", err)
 				defer valuesResp.Body.Close()
 				valuesBytes, err := io.ReadAll(valuesResp.Body)

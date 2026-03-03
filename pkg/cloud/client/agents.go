@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -94,11 +95,11 @@ func (c AgentsClient) secretKeyPath(idOrName, gracePeriod string) string {
 
 func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
 	path := c.secretKeyPath(idOrName, "")
-	req, err := nethttp.NewRequest("GET", path, nil)
-	req.Header.Add("Authorization", "Bearer "+c.Token)
+	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodGet, path, nil)
 	if err != nil {
 		return "", err
 	}
+	req.Header.Add("Authorization", "Bearer "+c.Token)
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return "", err
@@ -127,7 +128,7 @@ type RegenerateSecretKeyResponse struct {
 
 func (c AgentsClient) RegenerateSecretKey(idOrName, gracePeriod string) (RegenerateSecretKeyResponse, error) {
 	path := c.secretKeyPath(idOrName, gracePeriod)
-	req, err := nethttp.NewRequest("DELETE", path, nil)
+	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodDelete, path, nil)
 	if err != nil {
 		return RegenerateSecretKeyResponse{}, err
 	}
