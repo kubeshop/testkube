@@ -27,6 +27,12 @@ type Client interface {
 	tools.WorkflowRunner
 	tools.WorkflowMetricsGetter
 
+	// WorkflowTemplate interfaces
+	tools.WorkflowTemplateLister
+	tools.WorkflowTemplateDefinitionGetter
+	tools.WorkflowTemplateCreator
+	tools.WorkflowTemplateUpdater
+
 	// Bulk getters for yq query tools
 	tools.WorkflowDefinitionBulkGetter
 	tools.ExecutionBulkGetter

@@ -47,6 +47,12 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Workflow template tools
+	mcpServer.AddTool(tools.ListWorkflowTemplates(client))
+	mcpServer.AddTool(tools.GetWorkflowTemplateDefinition(client))
+	mcpServer.AddTool(tools.CreateWorkflowTemplate(client))
+	mcpServer.AddTool(tools.UpdateWorkflowTemplate(client))
+
 	// Query tools (JSONPath-based bulk queries)
 	// Only check backwards compatibility when using APIClient without SkipEndpointChecks
 	if apiClient, ok := client.(*APIClient); ok && !cfg.SkipEndpointChecks {

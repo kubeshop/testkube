@@ -103,6 +103,15 @@ Parameters:
 
 Returns: Map of execution ID → extracted values. Missing paths return empty arrays, not errors.`
 
+	// WorkflowTemplate tool descriptions
+	TemplateNameDescription = `The name of the workflow template. Template names are lowercase alphanumeric with dashes 
+(e.g., 'my-template', 'official--k6--v1'). This uniquely identifies a TestWorkflowTemplate within the environment.`
+
+	ListWorkflowTemplatesDescription         = "List all TestWorkflowTemplates in the current Testkube environment with optional label filtering. Returns template names, descriptions, and labels."
+	GetWorkflowTemplateDefinitionDescription = "Get the YAML definition of a specific TestWorkflowTemplate. Returns the complete template specification including all steps, configuration schema, and metadata."
+	CreateWorkflowTemplateDescription        = "Create a new TestWorkflowTemplate in Testkube from a YAML definition. The template will be immediately available for use by workflows after creation."
+	UpdateWorkflowTemplateDescription        = "Update an existing TestWorkflowTemplate in Testkube with a new YAML definition. The template will be updated immediately and workflows using it will pick up the changes."
+
 	// Schema tool descriptions
 	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use this to understand workflow structure when creating, updating, or querying workflows."
 	GetExecutionSchemaDescription = "Get the YAML schema for TestWorkflowExecution data. Returns all available fields, their types, and descriptions. Use this to understand execution data structure when analyzing results or querying executions."
