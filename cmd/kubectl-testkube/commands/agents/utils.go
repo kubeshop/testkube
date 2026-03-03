@@ -46,47 +46,274 @@ type internalAgent struct {
 
 type internalAgents []internalAgent
 
+// ToAgentList extracts the registered agent data for JSON/YAML serialization
+func (list internalAgents) ToAgentList() []cloudclient.Agent {
+	result := make([]cloudclient.Agent, 0, len(list))
+	for _, agent := range list {
+		if agent.Registered != nil {
+			result = append(result, *agent.Registered)
+		}
+	}
+	return result
+}
+
+type unknownAgentInfo struct {
+	PodName        string `json:"podName"`
+	Namespace      string `json:"namespace"`
+	AgentID        string `json:"agentId,omitempty"`
+	OrganizationID string `json:"organizationId,omitempty"`
+	EnvironmentID  string `json:"environmentId,omitempty"`
+	Ready          bool   `json:"ready"`
+}
+
+// ToUnknownAgentList extracts pod-level data for unknown agents (JSON/YAML serialization)
+func (list internalAgents) ToUnknownAgentList() []unknownAgentInfo {
+	result := make([]unknownAgentInfo, 0, len(list))
+	for _, agent := range list {
+		result = append(result, unknownAgentInfo{
+			PodName:        agent.Pod.Name,
+			Namespace:      agent.Pod.Namespace,
+			AgentID:        agent.AgentID.Value,
+			OrganizationID: agent.OrganizationID.Value,
+			EnvironmentID:  agent.EnvironmentID.Value,
+			Ready:          agent.Ready,
+		})
+	}
+	return result
+}
+
 func (list internalAgents) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Version", "Namespace", "Environments", "Labels"}
+	return list.TableWithEnvironments(false)
+}
+
+func (list internalAgents) TableWithEnvironments(showEnvironments bool) (header []string, output [][]string) {
+	if showEnvironments {
+		header = []string{"Name", "Environment", "Capabilities", "Labels", "Runner Mode", "License", "Agent ID", "Version", "Last Seen"}
+	} else {
+		header = []string{"Name", "Capabilities", "Labels", "Runner Mode", "License", "Agent ID", "Version", "Last Seen"}
+	}
+
 	for _, e := range list {
-		agentVersion := "-"
 		agentName := e.AgentID.Value
 		agentEnvironments := "-"
+		agentCapabilities := "-"
 		agentLabels := "-"
-		namespace := e.Pod.Namespace
+		agentRunnerMode := "-"
+		agentLicense := "-"
+		agentID := e.AgentID.Value
+		agentVersion := "-"
+		agentLastSeen := "-"
+
 		if e.Registered != nil {
 			agentName = e.Registered.Name
-			agentVersion = e.Registered.Version
-			agentEnvironments = strings.Join(common.MapSlice(e.Registered.Environments, func(t cloudclient.AgentEnvironment) string {
-				if t.Name == "" {
-					return t.ID
+			agentCapabilities = getAgentCapabilitiesString(e.Registered)
+			if agentCapabilities == "" {
+				agentCapabilities = "-"
+			}
+
+			// Environments
+			if len(e.Registered.Environments) > 0 {
+				envNames := make([]string, 0, len(e.Registered.Environments))
+				for _, env := range e.Registered.Environments {
+					if env.Name != "" {
+						envNames = append(envNames, env.Name)
+					} else {
+						envNames = append(envNames, env.Slug)
+					}
 				}
-				return t.Name
-			}), ", ")
-			agentLabelsEntries := make([]string, 0)
-			for k, v := range e.Registered.Labels {
-				agentLabelsEntries = append(agentLabelsEntries, fmt.Sprintf("%s=%s", k, v))
+				agentEnvironments = strings.Join(envNames, ", ")
 			}
-			agentLabels = strings.Join(agentLabelsEntries, " ")
-		}
-		if e.Detected {
-			if e.Ready {
-				namespace = fmt.Sprintf("%s:%s", ui.Green("•"), namespace)
-			} else {
-				namespace = fmt.Sprintf("%s:%s", ui.Red("•"), namespace)
+
+			// Labels
+			if len(e.Registered.Labels) > 0 {
+				agentLabelsEntries := make([]string, 0, len(e.Registered.Labels))
+				for k, v := range e.Registered.Labels {
+					agentLabelsEntries = append(agentLabelsEntries, fmt.Sprintf("%s=%s", k, v))
+				}
+				agentLabels = strings.Join(agentLabelsEntries, " ")
 			}
-		} else if e.Registered != nil {
-			namespace = e.Registered.Namespace
+
+			// Runner Mode and License (only for runner capability)
+			if hasCapability(e.Registered, cloudclient.AgentCapabilityRunner) {
+				agentRunnerMode = getAgentRunnerMode(e.Registered)
+				agentLicense = getAgentLicenseType(e.Registered)
+			}
+
+			// Agent ID
+			agentID = e.Registered.ID
+
+			// Version
+			agentVersion = e.Registered.Version
+
+			// Last Seen
+			agentLastSeen = formatLastSeen(e.Registered)
 		}
+
+		if showEnvironments {
+			output = append(output, []string{
+				agentName,
+				agentEnvironments,
+				agentCapabilities,
+				agentLabels,
+				agentRunnerMode,
+				agentLicense,
+				agentID,
+				agentVersion,
+				agentLastSeen,
+			})
+		} else {
+			output = append(output, []string{
+				agentName,
+				agentCapabilities,
+				agentLabels,
+				agentRunnerMode,
+				agentLicense,
+				agentID,
+				agentVersion,
+				agentLastSeen,
+			})
+		}
+	}
+	return
+}
+
+// agentsTableWithEnv is a wrapper type for displaying agents with optional environments column
+type agentsTableWithEnv struct {
+	agents           internalAgents
+	showEnvironments bool
+}
+
+// Table implements ui.TableData interface
+func (t agentsTableWithEnv) Table() (header []string, output [][]string) {
+	return t.agents.TableWithEnvironments(t.showEnvironments)
+}
+
+// unknownAgentsTable is a wrapper type for displaying unknown agents
+type unknownAgentsTable struct {
+	agents internalAgents
+}
+
+// Table implements ui.TableData interface for unknown agents with simplified columns
+func (t unknownAgentsTable) Table() (header []string, output [][]string) {
+	header = []string{"Pod Name", "Namespace", "Agent ID", "Org ID", "Env ID", "Ready"}
+	for _, e := range t.agents {
+		podName := e.Pod.Name
+		namespace := e.Pod.Namespace
+		agentID := e.AgentID.Value
+		orgID := e.OrganizationID.Value
+		envID := e.EnvironmentID.Value
+		ready := ui.Red("No")
+
+		if e.Ready {
+			ready = ui.Green("Yes")
+		}
+
+		// Show "-" for empty values
+		if agentID == "" {
+			agentID = "-"
+		}
+		if orgID == "" {
+			orgID = "-"
+		}
+		if envID == "" {
+			envID = "-"
+		}
+
 		output = append(output, []string{
-			agentName,
-			agentVersion,
+			podName,
 			namespace,
-			agentEnvironments,
-			agentLabels,
+			agentID,
+			orgID,
+			envID,
+			ready,
 		})
 	}
 	return
+}
+
+// getAgentCapabilitiesString returns a string representation of agent capabilities
+func getAgentCapabilitiesString(agent *cloudclient.Agent) string {
+	if agent == nil || len(agent.Capabilities) == 0 {
+		return ""
+	}
+	caps := make([]string, len(agent.Capabilities))
+	for i, cap := range agent.Capabilities {
+		caps[i] = string(cap)
+	}
+	return strings.Join(caps, ",")
+}
+
+// hasCapability checks if agent has specific capability
+func hasCapability(agent *cloudclient.Agent, capability cloudclient.AgentCapability) bool {
+	if agent == nil {
+		return false
+	}
+	for _, cap := range agent.Capabilities {
+		if cap == capability {
+			return true
+		}
+	}
+	return false
+}
+
+// getAgentRunnerMode returns the runner mode based on runnerPolicy
+func getAgentRunnerMode(agent *cloudclient.Agent) string {
+	if agent == nil || agent.RunnerPolicy == nil {
+		return "Global"
+	}
+
+	match := agent.RunnerPolicy.RequiredMatch
+	if len(match) == 0 {
+		return "Global"
+	}
+
+	if len(match) == 1 {
+		switch match[0] {
+		case "global":
+			return "Global"
+		case "name":
+			return "Independent"
+		case "group":
+			return "Group"
+		}
+	}
+
+	return "Custom Policy"
+}
+
+// getAgentLicenseType returns "Floating" or "Fixed"
+func getAgentLicenseType(agent *cloudclient.Agent) string {
+	if agent == nil {
+		return "-"
+	}
+	if agent.Floating {
+		return "Floating"
+	}
+	return "Fixed"
+}
+
+// formatLastSeen formats the last accessed timestamp
+func formatLastSeen(agent *cloudclient.Agent) string {
+	if agent == nil || agent.AccessedAt == nil {
+		return "Never"
+	}
+	duration := time.Since(*agent.AccessedAt)
+	return formatDuration(duration) + " ago"
+}
+
+// formatDuration formats a duration in a human-readable way
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	days := int(d.Hours() / 24)
+	return fmt.Sprintf("%dd", days)
 }
 
 func GetKubernetesNamespaces() ([]string, error) {
@@ -141,12 +368,31 @@ func GetControlPlaneAgents(cmd *cobra.Command, includeDeleted bool) ([]cloudclie
 		return nil, errors.New("no api key found in config")
 	}
 
-	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, "run", includeDeleted)
+	// Pass empty string for type to get all agent types including superagents
+	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, "", includeDeleted)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting agents")
 	}
 
 	return registeredAgents, nil
+}
+
+func FilterAgentsByEnvironment(agents []cloudclient.Agent, environmentID string) []cloudclient.Agent {
+	if environmentID == "" {
+		return agents
+	}
+
+	filtered := make([]cloudclient.Agent, 0, len(agents))
+	for _, agent := range agents {
+		for _, env := range agent.Environments {
+			if env.ID == environmentID {
+				filtered = append(filtered, agent)
+				break
+			}
+		}
+	}
+
+	return filtered
 }
 
 func GetControlPlaneAgent(cmd *cobra.Command, idOrName string) (*cloudclient.Agent, error) {
@@ -308,6 +554,7 @@ func CombineAgents(kubernetesAgents internalAgents, controlPlaneAgents []cloudcl
 	controlPlaneAgentsMap := make(map[string]*cloudclient.Agent)
 	found := make(map[string]bool)
 	for i := range controlPlaneAgents {
+		normalizeLegacySuperAgent(&controlPlaneAgents[i])
 		controlPlaneAgentsMap[controlPlaneAgents[i].ID] = &controlPlaneAgents[i]
 	}
 
@@ -327,6 +574,23 @@ func CombineAgents(kubernetesAgents internalAgents, controlPlaneAgents []cloudcl
 	}
 
 	return kubernetesAgents
+}
+
+// normalizeLegacySuperAgent fills in capabilities for legacy superagents that
+// were migrated from the old architecture. The control plane returns these with
+// an empty capabilities list, but they actually serve all roles.
+func normalizeLegacySuperAgent(agent *cloudclient.Agent) {
+	if agent == nil || agent.Labels["runnertype"] != "superagent" {
+		return
+	}
+	if len(agent.Capabilities) == 0 {
+		agent.Capabilities = []cloudclient.AgentCapability{
+			cloudclient.AgentCapabilityRunner,
+			cloudclient.AgentCapabilityListener,
+			cloudclient.AgentCapabilityGitops,
+			cloudclient.AgentCapabilityWebhooks,
+		}
+	}
 }
 
 type ControlPlaneConfig struct {
@@ -487,17 +751,17 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 	}
 
 	if agent.DeletedAt != nil {
-		fmt.Println("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Runner has been deleted.")) + "\n")
+		ui.Print("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Runner has been deleted.")) + "\n")
 	}
 
 	ui.Warn("Last Version:  ", agent.Version)
 	ui.Warn("Last Namespace:", agent.Namespace)
 	ui.Warn("Environments:")
 	for _, env := range agent.Environments {
-		fmt.Println("   ", env.Name, ui.LightGray("("+env.ID+")"))
+		ui.Print("   ", env.Name, ui.LightGray("("+env.ID+")"))
 	}
 	if len(agent.Environments) == 0 {
-		fmt.Println("   none")
+		ui.Print("   none")
 	}
 	ui.Warn("Labels:")
 	maxLabelSize := 0
@@ -510,7 +774,7 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 		ui.Warn("   "+strings.Repeat(" ", maxLabelSize-len(k))+k, ui.LightGray("= ")+v)
 	}
 	if len(agent.Labels) == 0 {
-		fmt.Println("   none")
+		ui.Print("   none")
 	}
 
 	if agent.RunnerPolicy != nil && len(agent.RunnerPolicy.RequiredMatch) > 0 {
