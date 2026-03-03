@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -60,6 +61,8 @@ type WebhooksLoader struct {
 	orgID                         string
 	envID                         string
 	agentID                       string
+	agentName                     string
+	agentLabels                   map[string]string
 	grpcClient                    cloud.TestKubeCloudAPIClient
 	apiKey                        string
 }
@@ -151,6 +154,20 @@ func WithAgentID(agentID string) WebhookLoaderOption {
 	}
 }
 
+// WithAgentName sets the agent name for target matching
+func WithAgentName(agentName string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.agentName = agentName
+	}
+}
+
+// WithAgentLabels sets the agent labels for target matching
+func WithAgentLabels(agentLabels map[string]string) WebhookLoaderOption {
+	return func(loader *WebhooksLoader) {
+		loader.agentLabels = agentLabels
+	}
+}
+
 func (r WebhooksLoader) Kind() string {
 	return "webhook"
 }
@@ -186,6 +203,11 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		if webhook.Spec.PayloadTemplate == "" && webhook.Spec.PayloadTemplateReference != "" {
 			r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template_ref", webhook.Spec.PayloadTemplateReference)
+			continue
+		}
+
+		if !matchesAgentTarget(webhook.Spec.Target, r.agentID, r.agentName, r.agentLabels) {
+			r.log.Debugw("webhook skipped by target selector", "name", webhook.Name, "agent_id", r.agentID, "agent_name", r.agentName)
 			continue
 		}
 
@@ -353,5 +375,66 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		})
 	}
 
+	if dst.Spec.Target == nil && src.Spec.Target != nil {
+		dst.Spec.Target = src.Spec.Target.DeepCopy()
+	}
+
 	return dst
+}
+
+func matchesAgentTarget(target *commonv1.Target, agentID, agentName string, agentLabels map[string]string) bool {
+	if target == nil || (len(target.Match) == 0 && len(target.Not) == 0) {
+		return true
+	}
+
+	for key, values := range target.Match {
+		if !matchesTargetKeyValue(key, values, agentID, agentName, agentLabels) {
+			return false
+		}
+	}
+
+	for key, values := range target.Not {
+		if matchesTargetKeyValue(key, values, agentID, agentName, agentLabels) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func matchesTargetKeyValue(key string, values []string, agentID, agentName string, agentLabels map[string]string) bool {
+	if len(values) == 0 {
+		return false
+	}
+
+	value, ok := resolveAgentValue(key, agentID, agentName, agentLabels)
+	if !ok {
+		return false
+	}
+
+	for _, candidate := range values {
+		if candidate == value {
+			return true
+		}
+	}
+
+	return false
+}
+
+func resolveAgentValue(key, agentID, agentName string, agentLabels map[string]string) (string, bool) {
+	switch key {
+	case "id":
+		if agentID == "" {
+			return "", false
+		}
+		return agentID, true
+	case "name":
+		if agentName == "" {
+			return "", false
+		}
+		return agentName, true
+	default:
+		value, ok := agentLabels[key]
+		return value, ok
+	}
 }

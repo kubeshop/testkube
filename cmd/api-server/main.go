@@ -539,7 +539,9 @@ func main() {
 			webhook.WithEnvID(proContext.EnvID),
 			webhook.WithGRPCClient(grpcClient),
 			webhook.WithAPIKey(proContext.APIKey),
-			webhook.WithAgentID(proContext.Agent.ID))
+			webhook.WithAgentID(proContext.Agent.ID),
+			webhook.WithAgentName(proContext.Agent.Name),
+			webhook.WithAgentLabels(proContext.Agent.Labels))
 		eventsEmitter.RegisterLoader(webhookLoader)
 		log.DefaultLogger.Infow("webhook loader registered")
 	} else {

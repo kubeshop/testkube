@@ -39,6 +39,7 @@ type WebhookCreateRequest struct {
 	Headers            map[string]string             `json:"headers,omitempty"`
 	Config             map[string]WebhookConfigValue `json:"config,omitempty"`
 	Parameters         []WebhookParameterSchema      `json:"parameters,omitempty"`
+	Target             *ExecutionTarget              `json:"target,omitempty"`
 	WebhookTemplateRef *WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
 	Sync               *Syncable                     `json:"sync,omitempty"`
 }
