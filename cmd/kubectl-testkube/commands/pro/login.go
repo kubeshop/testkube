@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,11 +49,15 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("invalid instance url", err)
 
 				// Call the Control Plane
-				req, err := http.Get(u.String())
+				httpReq, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
+				ui.ExitOnError("creating request", reqErr)
+				req, err := http.DefaultClient.Do(httpReq)
 				if err != nil && strings.Contains(err.Error(), "response to HTTPS client") {
 					// Automatically handle http/https discovery
 					u.Scheme = "http"
-					req, err = http.Get(u.String())
+					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
+					ui.ExitOnError("creating request", reqErr)
+					req, err = http.DefaultClient.Do(httpReq)
 				}
 				ui.ExitOnError("requesting control plane info", err)
 
