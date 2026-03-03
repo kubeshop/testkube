@@ -3,9 +3,11 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -148,7 +150,7 @@ func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	// Build the address
-	addr := fmt.Sprintf("%s:%d", cfg.SHTTPConfig.Host, cfg.SHTTPConfig.Port)
+	addr := net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port))
 
 	// Start the server in a goroutine
 	serverErrCh := make(chan error, 1)

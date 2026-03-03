@@ -2,11 +2,12 @@ package triggers
 
 import (
 	"context"
-	"fmt"
 	"maps"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -326,7 +327,7 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 
 			host := probe.Host
 			if probe.Port != 0 {
-				host = fmt.Sprintf("%s:%d", host, probe.Port)
+				host = net.JoinHostPort(host, strconv.Itoa(int(probe.Port)))
 			}
 
 			if host == "" {
