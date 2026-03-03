@@ -751,17 +751,17 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 	}
 
 	if agent.DeletedAt != nil {
-		fmt.Println("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Runner has been deleted.")) + "\n")
+		ui.Print("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Runner has been deleted.")) + "\n")
 	}
 
 	ui.Warn("Last Version:  ", agent.Version)
 	ui.Warn("Last Namespace:", agent.Namespace)
 	ui.Warn("Environments:")
 	for _, env := range agent.Environments {
-		fmt.Println("   ", env.Name, ui.LightGray("("+env.ID+")"))
+		ui.Print("   ", env.Name, ui.LightGray("("+env.ID+")"))
 	}
 	if len(agent.Environments) == 0 {
-		fmt.Println("   none")
+		ui.Print("   none")
 	}
 	ui.Warn("Labels:")
 	maxLabelSize := 0
@@ -774,7 +774,7 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 		ui.Warn("   "+strings.Repeat(" ", maxLabelSize-len(k))+k, ui.LightGray("= ")+v)
 	}
 	if len(agent.Labels) == 0 {
-		fmt.Println("   none")
+		ui.Print("   none")
 	}
 
 	if agent.RunnerPolicy != nil && len(agent.RunnerPolicy.RequiredMatch) > 0 {

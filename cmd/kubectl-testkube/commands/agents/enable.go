@@ -1,7 +1,6 @@
 package agents
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -47,7 +46,7 @@ func UiEnableAgent(cmd *cobra.Command, name string) {
 		})
 		ui.ExitOnError("updating agent", err)
 	} else {
-		fmt.Println("Agent is already enabled.")
+		ui.Print("Agent is already enabled.")
 	}
 
 	PrintControlPlaneAgent(*agent)
@@ -63,7 +62,7 @@ func UiDisableAgent(cmd *cobra.Command, name string) {
 		})
 		ui.ExitOnError("updating agent", err)
 	} else {
-		fmt.Println("Agent is already disabled.")
+		ui.Print("Agent is already disabled.")
 	}
 
 	PrintControlPlaneAgent(*agent)

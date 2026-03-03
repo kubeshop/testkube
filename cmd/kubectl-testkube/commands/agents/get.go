@@ -130,7 +130,7 @@ func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnv
 	agents = filteredAgents
 
 	if len(agents) == 0 {
-		fmt.Println(ui.LightGray("\nNo agents found"))
+		ui.Print(ui.LightGray("\nNo agents found"))
 		return
 	}
 
