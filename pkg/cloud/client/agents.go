@@ -84,8 +84,16 @@ type AgentsClient struct {
 	RESTClient[AgentInput, Agent]
 }
 
-func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
+func (c AgentsClient) secretKeyPath(idOrName, gracePeriod string) string {
 	path := c.BaseUrl + c.Path + "/" + idOrName + "/secret-key"
+	if gracePeriod != "" {
+		path += "?gracePeriod=" + url.QueryEscape(gracePeriod)
+	}
+	return path
+}
+
+func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
+	path := c.secretKeyPath(idOrName, "")
 	req, err := nethttp.NewRequest("GET", path, nil)
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
@@ -118,10 +126,7 @@ type RegenerateSecretKeyResponse struct {
 }
 
 func (c AgentsClient) RegenerateSecretKey(idOrName, gracePeriod string) (RegenerateSecretKeyResponse, error) {
-	path := c.BaseUrl + c.Path + "/" + idOrName + "/secret-key"
-	if gracePeriod != "" {
-		path += "?gracePeriod=" + url.QueryEscape(gracePeriod)
-	}
+	path := c.secretKeyPath(idOrName, gracePeriod)
 	req, err := nethttp.NewRequest("DELETE", path, nil)
 	if err != nil {
 		return RegenerateSecretKeyResponse{}, err

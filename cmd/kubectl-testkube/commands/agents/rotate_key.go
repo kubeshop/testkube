@@ -21,7 +21,7 @@ func NewRotateKeyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rotate-key <nameOrId>",
 		Short: "Rotate the secret key for an agent",
-		Long:  "Regenerate the secret key for an agent with a configurable grace period during which the old key remains valid",
+		Long:  "Rotate the secret key for an agent with a configurable grace period during which the old key remains valid",
 		Args:  cobra.ExactArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
@@ -34,7 +34,15 @@ func NewRotateKeyCommand() *cobra.Command {
 
 			// Validate the agent exists
 			agent, err := GetControlPlaneAgent(cmd, nameOrID)
-			ui.ExitOnError("getting agent", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAgentGetFailed,
+					"Failed to get agent",
+					"Verify the agent name or ID is correct and your credentials are valid",
+					err,
+				))
+				return
+			}
 
 			// Confirm unless --yes
 			if !yes {
@@ -46,7 +54,15 @@ func NewRotateKeyCommand() *cobra.Command {
 
 			// Rotate the key
 			result, err := RotateControlPlaneAgentKey(cmd, agent.ID, gracePeriod)
-			ui.ExitOnError("rotating agent secret key", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrAgentRotateKeyFailed,
+					"Failed to rotate agent secret key",
+					"Verify the agent exists and your credentials are valid",
+					err,
+				))
+				return
+			}
 
 			// Display results
 			ui.Success("Secret key rotated successfully")
