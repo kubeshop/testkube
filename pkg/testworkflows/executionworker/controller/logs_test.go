@@ -16,6 +16,16 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 )
 
+const (
+	testIdleTimeoutShort   = 50 * time.Millisecond
+	testIdleTimeoutDefault = 500 * time.Millisecond
+	testDeadlineShort      = 500 * time.Millisecond
+	testDeadlineMedium     = 2 * time.Second
+	testDeadlineLong       = 5 * time.Second
+	testBufferSizeSmall    = 1
+	testBufferSizeLarge    = 5
+)
+
 func Test_ReadTimestamp_UTC_Initial(t *testing.T) {
 	reader := newTimestampReader()
 	prefix := "2024-06-07T12:41:49.037275300Z "
@@ -85,9 +95,8 @@ func TestWatchContainerLogsIdleTimeoutCancelsWhenDone(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
-	idleTimeout := 50 * time.Millisecond
 	ch := watchContainerLogsWithStream(
 		ctx,
 		func(ctx context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
@@ -97,13 +106,13 @@ func TestWatchContainerLogsIdleTimeoutCancelsWhenDone(t *testing.T) {
 		"default",
 		"pod",
 		"container",
-		1,
+		testBufferSizeSmall,
 		func() bool { return true },
 		func(*instructions.Instruction) bool { return false },
-		idleTimeout,
+		testIdleTimeoutShort,
 	)
 
-	deadline := time.NewTimer(500 * time.Millisecond)
+	deadline := time.NewTimer(testDeadlineShort)
 	defer deadline.Stop()
 
 	var gotErr bool
@@ -128,7 +137,7 @@ func TestWatchContainerLogsReopensOnEOF(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
 	var calls int32
 	line := "2024-06-07T12:41:49.037275300Z hello\n"
@@ -145,13 +154,13 @@ func TestWatchContainerLogsReopensOnEOF(t *testing.T) {
 		"default",
 		"pod",
 		"container",
-		5,
+		testBufferSizeLarge,
 		func() bool { return false },
 		func(*instructions.Instruction) bool { return false },
-		500*time.Millisecond,
+		testIdleTimeoutDefault,
 	)
 
-	deadline := time.NewTimer(2 * time.Second)
+	deadline := time.NewTimer(testDeadlineMedium)
 	defer deadline.Stop()
 
 	var gotLog bool
@@ -179,7 +188,7 @@ func TestWatchContainerLogsProxyErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
 	ch := watchContainerLogsWithStream(
 		ctx,
@@ -190,13 +199,13 @@ func TestWatchContainerLogsProxyErrorPropagates(t *testing.T) {
 		"default",
 		"pod",
 		"container",
-		5,
+		testBufferSizeLarge,
 		func() bool { return false },
 		func(*instructions.Instruction) bool { return false },
-		500*time.Millisecond,
+		testIdleTimeoutDefault,
 	)
 
-	deadline := time.NewTimer(5 * time.Second)
+	deadline := time.NewTimer(testDeadlineLong)
 	defer deadline.Stop()
 
 	var gotErr bool
@@ -221,7 +230,7 @@ func TestWatchContainerLogsDoneWithNoLogsCloses(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
 	ch := watchContainerLogsWithStream(
 		ctx,
@@ -232,13 +241,13 @@ func TestWatchContainerLogsDoneWithNoLogsCloses(t *testing.T) {
 		"default",
 		"pod",
 		"container",
-		1,
+		testBufferSizeSmall,
 		func() bool { return true },
 		func(*instructions.Instruction) bool { return false },
-		500*time.Millisecond,
+		testIdleTimeoutDefault,
 	)
 
-	deadline := time.NewTimer(500 * time.Millisecond)
+	deadline := time.NewTimer(testDeadlineShort)
 	defer deadline.Stop()
 
 	for {
