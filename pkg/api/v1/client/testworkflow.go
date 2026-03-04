@@ -259,6 +259,19 @@ func (c TestWorkflowClient) GetTestWorkflowExecutionLogs(id string) (result []by
 	return c.testWorkflowTransport.GetRawBody(http.MethodGet, uri, nil, nil)
 }
 
+// UpdateTestWorkflowExecutionTags updates tags on a test workflow execution
+func (c TestWorkflowClient) UpdateTestWorkflowExecutionTags(executionID string, tags map[string]string) error {
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions/%s/tags", executionID)
+
+	body, err := json.Marshal(tags)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.testWorkflowExecutionTransport.GetRawBody(http.MethodPatch, uri, body, nil)
+	return err
+}
+
 // ReRunTestWorkflowExecution reruns selected execution
 func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
 	if workflow == "" {
