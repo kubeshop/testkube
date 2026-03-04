@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 )
@@ -62,11 +63,11 @@ func (t *server) Has(dirPath string, files []string) bool {
 }
 
 func (t *server) GetUrl(id string) string {
-	return fmt.Sprintf("http://%s:%d/download/%s.tar.gz", t.host, t.port, id)
+	return fmt.Sprintf("http://%s/download/%s.tar.gz", net.JoinHostPort(t.host, strconv.Itoa(t.port)), id)
 }
 
 func (t *server) GetRequestUrl(id string) string {
-	return fmt.Sprintf("http://%s:%d/upload/%s", t.host, t.port, id)
+	return fmt.Sprintf("http://%s/upload/%s", net.JoinHostPort(t.host, strconv.Itoa(t.port)), id)
 }
 
 func (t *server) Include(dirPath string, files []string) (Entry, error) {
