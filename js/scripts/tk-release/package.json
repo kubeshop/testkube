@@ -10,7 +10,7 @@
     "boxen": "8.0.1",
     "cac": "6.7.14",
     "chalk": "5.4.1",
-    "execa": "9.6.0",
+    "execa": "9.6.1",
     "fs-extra": "11.3.0",
     "inquirer": "12.6.1",
     "log-symbols": "7.0.0",
