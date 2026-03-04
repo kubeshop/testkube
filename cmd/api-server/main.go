@@ -322,6 +322,8 @@ func main() {
 
 	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+	leaderIdentifier := resolveLeaderIdentifier()
+	leaderClusterID := resolveLeaderClusterID(clusterId)
 
 	// k8s clients
 	var webhooksClient executorsclientv1.WebhooksInterface = executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
@@ -340,24 +342,21 @@ func main() {
 	// This setup can be moved back down to just before the controller initialisation
 	// when the SuperAgent migration has been removed.
 	syncStore := syncgrpc.NewClient(grpcConn, log.DefaultLogger, proContext.APIKey, proContext.OrgID, grpcTLSEnabled)
+	superAgentMigrationCfg := superAgentMigrationConfig{
+		agentId: proContext.Agent.ID,
+		apiKey:  proContext.APIKey,
+		proContextControlPlaneHasSourceOfTruthCapability: proContext.HasSourceOfTruthCapability,
+		proContextAgentIsSuperAgent:                      proContext.Agent.IsSuperAgent,
+		forceSuperAgentMode:                              cfg.ForceSuperAgentMode,
+		terminationLogPath:                               cfg.TerminationLogPath,
+		namespace:                                        cfg.TestkubeNamespace,
+	}
 	// SUPER AGENT DEPRECATION MIGRATION
-	// Run the migration function blocking further processing. We want the migration to run and succeed or to fail and
-	// kill the program before any additional processing occurs to avoid any conflicts with the migration process and
-	// to force migration of Agents.
-	migrateSuperAgent(ctx, log.DefaultLogger,
-		superAgentMigrationConfig{
-			agentId: proContext.Agent.ID,
-			apiKey:  proContext.APIKey,
-			proContextControlPlaneHasSourceOfTruthCapability: proContext.HasSourceOfTruthCapability,
-			proContextAgentIsSuperAgent:                      proContext.Agent.IsSuperAgent,
-			forceSuperAgentMode:                              cfg.ForceSuperAgentMode,
-			terminationLogPath:                               cfg.TerminationLogPath,
-			namespace:                                        cfg.TestkubeNamespace,
-		},
-		grpcClient,
-		kubeClient,
-		syncStore,
-	)
+	// Run migration only on the elected leader to avoid concurrent migrations across replicas.
+	// On the leader, migration still blocks further processing and will exit on completion.
+	if shouldRunSuperAgentMigrationOnLeader(ctx, log.DefaultLogger, superAgentMigrationCfg, leaderLeaseBackend, leaderIdentifier, leaderClusterID) {
+		migrateSuperAgent(ctx, log.DefaultLogger, superAgentMigrationCfg, grpcClient, kubeClient, syncStore)
+	}
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
@@ -847,15 +846,6 @@ func main() {
 	})
 
 	if len(leaderTasks) > 0 {
-		leaderIdentifier := resolveLeaderIdentifier()
-
-		leaderClusterID := clusterId
-		if leaderClusterID == "" {
-			leaderClusterID = "testkube-core"
-		} else {
-			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
-		}
-
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
 		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
 		for _, task := range leaderTasks {
@@ -882,6 +872,14 @@ func resolveLeaderIdentifier() string {
 	}
 
 	return fmt.Sprintf("testkube-core-%d", time.Now().UnixNano())
+}
+
+func resolveLeaderClusterID(clusterID string) string {
+	if clusterID == "" {
+		return "testkube-core"
+	}
+
+	return fmt.Sprintf("%s-core", clusterID)
 }
 
 func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {
