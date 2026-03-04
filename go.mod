@@ -21,7 +21,7 @@ require (
 	github.com/fasthttp/websocket v1.5.0
 	github.com/fluxcd/pkg/apis/event v0.2.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gabriel-vasile/mimetype v1.4.8
+	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/go-errors/errors v1.5.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.1.29
