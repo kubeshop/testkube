@@ -49,8 +49,8 @@ require (
 	github.com/minio/minio-go/v7 v7.0.66
 	github.com/montanaflynn/stats v0.7.1
 	github.com/moogar0880/problems v0.1.1
-	github.com/nats-io/nats-server/v2 v2.11.4
-	github.com/nats-io/nats.go v1.42.0
+	github.com/nats-io/nats-server/v2 v2.11.12
+	github.com/nats-io/nats.go v1.48.0
 	github.com/ohler55/ojg v1.28.0
 	github.com/olekukonko/tablewriter v0.0.6-0.20230925090304-df64c4bbad77
 	github.com/onsi/ginkgo v1.16.5
@@ -121,6 +121,7 @@ require (
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/alecthomas/repr v0.5.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/antithesishq/antithesis-sdk-go v0.5.0-default-no-op // indirect
 	github.com/aws/aws-sdk-go-v2 v1.36.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.29.6 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.59 // indirect
@@ -194,7 +195,7 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/go-tpm v0.9.5 // indirect
+	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
@@ -210,7 +211,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/keygen-sh/go-update v1.0.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
@@ -223,7 +224,7 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
-	github.com/minio/highwayhash v1.0.3 // indirect
+	github.com/minio/highwayhash v1.0.4-0.20251030100505-070ab1a87a76 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -239,8 +240,8 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
-	github.com/nats-io/jwt/v2 v2.7.4 // indirect
-	github.com/nats-io/nkeys v0.4.11 // indirect
+	github.com/nats-io/jwt/v2 v2.8.0 // indirect
+	github.com/nats-io/nkeys v0.4.12 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce // indirect
@@ -304,7 +305,7 @@ require (
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
