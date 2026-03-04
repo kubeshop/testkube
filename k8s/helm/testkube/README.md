@@ -382,9 +382,6 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | testkube-api.serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | testkube-api.serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template. |
-| testkube-api.slackConfig | string | `nil` | Slack config for the events, tests, testsuites, testworkflows and channels |
-| testkube-api.slackSecret | string | `""` | Slack secret to store slackToken, the key name should be SLACK_TOKEN |
-| testkube-api.slackToken | string | `""` | Slack token from the testkube authentication endpoint |
 | testkube-api.storage.SSL | bool | `false` | MinIO Use SSL |
 | testkube-api.storage.accessKey | string | `"minio123"` | MinIO Secret Access Key |
 | testkube-api.storage.accessKeyId | string | `"minio"` | MinIO Access Key ID |

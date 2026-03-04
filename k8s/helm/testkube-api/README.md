@@ -195,9 +195,6 @@ A Helm chart for Testkube api
 | serviceAccount.annotations | object | `{}` |  |
 | serviceAccount.create | bool | `true` |  |
 | serviceAccount.name | string | `""` |  |
-| slackConfig | string | `""` |  |
-| slackSecret | string | `""` |  |
-| slackToken | string | `""` |  |
 | storage.SSL | bool | `false` |  |
 | storage.accessKey | string | `""` |  |
 | storage.accessKeyId | string | `""` |  |

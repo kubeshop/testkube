@@ -18,15 +18,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 type Enqueuer struct {
-	logger              *zap.SugaredLogger
-	workflowRepository  testworkflowclient.TestWorkflowClient
-	templateRepository  testworkflowtemplateclient.TestWorkflowTemplateClient
-	executionRepository testworkflow.Repository
-	emitter             *event.Emitter
+	logger                   *zap.SugaredLogger
+	workflowRepository       testworkflowclient.TestWorkflowClient
+	templateRepository       testworkflowtemplateclient.TestWorkflowTemplateClient
+	executionRepository      testworkflow.Repository
+	emitter                  *event.Emitter
+	globalTemplateName       string
+	hasInlinedGlobalTemplate bool
 }
 
 func NewEnqueuer(
@@ -35,13 +38,17 @@ func NewEnqueuer(
 	templateRepository testworkflowtemplateclient.TestWorkflowTemplateClient,
 	executionRepository testworkflow.Repository,
 	emitter *event.Emitter,
+	globalTemplateName string,
+	hasInlinedGlobalTemplate bool,
 ) Enqueuer {
 	return Enqueuer{
-		logger:              logger,
-		workflowRepository:  workflowRepository,
-		templateRepository:  templateRepository,
-		executionRepository: executionRepository,
-		emitter:             emitter,
+		logger:                   logger,
+		workflowRepository:       workflowRepository,
+		templateRepository:       templateRepository,
+		executionRepository:      executionRepository,
+		emitter:                  emitter,
+		globalTemplateName:       globalTemplateName,
+		hasInlinedGlobalTemplate: hasInlinedGlobalTemplate,
 	}
 }
 
@@ -198,6 +205,16 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 		SetKubernetesObjectName(req.KubernetesObjectName).
 		SetRunningContext(testworkflowexecutor.GetLegacyRunningContext(req))
 
+	if req.SilentMode != nil {
+		executionBase.SetSilentMode(&testkube.SilentMode{
+			Webhooks: req.SilentMode.Webhooks,
+			Insights: req.SilentMode.Insights,
+			Health:   req.SilentMode.Health,
+			Metrics:  req.SilentMode.Metrics,
+			Cdevents: req.SilentMode.Cdevents,
+		})
+	}
+
 	hasResolvedWorkflow := len(req.ResolvedWorkflow) != 0
 	if hasResolvedWorkflow {
 		var workflow testkube.TestWorkflow
@@ -205,6 +222,12 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			return nil, err
 		}
 		executionBase.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
+	} else {
+		if e.hasInlinedGlobalTemplate {
+			executionBase.PrependTemplate(testworkflowtemplateclient.InlinedGlobalTemplateName)
+		} else if e.globalTemplateName != "" {
+			executionBase.PrependTemplate(e.globalTemplateName)
+		}
 	}
 
 	for _, exec := range executions {
@@ -258,6 +281,11 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 				current.SetError("Cannot inline Test Workflow Templates", err)
 				continue
 			}
+		}
+
+		// Apply silent flag from workflow spec to SilentMode
+		if current.IsSilent() {
+			current.SetSilentMode(testworkflows.NewSilenceAllSilentMode())
 		}
 	}
 
@@ -366,21 +394,6 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExecution) {
 	for _, execution := range executions {
 		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-
-		switch {
-		case execution.Result.IsPassed():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, ""))
-		case execution.Result.IsAborted():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, ""))
-		case execution.Result.IsCanceled():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, ""))
-		default:
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, ""))
-		}
-
-		if execution.Result.IsNotPassed() {
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, ""))
-		}
 	}
 }
 

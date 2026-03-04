@@ -148,12 +148,11 @@ func (c *CloudObject) DashboardUrl(id, path string) string {
 	return strings.TrimSuffix(fmt.Sprintf("%s/organization/%s/environment/%s/", c.cfg.UiUri, c.cfg.OrganizationId, id)+strings.TrimPrefix(path, "/"), "/")
 }
 
-func (c *CloudObject) CreateEnvironment(name string, disableCloudStorage bool) (*client.Environment, error) {
+func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error) {
 	env, err := c.envClient.Create(client.Environment{
 		Name:            name,
 		Owner:           c.cfg.OrganizationId,
 		OrganizationId:  c.cfg.OrganizationId,
-		CloudStorage:    !disableCloudStorage,
 		NewArchitecture: true,
 	})
 	if err != nil {
@@ -178,6 +177,16 @@ func (c *CloudObject) CreateEnvironment(name string, disableCloudStorage bool) (
 	if env.Slug == "" {
 		env.Slug = env.Id
 	}
+
+	// Fetch the super agent token from the agents API
+	// The super agent ID is derived from env ID: tkcenv_xxx -> tkcroot_xxx
+	superAgentId := strings.Replace(env.Id, "tkcenv_", "tkcroot_", 1)
+	agentToken, err := c.agentClient.GetSecretKey(superAgentId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get super agent token: %w", err)
+	}
+	env.AgentToken = agentToken
+
 	return &env, nil
 }
 

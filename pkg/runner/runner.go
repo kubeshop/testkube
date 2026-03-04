@@ -485,6 +485,7 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 			return nil, err
 		}
 	}
+
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		go func() {

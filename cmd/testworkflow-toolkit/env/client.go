@@ -127,7 +127,7 @@ func ImageInspector() imageinspector.Inspector {
 	}
 	return imageinspector.NewInspector(
 		config2.Config().Worker.DefaultRegistry,
-		imageinspector.NewCraneFetcher(),
+		imageinspector.NewCraneFetcher(config2.Config().Worker.InsecureRegistries...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(config2.Config().Worker.ImageInspectorPersistenceCacheTTL)),
 		inspectorStorages...,
 	)

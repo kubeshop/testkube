@@ -58,7 +58,8 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		os.Remove(socketAddr)
 	})
 
-	listener, err := net.Listen("unix", socketAddr)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "unix", socketAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,5 +81,5 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		t.Fatal(err)
 	}
 
-	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar")
+	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", true)
 }

@@ -68,7 +68,7 @@ func (r *GitOpsAgent) generatePodSpec(env *client.Environment, agent *client.Age
 		{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},
 		{Name: "TESTKUBE_PRO_URL", Value: r.cloud.AgentURI()},
 		{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: fmt.Sprintf("%v", r.cloud.AgentInsecure())},
-		{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
+		{Name: "TESTKUBE_PRO_SKIP_VERIFY", Value: "true"},
 
 		// CRD Sync configuration
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},

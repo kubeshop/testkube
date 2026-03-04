@@ -15,10 +15,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -26,9 +30,7 @@ import (
 func TestServicesExecutor_RequiresGroupRef(t *testing.T) {
 	executor := NewServicesExecutor("", false, ServicesDependencies{})
 	err := executor.Execute([]string{`{}`})
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing required --group")
+	assert.ErrorContains(t, err, "missing required --group")
 }
 
 func TestProcessNotifications(t *testing.T) {
@@ -84,10 +86,7 @@ func TestProcessNotifications(t *testing.T) {
 			watcher := newMockWatcher(tt.notifications)
 
 			got := runner.processNotifications(watcher, "main")
-
-			assert.Equal(t, tt.want.Started, got.Started, "Started")
-			assert.Equal(t, tt.want.Ready, got.Ready, "Ready")
-			assert.Equal(t, tt.want.Failed, got.Failed, "Failed")
+			assert.Equal(t, tt.want, ServiceExecutionResult{Started: got.Started, Ready: got.Ready, Failed: got.Failed})
 		})
 	}
 }
@@ -243,4 +242,73 @@ type mockWorker struct {
 
 func (m *mockWorker) StatusNotifications(ctx context.Context, id string, opts executionworkertypes.StatusNotificationsOptions) executionworkertypes.StatusNotificationsWatcher {
 	return newMockWatcher(m.notifications)
+}
+
+func TestServiceEnvExpressionPreservation(t *testing.T) {
+	const (
+		envVar      = "TEST_VAR"
+		parentValue = "parent-value"
+	)
+
+	cfg := &testworkflowconfig.InternalConfig{
+		Execution: testworkflowconfig.ExecutionConfig{Id: "test-exec"},
+	}
+	shellScript := `echo "{{ env.` + envVar + ` }}"`
+
+	t.Run("without EnvMachine expression preserved", func(t *testing.T) {
+		executor := &ServicesExecutor{
+			groupRef: "test-group",
+			deps: ServicesDependencies{
+				Config:      cfg,
+				BaseMachine: createTestMachineWithoutEnv(cfg),
+				Namespace:   "test-ns",
+			},
+		}
+		instance := buildServiceInstance(t, executor, shellScript)
+		assert.Contains(t, *instance.Spec.Steps[0].Run.Shell, "{{env."+envVar+"}}")
+	})
+
+	t.Run("with EnvMachine parent value leaks", func(t *testing.T) {
+		machineWithEnv := expressions.CombinedMachines(
+			createTestMachineWithoutEnv(cfg),
+			expressions.NewMachine().RegisterAccessor(func(name string) (interface{}, bool) {
+				if name == "env."+envVar {
+					return parentValue, true
+				}
+				return nil, false
+			}),
+		)
+		executor := &ServicesExecutor{
+			groupRef: "test-group",
+			deps: ServicesDependencies{
+				Config:      cfg,
+				BaseMachine: machineWithEnv,
+				Namespace:   "test-ns",
+			},
+		}
+		instance := buildServiceInstance(t, executor, shellScript)
+		assert.Contains(t, *instance.Spec.Steps[0].Run.Shell, parentValue)
+	})
+}
+
+func buildServiceInstance(t *testing.T, executor *ServicesExecutor, shellScript string) ServiceInstance {
+	t.Helper()
+	svc := testworkflowsv1.ServiceSpec{
+		IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
+			StepRun: testworkflowsv1.StepRun{Shell: &shellScript},
+			Pod:     &testworkflowsv1.PodConfig{},
+		},
+	}
+	params := &commontcl.ParamsSpec{Count: 1, ShardCount: 1, MatrixCount: 1}
+	instances, _, err := executor.buildServiceInstances("test-service", svc, params)
+	require.NoError(t, err)
+	require.Len(t, instances, 1)
+	return instances[0]
+}
+
+func createTestMachineWithoutEnv(cfg *testworkflowconfig.InternalConfig) expressions.Machine {
+	return expressions.CombinedMachines(
+		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
+		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
+	)
 }

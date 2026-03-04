@@ -12,6 +12,10 @@ spec:
     activeDeadlineSeconds: 180
   container:
     image: kubeshop/testkube-cli:latest
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
     env:
       - name: apiToken
         valueFrom:

@@ -2,6 +2,7 @@ package license
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -42,7 +43,13 @@ func (c *Client) ValidateLicense(licenseRequest LicenseRequest) (*LicenseRespons
 		return nil, err
 	}
 
-	resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, c.url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

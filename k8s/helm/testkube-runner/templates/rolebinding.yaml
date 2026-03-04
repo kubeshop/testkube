@@ -201,7 +201,8 @@ roleRef:
 ---
 
 # Apply watchers role bindings for triggers functionality
-{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- $watchersEnabled := or .Values.listener.enabled .Values.gitops.enabled }}
+{{- if and .Values.pod.serviceAccount.autoCreate $watchersEnabled }}
 {{- if .Values.listener.watchAllNamespaces }}
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: ClusterRoleBinding

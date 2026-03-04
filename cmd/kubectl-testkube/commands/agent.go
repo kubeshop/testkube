@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agent"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -39,6 +40,7 @@ func NewAgentCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(agent.NewDebugAgentCmd())
+	cmd.AddCommand(agents.NewRotateKeyCommand())
 
 	return cmd
 }

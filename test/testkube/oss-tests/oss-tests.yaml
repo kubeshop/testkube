@@ -14,6 +14,10 @@ spec:
             key: ENTERPRISE_INSTALLATION_TEST_SA_KEY
   container:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    resources:
+      requests:
+        cpu: 1
+        memory: 128Mi
   steps:
     - name: Install Testkube CLI and jq
       shell: |

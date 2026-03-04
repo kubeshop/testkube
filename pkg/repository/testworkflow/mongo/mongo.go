@@ -249,7 +249,7 @@ func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.F
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 	// Build a compound query with both status and silent mode filters
-	query["$and"] = bson.A{
+	statusAndSilentModeQuery := bson.A{
 		// Status filter: must be finished status
 		bson.M{"$or": bson.A{
 			bson.M{"result.status": testkube.PASSED_TestWorkflowStatus},
@@ -262,6 +262,11 @@ func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.F
 			bson.M{"silentmode.health": bson.M{"$exists": false}},
 			bson.M{"silentmode": bson.M{"$exists": false}},
 		}},
+	}
+	if existingAnd, ok := query["$and"].(bson.A); ok {
+		query["$and"] = append(existingAnd, statusAndSilentModeQuery...)
+	} else {
+		query["$and"] = statusAndSilentModeQuery
 	}
 
 	cursor, err := r.Coll.Find(ctx, query, opts)

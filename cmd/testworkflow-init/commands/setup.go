@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"strings"
@@ -28,7 +29,7 @@ func Setup(config lite.ActionSetup) error {
 		if envPath := os.Getenv("TESTKUBE_TW_INIT_BINARY_PATH"); envPath != "" {
 			initSource = envPath
 		}
-		err := exec.Command("cp", initSource, constants.InitPath).Run()
+		err := exec.CommandContext(context.Background(), "cp", initSource, constants.InitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the /init process: %s\n", err.Error())
@@ -47,7 +48,7 @@ func Setup(config lite.ActionSetup) error {
 		if envPath := os.Getenv("TESTKUBE_TW_TOOLKIT_BINARY_PATH"); envPath != "" {
 			toolkitSource = envPath
 		}
-		err := exec.Command("cp", toolkitSource, constants.ToolkitPath).Run()
+		err := exec.CommandContext(context.Background(), "cp", toolkitSource, constants.ToolkitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the /toolkit utilities: %s\n", err.Error())
@@ -68,7 +69,7 @@ func Setup(config lite.ActionSetup) error {
 		}
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
 		// Copying individual files will lead to high FS usage
-		err := exec.Command("cp", "-rf", binariesSource, constants.InternalBinPath).Run()
+		err := exec.CommandContext(context.Background(), "cp", "-rf", binariesSource, constants.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the binaries: %s\n", err.Error())

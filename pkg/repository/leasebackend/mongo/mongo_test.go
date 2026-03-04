@@ -11,14 +11,12 @@ import (
 )
 
 func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
-	t.Parallel()
 
 	ctx := context.Background()
 
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
 	mt.Run("acquire existing lease", func(mt *mtest.T) {
-		mt.Parallel()
 
 		leaseBackend := NewMongoLeaseBackend(mt.DB)
 
@@ -51,7 +49,6 @@ func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
 	})
 
 	mt.Run("renew existing lease", func(mt *mtest.T) {
-		mt.Parallel()
 
 		leaseBackend := NewMongoLeaseBackend(mt.DB)
 
@@ -105,7 +102,6 @@ func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
 	})
 
 	mt.Run("not acquire if other instance is holding non-expired", func(mt *mtest.T) {
-		mt.Parallel()
 
 		leaseBackend := NewMongoLeaseBackend(mt.DB)
 
@@ -138,7 +134,6 @@ func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
 	})
 
 	mt.Run("acquire lease from other instance if lease is expired", func(mt *mtest.T) {
-		mt.Parallel()
 
 		leaseBackend := NewMongoLeaseBackend(mt.DB)
 

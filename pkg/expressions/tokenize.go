@@ -70,7 +70,7 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			var val interface{}
 			err := decoder.Decode(&val)
 			if err != nil {
-				return token{}, i, fmt.Errorf("error while decoding string from index %d in expression: %s: %s", i, exp, err.Error())
+				return token{}, i, fmt.Errorf("error while decoding string from index %d in expression: %s: %w", i, exp, err)
 			}
 			return tokenJson(val), i + originalLen, nil
 		case jsonValueRe.MatchString(exp[i:]):
@@ -98,7 +98,7 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			var val interface{}
 			err := decoder.Decode(&val)
 			if err != nil {
-				return token{}, i, fmt.Errorf("error while decoding JSON from index %d in expression: %s: %s", i, exp, err.Error())
+				return token{}, i, fmt.Errorf("error while decoding JSON from index %d in expression: %s: %w", i, exp, err)
 			}
 			return tokenJson(val), i + int(decoder.InputOffset()) - appended, nil
 		case accessorRe.MatchString(exp[i:]):

@@ -1,0 +1,19 @@
+# TODO: directory structure - move out of cron triggers directory (TKC-3807)
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: dev-e2e-heartbeat-webhook
+spec:
+  events:
+  - end-testworkflow-success
+  uri: '{{credential("webhook-e2e-tests-heartbeat-url")}}'
+  selector: heartbeat-type=dev-e2e-webhook
+  headers:
+    Content-Type: application/json
+    X-Heartbeat-Token: '{{credential("webhook-e2e-tests-heartbeat-key")}}'
+  payloadTemplate: |-
+    {
+      "service": "testkube-e2e-webhook",
+      "env": "dev",
+      "info": "workflow={{ .TestWorkflowExecution.Workflow.Name }} status={{ .Type_ }} exec={{ .TestWorkflowExecution.Id }}"
+    }

@@ -26,7 +26,6 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -35,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -93,7 +91,7 @@ func MustGetConfig() *config.Config {
 }
 
 func MustFreePort(port int) {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", fmt.Sprintf(":%d", port))
 	ExitOnError(fmt.Sprintf("checking if port %d is free", port), err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
@@ -204,7 +202,7 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
 	// Connect to PostgreSQL
-	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	pool, err := pgxpool.New(ctx, cfg.APIPostgresDSN)
 	ExitOnError("Getting Postgres database", err)
 
 	if migrate {
@@ -342,22 +340,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	return proContext, nil
 }
 
-func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
-	slackTemplate, err := parser.LoadConfigFromStringOrFile(
-		cfg.SlackTemplate,
-		cfg.TestkubeConfigDir,
-		"slack-template.json",
-		"slack template",
-	)
-	ExitOnError("Creating slack loader", err)
-
-	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
-	ExitOnError("Creating slack loader", err)
-
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
-		testkube.AllEventTypes, envs)
-}
-
 func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
@@ -386,6 +368,16 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 
 // Components
 
+func TrimAndFilterRegistries(csv string) []string {
+	var result []string
+	for _, r := range strings.Split(csv, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
 func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
@@ -395,7 +387,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	}
 	return imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(),
+		imageinspector.NewCraneFetcher(TrimAndFilterRegistries(cfg.InsecureRegistries)...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)

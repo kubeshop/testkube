@@ -163,6 +163,20 @@ func (e *IntermediateExecution) SetSilentMode(silentMode *testkube.SilentMode) *
 	return e
 }
 
+// IsSilent checks if the workflow has silent set to true in its execution schema
+func (e *IntermediateExecution) IsSilent() bool {
+	if e.cr == nil {
+		return false
+	}
+	if e.cr.Spec.Execution == nil {
+		return false
+	}
+	if e.cr.Spec.Execution.Silent == nil {
+		return false
+	}
+	return *e.cr.Spec.Execution.Silent
+}
+
 func (e *IntermediateExecution) SetRunningContext(runningContext *testkube.TestWorkflowRunningContext) *IntermediateExecution {
 	e.execution.RunningContext = runningContext
 	return e
@@ -242,7 +256,14 @@ func (e *IntermediateExecution) ApplyDynamicConfig(config map[string]string) err
 func (e *IntermediateExecution) ApplyConfig(config map[string]string) error {
 	dynamicConfig := make(map[string]string)
 	for k, v := range config {
-		dynamicConfig[k] = expressions.NewStringValue(v).Template()
+		// Detect JSON values (start with { or [ but NOT {{) and wrap in tojson(json()) to prevent colon tokenization
+		isJSON := len(v) > 0 && ((v[0] == '{' && (len(v) < 2 || v[1] != '{')) || v[0] == '[')
+
+		if isJSON {
+			dynamicConfig[k] = "tojson(json(" + expressions.NewStringValue(v).String() + "))"
+		} else {
+			dynamicConfig[k] = expressions.NewStringValue(v).Template()
+		}
 	}
 	return e.ApplyDynamicConfig(dynamicConfig)
 }

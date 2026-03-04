@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: maven
     category: build-integration
+  annotations:
+    testkube.io/icon: maven
 spec:
   content:
     git:
@@ -38,6 +40,8 @@ metadata:
     core-tests: workflows
     tool: maven
     category: build-integration
+  annotations:
+    testkube.io/icon: maven
 spec:
   content:
     git:

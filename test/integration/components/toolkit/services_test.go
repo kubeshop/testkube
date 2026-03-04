@@ -2,6 +2,8 @@ package toolkit_test
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -10,98 +12,129 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
-func TestServicePodLifecycle_Integration(t *testing.T) {
+func TestServiceEnvOverride_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
-	tests := []struct {
-		name         string
-		command      string
-		wantPhase    corev1.PodPhase
-		wantRunning  bool
-		wantExitCode *int32
-	}{
-		{
-			name:      "failing pod is detected",
-			command:   "exit 1",
-			wantPhase: corev1.PodFailed,
-		},
-		{
-			name:        "running pod has IP",
-			command:     "sleep 300",
-			wantRunning: true,
-		},
-		{
-			name:         "exit code is preserved",
-			command:      "exit 42",
-			wantPhase:    corev1.PodFailed,
-			wantExitCode: common.Ptr(int32(42)),
+	namespace := createTestNamespace(t)
+	t.Cleanup(func() { deleteTestNamespace(t, namespace) })
+
+	_, _, cleanupCP := setupTestWithControlPlane(t, namespace)
+	t.Cleanup(cleanupCP)
+
+	// Service overrides MY_VAR and uses expression that must resolve to service's value
+	services := map[string]testworkflowsv1.ServiceSpec{
+		"env-test": {
+			IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
+				StepRun: testworkflowsv1.StepRun{
+					ContainerConfig: testworkflowsv1.ContainerConfig{
+						Image: "busybox:1.36",
+						Env: []testworkflowsv1.EnvVar{
+							{EnvVar: corev1.EnvVar{Name: "MY_VAR", Value: "service-value"}},
+						},
+					},
+					Shell: common.Ptr(`[ "{{ env.MY_VAR }}" = "service-value" ]`),
+				},
+				Pod: &testworkflowsv1.PodConfig{},
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			namespace := createTestNamespace(t)
-			t.Cleanup(func() { deleteTestNamespace(t, namespace) })
+	observer, err := startPodObserver(t, namespace)
+	require.NoError(t, err)
+	t.Cleanup(observer.Stop)
 
-			pod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: namespace,
+	err = executeServices(t, services, "test-group")
+	require.NoError(t, err, "service should start successfully")
+
+	err = observer.WaitForPods(1, 30*time.Second)
+	require.NoError(t, err, "should observe 1 service pod")
+
+	pods := observer.GetCreatedPods()
+	require.Len(t, pods, 1)
+
+	// Wait for pod to complete and verify success
+	pod := waitForPodTermination(t, namespace, pods[0].Name, 30*time.Second)
+	assert.Equal(t, corev1.PodSucceeded, pod.Status.Phase,
+		"service pod should succeed - env expression resolved to service's value")
+}
+
+// TestServiceFailureDetection_Integration verifies that failing services are detected.
+func TestServiceFailureDetection_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	namespace := createTestNamespace(t)
+	t.Cleanup(func() { deleteTestNamespace(t, namespace) })
+
+	_, _, cleanupCP := setupTestWithControlPlane(t, namespace)
+	t.Cleanup(cleanupCP)
+
+	services := map[string]testworkflowsv1.ServiceSpec{
+		"failing-service": {
+			IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
+				StepRun: testworkflowsv1.StepRun{
+					ContainerConfig: testworkflowsv1.ContainerConfig{
+						Image: "busybox:1.36",
+					},
+					Shell: common.Ptr(`exit 1`),
 				},
-				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Containers: []corev1.Container{{
-						Name:    "main",
-						Image:   "busybox:1.36",
-						Command: []string{"sh", "-c", tt.command},
-					}},
-				},
-			}
+				Pod: &testworkflowsv1.PodConfig{},
+			},
+		},
+	}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-			defer cancel()
+	err := executeServices(t, services, "test-group")
+	assert.Error(t, err, "should detect service failure")
+}
 
-			_, err := globalK8sClient.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
-			require.NoError(t, err)
+func executeServices(t *testing.T, services map[string]testworkflowsv1.ServiceSpec, groupRef string) error {
+	t.Helper()
 
-			p := waitForPod(t, ctx, namespace, pod.Name, tt.wantRunning)
+	data, err := json.Marshal(services)
+	require.NoError(t, err)
+	encoded := base64.StdEncoding.EncodeToString(data)
 
-			if tt.wantPhase != "" {
-				assert.Equal(t, tt.wantPhase, p.Status.Phase)
-			}
-			if tt.wantRunning {
-				assert.Equal(t, corev1.PodRunning, p.Status.Phase)
-				assert.NotEmpty(t, p.Status.PodIP, "running pod should have IP")
-			}
-			if tt.wantExitCode != nil {
-				require.Len(t, p.Status.ContainerStatuses, 1)
-				terminated := p.Status.ContainerStatuses[0].State.Terminated
-				require.NotNil(t, terminated)
-				assert.Equal(t, *tt.wantExitCode, terminated.ExitCode)
-			}
-		})
+	cfg, err := config.LoadConfigV2()
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- commands.RunServicesWithOptions(encoded, cfg, true, groupRef)
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
-func waitForPod(t *testing.T, ctx context.Context, namespace, name string, wantRunning bool) *corev1.Pod {
+func waitForPodTermination(t *testing.T, namespace, name string, timeout time.Duration) *corev1.Pod {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	for {
-		p, err := globalK8sClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+		pod, err := globalK8sClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		if wantRunning && p.Status.Phase == corev1.PodRunning {
-			return p
-		}
-		if !wantRunning && (p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodSucceeded) {
-			return p
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			return pod
 		}
 
 		select {
 		case <-ctx.Done():
-			t.Fatalf("timeout waiting for pod %s", name)
+			t.Fatalf("timeout waiting for pod %s to terminate", name)
 		case <-time.After(500 * time.Millisecond):
 		}
 	}

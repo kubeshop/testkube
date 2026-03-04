@@ -1,8 +1,6 @@
 package websocket
 
 import (
-	"sync"
-
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
 
@@ -17,7 +15,6 @@ func NewWebsocketLoader() *WebsocketLoader {
 }
 
 type WebsocketLoader struct {
-	mutex    sync.Mutex
 	Listener *WebsocketListener
 }
 
@@ -30,27 +27,19 @@ func (l *WebsocketLoader) Load() (listeners common.Listeners, err error) {
 }
 
 func (l *WebsocketLoader) Add(conn *websocket.Conn) chan bool {
-	var end chan bool
+	end := make(chan bool, 1)
 	id := uuid.NewString()
 
 	conn.SetCloseHandler(func(code int, text string) error {
-		for i, websocket := range l.Listener.Websockets {
-			if websocket.Id == id {
-				l.mutex.Lock()
-				l.Listener.Websockets = append(l.Listener.Websockets[:i], l.Listener.Websockets[i+1:]...)
-				l.mutex.Unlock()
-				break
-			}
-		}
+		l.Listener.RemoveWebsocket(id)
 
 		end <- true
 		return nil
 	})
 
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-	l.Listener.Websockets = append(l.Listener.Websockets, Websocket{Id: id, Conn: conn, Events: testkube.AllEventTypes})
+	ws := &Websocket{Id: id, Conn: conn, Events: testkube.AllEventTypes}
+	l.Listener.AddWebsocket(ws)
 
-	conn.WriteJSON(map[string]string{"message": "connected to Testkube Events", "id": id})
+	_ = ws.SendJSON(map[string]string{"message": "connected to Testkube Events", "id": id})
 	return end
 }

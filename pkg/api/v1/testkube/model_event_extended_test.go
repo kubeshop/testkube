@@ -7,11 +7,7 @@ import (
 )
 
 func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
-	t.Parallel()
-
 	t.Run("should pass only events with given selector", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		execution := &TestWorkflowExecution{Workflow: &TestWorkflow{}}
 		execution.Workflow.Labels = map[string]string{"test": "1"}
@@ -26,8 +22,6 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 	})
 
 	t.Run("should not pass events with not matching selector", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		execution := &TestWorkflowExecution{Workflow: &TestWorkflow{}}
 		execution.Workflow.Labels = map[string]string{"test": "2"}
@@ -42,8 +36,6 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 	})
 
 	t.Run("should pass events without selector", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		execution := &TestWorkflowExecution{Workflow: &TestWorkflow{}}
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
@@ -72,8 +64,6 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 	})
 
 	t.Run("should pass events with become events", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		execution := &TestWorkflowExecution{}
 		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
@@ -87,8 +77,6 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 	})
 
 	t.Run("should pass events with become and regular events", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		execution := &TestWorkflowExecution{}
 		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
@@ -102,8 +90,6 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 	})
 
 	t.Run("should not pass events with wrong become events", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		execution := &TestWorkflowExecution{}
 		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
@@ -118,11 +104,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 }
 
 func TestEvent_IsSuccess(t *testing.T) {
-	t.Parallel()
-
 	t.Run("should return true for success events", func(t *testing.T) {
-		t.Parallel()
-
 		events := map[EventType]bool{
 			END_TESTWORKFLOW_FAILED_EventType:  false,
 			END_TESTWORKFLOW_SUCCESS_EventType: true,
@@ -139,5 +121,4 @@ func TestEvent_IsSuccess(t *testing.T) {
 			assert.Equal(t, expected, success)
 		}
 	})
-
 }

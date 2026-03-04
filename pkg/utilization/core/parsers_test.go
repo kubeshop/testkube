@@ -14,8 +14,6 @@ import (
 )
 
 func TestParseMetrics(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name            string
 		filepath        string
@@ -98,8 +96,6 @@ func TestParseMetrics(t *testing.T) {
 }
 
 func TestInfluxDBLineProtocolParser(t *testing.T) {
-	t.Parallel()
-
 	parser := NewInfluxDBLineProtocolParser()
 
 	// We'll create a known time value for testing timestamp parsing.

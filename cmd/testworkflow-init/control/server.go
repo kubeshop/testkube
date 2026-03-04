@@ -1,6 +1,7 @@
 package control
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -67,7 +68,8 @@ func (s *server) handler(conn net.Conn) {
 
 func (s *server) Listen() (func(), error) {
 	addr := fmt.Sprintf(":%d", s.port)
-	listener, err := net.Listen("tcp", addr)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +78,9 @@ func (s *server) Listen() (func(), error) {
 	}
 	go func() {
 		for {
-			// Accept incoming connections
 			conn, err := listener.Accept()
 			if err != nil {
-				continue
+				return
 			}
 			go s.handler(conn)
 		}
