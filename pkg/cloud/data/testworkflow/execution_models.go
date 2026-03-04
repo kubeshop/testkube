@@ -215,8 +215,6 @@ type ExecutionUpdateTagsRequest struct {
 	Tags map[string]string `json:"tags"`
 }
 
-type ExecutionUpdateTagsResponse struct{}
-
 type TestWorkflowListRequest struct {
 	Selector string `json:"selector"`
 }
