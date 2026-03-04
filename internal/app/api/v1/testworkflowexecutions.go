@@ -796,6 +796,9 @@ func (s *TestkubeAPI) UpdateTestWorkflowExecutionTagsHandler() fiber.Handler {
 		if err := json.Unmarshal(c.Body(), &tags); err != nil {
 			return s.BadRequest(c, errPrefix, "invalid request body", err)
 		}
+		if tags == nil {
+			tags = make(map[string]string)
+		}
 
 		// Verify execution exists
 		_, err := s.TestWorkflowResults.Get(ctx, executionID)
