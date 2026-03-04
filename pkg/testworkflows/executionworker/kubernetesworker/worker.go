@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/strings/slices"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -485,8 +485,8 @@ func (w *worker) Finished(ctx context.Context, id string, options executionworke
 func (w *worker) List(ctx context.Context, options executionworkertypes.ListOptions) ([]executionworkertypes.ListResultItem, error) {
 	namespaces := maps.Keys(w.config.Cluster.Namespaces)
 	if len(options.Namespaces) > 0 {
-		namespaces = slices.Filter(nil, namespaces, func(ns string) bool {
-			return slices.Contains(options.Namespaces, ns)
+		namespaces = slices.DeleteFunc(namespaces, func(ns string) bool {
+			return !slices.Contains(options.Namespaces, ns)
 		})
 	}
 
