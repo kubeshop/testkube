@@ -27,7 +27,7 @@
   "devDependencies": {
     "@changesets/cli": "2.29.7",
     "turbo": "2.5.8",
-    "typescript": "5.9.2"
+    "typescript": "5.9.3"
   },
   "optionalDependencies": {
     "@esbuild/linux-x64": "0.24.2",
