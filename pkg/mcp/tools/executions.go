@@ -239,12 +239,13 @@ func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler ser
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
+		if !ok {
+			return mcp.NewToolResultError("missing required parameter: tags"), nil
+		}
 
 		tags := make(map[string]string)
-		if ok {
-			for k, v := range tagsRaw {
-				tags[k] = fmt.Sprintf("%v", v)
-			}
+		for k, v := range tagsRaw {
+			tags[k] = fmt.Sprintf("%v", v)
 		}
 
 		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
