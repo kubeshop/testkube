@@ -62,7 +62,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savioxavier/termlink v1.4.1
 	github.com/segmentio/analytics-go/v3 v3.2.1
-	github.com/shirou/gopsutil/v3 v3.24.3
+	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/shirou/gopsutil/v4 v4.25.6
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.11.0
