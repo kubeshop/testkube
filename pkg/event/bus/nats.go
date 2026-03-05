@@ -44,9 +44,13 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 	opts = []nats.Option{
 		// Never stop trying to reconnect — the process should not require a restart
 		// due to a transient NATS outage.
+		// Note: RetryOnFailedConnect is intentionally omitted. It would make
+		// nats.Connect() return nil on an unreachable server, silently disabling
+		// the retry.DoWithData startup loop and removing crash-on-startup behaviour.
+		// MaxReconnects(-1) covers all runtime reconnection; startup retries are
+		// handled by the caller's retry loop.
 		nats.MaxReconnects(-1),
 		nats.ReconnectWait(2 * time.Second),
-		nats.RetryOnFailedConnect(true),
 	}
 
 	if cfg.NatsSecure {
@@ -172,10 +176,11 @@ func (n *NATSBus) reconnect() error {
 	if err != nil {
 		return fmt.Errorf("nats reconnect failed: %w", err)
 	}
-	n.nc = conn
 
-	// Re-register every subscription on the new connection.  Without this step
-	// all consumers would silently stop receiving events after a reconnect.
+	// Re-register subscriptions BEFORE exposing conn via n.nc.  This closes the
+	// window where the new connection is live but has no handlers — messages
+	// published to subscribed topics during that gap would otherwise be silently
+	// discarded by the NATS server.
 	n.subscriptions.Range(func(key, value any) bool {
 		entry := value.(*subscriptionEntry)
 
@@ -202,6 +207,7 @@ func (n *NATSBus) reconnect() error {
 		return true
 	})
 
+	n.nc = conn
 	return nil
 }
 
