@@ -184,6 +184,7 @@ rules:
       - "testworkflows.testkube.io"
     resources:
       - testworkflows
+      - testworkflowtemplates
     verbs:
       - get
       - list

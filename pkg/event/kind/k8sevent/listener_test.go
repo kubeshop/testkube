@@ -20,7 +20,7 @@ import (
 func TestK8sEventListenerCreatesEvent(t *testing.T) {
 	t.Parallel()
 
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	listener := NewK8sEventListener("k8s", "", "tk-dev",
 		[]testkube.EventType{*testkube.EventEndTestWorkflowSuccess}, clientset)
 
@@ -55,7 +55,7 @@ func TestK8sEventListenerCreatesEvent(t *testing.T) {
 func TestK8sEventListenerCreateError(t *testing.T) {
 	t.Parallel()
 
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	// Force an error on event creation.
 	clientset.PrependReactor("create", "events", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 		return true, nil, errors.New("create failed")
@@ -84,7 +84,7 @@ func TestK8sEventListenerCreateError(t *testing.T) {
 func TestK8sEventListenerCreateAlreadyExists(t *testing.T) {
 	t.Parallel()
 
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	listener := NewK8sEventListener("k8s", "", "tk-dev",
 		[]testkube.EventType{*testkube.EventEndTestWorkflowSuccess}, clientset)
 
