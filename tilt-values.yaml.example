@@ -40,7 +40,9 @@ testkube-api:
     embedded: false
     enabled: true
   
-  # MinIO for artifact storage
+  # MinIO for artifact storage.
+  # If you change minioRootUser/minioRootPassword here, also set the same values
+  # in the Tiltfile (minio_user / minio_pass) so the create-minio-buckets job can authenticate.
   minio:
     enabled: true
     minioRootUser: minio

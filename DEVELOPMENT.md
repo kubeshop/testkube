@@ -169,6 +169,8 @@ cp tilt-values.yaml.example tilt-values.yaml
 
 > **Warning**: `tilt-values.yaml.example` ships with hardcoded default passwords for MinIO (`minio` / `minio123`) and PostgreSQL (`testkube` / `postgres5432`). These are fine for a throwaway local cluster but should be changed in `tilt-values.yaml` if your cluster is accessible from a network.
 
+If you override MinIO credentials in `tilt-values.yaml` (`minio.minioRootUser` / `minio.minioRootPassword`), you must set the same values in the Tiltfile (`minio_user` and `minio_pass` near the top) so the create-minio-buckets job can authenticate. The Tiltfile does not read credentials from `tilt-values.yaml`.
+
 You can also start from scratch and only override what you need:
 
 ```yaml
@@ -188,7 +190,11 @@ You can modify the constants at the top of the `Tiltfile`:
 NAMESPACE = "testkube-dev"       # Kubernetes namespace
 HELM_RELEASE_NAME = "testkube"   # Helm release name
 HELM_CHART_PATH = "./k8s/helm/testkube"  # Path to Helm chart
+minio_user = "minio"             # MinIO root user (used by bucket setup job)
+minio_pass = "minio123"          # MinIO root password
 ```
+
+If you override MinIO credentials in `tilt-values.yaml`, keep `minio_user` and `minio_pass` in sync here so the create-minio-buckets job succeeds.
 
 ## Development Workflow
 

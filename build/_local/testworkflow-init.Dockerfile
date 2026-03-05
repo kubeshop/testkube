@@ -27,6 +27,7 @@ FROM golang:1.26.0-alpine AS debug
 
 ENV GOTRACEBACK=all
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
+RUN apk --no-cache add ca-certificates
 RUN cp -rf /bin /.tktw-bin
 COPY --from=builder /app/build/_local/workflow-init /init
 

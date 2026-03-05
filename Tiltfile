@@ -35,11 +35,13 @@ NAMESPACE = "testkube-dev"
 HELM_RELEASE_NAME = "testkube"
 HELM_CHART_PATH = "./k8s/helm/testkube"
 
-# MinIO credentials — used by Helm chart and bucket setup job; change here if overriding defaults
+# MinIO credentials — used by Helm chart and by the create-minio-buckets job.
+# If you override these in tilt-values.yaml (minio.minioRootUser / minio.minioRootPassword),
+# you must keep the same values here so the bucket setup job can authenticate.
 minio_user = "minio"
 minio_pass = "minio123"
 
-# MinIO resource names — derived from release and namespace so they stay in sync with Helm
+# MinIO resource names — from testkube-api chart (Deployment + Service use .Release.Namespace)
 MINIO_RESOURCE_NAME = HELM_RELEASE_NAME + "-minio-" + NAMESPACE
 MINIO_SERVICE_HOST = HELM_RELEASE_NAME + "-minio-service-" + NAMESPACE
 
@@ -383,7 +385,7 @@ local_resource(
     cmd="""
         set -e
         echo "Waiting for MinIO to be ready..."
-        kubectl wait --for=condition=ready pod -l app=""" + MINIO_RESOURCE_NAME + """ -n """ + NAMESPACE + """ --timeout=120s
+        kubectl rollout status deployment/""" + MINIO_RESOURCE_NAME + """ -n """ + NAMESPACE + """ --timeout=120s
         sleep 3
         echo "Creating MinIO buckets..."
         kubectl delete job minio-bucket-setup -n """ + NAMESPACE + """ --ignore-not-found=true
