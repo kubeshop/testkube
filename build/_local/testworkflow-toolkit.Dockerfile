@@ -33,8 +33,6 @@ ARG GOCACHE="/root/.cache/go-build"
 ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
 
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
-
 WORKDIR /app
 COPY . .
 RUN --mount=type=cache,target="$GOMODCACHE" \
@@ -45,12 +43,18 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
     go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o build/_local/workflow-toolkit cmd/testworkflow-toolkit/main.go
 
 ###################################
+## Debug builder (Delve)
+###################################
+FROM golang:1.25.0-alpine AS debug-builder
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
+
+###################################
 ## Debug
 ###################################
 FROM ${ALPINE_IMAGE} AS debug
 RUN apk --no-cache add ca-certificates libssl3 git openssh-client
 ENV GOTRACEBACK=all
-COPY --from=builder-toolkit /go/bin/dlv /
+COPY --from=debug-builder /go/bin/dlv /
 COPY --from=busybox /bin /.tktw-bin
 COPY --from=builder-toolkit /app/build/_local/workflow-toolkit /toolkit
 COPY --from=builder-init /app/build/_local/workflow-init /init

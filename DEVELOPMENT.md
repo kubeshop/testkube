@@ -146,16 +146,16 @@ Each Dockerfile provides multiple build targets:
 
 ## Port Forwards
 
-| Service | Port | Description | Condition |
-|---------|------|-------------|-----------|
-| testkube-api-server | 8088 | HTTP REST API | Always |
-| testkube-api-server | 8089 | gRPC API | Always |
-| testkube-api-server | 56268 | Delve debugger | `--debug` only |
-| PostgreSQL | 5432 | Database | `--db=postgres` or `both` |
-| MongoDB | 27017 | Database | `--db=mongo` or `both` |
-| MinIO | 9000 | S3-compatible artifact storage | Always |
-| MinIO | 9001 | MinIO web console | Always |
-| NATS | 4222 | Message queue | Always |
+| Service | Local Port | Pod Port | Description | Condition |
+|---------|------------|----------|-------------|-----------|
+| testkube-api-server | 8088 | 8088 | HTTP REST API | Always |
+| testkube-api-server | 8089 | 8089 | gRPC API | Always |
+| testkube-api-server | 56268 | 56268 | Delve debugger | `--debug` only |
+| PostgreSQL | 5432 | 5432 | Database | `--db=postgres` or `both` |
+| MongoDB | 27017 | 27017 | Database | `--db=mongo` or `both` |
+| MinIO | 9000 | 9000 | S3-compatible artifact storage | Always |
+| MinIO | 9001 | 9090 | MinIO web console | Always |
+| NATS | 4222 | 4222 | Message queue | Always |
 
 ## Configuration
 

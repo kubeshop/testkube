@@ -487,12 +487,12 @@ if has_go:
     )
 
     cmd_button('run-cli-command:run',
-        argv=['sh', '-c', CLI_BIN + ' $COMMAND'],
+        argv=['sh', '-c', 'set -f; exec ' + CLI_BIN + ' $COMMAND'],
         resource='run-cli-command',
         icon_name='terminal',
         text='Run',
         inputs=[
-            text_input('COMMAND', placeholder='e.g. get testworkflows, run testworkflow <name>, get testworkflowexecutions'),
+            text_input('COMMAND', placeholder='CLI args, e.g. get testworkflows (input is interpreted by sh)'),
         ],
     )
 
