@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.25
+FROM golang:1.26
 WORKDIR /build
 COPY . .
 ENV CGO_ENABLED=0

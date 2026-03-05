@@ -44,7 +44,7 @@ If not, there are [many Issues](https://github.com/kubeshop/testkube/issues) to 
 
 Before you begin, ensure you have the following installed:
 
-- **Go** 1.25 or later
+- **Go** 1.26 or later
 - **Docker** with BuildX support
 - **Kubernetes cluster** (for integration testing) 
 - **Helm** v3.x (for local deployment)
@@ -53,7 +53,7 @@ To verify your Go installation:
 
 ```bash
 go version
-# Should output: go version go1.25.x ...
+# Should output: go version go1.26.x ...
 ```
 
 ## Building the Code
