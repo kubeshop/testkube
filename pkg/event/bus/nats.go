@@ -131,11 +131,20 @@ func NewNATSBus(nc *nats.EncodedConn, cfg ConnectionConfig) *NATSBus {
 	}
 }
 
+// subscriptionEntry holds everything needed to re-register a subscription on a
+// fresh connection after a reconnect.
+type subscriptionEntry struct {
+	topic   string
+	queue   string
+	handler Handler
+	sub     *nats.Subscription
+}
+
 type NATSBus struct {
 	nc            *nats.EncodedConn
 	cfg           ConnectionConfig
 	mu            sync.RWMutex
-	subscriptions sync.Map
+	subscriptions sync.Map // map[string]*subscriptionEntry
 }
 
 // Publish publishes event to NATS on events topic
@@ -172,6 +181,28 @@ func (n *NATSBus) reconnect() error {
 		return fmt.Errorf("nats reconnect failed: %w", err)
 	}
 	n.nc = conn
+
+	// Re-register every subscription on the new connection.  Without this step
+	// all consumers would silently stop receiving events after a reconnect.
+	n.subscriptions.Range(func(key, value any) bool {
+		entry := value.(*subscriptionEntry)
+		newSub, serr := conn.QueueSubscribe(entry.topic, entry.queue, entry.handler)
+		if serr != nil {
+			log.DefaultLogger.Errorw("failed to re-register subscription after nats reconnect",
+				"topic", entry.topic,
+				"queue", entry.queue,
+				"error", serr)
+			return true
+		}
+		n.subscriptions.Store(key, &subscriptionEntry{
+			topic:   entry.topic,
+			queue:   entry.queue,
+			handler: entry.handler,
+			sub:     newSub,
+		})
+		return true
+	})
+
 	return nil
 }
 
@@ -214,13 +245,21 @@ func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	// async subscribe on queue
-	s, err := n.nc.QueueSubscribe(topic, queue, handler)
+	n.mu.RLock()
+	nc := n.nc
+	n.mu.RUnlock()
 
+	// async subscribe on queue
+	s, err := nc.QueueSubscribe(topic, queue, handler)
 	if err == nil {
-		// store subscription for later unsubscribe
+		// store topic, queue, and handler so reconnect() can re-register them
 		key := n.queueName(SubscriptionName, queue)
-		n.subscriptions.Store(key, s)
+		n.subscriptions.Store(key, &subscriptionEntry{
+			topic:   topic,
+			queue:   queue,
+			handler: handler,
+			sub:     s,
+		})
 	}
 
 	return err
@@ -231,8 +270,8 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 	queue := common.ListenerName(queueName)
 
 	key := n.queueName(SubscriptionName, queue)
-	if s, ok := n.subscriptions.Load(key); ok {
-		return s.(*nats.Subscription).Drain()
+	if v, ok := n.subscriptions.Load(key); ok {
+		return v.(*subscriptionEntry).sub.Drain()
 	}
 	return nil
 }
