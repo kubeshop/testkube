@@ -45,8 +45,8 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug builder (Delve)
 ###################################
-FROM golang:1.25.0-alpine AS debug-builder
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
+FROM golang:1.26.0-alpine AS debug-builder
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 
 ###################################
 ## Debug
@@ -60,7 +60,7 @@ COPY --from=builder-toolkit /app/build/_local/workflow-toolkit /toolkit
 COPY --from=builder-init /app/build/_local/workflow-init /init
 RUN adduser --disabled-password --home / --no-create-home --uid 1001 default
 USER 1001
-ENTRYPOINT ["/dlv", "exec", "--headless", "--accept-multiclient", "--listen=:56300", "--api-version=2", "/toolkit"]
+ENTRYPOINT ["/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56300", "--api-version=2", "/toolkit"]
 
 ###################################
 ## Distribution
