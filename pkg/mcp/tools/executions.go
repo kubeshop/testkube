@@ -218,6 +218,43 @@ func extractExecutionIdFromResponse(responseJSON string, targetExecutionName str
 	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
 }
 
+type ExecutionTagUpdater interface {
+	UpdateExecutionTags(ctx context.Context, executionId string, tags map[string]string) error
+}
+
+func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("update_execution_tags",
+		mcp.WithDescription(UpdateExecutionTagsDescription),
+		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+		mcp.WithString("tags", mcp.Required(), mcp.Description(`JSON string of key-value tag pairs (e.g., '{"env":"prod","bug":"found"}'). Replaces all existing tags. Use '{}' to clear all tags.`)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		executionId, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		tagsStr, err := RequiredParam[string](request, "tags")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		var tags map[string]string
+		if err := json.Unmarshal([]byte(tagsStr), &tags); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Invalid tags JSON: %v. Expected format: {\"key\":\"value\"}", err)), nil
+		}
+
+		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update execution tags: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText("Execution tags updated successfully."), nil
+	}
+
+	return tool, handler
+}
+
 type WorkflowExecutionAborter interface {
 	AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error)
 }
