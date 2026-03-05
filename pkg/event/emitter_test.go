@@ -300,7 +300,7 @@ func TestEmitterCreatesK8sEvents(t *testing.T) {
 		TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(true, nil).AnyTimes()
 
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	listener := k8sevent.NewK8sEventListener("k8sevent", "", "tk-dev",
 		[]testkube.EventType{*testkube.EventStartTestWorkflow}, clientset)
 
