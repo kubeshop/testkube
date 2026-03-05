@@ -226,7 +226,7 @@ func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler ser
 	tool = mcp.NewTool("update_execution_tags",
 		mcp.WithDescription(UpdateExecutionTagsDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
-		mcp.WithString("tags", mcp.Required(), mcp.Description(`JSON string of key-value tag pairs (e.g., '{"env":"prod","bug":"found"}'). Replaces all existing tags. Use '{}' to clear all tags.`)),
+		mcp.WithObject("tags", mcp.Required(), mcp.Description(`Key-value tag pairs (e.g., {"env":"prod","bug":"found"}). Replaces all existing tags. Use {} to clear all tags.`)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -235,24 +235,27 @@ func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler ser
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		tagsStr, err := RequiredParam[string](request, "tags")
+		tagsRaw, ok, err := OptionalParamOK[map[string]any](request, "tags")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		var tags map[string]string
-		if err := json.Unmarshal([]byte(tagsStr), &tags); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Invalid tags JSON: %v. Expected format: {\"key\":\"value\"}", err)), nil
-		}
-		if tags == nil {
-			tags = make(map[string]string)
+		tags := make(map[string]string)
+		if ok {
+			for k, v := range tagsRaw {
+				tags[k] = fmt.Sprintf("%v", v)
+			}
 		}
 
 		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update execution tags: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText("Execution tags updated successfully."), nil
+		tagsJSON, err := json.Marshal(tags)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal tags: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Execution tags updated successfully. New tags: %s", tagsJSON)), nil
 	}
 
 	return tool, handler
