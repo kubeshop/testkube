@@ -277,7 +277,10 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 }
 
 func (n *NATSBus) Close() error {
-	n.nc.Close()
+	n.mu.RLock()
+	nc := n.nc
+	n.mu.RUnlock()
+	nc.Close()
 	return nil
 }
 
@@ -286,7 +289,11 @@ func (n *NATSBus) queueName(subscription, queue string) string {
 }
 
 func (n *NATSBus) TraceEvents() {
-	s, err := n.nc.Subscribe(SubscriptionName+".>", func(event testkube.Event) {
+	n.mu.RLock()
+	nc := n.nc
+	n.mu.RUnlock()
+
+	s, err := nc.Subscribe(SubscriptionName+".>", func(event testkube.Event) {
 		log.Tracew(log.DefaultLogger, "all events.> trace", event.Log()...)
 	})
 
