@@ -1042,6 +1042,26 @@ func (mr *MockTestKubeCloudAPIClientMockRecorder) Send(ctx any, opts ...any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).Send), varargs...)
 }
 
+// UpdateAgentCapabilitiesOnStartup mocks base method.
+func (m *MockTestKubeCloudAPIClient) UpdateAgentCapabilitiesOnStartup(ctx context.Context, in *UpdateAgentCapabilitiesOnStartupRequest, opts ...grpc.CallOption) (*UpdateAgentCapabilitiesOnStartupResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateAgentCapabilitiesOnStartup", varargs...)
+	ret0, _ := ret[0].(*UpdateAgentCapabilitiesOnStartupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAgentCapabilitiesOnStartup indicates an expected call of UpdateAgentCapabilitiesOnStartup.
+func (mr *MockTestKubeCloudAPIClientMockRecorder) UpdateAgentCapabilitiesOnStartup(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentCapabilitiesOnStartup", reflect.TypeOf((*MockTestKubeCloudAPIClient)(nil).UpdateAgentCapabilitiesOnStartup), varargs...)
+}
+
 // UpdateExecutionOutput mocks base method.
 func (m *MockTestKubeCloudAPIClient) UpdateExecutionOutput(ctx context.Context, in *UpdateExecutionOutputRequest, opts ...grpc.CallOption) (*UpdateExecutionOutputResponse, error) {
 	m.ctrl.T.Helper()
