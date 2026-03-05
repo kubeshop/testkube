@@ -18,7 +18,7 @@ Before you begin, ensure you have the following installed:
 - **[k3d](https://k3d.io/)** (recommended — the setup script creates a k3d cluster with a local registry)
 - **[Tilt](https://docs.tilt.dev/install.html)** v0.30.0 or later
 - **[Helm](https://helm.sh/docs/intro/install/)** v3.x
-- **Go** 1.25+ (enables live reload — optional but recommended)
+- **Go** 1.26+ (enables live reload — optional but recommended)
 
 ## Quick Start
 
@@ -416,7 +416,7 @@ If live reload is not activating:
 1. Check that Go is installed and in your PATH: `which go`
 2. Check the Tilt startup output for "Live reload: enabled"
 3. Force it on explicitly: `tilt up -- --live-reload`
-4. Ensure your Go version matches what the project requires (1.25+)
+4. Ensure your Go version matches what the project requires (1.26+)
 
 ### Cleaning Up
 

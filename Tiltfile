@@ -241,11 +241,12 @@ else:
         "testkube-api.postgresql.enabled=false",
     ]
 
-# MinIO credentials — must match bucket setup job
-helm_sets += [
-    "minio.minioRootUser=" + minio_user,
-    "minio.minioRootPassword=" + minio_pass,
-]
+# MinIO credentials — only set when no tilt-values.yaml so user overrides take effect
+if not os.path.exists("./tilt-values.yaml"):
+    helm_sets += [
+        "minio.minioRootUser=" + minio_user,
+        "minio.minioRootPassword=" + minio_pass,
+    ]
 
 # Tell crane (image inspector) to use HTTP for the local registry.
 # Reserved: extraEnvVars[0] is used here; in tilt-values.yaml use indices 1+ for your own vars.
