@@ -1167,7 +1167,7 @@ testkube-operator:
       # -- Testkube Operator rbac-proxy image repository
       repository: brancz/kube-rbac-proxy
       # -- Testkube Operator rbac-proxy image tag
-      tag: "v0.18.1"
+      tag: "v0.21.0"
       # -- Testkube Operator rbac-proxy k8s secret for private registries
       pullSecrets: []
     # -- Testkube Operator rbac-proxy resource settings
