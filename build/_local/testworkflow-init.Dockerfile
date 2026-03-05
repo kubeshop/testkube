@@ -7,8 +7,8 @@ FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
 
 WORKDIR /app
@@ -27,8 +27,8 @@ FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
 
 WORKDIR /app
