@@ -35,6 +35,14 @@ NAMESPACE = "testkube-dev"
 HELM_RELEASE_NAME = "testkube"
 HELM_CHART_PATH = "./k8s/helm/testkube"
 
+# MinIO credentials — used by Helm chart and bucket setup job; change here if overriding defaults
+minio_user = "minio"
+minio_pass = "minio123"
+
+# MinIO resource names — derived from release and namespace so they stay in sync with Helm
+MINIO_RESOURCE_NAME = HELM_RELEASE_NAME + "-minio-" + NAMESPACE
+MINIO_SERVICE_HOST = HELM_RELEASE_NAME + "-minio-service-" + NAMESPACE
+
 # Database backend
 db_backend = cfg.get('db', 'postgres')
 if db_backend not in ['mongo', 'postgres', 'both']:
@@ -233,7 +241,14 @@ else:
         "testkube-api.postgresql.enabled=false",
     ]
 
+# MinIO credentials — must match bucket setup job
+helm_sets += [
+    "minio.minioRootUser=" + minio_user,
+    "minio.minioRootPassword=" + minio_pass,
+]
+
 # Tell crane (image inspector) to use HTTP for the local registry.
+# Reserved: extraEnvVars[0] is used here; in tilt-values.yaml use indices 1+ for your own vars.
 if registry_running:
     helm_sets += [
         "testkube-api.extraEnvVars[0].name=TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES",
@@ -346,7 +361,7 @@ if use_mongo:
     )
 
 k8s_resource(
-    "testkube-minio-testkube-dev",
+    MINIO_RESOURCE_NAME,
     port_forwards=[
         port_forward(9000, 9000, name="MinIO API"),
         port_forward(9001, 9090, name="MinIO Console"),
@@ -367,11 +382,11 @@ local_resource(
     cmd="""
         set -e
         echo "Waiting for MinIO to be ready..."
-        kubectl wait --for=condition=ready pod -l app=testkube-minio-testkube-dev -n {} --timeout=120s
+        kubectl wait --for=condition=ready pod -l app=""" + MINIO_RESOURCE_NAME + """ -n """ + NAMESPACE + """ --timeout=120s
         sleep 3
         echo "Creating MinIO buckets..."
-        kubectl delete job minio-bucket-setup -n {} --ignore-not-found=true
-        kubectl apply -n {} -f - <<'YAML'
+        kubectl delete job minio-bucket-setup -n """ + NAMESPACE + """ --ignore-not-found=true
+        kubectl apply -n """ + NAMESPACE + """ -f - <<'YAML'
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -387,18 +402,18 @@ spec:
         - /bin/sh
         - -c
         - |
-          mc alias set minio http://testkube-minio-service-testkube-dev:9000 minio minio123
+          mc alias set minio http://""" + MINIO_SERVICE_HOST + """:9000 """ + minio_user + " " + minio_pass + """
           mc mb minio/testkube-artifacts --ignore-existing
           mc mb minio/testkube-logs --ignore-existing
           echo "Buckets created successfully"
       restartPolicy: Never
   backoffLimit: 3
 YAML
-        kubectl wait --for=condition=complete job/minio-bucket-setup -n {} --timeout=60s
+        kubectl wait --for=condition=complete job/minio-bucket-setup -n """ + NAMESPACE + """ --timeout=60s
         echo "MinIO buckets setup complete."
-    """.format(NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE),
+    """,
     labels=["setup"],
-    resource_deps=["testkube-minio-testkube-dev"],
+    resource_deps=[MINIO_RESOURCE_NAME],
 )
 
 # =============================================================================
@@ -522,7 +537,7 @@ Ports:
   Tilt UI:     http://localhost:10350
   API:         http://localhost:8088
   gRPC:        localhost:8089
-  MinIO:       http://localhost:9000 (minio/minio123)
+  MinIO:       http://localhost:9000 (""" + minio_user + "/" + minio_pass + """)
   NATS:        localhost:4222"""
 
 if use_postgres:
