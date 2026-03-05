@@ -107,13 +107,30 @@ watch_settings(ignore=[
     "k8s/helm/testkube/Chart.lock",
 ])
 
-# Tilt auto-detects the k3d local registry from the cluster config.
-# We just need to check if it's running so we can tell the API server's
-# image inspector to use HTTP instead of HTTPS for that registry.
+# Local container registry.
+# Tilt auto-detects the k3d registry for container image fields, but NOT for env
+# var values (match_in_env_vars). We call default_registry() explicitly so that
+# ALL image references — including the TESTKUBE_TW_*_IMAGE env vars — get the
+# registry prefix. Without this, crane (image inspector) would try Docker Hub.
+REGISTRY_NAME = 'testkube-registry'
+REGISTRY_HOST_PORT = '5001'
+REGISTRY_CLUSTER_PORT = '5000'
 registry_running = str(local(
-    'docker inspect -f "{{{{.State.Running}}}}" testkube-registry 2>/dev/null || echo false',
+    'docker ps -q --filter name=^' + REGISTRY_NAME + '$ 2>/dev/null | grep -q . && echo true || echo false',
     quiet=True,
 )).strip() == 'true'
+registry_ip = ''
+
+if registry_running:
+    registry_ip = str(local(
+        "docker inspect " + REGISTRY_NAME + " 2>/dev/null | grep -m1 '\"IPAddress\"' | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'",
+        quiet=True,
+    )).strip()
+
+    default_registry(
+        'localhost:' + REGISTRY_HOST_PORT,
+        host_from_cluster=REGISTRY_NAME + ':' + REGISTRY_CLUSTER_PORT,
+    )
 
 # =============================================================================
 # Docker Builds
@@ -216,21 +233,15 @@ else:
         "testkube-api.postgresql.enabled=false",
     ]
 
-# Tell the image inspector that the local registry serves HTTP, not HTTPS.
-# Written as a values file because Tilt's helm() doesn't handle --set array syntax.
+# Tell crane (image inspector) to use HTTP for the local registry.
 if registry_running:
-    local("mkdir -p build/_local", quiet=True, echo_off=True)
-    local("""cat > build/_local/tilt-registry-values.yaml << 'EOF'
-testkube-api:
-  extraEnvVars:
-    - name: TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES
-      value: "testkube-registry:5000"
-EOF""", quiet=True, echo_off=True)
+    helm_sets += [
+        "testkube-api.extraEnvVars[0].name=TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES",
+        "testkube-api.extraEnvVars[0].value=" + REGISTRY_NAME + ":" + REGISTRY_CLUSTER_PORT,
+    ]
 
 # Optional local overrides (not committed)
 values_files = []
-if registry_running and os.path.exists("./build/_local/tilt-registry-values.yaml"):
-    values_files.append("./build/_local/tilt-registry-values.yaml")
 if os.path.exists("./tilt-values.yaml"):
     values_files.append("./tilt-values.yaml")
 
@@ -243,6 +254,35 @@ k8s_yaml(
         set=helm_sets,
     )
 )
+
+# Pods use CoreDNS which can't resolve Docker container names. Create a headless
+# K8s Service so crane (running inside the API server pod) can reach the registry.
+if registry_running and registry_ip:
+    k8s_yaml(blob("""
+apiVersion: v1
+kind: Service
+metadata:
+  name: {name}
+  namespace: {ns}
+spec:
+  ports:
+    - port: {port}
+      targetPort: {port}
+      protocol: TCP
+  clusterIP: None
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: {name}
+  namespace: {ns}
+subsets:
+  - addresses:
+      - ip: {ip}
+    ports:
+      - port: {port}
+        protocol: TCP
+""".format(name=REGISTRY_NAME, ns=NAMESPACE, port=REGISTRY_CLUSTER_PORT, ip=registry_ip)))
 
 # =============================================================================
 # Resource Configuration

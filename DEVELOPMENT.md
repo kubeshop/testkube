@@ -379,12 +379,16 @@ helm dependency build ./k8s/helm/testkube
 
 ### Image Pull or Inspection Errors
 
-Tilt auto-detects the k3d local registry and pushes images there. If you encounter pull errors or `MANIFEST_UNKNOWN` / `http: server gave HTTP response to HTTPS client` during Test Workflow execution:
+When a k3d local registry is detected, the Tiltfile calls `default_registry()` so
+that ALL image references (including TW image env vars) include the registry prefix.
+It also creates a K8s Service/Endpoints to make the registry resolvable from pods
+(CoreDNS can't resolve Docker container names). If you encounter pull errors or
+`MANIFEST_UNKNOWN` during Test Workflow execution:
 
 - Ensure your cluster was created with `./scripts/tilt-cluster.sh` (sets up the k3d local registry)
 - Ensure your cluster context is one of the allowed contexts (see `allow_k8s_contexts` in the Tiltfile)
 - Check that the registry container is running: `docker ps | grep testkube-registry`
-- The Tiltfile automatically configures the API server's image inspector to treat the local registry as insecure (HTTP). If you see HTTPS-related errors, verify that `build/_local/tilt-registry-values.yaml` was generated and contains the `TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES` setting
+- The Tiltfile automatically sets `TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES` so crane (the image inspector) uses HTTP instead of HTTPS for the local registry
 
 ### Port Already in Use
 
