@@ -275,7 +275,7 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 	queue := common.ListenerName(queueName)
 
 	key := n.queueName(SubscriptionName, queue)
-	if v, ok := n.subscriptions.Load(key); ok {
+	if v, ok := n.subscriptions.LoadAndDelete(key); ok {
 		return v.(*subscriptionEntry).sub.Drain()
 	}
 	return nil
