@@ -9,7 +9,7 @@
   "dependencies": {
     "boxen": "8.0.1",
     "cac": "6.7.14",
-    "chalk": "5.4.1",
+    "chalk": "5.6.2",
     "execa": "9.6.0",
     "fs-extra": "11.3.4",
     "inquirer": "12.6.1",
