@@ -11,15 +11,15 @@
     "cac": "6.7.14",
     "chalk": "5.4.1",
     "execa": "9.6.0",
-    "fs-extra": "11.3.0",
+    "fs-extra": "11.3.4",
     "inquirer": "12.6.1",
-    "log-symbols": "7.0.0",
+    "log-symbols": "7.0.1",
     "ora": "8.2.0",
-    "semver": "7.7.2",
+    "semver": "7.7.4",
     "shelljs": "0.10.0",
     "strands": "1.0.1",
     "untildify": "5.0.0",
     "xdg-app-paths": "8.3.0",
-    "yaml": "2.8.0"
+    "yaml": "2.8.2"
   }
 }
