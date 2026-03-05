@@ -3,6 +3,7 @@ package bus
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -40,7 +41,14 @@ type ConnectionConfig struct {
 }
 
 func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
-	opts = []nats.Option{}
+	opts = []nats.Option{
+		// Never stop trying to reconnect — the process should not require a restart
+		// due to a transient NATS outage.
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(2 * time.Second),
+		nats.RetryOnFailedConnect(true),
+	}
+
 	if cfg.NatsSecure {
 		if cfg.NatsSkipVerify {
 			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
@@ -84,6 +92,21 @@ func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.
 
 func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, error) {
 	opts = append(opts, optsFromConfig(cfg)...)
+	opts = append(opts,
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			log.DefaultLogger.Warnw("nats disconnected",
+				"error_type", "nats_connection_closed",
+				"error", err)
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			log.DefaultLogger.Infow("nats reconnected",
+				"url", nc.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(_ *nats.Conn) {
+			log.DefaultLogger.Errorw("nats connection permanently closed",
+				"error_type", "nats_connection_closed")
+		}),
+	)
 
 	nc, err := retry.DoWithData(
 		func() (*nats.Conn, error) {
@@ -101,14 +124,17 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 	return nc, nil
 }
 
-func NewNATSBus(nc *nats.EncodedConn) *NATSBus {
+func NewNATSBus(nc *nats.EncodedConn, cfg ConnectionConfig) *NATSBus {
 	return &NATSBus{
-		nc: nc,
+		nc:  nc,
+		cfg: cfg,
 	}
 }
 
 type NATSBus struct {
 	nc            *nats.EncodedConn
+	cfg           ConnectionConfig
+	mu            sync.RWMutex
 	subscriptions sync.Map
 }
 
@@ -122,10 +148,65 @@ func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
 	return n.SubscribeTopic(SubscriptionName, queueName, handler)
 }
 
-// PublishTopic publishes event to NATS on given topic
+// reconnect replaces the underlying connection when it has been permanently
+// closed.  Callers must NOT hold n.mu when calling this.
+func (n *NATSBus) reconnect() error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	// Another goroutine may have already reconnected while we waited for the lock.
+	if !n.nc.Conn.IsClosed() {
+		return nil
+	}
+
+	if n.cfg.NatsURI == "" {
+		return errors.New("nats reconnect: no URI configured (embedded connection cannot reconnect)")
+	}
+
+	log.DefaultLogger.Warnw("nats connection is closed, reinitialising",
+		"error_type", "nats_connection_closed",
+		"url", n.cfg.NatsURI)
+
+	conn, err := NewNATSEncodedConnection(n.cfg)
+	if err != nil {
+		return fmt.Errorf("nats reconnect failed: %w", err)
+	}
+	n.nc = conn
+	return nil
+}
+
+// PublishTopic publishes event to NATS on given topic.
+// If the connection is permanently closed it attempts a single reconnect before
+// giving up, so a transient NATS restart does not require a pod restart.
 func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
 	log.Tracew(log.DefaultLogger, "publishing event", event.Log()...)
-	return n.nc.Publish(topic, event)
+
+	n.mu.RLock()
+	nc := n.nc
+	n.mu.RUnlock()
+
+	err := nc.Publish(topic, event)
+	if err == nil {
+		return nil
+	}
+
+	if !errors.Is(err, nats.ErrConnectionClosed) {
+		return err
+	}
+
+	log.DefaultLogger.Warnw("nats connection closed during publish, attempting reconnect",
+		"topic", topic,
+		"error_type", "nats_connection_closed")
+
+	if rerr := n.reconnect(); rerr != nil {
+		return fmt.Errorf("nats publish failed, reconnect error: %w", rerr)
+	}
+
+	n.mu.RLock()
+	nc = n.nc
+	n.mu.RUnlock()
+
+	return nc.Publish(topic, event)
 }
 
 // SubscribeTopic subscribes to NATS topic
