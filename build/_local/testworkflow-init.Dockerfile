@@ -21,26 +21,6 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
     go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o build/_local/workflow-init cmd/testworkflow-init/main.go
 
 ###################################
-## Build testworkflow toolkit
-###################################
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
-
-ARG TARGETOS
-ARG TARGETARCH
-ARG GOCACHE="/root/.cache/go-build"
-ARG GOMODCACHE="/go/pkg/mod"
-ARG SKAFFOLD_GO_GCFLAGS
-
-WORKDIR /app
-COPY . .
-RUN --mount=type=cache,target="$GOMODCACHE" \
-    --mount=type=cache,target="$GOCACHE" \
-    GOOS=$TARGETOS \
-    GOARCH=$TARGETARCH \
-    CGO_ENABLED=0 \
-    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o build/_local/workflow-init cmd/testworkflow-init/main.go
-
-###################################
 ## Debug
 ###################################
 FROM golang:1.25.0-alpine AS debug
