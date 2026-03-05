@@ -185,7 +185,8 @@ func main() {
 		// In standalone mode, use environment ID from config (empty if not set)
 		controlPlane = services.CreateControlPlane(ctx, cfg, eventsEmitter, cfg.TestkubeProEnvID)
 
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
+		var lc net.ListenConfig
+		ln, err := lc.Listen(ctx, "tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
 		commons.ExitOnError("cannot listen to gRPC port", err)
 		g.Go(func() error {
 			return controlPlane.Start(ctx, ln)
@@ -268,6 +269,12 @@ func main() {
 		if cfg.GitOpsSyncKubernetesToCloudEnabled {
 			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
 		}
+
+		capabilityNames := make([]string, len(capabilities))
+		for i, c := range capabilities {
+			capabilityNames[i] = c.String()
+		}
+		log.DefaultLogger.Infow("runner capabilities", "capabilities", capabilityNames)
 
 		// Get all labels that matches with prefix
 		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)

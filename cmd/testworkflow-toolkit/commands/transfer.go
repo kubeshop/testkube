@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -77,7 +78,13 @@ func ProcessTransferPair(pair string, output io.Writer) int {
 	}()
 
 	// Send the tarball
-	resp, err := http.Post(url, "application/tar+gzip", reader)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, reader)
+	if err != nil {
+		fmt.Fprintf(output, "error: create the tarball request - %s\n", err.Error())
+		return 1
+	}
+	req.Header.Set("Content-Type", "application/tar+gzip")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Fprintf(output, "error: send the tarball request - %s\n", err.Error())
 		return 1
