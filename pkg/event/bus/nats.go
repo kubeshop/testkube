@@ -68,8 +68,6 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 }
 
 func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.EncodedConn, error) {
-	opts = append(opts, optsFromConfig(cfg)...)
-
 	nc, err := NewNATSConnection(cfg, opts...)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
@@ -133,9 +131,10 @@ func NewNATSBus(nc *nats.EncodedConn, cfg ConnectionConfig) *NATSBus {
 
 // subscriptionEntry holds everything needed to re-register a subscription on a
 // fresh connection after a reconnect.
+// When queue is empty a plain Subscribe is used; otherwise QueueSubscribe.
 type subscriptionEntry struct {
 	topic   string
-	queue   string
+	queue   string // empty → plain Subscribe, non-empty → QueueSubscribe
 	handler Handler
 	sub     *nats.Subscription
 }
@@ -186,7 +185,14 @@ func (n *NATSBus) reconnect() error {
 	// all consumers would silently stop receiving events after a reconnect.
 	n.subscriptions.Range(func(key, value any) bool {
 		entry := value.(*subscriptionEntry)
-		newSub, serr := conn.QueueSubscribe(entry.topic, entry.queue, entry.handler)
+
+		var newSub *nats.Subscription
+		var serr error
+		if entry.queue == "" {
+			newSub, serr = conn.Subscribe(entry.topic, entry.handler)
+		} else {
+			newSub, serr = conn.QueueSubscribe(entry.topic, entry.queue, entry.handler)
+		}
 		if serr != nil {
 			log.DefaultLogger.Errorw("failed to re-register subscription after nats reconnect",
 				"topic", entry.topic,
@@ -293,14 +299,25 @@ func (n *NATSBus) TraceEvents() {
 	nc := n.nc
 	n.mu.RUnlock()
 
-	s, err := nc.Subscribe(SubscriptionName+".>", func(event testkube.Event) {
+	topic := SubscriptionName + ".>"
+	handler := Handler(func(event testkube.Event) error {
 		log.Tracew(log.DefaultLogger, "all events.> trace", event.Log()...)
+		return nil
 	})
 
+	s, err := nc.Subscribe(topic, handler)
 	if err != nil {
 		log.DefaultLogger.Errorw("error subscribing to all events", "error", err)
 		return
 	}
+
+	// Store with empty queue so reconnect() re-registers it via plain Subscribe.
+	n.subscriptions.Store("trace:"+topic, &subscriptionEntry{
+		topic:   topic,
+		queue:   "",
+		handler: handler,
+		sub:     s,
+	})
 
 	log.DefaultLogger.Infow("subscribed to all events", "subscription", s.Subject)
 }
