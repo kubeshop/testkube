@@ -70,19 +70,13 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.EncodedConn, error) {
 	nc, err := NewNATSConnection(cfg, opts...)
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
 	}
 
 	// automatic NATS JSON CODEC
 	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
-	}
-
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
 
 	return ec, nil
@@ -115,7 +109,6 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 		retry.Attempts(NATS_RETRY_ATTEMPTS),
 	)
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
 	}
 
@@ -231,6 +224,12 @@ func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
 		return err
 	}
 
+	// ErrConnectionClosed means the connection is permanently gone — not a
+	// transient blip.  With MaxReconnects(-1) the NATS library handles transient
+	// outages internally (buffering publishes while reconnecting), so this path
+	// is a last-resort safety net for the rare case where the connection object
+	// itself must be replaced (e.g. after an explicit Close or an unforeseen
+	// client state machine edge-case).
 	log.DefaultLogger.Warnw("nats connection closed during publish, attempting reconnect",
 		"topic", topic,
 		"error_type", "nats_connection_closed")

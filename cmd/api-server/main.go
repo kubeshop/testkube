@@ -166,16 +166,7 @@ func main() {
 	metrics := metrics.NewMetrics()
 
 	log.DefaultLogger.Info("connecting to NATS...")
-	natsCfg := bus.ConnectionConfig{
-		NatsURI:            cfg.NatsURI,
-		NatsSecure:         cfg.NatsSecure,
-		NatsSkipVerify:     cfg.NatsSkipVerify,
-		NatsCertFile:       cfg.NatsCertFile,
-		NatsKeyFile:        cfg.NatsKeyFile,
-		NatsCAFile:         cfg.NatsCAFile,
-		NatsConnectTimeout: cfg.NatsConnectTimeout,
-	}
-	nc := commons.MustCreateNATSConnection(cfg)
+	nc, natsCfg := commons.MustCreateNATSConnection(cfg)
 	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
 
 	eventBus := bus.NewNATSBus(nc, natsCfg)
