@@ -244,6 +244,9 @@ func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler ser
 		if err := json.Unmarshal([]byte(tagsStr), &tags); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Invalid tags JSON: %v. Expected format: {\"key\":\"value\"}", err)), nil
 		}
+		if tags == nil {
+			tags = make(map[string]string)
+		}
 
 		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update execution tags: %v", err)), nil

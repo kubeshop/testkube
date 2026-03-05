@@ -59,14 +59,15 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflow-executions/summaries") {
 			mcpServer.AddTool(tools.QueryExecutions(client))
 		}
-		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflow-executions/tags") {
-			mcpServer.AddTool(tools.UpdateExecutionTags(client))
-		}
 	} else {
 		mcpServer.AddTool(tools.QueryWorkflows(client))
 		mcpServer.AddTool(tools.QueryExecutions(client))
-		mcpServer.AddTool(tools.UpdateExecutionTags(client))
 	}
+
+	// Execution tag editing — registered unconditionally since the endpoint is
+	// parameterized (/agent/test-workflow-executions/{executionId}/tags) and
+	// cannot be probed with SupportsEndpoint. Errors surface at call time.
+	mcpServer.AddTool(tools.UpdateExecutionTags(client))
 
 	// Schema tools (static content, no client needed)
 	mcpServer.AddTool(tools.GetWorkflowSchema())
