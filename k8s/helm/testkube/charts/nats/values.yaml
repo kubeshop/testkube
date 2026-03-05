@@ -365,7 +365,7 @@ reloader:
   enabled: true
   image:
     repository: natsio/nats-server-config-reloader
-    tag: 0.18.2
+    tag: 0.22.3
     pullPolicy:
     registry:
 
