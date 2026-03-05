@@ -186,7 +186,7 @@ webhook:
     image:
       registry: docker.io
       repository: rancher/kubectl
-      tag: v1.23.7
+      tag: v1.35.2
       pullPolicy: Always
       pullSecrets: []
     ## Configure Security Context for Migrate Container
