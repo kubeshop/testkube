@@ -432,6 +432,8 @@ if has_go:
         'configure-cli',
         cmd=CLI_BIN + ' set context --kubeconfig --namespace ' + NAMESPACE + ' --api-uri http://localhost:8088 --client direct',
         labels=['cli'],
+        auto_init=False,
+        trigger_mode=TRIGGER_MODE_MANUAL,
         resource_deps=['compile:cli'],
     )
 
@@ -441,7 +443,7 @@ if has_go:
         labels=['cli'],
         auto_init=False,
         trigger_mode=TRIGGER_MODE_MANUAL,
-        resource_deps=['configure-cli', 'testkube-api-server'],
+        resource_deps=['compile:cli', 'testkube-api-server'],
     )
 
     cmd_button('run-cli-command:run',

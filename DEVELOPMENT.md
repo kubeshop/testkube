@@ -46,7 +46,7 @@ Before you begin, ensure you have the following installed:
 
 3. **Open the Tilt UI** at http://localhost:10350 to monitor the deployment.
 
-4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI and configures it to talk to the local API server. Use the **Run** button on the `run-cli-command` resource in the Tilt UI (e.g. enter `get testworkflows`), or run commands directly:
+4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI. To point it at the local API server, trigger the **configure-cli** resource in the Tilt UI. Then use the **Run** button on `run-cli-command` (e.g. enter `get testworkflows`), or run commands directly:
 
    ```bash
    ./build/_local/kubectl-testkube get testworkflows
@@ -228,7 +228,7 @@ In CI mode (`tilt ci`), the smoke test runs automatically and Tilt exits on succ
 When Go is installed, Tilt automatically compiles the Testkube CLI (`kubectl-testkube`) for your host OS and configures it to connect directly to the local API server. The following resources appear under the **cli** label in the Tilt UI:
 
 - **compile:cli** — Compiles `cmd/kubectl-testkube` to `build/_local/kubectl-testkube`. Rebuilds automatically when CLI or shared code changes.
-- **configure-cli** — Runs `set context --kubeconfig` to point the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Runs automatically after compilation.
+- **configure-cli** — Manually trigger to run `set context --kubeconfig`, pointing the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Not auto-run to avoid overwriting your existing CLI configuration.
 - **run-cli-command** — A dedicated resource for running arbitrary CLI commands. Click the **Run** button, enter any testkube subcommand (e.g. `run testworkflow curl-workflow-smoke`), and the output appears in the resource logs.
 
 You can also use the compiled CLI directly from your terminal:
