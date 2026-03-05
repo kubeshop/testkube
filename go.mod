@@ -8,7 +8,7 @@ require (
 	github.com/adhocore/gronx v1.19.6
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
-	github.com/bmatcuk/doublestar/v4 v4.6.1
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cdevents/sdk-go v0.3.0
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/cli/cli/v2 v2.67.0
