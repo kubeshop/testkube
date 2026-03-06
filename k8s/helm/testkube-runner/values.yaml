@@ -244,7 +244,7 @@ analyticsEnabled: true
 ## allow using low-security fields for test workflow pod and container configurations
 allowLowSecurityFields: false
 
-## Disable operator by default, because it's deprecated, do not enable it. 
+## Disable operator by default, because it's deprecated, do not enable it.
 ## This property and the Operator helm chart is needed due CRDs when GitOps capability is enabled.
 testkube-operator:
   enabled: false
