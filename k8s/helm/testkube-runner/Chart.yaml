@@ -8,3 +8,7 @@ dependencies:
 - name: global
   version: 0.x.x-x
   repository: "file://../global"
+- name: testkube-operator
+  version: 2.x.x-x
+  condition: gitops.enabled
+  repository: "file://../testkube-operator"
