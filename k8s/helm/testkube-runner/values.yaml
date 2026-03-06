@@ -245,6 +245,6 @@ analyticsEnabled: true
 allowLowSecurityFields: false
 
 ## Disable operator by default, because it's deprecated, do not enable it.
-## This property and the Operator helm chart is needed due CRDs when GitOps capability is enabled.
+## This property and the Operator helm chart are needed to install CRDs when GitOps capability is enabled.
 testkube-operator:
   enabled: false
