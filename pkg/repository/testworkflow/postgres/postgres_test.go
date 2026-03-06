@@ -233,6 +233,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflowResourceAg
 	return args.Error(0)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionTags(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionTagsParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflow(ctx context.Context, arg sqlc.DeleteTestWorkflowParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
