@@ -62,6 +62,6 @@ func CreateExecutionWorker(
 		AllowLowSecurityFields: cfg.AllowLowSecurityFields,
 		// Automatically disable resource metrics collection in standalone mode (no API key and no agent registration token configured),
 		// as the gRPC control plane connection from execution pods may not be available.
-		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" || cfg.TestkubeProAgentRegToken == "",
+		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
 	})
 }
