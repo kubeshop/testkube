@@ -28,6 +28,9 @@ const (
 	SubscriptionName       = "agentevents"
 	InternalPublishTopic   = "internal.all"
 	InternalSubscribeTopic = "internal.>"
+
+	natsMaxReconnects = -1
+	natsReconnectWait = 2 * time.Second
 )
 
 type ConnectionConfig struct {
@@ -49,8 +52,8 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 		// the retry.DoWithData startup loop and removing crash-on-startup behaviour.
 		// MaxReconnects(-1) covers all runtime reconnection; startup retries are
 		// handled by the caller's retry loop.
-		nats.MaxReconnects(-1),
-		nats.ReconnectWait(2 * time.Second),
+		nats.MaxReconnects(natsMaxReconnects),
+		nats.ReconnectWait(natsReconnectWait),
 	}
 
 	if cfg.NatsSecure {
@@ -139,9 +142,16 @@ type subscriptionEntry struct {
 type NATSBus struct {
 	nc            *nats.EncodedConn
 	cfg           ConnectionConfig
-	mu            sync.RWMutex
-	reconnectMu   sync.Mutex // serialises reconnect attempts; never held while mu is held
+	connMu        sync.RWMutex
+	reconnectMu   sync.Mutex // serialises reconnect attempts; never held while connMu is held
 	subscriptions sync.Map   // map[string]*subscriptionEntry
+}
+
+// getNC returns the current encoded connection under a read lock.
+func (n *NATSBus) getNC() *nats.EncodedConn {
+	n.connMu.RLock()
+	defer n.connMu.RUnlock()
+	return n.nc
 }
 
 // Publish publishes event to NATS on events topic
@@ -160,7 +170,7 @@ func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
 // Design notes:
 //   - reconnectMu serialises concurrent reconnect attempts so only one goroutine
 //     pays the cost of NewNATSEncodedConnection's retry loop at a time.
-//   - n.mu (the read/write lock guarding n.nc) is held only for the final
+//   - connMu (the read/write lock guarding n.nc) is held only for the final
 //     pointer swap, so publishers are not stalled for the full retry duration.
 //   - CompareAndSwap is used when updating subscription entries so that a
 //     concurrent Unsubscribe (which calls LoadAndDelete) wins: if the key was
@@ -178,10 +188,7 @@ func (n *NATSBus) reconnect() error {
 
 	// Re-check now that we hold reconnectMu: a previous waiter may have
 	// already swapped in a healthy connection.
-	n.mu.RLock()
-	closed := n.nc.Conn.IsClosed()
-	n.mu.RUnlock()
-	if !closed {
+	if !n.getNC().Conn.IsClosed() {
 		return nil
 	}
 
@@ -200,6 +207,7 @@ func (n *NATSBus) reconnect() error {
 	// Re-register subscriptions on the new connection BEFORE exposing it via
 	// n.nc.  This closes the window where messages could arrive on a topic that
 	// has no handler yet.
+	var failedKeys []any
 	n.subscriptions.Range(func(key, value any) bool {
 		entry := value.(*subscriptionEntry)
 
@@ -215,6 +223,9 @@ func (n *NATSBus) reconnect() error {
 				"topic", entry.topic,
 				"queue", entry.queue,
 				"error", serr)
+			// Mark for removal: leaving a stale entry would cause silent message
+			// loss and unexpected Drain() calls on dead subscriptions.
+			failedKeys = append(failedKeys, key)
 			return true
 		}
 
@@ -234,10 +245,14 @@ func (n *NATSBus) reconnect() error {
 		return true
 	})
 
+	for _, key := range failedKeys {
+		n.subscriptions.Delete(key)
+	}
+
 	// Hold the write lock only for the pointer swap.
-	n.mu.Lock()
+	n.connMu.Lock()
 	n.nc = conn
-	n.mu.Unlock()
+	n.connMu.Unlock()
 	return nil
 }
 
@@ -247,10 +262,7 @@ func (n *NATSBus) reconnect() error {
 func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
 	log.Tracew(log.DefaultLogger, "publishing event", event.Log()...)
 
-	n.mu.RLock()
-	nc := n.nc
-	n.mu.RUnlock()
-
+	nc := n.getNC()
 	err := nc.Publish(topic, event)
 	if err == nil {
 		return nil
@@ -274,11 +286,7 @@ func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
 		return fmt.Errorf("nats publish failed, reconnect error: %w", rerr)
 	}
 
-	n.mu.RLock()
-	nc = n.nc
-	n.mu.RUnlock()
-
-	return nc.Publish(topic, event)
+	return n.getNC().Publish(topic, event)
 }
 
 // SubscribeTopic subscribes to NATS topic.
@@ -288,26 +296,19 @@ func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	n.mu.RLock()
-	nc := n.nc
-	n.mu.RUnlock()
-
 	// async subscribe on queue
-	s, err := nc.QueueSubscribe(topic, queue, handler)
+	s, err := n.getNC().QueueSubscribe(topic, queue, handler)
+	if err != nil && !errors.Is(err, nats.ErrConnectionClosed) {
+		return err
+	}
 	if err != nil {
-		if !errors.Is(err, nats.ErrConnectionClosed) {
-			return err
-		}
 		log.DefaultLogger.Warnw("nats connection closed during subscribe, attempting reconnect",
 			"topic", topic,
 			"error_type", "nats_connection_closed")
 		if rerr := n.reconnect(); rerr != nil {
 			return fmt.Errorf("nats subscribe failed, reconnect error: %w", rerr)
 		}
-		n.mu.RLock()
-		nc = n.nc
-		n.mu.RUnlock()
-		s, err = nc.QueueSubscribe(topic, queue, handler)
+		s, err = n.getNC().QueueSubscribe(topic, queue, handler)
 		if err != nil {
 			return err
 		}
@@ -336,10 +337,7 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 }
 
 func (n *NATSBus) Close() error {
-	n.mu.RLock()
-	nc := n.nc
-	n.mu.RUnlock()
-	nc.Close()
+	n.getNC().Close()
 	return nil
 }
 
@@ -348,17 +346,13 @@ func (n *NATSBus) queueName(subscription, queue string) string {
 }
 
 func (n *NATSBus) TraceEvents() {
-	n.mu.RLock()
-	nc := n.nc
-	n.mu.RUnlock()
-
 	topic := SubscriptionName + ".>"
 	handler := Handler(func(event testkube.Event) error {
 		log.Tracew(log.DefaultLogger, "all events.> trace", event.Log()...)
 		return nil
 	})
 
-	s, err := nc.Subscribe(topic, handler)
+	s, err := n.getNC().Subscribe(topic, handler)
 	if err != nil {
 		log.DefaultLogger.Errorw("error subscribing to all events", "error", err)
 		return
