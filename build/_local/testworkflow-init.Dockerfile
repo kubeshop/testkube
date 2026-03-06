@@ -43,7 +43,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.26.0-alpine AS debug
+FROM golang:1.26.1-alpine AS debug
 
 ENV GOTRACEBACK=all
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
