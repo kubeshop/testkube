@@ -871,7 +871,8 @@ func NewDevBoxCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&rawDevboxName, "name", "", fmt.Sprintf("%d", time.Now().UnixNano()), "devbox name")
+	cmd.Flags().StringVarP(&rawDevboxName, "name", "n", fmt.Sprintf("%d", time.Now().UnixNano()), "devbox name")
+	cmd.Flags().MarkShorthandDeprecated("name", "please use --name instead")
 	cmd.Flags().StringSliceVarP(&syncLocalResources, "fssync", "s", nil, "synchronise resources at local paths")
 	cmd.Flags().BoolVarP(&gitopsEnabled, "gitops-agent", "g", false, "enable GitOps agent")
 	cmd.Flags().BoolVarP(&open, "open", "o", false, "open dashboard in browser")

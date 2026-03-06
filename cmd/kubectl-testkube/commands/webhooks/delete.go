@@ -41,7 +41,8 @@ func NewDeleteWebhookCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "", "", "unique webhook name, you can also pass it as first argument")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as first argument")
+	cmd.Flags().MarkShorthandDeprecated("name", "please use --name instead")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 
 	return cmd
