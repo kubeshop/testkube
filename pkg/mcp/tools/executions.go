@@ -245,7 +245,11 @@ func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler ser
 
 		tags := make(map[string]string)
 		for k, v := range tagsRaw {
-			tags[k] = fmt.Sprintf("%v", v)
+			s, ok := v.(string)
+			if !ok {
+				return mcp.NewToolResultError(fmt.Sprintf("tag value for key %q must be a string, got %T", k, v)), nil
+			}
+			tags[k] = s
 		}
 
 		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
