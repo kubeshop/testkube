@@ -249,5 +249,3 @@ allowLowSecurityFields: false
 ## in order to install the required CRDs (controlled by installCRD, which defaults to true).
 testkube-operator:
   enabled: false
-testkube-operator:
-  enabled: false
