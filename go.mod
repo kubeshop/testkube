@@ -19,7 +19,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fasthttp/websocket v1.5.12
-	github.com/fluxcd/pkg/apis/event v0.2.0
+	github.com/fluxcd/pkg/apis/event v0.24.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/go-errors/errors v1.5.1
