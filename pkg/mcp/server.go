@@ -86,6 +86,8 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.GetWorkflowResourceHistory(client))
 	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
+	// Registered unconditionally — endpoint is parameterized and cannot be probed with SupportsEndpoint.
+	mcpServer.AddTool(tools.UpdateExecutionTags(client))
 
 	// Artifact tools
 	mcpServer.AddTool(tools.ListArtifacts(client))
