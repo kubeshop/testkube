@@ -15,6 +15,7 @@ type DummyListener struct {
 	Id                 string
 	NotificationCount  int32
 	SelectorString     string
+	GroupString        string
 	Types              []testkube.EventType
 	ReceivedEventTypes []testkube.EventType
 	mu                 sync.Mutex
@@ -76,7 +77,7 @@ func (l *DummyListener) Kind() string {
 }
 
 func (l *DummyListener) Group() string {
-	return ""
+	return l.GroupString
 }
 
 func (l *DummyListener) Metadata() map[string]string {
