@@ -42,7 +42,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/keygen-sh/jsonapi-go v1.2.1
-	github.com/keygen-sh/keygen-go/v3 v3.2.0
+	github.com/keygen-sh/keygen-go/v3 v3.3.0
 	github.com/mark3labs/mcp-go v0.36.0
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/montanaflynn/stats v0.7.1
