@@ -186,6 +186,55 @@ func TestEmitter_NotifyBecome(t *testing.T) {
 	})
 }
 
+func TestEmitter_GroupedListenersReceiveQueuedAndStartedWorkflowEvents(t *testing.T) {
+	t.Run("grouped listeners match queue and start workflow events", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepository := leasebackend.NewMockRepository(mockCtrl)
+		mockLeaseRepository.EXPECT().
+			TryAcquire(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(true, nil).AnyTimes()
+		emitter := NewEmitter(eventBus, mockLeaseRepository, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+
+		listener := &dummy.DummyListener{
+			Id:          "grouped",
+			GroupString: "env-123",
+			Types: []testkube.EventType{
+				testkube.QUEUE_TESTWORKFLOW_EventType,
+				testkube.START_TESTWORKFLOW_EventType,
+			},
+		}
+		emitter.Register(listener)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		go emitter.Listen(ctx)
+
+		time.Sleep(50 * time.Millisecond)
+
+		execution := testkube.NewExecutionWithID("executionID-grouped", "grouped")
+		execution.GroupId = "env-123"
+
+		emitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
+		emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+
+		assert.Eventually(t, func() bool {
+			return listener.GetNotificationCount() == 2 && len(listener.GetReceivedEventTypes()) == 2
+		}, 5*time.Second, 50*time.Millisecond)
+
+		assert.Equal(t, 2, listener.GetNotificationCount())
+		assert.ElementsMatch(t,
+			[]testkube.EventType{
+				testkube.QUEUE_TESTWORKFLOW_EventType,
+				testkube.START_TESTWORKFLOW_EventType,
+			},
+			listener.GetReceivedEventTypes(),
+		)
+	})
+}
+
 func TestEmitter_Listen_reconciliation(t *testing.T) {
 	t.Run("emitter refresh listeners in reconcile loop", func(t *testing.T) {
 		eventBus := bus.NewEventBusMock()

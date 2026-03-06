@@ -131,6 +131,12 @@ func (s *Server) Register(ctx context.Context, request *cloud.RegisterRequest) (
 	return nil, status.Error(codes.Unimplemented, "not supported in the standalone version")
 }
 
+func (s *Server) UpdateAgentCapabilitiesOnStartup(_ context.Context, req *cloud.UpdateAgentCapabilitiesOnStartupRequest) (*cloud.UpdateAgentCapabilitiesOnStartupResponse, error) {
+	return &cloud.UpdateAgentCapabilitiesOnStartupResponse{
+		Capabilities: req.GetCapabilities(),
+	}, nil
+}
+
 func (s *Server) GetUnfinishedExecutions(_ *emptypb.Empty, srv cloud.TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
 	executions, err := s.resultsRepository.GetExecutions(srv.Context(), testworkflow.FilterImpl{
 		FStatuses: testkube.TestWorkflowExecutingStatus,
