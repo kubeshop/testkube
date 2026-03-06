@@ -16,7 +16,7 @@ require (
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/docker v28.3.3+incompatible
+	github.com/docker/docker v28.5.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fasthttp/websocket v1.5.12
 	github.com/fluxcd/pkg/apis/event v0.2.0
