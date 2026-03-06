@@ -83,7 +83,7 @@ func TestCreateTestTriggerHandler(t *testing.T) {
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("POST", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -116,7 +116,7 @@ spec:
 `
 
 		// YAML test just returns success without calling the client
-		req := httptest.NewRequest("POST", "/test-triggers", strings.NewReader(yamlContent))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/test-triggers", strings.NewReader(yamlContent))
 		req.Header.Set("Content-Type", "text/yaml")
 
 		mockClient.EXPECT().
@@ -167,7 +167,7 @@ spec:
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("POST", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -204,7 +204,7 @@ spec:
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("POST", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -217,7 +217,7 @@ spec:
 
 	t.Run("should return error for invalid JSON", func(t *testing.T) {
 		// given
-		req := httptest.NewRequest("POST", "/test-triggers", strings.NewReader("invalid json"))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/test-triggers", strings.NewReader("invalid json"))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -310,7 +310,7 @@ func TestUpdateTestTriggerHandler(t *testing.T) {
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -383,7 +383,7 @@ spec:
 			}).
 			Times(1)
 
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
 		req.Header.Set("Content-Type", "text/yaml")
 
 		// when
@@ -408,7 +408,7 @@ spec:
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -443,7 +443,7 @@ spec:
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -502,7 +502,7 @@ spec:
 			}).
 			Times(1)
 
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
 		req.Header.Set("Content-Type", "text/yaml")
 
 		// when
@@ -597,7 +597,7 @@ spec:
 
 		requestBody, _ := json.Marshal(request)
 		// Note: using mode=replace query param with JSON content type
-		req := httptest.NewRequest("PUT", "/test-triggers?mode=replace", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers?mode=replace", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -650,7 +650,7 @@ spec:
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -748,7 +748,7 @@ spec:
 			}).
 			Times(1)
 
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
 		req.Header.Set("Content-Type", "text/yaml")
 
 		// when
@@ -829,7 +829,7 @@ spec:
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -901,7 +901,7 @@ spec:
 			}).
 			Times(1)
 
-		req := httptest.NewRequest("PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader([]byte(requestBody)))
 		req.Header.Set("Content-Type", "text/yaml")
 
 		// when
@@ -979,7 +979,7 @@ func TestBulkUpdateTestTriggersHandler(t *testing.T) {
 			Times(2)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers/bulk", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers/bulk", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -1011,7 +1011,7 @@ func TestBulkUpdateTestTriggersHandler(t *testing.T) {
 			Times(1)
 
 		requestBody, _ := json.Marshal(request)
-		req := httptest.NewRequest("PUT", "/test-triggers/bulk", bytes.NewReader(requestBody))
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers/bulk", bytes.NewReader(requestBody))
 		req.Header.Set("Content-Type", "application/json")
 
 		// when
@@ -1055,7 +1055,7 @@ func TestGetTestTriggerHandler(t *testing.T) {
 			Return(expectedTrigger, nil).
 			Times(1)
 
-		req := httptest.NewRequest("GET", "/test-triggers/test-trigger", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers/test-trigger", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1082,7 +1082,7 @@ func TestGetTestTriggerHandler(t *testing.T) {
 			Return(expectedTrigger, nil).
 			Times(1)
 
-		req := httptest.NewRequest("GET", "/test-triggers/test-trigger?namespace=custom", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers/test-trigger?namespace=custom", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1100,7 +1100,7 @@ func TestGetTestTriggerHandler(t *testing.T) {
 			Return(nil, expectedError).
 			Times(1)
 
-		req := httptest.NewRequest("GET", "/test-triggers/test-trigger", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers/test-trigger", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1134,7 +1134,7 @@ func TestDeleteTestTriggerHandler(t *testing.T) {
 			Return(nil).
 			Times(1)
 
-		req := httptest.NewRequest("DELETE", "/test-triggers/test-trigger", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers/test-trigger", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1151,7 +1151,7 @@ func TestDeleteTestTriggerHandler(t *testing.T) {
 			Return(nil).
 			Times(1)
 
-		req := httptest.NewRequest("DELETE", "/test-triggers/test-trigger?namespace=custom", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers/test-trigger?namespace=custom", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1169,7 +1169,7 @@ func TestDeleteTestTriggerHandler(t *testing.T) {
 			Return(expectedError).
 			Times(1)
 
-		req := httptest.NewRequest("DELETE", "/test-triggers/test-trigger", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers/test-trigger", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1203,7 +1203,7 @@ func TestDeleteTestTriggersHandler(t *testing.T) {
 			Return(uint32(3), nil).
 			Times(1)
 
-		req := httptest.NewRequest("DELETE", "/test-triggers", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1220,7 +1220,7 @@ func TestDeleteTestTriggersHandler(t *testing.T) {
 			Return(uint32(2), nil).
 			Times(1)
 
-		req := httptest.NewRequest("DELETE", "/test-triggers?selector=app=test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers?selector=app=test", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1232,7 +1232,7 @@ func TestDeleteTestTriggersHandler(t *testing.T) {
 
 	t.Run("should return error for invalid selector", func(t *testing.T) {
 		// given
-		req := httptest.NewRequest("DELETE", "/test-triggers?selector=invalid=selector=format", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers?selector=invalid=selector=format", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1250,7 +1250,7 @@ func TestDeleteTestTriggersHandler(t *testing.T) {
 			Return(uint32(0), expectedError).
 			Times(1)
 
-		req := httptest.NewRequest("DELETE", "/test-triggers", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "DELETE", "/test-triggers", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1295,7 +1295,7 @@ func TestListTestTriggersHandler(t *testing.T) {
 			Return(expectedTriggers, nil).
 			Times(1)
 
-		req := httptest.NewRequest("GET", "/test-triggers", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1326,7 +1326,7 @@ func TestListTestTriggersHandler(t *testing.T) {
 			Return(expectedTriggers, nil).
 			Times(1)
 
-		req := httptest.NewRequest("GET", "/test-triggers?selector=app=test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers?selector=app=test", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1343,7 +1343,7 @@ func TestListTestTriggersHandler(t *testing.T) {
 
 	t.Run("should return error for invalid selector", func(t *testing.T) {
 		// given
-		req := httptest.NewRequest("GET", "/test-triggers?selector=invalid=selector=format", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers?selector=invalid=selector=format", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1361,7 +1361,7 @@ func TestListTestTriggersHandler(t *testing.T) {
 			Return(nil, expectedError).
 			Times(1)
 
-		req := httptest.NewRequest("GET", "/test-triggers", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers", nil)
 
 		// when
 		resp, err := app.Test(req)
@@ -1382,7 +1382,7 @@ func TestGetTestTriggerKeyMapHandler(t *testing.T) {
 
 	t.Run("should return test trigger keymap", func(t *testing.T) {
 		// given
-		req := httptest.NewRequest("GET", "/test-trigger-keymap", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-trigger-keymap", nil)
 
 		// when
 		resp, err := app.Test(req)
