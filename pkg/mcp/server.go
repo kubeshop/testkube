@@ -64,11 +64,6 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 		mcpServer.AddTool(tools.QueryExecutions(client))
 	}
 
-	// Execution tag editing — registered unconditionally since the endpoint is
-	// parameterized (/agent/test-workflow-executions/{executionId}/tags) and
-	// cannot be probed with SupportsEndpoint. Errors surface at call time.
-	mcpServer.AddTool(tools.UpdateExecutionTags(client))
-
 	// Schema tools (static content, no client needed)
 	mcpServer.AddTool(tools.GetWorkflowSchema())
 	mcpServer.AddTool(tools.GetExecutionSchema())
@@ -91,6 +86,8 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.GetWorkflowResourceHistory(client))
 	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
+	// Registered unconditionally — endpoint is parameterized and cannot be probed with SupportsEndpoint.
+	mcpServer.AddTool(tools.UpdateExecutionTags(client))
 
 	// Artifact tools
 	mcpServer.AddTool(tools.ListArtifacts(client))
