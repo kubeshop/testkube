@@ -24,6 +24,7 @@ service TestKubeCloudAPI {
 
     // Runner
     rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc UpdateAgentCapabilitiesOnStartup(UpdateAgentCapabilitiesOnStartupRequest) returns (UpdateAgentCapabilitiesOnStartupResponse);
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest) {
       // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.GetExecutionUpdates instead.
@@ -443,6 +444,14 @@ message RegisterResponse {
   string runner_key = 2;
   string organization_id = 3;
   string runner_name = 4;
+}
+
+message UpdateAgentCapabilitiesOnStartupRequest {
+  repeated AgentCapability capabilities = 1;
+}
+
+message UpdateAgentCapabilitiesOnStartupResponse {
+  repeated AgentCapability capabilities = 1;
 }
 
 enum RunnerRequestType {
