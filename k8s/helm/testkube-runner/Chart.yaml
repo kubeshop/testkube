@@ -10,5 +10,5 @@ dependencies:
   repository: "file://../global"
 - name: testkube-operator
   version: 2.x.x-x
-  condition: gitops.enabled
+  condition: gitops.installCRD, gitops.enabled
   repository: "file://../testkube-operator"
