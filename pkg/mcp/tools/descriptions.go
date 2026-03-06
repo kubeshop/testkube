@@ -48,6 +48,7 @@ to find items containing all terms`
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
 	WaitForExecutionsDescription      = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
 	AbortWorkflowExecutionDescription = "Abort a running test workflow execution. This will stop the execution and mark it as aborted. Use this tool to cancel long-running or stuck workflow executions."
+	UpdateExecutionTagsDescription    = "Update the tags on a test workflow execution. Uses replace semantics: the provided tags completely replace any existing tags. Send an empty map ({}) to clear all tags. Tags are key-value string pairs used for categorization and filtering (e.g., {\"env\":\"prod\",\"bug\":\"found\"})."
 
 	// Additional parameter descriptions
 	ExecutionIdsDescription   = "Comma-separated list of execution IDs to wait for (e.g., 'exec1,exec2,exec3')."
