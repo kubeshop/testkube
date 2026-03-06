@@ -376,6 +376,7 @@ func ConvertIndependentServiceToService(svc testworkflowsv1.IndependentServiceSp
 func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.IndependentStepParallel) testworkflowsv1.StepParallel {
 	return testworkflowsv1.StepParallel{
 		Parallelism:         step.Parallelism,
+		FailFast:            step.FailFast,
 		StepExecuteStrategy: step.StepExecuteStrategy,
 		Description:         step.Description,
 		Logs:                step.Logs,
