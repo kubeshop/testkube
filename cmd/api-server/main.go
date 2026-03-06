@@ -16,6 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -247,34 +248,8 @@ func main() {
 			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
 		}
 
-		// Build capabilities based on enabled features
-		capabilities := []cloud.AgentCapability{}
-		if !cfg.DisableRunner {
-			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
-		}
-		if !cfg.DisableTestTriggers {
-			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
-		}
-		if !cfg.DisableWebhooks {
-			if cfg.EnableCloudWebhooks {
-				// The presence of an agent with this capability within an
-				// environment toggles Webhooks for the environment from
-				// being emitted by the agent to being emitted by the
-				// control plane.
-				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_CLOUD_WEBHOOKS)
-			} else {
-				capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
-			}
-		}
-		if cfg.GitOpsSyncKubernetesToCloudEnabled {
-			capabilities = append(capabilities, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
-		}
-
-		capabilityNames := make([]string, len(capabilities))
-		for i, c := range capabilities {
-			capabilityNames[i] = c.String()
-		}
-		log.DefaultLogger.Infow("runner capabilities", "capabilities", capabilityNames)
+		capabilities := buildStartupCapabilities(cfg)
+		log.DefaultLogger.Infow("runner capabilities", "capabilities", stringifyCapabilities(capabilities))
 
 		// Get all labels that matches with prefix
 		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
@@ -358,6 +333,40 @@ func main() {
 		kubeClient,
 		syncStore,
 	)
+
+	// Keep startup-time capabilities in sync with runtime flags.
+	// The control plane enforces that runner capability cannot be changed via this path.
+	if proContext.APIKey != "" {
+		startupCapabilities := buildStartupCapabilities(cfg)
+		updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		updateCtx = metadata.NewOutgoingContext(updateCtx, metadata.New(map[string]string{
+			controlplaneclient.AgentSecretKeyMetadataName: proContext.APIKey,
+			controlplaneclient.OrganizationIdMetadataName: proContext.OrgID,
+			controlplaneclient.AgentIdMetadataName:        proContext.Agent.ID,
+			controlplaneclient.EnvironmentIdMetadataName:  proContext.EnvID,
+		}))
+		resp, err := grpcClient.UpdateAgentCapabilitiesOnStartup(updateCtx, &cloud.UpdateAgentCapabilitiesOnStartupRequest{
+			Capabilities: startupCapabilities,
+		})
+		cancel()
+		if err != nil {
+			if status.Code(err) == codes.Unimplemented {
+				log.DefaultLogger.Warnw("control plane does not support startup capability update endpoint",
+					"capabilities", stringifyCapabilities(startupCapabilities),
+					"error", err.Error(),
+				)
+			} else {
+				log.DefaultLogger.Errorw("failed to update startup capabilities in control plane",
+					"capabilities", stringifyCapabilities(startupCapabilities),
+					"error", err.Error(),
+				)
+			}
+		} else {
+			log.DefaultLogger.Infow("updated startup capabilities in control plane",
+				"capabilities", stringifyCapabilities(resp.Capabilities),
+			)
+		}
+	}
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, &proContext)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.StorageSkipVerify, &proContext)
@@ -882,6 +891,39 @@ func resolveLeaderIdentifier() string {
 	}
 
 	return fmt.Sprintf("testkube-core-%d", time.Now().UnixNano())
+}
+
+func buildStartupCapabilities(cfg *intconfig.Config) []cloud.AgentCapability {
+	caps := make([]cloud.AgentCapability, 0, 4)
+	if !cfg.DisableRunner {
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_RUNNER)
+	}
+	if !cfg.DisableTestTriggers {
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_LISTENER)
+	}
+	if !cfg.DisableWebhooks {
+		if cfg.EnableCloudWebhooks {
+			// The presence of an agent with this capability within an
+			// environment toggles Webhooks for the environment from
+			// being emitted by the agent to being emitted by the
+			// control plane.
+			caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_CLOUD_WEBHOOKS)
+		} else {
+			caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_WEBHOOKS)
+		}
+	}
+	if cfg.GitOpsSyncKubernetesToCloudEnabled {
+		caps = append(caps, cloud.AgentCapability_AGENT_CAPABILITY_GITOPS)
+	}
+	return caps
+}
+
+func stringifyCapabilities(capabilities []cloud.AgentCapability) []string {
+	names := make([]string, len(capabilities))
+	for i, c := range capabilities {
+		names[i] = c.String()
+	}
+	return names
 }
 
 func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {

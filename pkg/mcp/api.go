@@ -612,6 +612,19 @@ func (c *APIClient) ListAgents(ctx context.Context, params tools.ListAgentsParam
 	})
 }
 
+func (c *APIClient) UpdateExecutionTags(ctx context.Context, executionId string, tags map[string]string) error {
+	_, err := c.makeRequest(ctx, APIRequest{
+		Method: http.MethodPatch,
+		Path:   "/agent/test-workflow-executions/{executionId}/tags",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"executionId": executionId,
+		},
+		Body: tags,
+	})
+	return err
+}
+
 func (c *APIClient) AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "POST",
