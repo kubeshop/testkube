@@ -220,13 +220,9 @@ func TestEmitter_GroupedListenersReceiveQueuedAndStartedWorkflowEvents(t *testin
 		emitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
 		emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
 
-		retryCount := 100
-		for i := 0; i < retryCount; i++ {
-			if listener.GetNotificationCount() == 2 {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
+		assert.Eventually(t, func() bool {
+			return listener.GetNotificationCount() == 2 && len(listener.GetReceivedEventTypes()) == 2
+		}, 5*time.Second, 50*time.Millisecond)
 
 		assert.Equal(t, 2, listener.GetNotificationCount())
 		assert.ElementsMatch(t,
