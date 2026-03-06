@@ -244,7 +244,10 @@ analyticsEnabled: true
 ## allow using low-security fields for test workflow pod and container configurations
 allowLowSecurityFields: false
 
-## Disable operator by default, because it's deprecated, do not enable it.
-## This property and the Operator helm chart are needed to install CRDs when GitOps capability is enabled.
+## The operator controller itself is deprecated and thus disabled (enabled: false).
+## However, the testkube-operator chart is still included as a dependency when gitops.enabled=true
+## in order to install the required CRDs (controlled by installCRD, which defaults to true).
+testkube-operator:
+  enabled: false
 testkube-operator:
   enabled: false
