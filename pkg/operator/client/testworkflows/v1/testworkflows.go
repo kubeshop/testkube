@@ -5,6 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
@@ -107,9 +108,12 @@ func (s TestWorkflowsClient) Update(workflow *testworkflowsv1.TestWorkflow) (*te
 
 // Apply applies changes to the existing TestWorkflow
 func (s TestWorkflowsClient) Apply(workflow *testworkflowsv1.TestWorkflow) error {
-	return s.Client.Patch(context.Background(), workflow, client.Apply, &client.PatchOptions{
-		FieldManager: "application/apply-patch",
-	})
+	obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(workflow)
+	if err != nil {
+		return err
+	}
+	u := &unstructured.Unstructured{Object: obj}
+	return s.Client.Apply(context.Background(), client.ApplyConfigurationFromUnstructured(u), client.FieldOwner("application/apply-patch"))
 }
 
 // Delete deletes existing TestWorkflow
