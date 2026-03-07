@@ -9,8 +9,8 @@ FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder-init
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
 
 WORKDIR /app
@@ -29,11 +29,9 @@ FROM --platform=$BUILDPLATFORM golang:1.26.1-alpine AS builder-toolkit
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
-
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 
 WORKDIR /app
 COPY . .
@@ -45,18 +43,24 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
     go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o build/_local/workflow-toolkit cmd/testworkflow-toolkit/main.go
 
 ###################################
+## Debug builder (Delve)
+###################################
+FROM golang:1.26.0-alpine AS debug-builder
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
+
+###################################
 ## Debug
 ###################################
 FROM ${ALPINE_IMAGE} AS debug
 RUN apk --no-cache add ca-certificates libssl3 git openssh-client
 ENV GOTRACEBACK=all
-COPY --from=builder-toolkit /go/bin/dlv /
+COPY --from=debug-builder /go/bin/dlv /
 COPY --from=busybox /bin /.tktw-bin
 COPY --from=builder-toolkit /app/build/_local/workflow-toolkit /toolkit
 COPY --from=builder-init /app/build/_local/workflow-init /init
 RUN adduser --disabled-password --home / --no-create-home --uid 1001 default
 USER 1001
-ENTRYPOINT ["/dlv", "exec", "--headless", "--accept-multiclient", "--listen=:56300", "--api-version=2", "/toolkit"]
+ENTRYPOINT ["/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56300", "--api-version=2", "/toolkit"]
 
 ###################################
 ## Distribution

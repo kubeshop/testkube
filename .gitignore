@@ -48,6 +48,12 @@ movie.mp4
 
 # Local
 build/_local/values.dev.yaml
+build/_local/agent-server
+build/_local/kubectl-testkube
+build/_local/tilt-registry-values.yaml
+tilt-values.yaml
+tilt_modules/
+.tiltbuild/
 depot-build-meta.json
 
 # Environment files

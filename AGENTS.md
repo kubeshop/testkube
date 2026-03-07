@@ -1,5 +1,9 @@
 # Working with Testkube Core (testkube)
 
+## Deprecated components — DO NOT reference
+
+- **testkube-operator** (`k8s/helm/testkube-operator/`, `testkube-operator` Helm values): The Kubernetes operator is deprecated and disabled by default. Do not suggest enabling it, reference it in documentation, or add new code that depends on it. The Helm chart still carries it as a dependency for backwards compatibility only.
+
 ## Purpose
 
 - Implements the Testkube agent services that run inside clusters.
