@@ -165,7 +165,7 @@ func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
 }
 
 // reconnect replaces the underlying connection when it has been permanently
-// closed.  Callers must NOT hold n.mu when calling this.
+// closed.  Callers must NOT hold n.connMu when calling this.
 //
 // Design notes:
 //   - reconnectMu serialises concurrent reconnect attempts so only one goroutine
@@ -196,9 +196,10 @@ func (n *NATSBus) reconnect() error {
 		"error_type", "nats_connection_closed",
 		"url", n.cfg.NatsURI)
 
-	// Create the new connection outside every lock so that publishers are not
+	// Create the new connection outside connMu so that publishers are not
 	// stalled during the (potentially slow) retry loop inside
-	// NewNATSEncodedConnection.
+	// NewNATSEncodedConnection.  (reconnectMu is still held to serialise
+	// concurrent reconnect attempts.)
 	conn, err := NewNATSEncodedConnection(n.cfg)
 	if err != nil {
 		return fmt.Errorf("nats reconnect failed: %w", err)
