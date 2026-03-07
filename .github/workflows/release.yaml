@@ -352,7 +352,7 @@ jobs:
           docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}
