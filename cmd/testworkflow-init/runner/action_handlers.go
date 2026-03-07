@@ -263,7 +263,7 @@ func newMetricsRecorderConfig(stepRef string, skip bool, containerResources test
 	metricsDir := filepath.Join(constants.InternalPath, "metrics", stepRef)
 	return utilization.Config{
 		Dir:  metricsDir,
-		Skip: skip,
+		Skip: skip || s.InternalConfig.Worker.DisableResourceMetrics,
 		ExecutionConfig: utilization.ExecutionConfig{
 			Workflow:  s.InternalConfig.Workflow.Name,
 			Step:      stepRef,
