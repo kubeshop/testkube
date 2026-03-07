@@ -390,15 +390,14 @@ func (ag *Agent) executeCommand(_ context.Context, cmd *cloud.ExecuteRequest) *c
 		fasthttp.ReleaseRequest(r)
 
 		headers := make(map[string]*cloud.HeaderValue)
-		req.Response.Header.VisitAll(func(key, value []byte) {
-			_, ok := headers[string(key)]
-			if !ok {
-				headers[string(key)] = &cloud.HeaderValue{Header: []string{string(value)}}
-				return
+		for key, value := range req.Response.Header.All() {
+			k := string(key)
+			if _, ok := headers[k]; !ok {
+				headers[k] = &cloud.HeaderValue{Header: []string{string(value)}}
+			} else {
+				headers[k].Header = append(headers[k].Header, string(value))
 			}
-
-			headers[string(key)].Header = append(headers[string(key)].Header, string(value))
-		})
+		}
 
 		resp := &cloud.ExecuteResponse{MessageId: cmd.MessageId, Headers: headers, Status: int64(req.Response.StatusCode()), Body: req.Response.Body()}
 
