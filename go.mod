@@ -67,7 +67,7 @@ require (
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
-	github.com/valyala/fasthttp v1.58.0
+	github.com/valyala/fasthttp v1.69.0
 	github.com/wI2L/jsondiff v0.6.0
 	go.mongodb.org/mongo-driver v1.17.9
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
