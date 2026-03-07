@@ -22,8 +22,7 @@ import (
 )
 
 func (in *TestTrigger) SetupWebhookWithManager(mgr ctrl.Manager, validator admission.CustomValidator) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		WithValidator(validator).
-		For(in).
+	return ctrl.NewWebhookManagedBy(mgr, in).
+		WithCustomValidator(validator).
 		Complete()
 }
