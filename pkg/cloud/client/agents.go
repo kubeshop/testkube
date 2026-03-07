@@ -104,6 +104,7 @@ func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)

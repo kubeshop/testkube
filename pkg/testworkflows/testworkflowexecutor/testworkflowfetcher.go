@@ -169,10 +169,15 @@ func containsSameMap[T comparable, U comparable](s []map[T]U, v map[T]U) bool {
 		if len(s[i]) != len(v) {
 			continue
 		}
+		equal := true
 		for k := range s[i] {
 			if x, ok := v[k]; !ok || x != s[i][k] {
-				return true
+				equal = false
+				break
 			}
+		}
+		if equal {
+			return true
 		}
 	}
 	return false
