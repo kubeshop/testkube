@@ -113,6 +113,8 @@ func (s TestWorkflowsClient) Apply(workflow *testworkflowsv1.TestWorkflow) error
 		return err
 	}
 	u := &unstructured.Unstructured{Object: obj}
+	u.SetAPIVersion(testworkflowsv1.GroupVersion.String())
+	u.SetKind("TestWorkflow")
 	return s.Client.Apply(context.Background(), client.ApplyConfigurationFromUnstructured(u), client.FieldOwner("application/apply-patch"))
 }
 
