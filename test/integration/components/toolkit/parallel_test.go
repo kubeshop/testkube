@@ -530,17 +530,19 @@ func startPodObserver(t *testing.T, namespace string) (*PodObserver, error) {
 	// in buildInternalConfig, it uses execution.Id instead of preserving root ID
 	// So we need to look for test-exec instead of test-root
 	labelSelector := "testkube.io/root=test-exec"
-	listOptions := metav1.ListOptions{
-		LabelSelector: labelSelector,
-	}
 
 	// Create informer
+	// Note: options must be forwarded (not replaced) so that the reflector can set
+	// ResourceVersion, SendInitialEvents, AllowWatchBookmarks, etc. required by the
+	// WatchListClient feature gate enabled by default in client-go v0.35+.
 	watchList := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-			return globalK8sClient.CoreV1().Pods(namespace).List(context.Background(), listOptions)
+			options.LabelSelector = labelSelector
+			return globalK8sClient.CoreV1().Pods(namespace).List(context.Background(), options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			return globalK8sClient.CoreV1().Pods(namespace).Watch(context.Background(), listOptions)
+			options.LabelSelector = labelSelector
+			return globalK8sClient.CoreV1().Pods(namespace).Watch(context.Background(), options)
 		},
 	}
 
