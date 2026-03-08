@@ -27,7 +27,7 @@ jobs:
       - name: Lint Go
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.11.1
+          version: v2.11.2
           args: --timeout=10m
           only-new-issues: true
           verify: true
