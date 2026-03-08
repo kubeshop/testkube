@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,7 +25,7 @@ func TestTestkubeAPI_FluxEventHandler(t *testing.T) {
 	t.Run("test flux event", func(t *testing.T) {
 		// given
 		eventString := `{"involvedObject":{"kind":"Deployment","namespace":"my-ns","name":"my-deployment"},"severity":"info","timestamp":"2022-06-27T08:42:25Z","message":"some message","reason":"change","reportingController":"fluxcd"}`
-		req := httptest.NewRequest("POST", "/events/flux", strings.NewReader(eventString))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/events/flux", strings.NewReader(eventString))
 
 		// when
 		resp, err := app.Test(req)

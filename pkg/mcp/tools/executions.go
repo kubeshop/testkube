@@ -218,6 +218,54 @@ func extractExecutionIdFromResponse(responseJSON string, targetExecutionName str
 	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
 }
 
+type ExecutionTagUpdater interface {
+	UpdateExecutionTags(ctx context.Context, executionId string, tags map[string]string) error
+}
+
+func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("update_execution_tags",
+		mcp.WithDescription(UpdateExecutionTagsDescription),
+		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+		mcp.WithObject("tags", mcp.Required(), mcp.Description(`Key-value tag pairs (e.g., {"env":"prod","bug":"found"}). Replaces all existing tags. Use {} to clear all tags.`)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		executionId, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		tagsRaw, ok, err := OptionalParamOK[map[string]any](request, "tags")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if !ok {
+			return mcp.NewToolResultError("missing required parameter: tags"), nil
+		}
+
+		tags := make(map[string]string)
+		for k, v := range tagsRaw {
+			s, ok := v.(string)
+			if !ok {
+				return mcp.NewToolResultError(fmt.Sprintf("tag value for key %q must be a string, got %T", k, v)), nil
+			}
+			tags[k] = s
+		}
+
+		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update execution tags: %v", err)), nil
+		}
+
+		tagsJSON, err := json.Marshal(tags)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal tags: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Execution tags updated successfully. New tags: %s", tagsJSON)), nil
+	}
+
+	return tool, handler
+}
+
 type WorkflowExecutionAborter interface {
 	AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error)
 }

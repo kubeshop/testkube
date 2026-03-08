@@ -142,7 +142,7 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 	// Base64 encode to prevent testworkflow-init from prematurely resolving expressions.
 	// The parallel spec can contain expressions that need matrix/shard/count variables
 	// which are only available during parallel execution, not in the init context.
-	encoded, err := expressionstcl.EncodeBase64JSON(step.Parallel)
+	encoded, err := expressionstcl.EncodeBase64JSON(parallel)
 	if err != nil {
 		return nil, errors.Wrap(err, "parallel: encoding error")
 	}
