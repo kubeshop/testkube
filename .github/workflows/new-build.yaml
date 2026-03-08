@@ -36,7 +36,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Setup gcloud SA key for GAR
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GAR_PROJECT_ID }}
           credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
@@ -158,7 +158,7 @@ jobs:
 
       - name: Auth to Google Cloud
         if: ${{ github.ref_type == 'tag' }}
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GAR_PROJECT_ID }}
           credentials_json: ${{ secrets.GKE_SA_KEY_PROD }} #Key to SA in Testkube Prod project
