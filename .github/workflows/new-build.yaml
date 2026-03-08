@@ -30,7 +30,7 @@ jobs:
         uses: depot/setup-action@v1
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -168,7 +168,7 @@ jobs:
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
