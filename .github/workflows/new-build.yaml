@@ -46,7 +46,7 @@ jobs:
 
       - name: Create Docker tags and metadata for the API
         id: api-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "api-meta"
           images: |
@@ -58,7 +58,7 @@ jobs:
 
       - name: Create Docker tags and metadata for the API
         id: cli-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "cli-meta"
           images: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "tw-init-meta"
           images: |
@@ -82,7 +82,7 @@ jobs:
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "tw-toolkit-meta"
           images: |
@@ -94,7 +94,7 @@ jobs:
 
       - name: Create Docker tags and metadata for mcp-server
         id: mcp-server-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "mcp-server-meta"
           images: |
