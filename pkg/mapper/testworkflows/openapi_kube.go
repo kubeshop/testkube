@@ -322,6 +322,7 @@ func MapContentOciAPIToKube(v testkube.TestWorkflowContentOci) testworkflowsv1.C
 	return testworkflowsv1.ContentOci{
 		Image:        v.Image,
 		MountPath:    v.MountPath,
+		Path:         v.Path,
 		Username:     v.Username,
 		UsernameFrom: common.MapPtr(v.UsernameFrom, MapEnvVarSourceAPIToKube),
 		Token:        v.Token,
