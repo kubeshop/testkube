@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -874,7 +874,11 @@ func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowS
 	ui.Info("Getting logs from test workflow job", id)
 
 	// retry logic in case of error or closed channel with running state
-	err = retry.Do(
+	err = retry.New(
+		retry.Attempts(logsRetryAttempts),
+		retry.Delay(logsRetryDelay),
+		retry.LastErrorOnly(true),
+	).Do(
 		func() error {
 			notifications, err := client.GetTestWorkflowExecutionNotifications(id)
 			if err != nil {
@@ -893,9 +897,6 @@ func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowS
 
 			return nil
 		},
-		retry.Attempts(logsRetryAttempts),
-		retry.Delay(logsRetryDelay),
-		retry.LastErrorOnly(true),
 	)
 
 	return result, err
