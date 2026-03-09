@@ -18,7 +18,7 @@
     "semver": "7.7.4",
     "shelljs": "0.10.0",
     "strands": "1.0.1",
-    "untildify": "5.0.0",
+    "untildify": "6.0.0",
     "xdg-app-paths": "8.3.0",
     "yaml": "2.8.2"
   }
