@@ -24,10 +24,8 @@ require (
 	github.com/go-errors/errors v1.5.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.2.1
-	github.com/gofiber/contrib/otelfiber v1.0.10
 	github.com/gofiber/contrib/otelfiber/v2 v2.2.3
 	github.com/gofiber/fiber/v2 v2.52.12
-	github.com/gofiber/fiber/v3 v3.1.0
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.21.2
