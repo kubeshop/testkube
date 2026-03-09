@@ -124,13 +124,13 @@ env
 
 All of the workflows are labeled to simplify filtering them.
 
-The standard workflows are labeled with `core-tests: workflows`. Tool-specific workflows also have the `tool` label - for example: `tool: postman`
-
+The standard workflows are labeled with `core-tests: workflows`.
+Tool-specific workflows also have the `tool` label - for example: `tool: postman`
 There are additional labels for `artifacts` (`artifacts: "true"`) for the ones using artifacts, and `junit: "true"` for the ones generating JUnit reports.
 
 Additional labels:
- - `core-tests: special-cases` - Special cases
- - `core-tests: expected-fail` - Expected-fail scenarios
- - `core-tests: installation` - Installation tests
- - `core-tests: workflow-suite` - Test Workflow "suites"
- - `core-tests: workflow-suite-trigger` - suite triggers
+- `core-tests: special-cases` - Special cases
+- `core-tests: expected-fail` - Expected-fail scenarios
+- `core-tests: installation` - Installation tests
+- `core-tests: workflow-suite` - Test Workflow "suites"
+- `core-tests: workflow-suite-trigger` - suite triggers
