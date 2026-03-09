@@ -43,6 +43,7 @@ func NewUpdateTestWorkflowExecutionCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag in key=value format (can be specified multiple times)")
+	_ = cmd.MarkFlagRequired("tag")
 
 	return cmd
 }
