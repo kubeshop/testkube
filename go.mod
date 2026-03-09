@@ -48,7 +48,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/montanaflynn/stats v0.7.1
 	github.com/moogar0880/problems v0.1.1
-	github.com/nats-io/nats-server/v2 v2.12.4
+	github.com/nats-io/nats-server/v2 v2.12.5
 	github.com/nats-io/nats.go v1.49.0
 	github.com/ohler55/ojg v1.28.0
 	github.com/olekukonko/tablewriter v0.0.6-0.20230925090304-df64c4bbad77
@@ -116,7 +116,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
-	github.com/antithesishq/antithesis-sdk-go v0.5.0-default-no-op // indirect
+	github.com/antithesishq/antithesis-sdk-go v0.6.0-default-no-op // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.2 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.10 // indirect
@@ -227,7 +227,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nats-io/jwt/v2 v2.8.0 // indirect
-	github.com/nats-io/nkeys v0.4.12 // indirect
+	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce // indirect
@@ -285,9 +285,9 @@ require (
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.40.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
