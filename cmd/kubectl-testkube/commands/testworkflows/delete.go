@@ -1,7 +1,6 @@
 package testworkflows
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,7 +29,6 @@ func NewDeleteTestWorkflowCmd() *cobra.Command {
 				if len(selectors) > 0 {
 					selector := strings.Join(selectors, ",")
 					err = client.DeleteTestWorkflows(selector)
-					fmt.Println("error is", err)
 					if ignoreNotFound && apiutils.IsNotFound(err) {
 						ui.Info("Testworkflow not found for matching selector '" + selector + "', but ignoring since --ignore-not-found was passed")
 						ui.SuccessAndExit("Operation completed")
