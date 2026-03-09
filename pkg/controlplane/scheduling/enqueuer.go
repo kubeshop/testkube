@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 
@@ -368,7 +368,11 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 		exec := executions[i]
 
 		// Insert the execution
-		err := retry.Do(
+		err := retry.New(
+			retry.DelayType(retry.FixedDelay),
+			retry.Delay(300*time.Millisecond),
+			retry.Attempts(5),
+		).Do(
 			func() error {
 				err := e.executionRepository.Insert(ctx, *exec.Execution())
 				if err != nil {
@@ -376,9 +380,6 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 				}
 				return err
 			},
-			retry.DelayType(retry.FixedDelay),
-			retry.Delay(300*time.Millisecond),
-			retry.Attempts(5),
 		)
 		if err != nil {
 			logger.Errorw("failed to update the TestWorkflow exec in database", "recoverable", false, "executionId", exec.Execution().Id, "error", err)

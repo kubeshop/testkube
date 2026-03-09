@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/adhocore/gronx v1.19.6
-	github.com/avast/retry-go/v4 v4.7.0
+	github.com/avast/retry-go/v5 v5.0.0
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cdevents/sdk-go v0.4.1
@@ -24,7 +24,7 @@ require (
 	github.com/go-errors/errors v1.5.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.2.1
-	github.com/gofiber/contrib/otelfiber v1.0.10
+	github.com/gofiber/contrib/otelfiber/v2 v2.2.3
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/google/go-cmp v0.7.0
@@ -273,7 +273,6 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib v1.20.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.20.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.42.0 // indirect
 	go.opentelemetry.io/otel/metric v1.42.0 // indirect
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect
