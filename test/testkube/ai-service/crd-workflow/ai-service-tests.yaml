@@ -10,11 +10,12 @@ spec:
     serviceImage:
       type: string
       description: "AI service Docker image to test"
+      default: "kubeshop/testkube-copilot:latest"
 
   services:
     postgres:
       image: postgres:16-alpine
-      timeout: 60s
+      timeout: 120s
       logs: always
       env:
         - name: POSTGRES_USER
@@ -30,7 +31,7 @@ spec:
 
     cpstub:
       image: "{{ config.serviceImage }}"
-      timeout: 120s
+      timeout: 300s
       logs: always
       command: ["node", "dist/scripts/cp-stub/index.js"]
       env:
@@ -63,7 +64,7 @@ spec:
       services:
         aiservice:
           image: "{{ config.serviceImage }}"
-          timeout: 120s
+          timeout: 300s
           logs: always
           env:
             - name: NODE_ENV
