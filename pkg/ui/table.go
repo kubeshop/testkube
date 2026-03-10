@@ -34,9 +34,17 @@ func (ui *UI) Table(tableData TableData, writer io.Writer) {
 	}
 
 	for _, v := range data {
-		table.Append(v) //nolint:errcheck
+		anyRow := make([]any, len(v))
+		for i, c := range v {
+			anyRow[i] = c
+		}
+		if err := table.Append(anyRow...); err != nil {
+			ui.Warn("table append error", err.Error())
+		}
 	}
-	table.Render() //nolint:errcheck
+	if err := table.Render(); err != nil {
+		ui.Warn("table render error", err.Error())
+	}
 }
 
 func (ui *UI) JSONTable(tableData TableData, writer io.Writer) error {
