@@ -65,6 +65,8 @@ func clearYAMLFlowStyle(node *yaml.Node) {
 		if node.Style == yaml.DoubleQuotedStyle || node.Style == yaml.SingleQuotedStyle {
 			node.Style = 0
 		}
+	case yaml.AliasNode:
+		clearYAMLFlowStyle(node.Alias)
 	}
 	for _, child := range node.Content {
 		clearYAMLFlowStyle(child)
@@ -108,9 +110,7 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 		return nil, err
 	}
 	var node yaml.Node
-	if err := yaml.Unmarshal(out, &node); err != nil {
-		return nil, err
-	}
+	_ = yaml.Unmarshal(out, &node)
 	clearYAMLFlowStyle(&node)
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -120,10 +120,7 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 	} else {
 		_ = enc.Encode(&node)
 	}
-	if err := enc.Close(); err != nil {
-		return nil, err
-	}
-	b := buf.Bytes()
+	_ = enc.Close()
 	b := buf.Bytes()
 	if opts.OmitCreationTimestamp {
 		b = creationTsRegex.ReplaceAll(b, nil)
