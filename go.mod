@@ -51,11 +51,9 @@ require (
 	github.com/ohler55/ojg v1.28.0
 	github.com/olekukonko/tablewriter v0.0.6-0.20230925090304-df64c4bbad77
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v4 v4.9.0
-	github.com/pashagolub/pgxmock/v5 v5.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/prometheus/client_golang v1.23.2
@@ -63,7 +61,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savioxavier/termlink v1.4.3
 	github.com/segmentio/analytics-go/v3 v3.3.0
-	github.com/shirou/gopsutil/v4 v4.26.2
 	github.com/shirou/gopsutil/v4 v4.26.2
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.15.0
@@ -95,6 +92,8 @@ require (
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	sigs.k8s.io/controller-runtime v0.23.3
 )
+
+require github.com/opencontainers/go-digest v1.0.0 // indirect
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -231,7 +230,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.28.1 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/package-url/packageurl-go v0.1.2 // indirect
@@ -248,7 +247,6 @@ require (
 	github.com/savsgio/gotils v0.0.0-20240704082632-aef3928b8a38 // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
-	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
