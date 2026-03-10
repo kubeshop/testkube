@@ -1,11 +1,12 @@
 package crdcommon
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"regexp"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -52,6 +53,24 @@ func CleanObjectMeta(crs ...metav1.Object) {
 var creationTsNullRegex = regexp.MustCompile(`\n\s+creationTimestamp: null`)
 var creationTsRegex = regexp.MustCompile(`\n\s+creationTimestamp:[^\n]*`)
 
+// clearYAMLFlowStyle recursively removes flow style from YAML mapping and sequence nodes,
+// so they are marshaled as block YAML instead of inline JSON-like format.
+// It also clears double-quoted style from scalar nodes so that string keys/values
+// from JSON input are serialized as unquoted YAML scalars where possible.
+func clearYAMLFlowStyle(node *yaml.Node) {
+	switch node.Kind {
+	case yaml.MappingNode, yaml.SequenceNode:
+		node.Style = 0
+	case yaml.ScalarNode:
+		if node.Style == yaml.DoubleQuotedStyle || node.Style == yaml.SingleQuotedStyle {
+			node.Style = 0
+		}
+	}
+	for _, child := range node.Content {
+		clearYAMLFlowStyle(child)
+	}
+}
+
 func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 	if opts.CleanMeta || (opts.Kind != "" && opts.GroupVersion != nil) {
 		// For simplicity, support both direct struct (as in *List.Items), as well as the pointer itself
@@ -88,9 +107,19 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := yaml.MapSlice{}
-	_ = yaml.Unmarshal(out, &m)
-	b, _ := yaml.Marshal(m)
+	var node yaml.Node
+	_ = yaml.Unmarshal(out, &node)
+	clearYAMLFlowStyle(&node)
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		_ = enc.Encode(node.Content[0])
+	} else {
+		_ = enc.Encode(&node)
+	}
+	_ = enc.Close()
+	b := buf.Bytes()
 	if opts.OmitCreationTimestamp {
 		b = creationTsRegex.ReplaceAll(b, nil)
 	} else {

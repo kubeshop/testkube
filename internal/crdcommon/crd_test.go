@@ -117,11 +117,11 @@ func TestSerializeCRDWithMessyData(t *testing.T) {
 metadata:
   name: test-name
   managedFields:
-  - manager: some-manager
-    operation: some-operation
-    apiVersion: v1
-    fieldsType: blah
-    subresource: meh
+    - manager: some-manager
+      operation: some-operation
+      apiVersion: v1
+      fieldsType: blah
+      subresource: meh
 spec:
   description: some-description
 status: {}
