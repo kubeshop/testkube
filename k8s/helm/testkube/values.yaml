@@ -167,6 +167,10 @@ mongodb:
 postgresql:
   # -- Toggle whether to install PostgreSQL
   enabled: false
+  dsn: "mongodb://testkube-mongodb:27017"
+  # secretName: testkube-secrets
+  # secretKey: postgresql-dsn
+  
   # -- PostgreSQL fullname override
   fullnameOverride: "testkube-postgresql"
   # -- PostgreSQL architecture
