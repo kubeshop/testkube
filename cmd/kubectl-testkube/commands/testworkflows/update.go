@@ -18,7 +18,7 @@ func NewUpdateTestWorkflowExecutionCmd() *cobra.Command {
 		Use:     "testworkflowexecution <executionID>",
 		Aliases: []string{"twe", "testworkflows-execution", "testworkflow-execution"},
 		Short:   "Update test workflow execution tags",
-		Long:    "Update test workflow execution tags. Use --tag key=value to set tags. Replaces all existing tags.",
+		Long:    "Update test workflow execution tags. Use --tag key=value to set tags. Replaces all existing tags. Omit --tag to clear all tags.",
 		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
@@ -42,8 +42,7 @@ func NewUpdateTestWorkflowExecutionCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag in key=value format (can be specified multiple times)")
-	_ = cmd.MarkFlagRequired("tag")
+	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag in key=value format (can be specified multiple times, omit to clear all tags)")
 
 	return cmd
 }

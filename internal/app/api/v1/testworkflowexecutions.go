@@ -789,6 +789,7 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 func (s *TestkubeAPI) UpdateTestWorkflowExecutionTagsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
+		name := c.Params("id")
 		executionID := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to update tags for test workflow execution '%s'", executionID)
 
@@ -800,8 +801,13 @@ func (s *TestkubeAPI) UpdateTestWorkflowExecutionTagsHandler() fiber.Handler {
 			tags = make(map[string]string)
 		}
 
-		// Verify execution exists
-		_, err := s.TestWorkflowResults.Get(ctx, executionID)
+		// Verify execution exists (and belongs to the workflow if scoped)
+		var err error
+		if name == "" {
+			_, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			_, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
