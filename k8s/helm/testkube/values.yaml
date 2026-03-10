@@ -167,7 +167,6 @@ mongodb:
 postgresql:
   # -- Toggle whether to install PostgreSQL
   enabled: false
-
   # -- PostgreSQL fullname override
   fullnameOverride: "testkube-postgresql"
   # -- PostgreSQL architecture
