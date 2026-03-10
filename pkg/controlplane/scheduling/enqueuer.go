@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v5"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -198,7 +198,7 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 
 	now := time.Now().UTC()
 	executionBase := testworkflowexecutor.NewIntermediateExecution().
-		SetGroupID(primitive.NewObjectIDFromTimestamp(now).Hex()).
+		SetGroupID(bson.NewObjectIDFromTimestamp(now).Hex()).
 		SetScheduledAt(now).
 		AppendTags(req.Tags).
 		SetDisabledWebhooks(req.DisableWebhooks).
