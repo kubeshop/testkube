@@ -1,0 +1,143 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: ai-service-tests
+  labels:
+    component: ai-service
+    category: ai-testing
+spec:
+  config:
+    serviceImage:
+      type: string
+      description: "AI service Docker image to test"
+
+  services:
+    postgres:
+      image: postgres:16-alpine
+      timeout: 60s
+      logs: always
+      env:
+        - name: POSTGRES_USER
+          value: copilot
+        - name: POSTGRES_PASSWORD
+          value: copilot
+        - name: POSTGRES_DB
+          value: copilot
+      readinessProbe:
+        tcpSocket:
+          port: 5432
+        periodSeconds: 1
+
+    cpstub:
+      image: "{{ config.serviceImage }}"
+      timeout: 120s
+      logs: always
+      command: ["node", "dist/scripts/cp-stub/index.js"]
+      env:
+        - name: CP_STUB_PORT
+          value: "8090"
+        - name: TEST_ORG_ID
+          value: "test-org"
+        - name: TEST_ENV_ID
+          value: "test-env"
+        - name: ENABLE_MCP_TOOLS
+          value: "true"
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8090
+        periodSeconds: 1
+
+  container:
+    image: "{{ config.serviceImage }}"
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+
+  job:
+    activeDeadlineSeconds: 600
+
+  steps:
+    - name: Start AI Service and run agent cases
+      services:
+        aiservice:
+          image: "{{ config.serviceImage }}"
+          timeout: 120s
+          logs: always
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: USE_TLS
+              value: "false"
+            - name: PORT
+              value: "9090"
+            - name: CONTROL_PLANE_ENDPOINT
+              value: "http://{{ services.cpstub.0.ip }}:8090"
+            - name: POSTGRES_URI
+              value: "postgresql://copilot:copilot@{{ services.postgres.0.ip }}:5432/copilot?sslmode=disable"
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: testkube-agent-secrets
+                  key: DEV_LLM_API_KEY
+            - name: MODEL_NAME
+              value: "gpt-4o-mini"
+            - name: OAUTH_JWKS_URL
+              value: "http://{{ services.cpstub.0.ip }}:8090/keys"
+            - name: OAUTH_ISSUER
+              value: "http://{{ services.cpstub.0.ip }}:8090"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9090
+            periodSeconds: 2
+
+      steps:
+        - name: Run AI assistant cases (parallel)
+          parallel:
+            matrix:
+              case:
+                - id: list-workflows
+                  title: List workflows
+                  prompt: "List all workflows in this environment and summarize their latest status"
+                  requiredToolCalls: ["list_workflows"]
+                  responseMustContainAll: ["workflow"]
+                - id: diagnose-failure
+                  title: Diagnose playwright failure
+                  prompt: "Diagnose the latest failure for execution name playwright-smoke-8. Use only lookup_execution_id and fetch_execution_logs, then explain the failure cause briefly."
+                  requiredToolCalls:
+                    ["lookup_execution_id", "fetch_execution_logs"]
+                  responseMustContainAll: ["playwright", "failure"]
+                - id: workflow-knowledge
+                  title: Explain readiness probes
+                  prompt: "What are the best practices for configuring a readiness probe in a TestWorkflow?"
+                  responseMustContainAll: ["readiness"]
+            description: "{{ matrix.case.title || matrix.case.id }}"
+            run:
+              env:
+                - name: TEST_CASE_JSON
+                  value: "{{ tojson(matrix.case) }}"
+                - name: AI_SERVICE_URL
+                  value: "http://{{ services.aiservice.0.ip }}:9090"
+                - name: CP_STUB_URL
+                  value: "http://{{ services.cpstub.0.ip }}:8090"
+              shell: "node dist/scripts/test-runner.js"
+
+        - name: Verify assistant session status callbacks
+          run:
+            env:
+              - name: CP_STUB_URL
+                value: "http://{{ services.cpstub.0.ip }}:8090"
+              - name: EXPECTED_SESSIONS
+                value: '{{ len(list("list-workflows", "diagnose-failure", "workflow-knowledge")) }}'
+            shell: "node dist/scripts/verify-status-pushes.js"
+
+        - name: Save artifacts
+          condition: always
+          artifacts:
+            workingDir: /data/artifacts
+            paths:
+              - "*.json"
