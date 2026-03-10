@@ -27,6 +27,8 @@ func ZapGRPCLogger(logger *zap.Logger) logging.Logger {
 			logger.Warn(msg, f...)
 		case logging.LevelError:
 			logger.Error(msg, f...)
+		default:
+			logger.Info(msg, f...)
 		}
 	})
 }
