@@ -1456,6 +1456,21 @@ func (r *PostgresRepository) UpdateOutput(ctx context.Context, id string, refs [
 	return tx.Commit(ctx)
 }
 
+// UpdateTags replaces execution tags with the provided set
+func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map[string]string) error {
+	tagsJSON, err := toJSONB(tags)
+	if err != nil {
+		return err
+	}
+
+	return r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
+		Tags:           tagsJSON,
+		ExecutionID:    id,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
+}
+
 // UpdateResourceAggregations updates resource aggregations
 func (r *PostgresRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	global, err := toJSONB(resourceAggregations.Global)
