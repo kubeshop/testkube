@@ -50,7 +50,7 @@ require (
 	github.com/nats-io/nats.go v1.49.0
 	github.com/ohler55/ojg v1.28.0
 	github.com/olekukonko/tablewriter v1.1.3
-	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/otiai10/copy v1.14.1
