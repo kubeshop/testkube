@@ -20,6 +20,7 @@ func TestMongoLeaseBackend_TryAcquire_Integration(t *testing.T) {
 	ctx := context.Background()
 	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	require.NoError(t, err)
+	require.NoError(t, client.Ping(ctx, nil), "mongodb must be reachable at localhost:27017")
 	t.Cleanup(func() { client.Disconnect(ctx) })
 
 	t.Run("acquire existing lease", func(t *testing.T) {
