@@ -324,7 +324,7 @@ config:
 container:
   image:
     repository: nats
-    tag: 2.12.4-alpine
+    tag: 2.12.5-alpine
     pullPolicy:
     registry:
 
