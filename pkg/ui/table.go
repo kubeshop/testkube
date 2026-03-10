@@ -30,9 +30,7 @@ func (ui *UI) Table(tableData TableData, writer io.Writer) {
 		for i, h := range header {
 			anyHeader[i] = h
 		}
-		if err := table.Header(anyHeader...); err != nil {
-			ui.Warn("table header error", err.Error())
-		}
+		table.Header(anyHeader...)
 	}
 
 	for _, v := range data {
