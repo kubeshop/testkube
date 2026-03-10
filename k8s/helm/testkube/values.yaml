@@ -167,9 +167,6 @@ mongodb:
 postgresql:
   # -- Toggle whether to install PostgreSQL
   enabled: false
-  dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
-  # secretName: testkube-secrets
-  # secretKey: postgresql-dsn
 
   # -- PostgreSQL fullname override
   fullnameOverride: "testkube-postgresql"
@@ -990,6 +987,12 @@ testkube-api:
 
     # -- Key for SSL Cert Secret k8s Secret
     # sslCertSecretSecretKey: sslCertSecretSecretKey
+
+    postgresql:
+      enabled: false
+      # dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+      # secretName: testkube-secrets
+      # secretKey: postgresql-dsn
 
   # -- Testkube API Startup probe parameters
   startupProbe:
