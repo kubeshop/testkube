@@ -47,7 +47,7 @@ require (
 	github.com/mark3labs/mcp-go v0.45.0
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/montanaflynn/stats v0.7.1
-	github.com/moogar0880/problems v0.1.1
+	github.com/moogar0880/problems v1.0.1
 	github.com/nats-io/nats-server/v2 v2.12.5
 	github.com/nats-io/nats.go v1.49.0
 	github.com/ohler55/ojg v1.28.0
