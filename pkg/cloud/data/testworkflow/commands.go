@@ -24,6 +24,7 @@ const (
 	CmdTestWorkflowExecutionGetWorkflowMetrics       executor.Command = "workflow_execution_get_workflow_metrics"
 	CmdTestWorkflowExecutionGetNextExecutionNumber   executor.Command = "workflow_execution_get_next_execution_number"
 	CmdTestWorkflowExecutionGetExecutionTags         executor.Command = "workflow_execution_get_execution_tags"
+	CmdTestWorkflowExecutionUpdateTags               executor.Command = "workflow_execution_update_tags"
 
 	CmdTestWorkflowOutputPresignSaveLog         executor.Command = "workflow_output_presign_save_log"
 	CmdTestWorkflowOutputPresignReadLog         executor.Command = "workflow_output_presign_read_log"
@@ -77,6 +78,8 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowExecutionGetNextExecutionNumber
 	case ExecutionGetExecutionTagsRequest:
 		return CmdTestWorkflowExecutionGetExecutionTags
+	case ExecutionUpdateTagsRequest:
+		return CmdTestWorkflowExecutionUpdateTags
 
 	case OutputPresignSaveLogRequest:
 		return CmdTestWorkflowOutputPresignSaveLog

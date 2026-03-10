@@ -565,6 +565,11 @@ func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id str
 	return
 }
 
+func (r *MongoRepository) UpdateTags(ctx context.Context, id string, tags map[string]string) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"tags": tags}})
+	return
+}
+
 func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptions) {
 	query := bson.M{}
 	opts := options.Find()

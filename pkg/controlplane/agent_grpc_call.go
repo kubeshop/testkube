@@ -124,6 +124,9 @@ func CreateCommands(storageBucket string, storageClient domainstorage.Client, te
 			r.Tags, err = testWorkflowResultsRepository.GetExecutionTags(ctx, data.TestWorkflowName)
 			return
 		}),
+		cloudtestworkflow.CmdTestWorkflowExecutionUpdateTags: Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionUpdateTagsRequest) (r interface{}, err error) {
+			return r, testWorkflowResultsRepository.UpdateTags(ctx, data.ID, data.Tags)
+		}),
 	}
 
 	// Set up "Test Workflows - Output" commands
