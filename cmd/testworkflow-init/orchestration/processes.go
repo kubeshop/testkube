@@ -4,7 +4,7 @@ import (
 	errors2 "errors"
 
 	"github.com/pkg/errors"
-	gopsutil "github.com/shirou/gopsutil/v3/process"
+	gopsutil "github.com/shirou/gopsutil/v4/process"
 )
 
 type processNode struct {
