@@ -19,7 +19,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}

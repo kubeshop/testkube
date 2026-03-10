@@ -6,94 +6,40 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo/integration/mtest"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
-func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
+func TestMongoLeaseBackend_TryAcquire_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 
 	ctx := context.Background()
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
+	require.NoError(t, err)
+	t.Cleanup(func() { client.Disconnect(ctx) })
 
-	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+	t.Run("acquire existing lease", func(t *testing.T) {
+		db := client.Database("leasebackend-test-acquire-existing")
+		t.Cleanup(func() { db.Drop(ctx) })
 
-	mt.Run("acquire existing lease", func(mt *mtest.T) {
-
-		leaseBackend := NewMongoLeaseBackend(mt.DB)
-
-		testID := "test-host-1"
-		testClusterID := "testkube_api"
-		expectedLease := Lease{
-			Identifier: testID,
-			ClusterID:  testClusterID,
-			AcquiredAt: time.Now(),
-			RenewedAt:  time.Now(),
-		}
-		expectedMongoLease := MongoLease{
-			_id:   newLeaseMongoID(testClusterID),
-			Lease: expectedLease,
-		}
-
-		bsonD := cycleBSON(&expectedMongoLease)
-
-		mt.AddMockResponses(mtest.CreateCursorResponse(
-			1,
-			"testkube.lease",
-			mtest.FirstBatch,
-			bsonD,
-		))
-
-		leased, err := leaseBackend.TryAcquire(ctx, testID, testClusterID)
-
-		assert.True(t, leased, "should acquire lease")
-		assert.NoError(t, err)
-	})
-
-	mt.Run("renew existing lease", func(mt *mtest.T) {
-
-		leaseBackend := NewMongoLeaseBackend(mt.DB)
+		leaseBackend := NewMongoLeaseBackend(db)
 
 		testID := "test-host-1"
 		testClusterID := "testkube_api"
-		acquiredAt := time.Now().Add(-1 * time.Hour)
-		expectedLease1 := Lease{
-			Identifier: testID,
-			ClusterID:  testClusterID,
-			AcquiredAt: acquiredAt,
-			RenewedAt:  time.Now().Add(-1 * time.Hour),
-		}
-		expectedMongoLease1 := MongoLease{
-			_id:   newLeaseMongoID(testClusterID),
-			Lease: expectedLease1,
-		}
-		expectedLease2 := Lease{
-			Identifier: testID,
-			ClusterID:  testClusterID,
-			AcquiredAt: acquiredAt,
-			RenewedAt:  time.Now(),
-		}
-		expectedMongoLease2 := MongoLease{
-			_id:   newLeaseMongoID(testClusterID),
-			Lease: expectedLease2,
-		}
+		leaseMongoID := newLeaseMongoID(testClusterID)
 
-		bsonD1 := cycleBSON(&expectedMongoLease1)
-		bsonD2 := cycleBSON(&expectedMongoLease2)
-
-		mt.AddMockResponses(mtest.CreateCursorResponse(
-			1,
-			"testkube.lease",
-			mtest.FirstBatch,
-			bsonD1,
-		))
-		mt.AddMockResponses(mtest.CreateCursorResponse(
-			0,
-			"testkube.lease",
-			mtest.FirstBatch,
-		))
-		mt.AddMockResponses(bson.D{
-			{Key: "ok", Value: 1},
-			{Key: "value", Value: bsonD2},
+		_, err = db.Collection(mongoCollectionTriggersLease).InsertOne(ctx, bson.M{
+			"_id":         leaseMongoID,
+			"identifier":  testID,
+			"cluster_id":  testClusterID,
+			"acquired_at": time.Now(),
+			"renewed_at":  time.Now(),
 		})
+		require.NoError(t, err)
 
 		leased, err := leaseBackend.TryAcquire(ctx, testID, testClusterID)
 
@@ -101,31 +47,50 @@ func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	mt.Run("not acquire if other instance is holding non-expired", func(mt *mtest.T) {
+	t.Run("renew existing lease", func(t *testing.T) {
+		db := client.Database("leasebackend-test-renew-existing")
+		t.Cleanup(func() { db.Drop(ctx) })
 
-		leaseBackend := NewMongoLeaseBackend(mt.DB)
+		leaseBackend := NewMongoLeaseBackend(db)
+
+		testID := "test-host-1"
+		testClusterID := "testkube_api"
+		leaseMongoID := newLeaseMongoID(testClusterID)
+		acquiredAt := time.Now().Add(-1 * time.Hour)
+
+		_, err = db.Collection(mongoCollectionTriggersLease).InsertOne(ctx, bson.M{
+			"_id":         leaseMongoID,
+			"identifier":  testID,
+			"cluster_id":  testClusterID,
+			"acquired_at": acquiredAt,
+			"renewed_at":  time.Now().Add(-1 * time.Hour),
+		})
+		require.NoError(t, err)
+
+		leased, err := leaseBackend.TryAcquire(ctx, testID, testClusterID)
+
+		assert.True(t, leased, "should acquire lease")
+		assert.NoError(t, err)
+	})
+
+	t.Run("not acquire if other instance is holding non-expired", func(t *testing.T) {
+		db := client.Database("leasebackend-test-not-acquire")
+		t.Cleanup(func() { db.Drop(ctx) })
+
+		leaseBackend := NewMongoLeaseBackend(db)
 
 		testClusterID := "testkube_api"
+		leaseMongoID := newLeaseMongoID(testClusterID)
 		acquiredAt := time.Now().Add(-1 * time.Hour)
-		expectedLease := Lease{
-			Identifier: "test-id-2",
-			ClusterID:  testClusterID,
-			AcquiredAt: acquiredAt,
-			RenewedAt:  time.Now().Add(-5 * time.Second),
-		}
-		expectedMongoLease := MongoLease{
-			_id:   newLeaseMongoID(testClusterID),
-			Lease: expectedLease,
-		}
 
-		bsonD := cycleBSON(&expectedMongoLease)
-
-		mt.AddMockResponses(mtest.CreateCursorResponse(
-			1,
-			"testkube.lease",
-			mtest.FirstBatch,
-			bsonD,
-		))
+		_, err = db.Collection(mongoCollectionTriggersLease).InsertOne(ctx, bson.M{
+			"_id":         leaseMongoID,
+			"identifier":  "test-id-2",
+			"cluster_id":  testClusterID,
+			"acquired_at": acquiredAt,
+			"renewed_at":  time.Now().Add(-5 * time.Second),
+		})
+		require.NoError(t, err)
 
 		leased, err := leaseBackend.TryAcquire(ctx, "test-host-1", testClusterID)
 
@@ -133,63 +98,28 @@ func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	mt.Run("acquire lease from other instance if lease is expired", func(mt *mtest.T) {
+	t.Run("acquire lease from other instance if lease is expired", func(t *testing.T) {
+		db := client.Database("leasebackend-test-acquire-expired")
+		t.Cleanup(func() { db.Drop(ctx) })
 
-		leaseBackend := NewMongoLeaseBackend(mt.DB)
+		leaseBackend := NewMongoLeaseBackend(db)
 
 		testClusterID := "testkube_api"
+		leaseMongoID := newLeaseMongoID(testClusterID)
 		acquiredAt := time.Now().Add(-1 * time.Hour)
-		expectedLease1 := Lease{
-			Identifier: "test-host-2",
-			ClusterID:  testClusterID,
-			AcquiredAt: acquiredAt,
-			RenewedAt:  time.Now().Add(-1 * time.Hour),
-		}
-		expectedMongoLease1 := MongoLease{
-			_id:   newLeaseMongoID(testClusterID),
-			Lease: expectedLease1,
-		}
-		expectedLease2 := Lease{
-			Identifier: "test-host-1",
-			ClusterID:  testClusterID,
-			AcquiredAt: acquiredAt,
-			RenewedAt:  time.Now(),
-		}
-		expectedMongoLease2 := MongoLease{
-			_id:   newLeaseMongoID(testClusterID),
-			Lease: expectedLease2,
-		}
 
-		bsonD1 := cycleBSON(&expectedMongoLease1)
-		bsonD2 := cycleBSON(&expectedMongoLease2)
-
-		mt.AddMockResponses(mtest.CreateCursorResponse(
-			1,
-			"testkube.lease",
-			mtest.FirstBatch,
-			bsonD1,
-		))
-		mt.AddMockResponses(mtest.CreateCursorResponse(
-			0,
-			"testkube.lease",
-			mtest.FirstBatch,
-		))
-		mt.AddMockResponses(bson.D{
-			{Key: "ok", Value: 1},
-			{Key: "value", Value: bsonD2},
+		_, err = db.Collection(mongoCollectionTriggersLease).InsertOne(ctx, bson.M{
+			"_id":         leaseMongoID,
+			"identifier":  "test-host-2",
+			"cluster_id":  testClusterID,
+			"acquired_at": acquiredAt,
+			"renewed_at":  time.Now().Add(-1 * time.Hour),
 		})
+		require.NoError(t, err)
 
 		leased, err := leaseBackend.TryAcquire(ctx, "test-host-1", testClusterID)
 
 		assert.True(t, leased, "should acquire lease")
 		assert.NoError(t, err)
 	})
-}
-
-func cycleBSON(data any) bson.D {
-	bsonData, _ := bson.Marshal(data)
-	var bsonD bson.D
-	_ = bson.Unmarshal(bsonData, &bsonD)
-
-	return bsonD
 }
