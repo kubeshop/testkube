@@ -51,7 +51,6 @@ require (
 	github.com/ohler55/ojg v1.28.0
 	github.com/olekukonko/tablewriter v1.1.3
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.0.1
@@ -70,7 +69,6 @@ require (
 	github.com/valyala/fasthttp v1.69.0
 	github.com/wI2L/jsondiff v0.7.0
 	go.mongodb.org/mongo-driver v1.17.9
-	go.mongodb.org/mongo-driver/v2 v2.5.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.42.0
@@ -81,7 +79,6 @@ require (
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
 	golang.org/x/text v0.34.0
-	google.golang.org/appengine/v2 v2.0.6
 	google.golang.org/appengine/v2 v2.0.6
 	google.golang.org/grpc v1.79.2
 	google.golang.org/protobuf v1.36.11
@@ -237,6 +234,7 @@ require (
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.1.4-0.20260115111900-9e59c2286df0 // indirect
+	github.com/onsi/ginkgo/v2 v2.28.1 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/package-url/packageurl-go v0.1.2 // indirect
