@@ -132,5 +132,5 @@ Additional labels:
 - `core-tests: special-cases` - Special cases
 - `core-tests: expected-fail` - Expected-fail scenarios
 - `core-tests: installation` - Installation tests
-- `core-tests: workflow-suite` - Test Workflow "suites"
-- `core-tests: workflow-suite-trigger` - suite triggers
+- `core-tests: workflows-suite` - Test Workflow "suites"
+- `core-tests: workflows-suite-trigger` - suite triggers
