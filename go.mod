@@ -45,7 +45,7 @@ require (
 	github.com/mark3labs/mcp-go v0.45.0
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/montanaflynn/stats v0.7.1
-	github.com/moogar0880/problems v0.1.1
+	github.com/moogar0880/problems v1.0.1
 	github.com/nats-io/nats-server/v2 v2.12.5
 	github.com/nats-io/nats.go v1.49.0
 	github.com/ohler55/ojg v1.28.0
@@ -233,6 +233,7 @@ require (
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.1.4-0.20260115111900-9e59c2286df0 // indirect
+	github.com/onsi/ginkgo/v2 v2.28.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
