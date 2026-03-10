@@ -268,8 +268,7 @@ func (c TestWorkflowClient) UpdateTestWorkflowExecutionTags(executionID string, 
 		return err
 	}
 
-	_, err = c.testWorkflowExecutionTransport.GetRawBody(http.MethodPatch, uri, body, nil)
-	return err
+	return c.testWorkflowExecutionTransport.Validate(http.MethodPatch, uri, body, nil)
 }
 
 // ReRunTestWorkflowExecution reruns selected execution

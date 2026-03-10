@@ -937,6 +937,51 @@ func TestPostgresRepository_UpdateResult(t *testing.T) {
 	})
 }
 
+func TestPostgresRepository_UpdateTags(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+		id := "test-id"
+		tags := map[string]string{"env": "prod", "team": "qa"}
+
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(nil)
+
+		err := repo.UpdateTags(ctx, id, tags)
+
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+
+		call := mockQueries.Calls[0]
+		params := call.Arguments[1].(sqlc.UpdateTestWorkflowExecutionTagsParams)
+		assert.Equal(t, "test-id", params.ExecutionID)
+		assert.Equal(t, "org-1", params.OrganizationID)
+		assert.Equal(t, "env-1", params.EnvironmentID)
+
+		var got map[string]string
+		assert.NoError(t, json.Unmarshal(params.Tags, &got))
+		assert.Equal(t, tags, got)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{queries: mockQueries}
+		ctx := context.Background()
+
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(errors.New("db error"))
+
+		err := repo.UpdateTags(ctx, "test-id", map[string]string{"key": "val"})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "db error")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
 func TestPostgresRepository_DeleteByTestWorkflow(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 
