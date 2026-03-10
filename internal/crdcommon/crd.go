@@ -108,7 +108,9 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 		return nil, err
 	}
 	var node yaml.Node
-	_ = yaml.Unmarshal(out, &node)
+	if err := yaml.Unmarshal(out, &node); err != nil {
+		return nil, err
+	}
 	clearYAMLFlowStyle(&node)
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -118,7 +120,10 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 	} else {
 		_ = enc.Encode(&node)
 	}
-	_ = enc.Close()
+	if err := enc.Close(); err != nil {
+		return nil, err
+	}
+	b := buf.Bytes()
 	b := buf.Bytes()
 	if opts.OmitCreationTimestamp {
 		b = creationTsRegex.ReplaceAll(b, nil)
