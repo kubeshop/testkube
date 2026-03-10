@@ -12,15 +12,13 @@ import (
 )
 
 func TestTarball_Extract(t *testing.T) {
-	t.Parallel()
-
 	// create a test tarball
 	var buf bytes.Buffer
 	tarball := NewTarballService()
 	content := "testfile\n"
 	files := []*File{
-		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
-		{Name: "../hack.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
+		{Name: "testfile.txt", Mode: 0o644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
+		{Name: "../hack.txt", Mode: 0o644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
 	}
 	if err := tarball.Create(&buf, files); err != nil {
 		t.Fatalf("error creating tarball: %v", err)
@@ -31,8 +29,8 @@ func TestTarball_Extract(t *testing.T) {
 		t.Fatalf("Extract() error: %v", err)
 	}
 	assert.Equalf(t, "testfile.txt", files[0].Name, "Extract() returned file with name %s, expected testfile.txt", files[0].Name)
-	assert.Equalf(t, int64(0644), files[0].Mode, "Extract() returned file with mode %o, expected 0644", files[0].Mode)
-	if files[0].Mode != 0644 {
+	assert.Equalf(t, int64(0o644), files[0].Mode, "Extract() returned file with mode %o, expected 0644", files[0].Mode)
+	if files[0].Mode != 0o644 {
 		t.Fatalf("Extract() returned file with mode %o, expected 0644", files[0].Mode)
 	}
 	assert.Equalf(t, int64(len(content)), files[0].Size, "Extract() returned file with size %d, expected %d", files[0].Size, len(content))
@@ -44,14 +42,11 @@ func TestTarball_Extract(t *testing.T) {
 	assert.Equalf(t, "hack.txt", files[1].Name, "filepath is not sanitized: %s", files[1].Name)
 	// assert there are 2 files in the tarball
 	assert.Lenf(t, files, 2, "Extract() returned %d files, expected 2", len(files))
-
 }
 
 func TestTarball_Create(t *testing.T) {
-	t.Parallel()
-
 	files := []*File{
-		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString("testdata\n")},
+		{Name: "testfile.txt", Mode: 0o644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString("testdata\n")},
 	}
 
 	var buf bytes.Buffer
@@ -71,10 +66,10 @@ func TestTarball_Create(t *testing.T) {
 		t.Fatalf("error reading tarball: %v", err)
 	}
 	assert.Equalf(t, "testfile.txt", header.Name, "unexpected file in tarball: %s", header.Name)
-	assert.Equalf(t, int64(0644), header.Mode, "unexpected file mode in tarball: %o", header.Mode)
+	assert.Equalf(t, int64(0o644), header.Mode, "unexpected file mode in tarball: %o", header.Mode)
 	assert.Equalf(t, int64(9), header.Size, "unexpected file size in tarball: %d", header.Size)
 
-	//buf.Reset()
+	// buf.Reset()
 	var decoded bytes.Buffer
 	if _, err = io.Copy(&decoded, tr); err != nil {
 		t.Fatalf("error copying tarball contents: %v", err)

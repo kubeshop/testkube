@@ -11,6 +11,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
 type ExecutionLogger interface {
@@ -48,6 +50,8 @@ type ListExecutionsParams struct {
 	Page         int
 	Status       string
 	Since        string
+	StartDate    string
+	EndDate      string
 }
 
 type ExecutionLister interface {
@@ -57,18 +61,26 @@ type ExecutionLister interface {
 func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("list_executions",
 		mcp.WithDescription(ListExecutionsDescription),
-		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
+		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
 		mcp.WithString("status", mcp.Description(StatusDescription)),
+		mcp.WithString("since", mcp.Description(SinceDescription)),
+		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
+		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params := ListExecutionsParams{
 			WorkflowName: request.GetString("workflowName", ""),
+			Selector:     request.GetString("selector", ""),
 			TextSearch:   request.GetString("textSearch", ""),
 			Status:       request.GetString("status", ""),
+			Since:        request.GetString("since", ""),
+			StartDate:    request.GetString("startDate", ""),
+			EndDate:      request.GetString("endDate", ""),
 		}
 
 		if pageSizeStr := request.GetString("pageSize", "10"); pageSizeStr != "" {
@@ -87,7 +99,12 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list executions: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatListExecutions(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format executions: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -120,7 +137,12 @@ func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get execution info: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatExecutionInfo(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format execution info: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -143,7 +165,7 @@ func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.To
 		}
 
 		if !isValidExecutionName(executionName) {
-			return mcp.NewToolResultError(fmt.Sprintf("fnvalid execution name format: \"%s\" expected format: \"workflow-name-number\".", executionName)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Invalid execution name format: \"%s\" expected format: \"workflow-name-number\".", executionName)), nil
 		}
 
 		result, err := client.LookupExecutionID(ctx, executionName)
@@ -206,6 +228,54 @@ func extractExecutionIdFromResponse(responseJSON string, targetExecutionName str
 	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
 }
 
+type ExecutionTagUpdater interface {
+	UpdateExecutionTags(ctx context.Context, executionId string, tags map[string]string) error
+}
+
+func UpdateExecutionTags(client ExecutionTagUpdater) (tool mcp.Tool, handler server.ToolHandlerFunc) {
+	tool = mcp.NewTool("update_execution_tags",
+		mcp.WithDescription(UpdateExecutionTagsDescription),
+		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+		mcp.WithObject("tags", mcp.Required(), mcp.Description(`Key-value tag pairs (e.g., {"env":"prod","bug":"found"}). Replaces all existing tags. Use {} to clear all tags.`)),
+	)
+
+	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		executionId, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		tagsRaw, ok, err := OptionalParamOK[map[string]any](request, "tags")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if !ok {
+			return mcp.NewToolResultError("missing required parameter: tags"), nil
+		}
+
+		tags := make(map[string]string)
+		for k, v := range tagsRaw {
+			s, ok := v.(string)
+			if !ok {
+				return mcp.NewToolResultError(fmt.Sprintf("tag value for key %q must be a string, got %T", k, v)), nil
+			}
+			tags[k] = s
+		}
+
+		if err := client.UpdateExecutionTags(ctx, executionId, tags); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update execution tags: %v", err)), nil
+		}
+
+		tagsJSON, err := json.Marshal(tags)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal tags: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Execution tags updated successfully. New tags: %s", tagsJSON)), nil
+	}
+
+	return tool, handler
+}
+
 type WorkflowExecutionAborter interface {
 	AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error)
 }
@@ -233,7 +303,12 @@ func AbortWorkflowExecution(client WorkflowExecutionAborter) (tool mcp.Tool, han
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to abort workflow execution: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatAbortExecution(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format abort result: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler
@@ -281,7 +356,12 @@ func WaitForExecutions(client ExecutionWaiter) (tool mcp.Tool, handler server.To
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to wait for executions: %v", err)), nil
 		}
 
-		return mcp.NewToolResultText(result), nil
+		formatted, err := formatters.FormatWaitForExecutions(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to format wait results: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(formatted), nil
 	}
 
 	return tool, handler

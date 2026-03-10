@@ -263,6 +263,19 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
+        - name: mode
+          in: query
+          description: |
+            Update mode for the trigger. When set to "replace", the entire trigger 
+            is replaced with the request body (full replacement semantics). When not 
+            set or set to any other value, merge semantics are used where only 
+            non-null fields from the request are applied to the existing trigger.
+            This is used by cloud-api to signal that the original request was YAML.
+          required: false
+          schema:
+            type: string
+            enum:
+              - replace
       tags:
         - test-triggers
         - api
@@ -9327,6 +9340,9 @@ components:
           parallelism:
             type: integer
             description: how many resources could be scheduled in parallel
+          failFast:
+            type: boolean
+            description: abort remaining parallel workers on first failure
           description:
             type: string
             description: worker description to display
@@ -9356,6 +9372,9 @@ components:
           parallelism:
             type: integer
             description: how many resources could be scheduled in parallel
+          failFast:
+            type: boolean
+            description: abort remaining parallel workers on first failure
           description:
             type: string
             description: worker description to display
@@ -9523,7 +9542,7 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
-          $ref: "#/components/schemas/TestWorkflowTagSchema"
+          $ref: "#/components/schemas/TestWorkflowExecutionSchema"
         pvcs:
           type: object
           additionalProperties:
@@ -9567,7 +9586,7 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
-          $ref: "#/components/schemas/TestWorkflowTagSchema"
+          $ref: "#/components/schemas/TestWorkflowExecutionSchema"
         pvcs:
           type: object
           additionalProperties:
@@ -10509,14 +10528,18 @@ components:
           description: disable CDEvents for this execution
           default: false
 
-    TestWorkflowTagSchema:
+    TestWorkflowExecutionSchema:
       type: object
-      description: test workflow execution tag definition
+      description: test workflow execution configuration
       properties:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
           $ref: "#/components/schemas/ExecutionTarget"
+        silent:
+          type: boolean
+          description: indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+          default: false
 
     TestWorkflowExecutionTags:
       type: object

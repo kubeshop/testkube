@@ -9,9 +9,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -117,16 +119,36 @@ func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID
 		})
 	}
 
-	for i := range files {
-		reader, err := c.DownloadFile(ctx, files[i].Name, executionID, testName, testSuiteName, testWorkflowName)
-		if err != nil {
-			return nil, err
-		}
+	// Download files concurrently with controlled parallelism
+	var mu sync.Mutex
 
-		files[i].Data = &bytes.Buffer{}
-		if _, err = files[i].Data.ReadFrom(reader); err != nil {
-			return nil, err
-		}
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(storage.MaxConcurrentDownloads)
+
+	for i := range files {
+		idx := i
+		g.Go(func() error {
+			reader, err := c.DownloadFile(ctx, files[idx].Name, executionID, testName, testSuiteName, testWorkflowName)
+			if err != nil {
+				return err
+			}
+			defer reader.Close()
+
+			buf := &bytes.Buffer{}
+			if _, err = buf.ReadFrom(reader); err != nil {
+				return err
+			}
+
+			mu.Lock()
+			files[idx].Data = buf
+			mu.Unlock()
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	service := archive.NewTarballService()

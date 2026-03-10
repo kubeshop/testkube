@@ -2,11 +2,12 @@ package triggers
 
 import (
 	"context"
-	"fmt"
 	"maps"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -153,14 +154,18 @@ func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.
 	if selector == nil {
 		return true
 	}
-	k8sSelector, err := v1.LabelSelectorAsSelector(selector)
+
+	normalizedSelector := selector.DeepCopy()
+	mergedLabels := make(map[string]string)
+	maps.Copy(mergedLabels, event.resourceLabels)
+	maps.Copy(mergedLabels, event.EventLabels)
+	normalizeResourceKindSelector(normalizedSelector, mergedLabels)
+
+	k8sSelector, err := v1.LabelSelectorAsSelector(normalizedSelector)
 	if err != nil {
 		logger.Errorf("error creating k8s selector from label selector: %v", err)
 		return false
 	}
-	mergedLabels := make(map[string]string)
-	maps.Copy(mergedLabels, event.resourceLabels)
-	maps.Copy(mergedLabels, event.EventLabels)
 	labelsSet := labels.Set(mergedLabels)
 	_, err = labelsSet.AsValidatedSelector()
 	if err != nil {
@@ -168,6 +173,31 @@ func matchSelector(selector *v1.LabelSelector, event *watcherEvent, logger *zap.
 		return false
 	}
 	return k8sSelector.Matches(labelsSet)
+}
+
+func normalizeResourceKindSelector(selector *v1.LabelSelector, labels map[string]string) {
+	if selector == nil {
+		return
+	}
+
+	if selector.MatchLabels != nil {
+		if value, ok := selector.MatchLabels[eventLabelKeyResourceKind]; ok {
+			selector.MatchLabels[eventLabelKeyResourceKind] = strings.ToLower(value)
+		}
+	}
+
+	for i := range selector.MatchExpressions {
+		if selector.MatchExpressions[i].Key != eventLabelKeyResourceKind {
+			continue
+		}
+		for j := range selector.MatchExpressions[i].Values {
+			selector.MatchExpressions[i].Values[j] = strings.ToLower(selector.MatchExpressions[i].Values[j])
+		}
+	}
+
+	if value, ok := labels[eventLabelKeyResourceKind]; ok && value != "" {
+		labels[eventLabelKeyResourceKind] = strings.ToLower(value)
+	}
 }
 
 func matchResourceSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
@@ -297,7 +327,10 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 
 			host := probe.Host
 			if probe.Port != 0 {
-				host = fmt.Sprintf("%s:%d", host, probe.Port)
+				host = net.JoinHostPort(probe.Host, strconv.Itoa(int(probe.Port)))
+			} else if ip := net.ParseIP(probe.Host); ip != nil && ip.To4() == nil {
+				// IPv6 address without a port needs bracket notation in URL host
+				host = "[" + probe.Host + "]"
 			}
 
 			if host == "" {

@@ -88,3 +88,77 @@ func (q *Queries) GetExecutionsByStatus(ctx context.Context, arg GetExecutionsBy
 	}
 	return items, nil
 }
+
+const getExecutionsByStatuses = `-- name: GetExecutionsByStatuses :many
+SELECT
+    e.id, e.name, e.namespace, e.number, e.test_workflow_execution_name, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.scheduled_at, e.assigned_at, e.status_at, e.created_at, e.updated_at, e.organization_id, e.environment_id, e.runtime,
+    r.execution_id, r.status, r.predicted_status, r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms, r.pauses, r.initialization, r.steps, r.queued_at, r.started_at, r.finished_at, r.created_at, r.updated_at
+FROM
+    test_workflow_executions e
+        JOIN test_workflow_results r ON e.id = r.execution_id
+WHERE r.status = ANY($1::text[])
+ORDER BY e.scheduled_at
+`
+
+type GetExecutionsByStatusesRow struct {
+	TestWorkflowExecution TestWorkflowExecution `db:"test_workflow_execution" json:"test_workflow_execution"`
+	TestWorkflowResult    TestWorkflowResult    `db:"test_workflow_result" json:"test_workflow_result"`
+}
+
+func (q *Queries) GetExecutionsByStatuses(ctx context.Context, statuses []string) ([]GetExecutionsByStatusesRow, error) {
+	rows, err := q.db.Query(ctx, getExecutionsByStatuses, statuses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExecutionsByStatusesRow
+	for rows.Next() {
+		var i GetExecutionsByStatusesRow
+		if err := rows.Scan(
+			&i.TestWorkflowExecution.ID,
+			&i.TestWorkflowExecution.Name,
+			&i.TestWorkflowExecution.Namespace,
+			&i.TestWorkflowExecution.Number,
+			&i.TestWorkflowExecution.TestWorkflowExecutionName,
+			&i.TestWorkflowExecution.GroupID,
+			&i.TestWorkflowExecution.RunnerID,
+			&i.TestWorkflowExecution.RunnerTarget,
+			&i.TestWorkflowExecution.RunnerOriginalTarget,
+			&i.TestWorkflowExecution.DisableWebhooks,
+			&i.TestWorkflowExecution.Tags,
+			&i.TestWorkflowExecution.RunningContext,
+			&i.TestWorkflowExecution.ConfigParams,
+			&i.TestWorkflowExecution.ScheduledAt,
+			&i.TestWorkflowExecution.AssignedAt,
+			&i.TestWorkflowExecution.StatusAt,
+			&i.TestWorkflowExecution.CreatedAt,
+			&i.TestWorkflowExecution.UpdatedAt,
+			&i.TestWorkflowExecution.OrganizationID,
+			&i.TestWorkflowExecution.EnvironmentID,
+			&i.TestWorkflowExecution.Runtime,
+			&i.TestWorkflowResult.ExecutionID,
+			&i.TestWorkflowResult.Status,
+			&i.TestWorkflowResult.PredictedStatus,
+			&i.TestWorkflowResult.Duration,
+			&i.TestWorkflowResult.TotalDuration,
+			&i.TestWorkflowResult.DurationMs,
+			&i.TestWorkflowResult.PausedMs,
+			&i.TestWorkflowResult.TotalDurationMs,
+			&i.TestWorkflowResult.Pauses,
+			&i.TestWorkflowResult.Initialization,
+			&i.TestWorkflowResult.Steps,
+			&i.TestWorkflowResult.QueuedAt,
+			&i.TestWorkflowResult.StartedAt,
+			&i.TestWorkflowResult.FinishedAt,
+			&i.TestWorkflowResult.CreatedAt,
+			&i.TestWorkflowResult.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

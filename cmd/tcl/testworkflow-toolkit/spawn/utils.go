@@ -190,15 +190,37 @@ func GetServiceByResourceId(jobName string) (string, int64) {
 	return string(v[1]), index
 }
 
-func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
+func ExecuteParallel[T any](ctx context.Context, run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
 	var wg sync.WaitGroup
 	wg.Add(len(items))
 	ch := make(chan struct{}, parallelism)
 	success := atomic.Int64{}
+	skipped := atomic.Int64{}
 
 	// Execute all operations
 	for index := range items {
-		ch <- struct{}{}
+		// Prioritize context cancellation check before acquiring a slot
+		select {
+		case <-ctx.Done():
+			skipped.Add(int64(len(items) - index))
+			for j := index; j < len(items); j++ {
+				wg.Done()
+			}
+			goto wait
+		default:
+		}
+		// Wait for a parallelism slot, but also check for context cancellation
+		select {
+		case ch <- struct{}{}:
+			// Got a slot, proceed with execution
+		case <-ctx.Done():
+			// Context cancelled — skip this and all remaining items
+			skipped.Add(int64(len(items) - index))
+			for j := index; j < len(items); j++ {
+				wg.Done()
+			}
+			goto wait
+		}
 		go func(index int) {
 			if run(int64(index), namespaces[index], &items[index]) {
 				success.Add(1)
@@ -207,8 +229,9 @@ func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespa
 			wg.Done()
 		}(index)
 	}
+wait:
 	wg.Wait()
-	return int64(len(items)) - success.Load()
+	return int64(len(items)) - success.Load() - skipped.Load()
 }
 
 // SaveLogs saves execution logs to the artifact storage.
@@ -269,7 +292,11 @@ func CreateBaseMachine() expressions.Machine {
 	)
 }
 
-// CreateBaseMachineWithoutEnv creates a base expression machine without environment resolution.
+// CreateBaseMachineWithoutEnv creates a base expression machine that preserves
+// env.* expressions for later resolution. Use this when building specs for services
+// or workers that may have different environment variables than the parent.
+// Unlike CreateBaseMachine, this does NOT include EnvMachine, so {{ env.X }}
+// expressions remain unresolved and will be evaluated at runtime in the target container.
 func CreateBaseMachineWithoutEnv() expressions.Machine {
 	cfg := config.Config()
 	orgSlug := cfg.Execution.OrganizationSlug
@@ -280,8 +307,20 @@ func CreateBaseMachineWithoutEnv() expressions.Machine {
 	if envSlug == "" {
 		envSlug = cfg.Execution.EnvironmentId
 	}
+
+	// Get file machine for filesystem access
+	var wd, err = os.Getwd()
+	if err != nil {
+		wd = "/"
+	}
+	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
+
+	// Load state to ensure StateMachine is populated
+	data.GetState()
+
 	return expressions.CombinedMachines(
-		data.GetBaseTestWorkflowMachine(),
+		fileMachine,       // File system access (NO EnvMachine - preserves env.* expressions)
+		data.StateMachine, // State access for output.*, services.*, status
 		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
 		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
 		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),

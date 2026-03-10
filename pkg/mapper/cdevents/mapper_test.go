@@ -3,7 +3,7 @@ package cdevents
 import (
 	"testing"
 
-	cdevents "github.com/cdevents/sdk-go/pkg/api"
+	cdevents "github.com/cdevents/sdk-go/pkg/api/v04"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -11,7 +11,6 @@ import (
 )
 
 func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
-	t.Parallel()
 
 	event := testkube.Event{
 		TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -94,7 +93,6 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 }
 
 func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
-	t.Parallel()
 
 	event := testkube.Event{
 		TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -175,7 +173,6 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 }
 
 func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
-	t.Parallel()
 
 	event := testkube.Event{
 		TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -258,7 +255,6 @@ func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
 }
 
 func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
-	t.Parallel()
 
 	event := testkube.Event{
 		TestWorkflowExecution: &testkube.TestWorkflowExecution{
@@ -339,7 +335,6 @@ func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 }
 
 func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
-	t.Parallel()
 
 	status := testkube.FAILED_TestWorkflowStatus
 	event := testkube.Event{
@@ -440,7 +435,6 @@ func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
 }
 
 func TestMapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(t *testing.T) {
-	t.Parallel()
 
 	status := testkube.FAILED_TestWorkflowStatus
 	event := testkube.Event{

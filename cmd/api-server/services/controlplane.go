@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -23,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	"github.com/kubeshop/testkube/pkg/secret"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
@@ -51,7 +53,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 
 	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
 	commons.ExitOnError("Creating test workflow client", err)
-	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace, cfg.DisableOfficialTemplates)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace,
+		cfg.DisableOfficialTemplates, cfg.GlobalWorkflowTemplateInline)
 	commons.ExitOnError("Creating test workflow templates client", err)
 
 	// Build repositories
@@ -62,34 +65,17 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
-	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter)
+	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter,
+		cfg.GlobalWorkflowTemplateName, cfg.GlobalWorkflowTemplateInline != "")
 	scheduler := factory.NewScheduler()
 	executionController := factory.NewExecutionController()
 	executionQuerier := factory.NewExecutionQuerier()
 
-	// Ensure the buckets exist
-	if cfg.StorageBucket != "" {
-		exists, err := storageClient.BucketExists(ctx, cfg.StorageBucket)
-		if err != nil {
-			log.DefaultLogger.Errorw("Failed to check if the storage bucket exists", "error", err)
-		} else if !exists {
-			err = storageClient.CreateBucket(ctx, cfg.StorageBucket)
-			if err != nil && !strings.Contains(err.Error(), "already exists") {
-				log.DefaultLogger.Errorw("Creating storage bucket", "error", err)
-			}
-		}
-	}
-	if cfg.LogsBucket != "" {
-		exists, err := storageClient.BucketExists(ctx, cfg.LogsBucket)
-		if err != nil {
-			log.DefaultLogger.Errorw("Failed to check if the storage bucket exists", "error", err)
-		} else if !exists {
-			err = storageClient.CreateBucket(ctx, cfg.LogsBucket)
-			if err != nil && !strings.Contains(err.Error(), "already exists") {
-				log.DefaultLogger.Errorw("Creating logs bucket", "error", err)
-			}
-		}
-	}
+	// Ensure the buckets exist (retry in background until they do).
+	go ensureBucketsWithRetry(ctx, storageClient, []bucketSpec{
+		{name: cfg.StorageBucket, label: "storage"},
+		{name: cfg.LogsBucket, label: "logs"},
+	})
 
 	return controlplane.New(controlplane.Config{
 		Port:                             cfg.GRPCServerPort,
@@ -99,6 +85,74 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
 	}, enqueuer, scheduler, executionController, executionQuerier, eventsEmitter, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
 		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, envID, commands...)
+}
+
+type bucketSpec struct {
+	name  string
+	label string
+}
+
+func ensureBucketsWithRetry(ctx context.Context, storageClient domainstorage.Client, buckets []bucketSpec) {
+	var active []bucketSpec
+	for _, bucket := range buckets {
+		if bucket.name != "" {
+			active = append(active, bucket)
+		}
+	}
+	if len(active) == 0 {
+		return
+	}
+
+	delay := 1 * time.Second
+	maxDelay := 30 * time.Second
+	maxAttempts := 10
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		remaining := 0
+		for _, bucket := range active {
+			if !ensureBucket(ctx, storageClient, bucket) {
+				remaining++
+			}
+		}
+
+		if remaining == 0 {
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+
+		if delay < maxDelay {
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
+	log.DefaultLogger.Errorw("Failed to ensure buckets after max retries", "attempts", maxAttempts)
+}
+
+func ensureBucket(ctx context.Context, storageClient domainstorage.Client, bucket bucketSpec) bool {
+	exists, err := storageClient.BucketExists(ctx, bucket.name)
+	if err != nil {
+		log.DefaultLogger.Warnw("Failed to check if the bucket exists; will retry", "bucket", bucket.name, "label", bucket.label, "error", err)
+		return false
+	}
+	if exists {
+		return true
+	}
+	if err := storageClient.CreateBucket(ctx, bucket.name); err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			return true
+		}
+		log.DefaultLogger.Warnw("Creating bucket failed; will retry", "bucket", bucket.name, "label", bucket.label, "error", err)
+		return false
+	}
+	log.DefaultLogger.Infow("Created bucket", "bucket", bucket.name, "label", bucket.label)
+	return true
 }
 
 func CreateMongoFactory(_ context.Context, cfg *config.Config, db *mongo.Database) (repository.RepositoryFactory, error) {

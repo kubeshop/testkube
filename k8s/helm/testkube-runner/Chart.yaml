@@ -2,9 +2,13 @@ apiVersion: v2
 name: testkube-runner
 description: A Helm chart for the Testkube's Runner Agent
 type: application
-version: 2.5.0-rc.0
-appVersion: 2.3.0
+version: 2.7.0-rc.0
+appVersion: 2.7.0-rc.0
 dependencies:
 - name: global
   version: 0.x.x-x
   repository: "file://../global"
+- name: testkube-operator
+  version: 2.x.x-x
+  condition: gitops.enabled
+  repository: "file://../testkube-operator"

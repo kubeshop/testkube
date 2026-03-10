@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetClusterVersion(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	v, err := GetClusterVersion(client)
 	assert.NoError(t, err)
@@ -17,7 +17,7 @@ func TestGetClusterVersion(t *testing.T) {
 }
 
 func TestGetAPIServerLogs(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	logs, err := GetAPIServerLogs(context.Background(), client, "testkube")
 	assert.NoError(t, err)
@@ -25,7 +25,7 @@ func TestGetAPIServerLogs(t *testing.T) {
 }
 
 func TestGetOperatorLogs(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	logs, err := GetOperatorLogs(context.Background(), client, "testkube")
 	assert.NoError(t, err)
@@ -33,7 +33,7 @@ func TestGetOperatorLogs(t *testing.T) {
 }
 
 func TestGetPodLogs(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	logs, err := GetPodLogs(context.Background(), client, "testkube", "selector")
 	assert.NoError(t, err)

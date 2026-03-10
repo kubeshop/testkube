@@ -1,5 +1,5 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.kubeshop/testkube-mcp",
   "description": "MCP server for Testkube - Manage test workflows, executions, and artifacts via AI assistants",
   "icons": [

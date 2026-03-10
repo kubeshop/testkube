@@ -146,6 +146,11 @@ func (n *NamespaceObject) createRole() error {
 				Resources: []string{"secrets", "configmaps"},
 			},
 			{
+				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete"},
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+			},
+			{
 				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete", "deletecollection"},
 				APIGroups: []string{"testworkflows.testkube.io"},
 				Resources: []string{"testworkflows", "testworkflows/status", "testworkflowtemplates", "testworkflowexecutions"},
@@ -154,6 +159,11 @@ func (n *NamespaceObject) createRole() error {
 				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete", "deletecollection"},
 				APIGroups: []string{"tests.testkube.io"},
 				Resources: []string{"testtriggers", "testexecutions", "testsuiteexecutions"},
+			},
+			{
+				Verbs:     []string{"get", "watch", "list", "delete"},
+				APIGroups: []string{"executor.testkube.io"},
+				Resources: []string{"webhooks", "webhooktemplates"},
 			},
 		},
 	}, metav1.CreateOptions{})

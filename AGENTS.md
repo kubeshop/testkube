@@ -30,6 +30,7 @@
 ## Regenerating artifacts
 
 - Update the agent OpenAPI files with `make generate-openapi` after schema edits.
+- Regenerate Kubernetes CRDs after editing type definitions in `api/` via `make generate-crds`.
 - Regenerate SQL code when query files change via `make generate-sqlc`.
 - Refresh mocks for new or updated interfaces using `make generate-mocks`.
 
@@ -37,6 +38,32 @@
 
 - Agent behavior is driven by env vars defined in `internal/config/config.go` (scan for `envconfig:"..."` tags when researching a toggle).
 - Helm chart values are the source of deployment defaults; `build/_local/values.dev.yaml` (shaped by the `values.dev.tpl.yaml` template) shows the local overrides used by `tk-dev` if you need a concrete reference.
+
+## Architecture reference
+
+- See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a detailed description of the agent's components, storage layer, event system, CRDs, CLI, and Kubernetes deployment.
+- When making changes that affect the architecture (new entry points, storage backends, event listeners, CRDs, API routes, etc.), update `ARCHITECTURE.md` to keep it in sync.
+
+## Pre-commit checks
+
+Before committing, always verify your changes pass linting and build:
+
+```bash
+make lint          # Run golangci-lint (or `make lint-fix` to auto-fix)
+go build ./...     # Verify compilation
+```
+
+If your changes include tests, also run `make unit-tests` before pushing.
+
+## PR title format
+
+PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/) format with a type prefix. CI will reject PRs without one. Examples:
+
+- `feat: Add soft-delete for workflow executions`
+- `fix: Retry log stream on 502 errors`
+- `chore: Add contextcheck linter`
+
+Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `ci`, `chore`
 
 ## Tips
 

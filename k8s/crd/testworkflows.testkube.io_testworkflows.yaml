@@ -1613,6 +1613,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -4138,6 +4141,9 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    silent:
+                      description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+                      type: boolean
                     tags:
                       additionalProperties:
                         type: string
@@ -7145,6 +7151,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -10474,6 +10483,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:

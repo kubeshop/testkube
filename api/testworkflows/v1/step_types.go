@@ -226,6 +226,9 @@ type StepParallel struct {
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 
+	// abort remaining parallel workers on first failure
+	FailFast bool `json:"failFast,omitempty"`
+
 	StepExecuteStrategy `json:",inline" expr:"include"`
 
 	// worker description to display
@@ -295,7 +298,7 @@ type StepParallel struct {
 	// values to be used for test workflow execution
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
-	Execution *TestWorkflowTagSchema `json:"execution,omitempty" expr:"include"`
+	Execution *TestWorkflowExecutionSchema `json:"execution,omitempty" expr:"include"`
 
 	// list of accompanying services to start
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -348,6 +351,9 @@ func (sp StepParallel) NewTestWorkflowSpec() *TestWorkflowSpec {
 type IndependentStepParallel struct {
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
+
+	// abort remaining parallel workers on first failure
+	FailFast bool `json:"failFast,omitempty"`
 
 	StepExecuteStrategy `json:",inline" expr:"include"`
 

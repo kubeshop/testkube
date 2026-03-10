@@ -9,7 +9,6 @@ import (
 )
 
 func TestTriggerStatusForTestWorkflows(t *testing.T) {
-	t.Parallel()
 
 	status := newTriggerStatus(&v1.TestTrigger{})
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -48,6 +49,10 @@ func TestTestWorkflowTemplateSyncReconcilerUpdateOrCreate(t *testing.T) {
 	if diff := cmp.Diff(input, store.TestWorkflowTemplate); diff != "" {
 		t.Errorf("TestWorkflowTemplateSyncReconcilerUpdateOrCreate: -want, +got:\n%s", diff)
 	}
+
+	if store.UpdateCalls != 1 {
+		t.Errorf("TestWorkflowTemplateSyncReconcilerUpdateOrCreate: expected 1 update call, got %d", store.UpdateCalls)
+	}
 }
 
 func TestTestWorkflowTemplateSyncReconcilerDelete(t *testing.T) {
@@ -67,5 +72,39 @@ func TestTestWorkflowTemplateSyncReconcilerDelete(t *testing.T) {
 
 	if diff := cmp.Diff(name, store.Deleted); diff != "" {
 		t.Errorf("TestWorkflowTemplateSyncReconcilerUpdateOrCreate: -want, +got:\n%s", diff)
+	}
+
+	if store.UpdateCalls != 0 {
+		t.Errorf("TestWorkflowTemplateSyncReconcilerDelete: expected 0 update calls, got %d", store.UpdateCalls)
+	}
+}
+
+func TestTestWorkflowTemplateSyncReconcilerDeleteWhenMarkedForDeletion(t *testing.T) {
+	store := &fakeStore{}
+	name := "foobar"
+	now := metav1.Now()
+
+	reconciler := testWorkflowTemplateSyncReconciler(
+		fakeKubernetesClient{
+			TestWorkflowTemplate: testworkflowsv1.TestWorkflowTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              name,
+					DeletionTimestamp: &now,
+				},
+			},
+		},
+		store,
+	)
+
+	if _, err := reconciler.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+
+	if diff := cmp.Diff(name, store.Deleted); diff != "" {
+		t.Errorf("TestWorkflowTemplateSyncReconcilerDeleteWhenMarkedForDeletion: -want, +got:\n%s", diff)
+	}
+
+	if store.UpdateCalls != 0 {
+		t.Errorf("TestWorkflowTemplateSyncReconcilerDeleteWhenMarkedForDeletion: expected 0 update calls, got %d", store.UpdateCalls)
 	}
 }

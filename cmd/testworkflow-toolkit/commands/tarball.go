@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -65,7 +66,12 @@ func ProcessTarballPair(pair string, output io.Writer) int {
 
 	// Start downloading the file
 	for attempt := 1; attempt <= TarballRetryMaxAttempts; attempt++ {
-		resp, err := http.Get(url)
+		req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+		if reqErr != nil {
+			fmt.Fprintf(output, "failed to create request for tarball: %s\n", reqErr.Error())
+			return 1
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err == nil && resp.StatusCode != http.StatusOK {
 			err = fmt.Errorf("status code %d", resp.StatusCode)
 		}

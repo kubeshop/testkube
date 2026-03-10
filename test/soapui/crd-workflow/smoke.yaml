@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows
     tool: soapui
     category: api-testing
+  annotations:
+    testkube.io/icon: soapui
 spec:
   content:
     git:
@@ -34,6 +36,8 @@ metadata:
     core-tests: workflows
     tool: soapui
     category: api-testing
+  annotations:
+    testkube.io/icon: soapui
 description: Running SoapUI test using COMMAND_LINE ENV variable
 spec:
   content:
@@ -65,6 +69,8 @@ metadata:
     core-tests: workflows
     tool: soapui
     category: api-testing
+  annotations:
+    testkube.io/icon: soapui
 spec:
   content:
     git:
@@ -131,6 +137,8 @@ metadata:
     core-tests: workflows
     tool: soapui
     category: api-testing
+  annotations:
+    testkube.io/icon: soapui
 spec:
   content:
     git:

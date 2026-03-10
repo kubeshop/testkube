@@ -7,6 +7,11 @@ metadata:
     tool: postman
     category: api-testing
 spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   content:
     git:
       uri: https://github.com/kubeshop/testkube

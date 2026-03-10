@@ -42,6 +42,7 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 				// the store then we should handle them here.
 				return ctrl.Result{}, fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err)
 			}
+			return ctrl.Result{}, nil
 		case err != nil:
 			return ctrl.Result{}, fmt.Errorf("retrieve TestWorkflow %q from Kubernetes: %w", req.NamespacedName, err)
 		}
@@ -63,6 +64,7 @@ func testWorkflowSyncReconciler(client client.Reader, store TestWorkflowStore) r
 				// the store then we should handle them here.
 				return ctrl.Result{}, fmt.Errorf("delete TestWorkflow %q from store: %w", req.Name, err)
 			}
+			return ctrl.Result{}, nil
 		}
 
 		// Regular update so send the new object into the store.

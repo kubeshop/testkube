@@ -90,7 +90,7 @@ var stdFunctions = map[string]StdFunction{
 			}
 			slice, err := value[0].SliceValue()
 			if err != nil {
-				return nil, fmt.Errorf(`"join" function error: reading slice: %s`, err.Error())
+				return nil, fmt.Errorf(`"join" function error: reading slice: %w`, err)
 			}
 			v := make([]string, len(slice))
 			for i := range slice {
@@ -193,7 +193,7 @@ var stdFunctions = map[string]StdFunction{
 			}
 			b, err := json.Marshal(value[0].Value())
 			if err != nil {
-				return nil, fmt.Errorf(`"tojson" function had problem marshalling: %s`, err.Error())
+				return nil, fmt.Errorf(`"tojson" function had problem marshalling: %w`, err)
 			}
 			return NewValue(string(b)), nil
 		}),
@@ -209,7 +209,7 @@ var stdFunctions = map[string]StdFunction{
 			var v interface{}
 			err := json.Unmarshal([]byte(value[0].Value().(string)), &v)
 			if err != nil {
-				return nil, fmt.Errorf(`"json" function had problem unmarshalling: %s`, err.Error())
+				return nil, fmt.Errorf(`"json" function had problem unmarshalling: %w`, err)
 			}
 			return NewValue(v), nil
 		}),
@@ -222,7 +222,7 @@ var stdFunctions = map[string]StdFunction{
 			}
 			b, err := yaml.Marshal(value[0].Value())
 			if err != nil {
-				return nil, fmt.Errorf(`"toyaml" function had problem marshalling: %s`, err.Error())
+				return nil, fmt.Errorf(`"toyaml" function had problem marshalling: %w`, err)
 			}
 			return NewValue(string(b)), nil
 		}),
@@ -238,7 +238,7 @@ var stdFunctions = map[string]StdFunction{
 			var v interface{}
 			err := yaml.Unmarshal([]byte(value[0].Value().(string)), &v)
 			if err != nil {
-				return nil, fmt.Errorf(`"yaml" function had problem unmarshalling: %s`, err.Error())
+				return nil, fmt.Errorf(`"yaml" function had problem unmarshalling: %w`, err)
 			}
 			return NewValue(v), nil
 		}),

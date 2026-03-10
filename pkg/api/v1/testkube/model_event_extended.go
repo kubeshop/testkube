@@ -32,16 +32,28 @@ func NewEvent(t *EventType, resource *EventResource, id string) Event {
 }
 
 func NewEventQueueTestWorkflow(execution *TestWorkflowExecution) Event {
+	groupId := ""
+	if execution != nil {
+		groupId = execution.GroupId
+	}
+
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventQueueTestWorkflow,
 		TestWorkflowExecution: execution,
 	}
 }
 
 func NewEventStartTestWorkflow(execution *TestWorkflowExecution) Event {
+	groupId := ""
+	if execution != nil {
+		groupId = execution.GroupId
+	}
+
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventStartTestWorkflow,
 		TestWorkflowExecution: execution,
 	}
@@ -158,7 +170,7 @@ func (e Event) Log() []any {
 }
 
 func (e Event) Valid(groupId, selector string, types []EventType) (matchedTypes []EventType, valid bool) {
-	if e.GroupId != groupId {
+	if groupId != "" && e.GroupId != groupId {
 		return nil, false
 	}
 

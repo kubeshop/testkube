@@ -9,87 +9,111 @@
 package spawn
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
-func TestCreateBaseMachineWithoutEnv(t *testing.T) {
-	t.Run("env expressions remain unresolved", func(t *testing.T) {
-		cfg := &testworkflowconfig.InternalConfig{
-			Execution: testworkflowconfig.ExecutionConfig{
-				OrganizationSlug: "test-org",
-				EnvironmentSlug:  "test-env",
-			},
+func TestExecuteParallel(t *testing.T) {
+	t.Run("all items run when context is not cancelled", func(t *testing.T) {
+		items := []string{"a", "b", "c", "d"}
+		namespaces := []string{"ns1", "ns1", "ns1", "ns1"}
+		var executed atomic.Int64
+
+		run := func(index int64, ns string, item *string) bool {
+			executed.Add(1)
+			return true
 		}
 
-		machine := createBaseMachineWithoutEnv(cfg)
-
-		// Verify env.* expressions are NOT resolved
-		expr, err := expressions.Compile("env.TEST_VAR")
-		require.NoError(t, err)
-		result, err := expr.Resolve(machine)
-		require.NoError(t, err)
-		assert.Equal(t, "{{env.TEST_VAR}}", result.Template())
+		failed := ExecuteParallel(context.Background(), run, items, namespaces, 2)
+		assert.Equal(t, int64(0), failed)
+		assert.Equal(t, int64(4), executed.Load())
 	})
 
-	t.Run("uses ID when slug is empty", func(t *testing.T) {
-		cfg := &testworkflowconfig.InternalConfig{
-			Execution: testworkflowconfig.ExecutionConfig{
-				OrganizationId:   "org-123",
-				OrganizationSlug: "", // empty
-				EnvironmentId:    "env-456",
-				EnvironmentSlug:  "", // empty
-			},
+	t.Run("cancelled context prevents queued items from starting", func(t *testing.T) {
+		items := []string{"a", "b", "c", "d", "e", "f"}
+		namespaces := []string{"ns1", "ns1", "ns1", "ns1", "ns1", "ns1"}
+		var executed atomic.Int64
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		run := func(index int64, ns string, item *string) bool {
+			executed.Add(1)
+			if index == 0 {
+				// First worker cancels the context, simulating fail-fast
+				cancel()
+				// Give a moment for cancellation to propagate
+				time.Sleep(10 * time.Millisecond)
+			}
+			return index != 0 // first worker "fails"
 		}
 
-		machine := createBaseMachineWithoutEnv(cfg)
+		// Parallelism of 1 ensures sequential execution so cancellation
+		// prevents subsequent items from starting
+		failed := ExecuteParallel(ctx, run, items, namespaces, 1)
 
-		// Should still create a valid machine using IDs
-		assert.NotNil(t, machine)
-
-		// Verify organization.id is accessible (testing the fallback logic)
-		expr, err := expressions.Compile("organization.id")
-		require.NoError(t, err)
-		result, err := expr.Resolve(machine)
-		require.NoError(t, err)
-		value, err := result.Static().StringValue()
-		require.NoError(t, err)
-		assert.Equal(t, "org-123", value)
+		// Only the first worker should have executed
+		assert.Equal(t, int64(1), executed.Load())
+		// Failed count should only reflect actually-run workers that failed,
+		// not skipped ones
+		assert.Equal(t, int64(1), failed)
 	})
 
-	t.Run("non-env expressions work normally", func(t *testing.T) {
-		cfg := &testworkflowconfig.InternalConfig{
-			Execution: testworkflowconfig.ExecutionConfig{
-				Id: "exec-123",
-			},
-			Workflow: testworkflowconfig.WorkflowConfig{
-				Name: "test-workflow",
-			},
+	t.Run("counts failures correctly", func(t *testing.T) {
+		items := []int{0, 1, 2, 3}
+		namespaces := []string{"ns1", "ns1", "ns1", "ns1"}
+
+		run := func(index int64, ns string, item *int) bool {
+			return *item%2 == 0 // items 0 and 2 pass, 1 and 3 fail
 		}
 
-		machine := createBaseMachineWithoutEnv(cfg)
+		failed := ExecuteParallel(context.Background(), run, items, namespaces, 4)
+		assert.Equal(t, int64(2), failed)
+	})
 
-		// execution.id should resolve
-		execExpr, err := expressions.Compile("execution.id")
-		require.NoError(t, err)
-		execResult, err := execExpr.Resolve(machine)
-		require.NoError(t, err)
-		execValue, err := execResult.Static().StringValue()
-		require.NoError(t, err)
-		assert.Equal(t, "exec-123", execValue)
+	t.Run("respects parallelism limit", func(t *testing.T) {
+		items := []string{"a", "b", "c", "d"}
+		namespaces := []string{"ns1", "ns1", "ns1", "ns1"}
+		var concurrent atomic.Int64
+		var maxConcurrent atomic.Int64
 
-		// workflow.name should resolve
-		wfExpr, err := expressions.Compile("workflow.name")
-		require.NoError(t, err)
-		wfResult, err := wfExpr.Resolve(machine)
-		require.NoError(t, err)
-		wfValue, err := wfResult.Static().StringValue()
-		require.NoError(t, err)
-		assert.Equal(t, "test-workflow", wfValue)
+		run := func(index int64, ns string, item *string) bool {
+			cur := concurrent.Add(1)
+			// Track max concurrency
+			for {
+				max := maxConcurrent.Load()
+				if cur <= max || maxConcurrent.CompareAndSwap(max, cur) {
+					break
+				}
+			}
+			time.Sleep(10 * time.Millisecond)
+			concurrent.Add(-1)
+			return true
+		}
+
+		failed := ExecuteParallel(context.Background(), run, items, namespaces, 2)
+		assert.Equal(t, int64(0), failed)
+		assert.LessOrEqual(t, maxConcurrent.Load(), int64(2))
+	})
+
+	t.Run("already cancelled context skips all items", func(t *testing.T) {
+		items := []string{"a", "b", "c"}
+		namespaces := []string{"ns1", "ns1", "ns1"}
+		var executed atomic.Int64
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel before execution
+
+		run := func(index int64, ns string, item *string) bool {
+			executed.Add(1)
+			return true
+		}
+
+		failed := ExecuteParallel(ctx, run, items, namespaces, 2)
+		assert.Equal(t, int64(0), executed.Load())
+		assert.Equal(t, int64(0), failed) // skipped items don't count as failures
 	})
 }

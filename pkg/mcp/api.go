@@ -47,6 +47,18 @@ func NewAPIClient(cfg *MCPServerConfig, client *http.Client) *APIClient {
 	}
 }
 
+// SupportsEndpoint checks if the control plane supports a specific endpoint.
+// Used for backwards compatibility with older control plane versions.
+func (c *APIClient) SupportsEndpoint(ctx context.Context, path string) bool {
+	req := APIRequest{
+		Method: http.MethodHead,
+		Path:   path,
+		Scope:  ApiScopeOrgEnv,
+	}
+	_, err := c.makeRequest(ctx, req)
+	return err == nil // 2xx = supported, 4xx/5xx = not supported
+}
+
 func (c *APIClient) buildApiUrl(path string, pathParams map[string]string, scope ApiScope) string {
 	// Replace path parameters in the path
 	finalPath := path
@@ -325,6 +337,12 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	if params.Since != "" {
 		queryParams["since"] = params.Since
 	}
+	if params.StartDate != "" {
+		queryParams["startDate"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		queryParams["endDate"] = params.EndDate
+	}
 
 	path := "/agent/test-workflow-executions"
 	if params.WorkflowName != "" {
@@ -600,6 +618,19 @@ func (c *APIClient) ListAgents(ctx context.Context, params tools.ListAgentsParam
 	})
 }
 
+func (c *APIClient) UpdateExecutionTags(ctx context.Context, executionId string, tags map[string]string) error {
+	_, err := c.makeRequest(ctx, APIRequest{
+		Method: http.MethodPatch,
+		Path:   "/agent/test-workflow-executions/{executionId}/tags",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"executionId": executionId,
+		},
+		Body: tags,
+	})
+	return err
+}
+
 func (c *APIClient) AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error) {
 	return c.makeRequest(ctx, APIRequest{
 		Method: "POST",
@@ -737,4 +768,98 @@ func (c *APIClient) WaitForExecutions(ctx context.Context, executionIds []string
 			}
 		}
 	}
+}
+
+func (c *APIClient) GetWorkflowResourceHistory(ctx context.Context, params tools.WorkflowResourceHistoryParams) (string, error) {
+	queryParams := make(map[string]string)
+
+	if params.LastN > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.LastN)
+	} else {
+		queryParams["pageSize"] = "50"
+	}
+	queryParams["page"] = "0"
+
+	return c.makeRequest(ctx, APIRequest{
+		Method: "GET",
+		Path:   "/agent/test-workflows/{workflowName}/executions",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"workflowName": params.WorkflowName,
+		},
+		QueryParams: queryParams,
+	})
+}
+
+// GetWorkflowDefinitions fetches multiple workflow definitions in bulk from the control plane.
+// It calls the bulk endpoint that returns all workflow YAML definitions in a single request.
+func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.ListWorkflowsParams) (map[string]string, error) {
+	queryParams := make(map[string]string)
+
+	if params.Selector != "" {
+		queryParams["selector"] = params.Selector
+	}
+	if params.ResourceGroup != "" {
+		queryParams["resourceGroup"] = params.ResourceGroup
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	} else {
+		queryParams["pageSize"] = "50" // Default limit
+	}
+
+	result, err := c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/agent/test-workflows/definitions",
+		Scope:       ApiScopeOrgEnv,
+		QueryParams: queryParams,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch workflow definitions: %w", err)
+	}
+
+	var definitions map[string]string
+	if err := json.Unmarshal([]byte(result), &definitions); err != nil {
+		return nil, fmt.Errorf("failed to parse workflow definitions: %w", err)
+	}
+
+	return definitions, nil
+}
+
+// GetExecutions fetches multiple execution summary records in bulk from the control plane.
+// It calls the bulk endpoint that returns all execution summaries in a single request.
+func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutionsParams) (map[string]string, error) {
+	queryParams := make(map[string]string)
+
+	if params.WorkflowName != "" {
+		queryParams["workflowName"] = params.WorkflowName
+	}
+	if params.Status != "" {
+		queryParams["status"] = params.Status
+	}
+	if params.TextSearch != "" {
+		queryParams["textSearch"] = params.TextSearch
+	}
+	if params.PageSize > 0 {
+		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
+	} else {
+		queryParams["pageSize"] = "50" // Default limit
+	}
+
+	result, err := c.makeRequest(ctx, APIRequest{
+		Method:      http.MethodGet,
+		Path:        "/agent/test-workflow-executions/summaries",
+		Scope:       ApiScopeOrgEnv,
+		QueryParams: queryParams,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch execution summaries: %w", err)
+	}
+
+	var executions map[string]string
+	if err := json.Unmarshal([]byte(result), &executions); err != nil {
+		return nil, fmt.Errorf("failed to parse execution summaries: %w", err)
+	}
+
+	return executions, nil
 }

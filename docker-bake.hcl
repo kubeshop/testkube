@@ -1,12 +1,10 @@
 variable "GOCACHE"       { default = "/go/pkg" }
 variable "GOMODCACHE"    { default = "/root/.cache/go-build" }
 variable "BUSYBOX_IMAGE" { default = "busybox:1.36.1-musl"}
-variable "ALPINE_IMAGE"  { default = "alpine:3.20.6" }
+variable "ALPINE_IMAGE"  { default = "alpine:3.23.3" }
 variable "VERSION"       { default = "0.0.0-unknown"}
 
 variable "GIT_SHA"                 { default = ""}
-variable "SLACK_BOT_CLIENT_ID"     { default = ""}
-variable "SLACK_BOT_CLIENT_SECRET" { default = ""}
 variable "ANALYTICS_TRACKING_ID"   { default = ""}
 variable "ANALYTICS_API_KEY"       { default = ""}
 variable "SEGMENTIO_KEY"           { default = ""}
@@ -14,7 +12,7 @@ variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
 variable "KEYGEN_PUBLIC_KEY"       { default = ""}
 
 group "default" {
-  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit", "mcp-server", "cli"]
+  targets = ["api", "cli", "tw-init", "tw-toolkit", "mcp-server"]
 }
 
 target "api-meta" {}
@@ -26,8 +24,6 @@ target "api" {
   args = {
     VERSION = "${VERSION}"
     GIT_SHA = "${GIT_SHA}"
-    SLACK_BOT_CLIENT_ID = "${SLACK_BOT_CLIENT_ID}"
-    SLACK_BOT_CLIENT_SECRET = "${SLACK_BOT_CLIENT_SECRET}"
     ANALYTICS_TRACKING_ID = "${ANALYTICS_TRACKING_ID}"
     ANALYTICS_API_KEY = "${ANALYTICS_API_KEY}"
     SEGMENTIO_KEY = "${SEGMENTIO_KEY}"
@@ -39,7 +35,7 @@ target "api" {
 
 target "cli-meta" {}
 target "cli" {
-  inherits = ["testworkflow-init-meta"]
+  inherits = ["cli-meta"]
   context="."
   dockerfile = "build/new/cli.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
@@ -55,7 +51,7 @@ target "cli" {
 
 target "tw-init-meta" {}
 target "tw-init" {
-  inherits = ["testworkflow-init-meta"]
+  inherits = ["tw-init-meta"]
   context="."
   dockerfile = "build/new/tw-init.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
@@ -67,7 +63,7 @@ target "tw-init" {
 
 target "tw-toolkit-meta" {}
 target "tw-toolkit" {
-  inherits = ["testworkflow-toolkit-meta"]
+  inherits = ["tw-toolkit-meta"]
   context="."
   dockerfile = "build/new/tw-toolkit.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
@@ -88,8 +84,6 @@ target "agent-server" {
     GOMODCACHE = "${GOMODCACHE}"
     VERSION = "${VERSION}"
     GIT_SHA = "${GIT_SHA}"
-    SLACK_BOT_CLIENT_ID = "${SLACK_BOT_CLIENT_ID}"
-    SLACK_BOT_CLIENT_SECRET = "${SLACK_BOT_CLIENT_SECRET}"
     ANALYTICS_TRACKING_ID = "${ANALYTICS_TRACKING_ID}"
     ANALYTICS_API_KEY = "${ANALYTICS_API_KEY}"
     SEGMENTIO_KEY = "${SEGMENTIO_KEY}"

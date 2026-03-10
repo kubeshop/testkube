@@ -131,7 +131,7 @@ func templateWithName(name string) func(testkube.TestWorkflowTemplate) bool {
 // These were deployed through a Helm Hook and will stay around forever until
 // deleted manually.
 func CleanUpOldHelmTemplates(ctx context.Context, client client.Client, restConfig *rest.Config, namespace string) error {
-	c, err := NewKubernetesTestWorkflowTemplateClient(client, restConfig, namespace, true)
+	c, err := NewKubernetesTestWorkflowTemplateClient(client, restConfig, namespace, true, "")
 	if err != nil {
 		return err
 	}

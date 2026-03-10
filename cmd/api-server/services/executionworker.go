@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -30,12 +31,14 @@ func CreateExecutionWorker(
 	for n, s := range serviceAccountNames {
 		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
 	}
+	insecureRegistries := commons.TrimAndFilterRegistries(cfg.InsecureRegistries)
 	return executionworker.NewKubernetes(clientSet, processor, kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
-			Id:               clusterId,
-			DefaultNamespace: defaultNamespace,
-			DefaultRegistry:  cfg.TestkubeRegistry,
-			Namespaces:       namespacesConfig,
+			Id:                 clusterId,
+			DefaultNamespace:   defaultNamespace,
+			DefaultRegistry:    cfg.TestkubeRegistry,
+			InsecureRegistries: insecureRegistries,
+			Namespaces:         namespacesConfig,
 		},
 		ImageInspector: kubernetesworker.ImageInspectorConfig{
 			CacheEnabled: cfg.EnableImageDataPersistentCache,

@@ -2,6 +2,7 @@ package testworkflowtemplateclient
 
 import (
 	"context"
+	"errors"
 	"math"
 	"slices"
 	"strings"
@@ -18,21 +19,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
+const InlinedGlobalTemplateName = "<inline-global-template>"
+
 var _ TestWorkflowTemplateClient = &k8sTestWorkflowTemplateClient{}
 
 type k8sTestWorkflowTemplateClient struct {
-	client         client.Client
-	restClient     rest.Interface
-	parameterCodec runtime.ParameterCodec
-	namespace      string
+	client                client.Client
+	restClient            rest.Interface
+	parameterCodec        runtime.ParameterCodec
+	namespace             string
+	inlinedGlobalTemplate string
 }
 
-func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *rest.Config, namespace string, disableOfficialTemplates bool) (TestWorkflowTemplateClient, error) {
+func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *rest.Config, namespace string,
+	disableOfficialTemplates bool, inlinedGlobalTemplate string) (TestWorkflowTemplateClient, error) {
 	// Build the scheme
 	scheme := runtime.NewScheme()
 	if err := metav1.AddMetaToScheme(scheme); err != nil {
@@ -60,10 +66,11 @@ func NewKubernetesTestWorkflowTemplateClient(client client.Client, restConfig *r
 	}
 
 	c := &k8sTestWorkflowTemplateClient{
-		client:         client,
-		restClient:     restClient,
-		parameterCodec: parameterCodec,
-		namespace:      namespace,
+		client:                client,
+		restClient:            restClient,
+		parameterCodec:        parameterCodec,
+		namespace:             namespace,
+		inlinedGlobalTemplate: inlinedGlobalTemplate,
 	}
 
 	if disableOfficialTemplates {
@@ -82,6 +89,20 @@ func (c *k8sTestWorkflowTemplateClient) get(ctx context.Context, name string) (*
 }
 
 func (c *k8sTestWorkflowTemplateClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflowTemplate, error) {
+	if name == InlinedGlobalTemplateName {
+		if c.inlinedGlobalTemplate != "" {
+			globalTemplateInline := new(testworkflowsv1.TestWorkflowTemplate)
+			err := crdcommon.DeserializeCRD(globalTemplateInline, []byte("spec:\n  "+strings.ReplaceAll(c.inlinedGlobalTemplate, "\n", "\n  ")))
+			if err != nil {
+				return nil, err
+			}
+
+			return testworkflows.MapTemplateKubeToAPI(globalTemplateInline), nil
+		}
+
+		return nil, errors.New("empty inlline template")
+	}
+
 	template, err := c.get(ctx, name)
 	if err != nil {
 		return nil, err

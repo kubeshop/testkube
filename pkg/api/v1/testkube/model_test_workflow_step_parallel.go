@@ -34,6 +34,8 @@ type TestWorkflowStepParallel struct {
 	Artifacts *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
+	// abort remaining parallel workers on first failure
+	FailFast bool `json:"failFast,omitempty"`
 	// worker description to display
 	Description string       `json:"description,omitempty"`
 	Logs        *BoxedString `json:"logs,omitempty"`
@@ -55,6 +57,6 @@ type TestWorkflowStepParallel struct {
 	Steps       []TestWorkflowStep                     `json:"steps,omitempty"`
 	After       []TestWorkflowStep                     `json:"after,omitempty"`
 	Events      []TestWorkflowEvent                    `json:"events,omitempty"`
-	Execution   *TestWorkflowTagSchema                 `json:"execution,omitempty"`
+	Execution   *TestWorkflowExecutionSchema           `json:"execution,omitempty"`
 	Pvcs        map[string]TestWorkflowPvcConfig       `json:"pvcs,omitempty"`
 }

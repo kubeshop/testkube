@@ -1,10 +1,13 @@
 package mcp
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -22,6 +25,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer := server.NewMCPServer(
 		"testkube-mcp",
 		cfg.Version,
+		server.WithRecovery(),
 		server.WithToolCapabilities(true),
 		server.WithToolHandlerMiddleware(DebugMiddleware(&cfg)),
 		server.WithToolHandlerMiddleware(TelemetryMiddleware(&cfg)),
@@ -45,6 +49,25 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflow(client))
 	mcpServer.AddTool(tools.RunWorkflow(client))
 
+	// Query tools (JSONPath-based bulk queries)
+	// Only check backwards compatibility when using APIClient without SkipEndpointChecks
+	if apiClient, ok := client.(*APIClient); ok && !cfg.SkipEndpointChecks {
+		ctx := context.Background()
+		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflows/definitions") {
+			mcpServer.AddTool(tools.QueryWorkflows(client))
+		}
+		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflow-executions/summaries") {
+			mcpServer.AddTool(tools.QueryExecutions(client))
+		}
+	} else {
+		mcpServer.AddTool(tools.QueryWorkflows(client))
+		mcpServer.AddTool(tools.QueryExecutions(client))
+	}
+
+	// Schema tools (static content, no client needed)
+	mcpServer.AddTool(tools.GetWorkflowSchema())
+	mcpServer.AddTool(tools.GetExecutionSchema())
+
 	// Labels tools
 	mcpServer.AddTool(tools.ListLabels(client))
 
@@ -60,8 +83,11 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.LookupExecutionId(client))
 	mcpServer.AddTool(tools.GetExecutionInfo(client))
 	mcpServer.AddTool(tools.GetWorkflowExecutionMetrics(client))
+	mcpServer.AddTool(tools.GetWorkflowResourceHistory(client))
 	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
+	// Registered unconditionally — endpoint is parameterized and cannot be probed with SupportsEndpoint.
+	mcpServer.AddTool(tools.UpdateExecutionTags(client))
 
 	// Artifact tools
 	mcpServer.AddTool(tools.ListArtifacts(client))
@@ -126,7 +152,7 @@ func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	// Build the address
-	addr := fmt.Sprintf("%s:%d", cfg.SHTTPConfig.Host, cfg.SHTTPConfig.Port)
+	addr := net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port))
 
 	// Start the server in a goroutine
 	serverErrCh := make(chan error, 1)

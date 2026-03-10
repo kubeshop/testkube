@@ -50,6 +50,13 @@ const (
 
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
+
+	// TKERR-15xx errors are related to agent operations.
+
+	// TKErrAgentGetFailed is returned when fetching an agent from the control plane fails.
+	TKErrAgentGetFailed ErrorCode = "TKERR-1501"
+	// TKErrAgentRotateKeyFailed is returned when rotating an agent's secret key fails.
+	TKErrAgentRotateKeyFailed ErrorCode = "TKERR-1502"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"

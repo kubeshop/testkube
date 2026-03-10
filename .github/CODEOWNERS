@@ -1,6 +1,6 @@
 * @kubeshop/testkube-backend
 
-/test/ @kubeshop/testkube-qa @kubeshop/testkube
+/test/ @kubeshop/testkube-qa @kubeshop/testkube-backend
 
 /.github/ @kubeshop/testkube-devops
 /goreleaser_files/ @kubeshop/testkube-devops

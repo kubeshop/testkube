@@ -41,6 +41,7 @@ type WebhookTemplateAPI interface {
 type TestTriggerAPI interface {
 	CreateTestTrigger(options CreateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
 	UpdateTestTrigger(options UpdateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
+	UpdateTestTriggerWithReplaceMode(options UpdateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
 	GetTestTrigger(name string) (testTrigger testkube.TestTrigger, err error)
 	ListTestTriggers(selector string) (testTriggers []testkube.TestTrigger, err error)
 	DeleteTestTrigger(name string) (err error)

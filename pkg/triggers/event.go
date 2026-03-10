@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const testkubeEventCausePrefix = "event-"
@@ -109,9 +110,9 @@ func (s Service) newWatcherEvent(
 	}
 
 	maps.Copy(w.EventLabels, s.eventLabels)
-	w.EventLabels[eventLabelKeyAgentName] = s.agentName
+	w.EventLabels[eventLabelKeyAgentName] = utils.TruncateName(s.agentName)
 	w.EventLabels[eventLabelKeyAgentNamespace] = s.testkubeNamespace
-	w.EventLabels[eventLabelKeyResourceName] = objectMeta.GetName()
+	w.EventLabels[eventLabelKeyResourceName] = utils.TruncateName(objectMeta.GetName())
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
 	if runtimeObject, ok := object.(runtime.Object); ok &&
@@ -132,6 +133,27 @@ func (s Service) newWatcherEvent(
 	}
 
 	sanitizeEventLabelValues(w.EventLabels, s.logger)
+	if s.logger != nil {
+		s.logger.Debugw("testtrigger event labels prepared",
+			"eventType", string(eventType),
+
+			"agentName", s.agentName,
+			"agentNameLabel", w.EventLabels[eventLabelKeyAgentName],
+			"agentNamespaceLabel", w.EventLabels[eventLabelKeyAgentNamespace],
+
+			"resourceKindLabel", w.EventLabels[eventLabelKeyResourceKind],
+			"resourceGroupLabel", w.EventLabels[eventLabelKeyResourceGroup],
+			"resourceVersionLabel", w.EventLabels[eventLabelKeyResourceVersion],
+			"resourceNameLabel", w.EventLabels[eventLabelKeyResourceName],
+			"resourceNamespaceLabel", w.EventLabels[eventLabelKeyResourceNamespace],
+			"resourceType", string(resource),
+
+			"objectNamespace", objectMeta.GetNamespace(),
+			"objectName", objectMeta.GetName(),
+
+			"labels", w.EventLabels,
+		)
+	}
 
 	return w
 }
@@ -167,7 +189,11 @@ outerLoop:
 		}
 	}
 
-	return fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(podIP, ".", "-"), object.GetNamespace()), nil
+	// Build the Kubernetes pod DNS name from the pod IP.
+	// IPv4: replace "." with "-" (e.g. 192.168.1.100 → 192-168-1-100)
+	// IPv6: replace ":" with "-" (e.g. 2001:db8::1 → 2001-db8--1, where "::" becomes "--")
+	podIPForDNS := strings.NewReplacer(".", "-", ":", "-").Replace(podIP)
+	return fmt.Sprintf("%s.%s.pod.cluster.local", podIPForDNS, object.GetNamespace()), nil
 }
 
 func getDeploymentConditions(
@@ -238,8 +264,16 @@ func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.C
 
 func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogger) {
 	for key, value := range labels {
-		if errs := validation.IsValidLabelValue(value); len(errs) == 0 {
+		errs := validation.IsValidLabelValue(value)
+		if len(errs) == 0 {
 			continue
+		}
+		if logger != nil {
+			logger.Debugw("event label invalid before sanitization",
+				"key", key,
+				"value", value,
+				"errors", errs,
+			)
 		}
 
 		sanitized := strings.Map(func(r rune) rune {
@@ -255,6 +289,14 @@ func sanitizeEventLabelValues(labels map[string]string, logger *zap.SugaredLogge
 
 		sanitized = strings.TrimLeftFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
 		sanitized = strings.TrimRightFunc(sanitized, func(r rune) bool { return !isAlphaNumeric(r) })
+
+		if logger != nil {
+			logger.Debugw("event label sanitization result",
+				"key", key,
+				"original", value,
+				"sanitized", sanitized,
+			)
+		}
 
 		if sanitized == "" {
 			if logger != nil {

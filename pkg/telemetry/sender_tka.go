@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,7 +20,7 @@ func TestkubeAnalyticsSender(client *http.Client, payload Payload) (out string, 
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", testkubeTelemetryUrl, bytes.NewBuffer(jsonData))
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, testkubeTelemetryUrl, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}

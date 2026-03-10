@@ -1069,6 +1069,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
 		Parallelism: v.Parallelism,
+		FailFast:    v.FailFast,
 		Description: v.Description,
 		Logs:        MapBoxedStringToString(v.Logs),
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
@@ -1111,6 +1112,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
 		Parallelism: v.Parallelism,
+		FailFast:    v.FailFast,
 		Description: v.Description,
 		Logs:        MapBoxedStringToString(v.Logs),
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
@@ -1605,10 +1607,11 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 	}
 }
 
-func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
-	return testworkflowsv1.TestWorkflowTagSchema{
+func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowExecutionSchema) testworkflowsv1.TestWorkflowExecutionSchema {
+	return testworkflowsv1.TestWorkflowExecutionSchema{
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
+		Silent: v.Silent,
 	}
 }
 
