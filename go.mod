@@ -93,6 +93,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.23.3
 )
 
+require github.com/opencontainers/go-digest v1.0.0 // indirect
+
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
@@ -229,7 +231,6 @@ require (
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce // indirect
 	github.com/onsi/ginkgo/v2 v2.28.1 // indirect
-	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/package-url/packageurl-go v0.1.2 // indirect
