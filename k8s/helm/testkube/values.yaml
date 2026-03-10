@@ -990,6 +990,7 @@ testkube-api:
 
     postgresql:
       enabled: false
+      # -- PostgreSQL DSN
       # dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
       # secretName: testkube-secrets
       # secretKey: postgresql-dsn
