@@ -8,17 +8,17 @@
   },
   "dependencies": {
     "boxen": "8.0.1",
-    "cac": "6.7.14",
+    "cac": "7.0.0",
     "chalk": "5.6.2",
     "execa": "9.6.0",
     "fs-extra": "11.3.4",
-    "inquirer": "12.11.1",
+    "inquirer": "13.3.0",
     "log-symbols": "7.0.1",
-    "ora": "8.2.0",
+    "ora": "9.3.0",
     "semver": "7.7.4",
     "shelljs": "0.10.0",
     "strands": "1.0.1",
-    "untildify": "5.0.0",
+    "untildify": "6.0.0",
     "xdg-app-paths": "8.3.0",
     "yaml": "2.8.2"
   }

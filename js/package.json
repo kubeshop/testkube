@@ -26,14 +26,14 @@
   },
   "devDependencies": {
     "@changesets/cli": "2.30.0",
-    "turbo": "2.8.14",
+    "turbo": "2.8.15",
     "typescript": "5.9.2"
   },
   "optionalDependencies": {
     "@esbuild/linux-x64": "0.27.3",
     "@rollup/rollup-linux-x64-gnu": "4.59.0"
   },
-  "packageManager": "npm@10.9.5",
+  "packageManager": "npm@11.11.0",
   "engines": {
     "node": "^20.0.0 || ^22.0.0 || ^24.0.0",
     "npm": ">=10.0.0"
