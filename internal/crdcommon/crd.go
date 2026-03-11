@@ -126,7 +126,6 @@ func SerializeCRD(cr interface{}, opts SerializeOptions) ([]byte, error) {
 		err = enc.Close()
 	}
 	b := buf.Bytes()
-	b := buf.Bytes()
 	if opts.OmitCreationTimestamp {
 		b = creationTsRegex.ReplaceAll(b, nil)
 	} else {
