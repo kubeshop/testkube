@@ -1,0 +1,64 @@
+name: Trigger FIPS OSS Images Build
+
+on:
+  push:
+    branches:
+      - 'release/*'
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  trigger-fips-build:
+    name: Trigger FIPS OSS build
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref, '-dev') && !contains(github.ref, '-rc') }}
+    steps:
+      - name: Determine version and ref
+        id: version
+        run: |
+          REF="${GITHUB_REF}"
+
+          if [[ "$REF" == refs/tags/* ]]; then
+            VERSION="${REF#refs/tags/}"
+            MAJOR="${VERSION%%.*}"
+            MINOR="${VERSION#*.}"; MINOR="${MINOR%%.*}"
+            # Use release/X-Y branch (more reliable than vX.Y.Z tag)
+            OSS_REF="release/${MAJOR}-${MINOR}"
+            echo "Triggered by tag: $VERSION -> oss_ref=$OSS_REF"
+          elif [[ "$REF" == refs/heads/release/* ]]; then
+            BRANCH_VERSION="${REF#refs/heads/release/}"
+            if [[ "$BRANCH_VERSION" =~ ^[0-9]+-[0-9]+$ ]]; then
+              OSS_REF="release/${BRANCH_VERSION}"
+            elif [[ "$BRANCH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              MAJOR="${BRANCH_VERSION%%.*}"
+              MINOR="${BRANCH_VERSION#*.}"; MINOR="${MINOR%%.*}"
+              OSS_REF="release/${MAJOR}-${MINOR}"
+            else
+              echo "::error::Unsupported branch format: $BRANCH_VERSION"
+              exit 1
+            fi
+            VERSION="$BRANCH_VERSION"
+            echo "Triggered by branch: $VERSION -> oss_ref=$OSS_REF"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "oss_ref=$OSS_REF" >> $GITHUB_OUTPUT
+
+      - name: Trigger FIPS OSS build in testkube-fips-enable-images
+        continue-on-error: true
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.CI_BOT_TOKEN }}
+          script: |
+            const version = '${{ steps.version.outputs.version }}';
+            const ossRef = '${{ steps.version.outputs.oss_ref }}';
+            console.log(`Triggering FIPS OSS build: version=${version}, oss_ref=${ossRef}`);
+            await github.rest.repos.createDispatchEvent({
+              owner: 'kubeshop',
+              repo: 'testkube-fips-enable-images',
+              event_type: 'build-fips-oss',
+              client_payload: {
+                version: version,
+                oss_ref: ossRef
+              }
+            })
