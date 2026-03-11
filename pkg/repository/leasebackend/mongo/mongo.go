@@ -86,7 +86,7 @@ func (b *MongoLeaseBackend) findOrInsertCurrentLease(ctx context.Context, leaseM
 
 func (b *MongoLeaseBackend) insertLease(ctx context.Context, leaseMongoID, id, clusterID string) (*Lease, error) {
 	lease := NewLease(id, clusterID)
-	_, err := b.coll.InsertOne(ctx, bson.M{"_id": leaseMongoID, "lease": *lease})
+	_, err := b.coll.InsertOne(ctx, MongoLease{ID: leaseMongoID, Lease: *lease})
 	if err != nil {
 		return nil, errors.Wrap(err, "error inserting lease document into mongo")
 	}
@@ -100,15 +100,11 @@ func (b *MongoLeaseBackend) tryUpdateLease(ctx context.Context, leaseMongoID, id
 		AcquiredAt: acquiredAt,
 		RenewedAt:  time.Now(),
 	}
-	newMongoLease := MongoLease{
-		_id:   leaseMongoID,
-		Lease: newLease,
-	}
 
 	res := b.coll.FindOneAndUpdate(
 		ctx,
 		bson.M{"_id": leaseMongoID},
-		bson.M{"$set": newMongoLease},
+		bson.M{"$set": newLease},
 		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	)
 	if res.Err() != nil {
@@ -148,6 +144,6 @@ func newLeaseMongoID(clusterID string) string {
 }
 
 type MongoLease struct {
-	_id string `bson:"_id"`
-	Lease
+	ID    string `bson:"_id"`
+	Lease `bson:",inline"`
 }
