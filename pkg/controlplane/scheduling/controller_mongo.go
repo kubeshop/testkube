@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -352,7 +351,7 @@ func createCancelExecutionStepsSteps(t time.Time) []bson.D {
 																	"$$this.v.finishedat",
 																	bson.A{
 																		time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
-																		primitive.Null{},
+																		bson.Null{},
 																		"",
 																	},
 																},
@@ -431,7 +430,7 @@ func createCancelExecutionStepsSteps(t time.Time) []bson.D {
 																	"$$this.v.startedat",
 																	bson.A{
 																		time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
-																		primitive.Null{},
+																		bson.Null{},
 																		"",
 																	},
 																},
@@ -510,7 +509,7 @@ func createCancelExecutionStepsSteps(t time.Time) []bson.D {
 																	"$$this.v.queuedat",
 																	bson.A{
 																		time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
-																		primitive.Null{},
+																		bson.Null{},
 																		"",
 																	},
 																},
