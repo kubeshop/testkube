@@ -10,6 +10,8 @@ on:
 jobs:
   trigger-fips-build:
     name: Trigger FIPS OSS build
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     if: ${{ !contains(github.ref, '-dev') && !contains(github.ref, '-rc') }}
     steps:
@@ -22,7 +24,6 @@ jobs:
             VERSION="${REF#refs/tags/}"
             MAJOR="${VERSION%%.*}"
             MINOR="${VERSION#*.}"; MINOR="${MINOR%%.*}"
-            # Use release/X-Y branch (more reliable than vX.Y.Z tag)
             OSS_REF="release/${MAJOR}-${MINOR}"
             echo "Triggered by tag: $VERSION -> oss_ref=$OSS_REF"
           elif [[ "$REF" == refs/heads/release/* ]]; then
@@ -41,17 +42,25 @@ jobs:
             echo "Triggered by branch: $VERSION -> oss_ref=$OSS_REF"
           fi
 
+          if [[ -z "$VERSION" || -z "$OSS_REF" ]]; then
+            echo "::error::Could not determine VERSION or OSS_REF from GITHUB_REF=$GITHUB_REF"
+            exit 1
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "oss_ref=$OSS_REF" >> $GITHUB_OUTPUT
 
       - name: Trigger FIPS OSS build in testkube-fips-enable-images
         continue-on-error: true
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          OSS_REF: ${{ steps.version.outputs.oss_ref }}
         with:
           github-token: ${{ secrets.CI_BOT_TOKEN }}
           script: |
-            const version = '${{ steps.version.outputs.version }}';
-            const ossRef = '${{ steps.version.outputs.oss_ref }}';
+            const version = process.env.VERSION;
+            const ossRef = process.env.OSS_REF;
             console.log(`Triggering FIPS OSS build: version=${version}, oss_ref=${ossRef}`);
             await github.rest.repos.createDispatchEvent({
               owner: 'kubeshop',
