@@ -15,7 +15,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/jackc/pgx/v5"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func IsNotFound(err error) bool {
