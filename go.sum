@@ -436,6 +436,8 @@ github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee h1:W5t00kpgFd
 github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/montanaflynn/stats v0.7.1 h1:etflOAAHORrCC44V+aR6Ftzort912ZU+YLiSTuV8eaE=
 github.com/montanaflynn/stats v0.7.1/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
+github.com/montanaflynn/stats v0.8.2 h1:52wnefTJnPI5FoHif1DQh2soKRw0yYs+4AVyvtcZCH0=
+github.com/montanaflynn/stats v0.8.2/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
 github.com/moogar0880/problems v1.0.1 h1:jKrdXJmXVBM3J8M8iNcy0BByffJ6nf1Rkxwj84Aj3MQ=
 github.com/moogar0880/problems v1.0.1/go.mod h1:vrTUjd+81cQ9SwKUApMYrEDjDOBSjON3mSAy8GSn/b8=
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
