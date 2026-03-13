@@ -28,6 +28,7 @@ type Enqueuer struct {
 	templateRepository       testworkflowtemplateclient.TestWorkflowTemplateClient
 	executionRepository      testworkflow.Repository
 	emitter                  *event.Emitter
+	envID                    string
 	globalTemplateName       string
 	hasInlinedGlobalTemplate bool
 }
@@ -38,6 +39,7 @@ func NewEnqueuer(
 	templateRepository testworkflowtemplateclient.TestWorkflowTemplateClient,
 	executionRepository testworkflow.Repository,
 	emitter *event.Emitter,
+	envID string,
 	globalTemplateName string,
 	hasInlinedGlobalTemplate bool,
 ) Enqueuer {
@@ -47,6 +49,7 @@ func NewEnqueuer(
 		templateRepository:       templateRepository,
 		executionRepository:      executionRepository,
 		emitter:                  emitter,
+		envID:                    envID,
 		globalTemplateName:       globalTemplateName,
 		hasInlinedGlobalTemplate: hasInlinedGlobalTemplate,
 	}
@@ -394,7 +397,7 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 // dispatchExecutionEvents dispatches events related to queueing.
 func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExecution) {
 	for _, execution := range executions {
-		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
+		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution, e.envID))
 	}
 }
 

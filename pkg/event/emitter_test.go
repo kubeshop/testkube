@@ -215,10 +215,10 @@ func TestEmitter_GroupedListenersReceiveQueuedAndStartedWorkflowEvents(t *testin
 		time.Sleep(50 * time.Millisecond)
 
 		execution := testkube.NewExecutionWithID("executionID-grouped", "grouped")
-		execution.GroupId = "env-123"
+		execution.GroupId = "execution-group-123"
 
-		emitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
-		emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+		emitter.Notify(testkube.NewEventQueueTestWorkflow(execution, "env-123"))
+		emitter.Notify(testkube.NewEventStartTestWorkflow(execution, "env-123"))
 
 		assert.Eventually(t, func() bool {
 			return listener.GetNotificationCount() == 2 && len(listener.GetReceivedEventTypes()) == 2
