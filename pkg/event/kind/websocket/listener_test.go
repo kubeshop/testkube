@@ -20,7 +20,7 @@ func TestWebsocketListener(t *testing.T) {
 	}}
 
 	// when
-	result := l.Notify(testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution()))
+	result := l.Notify(testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution(), ""))
 
 	// then
 	assert.Equal(t, "", result.Error_)
@@ -31,7 +31,7 @@ func TestWebsocketListenerNoClients(t *testing.T) {
 	l := NewWebsocketListener()
 
 	// when
-	result := l.Notify(testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution()))
+	result := l.Notify(testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution(), ""))
 
 	// then - not an error when no clients are connected
 	assert.Equal(t, "", result.Error_)

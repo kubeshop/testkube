@@ -66,7 +66,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
 	enqueuer := scheduling.NewEnqueuer(log.DefaultLogger, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, eventsEmitter,
-		cfg.GlobalWorkflowTemplateName, cfg.GlobalWorkflowTemplateInline != "")
+		envID, cfg.GlobalWorkflowTemplateName, cfg.GlobalWorkflowTemplateInline != "")
 	scheduler := factory.NewScheduler()
 	executionController := factory.NewExecutionController()
 	executionQuerier := factory.NewExecutionQuerier()
