@@ -9,7 +9,7 @@ require (
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
-	github.com/cdevents/sdk-go v0.4.1
+	github.com/cdevents/sdk-go v0.5.0
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
