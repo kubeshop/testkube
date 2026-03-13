@@ -8,8 +8,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -21,7 +21,7 @@ func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestNewMongoRepository_GetFinished_PreservesFilterAnd_Integration(t *testin
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestNewMongoRepository_Executions_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -314,7 +314,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -426,7 +426,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -529,7 +529,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	ctx := context.Background()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -634,7 +634,7 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}

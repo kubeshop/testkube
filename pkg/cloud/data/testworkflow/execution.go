@@ -245,6 +245,11 @@ func (r *CloudRepository) AbortIfQueued(ctx context.Context, id string) (bool, e
 	return false, errors.New("not supported")
 }
 
+func (r *CloudRepository) UpdateTags(ctx context.Context, id string, tags map[string]string) error {
+	req := ExecutionUpdateTagsRequest{ID: id, Tags: tags}
+	return passNoContent(r.executor, ctx, req)
+}
+
 func (r *CloudRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	return errors.New("not supported")
 }
