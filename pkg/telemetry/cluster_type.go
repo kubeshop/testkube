@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -13,7 +14,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-const clusterTypeDetectionTimeout = 10 * time.Second
+const (
+	clusterTypeDetectionTimeout       = 10 * time.Second
+	clusterTypeNodeListLimit    int64 = 5
+	clusterTypePodListLimit     int64 = 50
+)
 
 var (
 	clusterTypeOnce   sync.Once
@@ -46,8 +51,7 @@ func detectClusterTypeFromClientset(clientset kubernetes.Interface) string {
 	defer cancel()
 
 	detectors := []func(context.Context, kubernetes.Interface) string{
-		detectFromProviderID,
-		detectFromNodeLabels,
+		detectFromNodeMetadata,
 		detectFromServerVersion,
 		detectFromKubeSystemPods,
 	}
@@ -63,6 +67,18 @@ func detectClusterTypeFromClientset(clientset kubernetes.Interface) string {
 	}
 
 	return "others"
+}
+
+func detectFromNodeMetadata(ctx context.Context, clientset kubernetes.Interface) string {
+	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: clusterTypeNodeListLimit})
+	if err != nil || len(nodes.Items) == 0 {
+		return ""
+	}
+
+	if ct := detectFromProviderIDInNodes(nodes.Items); ct != "" {
+		return ct
+	}
+	return detectFromNodeLabelsInNodes(nodes.Items)
 }
 
 // --- Layer 1: Node spec.providerID ---
@@ -82,12 +98,16 @@ var providerIDPrefixes = []struct {
 }
 
 func detectFromProviderID(ctx context.Context, clientset kubernetes.Interface) string {
-	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: 5})
+	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: clusterTypeNodeListLimit})
 	if err != nil || len(nodes.Items) == 0 {
 		return ""
 	}
 
-	for _, node := range nodes.Items {
+	return detectFromProviderIDInNodes(nodes.Items)
+}
+
+func detectFromProviderIDInNodes(nodes []corev1.Node) string {
+	for _, node := range nodes {
 		pid := strings.ToLower(node.Spec.ProviderID)
 		if pid == "" {
 			continue
@@ -119,12 +139,16 @@ var labelDetectors = []struct {
 }
 
 func detectFromNodeLabels(ctx context.Context, clientset kubernetes.Interface) string {
-	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: 5})
+	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: clusterTypeNodeListLimit})
 	if err != nil || len(nodes.Items) == 0 {
 		return ""
 	}
 
-	for _, node := range nodes.Items {
+	return detectFromNodeLabelsInNodes(nodes.Items)
+}
+
+func detectFromNodeLabelsInNodes(nodes []corev1.Node) string {
+	for _, node := range nodes {
 		for _, ld := range labelDetectors {
 			if _, ok := node.Labels[ld.label]; ok {
 				return ld.clusterType
@@ -182,7 +206,7 @@ var podNameDetectors = []struct {
 }
 
 func detectFromKubeSystemPods(ctx context.Context, clientset kubernetes.Interface) string {
-	pods, err := clientset.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{})
+	pods, err := clientset.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{Limit: clusterTypePodListLimit})
 	if err != nil {
 		return ""
 	}

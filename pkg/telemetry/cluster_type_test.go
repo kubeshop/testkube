@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestDetectFromProviderID(t *testing.T) {
@@ -161,4 +162,22 @@ func TestDetectClusterTypeFromClientset_LayerPriority(t *testing.T) {
 		)
 		assert.Equal(t, "others", detectClusterTypeFromClientset(cs))
 	})
+}
+
+func TestDetectClusterTypeFromClientset_NodeMetadataListedOnce(t *testing.T) {
+	cs := fake.NewSimpleClientset(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "node-1",
+			Labels: map[string]string{"minikube.k8s.io/name": "minikube"},
+		},
+	})
+
+	nodeListCalls := 0
+	cs.Fake.PrependReactor("list", "nodes", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		nodeListCalls++
+		return false, nil, nil
+	})
+
+	assert.Equal(t, "minikube", detectClusterTypeFromClientset(cs))
+	assert.Equal(t, 1, nodeListCalls)
 }
