@@ -7,9 +7,8 @@ import (
 	"net"
 	"time"
 
-	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -21,6 +20,7 @@ import (
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/grpcutils"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	executionv1 "github.com/kubeshop/testkube/pkg/proto/testkube/testworkflow/execution/v1"
@@ -125,19 +125,16 @@ func (s *Server) Start(ctx context.Context, ln net.Listener) error {
 	if s.cfg.Verbose {
 		// Shared options for the logger, with a custom gRPC code to log level function.
 		logger := s.cfg.Logger.Desugar()
-		grpczap.ReplaceGrpcLoggerV2(logger)
 		opts = append(
 			opts,
 			grpc.ChainUnaryInterceptor(
-				grpcctxtags.UnaryServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
-				grpczap.UnaryServerInterceptor(logger),
+				logging.UnaryServerInterceptor(grpcutils.ZapGRPCLogger(logger)),
 			),
 		)
 		opts = append(
 			opts,
 			grpc.ChainStreamInterceptor(
-				grpcctxtags.StreamServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
-				grpczap.StreamServerInterceptor(logger),
+				logging.StreamServerInterceptor(grpcutils.ZapGRPCLogger(logger)),
 			),
 		)
 	}

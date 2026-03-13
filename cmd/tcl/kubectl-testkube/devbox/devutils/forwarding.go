@@ -10,6 +10,7 @@ package devutils
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -75,7 +76,8 @@ func ForwardPod(config *rest.Config, namespace, podName string, clusterPort, loc
 	// Hack to handle Kubernetes Port Forwarding issue.
 	// Stream through a different server, to ensure that both connections are fully read, with no broken pipe.
 	// @see {@link https://github.com/kubernetes/kubernetes/issues/74551}
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", localPort))
+	var lc net.ListenConfig
+	ln, err := lc.Listen(context.Background(), "tcp", fmt.Sprintf(":%d", localPort))
 	if err != nil {
 		return err
 	}
@@ -86,7 +88,7 @@ func ForwardPod(config *rest.Config, namespace, podName string, clusterPort, loc
 			if err == nil {
 				go func(conn net.Conn) {
 					defer conn.Close()
-					open, err := net.Dial("tcp", fmt.Sprintf(":%d", middlewarePort))
+					open, err := (&net.Dialer{}).DialContext(context.Background(), "tcp", fmt.Sprintf(":%d", middlewarePort))
 					if err != nil {
 						return
 					}
@@ -114,7 +116,7 @@ func ForwardPod(config *rest.Config, namespace, podName string, clusterPort, loc
 	if ping {
 		go func() {
 			for {
-				http.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d", localPort), nil)
+				http.NewRequestWithContext(context.Background(), http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d", localPort), nil)
 				time.Sleep(4 * time.Second)
 			}
 		}()
@@ -149,7 +151,7 @@ func ProxySSL(sourcePort, sslPort int) error {
 			if err == nil {
 				go func(conn net.Conn) {
 					defer conn.Close()
-					open, err := net.Dial("tcp", fmt.Sprintf(":%d", sourcePort))
+					open, err := (&net.Dialer{}).DialContext(context.Background(), "tcp", fmt.Sprintf(":%d", sourcePort))
 					if err != nil {
 						return
 					}

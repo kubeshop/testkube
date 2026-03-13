@@ -1,7 +1,7 @@
 ###################################
 ## Build
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.25 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -32,10 +32,10 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.25 AS debug
+FROM golang:1.26 AS debug
 
 ENV GOTRACEBACK=all
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.2
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/build/_local/agent-server /testkube/
@@ -46,7 +46,7 @@ ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multicl
 ###################################
 ## Live (Tilt live_update — needs shell for restart_process)
 ###################################
-FROM ${BUSYBOX_IMAGE:-busybox:1.36} AS live
+FROM ${BUSYBOX_IMAGE:-busybox:1.37} AS live
 
 COPY --from=builder /app/build/_local/agent-server /testkube/agent-server
 

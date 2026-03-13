@@ -3,6 +3,7 @@ package process
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os/exec"
@@ -34,7 +35,7 @@ func Execute(command string, arguments ...string) (out []byte, err error) {
 
 // ExecuteInDir runs system command and returns whole output also in case of error in a specific directory
 func ExecuteInDir(dir string, command string, arguments ...string) (out []byte, err error) {
-	cmd := exec.Command(command, arguments...)
+	cmd := exec.CommandContext(context.Background(), command, arguments...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
@@ -65,7 +66,7 @@ func ExecuteInDir(dir string, command string, arguments ...string) (out []byte, 
 
 // LoggedExecuteInDir runs system command and returns whole output also in case of error in a specific directory with logging to writer
 func LoggedExecuteInDir(dir string, writer io.Writer, command string, arguments ...string) (out []byte, err error) {
-	cmd := exec.Command(command, arguments...)
+	cmd := exec.CommandContext(context.Background(), command, arguments...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
@@ -102,7 +103,7 @@ func ExecuteAsync(command string, arguments ...string) (cmd *exec.Cmd, err error
 
 // ExecuteAsyncInDir runs system command and doesn't wait when it's completed for specific directory
 func ExecuteAsyncInDir(dir string, command string, arguments ...string) (cmd *exec.Cmd, err error) {
-	cmd = exec.Command(command, arguments...)
+	cmd = exec.CommandContext(context.Background(), command, arguments...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
@@ -142,7 +143,7 @@ func ExecuteString(command string) (out []byte, err error) {
 }
 
 func ExecuteAndStreamOutput(command string, arguments ...string) error {
-	cmd := exec.Command(command, arguments...)
+	cmd := exec.CommandContext(context.Background(), command, arguments...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

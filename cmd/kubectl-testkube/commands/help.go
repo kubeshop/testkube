@@ -84,10 +84,10 @@ func helpMessageByGroups(cmd *cobra.Command) string {
 		if len(groupSplit) > 1 {
 			group = strings.Split(groupName, cmdGroupDelimiter)[1]
 		}
-		buf.WriteString(fmt.Sprintf("%s\n", ui.LightGray(group)))
+		fmt.Fprintf(&buf, "%s\n", ui.LightGray(group))
 
 		for _, cmd := range commands {
-			buf.WriteString(fmt.Sprintf("%s\n", cmd))
+			fmt.Fprintf(&buf, "%s\n", cmd)
 		}
 		buf.WriteString("\n")
 	}

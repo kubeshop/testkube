@@ -3,9 +3,11 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -84,6 +86,8 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.GetWorkflowResourceHistory(client))
 	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
+	// Registered unconditionally — endpoint is parameterized and cannot be probed with SupportsEndpoint.
+	mcpServer.AddTool(tools.UpdateExecutionTags(client))
 
 	// Artifact tools
 	mcpServer.AddTool(tools.ListArtifacts(client))
@@ -148,7 +152,7 @@ func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	// Build the address
-	addr := fmt.Sprintf("%s:%d", cfg.SHTTPConfig.Host, cfg.SHTTPConfig.Port)
+	addr := net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port))
 
 	// Start the server in a goroutine
 	serverErrCh := make(chan error, 1)

@@ -840,11 +840,16 @@ DELETE FROM test_workflow_resource_aggregations WHERE execution_id = @execution_
 DELETE FROM test_workflows WHERE execution_id = @execution_id AND workflow_type = @workflow_type;
 
 -- name: UpdateTestWorkflowExecutionResourceAggregations :exec
-UPDATE test_workflow_resource_aggregations 
-SET 
+UPDATE test_workflow_resource_aggregations
+SET
     global = @global,
     step = @step
 WHERE execution_id = @execution_id;
+
+-- name: UpdateTestWorkflowExecutionTags :exec
+UPDATE test_workflow_executions
+SET tags = @tags
+WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
 DELETE FROM test_workflow_executions e

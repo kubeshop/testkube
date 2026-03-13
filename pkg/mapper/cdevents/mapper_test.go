@@ -3,7 +3,7 @@ package cdevents
 import (
 	"testing"
 
-	cdevents "github.com/cdevents/sdk-go/pkg/api"
+	cdevents "github.com/cdevents/sdk-go/pkg/api/v04"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/internal/common"

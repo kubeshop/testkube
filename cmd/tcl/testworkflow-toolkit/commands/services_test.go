@@ -29,7 +29,7 @@ import (
 
 func TestServicesExecutor_RequiresGroupRef(t *testing.T) {
 	executor := NewServicesExecutor("", false, ServicesDependencies{})
-	err := executor.Execute([]string{`{}`})
+	err := executor.Execute(context.Background(), []string{`{}`})
 	assert.ErrorContains(t, err, "missing required --group")
 }
 

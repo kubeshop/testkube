@@ -1,7 +1,7 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: tw-suite-small-smoke-cron-trigger
+  name: pytest-junit-cron-trigger
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
@@ -14,7 +14,6 @@ spec:
   steps:
   - execute:
       workflows:
-      - name: tw-suite-small-smoke
       - name: pytest-workflow-smoke-junit-mixed-failures
       - name: pytest-workflow-smoke-junit-random-failures
   events:

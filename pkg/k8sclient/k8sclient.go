@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/v2/log"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/transport/spdy"
 

@@ -2,7 +2,9 @@ package formatters
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -303,27 +305,23 @@ type formattedExecutionMetrics struct {
 	Steps     []formattedStepData `json:"steps,omitempty"`
 }
 
-// formattedTimeRange contains execution timing info.
 type formattedTimeRange struct {
 	StartedAt  string `json:"startedAt,omitempty"`
 	FinishedAt string `json:"finishedAt,omitempty"`
 }
 
-// formattedStepData contains time-series metrics for a single execution step.
 type formattedStepData struct {
 	Step   string                  `json:"step"`
 	Series []formattedMetricSeries `json:"series"`
 }
 
-// formattedMetricSeries is a single metric time-series with summary statistics.
 type formattedMetricSeries struct {
-	Metric      string       `json:"metric"` // e.g. "cpu.millicores", "memory.used"
-	SampleCount int          `json:"sampleCount"`
-	Summary     metricStats  `json:"summary"`
-	Samples     [][2]float64 `json:"samples"` // [timestamp_ms, value]
+	Metric      string      `json:"metric"` // e.g. "cpu.millicores", "memory.used"
+	SampleCount int         `json:"sampleCount"`
+	Summary     metricStats `json:"summary"`
+	Samples     []dataPoint `json:"samples"` // [timestamp_ms, value]
 }
 
-// metricStats contains min/max/avg for a metric series.
 type metricStats struct {
 	Min float64 `json:"min"`
 	Max float64 `json:"max"`
@@ -341,23 +339,54 @@ type aggregatedMetricsInput struct {
 	Metrics []linkedMetricInput `json:"metrics"`
 }
 
-// linkedMetricInput represents per-step metric data from the /metrics endpoint.
 type linkedMetricInput struct {
 	Step string           `json:"step"`
 	Data []dataPointInput `json:"data"`
 }
 
-// dataPointInput represents a single metric data point series.
 type dataPointInput struct {
-	Measurement string       `json:"measurement"`
-	Field       string       `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
-	Values      [][2]float64 `json:"values"` // [timestamp_ms, value]
+	Measurement string      `json:"measurement"`
+	Field       string      `json:"fields"` // note: JSON key is "fields" (singular value despite plural name)
+	Values      []dataPoint `json:"values"` // [timestamp_ms, value]
 }
 
-// FormatGetWorkflowExecutionMetrics parses a raw API response containing execution metrics.
-// Handles the AggregatedMetrics shape from the /metrics endpoint (time-series data)
-// and returns a compact JSON with per-step metric series, downsampled to avoid large payloads.
-// maxSamples controls the maximum number of data points per metric series (0 uses default of 50).
+// dataPoint is a [timestamp_ms, value] pair. Values are string-encoded in the
+// wire format (InfluxDB line protocol parses all field values as strings), so we
+// accept both JSON numbers and quoted strings.
+type dataPoint [2]float64
+
+func (dp *dataPoint) UnmarshalJSON(b []byte) error {
+	var raw [2]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	ts, err := rawToFloat64(raw[0])
+	if err != nil {
+		return fmt.Errorf("dataPoint timestamp: %w", err)
+	}
+	v, err := rawToFloat64(raw[1])
+	if err != nil {
+		return fmt.Errorf("dataPoint value: %w", err)
+	}
+	dp[0] = ts
+	dp[1] = v
+	return nil
+}
+
+func rawToFloat64(raw json.RawMessage) (float64, error) {
+	var n json.Number
+	if err := json.Unmarshal(raw, &n); err == nil {
+		return n.Float64()
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return 0, fmt.Errorf("expected number or string, got: %s", string(raw))
+	}
+	return strconv.ParseFloat(s, 64)
+}
+
+// FormatGetWorkflowExecutionMetrics formats raw /metrics API output for the AI agent.
+// Returns compact JSON with per-step metric series, downsampled to maxSamples points (0 = default 50).
 func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, error) {
 	if IsEmptyInput(raw) {
 		return "{}", nil
@@ -372,10 +401,17 @@ func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, erro
 		return "", err
 	}
 
-	// Check if this looks like an AggregatedMetrics response (has "metrics" field with data)
-	if len(input.Metrics) == 0 && input.Workflow == "" {
-		// Not an AggregatedMetrics response — return empty
+	// Unrecognisable response — neither workflow nor metrics present.
+	if input.Workflow == "" && len(input.Metrics) == 0 {
 		return "{}", nil
+	}
+
+	// Workflow is known but no metrics were collected — return structured empty response.
+	if len(input.Metrics) == 0 {
+		return FormatJSON(formattedExecutionMetrics{
+			Workflow:  input.Workflow,
+			Execution: input.Execution,
+		})
 	}
 
 	formatted := formattedExecutionMetrics{
@@ -418,7 +454,7 @@ func FormatGetWorkflowExecutionMetrics(raw string, maxSamples int) (string, erro
 }
 
 // computeStats calculates min/max/avg from a time-series of [timestamp, value] pairs.
-func computeStats(values [][2]float64) metricStats {
+func computeStats(values []dataPoint) metricStats {
 	if len(values) == 0 {
 		return metricStats{}
 	}
@@ -447,12 +483,12 @@ func computeStats(values [][2]float64) metricStats {
 
 // downsample reduces a time-series to at most maxPoints, evenly spaced.
 // Always preserves the first and last data points.
-func downsample(values [][2]float64, maxPoints int) [][2]float64 {
+func downsample(values []dataPoint, maxPoints int) []dataPoint {
 	if len(values) <= maxPoints {
 		return values
 	}
 
-	result := make([][2]float64, 0, maxPoints)
+	result := make([]dataPoint, 0, maxPoints)
 	result = append(result, values[0])
 
 	// Evenly pick interior points

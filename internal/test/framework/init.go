@@ -254,6 +254,8 @@ func (f *InitTestFramework) configureEnvironment() error {
 }
 
 func (f *InitTestFramework) updateGlobalConstants() {
+	constants.ControlServerPort = 0
+
 	constants.InternalPath = os.Getenv("TESTKUBE_TW_INTERNAL_PATH")
 	if constants.InternalPath == "" {
 		constants.InternalPath = "/.tktw"

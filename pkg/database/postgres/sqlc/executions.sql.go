@@ -3686,8 +3686,8 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 }
 
 const updateTestWorkflowExecutionResourceAggregations = `-- name: UpdateTestWorkflowExecutionResourceAggregations :exec
-UPDATE test_workflow_resource_aggregations 
-SET 
+UPDATE test_workflow_resource_aggregations
+SET
     global = $1,
     step = $2
 WHERE execution_id = $3
@@ -3826,4 +3826,27 @@ func (q *Queries) UpdateTestWorkflowExecutionResultStrict(ctx context.Context, a
 	var execution_id string
 	err := row.Scan(&execution_id)
 	return execution_id, err
+}
+
+const updateTestWorkflowExecutionTags = `-- name: UpdateTestWorkflowExecutionTags :exec
+UPDATE test_workflow_executions
+SET tags = $1
+WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
+`
+
+type UpdateTestWorkflowExecutionTagsParams struct {
+	Tags           []byte `db:"tags" json:"tags"`
+	ExecutionID    string `db:"execution_id" json:"execution_id"`
+	OrganizationID string `db:"organization_id" json:"organization_id"`
+	EnvironmentID  string `db:"environment_id" json:"environment_id"`
+}
+
+func (q *Queries) UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) error {
+	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionTags,
+		arg.Tags,
+		arg.ExecutionID,
+		arg.OrganizationID,
+		arg.EnvironmentID,
+	)
+	return err
 }
