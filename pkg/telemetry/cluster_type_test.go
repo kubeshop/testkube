@@ -165,7 +165,7 @@ func TestDetectClusterTypeFromClientset_LayerPriority(t *testing.T) {
 }
 
 func TestDetectClusterTypeFromClientset_NodeMetadataListedOnce(t *testing.T) {
-	cs := fake.NewSimpleClientset(&corev1.Node{
+	cs := fake.NewClientset(&corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node-1",
 			Labels: map[string]string{"minikube.k8s.io/name": "minikube"},
@@ -173,7 +173,7 @@ func TestDetectClusterTypeFromClientset_NodeMetadataListedOnce(t *testing.T) {
 	})
 
 	nodeListCalls := 0
-	cs.Fake.PrependReactor("list", "nodes", func(action k8stesting.Action) (bool, runtime.Object, error) {
+	cs.PrependReactor("list", "nodes", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		nodeListCalls++
 		return false, nil, nil
 	})
