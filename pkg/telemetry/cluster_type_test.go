@@ -13,7 +13,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 )
 
-func TestDetectFromProviderID(t *testing.T) {
+func TestDetectFromNodeMetadata_ProviderID(t *testing.T) {
 	tests := []struct {
 		name       string
 		providerID string
@@ -37,12 +37,12 @@ func TestDetectFromProviderID(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
 				Spec:       corev1.NodeSpec{ProviderID: tt.providerID},
 			})
-			assert.Equal(t, tt.want, detectFromProviderID(ctx, cs))
+			assert.Equal(t, tt.want, detectFromNodeMetadata(ctx, cs))
 		})
 	}
 }
 
-func TestDetectFromNodeLabels(t *testing.T) {
+func TestDetectFromNodeMetadata_NodeLabels(t *testing.T) {
 	tests := []struct {
 		name   string
 		labels map[string]string
@@ -65,7 +65,7 @@ func TestDetectFromNodeLabels(t *testing.T) {
 			cs := fake.NewSimpleClientset(&corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: tt.labels},
 			})
-			assert.Equal(t, tt.want, detectFromNodeLabels(ctx, cs))
+			assert.Equal(t, tt.want, detectFromNodeMetadata(ctx, cs))
 		})
 	}
 }

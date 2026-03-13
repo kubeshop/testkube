@@ -97,15 +97,6 @@ var providerIDPrefixes = []struct {
 	{"openstack://", "openstack"},
 }
 
-func detectFromProviderID(ctx context.Context, clientset kubernetes.Interface) string {
-	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: clusterTypeNodeListLimit})
-	if err != nil || len(nodes.Items) == 0 {
-		return ""
-	}
-
-	return detectFromProviderIDInNodes(nodes.Items)
-}
-
 func detectFromProviderIDInNodes(nodes []corev1.Node) string {
 	for _, node := range nodes {
 		pid := strings.ToLower(node.Spec.ProviderID)
@@ -136,15 +127,6 @@ var labelDetectors = []struct {
 	{"minikube.k8s.io/name", "minikube"},
 	{"node.openshift.io/os_id", "openshift"},
 	{"microk8s.io/cluster", "microk8s"},
-}
-
-func detectFromNodeLabels(ctx context.Context, clientset kubernetes.Interface) string {
-	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{Limit: clusterTypeNodeListLimit})
-	if err != nil || len(nodes.Items) == 0 {
-		return ""
-	}
-
-	return detectFromNodeLabelsInNodes(nodes.Items)
 }
 
 func detectFromNodeLabelsInNodes(nodes []corev1.Node) string {
