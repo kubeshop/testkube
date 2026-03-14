@@ -95,6 +95,49 @@ print("  Database:    " + db_backend)
 # Safety Checks
 # =============================================================================
 
+# Validate the development cluster created by scripts/tilt-cluster.sh exists and
+# that kubectl points to it before we continue.
+EXPECTED_CLUSTER_NAME = "testkube-dev"
+EXPECTED_KUBE_CONTEXT = "k3d-" + EXPECTED_CLUSTER_NAME
+
+current_kube_context = str(local(
+    "kubectl config current-context 2>/dev/null || true",
+    quiet=True,
+)).strip()
+
+cluster_exists = str(local(
+    "k3d cluster list 2>/dev/null | awk 'NR>1 {{print $1}}' | grep -x '{}' >/dev/null && echo true || echo false".format(EXPECTED_CLUSTER_NAME),
+    quiet=True,
+)).strip() == "true"
+
+if not cluster_exists:
+    fail("""
+Missing required k3d cluster: '{cluster}'.
+
+This Tiltfile expects the cluster created by:
+  ./scripts/tilt-cluster.sh
+
+Please run:
+  ./scripts/tilt-cluster.sh
+
+Then start Tilt again with:
+  tilt up
+""".format(cluster=EXPECTED_CLUSTER_NAME).strip())
+
+if current_kube_context != EXPECTED_KUBE_CONTEXT:
+    fail("""
+Wrong Kubernetes context: '{current}'.
+
+This Tiltfile requires context:
+  {expected}
+
+Switch context:
+  kubectl config use-context {expected}
+""".format(
+        current=current_kube_context if current_kube_context else "<none>",
+        expected=EXPECTED_KUBE_CONTEXT,
+    ).strip())
+
 allow_k8s_contexts([
     "k3d-testkube-dev",
     "docker-desktop",
@@ -363,6 +406,55 @@ if use_mongo:
         labels=["dependencies"],
     )
 
+# Database recreation utility (manual). Resets the "backend" database for the
+# currently enabled DB backend(s), then restarts the API server.
+recreate_db_deps = ["create-namespace"]
+if use_postgres:
+    recreate_db_deps.append("testkube-postgresql")
+if use_mongo:
+    recreate_db_deps.append("testkube-mongodb")
+
+recreate_db_cmd = """
+set -e
+echo "Recreating database backend(s)..."
+"""
+
+if use_postgres:
+    recreate_db_cmd += """
+echo "Waiting for PostgreSQL to be ready..."
+kubectl wait --for=condition=ready pod/testkube-postgresql-0 -n """ + NAMESPACE + """ --timeout=120s
+echo "Recreating PostgreSQL database 'backend'..."
+kubectl exec -n """ + NAMESPACE + """ testkube-postgresql-0 -- \
+  psql -U testkube -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'backend' AND pid <> pg_backend_pid();"
+kubectl exec -n """ + NAMESPACE + """ testkube-postgresql-0 -- \
+  psql -U testkube -d postgres -c "DROP DATABASE IF EXISTS backend;"
+kubectl exec -n """ + NAMESPACE + """ testkube-postgresql-0 -- \
+  psql -U testkube -d postgres -c "CREATE DATABASE backend;"
+"""
+
+if use_mongo:
+    recreate_db_cmd += """
+echo "Waiting for MongoDB to be ready..."
+kubectl wait --for=condition=ready pod/testkube-mongodb-0 -n """ + NAMESPACE + """ --timeout=120s
+echo "Recreating MongoDB database 'backend'..."
+kubectl exec -n """ + NAMESPACE + """ testkube-mongodb-0 -- sh -c 'if command -v mongosh >/dev/null 2>&1; then mongosh --quiet --eval "db.getSiblingDB(\\\"backend\\\").dropDatabase()"; else mongo --quiet --eval "db.getSiblingDB(\\\"backend\\\").dropDatabase()"; fi'
+"""
+
+recreate_db_cmd += """
+echo "Restarting API server deployment..."
+kubectl rollout restart deployment/testkube-api-server -n """ + NAMESPACE + """
+echo "Database recreation complete."
+"""
+
+local_resource(
+    "recreate-database",
+    cmd=recreate_db_cmd,
+    labels=["setup"],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    resource_deps=recreate_db_deps,
+)
+
 k8s_resource(
     MINIO_RESOURCE_NAME,
     port_forwards=[
@@ -448,6 +540,12 @@ if not is_ci:
         resource='testkube-api-server',
         icon_name='favorite',
         text='Health Check',
+    )
+    cmd_button('recreate-database:run',
+        argv=['sh', '-c', recreate_db_cmd],
+        resource='testkube-api-server',
+        icon_name='refresh',
+        text='Recreate DB',
     )
 
 # =============================================================================

@@ -226,6 +226,7 @@ The Tilt UI includes verification resources under the **verify** label:
 - **health-check** — Manually trigger a health check against the API (`curl http://localhost:8088/health`)
 - **smoke-test** — Manually trigger a smoke test that verifies the API and workflows endpoint
 - **Health Check button** — Click the heart icon on the `testkube-api-server` resource in the Tilt UI
+- **Recreate DB button** — Click the refresh icon on the `testkube-api-server` resource to recreate the active database backend(s) and restart the API server
 
 In CI mode (`tilt ci`), the smoke test runs automatically and Tilt exits on success or failure.
 
@@ -274,6 +275,7 @@ From the Tilt UI, trigger these manual resources:
 
 - **make test** — Runs the full test suite
 - **make lint** — Runs golangci-lint
+- **recreate-database** — Recreates the `backend` database for the enabled backend (`--db=postgres`, `--db=mongo`, or both) and restarts `testkube-api-server`
 
 Or run directly:
 
@@ -414,6 +416,13 @@ kubectl get pods -n testkube-dev | grep -E 'postgresql|mongodb'
 # Check database logs
 kubectl logs -n testkube-dev statefulset/testkube-postgresql
 ```
+
+If your local data gets out of sync or corrupted, recreate the database from Tilt:
+
+- Trigger the **recreate-database** resource (under **setup**), or
+- Click the **Recreate DB** button (refresh icon) on `testkube-api-server`
+
+This resets the `backend` database for the active backend(s) and restarts the API server.
 
 ### Live Reload Not Working
 
