@@ -104,7 +104,7 @@ jobs:
     if: ${{ inputs.confirm == 'yes' && !inputs.skip_build }}
 
     steps:
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app-token
         with:
           app-id: 253113
