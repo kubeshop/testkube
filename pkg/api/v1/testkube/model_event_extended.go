@@ -31,12 +31,7 @@ func NewEvent(t *EventType, resource *EventResource, id string) Event {
 	}
 }
 
-func NewEventQueueTestWorkflow(execution *TestWorkflowExecution) Event {
-	groupId := ""
-	if execution != nil {
-		groupId = execution.GroupId
-	}
-
+func NewEventQueueTestWorkflow(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
 		GroupId:               groupId,
@@ -45,12 +40,7 @@ func NewEventQueueTestWorkflow(execution *TestWorkflowExecution) Event {
 	}
 }
 
-func NewEventStartTestWorkflow(execution *TestWorkflowExecution) Event {
-	groupId := ""
-	if execution != nil {
-		groupId = execution.GroupId
-	}
-
+func NewEventStartTestWorkflow(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
 		GroupId:               groupId,
