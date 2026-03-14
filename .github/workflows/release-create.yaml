@@ -28,7 +28,7 @@ jobs:
     if: ${{ inputs.confirm == 'yes' }}
     steps:
       # Configure git to push: We use a GitHub App so that we have an entity that can be configured to bypass merge to main.
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app-token
         with:
           app-id: 253113
