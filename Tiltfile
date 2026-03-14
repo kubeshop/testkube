@@ -140,10 +140,6 @@ Switch context:
 
 allow_k8s_contexts([
     "k3d-testkube-dev",
-    "docker-desktop",
-    "docker-for-desktop",
-    "minikube",
-    "rancher-desktop",
 ])
 
 docker_prune_settings(

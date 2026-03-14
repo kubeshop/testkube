@@ -40,9 +40,10 @@ testkube-api:
     embedded: false
     enabled: true
   
-  # MinIO for artifact storage.
-  # If you change minioRootUser/minioRootPassword here, also set the same values
-  # in the Tiltfile (minio_user / minio_pass) so the create-minio-buckets job can authenticate.
+  # MinIO client configuration used by testkube-api (connection credentials).
+  # Keep these values in sync with top-level minio.minioRootUser/minioRootPassword below.
+  # If you change credentials, also update the Tiltfile (minio_user / minio_pass)
+  # so the create-minio-buckets job can authenticate.
   minio:
     enabled: true
     minioRootUser: minio
@@ -84,6 +85,13 @@ postgresql:
       requests:
         cpu: 100m
         memory: 128Mi
+
+# MinIO deployment credentials (MinIO subchart values).
+# These control the MinIO pod's root user/password.
+# Keep these values identical to testkube-api.minio.* above.
+minio:
+  minioRootUser: minio
+  minioRootPassword: minio123
 
 # NATS configuration
 nats:

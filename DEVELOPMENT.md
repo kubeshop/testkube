@@ -394,7 +394,7 @@ It also creates a K8s Service/Endpoints to make the registry resolvable from pod
 `MANIFEST_UNKNOWN` during Test Workflow execution:
 
 - Ensure your cluster was created with `./scripts/tilt-cluster.sh` (sets up the k3d local registry)
-- Ensure your cluster context is one of the allowed contexts (see `allow_k8s_contexts` in the Tiltfile)
+- Ensure your active context is `k3d-testkube-dev`
 - Check that the registry container is running: `docker ps | grep testkube-registry`
 - The Tiltfile automatically sets `TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES` so crane (the image inspector) uses HTTP instead of HTTPS for the local registry
 
@@ -450,14 +450,7 @@ kubectl delete namespace testkube-dev
 
 ### Allowed Kubernetes Contexts
 
-The Tiltfile permits these contexts by default:
-
-- `k3d-testkube-dev` (recommended)
-- `docker-desktop` / `docker-for-desktop`
-- `minikube`
-- `rancher-desktop`
-
-To allow additional contexts, modify the `allow_k8s_contexts()` call in the Tiltfile.
+The Tiltfile requires the `k3d-testkube-dev` context created by `./scripts/tilt-cluster.sh`.
 
 ### Building Images Manually
 
