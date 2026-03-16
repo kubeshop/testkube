@@ -83,6 +83,7 @@ webhooks:
 gitops:
   ## Enable Kubernetes to Control Plane sync
   enabled: false
+  ## Install the shared Testkube CRDs required by GitOps watchers
   installCRD: true
 
 execution:
@@ -244,10 +245,3 @@ analyticsEnabled: true
 
 ## allow using low-security fields for test workflow pod and container configurations
 allowLowSecurityFields: false
-
-## The operator controller itself is deprecated and thus disabled (enabled: false).
-## However, the testkube-operator chart is still included as a dependency when gitops.enabled=true
-## in order to install the required CRDs (controlled by installCRD, which defaults to true).
-## TODO: remove these lines once operator deployment and related code is fully removed from the repository.
-testkube-operator:
-  enabled: false

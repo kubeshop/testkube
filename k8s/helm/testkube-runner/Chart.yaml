@@ -8,7 +8,6 @@ dependencies:
 - name: global
   version: 0.x.x-x
   repository: "file://../global"
-- name: testkube-operator
-  version: 2.x.x-x
-  condition: gitops.installCRD, gitops.enabled
-  repository: "file://../testkube-operator"
+- name: testkube-crds
+  version: 0.1.0
+  repository: "file://../testkube-crds"
