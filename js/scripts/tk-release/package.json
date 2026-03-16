@@ -12,7 +12,7 @@
     "chalk": "5.6.2",
     "execa": "9.6.0",
     "fs-extra": "11.3.4",
-    "inquirer": "13.3.0",
+    "inquirer": "13.3.2",
     "log-symbols": "7.0.1",
     "ora": "9.3.0",
     "semver": "7.7.4",
