@@ -10,7 +10,7 @@ spec:
     serviceImage:
       type: string
       description: "AI service Docker image to test"
-      default: "kubeshop/testkube-ai-copilot:latest"
+      default: "kubeshop/testkube-ai-copilot:test"
 
   services:
     postgres:
