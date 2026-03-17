@@ -5,5 +5,5 @@ dependencies:
 - name: testkube-crds
   repository: file://../testkube-crds
   version: 0.1.0
-digest: sha256:6138dc03ce9e02b9da129b6b7ad4c9b0a1266a125a5131eceaac4eabdc047e31
+digest: sha256:9511607bd356e98bb8a1ae78d84111ee9b3c774f288b7252637d3e2bec58787f
 generated: "2026-03-16T23:58:05.226531-03:00"

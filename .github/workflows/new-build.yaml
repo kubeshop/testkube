@@ -172,6 +172,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - id: helm-publish
         name: Publish Helm Chart
         run: |
