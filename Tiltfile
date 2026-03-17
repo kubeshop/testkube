@@ -27,6 +27,7 @@ load('ext://restart_process', 'docker_build_with_restart', 'custom_build_with_re
 load('ext://uibutton', 'cmd_button', 'location', 'text_input')
 
 config.define_bool("live-reload", usage="Force live reload on/off (default: auto-detect Go toolchain)")
+config.define_bool("no-live-reload", usage="Force live reload off (full Docker rebuilds)")
 config.define_bool("debug", usage="Build with debug symbols and expose Delve debugger ports")
 config.define_string("db", usage="Database backend: mongo, postgres, both (default: postgres)")
 cfg = config.parse()
@@ -59,9 +60,10 @@ if has_go:
     compile_env = 'CGO_ENABLED=0 GOOS=linux GOARCH=' + go_arch
 
 # Resolve live_reload: explicit flag overrides auto-detect
-live_reload_flag = cfg.get('live-reload', None)
-if live_reload_flag != None:
-    live_reload = bool(live_reload_flag) and has_go
+if "no-live-reload" in cfg and bool(cfg.get("no-live-reload")):
+    live_reload = False
+elif "live-reload" in cfg:
+    live_reload = bool(cfg.get("live-reload")) and has_go
 else:
     live_reload = has_go
 
