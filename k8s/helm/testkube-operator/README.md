@@ -8,7 +8,8 @@ A Helm chart for the testkube-operator (installs needed CRDs only for now)
 
 | Repository | Name | Version |
 |------------|------|---------|
-| file://../global | global | 0.1.2 |
+| file://../global | global | 0.1.3 |
+| file://../testkube-crds | testkube-crds | 0.1.0 |
 
 ## Values
 
@@ -32,7 +33,7 @@ A Helm chart for the testkube-operator (installs needed CRDs only for now)
 | image.registry | string | `"docker.io"` |  |
 | image.repository | string | `"kubeshop/testkube-operator"` |  |
 | args | list | `--logtostderr=true` | |
-| installCRD | bool | `true` |  |
+| installCRD | bool | `true` | Installs the shared Testkube CRDs used by GitOps and operator-managed resources. |
 | kubeVersion | string | `""` |  |
 | livenessProbe.initialDelaySeconds | int | `3` |  |
 | livenessProbe.periodSeconds | int | `10` |  |

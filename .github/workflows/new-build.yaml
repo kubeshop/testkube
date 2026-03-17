@@ -172,6 +172,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Verify generated CRDs
+        run: make verify-crds-generated
       - id: helm-publish
         name: Publish Helm Chart
         run: |
