@@ -1966,6 +1966,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -7504,6 +7507,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -10836,6 +10842,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:

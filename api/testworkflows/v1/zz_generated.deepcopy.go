@@ -1182,6 +1182,11 @@ func (in *StepParallel) DeepCopyInto(out *StepParallel) {
 		*out = new(TestWorkflowExecutionSchema)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Timeouts != nil {
+		in, out := &in.Timeouts, &out.Timeouts
+		*out = new(TestWorkflowTimeouts)
+		**out = **in
+	}
 	if in.Services != nil {
 		in, out := &in.Services, &out.Services
 		*out = make(map[string]ServiceSpec, len(*in))
