@@ -1,14 +1,29 @@
 # Local Development Guide
 
-This guide explains how to set up and use the local development environment for Testkube using [Tilt](https://tilt.dev).
+This guide explains how to set up and use a local development environment for the Testkube Open Source Agent using [Tilt](https://tilt.dev).
 
-The Tilt-driven development environment builds and deploys:
+The Tilt-driven development environment automatically builds and deploys:
 
-- **testkube-api-server** — The main API server (with optional live reload on code changes)
+- **testkube-api-server** — The main API server (with optional live reload on code changes) 
 - **testworkflow-init** — Init container for Test Workflow execution
 - **testworkflow-toolkit** — Runtime utilities for Test Workflow containers
 
+Check out the [Architecture](ARCHITECTURE.md) document for details on these components.
+
 > **Note**: This guide applies to developing the **standalone/open-source Testkube agent**. It does not cover development with the agent connected to the Testkube Control Plane.
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Development Workflow](#development-workflow)
+- [Architecture](#architecture)
+- [Port Forwards](#port-forwards)
+- [Configuration](#configuration)
+- [Debugging](#debugging)
+- [Troubleshooting](#troubleshooting)
+- [Advanced Topics](#advanced-topics)
+- [Related Documentation](#related-documentation)
 
 ## Prerequisites
 
@@ -23,36 +38,28 @@ Before you begin, ensure you have the following installed:
 ## Quick Start
 
 1. **Create a local Kubernetes cluster** (if you don't have one):
-
-   ```bash
+  ```bash
    ./scripts/tilt-cluster.sh
-   ```
-
+  ```
    This creates a k3d cluster with a local container registry (`localhost:5001`). The registry is required so that Tilt-built images (like `testkube-tw-init` and `testkube-tw-toolkit`) are accessible to the API server's image inspector during Test Workflow execution.
-
 2. **Start the development environment**:
-
-   ```bash
+  ```bash
    tilt up
-   ```
-
+  ```
    This will:
-   - Detect your Go toolchain and enable live reload automatically
-   - Build 3 images: `testkube-api-server`, `testworkflow-init`, `testworkflow-toolkit`
-   - Create the `testkube-dev` namespace
-   - Deploy the Testkube Helm chart with all dependencies (PostgreSQL, MinIO, NATS)
-   - Create MinIO buckets for artifacts and logs
-   - Set up port forwards for local access
-
-3. **Open the Tilt UI** at http://localhost:10350 to monitor the deployment.
-
+  - Detect your Go toolchain and enable live reload automatically
+  - Build 3 images: `testkube-api-server`, `testworkflow-init`, `testworkflow-toolkit`
+  - Create the `testkube-dev` namespace
+  - Deploy the Testkube Helm chart with all dependencies (PostgreSQL, MinIO, NATS)
+  - Create MinIO buckets for artifacts and logs
+  - Set up port forwards for local access
+3. **Open the Tilt UI** at [http://localhost:10350](http://localhost:10350) to monitor the deployment.
 4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI. To point it at the local API server, trigger the **configure-cli** resource in the Tilt UI. Then use the **Run** button on `run-cli-command` (e.g. enter `get testworkflows`), or run commands directly:
-
-   ```bash
+  ```bash
    ./build/_local/kubectl-testkube get testworkflows
-   ```
+  ```
 
-## Options
+### Options
 
 The Tiltfile supports several command-line options:
 
@@ -76,11 +83,13 @@ tilt up -- --no-live-reload
 tilt ci
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
+
+| Option                               | Default        | Description                                                                                               |
+| ------------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------- |
 | `--live-reload` / `--no-live-reload` | Auto-detect Go | Live reload compiles Go locally and syncs the binary into the container (~2s vs ~30s full Docker rebuild) |
-| `--debug` | Off | Builds with Delve debugger, disables Go optimizations, exposes debug port :56268 |
-| `--db=<backend>` | `postgres` | Database backend: `mongo`, `postgres`, or `both` |
+| `--debug`                            | Off            | Builds with Delve debugger, disables Go optimizations, exposes debug port :56268                          |
+| `--db=<backend>`                     | `postgres`     | Database backend: `mongo`, `postgres`, or `both`                                                          |
+
 
 ## Development Workflow
 
@@ -145,12 +154,14 @@ You can also use the compiled CLI directly from your terminal:
 
 The Tilt UI includes an **install-sample-workflows** resource (under the **setup** label) that installs a set of sample workflows you can use to validate your local environment. Trigger it manually from the Tilt UI to install:
 
-| Workflow | Tool | Description |
-|----------|------|-------------|
-| `curl-workflow-smoke` | curl | Simple HTTP request to a public URL |
-| `postman-workflow-smoke` | Postman/Newman | Runs a Postman collection from the repo |
-| `playwright-workflow-smoke` | Playwright | Runs Playwright browser tests from the repo |
-| `k6-workflow-smoke` | k6 | Runs a k6 load test script from the repo |
+
+| Workflow                    | Tool           | Description                                 |
+| --------------------------- | -------------- | ------------------------------------------- |
+| `curl-workflow-smoke`       | curl           | Simple HTTP request to a public URL         |
+| `postman-workflow-smoke`    | Postman/Newman | Runs a Postman collection from the repo     |
+| `playwright-workflow-smoke` | Playwright     | Runs Playwright browser tests from the repo |
+| `k6-workflow-smoke`         | k6             | Runs a k6 load test script from the repo    |
+
 
 After installing, run a workflow using the **run-cli-command** resource or from the terminal:
 
@@ -240,11 +251,13 @@ kubectl logs -f -n testkube-dev deployment/testkube-api-server
 
 All images use Dockerfiles in `build/_local/` and use production image names so Tilt can auto-match them against the Helm-rendered manifests:
 
-| Image | Dockerfile | Build Mode | Description |
-|-------|------------|------------|-------------|
-| `kubeshop/testkube-api-server` | `agent-server.Dockerfile` | Live reload (default) or Docker build | Main API server — rebuilds on code changes |
-| `kubeshop/testkube-tw-init` | `testworkflow-init.Dockerfile` | Docker build | Init container for TW execution |
-| `kubeshop/testkube-tw-toolkit` | `testworkflow-toolkit.Dockerfile` | Docker build | Runtime utilities for TW containers |
+
+| Image                          | Dockerfile                        | Build Mode                            | Description                                |
+| ------------------------------ | --------------------------------- | ------------------------------------- | ------------------------------------------ |
+| `kubeshop/testkube-api-server` | `agent-server.Dockerfile`         | Live reload (default) or Docker build | Main API server — rebuilds on code changes |
+| `kubeshop/testkube-tw-init`    | `testworkflow-init.Dockerfile`    | Docker build                          | Init container for TW execution            |
+| `kubeshop/testkube-tw-toolkit` | `testworkflow-toolkit.Dockerfile` | Docker build                          | Runtime utilities for TW containers        |
+
 
 ### Build Modes
 
@@ -258,24 +271,28 @@ All images use Dockerfiles in `build/_local/` and use production image names so 
 
 Each Dockerfile provides multiple build targets:
 
-| Target | Used When | Description |
-|--------|-----------|-------------|
-| `dist` | Default (no --debug) | Distroless/minimal image, no debugger |
-| `live` | Live reload (no --debug) | BusyBox-based image with shell (required for binary sync) |
-| `debug` | `--debug` flag | Includes Delve debugger, Go runtime |
+
+| Target  | Used When                | Description                                               |
+| ------- | ------------------------ | --------------------------------------------------------- |
+| `dist`  | Default (no --debug)     | Distroless/minimal image, no debugger                     |
+| `live`  | Live reload (no --debug) | BusyBox-based image with shell (required for binary sync) |
+| `debug` | `--debug` flag           | Includes Delve debugger, Go runtime                       |
+
 
 ## Port Forwards
 
-| Service | Local Port | Pod Port | Description | Condition |
-|---------|------------|----------|-------------|-----------|
-| testkube-api-server | 8088 | 8088 | HTTP REST API | Always |
-| testkube-api-server | 8089 | 8089 | gRPC API | Always |
-| testkube-api-server | 56268 | 56268 | Delve debugger | `--debug` only |
-| PostgreSQL | 5432 | 5432 | Database | `--db=postgres` or `both` |
-| MongoDB | 27017 | 27017 | Database | `--db=mongo` or `both` |
-| MinIO | 9000 | 9000 | S3-compatible artifact storage | Always |
-| MinIO | 9001 | 9090 | MinIO web console | Always |
-| NATS | 4222 | 4222 | Message queue | Always |
+
+| Service             | Local Port | Pod Port | Description                    | Condition                 |
+| ------------------- | ---------- | -------- | ------------------------------ | ------------------------- |
+| testkube-api-server | 8088       | 8088     | HTTP REST API                  | Always                    |
+| testkube-api-server | 8089       | 8089     | gRPC API                       | Always                    |
+| testkube-api-server | 56268      | 56268    | Delve debugger                 | `--debug` only            |
+| PostgreSQL          | 5432       | 5432     | Database                       | `--db=postgres` or `both` |
+| MongoDB             | 27017      | 27017    | Database                       | `--db=mongo` or `both`    |
+| MinIO               | 9000       | 9000     | S3-compatible artifact storage | Always                    |
+| MinIO               | 9001       | 9090     | MinIO web console              | Always                    |
+| NATS                | 4222       | 4222     | Message queue                  | Always                    |
+
 
 ## Configuration
 
@@ -328,11 +345,13 @@ This builds all images with the `debug` Dockerfile target (which includes Delve)
 
 **Debug Ports:**
 
-| Image | Delve Port | Notes |
-|-------|------------|-------|
-| testkube-api-server | 56268 | Port-forwarded automatically |
-| testworkflow-init | 56268 | Spawned dynamically during test execution |
-| testworkflow-toolkit | 56300 | Spawned dynamically during test execution |
+
+| Image                | Delve Port | Notes                                     |
+| -------------------- | ---------- | ----------------------------------------- |
+| testkube-api-server  | 56268      | Port-forwarded automatically              |
+| testworkflow-init    | 56268      | Spawned dynamically during test execution |
+| testworkflow-toolkit | 56300      | Spawned dynamically during test execution |
+
 
 ### Connecting Your IDE
 
@@ -373,9 +392,9 @@ psql -h localhost -p 5432 -U testkube -d backend
 
 ### Accessing MinIO
 
-- **Web Console**: http://localhost:9001
+- **Web Console**: [http://localhost:9001](http://localhost:9001)
 - **Credentials**: `minio` / `minio123`
-- **API Endpoint**: http://localhost:9000
+- **API Endpoint**: [http://localhost:9000](http://localhost:9000)
 
 The Tiltfile automatically creates the required buckets (`testkube-artifacts`, `testkube-logs`) via a Kubernetes Job after MinIO starts.
 
@@ -496,3 +515,4 @@ tilt ci
 - [Tilt Documentation](https://docs.tilt.dev)
 - [Helm Chart README](./k8s/helm/testkube/README.md)
 - [Contributing Guide](./CONTRIBUTING.md)
+
