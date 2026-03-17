@@ -15,7 +15,7 @@ The Tilt-driven development environment builds and deploys:
 Before you begin, ensure you have the following installed:
 
 - **Docker** with BuildX support
-- **[k3d](https://k3d.io/)** (recommended — the setup script creates a k3d cluster with a local registry)
+- **[k3d](https://k3d.io/)**  — the setup script creates a k3d cluster with a local registry
 - **[Tilt](https://docs.tilt.dev/install.html)** v0.30.0 or later
 - **[Helm](https://helm.sh/docs/intro/install/)** v3.x
 - **Go** 1.26+ (enables live reload — optional but recommended)
@@ -81,6 +81,126 @@ tilt ci
 | `--live-reload` / `--no-live-reload` | Auto-detect Go | Live reload compiles Go locally and syncs the binary into the container (~2s vs ~30s full Docker rebuild) |
 | `--debug` | Off | Builds with Delve debugger, disables Go optimizations, exposes debug port :56268 |
 | `--db=<backend>` | `postgres` | Database backend: `mongo`, `postgres`, or `both` |
+
+## Development Workflow
+
+### Making Code Changes
+
+**API Server (live reload enabled):**
+
+1. Edit Go files in `cmd/api-server/`, `pkg/`, or `internal/`
+2. Tilt detects the change and triggers a local Go compile (~2s)
+3. The compiled binary is synced into the running container
+4. The process restarts with your changes — no full Docker rebuild needed
+
+**API Server (live reload disabled):**
+
+1. Edit Go files
+2. Tilt triggers a full Docker build using `build/_local/agent-server.Dockerfile`
+3. The deployment is updated with the new image
+
+**kubectl-testkube CLI plugin:**
+
+1. Edit Go files under `cmd/kubectl-testkube/` (for command wiring) and related shared packages under `pkg/` or `internal/`
+2. Tilt detects the change and reruns the `compile:cli` resource to rebuild `build/_local/kubectl-testkube`
+3. Use `run-cli-command` in the Tilt UI (or run `./build/_local/kubectl-testkube <command>` in your terminal) to validate behavior
+4. If needed, run `configure-cli` again to point the CLI context back to your local API server
+
+**Test Workflow images:**
+
+1. Edit files in `cmd/testworkflow-init/` or `cmd/testworkflow-toolkit/`
+2. Tilt detects the change and triggers a Docker rebuild
+3. New Test Workflow executions will use the updated images
+
+### Verification
+
+The Tilt UI includes verification resources under the **verify** label:
+
+- **health-check** — Manually trigger a health check against the API (`curl http://localhost:8088/health`)
+- **smoke-test** — Manually trigger a smoke test that verifies the API and workflows endpoint
+- **Health Check button** — Click the heart icon on the `testkube-api-server` resource in the Tilt UI
+- **Recreate DB button** — Click the refresh icon on the `testkube-api-server` resource to recreate the active database backend(s) and restart the API server
+
+In CI mode (`tilt ci`), the smoke test runs automatically and Tilt exits on success or failure.
+
+### Testkube CLI
+
+When Go is installed, Tilt automatically compiles the Testkube CLI (`kubectl-testkube`) for your host OS and configures it to connect directly to the local API server. The following resources appear under the **cli** label in the Tilt UI:
+
+- **compile:cli** — Compiles `cmd/kubectl-testkube` to `build/_local/kubectl-testkube`. Rebuilds automatically when CLI or shared code changes.
+- **configure-cli** — Manually trigger to run `set context --kubeconfig`, pointing the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Not auto-run to avoid overwriting your existing CLI configuration.
+- **run-cli-command** — A dedicated resource for running arbitrary CLI commands. Click the **Run** button, enter any testkube subcommand (e.g. `run testworkflow curl-workflow-smoke`), and the output appears in the resource logs.
+
+You can also use the compiled CLI directly from your terminal:
+
+```bash
+./build/_local/kubectl-testkube get testworkflows
+./build/_local/kubectl-testkube run testworkflow curl-workflow-smoke
+./build/_local/kubectl-testkube get testworkflowexecutions
+```
+
+> **Note**: The CLI context is stored in `~/.testkube/config.json`. If you also have a system-installed `testkube` CLI, the `configure-cli` step will update the shared config to point at your local dev environment. Run `testkube set context` again to reconfigure it when you're done with local development.
+
+### Sample Test Workflows
+
+The Tilt UI includes an **install-sample-workflows** resource (under the **setup** label) that installs a set of sample workflows you can use to validate your local environment. Trigger it manually from the Tilt UI to install:
+
+| Workflow | Tool | Description |
+|----------|------|-------------|
+| `curl-workflow-smoke` | curl | Simple HTTP request to a public URL |
+| `postman-workflow-smoke` | Postman/Newman | Runs a Postman collection from the repo |
+| `playwright-workflow-smoke` | Playwright | Runs Playwright browser tests from the repo |
+| `k6-workflow-smoke` | k6 | Runs a k6 load test script from the repo |
+
+After installing, run a workflow using the **run-cli-command** resource or from the terminal:
+
+```bash
+# Via the Run button on run-cli-command:
+#   run testworkflow curl-workflow-smoke
+
+# Or from the terminal:
+./build/_local/kubectl-testkube run testworkflow curl-workflow-smoke
+```
+
+### Running Tests and Linting
+
+From the Tilt UI, trigger these manual resources:
+
+- **make test** — Runs the full test suite
+- **make lint** — Runs golangci-lint
+- **recreate-database** — Recreates the `backend` database for the enabled backend (`--db=postgres`, `--db=mongo`, or both) and restarts `testkube-api-server`
+
+Or run directly:
+
+```bash
+make test
+make lint
+
+# Run specific package tests
+go test ./cmd/api-server/... -v
+go test ./pkg/... -race
+```
+
+### Code Generation
+
+The Tilt UI exposes all code generation targets under the **generate** label:
+
+- **make generate** — Run all generators
+- **make generate-protobuf** — Regenerate protobuf code
+- **make generate-openapi** — Regenerate OpenAPI models
+- **make generate-mocks** — Regenerate mock files
+- **make generate-sqlc** — Regenerate SQL client code
+- **make generate-crds** — Regenerate Kubernetes CRDs
+
+### Viewing Logs
+
+**Via Tilt UI**: Click on any resource to see live logs.
+
+**Via kubectl**:
+
+```bash
+kubectl logs -f -n testkube-dev deployment/testkube-api-server
+```
 
 ## Architecture
 
@@ -195,119 +315,6 @@ minio_pass = "minio123"          # MinIO root password
 ```
 
 If you override MinIO credentials in `tilt-values.yaml`, keep `minio_user` and `minio_pass` in sync here so the create-minio-buckets job succeeds.
-
-## Development Workflow
-
-### Making Code Changes
-
-**API Server (live reload enabled):**
-
-1. Edit Go files in `cmd/api-server/`, `pkg/`, or `internal/`
-2. Tilt detects the change and triggers a local Go compile (~2s)
-3. The compiled binary is synced into the running container
-4. The process restarts with your changes — no full Docker rebuild needed
-
-**API Server (live reload disabled):**
-
-1. Edit Go files
-2. Tilt triggers a full Docker build using `build/_local/agent-server.Dockerfile`
-3. The deployment is updated with the new image
-
-**Test Workflow images:**
-
-1. Edit files in `cmd/testworkflow-init/` or `cmd/testworkflow-toolkit/`
-2. Tilt detects the change and triggers a Docker rebuild
-3. New Test Workflow executions will use the updated images
-
-### Verification
-
-The Tilt UI includes verification resources under the **verify** label:
-
-- **health-check** — Manually trigger a health check against the API (`curl http://localhost:8088/health`)
-- **smoke-test** — Manually trigger a smoke test that verifies the API and workflows endpoint
-- **Health Check button** — Click the heart icon on the `testkube-api-server` resource in the Tilt UI
-- **Recreate DB button** — Click the refresh icon on the `testkube-api-server` resource to recreate the active database backend(s) and restart the API server
-
-In CI mode (`tilt ci`), the smoke test runs automatically and Tilt exits on success or failure.
-
-### Testkube CLI
-
-When Go is installed, Tilt automatically compiles the Testkube CLI (`kubectl-testkube`) for your host OS and configures it to connect directly to the local API server. The following resources appear under the **cli** label in the Tilt UI:
-
-- **compile:cli** — Compiles `cmd/kubectl-testkube` to `build/_local/kubectl-testkube`. Rebuilds automatically when CLI or shared code changes.
-- **configure-cli** — Manually trigger to run `set context --kubeconfig`, pointing the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Not auto-run to avoid overwriting your existing CLI configuration.
-- **run-cli-command** — A dedicated resource for running arbitrary CLI commands. Click the **Run** button, enter any testkube subcommand (e.g. `run testworkflow curl-workflow-smoke`), and the output appears in the resource logs.
-
-You can also use the compiled CLI directly from your terminal:
-
-```bash
-./build/_local/kubectl-testkube get testworkflows
-./build/_local/kubectl-testkube run testworkflow curl-workflow-smoke
-./build/_local/kubectl-testkube get testworkflowexecutions
-```
-
-> **Note**: The CLI context is stored in `~/.testkube/config.json`. If you also have a system-installed `testkube` CLI, the `configure-cli` step will update the shared config to point at your local dev environment. Run `testkube set context` again to reconfigure it when you're done with local development.
-
-### Sample Test Workflows
-
-The Tilt UI includes an **install-sample-workflows** resource (under the **setup** label) that installs a set of sample workflows you can use to validate your local environment. Trigger it manually from the Tilt UI to install:
-
-| Workflow | Tool | Description |
-|----------|------|-------------|
-| `curl-workflow-smoke` | curl | Simple HTTP request to a public URL |
-| `postman-workflow-smoke` | Postman/Newman | Runs a Postman collection from the repo |
-| `playwright-workflow-smoke` | Playwright | Runs Playwright browser tests from the repo |
-| `k6-workflow-smoke` | k6 | Runs a k6 load test script from the repo |
-
-After installing, run a workflow using the **run-cli-command** resource or from the terminal:
-
-```bash
-# Via the Run button on run-cli-command:
-#   run testworkflow curl-workflow-smoke
-
-# Or from the terminal:
-./build/_local/kubectl-testkube run testworkflow curl-workflow-smoke
-```
-
-### Running Tests and Linting
-
-From the Tilt UI, trigger these manual resources:
-
-- **make test** — Runs the full test suite
-- **make lint** — Runs golangci-lint
-- **recreate-database** — Recreates the `backend` database for the enabled backend (`--db=postgres`, `--db=mongo`, or both) and restarts `testkube-api-server`
-
-Or run directly:
-
-```bash
-make test
-make lint
-
-# Run specific package tests
-go test ./cmd/api-server/... -v
-go test ./pkg/... -race
-```
-
-### Code Generation
-
-The Tilt UI exposes all code generation targets under the **generate** label:
-
-- **make generate** — Run all generators
-- **make generate-protobuf** — Regenerate protobuf code
-- **make generate-openapi** — Regenerate OpenAPI models
-- **make generate-mocks** — Regenerate mock files
-- **make generate-sqlc** — Regenerate SQL client code
-- **make generate-crds** — Regenerate Kubernetes CRDs
-
-### Viewing Logs
-
-**Via Tilt UI**: Click on any resource to see live logs.
-
-**Via kubectl**:
-
-```bash
-kubectl logs -f -n testkube-dev deployment/testkube-api-server
-```
 
 ## Debugging
 
@@ -483,6 +490,8 @@ tilt ci
 
 ## Related Documentation
 
+- [README](./README.md)
+- [Architecture Guide](./ARCHITECTURE.md)
 - [Testkube Documentation](https://docs.testkube.io)
 - [Tilt Documentation](https://docs.tilt.dev)
 - [Helm Chart README](./k8s/helm/testkube/README.md)
