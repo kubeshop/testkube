@@ -48,7 +48,7 @@ require (
 	github.com/moogar0880/problems v1.0.1
 	github.com/nats-io/nats-server/v2 v2.12.5
 	github.com/nats-io/nats.go v1.49.0
-	github.com/ohler55/ojg v1.28.0
+	github.com/ohler55/ojg v1.28.1
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
