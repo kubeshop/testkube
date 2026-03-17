@@ -33,7 +33,7 @@ type MongoLeaseBackend struct {
 }
 
 func NewMongoLeaseBackend(db *mongo.Database) *MongoLeaseBackend {
-	return &MongoLeaseBackend{coll: db.Collection(mongoCollectionTriggersLease)}
+	return &MongoLeaseBackend{coll: db.Collection(mongoCollectionTriggersLease, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true}))}
 }
 
 func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) (leased bool, err error) {
