@@ -12254,6 +12254,16 @@ spec:
                       description: assume all the steps are pure by default
                       type: boolean
                   type: object
+                timeouts:
+                  description: per-workflow timeout configuration
+                  properties:
+                    initialization:
+                      description: maximum time for initialization/transitioning before steps run (not implemented)
+                      type: string
+                    queue:
+                      description: maximum time the execution may spend in queue before starting (not implemented)
+                      type: string
+                  type: object
                 use:
                   description: templates to include at a top-level of workflow
                   items:
