@@ -16,7 +16,7 @@ permissions:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: depot-ubuntu-22.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    runs-on: depot-ubuntu-22.04
+    runs-on: ubuntu-22.04
 
     services:
       mongo:
@@ -152,3 +152,36 @@ jobs:
           path: integration-coverage.out
           if-no-files-found: error
           retention-days: 1
+
+  verify-generated-crds:
+    name: Verify generated CRDs
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: false
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            bin/tooling
+          key: ${{ runner.os }}-go-verify-crds-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-verify-crds-
+
+      - name: Show Go environment
+        run: |
+          go env GOCACHE
+          go env GOMODCACHE
+          echo "Test tool location:"
+          ls -la bin/tooling/ || echo "No tools cached yet"
+
+      - name: Verify generated CRDs
+        run: make verify-crds-generated

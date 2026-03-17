@@ -9,3 +9,6 @@ dependencies:
     version: 0.1.3
     #repository: https://kubeshop.github.io/helm-charts
     repository: "file://../global"
+  - name: testkube-crds
+    version: 0.1.0
+    repository: "file://../testkube-crds"
