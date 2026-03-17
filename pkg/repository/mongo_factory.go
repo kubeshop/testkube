@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
@@ -62,20 +61,16 @@ func (f *MongoDBFactory) NewTestWorkflowRepository() testworkflow.Repository {
 	return f.testWorkflowRepo
 }
 
-func (f *MongoDBFactory) executionsCollection() *mongo.Collection {
-	return f.db.Collection(testworkflowmongo.CollectionName, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true}))
-}
-
 func (f *MongoDBFactory) NewScheduler() scheduling.Scheduler {
-	return scheduling.NewMongoScheduler(f.executionsCollection())
+	return scheduling.NewMongoScheduler(f.db.Collection(testworkflowmongo.CollectionName))
 }
 
 func (f *MongoDBFactory) NewExecutionController() scheduling.Controller {
-	return scheduling.NewMongoExecutionController(f.executionsCollection())
+	return scheduling.NewMongoExecutionController(f.db.Collection(testworkflowmongo.CollectionName))
 }
 
 func (f *MongoDBFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
-	return scheduling.NewMongoExecutionQuerier(f.executionsCollection())
+	return scheduling.NewMongoExecutionQuerier(f.db.Collection(testworkflowmongo.CollectionName))
 }
 
 func (f *MongoDBFactory) NewSequenceRepository() sequence.Repository {

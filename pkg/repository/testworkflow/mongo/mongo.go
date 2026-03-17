@@ -34,7 +34,7 @@ var (
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:           db,
-		Coll:         db.Collection(CollectionName, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true})),
+		Coll:         db.Collection(CollectionName),
 		allowDiskUse: allowDiskUse,
 	}
 
