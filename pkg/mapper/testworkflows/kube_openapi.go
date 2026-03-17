@@ -469,6 +469,13 @@ func MapConcurrencyPolicyKubeToApi(v testworkflowsv1.ConcurrencyPolicy) testkube
 	}
 }
 
+func MapTimeoutsKubeToAPI(v testworkflowsv1.TestWorkflowTimeouts) testkube.TestWorkflowTimeouts {
+	return testkube.TestWorkflowTimeouts{
+		Queue:          v.Queue,
+		Initialization: v.Initialization,
+	}
+}
+
 func MapContentGitKubeToAPI(v testworkflowsv1.ContentGit) testkube.TestWorkflowContentGit {
 	return testkube.TestWorkflowContentGit{
 		Uri:          v.Uri,
@@ -1069,6 +1076,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
 		Pod:         common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsKubeToAPI),
 		Setup:       common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:       common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		After:       common.MapSlice(v.After, MapIndependentStepKubeToAPI),
@@ -1272,6 +1280,7 @@ func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowS
 		After:       common.MapSlice(v.After, MapStepKubeToAPI),
 		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
 		Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
@@ -1291,6 +1300,7 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 		After:       common.MapSlice(v.After, MapIndependentStepKubeToAPI),
 		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
 		Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }

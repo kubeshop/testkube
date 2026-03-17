@@ -270,6 +270,12 @@ spec:
   execution:
     # Object. Test workflow execution tags. Tags help with filtering and organizing workflow executions for easier management and reporting. Custom metadata in key-value format.
     tags: {}
+  # Object. Per-workflow timeout configuration. Limits how long the execution may spend in queue and during initialization before steps run.
+  timeouts:
+    # String. Maximum time the execution may spend in queue before starting (e.g. 30s, 5m).
+    queue: ""
+    # String. Maximum time for initialization/transitioning before steps run (e.g. 60s, 2m).
+    initialization: ""
   # Object. Configuration for the scheduled job. Settings for the Kubernetes Job that will execute the TestWorkflow. Controls how the Job is created and managed.
   job:
     # Integer. Duration in seconds the job may be active on the node. After this time, the job will be terminated regardless of completion state. Prevents stuck jobs from consuming resources indefinitely.
