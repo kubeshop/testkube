@@ -1087,6 +1087,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 		Container:   common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 		Job:         common.MapPtr(v.Job, MapJobConfigAPIToKube),
 		Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+		Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsAPIToKube),
 		Use:         common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 		Setup:       common.MapSlice(v.Setup, MapStepAPIToKube),
 		Steps:       common.MapSlice(v.Steps, MapStepAPIToKube),
