@@ -62,7 +62,9 @@ func ValidateVersions(apiVersionString, clientVersionString string) error {
 	apiMinorVersion := TrimPatchVersion(apiVersionString)
 	apiVersion, err := semver.NewVersion(apiMinorVersion)
 	if err != nil {
-		return fmt.Errorf("parsing server version '%s': %w", apiVersionString, err)
+		// Local/dev builds can expose non-semver values (for example "local-dev").
+		// In that case we skip version compatibility checks.
+		return nil
 	}
 
 	if clientVersionString == "" {

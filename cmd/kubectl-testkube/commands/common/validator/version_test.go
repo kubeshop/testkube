@@ -38,4 +38,13 @@ func TestValidateVersions(t *testing.T) {
 		assert.ErrorIs(t, err, ErrOldClientVersion)
 	})
 
+	t.Run("non-semver server version should skip check", func(t *testing.T) {
+		apiVersion := "local-dev"
+		clientVersion := "1.10.1"
+
+		err := ValidateVersions(apiVersion, clientVersion)
+
+		assert.NoError(t, err)
+	})
+
 }

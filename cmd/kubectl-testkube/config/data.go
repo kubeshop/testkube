@@ -48,6 +48,12 @@ type Data struct {
 	Master       Master       `json:"master,omitempty"`
 }
 
+// IsControlPlaneContext reports whether the current context is cloud-backed
+// and has an API key available for control plane API operations.
+func (c Data) IsControlPlaneContext() bool {
+	return c.ContextType == ContextTypeCloud && c.CloudContext.ApiKey != ""
+}
+
 func (c *Data) EnableAnalytics() {
 	c.TelemetryEnabled = true
 }

@@ -11,6 +11,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+func printStandaloneModeMessage() {
+	ui.Warn("The CLI is connected to a Testkube Agent running in standalone mode.")
+	ui.Warn("The `get agents` command is only applicable when connected to the control plane.")
+	ui.Warn("Read More: https://docs.testkube.io/articles/agents-overview")
+}
+
 func NewGetAgentCommand() *cobra.Command {
 	var (
 		decryptSecretKey bool
@@ -48,6 +54,13 @@ func NewGetAgentCommand() *cobra.Command {
 }
 
 func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
+	cfg, err := config.Load()
+	ui.ExitOnError("loading config", err)
+
+	if !cfg.IsControlPlaneContext() {
+		printStandaloneModeMessage()
+		return
+	}
 	registeredAgents, err := GetControlPlaneAgents(cmd, true)
 	ui.ExitOnError("getting agents", err)
 
@@ -71,22 +84,34 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 	}
 
 	if decryptSecretKey {
+		if agent.Registered == nil {
+			ui.Failf("cannot decrypt secret key for agent '%s': this command requires a cloud-connected context and a registered control plane agent", agentId)
+		}
 		secretKey, err := GetControlPlaneAgentSecretKey(cmd, agent.Registered.ID)
 		ui.ExitOnError("failed to decrypt secret key", err)
 		agent.Registered.SecretKey = secretKey
+	}
+
+	if agent.Registered == nil {
+		ui.Failf("agent '%s' is not registered in control plane", agentId)
 	}
 
 	PrintControlPlaneAgent(*agent.Registered)
 }
 
 func UiListAgents(cmd *cobra.Command, showUnknown bool, showDeleted bool, allEnvironments bool) {
+	cfg, err := config.Load()
+	ui.ExitOnError("loading config", err)
+
+	if !cfg.IsControlPlaneContext() {
+		printStandaloneModeMessage()
+		return
+	}
 	registeredAgents, err := GetControlPlaneAgents(cmd, showDeleted)
 	ui.ExitOnError("getting agents", err)
 
 	// Filter agents by current environment (matching dashboard behavior) unless --all-environments is set
 	if !allEnvironments {
-		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
 		registeredAgents = FilterAgentsByEnvironment(registeredAgents, cfg.CloudContext.EnvironmentId)
 	}
 
