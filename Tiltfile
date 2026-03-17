@@ -583,15 +583,6 @@ if has_go:
     )
 
     local_resource(
-        'configure-cli',
-        cmd=CLI_BIN + ' set context --kubeconfig --namespace ' + NAMESPACE + ' --api-uri http://localhost:8088 --client direct',
-        labels=['cli'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-        resource_deps=['compile:cli'],
-    )
-
-    local_resource(
         'run-cli-command',
         cmd='echo "Use the Run button to execute a CLI command."',
         labels=['cli'],
@@ -608,6 +599,20 @@ if has_go:
         inputs=[
             text_input('COMMAND', placeholder='CLI args, e.g. get testworkflows (input is interpreted by sh)'),
         ],
+    )
+
+    cmd_button('run-cli-command:configure',
+        argv=['sh', '-c', CLI_BIN + ' set context --kubeconfig --namespace ' + NAMESPACE + ' --api-uri http://localhost:8088 --client direct'],
+        resource='run-cli-command',
+        icon_name='settings',
+        text='Configure',
+    )
+
+    cmd_button('run-cli-command:docs',
+        argv=['open', 'https://docs.testkube.io/cli/testkube'],
+        resource='run-cli-command',
+        icon_name='menu_book',
+        text='CLI Docs',
     )
 
 # =============================================================================
