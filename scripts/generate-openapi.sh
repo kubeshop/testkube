@@ -1,88 +1,87 @@
 #!/bin/bash
-# OpenAPI Model Post-Processing Script
+# Generate OpenAPI Go models from testkube.yaml using swagger-codegen via Docker.
 #
-# This script performs necessary transformations on generated OpenAPI models
-# to ensure compatibility with the Testkube codebase.
-#
-# Usage: Called automatically by 'make generate-openapi'
+# Requires: docker
+# Usage: Called via 'go generate ./pkg/api/v1/testkube' or 'make generate-openapi'
 
 set -euo pipefail
 
-# ==================== Configuration ====================
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-readonly TMP_API_DIR="${PROJECT_ROOT}/tmp/api/testkube"
+readonly TMP_DIR="${PROJECT_ROOT}/tmp"
+readonly TMP_API_DIR="${TMP_DIR}/api/testkube"
 readonly TARGET_DIR="${PROJECT_ROOT}/pkg/api/v1/testkube"
 
-# Detect if GNU sed is installed
+readonly SWAGGER_CODEGEN_IMAGE="swaggerapi/swagger-codegen-cli-v3:3.0.78"
+
+# ==================== Helpers ====================
+
 is_gnu_sed() {
     sed --version 2>/dev/null | grep -q "GNU sed"
 }
 
-# Use this function instead of a variable to handle sed portability
 sed_inplace() {
     if is_gnu_sed; then
         sed -i "$@"
     else
-        # This branch will now run for both non-GNU sed and macOS's BSD sed
         sed -i '' "$@"
     fi
 }
 
-# ==================== Functions ====================
-log_info() {
-    echo "[INFO] $1"
+log_info()    { echo "[INFO] $1"; }
+log_error()   { echo "[ERROR] $1" >&2; }
+log_success() { echo "[SUCCESS] $1"; }
+
+# ==================== Step 1: Run swagger-codegen via Docker ====================
+
+run_swagger_codegen() {
+    log_info "Running swagger-codegen via Docker..."
+
+    if ! command -v docker &> /dev/null; then
+        log_error "docker is not installed"
+        exit 1
+    fi
+
+    rm -rf "${TMP_DIR}/api"
+
+    docker run --rm \
+        --user "$(id -u):$(id -g)" \
+        -v "${PROJECT_ROOT}:/work" \
+        -w /work \
+        "${SWAGGER_CODEGEN_IMAGE}" \
+        generate \
+        --model-package testkube \
+        -i api/v1/testkube.yaml \
+        -l go \
+        -o /work/tmp/api/testkube
 }
 
-log_error() {
-    echo "[ERROR] $1" >&2
-}
+# ==================== Step 2: Post-process generated files ====================
 
-log_success() {
-    echo "[SUCCESS] $1"
-}
+move_generated_files() {
+    log_info "Moving generated model files..."
 
-# Validate prerequisites
-validate_environment() {
     if [[ ! -d "${TMP_API_DIR}" ]]; then
         log_error "Generated API directory not found: ${TMP_API_DIR}"
-        log_error "Please run swagger-codegen first"
         exit 1
     fi
-
-    if ! command -v sed &> /dev/null; then
-        log_error "sed command not found"
-        exit 1
-    fi
-}
-
-# Move generated files to target directory
-move_generated_files() {
-    log_info "Moving generated files to target directory..."
 
     # Rename test files to avoid conflicts
     if [[ -f "${TMP_API_DIR}/model_test.go" ]]; then
         mv "${TMP_API_DIR}/model_test.go" "${TMP_API_DIR}/model_test_base.go" || true
     fi
-
     if [[ -f "${TMP_API_DIR}/model_test_suite_step_execute_test.go" ]]; then
         mv "${TMP_API_DIR}/model_test_suite_step_execute_test.go" \
            "${TMP_API_DIR}/model_test_suite_step_execute_test_base.go" || true
     fi
 
-    # Create target directory if it doesn't exist
     mkdir -p "${TARGET_DIR}"
-
-    # Move all model files
     find "${TMP_API_DIR}" -name "model_*.go" -exec mv {} "${TARGET_DIR}/" \;
-
-    # Clean up temporary directory
-    rm -rf "${PROJECT_ROOT}/tmp"
+    rm -rf "${TMP_DIR}"
 }
 
-# Apply transformations to generated files
 apply_transformations() {
-    log_info "Applying transformations to generated files..."
+    log_info "Applying transformations..."
 
     # Change package name from swagger to testkube
     find "${TARGET_DIR}" -type f -name "*.go" | while read -r file; do
@@ -105,11 +104,9 @@ apply_transformations() {
     done
 }
 
-# Apply update-specific transformations
 apply_update_transformations() {
     log_info "Applying update-specific transformations..."
 
-    # Make fields in update structs pointers
     find "${TARGET_DIR}" -name "*update*.go" -type f | while read -r file; do
         sed_inplace "s/ map/ \*map/g" "$file"
         sed_inplace "s/ string/ \*string/g" "$file"
@@ -118,7 +115,6 @@ apply_update_transformations() {
         sed_inplace "s/ int64/ \*int64/g" "$file"
         sed_inplace "s/ bool/ \*bool/g" "$file"
 
-        # Fix specific struct pointer types
         sed_inplace "s/ \*TestContent/ \*\*TestContentUpdate/g" "$file"
         sed_inplace "s/ \*ExecutionRequest/ \*\*ExecutionUpdateRequest/g" "$file"
         sed_inplace "s/ \*Repository/ \*\*RepositoryUpdate/g" "$file"
@@ -133,7 +129,6 @@ apply_update_transformations() {
     done
 }
 
-# Apply special case transformations
 apply_special_transformations() {
     log_info "Applying special case transformations..."
 
@@ -148,28 +143,22 @@ apply_special_transformations() {
     done
 
     # Make bool fields pointers in key ref files
-    find "${TARGET_DIR}" -name "**_key_ref.go" -type f | while read -r file; do
+    find "${TARGET_DIR}" -name "*_key_ref.go" -type f | while read -r file; do
         sed_inplace "s/ bool/ \*bool/g" "$file"
     done
 }
 
-# Main execution
+# ==================== Main ====================
+
 main() {
-    log_info "Starting OpenAPI post-processing..."
-
-    # Validate environment
-    validate_environment
-
-    # Move generated files
+    log_info "Generating OpenAPI models..."
+    run_swagger_codegen
     move_generated_files
-
-    # Apply transformations
     apply_transformations
     apply_update_transformations
     apply_special_transformations
-
-    log_success "OpenAPI post-processing completed successfully"
+    cd "${PROJECT_ROOT}" && go fmt pkg/api/v1/testkube/*.go > /dev/null
+    log_success "OpenAPI model generation complete"
 }
 
-# Run main function
 main "$@"
