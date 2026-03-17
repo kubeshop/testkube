@@ -158,9 +158,9 @@ mongodb:
       # -- MongoDB metrics image registry
       registry: us-east1-docker.pkg.dev
       # -- MongoDB metrics image repository
-      repository: testkube-cloud-372110/testkube/mongodb
+      repository: testkube-cloud-372110/testkube/mongodb-exporter
       # -- MongoDB metrics image tag
-      tag: "8.2.5"
+      tag: "0.47.0-debian-12-r1"
 
 # PostgreSQL parameters
 # For more configuration parameters of PostgreSQL chart please look here: https://github.com/bitnami/charts/tree/main/bitnami/postgresql#parameters
