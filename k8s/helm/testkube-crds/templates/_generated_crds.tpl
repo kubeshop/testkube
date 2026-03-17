@@ -8997,6 +8997,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -14532,6 +14535,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -17861,6 +17867,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -21443,6 +21452,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -26839,6 +26851,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -30049,6 +30064,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
