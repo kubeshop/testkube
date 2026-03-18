@@ -243,6 +243,7 @@ local_resource(
 # Helm Deployment
 # =============================================================================
 
+local("helm dependency build ./k8s/helm/testkube-operator 2>/dev/null || helm dependency update ./k8s/helm/testkube-operator", quiet=True, echo_off=True)
 local("helm dependency build {} 2>/dev/null || helm dependency update {}".format(HELM_CHART_PATH, HELM_CHART_PATH), quiet=True, echo_off=True)
 
 use_mongo = db_backend in ['mongo', 'both']
