@@ -373,7 +373,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	request, err := http.NewRequest(http.MethodPost, string(uri), body)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, string(uri), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)

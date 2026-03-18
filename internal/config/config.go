@@ -150,6 +150,9 @@ type SecretManagementConfig struct {
 
 type ImageInspectorConfig struct {
 	TestkubeRegistry string `envconfig:"TESTKUBE_REGISTRY" default:""`
+	// InsecureRegistries is a comma-separated list of registry hostnames (host:port) that should
+	// be accessed over plain HTTP instead of HTTPS. Useful for local development with k3d/kind registries.
+	InsecureRegistries string `envconfig:"TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES" default:""`
 	// TestkubeImageCredentialsCacheTTL is the duration for which the image pull credentials should be cached provided as a Go duration string.
 	// If set to 0, the cache is disabled.
 	TestkubeImageCredentialsCacheTTL time.Duration `envconfig:"TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL" default:"30m"`

@@ -28,6 +28,10 @@ to find items containing all terms`
 
 	SinceDescription = "Filter executions created after this time (ISO 8601 format)"
 
+	StartDateDescription = "Filter executions scheduled on or after this date (YYYY-MM-DD format, e.g., '2024-01-15')"
+
+	EndDateDescription = "Filter executions scheduled on or before this date (YYYY-MM-DD format, e.g., '2024-01-31')"
+
 	FilenameDescription = "The name of the artifact file to retrieve"
 
 	// Workflow tool descriptions
@@ -48,6 +52,7 @@ to find items containing all terms`
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
 	WaitForExecutionsDescription      = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
 	AbortWorkflowExecutionDescription = "Abort a running test workflow execution. This will stop the execution and mark it as aborted. Use this tool to cancel long-running or stuck workflow executions."
+	UpdateExecutionTagsDescription    = "Update the tags on a test workflow execution. Uses replace semantics: the provided tags completely replace any existing tags. Send an empty map ({}) to clear all tags. Tags are key-value string pairs used for categorization and filtering (e.g., {\"env\":\"prod\",\"bug\":\"found\"})."
 
 	// Additional parameter descriptions
 	ExecutionIdsDescription   = "Comma-separated list of execution IDs to wait for (e.g., 'exec1,exec2,exec3')."
@@ -58,7 +63,7 @@ to find items containing all terms`
 	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."
 
 	// Other tool descriptions
-	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions."
+	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions. Supports deep linking to a specific step within an execution's log view using stepRef (obtained from execution info signatures) and executionTab (defaults to 'log-output' when stepRef is provided)."
 	ListLabelsDescription         = "Retrieve all available labels and their values from workflows in the current Testkube environment. Returns a map where each key is a label name and the value is an array of all possible values for that label. This is useful for discovering what labels exist and what values you can filter by when using selectors in other tools."
 	ListResourceGroupsDescription = "Retrieve all available resource groups from the current Testkube environment. Returns a list of resource groups with their IDs, slugs, names, descriptions, and metadata. This is useful for discovering what resource groups exist and what slugs you can use when filtering by resource groups in other tools."
 	ListAgentsDescription         = "Retrieve all available agents from the current Testkube organization that can be used when specifying target agent(s) in run_workflow. Returns a list of agents with their IDs, names, types, capabilities, labels, and environment information. This is useful for discovering what agents are available for workflow execution targeting."

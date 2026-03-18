@@ -11,10 +11,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/common"
 	"github.com/kubeshop/testkube/pkg/utils"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -219,8 +218,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 // TODO: Add limit?
 func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
-	opts := &options.FindOptions{}
-	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts := options.Find().SetSort(bson.D{{Key: "_id", Value: -1}})
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
@@ -249,7 +247,7 @@ func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.F
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 	// Build a compound query with both status and silent mode filters
-	query["$and"] = bson.A{
+	statusAndSilentModeQuery := bson.A{
 		// Status filter: must be finished status
 		bson.M{"$or": bson.A{
 			bson.M{"result.status": testkube.PASSED_TestWorkflowStatus},
@@ -262,6 +260,11 @@ func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.F
 			bson.M{"silentmode.health": bson.M{"$exists": false}},
 			bson.M{"silentmode": bson.M{"$exists": false}},
 		}},
+	}
+	if existingAnd, ok := query["$and"].(bson.A); ok {
+		query["$and"] = append(existingAnd, statusAndSilentModeQuery...)
+	} else {
+		query["$and"] = statusAndSilentModeQuery
 	}
 
 	cursor, err := r.Coll.Find(ctx, query, opts)
@@ -560,7 +563,12 @@ func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id str
 	return
 }
 
-func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptions) {
+func (r *MongoRepository) UpdateTags(ctx context.Context, id string, tags map[string]string) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"tags": tags}})
+	return
+}
+
+func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptionsBuilder) {
 	query := bson.M{}
 	opts := options.Find()
 	startTimeQuery := bson.M{}
@@ -574,7 +582,7 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 	}
 
 	if filter.TextSearchDefined() {
-		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
+		query["name"] = bson.M{"$regex": bson.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
 
 	if filter.LastNDaysDefined() {
@@ -966,8 +974,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 // TODO: Add indexes
 func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
-	opts := &options.FindOptions{}
-	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts := options.Find().SetSort(bson.D{{Key: "_id", Value: -1}})
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
@@ -19,7 +19,7 @@ const (
 
 func NewMongoRepository(db *mongo.Database, opts ...Opt) *MongoRepository {
 	r := &MongoRepository{
-		Coll: db.Collection(CollectionSequences),
+		Coll: db.Collection(CollectionSequences, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true})),
 	}
 
 	for _, opt := range opts {

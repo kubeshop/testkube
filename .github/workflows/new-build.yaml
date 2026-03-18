@@ -24,19 +24,19 @@ jobs:
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Depot CLI
         uses: depot/setup-action@v1
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Setup gcloud SA key for GAR
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GAR_PROJECT_ID }}
           credentials_json: ${{ secrets.GKE_SA_KEY_PROD }}
@@ -46,7 +46,7 @@ jobs:
 
       - name: Create Docker tags and metadata for the API
         id: api-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "api-meta"
           images: |
@@ -58,7 +58,7 @@ jobs:
 
       - name: Create Docker tags and metadata for the API
         id: cli-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "cli-meta"
           images: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "tw-init-meta"
           images: |
@@ -82,7 +82,7 @@ jobs:
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "tw-toolkit-meta"
           images: |
@@ -94,7 +94,7 @@ jobs:
 
       - name: Create Docker tags and metadata for mcp-server
         id: mcp-server-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           bake-target: "mcp-server-meta"
           images: |
@@ -149,7 +149,7 @@ jobs:
       GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
       CHARTS_REPOSITORY: testkube
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - id: helm-version
         name: Extract Helm Chart version
         uses: mikefarah/yq@master
@@ -158,7 +158,7 @@ jobs:
 
       - name: Auth to Google Cloud
         if: ${{ github.ref_type == 'tag' }}
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GAR_PROJECT_ID }}
           credentials_json: ${{ secrets.GKE_SA_KEY_PROD }} #Key to SA in Testkube Prod project
@@ -168,10 +168,11 @@ jobs:
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - id: helm-publish
         name: Publish Helm Chart
         run: |
@@ -194,7 +195,7 @@ jobs:
 
       - id: helm-index-update
         name: Dispatch update for legacy Helm index
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.CI_BOT_TOKEN }}
           script: |

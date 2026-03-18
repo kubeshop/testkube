@@ -122,3 +122,15 @@ func TestEvent_IsSuccess(t *testing.T) {
 		}
 	})
 }
+
+func TestNewWorkflowEvents_UseExplicitRoutingGroup(t *testing.T) {
+	t.Parallel()
+
+	execution := &TestWorkflowExecution{Id: "execution-1", GroupId: "execution-group-1"}
+
+	queueEvent := NewEventQueueTestWorkflow(execution, "env-123")
+	startEvent := NewEventStartTestWorkflow(execution, "env-123")
+
+	assert.Equal(t, "env-123", queueEvent.GroupId)
+	assert.Equal(t, "env-123", startEvent.GroupId)
+}

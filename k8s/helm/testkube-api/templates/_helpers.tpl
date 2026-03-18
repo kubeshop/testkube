@@ -275,7 +275,14 @@ Define API environment in standalone mode
 {{- end }}
 {{- if .Values.postgresql.enabled }}
 - name: API_POSTGRES_DSN
+  {{- if .Values.postgresql.secretName }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgresql.secretName }}
+      key: {{ .Values.postgresql.secretKey }}
+  {{- else }}
   value: "{{ .Values.postgresql.dsn }}"
+  {{- end }}
 {{- end }}
 - name: "NATS_EMBEDDED"
   value: "{{ .Values.nats.embedded }}"

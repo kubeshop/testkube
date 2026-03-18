@@ -598,17 +598,17 @@ metadata:
   name: special-cases-no-initial-output
   labels:
     core-tests: special-cases
-description: "No output at the beginning (just sleep)"
+description: "No output for 60s"
 spec:
   use:
     - name: special-cases-template-default-resources
   steps:
-  - name: Run test 1
+  - name: Sleep (60s) and echo
     shell: |
-      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
-  - name: Run test 2
+      sleep 60 && echo "Sleep finished after 60 seconds"
+  - name: Echo, sleep (60s) and echo
     shell: |
-      sleep 30 && echo "Sleep finished after 30 seconds" && sleep 30 && echo "Another 30 second sleep finished"
+      echo "Initial text" && sleep 60 && echo "Sleep finished after 60 seconds"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -774,3 +774,147 @@ spec:
           service_count: 1
           workers: 1
           step_validation: "override"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-parallel-steps
+  labels:
+    core-tests: special-cases
+spec:
+  config:
+    workers:
+      type: integer
+      default: 3
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: mkdir /data/parallel
+    shell: mkdir -p /data/parallel
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      fetch:
+      - from: /data/parallel
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          mkdir -p /data/parallel && touch /data/parallel/{{ index }}.txt && echo "File {{ index }}" > /data/parallel/{{ index }}.txt
+  - name: Validate files
+    shell: |
+      ls -lah /data/parallel
+      WORKERS={{ config.workers }}
+      for i in $(seq 0 $((WORKERS - 1))); do
+        if [ -f /data/parallel/$i.txt ] && grep -qx "File $i" /data/parallel/$i.txt; then
+          echo "File $i validation: OK"
+        else
+          echo "File $i validation: FAIL"
+          exit 1
+        fi
+      done
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-parallel-steps-matrix
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: mkdir /data/parallel
+    shell: mkdir -p /data/parallel
+  - name: Run test
+    parallel:
+      matrix:
+        name: ["0", "1", "2"]
+      fetch:
+      - from: /data/parallel
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          mkdir -p /data/parallel && touch /data/parallel/{{ matrix.name }}.txt && echo "File {{ matrix.name }}" > /data/parallel/{{ matrix.name }}.txt
+  - name: Validate files
+    shell: |
+      ls -lah /data/parallel
+      WORKERS=3
+      for i in $(seq 0 $((WORKERS - 1))); do
+        if [ -f /data/parallel/$i.txt ] && grep -qx "File $i" /data/parallel/$i.txt; then
+          echo "File $i validation: OK"
+        else
+          echo "File $i validation: FAIL"
+          exit 1
+        fi
+      done
+---
+# failFast=false (default) waits for all workers to complete
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-parallel-steps-fail-fast-disabled
+  labels:
+    core-tests: special-cases
+description: "parallel failFast disabled (default) - all workers complete even if one fails quickly"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: mkdir /data/parallel
+    shell: mkdir -p /data/parallel
+  - name: Run parallel with failFast disabled
+    negative: true
+    parallel:
+      count: 3
+      fetch:
+      - from: /data/parallel
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          mkdir -p /data/parallel
+          if [ "{{ index }}" = "0" ]; then echo "worker 0 failing" && exit 1; fi
+          touch /data/parallel/{{ index }}.txt && echo "worker {{ index }} completed"
+  - name: Validate non-failing workers completed
+    shell: |
+      for i in 1 2; do
+        if [ -f /data/parallel/$i.txt ]; then
+          echo "Worker $i: completed"
+        else
+          echo "Worker $i: MISSING - was incorrectly aborted"
+          exit 1
+        fi
+      done

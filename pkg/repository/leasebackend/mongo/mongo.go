@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
@@ -33,7 +33,7 @@ type MongoLeaseBackend struct {
 }
 
 func NewMongoLeaseBackend(db *mongo.Database) *MongoLeaseBackend {
-	return &MongoLeaseBackend{coll: db.Collection(mongoCollectionTriggersLease)}
+	return &MongoLeaseBackend{coll: db.Collection(mongoCollectionTriggersLease, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true}))}
 }
 
 func (b *MongoLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) (leased bool, err error) {
@@ -86,7 +86,7 @@ func (b *MongoLeaseBackend) findOrInsertCurrentLease(ctx context.Context, leaseM
 
 func (b *MongoLeaseBackend) insertLease(ctx context.Context, leaseMongoID, id, clusterID string) (*Lease, error) {
 	lease := NewLease(id, clusterID)
-	_, err := b.coll.InsertOne(ctx, bson.M{"_id": leaseMongoID, "lease": *lease})
+	_, err := b.coll.InsertOne(ctx, MongoLease{ID: leaseMongoID, Lease: *lease})
 	if err != nil {
 		return nil, errors.Wrap(err, "error inserting lease document into mongo")
 	}
@@ -100,20 +100,12 @@ func (b *MongoLeaseBackend) tryUpdateLease(ctx context.Context, leaseMongoID, id
 		AcquiredAt: acquiredAt,
 		RenewedAt:  time.Now(),
 	}
-	newMongoLease := MongoLease{
-		_id:   leaseMongoID,
-		Lease: newLease,
-	}
 
-	after := options.After
-	opts := options.FindOneAndUpdateOptions{
-		ReturnDocument: &after,
-	}
 	res := b.coll.FindOneAndUpdate(
 		ctx,
 		bson.M{"_id": leaseMongoID},
-		bson.M{"$set": newMongoLease},
-		&opts,
+		bson.M{"$set": newLease},
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	)
 	if res.Err() != nil {
 		return nil, errors.Wrap(res.Err(), "error finding and updating mongo db document")
@@ -152,6 +144,6 @@ func newLeaseMongoID(clusterID string) string {
 }
 
 type MongoLease struct {
-	_id string `bson:"_id"`
-	Lease
+	ID    string `bson:"_id"`
+	Lease `bson:",inline"`
 }

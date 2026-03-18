@@ -21,3 +21,19 @@ func TestBuildDataPoints(t *testing.T) {
 
 	assert.Len(t, dataPoints.Data, 6)
 }
+
+func TestGroupMetrics_WithNilTimestamp(t *testing.T) {
+	f, err := os.Open("testdata/metrics_no_timestamp.influx")
+	require.NoError(t, err)
+	defer f.Close()
+
+	samples, _, invalidLines, err := ParseMetrics(context.Background(), f, "testdata/metrics_no_timestamp.influx")
+	require.NoError(t, err)
+	assert.Empty(t, invalidLines)
+
+	// Should not panic and should skip metrics without timestamps
+	dataPoints := GroupMetrics(samples)
+
+	// Only 2 metrics should be included (the ones with timestamps)
+	assert.Len(t, dataPoints.Data, 2)
+}

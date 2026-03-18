@@ -9,7 +9,7 @@ import (
 )
 
 type LabelSource interface {
-	ListLabels() (map[string][]string, error)
+	ListLabels(ctx context.Context) (map[string][]string, error)
 }
 
 type extendedLabelSource interface {
@@ -21,8 +21,8 @@ type simpleLabelSource struct {
 	environmentId string
 }
 
-func (s simpleLabelSource) ListLabels() (map[string][]string, error) {
-	return s.source.ListLabels(context.Background(), s.environmentId)
+func (s simpleLabelSource) ListLabels(ctx context.Context) (map[string][]string, error) {
+	return s.source.ListLabels(ctx, s.environmentId)
 }
 
 func getClientLabelSource(source extendedLabelSource, environmentId string) LabelSource {
@@ -45,7 +45,7 @@ func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 		}
 
 		for _, source := range sources {
-			nextLabels, err := source.ListLabels()
+			nextLabels, err := source.ListLabels(c.Context())
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("failed to list labels: %w", err))
 			}

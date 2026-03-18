@@ -16,19 +16,19 @@ permissions:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: depot-ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
 
       - name: Cache Go modules and build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-coverage
           path: coverage.out
@@ -73,11 +73,11 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    runs-on: depot-ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     services:
       mongo:
-        image: bitnamilegacy/mongodb:7.0
+        image: bitnamilegacy/mongodb:8.0
         ports:
           - 27017:27017
       nats:
@@ -96,16 +96,16 @@ jobs:
           MINIO_ROOT_PASSWORD: minio123
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
 
       - name: Cache Go modules and build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
@@ -146,9 +146,42 @@ jobs:
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-coverage
           path: integration-coverage.out
           if-no-files-found: error
           retention-days: 1
+
+  verify-generated-crds:
+    name: Verify generated CRDs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: false
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            bin/tooling
+          key: ${{ runner.os }}-go-verify-crds-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-verify-crds-
+
+      - name: Show Go environment
+        run: |
+          go env GOCACHE
+          go env GOMODCACHE
+          echo "Test tool location:"
+          ls -la bin/tooling/ || echo "No tools cached yet"
+
+      - name: Verify generated CRDs
+        run: make verify-crds-generated

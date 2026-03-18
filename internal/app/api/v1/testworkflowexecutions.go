@@ -786,6 +786,43 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 	}
 }
 
+func (s *TestkubeAPI) UpdateTestWorkflowExecutionTagsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to update tags for test workflow execution '%s'", executionID)
+
+		var tags map[string]string
+		if body := c.Body(); len(body) > 0 {
+			if err := json.Unmarshal(body, &tags); err != nil {
+				return s.BadRequest(c, errPrefix, "invalid request body", err)
+			}
+		}
+		if tags == nil {
+			tags = make(map[string]string)
+		}
+
+		// Verify execution exists (and belongs to the workflow if scoped)
+		var err error
+		if name == "" {
+			_, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			_, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if err := s.TestWorkflowResults.UpdateTags(ctx, executionID, tags); err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		c.Status(http.StatusNoContent)
+		return nil
+	}
+}
+
 func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 	filter := testworkflow2.NewExecutionsFilter()
 	name := c.Params("id", "")

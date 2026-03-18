@@ -175,7 +175,7 @@ next:
   # - tkcsync_*** - GitOps Agent
   gitops:
     ## Should it copy data from Kubernetes to Control Plane
-    syncKubernetesToCloud: false
+    syncKubernetesToCloud: true
 
   # Configure the legacy Tests and Test Suites execution
   # - tkcagnt_*** - Super Agent
@@ -583,6 +583,9 @@ postgresql:
   enabled: false
   ## Define dsn connection string
   dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+  ## or use dsn in secrets
+  # secretName: testkube-secrets
+  # secretKey: postgresql-dsn
 
 ## NATS parameters
 ## ref: https://github.com/nats-io/nats-server

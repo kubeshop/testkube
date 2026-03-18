@@ -10,10 +10,12 @@ We're glad you're looking to contribute ideas and design efforts to Testkube!
 
 Testkube is the Kubernetes-native testing framework for testers and developers. We aim to simplify Tester's life by decoupling testing from CI/CD for improved test execution pipelines and faster runtimes.
 
-Testkube consists of 3 different parts. 
-1. The API
-2. The CLI
-3. The Frontend Application
+At a high level, Testkube consists of 2 parts:
+
+- The Testkube Agent - open-source, this repo.
+- The Testkube Control Plane (which includes the Testkube Dashboard) - closed source, private repo.
+
+You can read more about the Open Source Agent at https://docs.testkube.io/articles/open-source
 
 **You can always try our latest version live over here: https://demo.testkube.io**
 
@@ -40,11 +42,9 @@ We currently aim to to build a more comprehensive Design System which will also 
 
 For now – here is a list of design relevant information and materials:
 
-
 ### Fonts & Colors
 
 Fonts and Color Palettes can be found as design tokens and predefined styles in the Figma files listed below.
-
 
 ### Design Files, Screenshots, etc
 

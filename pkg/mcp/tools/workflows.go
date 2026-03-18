@@ -333,6 +333,7 @@ func GetWorkflowExecutionMetrics(client WorkflowExecutionMetricsGetter) (tool mc
 		mcp.WithDescription(GetWorkflowExecutionMetricsDescription),
 		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+		mcp.WithNumber("maxSamples", mcp.Description("Maximum number of time-series data points to return per metric (default: 50). Increase for more granular data, decrease for a more compact response.")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -346,12 +347,17 @@ func GetWorkflowExecutionMetrics(client WorkflowExecutionMetricsGetter) (tool mc
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
+		maxSamples, err := OptionalParam[float64](request, "maxSamples")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
 		result, err := client.GetWorkflowExecutionMetrics(ctx, workflowName, executionID)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get workflow execution metrics: %v", err)), nil
 		}
 
-		formatted, err := formatters.FormatGetWorkflowExecutionMetrics(result)
+		formatted, err := formatters.FormatGetWorkflowExecutionMetrics(result, int(maxSamples))
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to format execution metrics: %v", err)), nil
 		}

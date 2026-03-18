@@ -3,9 +3,11 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -54,9 +56,9 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.UpdateWorkflowTemplate(client))
 
 	// Query tools (JSONPath-based bulk queries)
-	// Only register if control plane supports bulk endpoints for backwards compatibility
-	ctx := context.Background()
-	if apiClient, ok := client.(*APIClient); ok {
+	// Only check backwards compatibility when using APIClient without SkipEndpointChecks
+	if apiClient, ok := client.(*APIClient); ok && !cfg.SkipEndpointChecks {
+		ctx := context.Background()
 		if apiClient.SupportsEndpoint(ctx, "/agent/test-workflows/definitions") {
 			mcpServer.AddTool(tools.QueryWorkflows(client))
 		}
@@ -64,7 +66,6 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 			mcpServer.AddTool(tools.QueryExecutions(client))
 		}
 	} else {
-		// Non-API clients (like HandlerClient in cloud-api) always support new endpoints
 		mcpServer.AddTool(tools.QueryWorkflows(client))
 		mcpServer.AddTool(tools.QueryExecutions(client))
 	}
@@ -91,6 +92,8 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 	mcpServer.AddTool(tools.GetWorkflowResourceHistory(client))
 	mcpServer.AddTool(tools.WaitForExecutions(client))
 	mcpServer.AddTool(tools.AbortWorkflowExecution(client))
+	// Registered unconditionally — endpoint is parameterized and cannot be probed with SupportsEndpoint.
+	mcpServer.AddTool(tools.UpdateExecutionTags(client))
 
 	// Artifact tools
 	mcpServer.AddTool(tools.ListArtifacts(client))
@@ -155,7 +158,7 @@ func ServeSHTTPMCP(cfg MCPServerConfig, client Client) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	// Build the address
-	addr := fmt.Sprintf("%s:%d", cfg.SHTTPConfig.Host, cfg.SHTTPConfig.Port)
+	addr := net.JoinHostPort(cfg.SHTTPConfig.Host, strconv.Itoa(cfg.SHTTPConfig.Port))
 
 	// Start the server in a goroutine
 	serverErrCh := make(chan error, 1)

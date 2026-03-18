@@ -31,17 +31,19 @@ func NewEvent(t *EventType, resource *EventResource, id string) Event {
 	}
 }
 
-func NewEventQueueTestWorkflow(execution *TestWorkflowExecution) Event {
+func NewEventQueueTestWorkflow(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventQueueTestWorkflow,
 		TestWorkflowExecution: execution,
 	}
 }
 
-func NewEventStartTestWorkflow(execution *TestWorkflowExecution) Event {
+func NewEventStartTestWorkflow(execution *TestWorkflowExecution, groupId string) Event {
 	return Event{
 		Id:                    uuid.NewString(),
+		GroupId:               groupId,
 		Type_:                 EventStartTestWorkflow,
 		TestWorkflowExecution: execution,
 	}

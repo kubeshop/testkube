@@ -189,7 +189,11 @@ outerLoop:
 		}
 	}
 
-	return fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(podIP, ".", "-"), object.GetNamespace()), nil
+	// Build the Kubernetes pod DNS name from the pod IP.
+	// IPv4: replace "." with "-" (e.g. 192.168.1.100 → 192-168-1-100)
+	// IPv6: replace ":" with "-" (e.g. 2001:db8::1 → 2001-db8--1, where "::" becomes "--")
+	podIPForDNS := strings.NewReplacer(".", "-", ":", "-").Replace(podIP)
+	return fmt.Sprintf("%s.%s.pod.cluster.local", podIPForDNS, object.GetNamespace()), nil
 }
 
 func getDeploymentConditions(

@@ -12,6 +12,7 @@ type Client interface {
 	tools.ExecutionLookup
 	tools.ExecutionWaiter
 	tools.WorkflowExecutionAborter
+	tools.ExecutionTagUpdater
 	tools.WorkflowExecutionMetricsGetter
 	tools.WorkflowResourceHistoryGetter
 

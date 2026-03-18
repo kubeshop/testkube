@@ -82,7 +82,7 @@ proxy:
     # -- Testkube Operator rbac-proxy image repository
     repository: brancz/kube-rbac-proxy
     # -- Testkube Operator rbac-proxy image tag
-    tag: "v0.18.1"
+    tag: "v0.21.1"
     # -- Testkube Operator rbac-proxy k8s secret for private registries
     pullSecrets: []
   # -- Testkube Operator rbac-proxy resource settings
@@ -186,7 +186,7 @@ webhook:
     image:
       registry: docker.io
       repository: rancher/kubectl
-      tag: v1.23.7
+      tag: v1.35.2
       pullPolicy: Always
       pullSecrets: []
     ## Configure Security Context for Migrate Container
@@ -216,7 +216,7 @@ webhook:
     image:
       registry: docker.io
       repository: kubeshop/kube-webhook-certgen
-      tag: 0.0.7
+      tag: 1.0.11
       pullPolicy: IfNotPresent
       pullSecrets: []
     ## Annotations to add to the patch Job

@@ -337,6 +337,12 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	if params.Since != "" {
 		queryParams["since"] = params.Since
 	}
+	if params.StartDate != "" {
+		queryParams["startDate"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		queryParams["endDate"] = params.EndDate
+	}
 
 	path := "/agent/test-workflow-executions"
 	if params.WorkflowName != "" {
@@ -610,6 +616,19 @@ func (c *APIClient) ListAgents(ctx context.Context, params tools.ListAgentsParam
 		Scope:       ApiScopeOrg,
 		QueryParams: queryParams,
 	})
+}
+
+func (c *APIClient) UpdateExecutionTags(ctx context.Context, executionId string, tags map[string]string) error {
+	_, err := c.makeRequest(ctx, APIRequest{
+		Method: http.MethodPatch,
+		Path:   "/agent/test-workflow-executions/{executionId}/tags",
+		Scope:  ApiScopeOrgEnv,
+		PathParams: map[string]string{
+			"executionId": executionId,
+		},
+		Body: tags,
+	})
+	return err
 }
 
 func (c *APIClient) AbortWorkflowExecution(ctx context.Context, workflowName, executionId string) (string, error) {
