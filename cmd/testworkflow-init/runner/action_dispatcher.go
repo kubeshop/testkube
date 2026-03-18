@@ -2,9 +2,11 @@ package runner
 
 import (
 	"fmt"
+	"os"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -145,6 +147,17 @@ func (d *ActionDispatcher) handleStart(action *lite.LiteAction, ctx *ExecutionCo
 		for _, v := range ctx.State.GetSteps() {
 			if slices.Contains(v.Parents, step.Ref) {
 				v.SetStatus(constants.StepStatusSkipped)
+			}
+		}
+	}
+
+	// Create per-step results directory if the step has an ID and will execute
+	if !step.IsFinished() && step.Id != "" {
+		resultsDir := data.StepResultsDir(step.Id)
+		if err := os.MkdirAll(resultsDir, 0777); err != nil {
+			return ActionResult{
+				ContinueExecution: false,
+				Error:             fmt.Errorf("failed to create step results directory %s: %w", resultsDir, err),
 			}
 		}
 	}

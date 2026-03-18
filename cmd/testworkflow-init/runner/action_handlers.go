@@ -25,7 +25,7 @@ import (
 
 // handleDeclareAction processes declare actions
 func handleDeclareAction(step *data.StepData, action *lite.ActionDeclare) {
-	step.SetCondition(action.Condition).SetParents(action.Parents)
+	step.SetId(action.Id).SetCondition(action.Condition).SetParents(action.Parents)
 }
 
 // handlePauseAction processes pause actions

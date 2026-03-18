@@ -98,6 +98,18 @@ func (s *state) getSubSteps(ref string, visited *map[*StepData]struct{}) {
 	}
 }
 
+func (s *state) GetStepByID(id string) *StepData {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+
+	for _, step := range s.Steps {
+		if step.Id == id {
+			return step
+		}
+	}
+	return nil
+}
+
 func (s *state) GetSubSteps(ref string) []*StepData {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
