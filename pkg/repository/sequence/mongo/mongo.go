@@ -19,7 +19,7 @@ const (
 
 func NewMongoRepository(db *mongo.Database, opts ...Opt) *MongoRepository {
 	r := &MongoRepository{
-		Coll: db.Collection(CollectionSequences),
+		Coll: db.Collection(CollectionSequences, options.Collection().SetBSONOptions(&options.BSONOptions{ObjectIDAsHexString: true})),
 	}
 
 	for _, opt := range opts {

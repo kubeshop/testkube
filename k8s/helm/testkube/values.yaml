@@ -156,11 +156,11 @@ mongodb:
   metrics:
     image:
       # -- MongoDB metrics image registry
-      registry: us-east1-docker.pkg.dev
+      registry: docker.io
       # -- MongoDB metrics image repository
-      repository: testkube-cloud-372110/testkube/mongodb
+      repository: bitnami/mongodb-exporter
       # -- MongoDB metrics image tag
-      tag: "8.2.5"
+      tag: "latest"
 
 # PostgreSQL parameters
 # For more configuration parameters of PostgreSQL chart please look here: https://github.com/bitnami/charts/tree/main/bitnami/postgresql#parameters
@@ -1174,7 +1174,7 @@ testkube-operator:
       # -- Testkube Operator rbac-proxy image repository
       repository: brancz/kube-rbac-proxy
       # -- Testkube Operator rbac-proxy image tag
-      tag: "v0.21.0"
+      tag: "v0.21.1"
       # -- Testkube Operator rbac-proxy k8s secret for private registries
       pullSecrets: []
     # -- Testkube Operator rbac-proxy resource settings

@@ -56,7 +56,7 @@ func (c *client) GetTestWorkflow(ctx context.Context, environmentId, name string
 func (c *client) ListTestWorkflows(ctx context.Context, environmentId string, options ListTestWorkflowOptions) TestWorkflowsReader {
 	req := &cloud.ListTestWorkflowsRequest{
 		Offset:     options.Offset,
-		Limit:      100,
+		Limit:      options.Limit,
 		Labels:     options.Labels,
 		TextSearch: options.TextSearch,
 	}

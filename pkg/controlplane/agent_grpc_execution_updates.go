@@ -77,8 +77,8 @@ func (s *Server) GetExecutionUpdates(ctx context.Context, _ *executionv1.GetExec
 				log.Warnw("error marking execution as starting", "err", err)
 			}
 
-			// Dispatch event for WebHooks and friends
-			s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exe))
+			// Dispatch event for WebHooks and friends using the environment ID as the routing group.
+			s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exe, s.envID))
 		default:
 			log.Warnw("unexpected state", "id", exe.Id, "status", *exe.Result.Status)
 		}
