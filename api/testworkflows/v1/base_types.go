@@ -40,9 +40,11 @@ type TestWorkflowSpecBase struct {
 
 // TestWorkflowTimeouts configures timeout behavior for a workflow (queue, initialization).
 type TestWorkflowTimeouts struct {
-	// maximum time the execution may spend in queue before starting (not implemented)
+	// maximum time the execution may spend in queue before starting
+	// TODO: Finish implementation
 	Queue string `json:"queue,omitempty" expr:"template"`
-	// maximum time for initialization/transitioning before steps run (not implemented)
+	// maximum time for initialization/transitioning before steps run
+	// TODO: Finish implementation
 	Initialization string `json:"initialization,omitempty" expr:"template"`
 }
 
