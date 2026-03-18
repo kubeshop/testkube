@@ -125,7 +125,6 @@ DOCKER_REGISTRY ?= docker.io/kubeshop
 DEVBOX_NAMESPACE ?= devbox
 
 # ==================== External Tool Versions ====================
-SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
@@ -136,8 +135,6 @@ GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 GORELEASER = go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
 GOLANGCI_LINT = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
-# swagger-codegen is installed globally via brew/package manager
-SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 
 # ==================== Environment Configuration ====================
 DASHBOARD_URI ?= https://demo.testkube.io
@@ -401,12 +398,8 @@ generate-protobuf: ## Generate protobuf code
 	@go generate ./proto
 
 .PHONY: generate-openapi
-generate-openapi: swagger-codegen-check ## Generate OpenAPI models
-	@echo "Generating OpenAPI models..."
-	@$(SWAGGER_CODEGEN) generate --model-package testkube \
-		-i api/v1/testkube.yaml -l go -o $(TMP_DIR)/api/testkube
-	@bash scripts/openapi-postprocess.sh
-	@$(GO) fmt pkg/api/v1/testkube/*.go
+generate-openapi: ## Generate OpenAPI models (requires Docker)
+	@bash scripts/generate-openapi.sh
 
 .PHONY: generate-mocks
 generate-mocks: ## Generate mock files using mockgen only in ./cmd, ./internal, and ./pkg
@@ -513,13 +506,6 @@ clean-all: clean ## Deep clean including Go cache
 
 # ==================== Tool Installation ====================
 ##@ Tools
-
-# Tool installation targets
-.PHONY: swagger-codegen-check
-swagger-codegen-check: ## Check if swagger-codegen is installed
-ifndef SWAGGER_CODEGEN
-	$(error swagger-codegen is not installed. Please install it manually from https://github.com/swagger-api/swagger-codegen)
-endif
 
 # ==================== Utility Functions ====================
 # Color output helpers
