@@ -10,6 +10,7 @@ import (
 
 type Signature interface {
 	Ref() string
+	Id() string
 	Name() string
 	Category() string
 	Optional() bool
@@ -21,6 +22,7 @@ type Signature interface {
 
 type signature struct {
 	RefValue      string      `json:"ref"`
+	IdValue       string      `json:"id,omitempty"`
 	NameValue     string      `json:"name,omitempty"`
 	CategoryValue string      `json:"category,omitempty"`
 	OptionalValue bool        `json:"optional,omitempty"`
@@ -30,6 +32,10 @@ type signature struct {
 
 func (s *signature) Ref() string {
 	return s.RefValue
+}
+
+func (s *signature) Id() string {
+	return s.IdValue
 }
 
 func (s *signature) Name() string {
@@ -55,6 +61,7 @@ func (s *signature) Children() []Signature {
 func (s *signature) ToInternal() testkube.TestWorkflowSignature {
 	return testkube.TestWorkflowSignature{
 		Ref:      s.RefValue,
+		Id:       s.IdValue,
 		Name:     s.NameValue,
 		Category: s.CategoryValue,
 		Optional: s.OptionalValue,
@@ -91,6 +98,7 @@ func MapSignatureList(v []testkube.TestWorkflowSignature) []Signature {
 	for i := range v {
 		r[i] = Signature(&signature{
 			RefValue:      v[i].Ref,
+			IdValue:       v[i].Id,
 			NameValue:     v[i].Name,
 			CategoryValue: v[i].Category,
 			OptionalValue: v[i].Optional,
@@ -114,6 +122,7 @@ func MapSignatureListToStepResults(v []Signature) map[string]testkube.TestWorkfl
 
 type rawSignature struct {
 	RefValue      string         `json:"ref"`
+	IdValue       string         `json:"id,omitempty"`
 	NameValue     string         `json:"name,omitempty"`
 	CategoryValue string         `json:"category,omitempty"`
 	OptionalValue bool           `json:"optional,omitempty"`
@@ -128,6 +137,7 @@ func rawSignatureToSignature(sig rawSignature) Signature {
 	}
 	return &signature{
 		RefValue:      sig.RefValue,
+		IdValue:       sig.IdValue,
 		NameValue:     sig.NameValue,
 		CategoryValue: sig.CategoryValue,
 		OptionalValue: sig.OptionalValue,
