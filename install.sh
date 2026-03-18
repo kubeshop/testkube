@@ -83,6 +83,20 @@ _download_url() {
   fi
   version="${tag/#v/}" # remove leading v if present
 
+  # Normalize the tag format based on the version number when a version is explicitly provided.
+  # Starting from 2.4.0, release tags dropped the 'v' prefix.
+  # For auto-detected versions fetched from the API, the tag already has the correct format.
+  if [ -n "$TESTKUBE_VERSION" ]; then
+    local major minor
+    major=$(echo "$version" | cut -d. -f1)
+    minor=$(echo "$version" | cut -d. -f2)
+    if [ "$major" -lt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -lt 4 ]; }; then
+      tag="v${version}"
+    else
+      tag="${version}"
+    fi
+  fi
+
   echo "https://github.com/kubeshop/testkube/releases/download/${tag}/testkube_${version:-1}_${os}_$arch.tar.gz"
 }
 
