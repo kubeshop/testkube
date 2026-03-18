@@ -300,6 +300,11 @@ type StepParallel struct {
 	// +kubebuilder:validation:Schemaless
 	Execution *TestWorkflowExecutionSchema `json:"execution,omitempty" expr:"include"`
 
+	// per-workflow timeout configuration
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Timeouts *TestWorkflowTimeouts `json:"timeouts,omitempty" expr:"include"`
+
 	// list of accompanying services to start
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
@@ -339,6 +344,7 @@ func (sp StepParallel) NewTestWorkflowSpec() *TestWorkflowSpec {
 			Pod:           sp.Pod,
 			Notifications: sp.Notifications,
 			Execution:     sp.Execution,
+			Timeouts:      sp.Timeouts,
 		},
 		Services: sp.Services,
 		Setup:    sp.Setup,
