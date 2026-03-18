@@ -67,9 +67,7 @@ A Helm chart for Testkube api
 | dockerImageVersion | string | `""` |  |
 | enableK8sEvents | bool | `true` |  |
 | enableSecretsEndpoint | bool | `false` |  |
-| enabledExecutors | string | `nil` |  |
 | executionNamespaces | string | `nil` |  |
-| executors | string | `""` |  |
 | extraEnvVars | list | `[]` |  |
 | fullnameOverride | string | `""` |  |
 | global.affinity | object | `{}` |  |

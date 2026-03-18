@@ -82,9 +82,6 @@ image:
   digest: ""
   pullSecrets: []
 
-## Sets a specific tag for the executors to the last built version
-executorsTag: 2.1.123
-
 imageTwToolkit:
   registry: docker.io
   repository: kubeshop/testkube-tw-toolkit
@@ -286,9 +283,6 @@ templates:
   ## Base64 encoded Slave Pod template
   slavePod: ""
 
-## base64 encoded executors.json alike data
-executors: ""
-
 ## target for cdevents emission via http(s)
 cdeventsTarget: ""
 
@@ -309,9 +303,6 @@ disablePostgresMigrations: false
 
 ## disable secret creation for tests and test sources
 disableSecretCreation: false
-
-## enable only specified executors with enabled flag
-enabledExecutors:
 
 ## Execution namespaces for Testkube API to only run tests
 ## Execution namespaces. In this case, a Role and a RoleBinding will be created for each specified namespace.
