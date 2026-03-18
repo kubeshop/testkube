@@ -291,9 +291,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.dockerImageVersion | string | "" | dockerImageVersion of Testkube Agent |
 | testkube-api.enableK8sEvents | bool | `true` | enable k8s events for testkube events |
 | testkube-api.enableSecretsEndpoint | bool | `false` | enable endpoint to list testkube namespace secrets |
-| testkube-api.enabledExecutors | string | `nil` | enable only specified executors with enabled flag |
 | testkube-api.executionNamespaces | list | `[]` | Execution namespaces for Testkube API to only run tests In this case, a Role and a RoleBinding will be created for each specified namespace. |
-| testkube-api.executors | string | `""` | default executors as base64-encoded string |
 | testkube-api.extraEnvVars | list | `[]` | Extra environment variables to be set on deployment |
 | testkube-api.fullnameOverride | string | `"testkube-api-server"` | Testkube API full name override |
 | testkube-api.hostNetwork | string | `""` | Specify hostNetwork for Testkube API Deployment |

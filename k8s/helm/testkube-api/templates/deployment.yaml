@@ -77,14 +77,8 @@ spec:
               value: "{{ .Values.service.port }}"
             - name: GRPCSERVER_PORT
               value: "{{ .Values.service.grpcPort }}"
-            - name: POSTMANEXECUTOR_URI
-              value: "{{ .Values.postmanExecutorURI }}"
             - name: TESTKUBE_ANALYTICS_ENABLED
               value: "{{ .Values.analyticsEnabled }}"
-            {{- if .Values.executors }}
-            - name: TESTKUBE_DEFAULT_EXECUTORS
-              value:  "{{ .Values.executors }}"
-            {{- end }}
             {{- if .Values.templates.job }}
             - name: TESTKUBE_TEMPLATE_JOB
               value: "{{ .Values.templates.job }}"
