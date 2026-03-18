@@ -1199,6 +1199,7 @@ func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflo
 
 func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 	return testkube.TestWorkflowStep{
+		Id:         v.Id,
 		Name:       v.Name,
 		Condition:  v.Condition,
 		Paused:     v.Paused,
@@ -1226,6 +1227,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 
 func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.TestWorkflowIndependentStep {
 	return testkube.TestWorkflowIndependentStep{
+		Id:         v.Id,
 		Name:       v.Name,
 		Condition:  v.Condition,
 		Paused:     v.Paused,

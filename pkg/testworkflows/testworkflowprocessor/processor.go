@@ -65,6 +65,7 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	// Build an initial group for the inner items
 	self := stage.NewGroupStage(ref, false)
 	self.SetPure(step.Pure)
+	self.SetId(step.Id)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition == "" {
@@ -143,7 +144,19 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.New("could not resolve resource.root")
 	}
 
-	// Process steps
+	err = expressions.Simplify(&workflow, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
+	}
+
+	// Resolve and validate step IDs after expression simplification,
+	// so auto-derivation works on resolved names rather than raw templates.
+	if err := ResolveAndValidateStepIds(&workflow.Spec); err != nil {
+		return nil, errors.Wrap(err, "step id validation")
+	}
+
+	// Process steps - must be after ResolveAndValidateStepIds so rootStep
+	// picks up the resolved IDs from the spec.
 	rootStep := testworkflowsv1.Step{
 		StepSource: testworkflowsv1.StepSource{
 			Content: workflow.Spec.Content,
@@ -155,10 +168,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
 
-	err = expressions.Simplify(&workflow, machines...)
-	if err != nil {
-		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
-	}
 	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, constants.RootOperationName)
 	if err != nil {
 		return nil, errors.Wrap(err, "processing error")

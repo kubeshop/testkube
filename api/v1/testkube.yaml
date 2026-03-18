@@ -9244,6 +9244,9 @@ components:
         ref:
           type: string
           description: step reference
+        id:
+          type: string
+          description: stable step identifier for expressions
         name:
           type: string
           description: step name
@@ -9630,6 +9633,9 @@ components:
     TestWorkflowIndependentStep:
       type: object
       properties:
+        id:
+          type: string
+          description: stable identifier for referencing this step in expressions
         name:
           type: string
           description: readable name for the step
@@ -9691,6 +9697,9 @@ components:
     TestWorkflowStep:
       type: object
       properties:
+        id:
+          type: string
+          description: stable identifier for referencing this step in expressions
         name:
           type: string
           description: readable name for the step

@@ -1278,6 +1278,7 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 	return testworkflowsv1.Step{
 		StepMeta: testworkflowsv1.StepMeta{
+			Id:        v.Id,
 			Name:      v.Name,
 			Condition: v.Condition,
 			Pure:      MapBoxedBooleanToBool(v.Pure),
@@ -1315,6 +1316,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testworkflowsv1.IndependentStep {
 	return testworkflowsv1.IndependentStep{
 		StepMeta: testworkflowsv1.StepMeta{
+			Id:        v.Id,
 			Name:      v.Name,
 			Condition: v.Condition,
 			Pure:      MapBoxedBooleanToBool(v.Pure),
