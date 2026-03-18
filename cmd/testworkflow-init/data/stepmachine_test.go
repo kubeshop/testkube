@@ -1,11 +1,14 @@
 package data
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -32,7 +35,7 @@ func resolveStepExpr(t *testing.T, expr string) (string, bool) {
 	return val, true
 }
 
-func TestStepMachine(t *testing.T) {
+func TestStepMachine_Results(t *testing.T) {
 	tests := map[string]struct {
 		steps      map[string]*StepData
 		currentRef string
@@ -83,28 +86,119 @@ func TestStepMachine(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestStepMachine_Outputs(t *testing.T) {
+	tests := map[string]struct {
+		outputs map[string]map[string]string // stepId -> key -> value
+		expr    string
+		wantVal string
+		wantOk  bool
+	}{
+		"resolves stored output": {
+			outputs: map[string]map[string]string{"auth": {"token": "abc123"}},
+			expr:    "step.auth.outputs.token",
+			wantVal: "abc123",
+			wantOk:  true,
+		},
+		"returns nothing for missing output": {
+			outputs: nil,
+			expr:    "step.auth.outputs.token",
+			wantOk:  false,
+		},
+		"isolated between steps": {
+			outputs: map[string]map[string]string{"step_a": {"token": "aaa"}, "step_b": {"token": "bbb"}},
+			expr:    "step.step_a.outputs.token",
+			wantVal: "aaa",
+			wantOk:  true,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTestState(map[string]*StepData{
+				"ref1": {Id: "auth"},
+				"ref2": {Id: "step_a"},
+				"ref3": {Id: "step_b"},
+			}, "ref1")
+			for stepId, outputs := range tc.outputs {
+				for k, v := range outputs {
+					GetState().SetStepOutput(stepId, k, v)
+				}
+			}
+			val, ok := resolveStepExpr(t, tc.expr)
+			assert.Equal(t, tc.wantOk, ok)
+			if tc.wantOk {
+				assert.Equal(t, tc.wantVal, val)
+			}
+		})
+	}
 }
 
 func TestStepMachine_TemplateExpression(t *testing.T) {
-	setupTestState(map[string]*StepData{"ref1": {Id: "build"}}, "ref1")
-	compiled, err := expressions.CompileAndResolveTemplate("go build -o {{ step.results }}/binary", StepMachine)
+	setupTestState(map[string]*StepData{"ref1": {Id: "auth"}}, "ref1")
+	GetState().SetStepOutput("auth", "token", "mytoken")
+
+	compiled, err := expressions.CompileAndResolveTemplate(
+		"curl -H \"Auth: {{ step.auth.outputs.token }}\" https://api",
+		StepMachine,
+	)
 	assert.NoError(t, err)
 	val, _ := compiled.Static().StringValue()
-	assert.Equal(t, "go build -o /data/.steps/build/binary", val)
+	assert.Equal(t, "curl -H \"Auth: mytoken\" https://api", val)
+}
+
+func TestScanStepOutputs(t *testing.T) {
+	t.Run("scans files and trims whitespace", func(t *testing.T) {
+		dir := t.TempDir()
+		setupTestState(map[string]*StepData{"ref1": {Id: "auth"}}, "ref1")
+
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "token"), []byte("abc123\n"), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "count"), []byte("42"), 0644))
+
+		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+
+		val, ok := resolveStepExpr(t, "step.auth.outputs.token")
+		assert.True(t, ok)
+		assert.Equal(t, "abc123", val)
+
+		val, ok = resolveStepExpr(t, "step.auth.outputs.count")
+		assert.True(t, ok)
+		assert.Equal(t, "42", val)
+	})
+
+	t.Run("skips hidden files", func(t *testing.T) {
+		dir := t.TempDir()
+		setupTestState(map[string]*StepData{"ref1": {Id: "auth"}}, "ref1")
+
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ".hidden"), []byte("secret"), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "visible"), []byte("ok"), 0644))
+
+		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+
+		val, ok := resolveStepExpr(t, "step.auth.outputs.visible")
+		assert.True(t, ok)
+		assert.Equal(t, "ok", val)
+	})
+
+	t.Run("skips oversized files", func(t *testing.T) {
+		dir := t.TempDir()
+		setupTestState(map[string]*StepData{"ref1": {Id: "auth"}}, "ref1")
+
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "big"), []byte(strings.Repeat("x", MaxOutputSize+1)), 0644))
+
+		require.NoError(t, scanStepOutputsFrom(dir, "auth"))
+
+		_, ok := resolveStepExpr(t, "step.auth.outputs.big")
+		assert.False(t, ok)
+	})
+
+	t.Run("noop for empty id or missing dir", func(t *testing.T) {
+		assert.NoError(t, scanStepOutputsFrom("/nonexistent", ""))
+		assert.NoError(t, scanStepOutputsFrom("/nonexistent", "build"))
+	})
 }
 
 func TestStepResultsDir(t *testing.T) {
 	assert.Equal(t, "/data/.steps/build", StepResultsDir("build"))
 	assert.Equal(t, "/data/.steps/run_tests", StepResultsDir("run_tests"))
-}
-
-func TestStepData_SetId(t *testing.T) {
-	step := &StepData{Ref: "ref1"}
-	step.SetId("build")
-	assert.Equal(t, "build", step.Id)
-
-	status := constants.StepStatusPassed
-	step.Status = &status
-	assert.True(t, step.IsFinished())
 }

@@ -9,7 +9,7 @@ import (
 
 const (
 	stepPrefix      = "step."
-	stepResultsBase = "/data/.steps/"
+	stepResultsBase = "/data/.steps"
 )
 
 // StepResultsDir returns the results directory path for a step.
@@ -19,13 +19,12 @@ func StepResultsDir(id string) string {
 	return filepath.Join(stepResultsBase, id)
 }
 
-// StepMachine resolves step-scoped expressions:
-//   - step.results -> current step's results directory
-//   - step.<id>.results -> named step's results directory
+// StepMachine resolves step-scoped expressions like step.results,
+// step.<id>.results, and step.<id>.outputs.<key>.
 var StepMachine = expressions.NewMachine().
-	RegisterAccessor(func(name string) (interface{}, bool) {
+	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		if !strings.HasPrefix(name, stepPrefix) {
-			return nil, false
+			return nil, false, nil
 		}
 		suffix := name[len(stepPrefix):]
 		state := GetState()
@@ -33,23 +32,31 @@ var StepMachine = expressions.NewMachine().
 		if suffix == "results" {
 			currentStep := state.GetStep(state.CurrentRef)
 			if currentStep.Id == "" {
-				return nil, false
+				return nil, false, nil
 			}
-			return StepResultsDir(currentStep.Id), true
+			return StepResultsDir(currentStep.Id), true, nil
 		}
 
 		parts := strings.SplitN(suffix, ".", 2)
 		if len(parts) != 2 {
-			return nil, false
+			return nil, false, nil
 		}
-		stepId, property := parts[0], parts[1]
+		stepId, rest := parts[0], parts[1]
 
-		if property == "results" {
+		switch {
+		case rest == "results":
 			if state.GetStepByID(stepId) == nil {
-				return nil, false
+				return nil, false, nil
 			}
-			return StepResultsDir(stepId), true
+			return StepResultsDir(stepId), true, nil
+
+		case strings.HasPrefix(rest, "outputs."):
+			key := rest[len("outputs."):]
+			if key == "" {
+				return nil, false, nil
+			}
+			return state.GetStepOutput(stepId, key)
 		}
 
-		return nil, false
+		return nil, false, nil
 	})
