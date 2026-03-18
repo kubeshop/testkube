@@ -258,6 +258,13 @@ func MapConcurrencyAPIToKube(v testkube.TestWorkflowConcurrencyPolicy) testworkf
 	}
 }
 
+func MapTimeoutsAPIToKube(v testkube.TestWorkflowTimeouts) testworkflowsv1.TestWorkflowTimeouts {
+	return testworkflowsv1.TestWorkflowTimeouts{
+		Queue:          v.Queue,
+		Initialization: v.Initialization,
+	}
+}
+
 func MapParameterSchemaAPIToKube(v testkube.TestWorkflowParameterSchema) testworkflowsv1.ParameterSchema {
 	var example *intstr.IntOrString
 	if v.Example != "" {
@@ -1080,6 +1087,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 		Container:   common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 		Job:         common.MapPtr(v.Job, MapJobConfigAPIToKube),
 		Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+		Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsAPIToKube),
 		Use:         common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 		Setup:       common.MapSlice(v.Setup, MapStepAPIToKube),
 		Steps:       common.MapSlice(v.Steps, MapStepAPIToKube),
@@ -1125,6 +1133,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 				Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 				Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 				Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+				Timeouts:  common.MapPtr(v.Timeouts, MapTimeoutsAPIToKube),
 			},
 			Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
@@ -1366,6 +1375,7 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 			Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			Events:      common.MapSlice(v.Events, MapEventAPIToKube),
 			Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
+			Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsAPIToKube),
 		},
 		Services: common.MapMap(v.Services, MapServiceSpecAPIToKube),
 		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
@@ -1388,6 +1398,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 			Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			Events:      common.MapSlice(v.Events, MapEventAPIToKube),
 			Execution:   common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
+			Timeouts:    common.MapPtr(v.Timeouts, MapTimeoutsAPIToKube),
 		},
 		Services: common.MapMap(v.Services, MapIndependentServiceSpecAPIToKube),
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),

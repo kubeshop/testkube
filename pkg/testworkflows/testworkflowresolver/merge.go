@@ -451,3 +451,20 @@ func MergeConcurrency(dst, src *testworkflowsv1.ConcurrencyPolicy) *testworkflow
 	dst.CancelInProgress = src.CancelInProgress
 	return dst
 }
+
+func MergeTimeouts(dst, include *testworkflowsv1.TestWorkflowTimeouts) *testworkflowsv1.TestWorkflowTimeouts {
+	if dst == nil {
+		return include
+	}
+	if include == nil {
+		return dst
+	}
+	out := *dst
+	if include.Queue != "" {
+		out.Queue = include.Queue
+	}
+	if include.Initialization != "" {
+		out.Initialization = include.Initialization
+	}
+	return &out
+}

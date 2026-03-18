@@ -9350,6 +9350,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -14888,6 +14891,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -18220,6 +18226,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -19637,6 +19646,16 @@ spec:
                     pureByDefault:
                       description: assume all the steps are pure by default
                       type: boolean
+                  type: object
+                timeouts:
+                  description: per-workflow timeout configuration
+                  properties:
+                    initialization:
+                      description: maximum time for initialization/transitioning before steps run
+                      type: string
+                    queue:
+                      description: maximum time the execution may spend in queue before starting
+                      type: string
                   type: object
                 use:
                   description: templates to include at a top-level of workflow
@@ -31733,6 +31752,16 @@ spec:
                     pureByDefault:
                       description: assume all the steps are pure by default
                       type: boolean
+                  type: object
+                timeouts:
+                  description: per-workflow timeout configuration
+                  properties:
+                    initialization:
+                      description: maximum time for initialization/transitioning before steps run
+                      type: string
+                    queue:
+                      description: maximum time the execution may spend in queue before starting
+                      type: string
                   type: object
               type: object
           required:

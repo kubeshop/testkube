@@ -6673,8 +6673,6 @@ components:
           deprecated: true
         secret:
           $ref: "#/components/schemas/SecretConfig"
-        features:
-          $ref: "#/components/schemas/Features"
         executionNamespaces:
           type: array
           description: execution namespaces
@@ -7926,26 +7924,6 @@ components:
     EventType:
       type: string
       enum:
-        - start-test
-        - end-test-success
-        - end-test-failed
-        - end-test-aborted
-        - end-test-timeout
-        - become-test-up
-        - become-test-down
-        - become-test-failed
-        - become-test-aborted
-        - become-test-timeout
-        - start-testsuite
-        - end-testsuite-success
-        - end-testsuite-failed
-        - end-testsuite-aborted
-        - end-testsuite-timeout
-        - become-testsuite-up
-        - become-testsuite-down
-        - become-testsuite-failed
-        - become-testsuite-aborted
-        - become-testsuite-timeout
         - queue-testworkflow
         - start-testworkflow
         - end-testworkflow-success
@@ -8062,15 +8040,6 @@ components:
           items:
             type: string
           example: ["logline1", "logline2", "logline3"]
-
-    Features:
-      type: object
-      required:
-        - logsV2
-      properties:
-        logsV2:
-          type: boolean
-          description: Log processing version 2
 
     TestTrigger:
       type: object
@@ -9500,6 +9469,17 @@ components:
         isolatedContainers:
           $ref: "#/components/schemas/BoxedBoolean"
 
+    TestWorkflowTimeouts:
+      type: object
+      description: configures timeout behavior for a workflow (queue, initialization)
+      properties:
+        queue:
+          type: string
+          description: maximum time the execution may spend in queue before starting (e.g. 30s, 5m)
+        initialization:
+          type: string
+          description: maximum time for initialization/transitioning before steps run (e.g. 60s, 2m)
+
     TestWorkflowSpec:
       type: object
       properties:
@@ -9543,6 +9523,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowExecutionSchema"
+        timeouts:
+          $ref: "#/components/schemas/TestWorkflowTimeouts"
         pvcs:
           type: object
           additionalProperties:
@@ -9587,6 +9569,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowExecutionSchema"
+        timeouts:
+          $ref: "#/components/schemas/TestWorkflowTimeouts"
         pvcs:
           type: object
           additionalProperties:
