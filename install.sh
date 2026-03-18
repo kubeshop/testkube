@@ -87,13 +87,18 @@ _download_url() {
   # Starting from 2.4.0, release tags dropped the 'v' prefix.
   # For auto-detected versions fetched from the API, the tag already has the correct format.
   if [ -n "$TESTKUBE_VERSION" ]; then
-    local major minor
-    major=$(echo "$version" | cut -d. -f1)
-    minor=$(echo "$version" | cut -d. -f2)
-    if [ "$major" -lt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -lt 4 ]; }; then
-      tag="v${version}"
-    else
-      tag="${version}"
+    # Only attempt numeric comparison when the version looks like a full numeric semver (X.Y.Z).
+    # Strip any pre-release/build suffix (e.g. "2.4.0-beta" -> "2.4.0") before validation.
+    local major minor normalized_version
+    normalized_version="${version%%-*}"
+    if [[ "$normalized_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      major=$(echo "$normalized_version" | cut -d. -f1)
+      minor=$(echo "$normalized_version" | cut -d. -f2)
+      if [ "$major" -lt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -lt 4 ]; }; then
+        tag="v${version}"
+      else
+        tag="${version}"
+      fi
     fi
   fi
 
