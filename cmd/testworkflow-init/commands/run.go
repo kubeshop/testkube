@@ -2,6 +2,8 @@ package commands
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -39,11 +41,15 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 
 	// Resolve the command to run
 	for i := range command {
+		before := command[i]
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
 			output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 		}
 		command[i], _ = value.Static().StringValue()
+		if before != command[i] {
+			fmt.Fprintf(os.Stderr, "debug: resolved arg[%d]:\n  before: %s\n  after:  %s\n", i, before, command[i])
+		}
 	}
 
 	// Run the operation with context
