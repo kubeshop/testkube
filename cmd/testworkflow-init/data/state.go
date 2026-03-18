@@ -110,13 +110,30 @@ func (s *state) GetStepByID(id string) *StepData {
 	return nil
 }
 
-func (s *state) SetStepOutput(stepId, name string, value interface{}) {
-	key := "step." + stepId + "." + name
-	s.SetOutput(stepId, key, value)
+func (s *state) SetStepOutput(stepId, name, value string) {
+	stateMu.Lock()
+	defer stateMu.Unlock()
+
+	if s.Output == nil {
+		s.Output = make(map[string]string)
+	}
+	// Store raw string directly, not JSON-encoded.
+	// GetOutput would compile a JSON string like "\"value\"" as an expression,
+	// which causes quoting issues in templates. Instead we store the plain value
+	// and retrieve it directly in GetStepOutput.
+	s.Output["step."+stepId+"."+name] = value
 }
 
 func (s *state) GetStepOutput(stepId, name string) (interface{}, bool, error) {
-	return s.GetOutput("step." + stepId + "." + name)
+	key := "step." + stepId + "." + name
+	stateMu.RLock()
+	v, ok := s.Output[key]
+	stateMu.RUnlock()
+
+	if !ok {
+		return nil, false, nil
+	}
+	return v, true, nil
 }
 
 func (s *state) GetSubSteps(ref string) []*StepData {
