@@ -19651,10 +19651,10 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run (not implemented)
+                      description: maximum time for initialization/transitioning before steps run
                       type: string
                     queue:
-                      description: maximum time the execution may spend in queue before starting (not implemented)
+                      description: maximum time the execution may spend in queue before starting
                       type: string
                   type: object
                 use:
@@ -31757,10 +31757,10 @@ spec:
                   description: per-workflow timeout configuration
                   properties:
                     initialization:
-                      description: maximum time for initialization/transitioning before steps run (not implemented)
+                      description: maximum time for initialization/transitioning before steps run
                       type: string
                     queue:
-                      description: maximum time the execution may spend in queue before starting (not implemented)
+                      description: maximum time the execution may spend in queue before starting
                       type: string
                   type: object
               type: object
