@@ -1,0 +1,3 @@
+{{- if and .Values.gitops.enabled .Values.gitops.installCRD }}
+{{ include "testkube-crds.render" . }}
+{{- end }}
