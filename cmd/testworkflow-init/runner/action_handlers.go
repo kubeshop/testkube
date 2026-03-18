@@ -23,27 +23,22 @@ import (
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 )
 
-// handleDeclareAction processes declare actions
 func handleDeclareAction(step *data.StepData, action *lite.ActionDeclare) {
 	step.SetId(action.Id).SetCondition(action.Condition).SetParents(action.Parents)
 }
 
-// handlePauseAction processes pause actions
 func handlePauseAction(step *data.StepData, action *lite.ActionPause) {
 	step.SetPausedOnStart(true)
 }
 
-// handleResultAction processes result actions
 func handleResultAction(step *data.StepData, action *lite.ActionResult) {
 	step.SetResult(action.Value)
 }
 
-// handleTimeoutAction processes timeout actions
 func handleTimeoutAction(step *data.StepData, action *lite.ActionTimeout) {
 	step.SetTimeout(action.Timeout)
 }
 
-// handleRetryAction processes retry actions
 func handleRetryAction(step *data.StepData, action *lite.ActionRetry) {
 	step.SetRetryPolicy(data.RetryPolicy{
 		Count: action.Count,
@@ -197,6 +192,18 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 			break
 		}
 
+		// Clear stale outputs from previous attempts and prepare fresh directory
+		if step.Id != "" {
+			data.GetState().ClearStepOutputs(step.Id)
+			if err := data.PrepareOutputsDir(); err != nil {
+				return ActionResult{
+					ContinueExecution: false,
+					Error:             err,
+					ErrorCode:         constants.CodeInternal,
+				}
+			}
+		}
+
 		hasTimeout.Store(false)
 		hasOwnTimeout.Store(false)
 		stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
@@ -234,6 +241,13 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 
 		now := time.Now()
 		step.StartedAt = &now
+	}
+
+	// Scan per-step outputs directory after execution
+	if step.Id != "" {
+		if err := data.ScanStepOutputs(step.Id); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: failed to scan step outputs: %s\n", err.Error())
+		}
 	}
 
 	return ActionResult{ContinueExecution: true}
