@@ -1,6 +1,8 @@
 package data
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +57,15 @@ var StepMachine = expressions.NewMachine().
 			if key == "" {
 				return nil, false, nil
 			}
-			return state.GetStepOutput(stepId, key)
+			val, ok, err := state.GetStepOutput(stepId, key)
+			fmt.Fprintf(os.Stderr, "debug: StepMachine lookup step.%s.outputs.%s -> ok=%v, err=%v, state.Output keys=%v\n", stepId, key, ok, err, func() []string {
+				keys := make([]string, 0, len(state.Output))
+				for k := range state.Output {
+					keys = append(keys, k)
+				}
+				return keys
+			}())
+			return val, ok, err
 		}
 
 		return nil, false, nil

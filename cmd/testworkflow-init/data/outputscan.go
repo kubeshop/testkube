@@ -31,6 +31,8 @@ func scanStepOutputsFrom(dir, stepId string) error {
 		return fmt.Errorf("failed to read outputs directory: %w", err)
 	}
 
+	fmt.Fprintf(os.Stderr, "debug: scanning outputs dir %s for step %q, found %d entries\n", dir, stepId, len(entries))
+
 	state := GetState()
 	for _, entry := range entries {
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
@@ -54,8 +56,13 @@ func scanStepOutputsFrom(dir, stepId string) error {
 			continue
 		}
 
-		state.SetStepOutput(stepId, name, strings.TrimSpace(string(content)))
+		trimmed := strings.TrimSpace(string(content))
+		fmt.Fprintf(os.Stderr, "debug: storing output step.%s.%s = %q\n", stepId, name, trimmed)
+		state.SetStepOutput(stepId, name, trimmed)
 	}
+
+	// Debug: dump all outputs in state
+	fmt.Fprintf(os.Stderr, "debug: state.Output after scan: %v\n", state.Output)
 	return nil
 }
 
