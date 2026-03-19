@@ -6,6 +6,7 @@
 *.so
 *.dylib
 *.tgz
+!k8s/helm/testkube-operator/charts/*.tgz
 
 # Test binary, built with `go test -c`
 *.test
