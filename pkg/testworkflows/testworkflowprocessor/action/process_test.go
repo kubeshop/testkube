@@ -21,9 +21,9 @@ func TestProcess_BasicSteps(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "step1", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "step1", "init").
 
 		// Declare group resolutions
 		Result("init", "step1&&step2").
@@ -77,12 +77,12 @@ func TestProcess_Grouping(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("group1", "step1", "init").
-		Declare("step2", "step1", "init", "group1").
-		Declare("step3", "step2&&step1", "init", "group1").
-		Declare("step4", "group1&&step1", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("group1", "", "step1", "init").
+		Declare("step2", "", "step1", "init", "group1").
+		Declare("step3", "", "step2&&step1", "init", "group1").
+		Declare("step4", "", "group1&&step1", "init").
 
 		// Declare group resolutions
 		Result("group1", "step2&&step3").
@@ -162,9 +162,9 @@ func TestProcess_Pause(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "step1", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "step1", "init").
 
 		// Declare information about potential pauses
 		Pause("step1").
@@ -219,9 +219,9 @@ func TestProcess_NegativeStep(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "step1", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "step1", "init").
 
 		// Declare group resolutions
 		Result("init", "step1&&step2").
@@ -272,9 +272,9 @@ func TestProcess_NegativeGroup(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "step1", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "step1", "init").
 
 		// Declare group resolutions
 		Result("init", "!step1||!step2").
@@ -326,9 +326,9 @@ func TestProcess_OptionalStep(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "true", "init"). // because step1 is optional
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "true", "init"). // because step1 is optional
 
 		// Declare group resolutions
 		Result("init", "step2").
@@ -381,10 +381,10 @@ func TestProcess_OptionalGroup(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("inner", "true", "init").
-		Declare("step1", "true", "init", "inner").
-		Declare("step2", "step1", "init", "inner").
+		Declare("init", "", "true").
+		Declare("inner", "", "true", "init").
+		Declare("step1", "", "true", "init", "inner").
+		Declare("step2", "", "step1", "init", "inner").
 
 		// Declare group resolutions
 		Result("inner", "step1&&step2").
@@ -440,9 +440,9 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "false").
-		Declare("step2", "true", "init"). // because step1 is skipped
+		Declare("init", "", "true").
+		Declare("step1", "", "false").
+		Declare("step2", "", "true", "init"). // because step1 is skipped
 
 		// Declare group resolutions
 		Result("init", "step2").
@@ -488,9 +488,9 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "false").
-		Declare("step1", "false").
-		Declare("step2", "false").
+		Declare("init", "", "false").
+		Declare("step1", "", "false").
+		Declare("step2", "", "false").
 
 		// Declare group resolutions
 		Result("", "true").
@@ -531,9 +531,9 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "false").
-		Declare("step1", "false").
-		Declare("step2", "false").
+		Declare("init", "", "false").
+		Declare("step1", "", "false").
+		Declare("step2", "", "false").
 
 		//Pause("init"). // ignored as it's not executed
 
@@ -577,9 +577,9 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "false").
-		Declare("step2", "true", "init"). // because step1 is skipped
+		Declare("init", "", "true").
+		Declare("step1", "", "false").
+		Declare("step2", "", "true", "init"). // because step1 is skipped
 
 		// Declare information about potential pauses
 		Pause("init").
@@ -631,9 +631,9 @@ func TestProcess_ConsecutiveAlways(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "true", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "true", "init").
 
 		// Declare group resolutions
 		Result("init", "step1&&step2").
@@ -689,9 +689,9 @@ func TestProcess_PureShellAtTheEnd(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Declare stage conditions
-		Declare("init", "true").
-		Declare("step1", "true", "init").
-		Declare("step2", "true", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "true", "init").
+		Declare("step2", "", "true", "init").
 
 		// Declare group resolutions
 		Result("init", "step1&&step2").

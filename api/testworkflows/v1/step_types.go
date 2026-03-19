@@ -20,6 +20,11 @@ type RetryPolicy struct {
 }
 
 type StepMeta struct {
+	// stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+	// if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+	// must contain only lowercase alphanumeric characters and underscores
+	Id string `json:"id,omitempty"`
+
 	// readable name for the step
 	Name string `json:"name,omitempty" expr:"template"`
 

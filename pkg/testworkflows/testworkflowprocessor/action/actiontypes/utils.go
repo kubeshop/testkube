@@ -44,8 +44,8 @@ func (a ActionList) Setup(copyInit, copyToolkit, copyBinaries bool) ActionList {
 	return append(a, Action{Setup: &lite.ActionSetup{CopyInit: copyInit, CopyToolkit: copyToolkit, CopyBinaries: copyBinaries}})
 }
 
-func (a ActionList) Declare(ref string, condition string, parents ...string) ActionList {
-	return append(a, Action{Declare: &lite.ActionDeclare{Ref: ref, Condition: condition, Parents: parents}})
+func (a ActionList) Declare(ref string, id string, condition string, parents ...string) ActionList {
+	return append(a, Action{Declare: &lite.ActionDeclare{Ref: ref, Id: id, Condition: condition, Parents: parents}})
 }
 
 func (a ActionList) Start(ref string) ActionList {
