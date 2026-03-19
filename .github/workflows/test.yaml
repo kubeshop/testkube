@@ -7,6 +7,7 @@ on:
   pull_request:
     paths-ignore: ["docs/**"]
     branches: [main]
+    
 
 permissions:
   contents: read
@@ -16,7 +17,8 @@ permissions:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-22.04
+    if: github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +75,8 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    runs-on: ubuntu-22.04
+    if: github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
 
     services:
       mongo:
@@ -155,7 +158,8 @@ jobs:
 
   verify-generated-crds:
     name: Verify generated CRDs
-    runs-on: ubuntu-22.04
+    if: github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
