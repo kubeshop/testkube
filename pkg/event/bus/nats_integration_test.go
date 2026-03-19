@@ -96,7 +96,7 @@ func TestNATS_Integration(t *testing.T) {
 	defer ec.Close() //nolint:staticcheck
 
 	// and NATS event bus
-	n := NewNATSBus(ec)
+	n := NewNATSBus(ec, ConnectionConfig{NatsURI: cfg.NatsURI})
 
 	var wg sync.WaitGroup
 	wg.Add(2)

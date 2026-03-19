@@ -167,10 +167,10 @@ func main() {
 	metrics := metrics.NewMetrics()
 
 	log.DefaultLogger.Info("connecting to NATS...")
-	nc := commons.MustCreateNATSConnection(cfg)
+	nc, natsCfg := commons.MustCreateNATSConnection(cfg)
 	log.DefaultLogger.Infow("connected to NATS successfully", "embedded", cfg.NatsEmbedded, "uri", cfg.NatsURI)
 
-	eventBus := bus.NewNATSBus(nc)
+	eventBus := bus.NewNATSBus(nc, natsCfg)
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}

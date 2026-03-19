@@ -340,7 +340,11 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	return proContext, nil
 }
 
-func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
+// MustCreateNATSConnection returns both the encoded connection and the
+// ConnectionConfig it was built from, so callers can pass the config on to
+// NATSBus without constructing it a second time (which risks drift when new
+// fields are added to ConnectionConfig).
+func MustCreateNATSConnection(cfg *config.Config) (*nats.EncodedConn, bus.ConnectionConfig) { //nolint:staticcheck
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
@@ -350,10 +354,11 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 
 		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 		ExitOnError("creating NATS connection", err)
-		return conn
+		// Embedded connections have no external URI; return empty config.
+		return conn, bus.ConnectionConfig{}
 	}
 
-	conn, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
+	natsCfg := bus.ConnectionConfig{
 		NatsURI:            cfg.NatsURI,
 		NatsSecure:         cfg.NatsSecure,
 		NatsSkipVerify:     cfg.NatsSkipVerify,
@@ -361,9 +366,10 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 		NatsKeyFile:        cfg.NatsKeyFile,
 		NatsCAFile:         cfg.NatsCAFile,
 		NatsConnectTimeout: cfg.NatsConnectTimeout,
-	})
+	}
+	conn, err := bus.NewNATSEncodedConnection(natsCfg)
 	ExitOnError("creating NATS connection", err)
-	return conn
+	return conn, natsCfg
 }
 
 // Components
