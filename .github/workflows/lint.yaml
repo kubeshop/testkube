@@ -4,6 +4,8 @@ on:
   push:
     branches-ignore:
       - main
+      - renovate/**
+      - dependabot/**
 
 permissions:
   # allow read access to the content for analysis.
