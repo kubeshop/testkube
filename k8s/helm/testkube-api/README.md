@@ -113,7 +113,7 @@ A Helm chart for Testkube api
 | kubeVersion | string | `""` |  |
 | livenessProbe.initialDelaySeconds | int | `30` |  |
 | logs.bucket | string | `"testkube-logs"` |  |
-| logs.storage | string | `"minio"` |  |
+| logs.storage | string | `"minio"` | Log storage can be "minio", "mongo", or "none" (to disable log persistence) |
 | logsServiceAccount.annotations | object | `{}` |  |
 | logsServiceAccount.create | bool | `true` |  |
 | logsServiceAccount.name | string | `""` |  |
