@@ -513,9 +513,6 @@ testkube-api:
     # -- Testkube API k8s secret for private registries
     pullSecrets: []
 
-  ## Sets a specific tag for the executors to the last built version
-  executorsTag: 2.1.123
-
   # Test Workflows toolkit image parameters
   imageTwToolkit:
     # -- Test Workflows image registry
@@ -1019,8 +1016,6 @@ testkube-api:
 
   # -- Testkube timeout for pod start
   podStartTimeout: "30m"
-  # -- default executors as base64-encoded string
-  executors: ""
   # -- SA that is used by a job. Can be annotated with the IAM Role Arn to access S3 service in AWS Cloud.
   jobServiceAccountName: ""
   # -- target for cdevents emission via http(s)
@@ -1033,12 +1028,6 @@ testkube-api:
   enableSecretsEndpoint: false
   # -- disable secret creation for tests and test sources
   disableSecretCreation: false
-  # -- enable only specified executors with enabled flag
-  enabledExecutors:
-  #  postman-executor:
-  #    enabled: true
-  #  cypress-executor:
-  #    enabled: true
   # -- Execution namespaces for Testkube API to only run tests
   # In this case, a Role and a RoleBinding will be created for each specified namespace.
   executionNamespaces: []

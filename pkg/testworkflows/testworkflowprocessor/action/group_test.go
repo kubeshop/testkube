@@ -13,10 +13,10 @@ import (
 func TestGroup_Basic(t *testing.T) {
 	input := actiontypes.NewActionList().
 		// Configure
-		Declare("init", "true").
-		Declare("step1", "false").
-		Declare("step2", "true", "init").
-		Declare("step3", "true", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "false").
+		Declare("step2", "", "true", "init").
+		Declare("step3", "", "true", "init").
 		Result("init", "step2 && step3").
 		Result("", "init").
 		Start("").

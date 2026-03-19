@@ -8505,6 +8505,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -14046,6 +14052,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -17381,6 +17393,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -20997,6 +21015,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -26396,6 +26420,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -29609,6 +29639,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
