@@ -57,7 +57,7 @@ func OpenTicket(d testkube.DebugInfo) error {
 		Labels: []string{BugType},
 	}
 
-	openURL, err := prShared.WithPrAndIssueQueryParams(nil, nil, BaseURL, issue)
+	openURL, err := prShared.WithPrAndIssueQueryParams(nil, nil, BaseURL, issue, nil)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@ type TableData interface {
 
 func (ui *UI) Table(tableData TableData, writer io.Writer) {
 	table := tablewriter.NewWriter(writer)
-	table.EnableBorder(false)
+	table.SetBorder(false)
 	table.SetHeaderLine(true)
 
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
