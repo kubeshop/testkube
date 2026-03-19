@@ -10,11 +10,6 @@ on:
         options:
           - 'no'
           - 'yes'
-      skip_build:
-        description: 'Skip build/release and only publish Linux packages? (for re-runs when release exists)'
-        type: boolean
-        required: false
-        default: false
 
 permissions:
   id-token: write # needed for keyless signing
@@ -101,7 +96,7 @@ jobs:
     name: Create and upload release-artifacts
     needs: pre_build
     runs-on: depot-ubuntu-22.04
-    if: ${{ inputs.confirm == 'yes' && !inputs.skip_build }}
+    if: ${{ inputs.confirm == 'yes' }}
 
     steps:
       - uses: actions/create-github-app-token@v3
