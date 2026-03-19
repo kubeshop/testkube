@@ -3,7 +3,7 @@ ARG BUSYBOX_IMAGE="busybox:1.36.1-musl"
 ###################################
 ## Build testworkflow init
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.1-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Build testworkflow toolkit
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.1-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -43,7 +43,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.25.0-alpine AS debug
+FROM golang:1.26.1-alpine AS debug
 
 ENV GOTRACEBACK=all
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0

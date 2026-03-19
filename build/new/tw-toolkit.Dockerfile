@@ -1,7 +1,7 @@
 ARG BUSYBOX_IMAGE
 ARG ALPINE_IMAGE
 
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.26.1-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app
@@ -29,4 +29,3 @@ COPY --from=build /app/testworkflow-init /init
 RUN adduser --disabled-password --home / --no-create-home --uid 1001 default
 USER 1001
 ENTRYPOINT ["/toolkit"]
-
