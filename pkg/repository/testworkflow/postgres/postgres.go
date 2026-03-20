@@ -692,7 +692,32 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams{
+		OrganizationID:     params.OrganizationID,
+		EnvironmentID:      params.EnvironmentID,
+		WorkflowName:       params.WorkflowName,
+		WorkflowNames:      params.WorkflowNames,
+		TextSearch:         params.TextSearch,
+		StartDate:          params.StartDate,
+		EndDate:            params.EndDate,
+		LastNDays:          params.LastNDays,
+		Statuses:           params.Statuses,
+		RunnerID:           params.RunnerID,
+		Assigned:           params.Assigned,
+		ActorName:          params.ActorName,
+		ActorType:          params.ActorType,
+		GroupID:            params.GroupID,
+		Initialized:        params.Initialized,
+		HealthRanges:       params.HealthRanges,
+		TagKeys:            params.TagKeys,
+		TagConditions:      params.TagConditions,
+		LabelKeys:          params.LabelKeys,
+		LabelConditions:    params.LabelConditions,
+		SelectorKeys:       params.SelectorKeys,
+		SelectorConditions: params.SelectorConditions,
+		Fst:                params.Fst,
+		Lmt:                params.Lmt,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1908,42 +1933,21 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	}
 
 	if filter.Selector() != "" {
-		keys, conditions := r.parseSelector(filter.Selector())
-		params.SelectorKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.SelectorConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseSelectorToText(filter.Selector())
+		params.SelectorKeys = keys
+		params.SelectorConditions = conditions
 	}
 
 	if filter.LabelSelector() != nil {
-		keys, conditions := r.parseLabelSelector(filter.LabelSelector())
-		params.LabelKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.LabelConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseLabelSelectorToText(filter.LabelSelector())
+		params.LabelKeys = keys
+		params.LabelConditions = conditions
 	}
 
 	if filter.TagSelector() != "" {
-		keys, conditions := r.parseTagSelector(filter.TagSelector())
-		params.TagKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.TagConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseTagSelectorToText(filter.TagSelector())
+		params.TagKeys = keys
+		params.TagConditions = conditions
 	}
 
 	if filter.SkipDefined() {
@@ -2054,8 +2058,84 @@ func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyConditio
 	return keys, conditions
 }
 
+func (r *PostgresRepository) parseSelectorToText(selector string) ([]string, [][]string) {
+	keys := make([]string, 0)
+	conditions := make([][]string, 0)
+	values := make(map[string][]string, 0)
+	items := strings.Split(selector, ",")
+	for _, item := range items {
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+		} else if len(elements) == 1 {
+			key := utils.EscapeDots(elements[0])
+			keys = append(keys, key)
+		}
+	}
+
+	for key, value := range values {
+		condition := make([]string, 0)
+		condition = append(condition, key)
+		condition = append(condition, value...)
+		conditions = append(conditions, condition)
+	}
+
+	return keys, conditions
+}
+
+func (r *PostgresRepository) parseLabelSelectorToText(labelSelector *testworkflow.LabelSelector) ([]string, [][]string) {
+	keys := make([]string, 0)
+	conditions := make([][]string, 0)
+	values := make(map[string][]string, 0)
+	for _, label := range labelSelector.Or {
+		if label.Value != nil {
+			values[utils.EscapeDots(label.Key)] = append(values[utils.EscapeDots(label.Key)], *label.Value)
+		} else if label.Exists != nil {
+			key := utils.EscapeDots(label.Key)
+			if !*label.Exists {
+				key = key + ":not_exists"
+			}
+			keys = append(keys, key)
+		}
+	}
+
+	for key, value := range values {
+		condition := make([]string, 0)
+		condition = append(condition, key)
+		condition = append(condition, value...)
+		conditions = append(conditions, condition)
+	}
+
+	return keys, conditions
+}
+
+func (r *PostgresRepository) parseTagSelectorToText(tagSelector string) ([]string, [][]string) {
+	keys := make([]string, 0)
+	conditions := make([][]string, 0)
+	values := make(map[string][]string, 0)
+	items := strings.Split(tagSelector, ",")
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+		} else if len(elements) == 1 {
+			key := utils.EscapeDots(elements[0])
+			keys = append(keys, key)
+		}
+	}
+
+	for key, value := range values {
+		condition := make([]string, 0)
+		condition = append(condition, key)
+		condition = append(condition, value...)
+		conditions = append(conditions, condition)
+	}
+
+	return keys, conditions
+}
+
 func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testworkflow.Filter) (sqlc.GetTestWorkflowExecutionsTotalsParams, error) {
-	var err error
 	params := sqlc.GetTestWorkflowExecutionsTotalsParams{
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
@@ -2128,42 +2208,21 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 	}
 
 	if filter.Selector() != "" {
-		keys, conditions := r.parseSelector(filter.Selector())
-		params.SelectorKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.SelectorConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseSelectorToText(filter.Selector())
+		params.SelectorKeys = keys
+		params.SelectorConditions = conditions
 	}
 
 	if filter.LabelSelector() != nil {
-		keys, conditions := r.parseLabelSelector(filter.LabelSelector())
-		params.LabelKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.LabelConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseLabelSelectorToText(filter.LabelSelector())
+		params.LabelKeys = keys
+		params.LabelConditions = conditions
 	}
 
 	if filter.TagSelector() != "" {
-		keys, conditions := r.parseTagSelector(filter.TagSelector())
-		params.TagKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.TagConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseTagSelectorToText(filter.TagSelector())
+		params.TagKeys = keys
+		params.TagConditions = conditions
 	}
 
 	return params, nil

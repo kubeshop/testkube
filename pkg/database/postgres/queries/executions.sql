@@ -381,91 +381,85 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR 
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE(@assigned, NULL) IS NULL OR
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR 
+    AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (     
-        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+   AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+          EXISTS (
+              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+          )
+      )
+    AND (
+        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length(@tag_keys::jsonb)
+            ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
+                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length(@selector_keys::jsonb)
+            ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length(@selector_conditions::jsonb)
+        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+            ) = array_length(@selector_conditions::text[][], 1)
         )
     )
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: GetTestWorkflowExecutionsTotals :many
-SELECT 
+SELECT
     r.status,
     COUNT(*) as count
 FROM test_workflow_executions e
@@ -480,90 +474,84 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR 
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE(@assigned, NULL) IS NULL OR
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR 
+    AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
     AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (     
-        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+          EXISTS (
+              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+          )
+      )
+    AND (
+        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length(@tag_keys::jsonb)
+            ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
+                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length(@selector_keys::jsonb)
+            ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length(@selector_conditions::jsonb)
+        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+            ) = array_length(@selector_conditions::text[][], 1)
         )
     )
 GROUP BY r.status;
 
 -- name: GetTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -630,84 +618,78 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR 
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE(@assigned, NULL) IS NULL OR
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR 
+    AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (     
-        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+   AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+          EXISTS (
+              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+          )
+      )
+    AND (
+        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length(@tag_keys::jsonb)
+            ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
+                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length(@selector_keys::jsonb)
+            ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length(@selector_conditions::jsonb)
+        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+            ) = array_length(@selector_conditions::text[][], 1)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -1119,84 +1101,78 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR 
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE(@assigned, NULL) IS NULL OR
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR 
+    AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE(@tag_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+    AND (
+        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length(@tag_keys::jsonb)
+            ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
+                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@label_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@label_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
             ) > 0
         )
     )
     AND (
-        (COALESCE(@selector_keys::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_keys::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length(@selector_keys::jsonb)
+            ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements(@selector_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length(@selector_conditions::jsonb)
+        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
+            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
+                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+            ) = array_length(@selector_conditions::text[][], 1)
         )
     )
 ORDER BY e.scheduled_at DESC
