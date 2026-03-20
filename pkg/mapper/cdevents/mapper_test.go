@@ -3,7 +3,7 @@ package cdevents
 import (
 	"testing"
 
-	cdevents "github.com/cdevents/sdk-go/pkg/api"
+	cdeventsv05 "github.com/cdevents/sdk-go/pkg/api/v05"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -63,7 +63,7 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected source: %s", source)
 	}
 
-	cde, ok := ev.(*cdevents.TestCaseRunQueuedEvent)
+	cde, ok := ev.(*cdeventsv05.TestCaseRunQueuedEvent)
 	assert.Equal(t, true, ok)
 
 	testID := cde.Subject.Content.TestCase.Id
@@ -148,7 +148,7 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected source: %s", source)
 	}
 
-	cde, ok := ev.(*cdevents.TestSuiteRunQueuedEvent)
+	cde, ok := ev.(*cdeventsv05.TestSuiteRunQueuedEvent)
 	assert.Equal(t, true, ok)
 
 	suiteID := cde.Subject.Content.TestSuite.Id
@@ -156,7 +156,7 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected test suite id: %s", suiteID)
 	}
 
-	suiteURI := cde.Subject.Content.TestSuite.Url
+	suiteURI := cde.Subject.Content.TestSuite.Uri
 	if suiteURI != "/test-workflows/Suite 1" {
 		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
@@ -224,7 +224,7 @@ func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected source: %s", source)
 	}
 
-	cde, ok := ev.(*cdevents.TestCaseRunStartedEvent)
+	cde, ok := ev.(*cdeventsv05.TestCaseRunStartedEvent)
 	assert.Equal(t, true, ok)
 
 	testID := cde.Subject.Content.TestCase.Id
@@ -310,7 +310,7 @@ func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected source: %s", source)
 	}
 
-	cde, ok := ev.(*cdevents.TestSuiteRunStartedEvent)
+	cde, ok := ev.(*cdeventsv05.TestSuiteRunStartedEvent)
 	assert.Equal(t, true, ok)
 
 	suiteID := cde.Subject.Content.TestSuite.Id
@@ -395,7 +395,7 @@ func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected source: %s", source)
 	}
 
-	cde, ok := ev.(*cdevents.TestCaseRunFinishedEvent)
+	cde, ok := ev.(*cdeventsv05.TestCaseRunFinishedEvent)
 	assert.Equal(t, true, ok)
 
 	testID := cde.Subject.Content.TestCase.Id
@@ -499,7 +499,7 @@ func TestMapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 		t.Errorf("Unexpected source: %s", source)
 	}
 
-	cde, ok := ev.(*cdevents.TestSuiteRunFinishedEvent)
+	cde, ok := ev.(*cdeventsv05.TestSuiteRunFinishedEvent)
 	assert.Equal(t, true, ok)
 
 	suiteID := cde.Subject.Content.TestSuite.Id
