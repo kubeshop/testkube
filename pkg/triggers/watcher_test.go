@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -40,31 +39,22 @@ func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 
 	service := newWatcherTestService(clientset, testKubeClientset, namespace)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	go service.runWatcher(ctx)
-
-	require.Eventually(t, func() bool {
-		return service.informers != nil
-	}, time.Second, 10*time.Millisecond)
-
 	trigger := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "test-trigger"},
 		Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
 	}
-	_, err := testKubeClientset.TestsV1().TestTriggers(namespace).Create(ctx, trigger, metav1.CreateOptions{})
-	require.NoError(t, err)
 
-	assert.Eventually(t, func() bool {
+	handler := service.testTriggerEventHandler()
+	handler.AddFunc(trigger)
+
+	require.Eventually(t, func() bool {
 		_, ok := service.triggerStatus[newStatusKey(namespace, "test-trigger")]
 		return ok
 	}, time.Second, 10*time.Millisecond)
 
-	err = testKubeClientset.TestsV1().TestTriggers(namespace).Delete(ctx, "test-trigger", metav1.DeleteOptions{})
-	require.NoError(t, err)
+	handler.DeleteFunc(trigger)
 
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		return len(service.triggerStatus) == 0
 	}, time.Second, 10*time.Millisecond)
 }

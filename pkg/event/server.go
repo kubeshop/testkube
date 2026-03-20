@@ -16,7 +16,7 @@ var ErrNatsEmbeddedServerTimeout = fmt.Errorf("server not ready for connections 
 func ServerWithConnection(dir string) (*server.Server, *nats.Conn, error) {
 	opts := &server.Options{
 		JetStream:             true,
-		Port:                  4222,
+		Port:                  -1,
 		Host:                  "localhost",
 		StoreDir:              dir,
 		NoLog:                 false,
