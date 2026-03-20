@@ -692,7 +692,8 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams{
+	//nolint:staticcheck // Different query types require explicit field mapping
+	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams{
 		OrganizationID:     params.OrganizationID,
 		EnvironmentID:      params.EnvironmentID,
 		WorkflowName:       params.WorkflowName,
@@ -717,7 +718,8 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		SelectorConditions: params.SelectorConditions,
 		Fst:                params.Fst,
 		Lmt:                params.Lmt,
-	})
+	}
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, summaryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -1965,97 +1967,6 @@ type KeyCondition struct {
 type ValueCondition struct {
 	Key    string   `json:"key"`
 	Values []string `json:"values"` // Multiple values for the same key (OR logic within the same key)
-}
-
-// Parse selector into conditions
-func (r *PostgresRepository) parseSelector(selector string) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
-	items := strings.Split(selector, ",")
-	for _, item := range items {
-		elements := strings.Split(item, "=")
-		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
-		} else if len(elements) == 1 {
-			condType := "exists"
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(elements[0]),
-			})
-		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
-	}
-
-	return keys, conditions
-}
-
-// Parse label selector into conditions
-func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.LabelSelector) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
-	for _, label := range labelSelector.Or {
-		if label.Value != nil {
-			values[utils.EscapeDots(label.Key)] = append(values[utils.EscapeDots(label.Key)], *label.Value)
-		} else if label.Exists != nil {
-			// Label exists/not exists
-			condType := "exists"
-			if !*label.Exists {
-				condType = "not_exists"
-			}
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(label.Key),
-			})
-		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
-	}
-
-	return keys, conditions
-}
-
-// Parse tag selector into conditions
-func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
-	items := strings.Split(tagSelector, ",")
-	for _, item := range items {
-		item = strings.TrimSpace(item)
-		elements := strings.Split(item, "=")
-		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
-		} else if len(elements) == 1 {
-			// Tag exists: tag
-			condType := "exists"
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(elements[0]),
-			})
-		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
-	}
-
-	return keys, conditions
 }
 
 func (r *PostgresRepository) parseSelectorToText(selector string) ([]string, [][]string) {
