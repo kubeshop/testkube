@@ -7,7 +7,8 @@ on:
   pull_request:
     paths-ignore: ["docs/**"]
     branches: [main]
-    
+    types: [opened, synchronize, reopened, ready_for_review]
+
 
 permissions:
   contents: read
@@ -17,7 +18,7 @@ permissions:
 jobs:
   unit-tests:
     name: Unit Tests
-    if: github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    if: github.event.pull_request.draft == false && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
 
     steps:
@@ -75,7 +76,7 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    if: github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    if: github.event.pull_request.draft == false && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
 
     services:
@@ -158,7 +159,7 @@ jobs:
 
   verify-generated-crds:
     name: Verify generated CRDs
-    if: github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    if: github.event.pull_request.draft == false && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
     runs-on: depot-ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
