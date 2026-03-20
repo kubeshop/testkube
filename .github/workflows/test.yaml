@@ -29,12 +29,11 @@ jobs:
           go-version: '1.26'
           cache: false
 
-      - name: Cache Go modules and build cache
+      - name: Cache Go modules
         uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
-            ~/.cache/go-build
             bin/tooling
           key: ${{ runner.os }}-go-unit-${{ hashFiles('go.sum') }}
           restore-keys: |
@@ -107,12 +106,11 @@ jobs:
           go-version: '1.26'
           cache: false
 
-      - name: Cache Go modules and build cache
+      - name: Cache Go modules
         uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
-            ~/.cache/go-build
             bin/tooling
           key: ${{ runner.os }}-go-integration-${{ hashFiles('go.sum') }}
           restore-keys: |
@@ -169,12 +167,11 @@ jobs:
           go-version: '1.26'
           cache: false
 
-      - name: Cache Go modules and build cache
+      - name: Cache Go modules
         uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
-            ~/.cache/go-build
             bin/tooling
           key: ${{ runner.os }}-go-verify-crds-${{ hashFiles('go.sum') }}
           restore-keys: |
