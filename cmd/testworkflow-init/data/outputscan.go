@@ -7,15 +7,26 @@ import (
 	"strings"
 )
 
+var (
+	outputsDir = "/testkube/outputs"
+)
+
 const (
-	OutputsDir    = "/testkube/outputs"
 	MaxOutputSize = 4096
 )
+
+func GetOutputsDir() string {
+	return outputsDir
+}
+
+func SetOutputsDir(dir string) {
+	outputsDir = dir
+}
 
 // ScanStepOutputs reads files from OutputsDir and stores their contents
 // as per-step outputs. Files exceeding MaxOutputSize are skipped.
 func ScanStepOutputs(stepId string) error {
-	return scanStepOutputsFrom(OutputsDir, stepId)
+	return scanStepOutputsFrom(outputsDir, stepId)
 }
 
 func scanStepOutputsFrom(dir, stepId string) error {
@@ -60,10 +71,10 @@ func scanStepOutputsFrom(dir, stepId string) error {
 }
 
 func PrepareOutputsDir() error {
-	if err := os.RemoveAll(OutputsDir); err != nil && !os.IsNotExist(err) {
+	if err := os.RemoveAll(outputsDir); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to clear outputs directory: %w", err)
 	}
-	if err := os.MkdirAll(OutputsDir, 0777); err != nil {
+	if err := os.MkdirAll(outputsDir, 0777); err != nil {
 		return fmt.Errorf("failed to create outputs directory: %w", err)
 	}
 	return nil
