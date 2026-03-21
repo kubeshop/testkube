@@ -23,27 +23,22 @@ import (
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 )
 
-// handleDeclareAction processes declare actions
 func handleDeclareAction(step *data.StepData, action *lite.ActionDeclare) {
-	step.SetCondition(action.Condition).SetParents(action.Parents)
+	step.SetId(action.Id).SetCondition(action.Condition).SetParents(action.Parents)
 }
 
-// handlePauseAction processes pause actions
 func handlePauseAction(step *data.StepData, action *lite.ActionPause) {
 	step.SetPausedOnStart(true)
 }
 
-// handleResultAction processes result actions
 func handleResultAction(step *data.StepData, action *lite.ActionResult) {
 	step.SetResult(action.Value)
 }
 
-// handleTimeoutAction processes timeout actions
 func handleTimeoutAction(step *data.StepData, action *lite.ActionTimeout) {
 	step.SetTimeout(action.Timeout)
 }
 
-// handleRetryAction processes retry actions
 func handleRetryAction(step *data.StepData, action *lite.ActionRetry) {
 	step.SetRetryPolicy(data.RetryPolicy{
 		Count: action.Count,
@@ -51,7 +46,6 @@ func handleRetryAction(step *data.StepData, action *lite.ActionRetry) {
 	})
 }
 
-// handleContainerTransition processes container transition actions
 func handleContainerTransition(container *lite.LiteActionContainer, actions []lite.LiteAction, currentIndex int, state interface{ GetStep(string) *data.StepData }, stdout interface{ SetSensitiveWords([]string) }) (*lite.LiteActionContainer, error) {
 	orchestration.Setup.SetConfig(container.Config)
 	err := orchestration.Setup.AdvanceEnv()
@@ -198,6 +192,18 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 			break
 		}
 
+		// Clear stale outputs from previous attempts and prepare fresh directory
+		if step.Id != "" {
+			data.GetState().ClearStepOutputs(step.Id)
+			if err := data.PrepareOutputsDir(); err != nil {
+				return ActionResult{
+					ContinueExecution: false,
+					Error:             err,
+					ErrorCode:         constants.CodeInternal,
+				}
+			}
+		}
+
 		hasTimeout.Store(false)
 		hasOwnTimeout.Store(false)
 		stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
@@ -237,10 +243,16 @@ func handleExecuteAction(action *lite.ActionExecute, ctx *ExecutionContext) Acti
 		step.StartedAt = &now
 	}
 
+	// Scan per-step outputs directory after execution
+	if step.Id != "" {
+		if err := data.ScanStepOutputs(step.Id); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: failed to scan step outputs: %s\n", err.Error())
+		}
+	}
+
 	return ActionResult{ContinueExecution: true}
 }
 
-// handlePause handles pausing of a step and its parents
 func handlePause(ts time.Time, step *data.StepData, ctx *ExecutionContext) error {
 	if step.PausedStart != nil {
 		return nil
@@ -257,7 +269,6 @@ func handlePause(ts time.Time, step *data.StepData, ctx *ExecutionContext) error
 	return err
 }
 
-// newMetricsRecorderConfig creates configuration for metrics recording
 func newMetricsRecorderConfig(stepRef string, skip bool, containerResources testworkflowconfig.ContainerResourceConfig) utilization.Config {
 	s := data.GetState()
 	metricsDir := filepath.Join(constants.InternalPath, "metrics", stepRef)
@@ -294,7 +305,6 @@ func appendSuffixIfNeeded(s, suffix string) string {
 	return s + suffix
 }
 
-// scrapeMetricsPostProcessor returns a function that processes scraped metrics
 func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.InternalConfig) func() error {
 	return func() error {
 		err := orchestration.Setup.UseCurrentEnv()
@@ -335,7 +345,6 @@ func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.Int
 	}
 }
 
-// shouldRetry determines if a step should be retried based on conditions
 func shouldRetry(step *data.StepData, hasTimeout bool, hasOwnTimeout bool, stdout interface {
 	Printf(format string, args ...interface{})
 }) bool {

@@ -428,9 +428,20 @@ generate-crds: ## Generate Kubernetes CRDs from kubebuilder Golang structs.
 	# Copy to shared Helm library chart as templated CRDs
 	node js/scripts/crd-postprocess.js
 
+	# Sync shared Helm library charts into GitOps-rendered consumers
+	bash scripts/sync-helm-libraries.sh
+
+.PHONY: sync-helm-libraries
+sync-helm-libraries: ## Sync shared Helm library charts into consumer chart dependencies.
+	bash scripts/sync-helm-libraries.sh
+
+.PHONY: verify-helm-libraries-synced
+verify-helm-libraries-synced: ## Verify vendored Helm library charts match the canonical sources.
+	bash scripts/check-helm-libraries.sh
+
 .PHONY: verify-crds-generated
-verify-crds-generated: generate-crds ## Verify generated CRD artifacts are up to date.
-	git diff --exit-code -- k8s/crd k8s/helm/testkube-crds/templates/_generated_crds.tpl
+verify-crds-generated: generate-crds verify-helm-libraries-synced ## Verify generated CRD artifacts are up to date.
+	git diff --exit-code -- k8s/crd k8s/helm/testkube-crds/templates/_generated_crds.tpl k8s/helm/testkube-operator/charts/testkube-crds/templates/_generated_crds.tpl k8s/helm/testkube-runner/charts/testkube-crds/templates/_generated_crds.tpl
 
 # ==================== Docker ====================
 ##@ Docker
