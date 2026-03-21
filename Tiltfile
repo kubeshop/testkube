@@ -36,9 +36,9 @@ NAMESPACE = "testkube-dev"
 HELM_RELEASE_NAME = "testkube"
 HELM_CHART_PATH = "./k8s/helm/testkube"
 
-# MinIO credentials — used by Helm chart and by the create-minio-buckets job.
-# If you override these in tilt-values.yaml (minio.minioRootUser / minio.minioRootPassword),
-# you must keep the same values here so the bucket setup job can authenticate.
+# MinIO credentials — used by the create-minio-buckets job.
+# If you override these in tilt-values.yaml or tilt-values.local.yaml
+# (minio.minioRootUser / minio.minioRootPassword), keep the same values here.
 minio_user = "minio"
 minio_pass = "minio123"
 
@@ -285,13 +285,6 @@ else:
         "testkube-api.postgresql.enabled=false",
     ]
 
-# MinIO credentials — only set when no tilt-values.yaml so user overrides take effect
-if not os.path.exists("./tilt-values.yaml"):
-    helm_sets += [
-        "minio.minioRootUser=" + minio_user,
-        "minio.minioRootPassword=" + minio_pass,
-    ]
-
 # Tell crane (image inspector) to use HTTP for the local registry.
 # Reserved: extraEnvVars[0] is used here; in tilt-values.yaml use indices 1+ for your own vars.
 if registry_running:
@@ -300,10 +293,10 @@ if registry_running:
         "testkube-api.extraEnvVars[0].value=" + REGISTRY_NAME + ":" + REGISTRY_CLUSTER_PORT,
     ]
 
-# Optional local overrides (not committed)
-values_files = []
-if os.path.exists("./tilt-values.yaml"):
-    values_files.append("./tilt-values.yaml")
+# Helm values: committed defaults + optional local overrides (gitignored)
+values_files = ["./tilt-values.yaml"]
+if os.path.exists("./tilt-values.local.yaml"):
+    values_files.append("./tilt-values.local.yaml")
 
 k8s_yaml(
     helm(

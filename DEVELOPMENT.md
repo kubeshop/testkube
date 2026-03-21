@@ -296,28 +296,24 @@ Each Dockerfile provides multiple build targets:
 
 ## Configuration
 
-### Custom Helm Values
+### Helm Values
 
-Create a `tilt-values.yaml` file in the repo root to override any Helm values (this file is not committed):
+The Tiltfile loads `tilt-values.yaml` (committed) which contains sensible defaults for local development. No manual setup is required — `tilt up` works out of the box.
 
-```bash
-cp tilt-values.yaml.example tilt-values.yaml
-```
-
-> **Warning**: `tilt-values.yaml.example` ships with hardcoded default passwords for MinIO (`minio` / `minio123`) and PostgreSQL (`testkube` / `postgres5432`). These are fine for a throwaway local cluster but should be changed in `tilt-values.yaml` if your cluster is accessible from a network.
-
-If you override MinIO credentials in `tilt-values.yaml` (`minio.minioRootUser` / `minio.minioRootPassword`), you must set the same values in the Tiltfile (`minio_user` and `minio_pass` near the top) so the create-minio-buckets job can authenticate. The Tiltfile does not read credentials from `tilt-values.yaml`.
-
-You can also start from scratch and only override what you need:
+To add personal overrides, create `tilt-values.local.yaml` in the repo root (this file is gitignored). It is loaded after `tilt-values.yaml` so its values take precedence:
 
 ```yaml
-# tilt-values.yaml
+# tilt-values.local.yaml — personal overrides (not committed)
 testkube-api:
   resources:
     limits:
       cpu: 2000m
       memory: 2Gi
 ```
+
+> **Warning**: `tilt-values.yaml` ships with hardcoded default passwords for MinIO (`minio` / `minio123`) and PostgreSQL (`testkube` / `postgres5432`). These are fine for a throwaway local cluster but should be changed in `tilt-values.local.yaml` if your cluster is accessible from a network.
+
+If you override MinIO credentials (`minio.minioRootUser` / `minio.minioRootPassword`), you must also set the same values in the Tiltfile (`minio_user` and `minio_pass` near the top) so the create-minio-buckets job can authenticate.
 
 ### Tiltfile Constants
 
@@ -331,7 +327,7 @@ minio_user = "minio"             # MinIO root user (used by bucket setup job)
 minio_pass = "minio123"          # MinIO root password
 ```
 
-If you override MinIO credentials in `tilt-values.yaml`, keep `minio_user` and `minio_pass` in sync here so the create-minio-buckets job succeeds.
+If you override MinIO credentials in `tilt-values.local.yaml`, keep `minio_user` and `minio_pass` in sync here so the create-minio-buckets job succeeds.
 
 ## Debugging
 
@@ -430,7 +426,7 @@ It also creates a K8s Service/Endpoints to make the registry resolvable from pod
 # Find the process using the port
 lsof -i :8088
 
-# Kill it or change the port forward in tilt-values.yaml
+# Kill it or change the port forward in tilt-values.local.yaml
 ```
 
 ### Database Connection Issues

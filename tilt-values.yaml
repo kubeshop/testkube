@@ -1,9 +1,10 @@
-# Tilt development values for testkube helm chart
-# 
-# Copy this file to tilt-values.yaml and modify as needed:
-#   cp tilt-values.yaml.example tilt-values.yaml
+# Tilt development values for testkube Helm chart
 #
-# The Tiltfile will automatically use tilt-values.yaml if it exists
+# These are the shared defaults used by all developers. They are loaded
+# automatically by the Tiltfile.
+#
+# For personal overrides create tilt-values.local.yaml (gitignored) — it is
+# loaded after this file so its values take precedence.
 
 # Testkube API configuration
 testkube-api:
