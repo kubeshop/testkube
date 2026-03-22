@@ -1,12 +1,8 @@
 name: Release MCP Server to MCP Registry
 
 on:
-  # Trigger on final release tags only (e.g., 1.19.0)
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-
-  # Allow manual triggering for testing or re-publishing
+  # Manual triggering only - automated publishing is handled by the Build workflow
+  # (publish_mcp_registry job) which guarantees the Docker image exists before publishing.
   workflow_dispatch:
     inputs:
       version:
