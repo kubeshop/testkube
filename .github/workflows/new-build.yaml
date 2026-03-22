@@ -245,8 +245,10 @@ jobs:
           cat server.json
 
       - name: Install mcp-publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.5.0
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz
           chmod +x mcp-publisher
           ./mcp-publisher --version
 
