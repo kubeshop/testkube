@@ -8,9 +8,16 @@ import (
 )
 
 const (
-	stepPrefix      = "step."
+	stepPrefix = "step."
+)
+
+var (
 	stepResultsBase = "/data/.steps"
 )
+
+func SetStepResultsBase(base string) {
+	stepResultsBase = base
+}
 
 // StepResultsDir returns the results directory path for a step.
 // Step IDs are validated by ValidateStepId (alphanumeric + underscores only),
