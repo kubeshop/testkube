@@ -497,23 +497,6 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 
 			return string(value), nil
 		},
-		"vault": func(path string) (string, error) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-
-			value, err := repo.GetWithSource(ctx, path, credentials.SourceVault)
-			if err != nil {
-				log.Errorw("failed to resolve vault secret",
-					"vault_path", path,
-					"error", err)
-				return "", err
-			}
-
-			log.Infow("resolved vault secret",
-				"vault_path", path)
-
-			return string(value), nil
-		},
 	}
 
 	tmpl, err := utils.NewTemplate(field).Funcs(funcMap).Parse(body)
