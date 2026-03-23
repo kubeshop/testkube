@@ -22,7 +22,9 @@ import (
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
+	testworkflowrepo "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
+	nonerepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/none"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -61,7 +63,14 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
 	storageClient := commons.MustGetMinioClient(cfg)
-	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
+
+	var testWorkflowOutputRepository testworkflowrepo.OutputRepository
+	if cfg.LogsStorage == "none" {
+		log.DefaultLogger.Infow("Log persistence is disabled", "logs.storage", cfg.LogsStorage)
+		testWorkflowOutputRepository = nonerepo.NewNoneOutputRepository()
+	} else {
+		testWorkflowOutputRepository = miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
+	}
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	commands := controlplane.CreateCommands(cfg.StorageBucket, storageClient, testWorkflowOutputRepository, testWorkflowResultsRepository, artifactStorage)
 
@@ -72,10 +81,11 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, eventsEmitter *
 	executionQuerier := factory.NewExecutionQuerier()
 
 	// Ensure the buckets exist (retry in background until they do).
-	go ensureBucketsWithRetry(ctx, storageClient, []bucketSpec{
-		{name: cfg.StorageBucket, label: "storage"},
-		{name: cfg.LogsBucket, label: "logs"},
-	})
+	buckets := []bucketSpec{{name: cfg.StorageBucket, label: "storage"}}
+	if cfg.LogsStorage != "none" {
+		buckets = append(buckets, bucketSpec{name: cfg.LogsBucket, label: "logs"})
+	}
+	go ensureBucketsWithRetry(ctx, storageClient, buckets)
 
 	return controlplane.New(controlplane.Config{
 		Port:                             cfg.GRPCServerPort,
