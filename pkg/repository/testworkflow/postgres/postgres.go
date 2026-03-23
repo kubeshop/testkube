@@ -232,7 +232,9 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	}
 
 	// Parse basic JSONB fields
-	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime, row.SilentMode)
+	if err := r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime, row.SilentMode); err != nil {
+		return nil, fmt.Errorf("failed to parse execution JSON fields: %w", err)
+	}
 
 	// Build result if exists
 	if row.Status.Valid {
