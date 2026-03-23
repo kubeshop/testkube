@@ -158,6 +158,7 @@ func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
 	e.log.Info("event emitter waiting for lease")
 	e.leaseCheck(ctx, leaseChan)
 	ticker := time.NewTicker(leaseCheckInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -264,6 +265,7 @@ func (e *Emitter) leaderLoop(ctx context.Context) {
 	// Reconcilation loop
 	e.log.Info("event emitter leader started reconciler")
 	ticker := time.NewTicker(reconcileInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():

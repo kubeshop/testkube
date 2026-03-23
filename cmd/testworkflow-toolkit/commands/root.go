@@ -50,6 +50,7 @@ func Execute() {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	g.Go(func() error {
+		defer signal.Stop(stopSignal)
 		select {
 		case <-ctx.Done():
 			return nil

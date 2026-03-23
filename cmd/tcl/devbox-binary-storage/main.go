@@ -86,6 +86,7 @@ func main() {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
+			defer file.Close()
 			stat, err := file.Stat()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)

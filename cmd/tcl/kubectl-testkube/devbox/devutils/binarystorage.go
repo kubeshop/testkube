@@ -262,8 +262,10 @@ func (r *BinaryStorage) upload(ctx context.Context, name string, binary *Binary)
 					fmt.Printf("error while sending %s patch, fallback to full stream: %s\n", name, err)
 				} else if res.StatusCode != http.StatusOK {
 					b, _ := io.ReadAll(res.Body)
+					res.Body.Close()
 					fmt.Printf("error while sending %s patch, fallback to full stream: status code: %s, message: %s\n", name, res.Status, string(b))
 				} else {
+					res.Body.Close()
 					r.SetHash(name, binary.hash)
 					return gzipContentsLen, nil
 				}
@@ -289,6 +291,7 @@ func (r *BinaryStorage) upload(ctx context.Context, name string, binary *Binary)
 	if err != nil {
 		return bufLen, err
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(res.Body)
 		return bufLen, fmt.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))

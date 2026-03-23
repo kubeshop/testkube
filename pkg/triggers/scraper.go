@@ -13,6 +13,7 @@ import (
 
 func (s *Service) runExecutionScraper(ctx context.Context) {
 	ticker := time.NewTicker(s.scraperInterval)
+	defer ticker.Stop()
 	s.logger.Debugf("trigger service: starting execution scraper")
 
 	for {

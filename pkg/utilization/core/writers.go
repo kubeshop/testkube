@@ -162,6 +162,7 @@ func (w *FileWriter) Print() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to open file")
 	}
+	defer f.Close()
 	data, err := io.ReadAll(f)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read file")
