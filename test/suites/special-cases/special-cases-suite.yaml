@@ -41,6 +41,7 @@ spec:
       - name: special-cases-parallel-steps
       - name: special-cases-parallel-steps-matrix
       - name: special-cases-parallel-steps-fail-fast-disabled
+      - name: special-cases-step-sharing
   - name: Execute .dev-specific workflows
     condition: 'environment.id == "tkcenv_03e3ff499f13ccba"' # execute only at .dev environment
     execute:
