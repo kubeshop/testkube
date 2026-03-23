@@ -1969,38 +1969,29 @@ type ValueCondition struct {
 	Values []string `json:"values"` // Multiple values for the same key (OR logic within the same key)
 }
 
-func (r *PostgresRepository) parseSelectorToText(selector string) ([]string, [][]string) {
+func (r *PostgresRepository) parseSelectorToText(selector string) ([]string, []string) {
 	keys := make([]string, 0)
-	conditions := make([][]string, 0)
-	values := make(map[string][]string, 0)
+	conditions := make([]string, 0)
 	items := strings.Split(selector, ",")
 	for _, item := range items {
 		elements := strings.Split(item, "=")
 		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+			conditions = append(conditions, utils.EscapeDots(elements[0])+"="+elements[1])
 		} else if len(elements) == 1 {
 			key := utils.EscapeDots(elements[0])
 			keys = append(keys, key)
 		}
 	}
 
-	for key, value := range values {
-		condition := make([]string, 0)
-		condition = append(condition, key)
-		condition = append(condition, value...)
-		conditions = append(conditions, condition)
-	}
-
 	return keys, conditions
 }
 
-func (r *PostgresRepository) parseLabelSelectorToText(labelSelector *testworkflow.LabelSelector) ([]string, [][]string) {
+func (r *PostgresRepository) parseLabelSelectorToText(labelSelector *testworkflow.LabelSelector) ([]string, []string) {
 	keys := make([]string, 0)
-	conditions := make([][]string, 0)
-	values := make(map[string][]string, 0)
+	conditions := make([]string, 0)
 	for _, label := range labelSelector.Or {
 		if label.Value != nil {
-			values[utils.EscapeDots(label.Key)] = append(values[utils.EscapeDots(label.Key)], *label.Value)
+			conditions = append(conditions, utils.EscapeDots(label.Key)+"="+*label.Value)
 		} else if label.Exists != nil {
 			key := utils.EscapeDots(label.Key)
 			if !*label.Exists {
@@ -2010,37 +2001,22 @@ func (r *PostgresRepository) parseLabelSelectorToText(labelSelector *testworkflo
 		}
 	}
 
-	for key, value := range values {
-		condition := make([]string, 0)
-		condition = append(condition, key)
-		condition = append(condition, value...)
-		conditions = append(conditions, condition)
-	}
-
 	return keys, conditions
 }
 
-func (r *PostgresRepository) parseTagSelectorToText(tagSelector string) ([]string, [][]string) {
+func (r *PostgresRepository) parseTagSelectorToText(tagSelector string) ([]string, []string) {
 	keys := make([]string, 0)
-	conditions := make([][]string, 0)
-	values := make(map[string][]string, 0)
+	conditions := make([]string, 0)
 	items := strings.Split(tagSelector, ",")
 	for _, item := range items {
 		item = strings.TrimSpace(item)
 		elements := strings.Split(item, "=")
 		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+			conditions = append(conditions, utils.EscapeDots(elements[0])+"="+elements[1])
 		} else if len(elements) == 1 {
 			key := utils.EscapeDots(elements[0])
 			keys = append(keys, key)
 		}
-	}
-
-	for key, value := range values {
-		condition := make([]string, 0)
-		condition = append(condition, key)
-		condition = append(condition, value...)
-		conditions = append(conditions, condition)
 	}
 
 	return keys, conditions

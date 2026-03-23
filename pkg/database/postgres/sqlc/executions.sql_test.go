@@ -41,11 +41,11 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		pgtype.Bool{},        // initialized
 		[]byte("[]"),         // health_ranges
 		[]string{},           // tag_keys
-		[][]string{},         // tag_conditions
+		[]string{},           // tag_conditions
 		[]string{},           // label_keys
-		[][]string{},         // label_conditions
+		[]string{},           // label_conditions
 		[]string{},           // selector_keys
-		[][]string{},         // selector_conditions
+		[]string{},           // selector_conditions
 	).WillReturnRows(rows)
 
 	// Execute query
@@ -67,11 +67,11 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 		Initialized:        pgtype.Bool{},
 		HealthRanges:       []byte("[]"),
 		TagKeys:            []string{},
-		TagConditions:      [][]string{},
+		TagConditions:      []string{},
 		LabelKeys:          []string{},
-		LabelConditions:    [][]string{},
+		LabelConditions:    []string{},
 		SelectorKeys:       []string{},
-		SelectorConditions: [][]string{},
+		SelectorConditions: []string{},
 	})
 
 	// Assertions

@@ -411,9 +411,9 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -430,9 +430,9 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -449,10 +449,10 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
             ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length(@selector_conditions::text[][], 1)
+        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -504,9 +504,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -523,9 +523,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -542,10 +542,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length(@selector_conditions::text[][], 1)
+        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     )
 GROUP BY r.status;
@@ -648,9 +648,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -667,9 +667,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -686,10 +686,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length(@selector_conditions::text[][], 1)
+        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -1131,9 +1131,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -1150,9 +1150,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -1169,10 +1169,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length(@selector_conditions::text[][], 1)
+        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -1224,9 +1224,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR 
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -1243,9 +1243,9 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) > 0
         )
         OR
-        (COALESCE(@label_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR 
-            (SELECT COUNT(*) FROM unnest(@label_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+            (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -1262,10 +1262,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR 
-            (SELECT COUNT(*) FROM unnest(@selector_conditions::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length(@selector_conditions::text[][], 1)
+        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     );
 

@@ -152,9 +152,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR 
-            (SELECT COUNT(*) FROM unnest($18::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -171,9 +171,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         OR
-        (COALESCE($20::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR 
-            (SELECT COUNT(*) FROM unnest($20::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -190,10 +190,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR 
-            (SELECT COUNT(*) FROM unnest($22::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length($22::text[][], 1)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 `
@@ -216,11 +216,11 @@ type CountTestWorkflowExecutionsParams struct {
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
 	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
-	TagConditions      [][]string         `db:"tag_conditions" json:"tag_conditions"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
-	LabelConditions    [][]string         `db:"label_conditions" json:"label_conditions"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions [][]string         `db:"selector_conditions" json:"selector_conditions"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 }
 
 func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error) {
@@ -553,9 +553,9 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
             ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($18::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -572,9 +572,9 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
             ) > 0
         )
         OR
-        (COALESCE($20::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($20::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -591,10 +591,10 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
             ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($22::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length($22::text[][], 1)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -619,11 +619,11 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
 	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
-	TagConditions      [][]string         `db:"tag_conditions" json:"tag_conditions"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
-	LabelConditions    [][]string         `db:"label_conditions" json:"label_conditions"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions [][]string         `db:"selector_conditions" json:"selector_conditions"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2187,9 +2187,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($18::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -2206,9 +2206,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         OR
-        (COALESCE($20::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($20::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -2225,10 +2225,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($22::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length($22::text[][], 1)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -2253,11 +2253,11 @@ type GetTestWorkflowExecutionsParams struct {
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
 	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
-	TagConditions      [][]string         `db:"tag_conditions" json:"tag_conditions"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
-	LabelConditions    [][]string         `db:"label_conditions" json:"label_conditions"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions [][]string         `db:"selector_conditions" json:"selector_conditions"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2523,9 +2523,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($18::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -2542,9 +2542,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         OR
-        (COALESCE($20::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($20::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -2561,10 +2561,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($22::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length($22::text[][], 1)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -2589,11 +2589,11 @@ type GetTestWorkflowExecutionsSummaryParams struct {
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
 	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
-	TagConditions      [][]string         `db:"tag_conditions" json:"tag_conditions"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
-	LabelConditions    [][]string         `db:"label_conditions" json:"label_conditions"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions [][]string         `db:"selector_conditions" json:"selector_conditions"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2807,9 +2807,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($18::text[][]) AS condition
-                WHERE e.tags->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -2826,9 +2826,9 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) > 0
         )
         OR
-        (COALESCE($20::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($20::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
@@ -2845,10 +2845,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::text[][], ARRAY[]::text[][]) = ARRAY[]::text[][] OR
-            (SELECT COUNT(*) FROM unnest($22::text[][]) AS condition
-                WHERE w.labels->>(condition[1]) = ANY(condition[2:])
-            ) = array_length($22::text[][], 1)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 GROUP BY r.status
@@ -2872,11 +2872,11 @@ type GetTestWorkflowExecutionsTotalsParams struct {
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
 	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
-	TagConditions      [][]string         `db:"tag_conditions" json:"tag_conditions"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
-	LabelConditions    [][]string         `db:"label_conditions" json:"label_conditions"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions [][]string         `db:"selector_conditions" json:"selector_conditions"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 }
 
 type GetTestWorkflowExecutionsTotalsRow struct {
