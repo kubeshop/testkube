@@ -116,7 +116,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath)).
-		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath)).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTestkubePath))
 
 	orgSlug := options.Config.Execution.OrganizationSlug
 	if orgSlug == "" {

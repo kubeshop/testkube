@@ -246,14 +246,16 @@ func TestProcessBasic(t *testing.T) {
 
 	assert.Equal(t, want, res.Job)
 
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 3, len(volumes))
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 4, len(volumes))
 	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
 	assert.Equal(t, constants.DefaultTmpDirPath, volumeMounts[1].MountPath)
 	assert.Equal(t, constants.DefaultDataPath, volumeMounts[2].MountPath)
+	assert.Equal(t, constants.DefaultTestkubePath, volumeMounts[3].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
+	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
 }
 
 func TestProcessShellWithNonStandardImage(t *testing.T) {
@@ -384,14 +386,16 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 
 	assert.Equal(t, want, res.Job)
 
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 3, len(volumes))
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 4, len(volumes))
 	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
 	assert.Equal(t, constants.DefaultTmpDirPath, volumeMounts[1].MountPath)
 	assert.Equal(t, constants.DefaultDataPath, volumeMounts[2].MountPath)
+	assert.Equal(t, constants.DefaultTestkubePath, volumeMounts[3].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
+	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
 }
 
 func TestProcessBasicEnvReference(t *testing.T) {
@@ -847,14 +851,14 @@ func TestProcessLocalContent(t *testing.T) {
 	}
 
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 4, len(volumeMountsWithContent))
-	assert.Equal(t, volumeMounts, volumeMountsWithContent[:3])
-	assert.Equal(t, "/some/path", volumeMountsWithContent[3].MountPath)
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 5, len(volumeMountsWithContent))
+	assert.Equal(t, volumeMounts, volumeMountsWithContent[:4])
+	assert.Equal(t, "/some/path", volumeMountsWithContent[4].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMountsWithContent[3].Name, volumes[3].Name)
-	assert.Equal(t, volumes[3].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[3].SubPath])
+	assert.Equal(t, volumeMountsWithContent[4].Name, volumes[4].Name)
+	assert.Equal(t, volumes[4].ConfigMap.Name, res.ConfigMaps[0].Name)
+	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[4].SubPath])
 }
 
 func TestProcessGlobalContent(t *testing.T) {
@@ -935,12 +939,12 @@ func TestProcessGlobalContent(t *testing.T) {
 	fmt.Println(string(v))
 
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 4, len(volumeMounts))
-	assert.Equal(t, "/some/path", volumeMounts[3].MountPath)
+	assert.Equal(t, 5, len(volumeMounts))
+	assert.Equal(t, "/some/path", volumeMounts[4].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMounts[3].Name, volumes[3].Name)
-	assert.Equal(t, volumes[3].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[3].SubPath])
+	assert.Equal(t, volumeMounts[4].Name, volumes[4].Name)
+	assert.Equal(t, volumes[4].ConfigMap.Name, res.ConfigMaps[0].Name)
+	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[4].SubPath])
 }
 
 func TestProcessEscapedAnnotations(t *testing.T) {
