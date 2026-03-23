@@ -36,8 +36,10 @@ If not, there are [many Issues](https://github.com/kubeshop/testkube/issues) to 
 
 - Make sure you've read our [Code of Conduct](CODE_OF_CONDUCT.md)
 - Sign up for our [Slack Channel](https://bit.ly/testkube-slack) where you can ask questions, share ideas, and get help.
+- Start with the [README](README.md) for project context and onboarding links.
 - Read the high-level [Open Source Documentation](https://docs.testkube.io/articles/open-source) to make sure you have an understanding of what Testkube Open Source is capable of.
 - Read the [Architecture](ARCHITECTURE.md) guide for the Testkube Agent (this repo).
+- Read the [Development Guide](DEVELOPMENT.md) to help you set up a local development environment using Tilt.
 - Check out the sections below to help you navigate the codebase and understand our development workflow.
 
 ## Coding Prerequisites
@@ -48,6 +50,7 @@ Before you begin, ensure you have the following installed:
 - **Docker** with BuildX support
 - **Kubernetes cluster** (for integration testing) 
 - **Helm** v3.x (for local deployment)
+- Optional: **[Tilt](https://docs.tilt.dev/install.html)** v0.30.0 or later for local development, see [DEVELOPMENT.md](DEVELOPMENT.md)
 
 To verify your Go installation:
 
@@ -465,6 +468,7 @@ This section highlights the most important files to familiarize yourself with wh
 | File | Purpose |
 |------|---------|
 | [`Makefile`](Makefile) | Build targets - run `make help` for available commands |
+| [`Tiltfile`](Tiltfile) | Tilt configuration for local development |
 | [`go.mod`](go.mod) | Go module dependencies |
 | [`.goreleaser.yml`](.goreleaser.yml) | Release configuration |
 
@@ -484,6 +488,13 @@ For new contributors, we recommend exploring the codebase in this order:
 3. **Trace the API server startup**: Follow [`cmd/api-server/main.go`](cmd/api-server/main.go) to see how components are wired together
 4. **Explore the API layer**: Look at [`internal/app/api/v1/server.go`](internal/app/api/v1/server.go) to understand route registration
 5. **Study the CLI**: Browse [`cmd/kubectl-testkube/commands/`](cmd/kubectl-testkube/commands/) for examples of how clients interact with the API
+6. **Set up local development**: Follow [`DEVELOPMENT.md`](DEVELOPMENT.md) to run Testkube locally with Tilt
+
+### Related Repository Guides
+
+- [`README.md`](README.md) - project overview and high-level getting started links
+- [`DEVELOPMENT.md`](DEVELOPMENT.md) - local development environment and daily workflows
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) - component-level architecture and code map
 
 ## License
 
