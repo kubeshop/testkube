@@ -347,6 +347,11 @@ spec:
               selector:
                 description: Labels to filter for tests and test suites
                 type: string
+              target:
+                additionalProperties:
+                  type: string
+                description: Label selector for targeting webhook agent(s)
+                type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
                   supported)
@@ -529,6 +534,11 @@ spec:
               selector:
                 description: Labels to filter for tests and test suites
                 type: string
+              target:
+                additionalProperties:
+                  type: string
+                description: Label selector for targeting webhook agent(s)
+                type: object
               uri:
                 description: Uri is address where webhook should be made (golang template
                   supported)
