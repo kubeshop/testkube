@@ -24,6 +24,7 @@ func MapCRDToAPI(item executorv1.WebhookTemplate) testkube.WebhookTemplate {
 		Disabled:                 item.Spec.Disabled,
 		Config:                   common.MapMap(item.Spec.Config, MapConfigValueCRDToAPI),
 		Parameters:               common.MapSlice(item.Spec.Parameters, MapParameterSchemaCRDToAPI),
+		Target:                   item.Spec.Target,
 	}
 }
 
@@ -99,6 +100,7 @@ func MapAPIToCRD(request testkube.WebhookTemplateCreateRequest) executorv1.Webho
 			Disabled:                 request.Disabled,
 			Config:                   common.MapMap(request.Config, MapConfigValueAPIToCRD),
 			Parameters:               common.MapSlice(request.Parameters, MapParameterSchemaAPIToCRD),
+			Target:                   request.Target,
 		},
 	}
 }
@@ -218,6 +220,10 @@ func MapUpdateToSpec(request testkube.WebhookTemplateUpdateRequest, webhookTempl
 		webhookTemplate.Spec.Parameters = common.MapSlice(*request.Parameters, MapParameterSchemaAPIToCRD)
 	}
 
+	if request.Target != nil {
+		webhookTemplate.Spec.Target = *request.Target
+	}
+
 	return webhookTemplate
 }
 
@@ -270,6 +276,7 @@ func MapSpecToUpdate(webhookTemplate *executorv1.WebhookTemplate) (request testk
 	request.Disabled = &webhookTemplate.Spec.Disabled
 	request.Config = common.Ptr(common.MapMap(webhookTemplate.Spec.Config, MapConfigValueCRDToAPI))
 	request.Parameters = common.Ptr(common.MapSlice(webhookTemplate.Spec.Parameters, MapParameterSchemaCRDToAPI))
+	request.Target = &webhookTemplate.Spec.Target
 
 	return request
 }

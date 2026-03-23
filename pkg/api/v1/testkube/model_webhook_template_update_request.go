@@ -34,4 +34,6 @@ type WebhookTemplateUpdateRequest struct {
 	Config     *map[string]WebhookConfigValue `json:"config,omitempty"`
 	Parameters *[]WebhookParameterSchema      `json:"parameters,omitempty"`
 	Sync       *Syncable                      `json:"sync,omitempty"`
+	// Label selector for targeting webhook agent(s)
+	Target *map[string]string `json:"target,omitempty"`
 }

@@ -53,6 +53,8 @@ type WebhookSpec struct {
 	Parameters []WebhookParameterSchema `json:"parameters,omitempty"`
 	// webhook template reference
 	WebhookTemplateRef *WebhookTemplateRef `json:"webhookTemplateRef,omitempty"`
+	// Label selector for targeting webhook agent(s)
+	Target map[string]string `json:"target,omitempty"`
 }
 
 // WebhookTemplateSpec defines the desired state of Webhook Template
@@ -80,6 +82,8 @@ type WebhookTemplateSpec struct {
 	Config map[string]WebhookConfigValue `json:"config,omitempty"`
 	// webhook parameters
 	Parameters []WebhookParameterSchema `json:"parameters,omitempty"`
+	// Label selector for targeting webhook agent(s)
+	Target map[string]string `json:"target,omitempty"`
 }
 
 // webhook parameter schema
