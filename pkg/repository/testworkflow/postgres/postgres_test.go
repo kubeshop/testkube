@@ -1266,13 +1266,343 @@ func TestTypeConversionHelpers(t *testing.T) {
 }
 
 func TestBuildTestWorkflowExecutionParams(t *testing.T) {
+	t.Run("BasicNameFilter", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithName("test-workflow")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "test-workflow", params.WorkflowName)
+	})
+
+	t.Run("TagSelectorKeyOnly", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector("environment")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"environment"}, params.TagKeys)
+		assert.Empty(t, params.TagConditions)
+	})
+
+	t.Run("TagSelectorKeyValue", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector("team=backend")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.TagKeys)
+		assert.Equal(t, []string{"team=backend"}, params.TagConditions)
+	})
+
+	t.Run("TagSelectorMultipleItems", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector("environment,team=backend")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"environment"}, params.TagKeys)
+		assert.Equal(t, []string{"team=backend"}, params.TagConditions)
+	})
+
+	t.Run("TagSelectorWithWhitespace", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		// Input contains leading/trailing whitespace per item that should be trimmed.
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector(" environment , team=backend ")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"environment"}, params.TagKeys)
+		assert.Equal(t, []string{"team=backend"}, params.TagConditions)
+	})
+
+	t.Run("LabelSelectorKeyExists", func(t *testing.T) {
+		trueVal := true
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithLabelSelector(&testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "app", Exists: &trueVal},
+			},
+		})
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"app"}, params.LabelKeys)
+		assert.Empty(t, params.LabelConditions)
+	})
+
+	t.Run("LabelSelectorKeyNotExists", func(t *testing.T) {
+		falseVal := false
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithLabelSelector(&testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "app", Exists: &falseVal},
+			},
+		})
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"app:not_exists"}, params.LabelKeys)
+		assert.Empty(t, params.LabelConditions)
+	})
+
+	t.Run("LabelSelectorKeyValue", func(t *testing.T) {
+		val := "v1"
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithLabelSelector(&testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "version", Value: &val},
+			},
+		})
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.LabelKeys)
+		assert.Equal(t, []string{"version=v1"}, params.LabelConditions)
+	})
+
+	t.Run("LabelSelectorMixedConditions", func(t *testing.T) {
+		trueVal := true
+		falseVal := false
+		val := "prod"
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithLabelSelector(&testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "active", Exists: &trueVal},
+				{Key: "deprecated", Exists: &falseVal},
+				{Key: "env", Value: &val},
+			},
+		})
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []string{"active", "deprecated:not_exists"}, params.LabelKeys)
+		assert.Equal(t, []string{"env=prod"}, params.LabelConditions)
+	})
+
+	t.Run("SelectorKeyOnly", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithSelector("region")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"region"}, params.SelectorKeys)
+		assert.Empty(t, params.SelectorConditions)
+	})
+
+	t.Run("SelectorKeyValue", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithSelector("env=prod")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.SelectorKeys)
+		assert.Equal(t, []string{"env=prod"}, params.SelectorConditions)
+	})
+
+	t.Run("SelectorMultipleItems", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithSelector("region,env=prod")
+
+		params, err := repo.buildTestWorkflowExecutionParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"region"}, params.SelectorKeys)
+		assert.Equal(t, []string{"env=prod"}, params.SelectorConditions)
+	})
+}
+
+func TestBuildTestWorkflowExecutionTotalParams(t *testing.T) {
+	t.Run("BasicNameFilter", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithName("test-workflow")
+
+		params, err := repo.buildTestWorkflowExecutionTotalParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "test-workflow", params.WorkflowName)
+	})
+
+	t.Run("TagSelectorKeyOnly", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector("environment")
+
+		params, err := repo.buildTestWorkflowExecutionTotalParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"environment"}, params.TagKeys)
+		assert.Empty(t, params.TagConditions)
+	})
+
+	t.Run("TagSelectorKeyValue", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector("team=backend")
+
+		params, err := repo.buildTestWorkflowExecutionTotalParams(filter)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.TagKeys)
+		assert.Equal(t, []string{"team=backend"}, params.TagConditions)
+	})
+
+	t.Run("TagSelectorMultipleValues", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithTagSelector("environment,team=backend,team=frontend")
+
+		params, err := repo.buildTestWorkflowExecutionTotalParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"environment"}, params.TagKeys)
+		assert.Equal(t, []string{"team=backend", "team=frontend"}, params.TagConditions)
+	})
+
+	t.Run("LabelSelectorNotExists", func(t *testing.T) {
+		falseVal := false
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithLabelSelector(&testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "deprecated", Exists: &falseVal},
+			},
+		})
+
+		params, err := repo.buildTestWorkflowExecutionTotalParams(filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"deprecated:not_exists"}, params.LabelKeys)
+		assert.Empty(t, params.LabelConditions)
+	})
+
+	t.Run("SelectorKeyValue", func(t *testing.T) {
+		repo := &PostgresRepository{}
+		filter := testworkflow.NewExecutionsFilter().WithSelector("env=prod")
+
+		params, err := repo.buildTestWorkflowExecutionTotalParams(filter)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.SelectorKeys)
+		assert.Equal(t, []string{"env=prod"}, params.SelectorConditions)
+	})
+}
+
+func TestParseSelectorToText(t *testing.T) {
 	repo := &PostgresRepository{}
-	filter := testworkflow.NewExecutionsFilter().WithName("test-workflow")
 
-	params, err := repo.buildTestWorkflowExecutionParams(filter)
+	t.Run("KeyOnly", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("region")
+		assert.Equal(t, []string{"region"}, keys)
+		assert.Empty(t, conditions)
+	})
 
-	assert.NoError(t, err)
-	assert.Equal(t, "test-workflow", params.WorkflowName)
+	t.Run("KeyValue", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env=prod")
+		assert.Empty(t, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("MultipleItems", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("region,env=prod,tier")
+		assert.Equal(t, []string{"region", "tier"}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("EmptyString", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("")
+		// Empty string input results in a single empty key element.
+		assert.Equal(t, []string{""}, keys)
+		assert.Empty(t, conditions)
+	})
+}
+
+func TestParseTagSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("KeyOnly", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("environment")
+		assert.Equal(t, []string{"environment"}, keys)
+		assert.Empty(t, conditions)
+	})
+
+	t.Run("KeyValue", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("team=backend")
+		assert.Empty(t, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("MultipleItems", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("environment,team=backend")
+		assert.Equal(t, []string{"environment"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("MultipleValuesForSameKey", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("team=backend,team=frontend")
+		assert.Empty(t, keys)
+		assert.Equal(t, []string{"team=backend", "team=frontend"}, conditions)
+	})
+
+	t.Run("WhitespaceTrimmed", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText(" environment , team=backend ")
+		assert.Equal(t, []string{"environment"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+}
+
+func TestParseLabelSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+	trueVal := true
+	falseVal := false
+
+	t.Run("KeyExists", func(t *testing.T) {
+		sel := &testworkflow.LabelSelector{Or: []testworkflow.Label{{Key: "app", Exists: &trueVal}}}
+		keys, conditions := repo.parseLabelSelectorToText(sel)
+		assert.Equal(t, []string{"app"}, keys)
+		assert.Empty(t, conditions)
+	})
+
+	t.Run("KeyNotExists", func(t *testing.T) {
+		sel := &testworkflow.LabelSelector{Or: []testworkflow.Label{{Key: "app", Exists: &falseVal}}}
+		keys, conditions := repo.parseLabelSelectorToText(sel)
+		assert.Equal(t, []string{"app:not_exists"}, keys)
+		assert.Empty(t, conditions)
+	})
+
+	t.Run("KeyValue", func(t *testing.T) {
+		val := "v1"
+		sel := &testworkflow.LabelSelector{Or: []testworkflow.Label{{Key: "version", Value: &val}}}
+		keys, conditions := repo.parseLabelSelectorToText(sel)
+		assert.Empty(t, keys)
+		assert.Equal(t, []string{"version=v1"}, conditions)
+	})
+
+	t.Run("MixedConditions", func(t *testing.T) {
+		val := "prod"
+		sel := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "active", Exists: &trueVal},
+			{Key: "deprecated", Exists: &falseVal},
+			{Key: "env", Value: &val},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(sel)
+		assert.ElementsMatch(t, []string{"active", "deprecated:not_exists"}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("EmptySelector", func(t *testing.T) {
+		sel := &testworkflow.LabelSelector{Or: []testworkflow.Label{}}
+		keys, conditions := repo.parseLabelSelectorToText(sel)
+		assert.Empty(t, keys)
+		assert.Empty(t, conditions)
+	})
 }
 
 func TestPopulateConfigParams(t *testing.T) {
