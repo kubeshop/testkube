@@ -692,7 +692,6 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	//nolint:staticcheck // Different query types require explicit field mapping
 	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams{
 		OrganizationID:     params.OrganizationID,
 		EnvironmentID:      params.EnvironmentID,
