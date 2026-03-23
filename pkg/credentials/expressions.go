@@ -9,7 +9,6 @@ import (
 
 const (
 	SourceCredential = "credential"
-	SourceVault      = "vault"
 )
 
 func NewCredentialMachine(repository CredentialRepository, observers ...func(name string, value string)) expressions.Machine {
@@ -51,15 +50,6 @@ func NewCredentialMachine(repository CredentialRepository, observers ...func(nam
 
 			name, _ := values[0].StringValue()
 			result, err := fetchCredentialWithSource(name, computed, SourceCredential)
-			return result, true, err
-		}).
-		RegisterFunction("vault", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-			if len(values) != 1 {
-				return nil, true, fmt.Errorf(`"vault" function expects 1 argument, %d provided`, len(values))
-			}
-
-			path, _ := values[0].StringValue()
-			result, err := fetchCredentialWithSource(path, false, SourceVault)
 			return result, true, err
 		})
 }
