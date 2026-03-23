@@ -811,9 +811,12 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
-	silentMode, err := toJSONB(execution.SilentMode)
-	if err != nil {
-		return err
+	var silentMode []byte
+	if execution.SilentMode != nil {
+		silentMode, err = toJSONB(execution.SilentMode)
+		if err != nil {
+			return err
+		}
 	}
 
 	return qtx.InsertTestWorkflowExecution(ctx, sqlc.InsertTestWorkflowExecutionParams{
@@ -2348,9 +2351,12 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
-	silentMode, err := toJSONB(execution.SilentMode)
-	if err != nil {
-		return err
+	var silentMode []byte
+	if execution.SilentMode != nil {
+		silentMode, err = toJSONB(execution.SilentMode)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Placeholder - you would call the generated method here:
