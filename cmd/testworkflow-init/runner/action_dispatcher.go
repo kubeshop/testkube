@@ -151,15 +151,23 @@ func (d *ActionDispatcher) handleStart(action *lite.LiteAction, ctx *ExecutionCo
 		}
 	}
 
-	// Create per-step results directory if the step has an ID and will execute
+	// Create per-step results directory if the step has an ID and will execute.
+	// MkdirAll respects umask (typically 0022), creating directories as 0755.
+	// With FSGroup, all containers share the same GID but the group write bit
+	// is missing — so containers with different UIDs cannot create subdirectories.
+	// Add the group write bit while preserving existing bits (e.g. setgid from FSGroup).
 	if !step.IsFinished() && step.Id != "" {
+		base := data.GetStepResultsBase()
 		resultsDir := data.StepResultsDir(step.Id)
+		_ = os.MkdirAll(base, 0777)
+		data.EnsureGroupWritable(base)
 		if err := os.MkdirAll(resultsDir, 0777); err != nil {
 			return ActionResult{
 				ContinueExecution: false,
 				Error:             fmt.Errorf("failed to create step results directory %s: %w", resultsDir, err),
 			}
 		}
+		data.EnsureGroupWritable(resultsDir)
 	}
 
 	if !step.IsFinished() && step.PausedOnStart {
