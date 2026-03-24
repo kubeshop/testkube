@@ -1275,6 +1275,213 @@ func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 	assert.Equal(t, "test-workflow", params.WorkflowName)
 }
 
+func TestParseSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("empty selector", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("")
+		assert.Equal(t, []string{""}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key exists", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env")
+		assert.Equal(t, []string{"env"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key=value", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env=prod")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("multiple keys", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env,team")
+		assert.Equal(t, []string{"env", "team"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("multiple key=value pairs", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env=prod,team=backend")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod", "team=backend"}, conditions)
+	})
+
+	t.Run("mixed keys and key=value", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env,team=backend,version")
+		assert.Equal(t, []string{"env", "version"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("key with dots escaped", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("app.kubernetes.io/name")
+		assert.Equal(t, []string{"app．kubernetes．io/name"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("key=value with dots in key escaped", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("app.kubernetes.io/name=myapp")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"app．kubernetes．io/name=myapp"}, conditions)
+	})
+}
+
+func TestParseTagSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("empty selector", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("")
+		assert.Equal(t, []string{""}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key exists", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env")
+		assert.Equal(t, []string{"env"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key=value", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env=prod")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("multiple keys", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env,team")
+		assert.Equal(t, []string{"env", "team"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("multiple key=value pairs", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env=prod,team=backend")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod", "team=backend"}, conditions)
+	})
+
+	t.Run("mixed keys and key=value", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env,team=backend,version")
+		assert.Equal(t, []string{"env", "version"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("with spaces around comma separators", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env , team=backend , version")
+		assert.Equal(t, []string{"env", "version"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("key with dots escaped", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("app.kubernetes.io/name")
+		assert.Equal(t, []string{"app．kubernetes．io/name"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("key=value with dots in key escaped", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("app.kubernetes.io/name=myapp")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"app．kubernetes．io/name=myapp"}, conditions)
+	})
+}
+
+func TestParseLabelSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("empty label selector", func(t *testing.T) {
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single label with value", func(t *testing.T) {
+		value := "prod"
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("single label exists", func(t *testing.T) {
+		exists := true
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"env"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single label not exists", func(t *testing.T) {
+		exists := false
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"env:not_exists"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("multiple labels with values", func(t *testing.T) {
+		value1 := "prod"
+		value2 := "backend"
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value1},
+			{Key: "team", Value: &value2},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod", "team=backend"}, conditions)
+	})
+
+	t.Run("mixed exists and value labels", func(t *testing.T) {
+		value := "prod"
+		exists := true
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value},
+			{Key: "team", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"team"}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("mixed not_exists and value labels", func(t *testing.T) {
+		value := "prod"
+		exists := false
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value},
+			{Key: "deprecated", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"deprecated:not_exists"}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("key with dots escaped", func(t *testing.T) {
+		exists := true
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "app.kubernetes.io/name", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"app．kubernetes．io/name"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("key=value with dots in key escaped", func(t *testing.T) {
+		value := "myapp"
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "app.kubernetes.io/name", Value: &value},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"app．kubernetes．io/name=myapp"}, conditions)
+	})
+}
+
 func TestPopulateConfigParams(t *testing.T) {
 	resolvedWorkflow := &testkube.TestWorkflow{
 		Spec: &testkube.TestWorkflowSpec{
