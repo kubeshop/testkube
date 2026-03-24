@@ -55,16 +55,19 @@ func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, n
 				err := enc.Encode(n)
 				if err != nil {
 					s.Log.Errorw("could not encode value", "error", err, "id", id)
+					return
 				}
 
 				_, err = fmt.Fprintf(w, "\n")
 				if err != nil {
 					s.Log.Errorw("could not print new line", "error", err, "id", id)
+					return
 				}
 
 				err = w.Flush()
 				if err != nil {
 					s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+					return
 				}
 			case <-keepAliveTicker.C:
 				// SSE comment line — ignored by spec-compliant clients but keeps
