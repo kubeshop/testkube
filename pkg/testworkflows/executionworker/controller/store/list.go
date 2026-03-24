@@ -104,20 +104,14 @@ func (v *list[T]) Channel(ctx context.Context) <-chan *T {
 			}
 
 			// Wait for updates
-		// Wait for updates
-		select {
-		case <-v.update.Next():
-			// New items may be available; loop back to read them.
-		case <-v.ctx.Done():
-			return
-		case <-ctx.Done():
-			return
-		}
+			select {
+			case <-v.update.Next():
 			case <-v.ctx.Done():
 				return
 			case <-ctx.Done():
 				return
 			}
+
 		}
 	}()
 	return ch
