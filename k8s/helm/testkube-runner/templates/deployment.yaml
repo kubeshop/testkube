@@ -267,13 +267,20 @@ spec:
             {{- end }}
 
             # Global template
-            {{- if and .Values.globalTemplate.enabled .Values.globalTemplate.spec }}
+            {{- if .Values.global.testWorkflows.globalTemplate.enabled }}
+            {{- if .Values.global.testWorkflows.globalTemplate.inline }}
+            {{- if .Values.global.testWorkflows.globalTemplate.spec }}
             - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE"
-              {{- if kindIs "map" .Values.globalTemplate.spec }}
-              value: {{ toJson .Values.globalTemplate.spec | quote }}
+              {{- if kindIs "map" .Values.global.testWorkflows.globalTemplate.spec }}
+              value: {{ toJson .Values.global.testWorkflows.globalTemplate.spec | quote }}
               {{- else }}
-              value: {{ toJson (fromYaml .Values.globalTemplate.spec) | quote }}
+              value: {{ toJson (fromYaml .Values.global.testWorkflows.globalTemplate.spec) | quote }}
               {{- end }}
+            {{- end }}
+            {{- else if .Values.global.testWorkflows.globalTemplate.name }}
+            - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME"
+              value: "{{ .Values.global.testWorkflows.globalTemplate.name }}"
+            {{- end }}
             {{- end }}
 
             # Certificates

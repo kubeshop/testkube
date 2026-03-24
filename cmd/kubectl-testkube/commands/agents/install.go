@@ -412,8 +412,9 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 		helmOpts.Values["execution.default.namespace"] = executionNs
 	}
 	if len(globalTemplate) > 0 {
-		helmOpts.Values["globalTemplate.enabled"] = true
-		helmOpts.Values["globalTemplate.spec"] = string(globalTemplate)
+		helmOpts.Values["global.testWorkflows.globalTemplate.enabled"] = true
+		helmOpts.Values["global.testWorkflows.globalTemplate.inline"] = true
+		helmOpts.Values["global.testWorkflows.globalTemplate.spec"] = string(globalTemplate)
 	}
 	cliErr := common2.HelmUpgradeOrInstallGeneric(helmOpts)
 	if cliErr != nil {
