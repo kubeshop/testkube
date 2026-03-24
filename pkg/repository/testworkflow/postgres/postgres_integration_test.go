@@ -7,13 +7,14 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestPostgresRepositoryGetExecutionsIntegration tests the full repository GetExecutions method with real PostgreSQL
 func TestPostgresRepositoryGetExecutions_Integration(t *testing.T) {
-	//test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_executions")
 	defer cleanup()
 
@@ -176,7 +177,7 @@ func TestPostgresRepositoryGetExecutions_Integration(t *testing.T) {
 
 // TestPostgresRepositoryGetExecutionsTotalsIntegration tests the full repository GetExecutionsTotals method with real PostgreSQL
 func TestPostgresRepositoryGetExecutionsTotals_Integration(t *testing.T) {
-	//test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_executions_totals")
 	defer cleanup()
 
@@ -249,6 +250,7 @@ func TestPostgresRepositoryGetExecutionsTotals_Integration(t *testing.T) {
 // TestPostgresRepositoryCountExecutions_Integration tests the CountTestWorkflowExecutions method
 // specifically verifying that label_keys and label_conditions work together with AND logic
 func TestPostgresRepositoryCountExecutions_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_count_executions")
 	defer cleanup()
 

@@ -6,12 +6,14 @@ import (
 	"testing"
 
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestGetTestWorkflowExecutionsIntegration tests the GetTestWorkflowExecutions query with real PostgreSQL
-func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
+func TestGetTestWorkflowExecutions_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "executions")
 	defer cleanup()
 
@@ -29,7 +31,7 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 
 	// Execution 1: with tags
 	_, err := testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflow_executions 
+		INSERT INTO test_workflow_executions
 		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7)
 	`, execution1, orgID, envID, "exec-1", "default", int32(1),
@@ -38,7 +40,7 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 
 	// Execution 2: with different tags
 	_, err = testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflow_executions 
+		INSERT INTO test_workflow_executions
 		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7)
 	`, execution2, orgID, envID, "exec-2", "default", int32(2),
@@ -47,7 +49,7 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 
 	// Execution 3: with some overlapping tags
 	_, err = testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflow_executions 
+		INSERT INTO test_workflow_executions
 		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7)
 	`, execution3, orgID, envID, "exec-3", "default", int32(3),
@@ -57,7 +59,7 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 	// Insert results for executions
 	for _, execID := range []string{execution1, execution2, execution3} {
 		_, err = testDB.Pool.Exec(ctx, `
-			INSERT INTO test_workflow_results 
+			INSERT INTO test_workflow_results
 			(execution_id, status, created_at, updated_at)
 			VALUES ($1, $2, NOW(), NOW())
 		`, execID, "passed")
@@ -89,7 +91,7 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
 			TagKeys:        []string{"env"},
-			Lmt:             10,
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(result), "Should find all 3 executions with 'env' tag")
@@ -101,7 +103,7 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
 			TagKeys:        []string{"deprecated:not_exists"},
-			Lmt:             10,
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(result), "Should find all 3 executions without 'deprecated' tag")
@@ -112,8 +114,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
-			TagConditions:   []string{"env=prod"},
-			Lmt:             10,
+			TagConditions:  []string{"env=prod"},
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(result), "Should find 2 executions with env=prod")
@@ -124,8 +126,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
-			LabelKeys:       []string{"app"},
-			Lmt:             10,
+			LabelKeys:      []string{"app"},
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(result), "Should find all 3 executions with 'app' label")
@@ -136,8 +138,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
-			LabelKeys:       []string{"deprecated:not_exists"},
-			Lmt:             10,
+			LabelKeys:      []string{"deprecated:not_exists"},
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(result), "Should find all 3 executions without 'deprecated' label")
@@ -146,8 +148,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 	t.Run("Test label filtering with key-value conditions", func(t *testing.T) {
 		// Test filtering by label key-value conditions
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
-			OrganizationID: orgID,
-			EnvironmentID:  envID,
+			OrganizationID:  orgID,
+			EnvironmentID:   envID,
 			LabelConditions: []string{"app=myapp"},
 			Lmt:             10,
 		})
@@ -160,8 +162,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
-			SelectorKeys:    []string{"app"},
-			Lmt:             10,
+			SelectorKeys:   []string{"app"},
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(result), "Should find all 3 executions with 'app' selector")
@@ -172,8 +174,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
 			OrganizationID: orgID,
 			EnvironmentID:  envID,
-			SelectorKeys:    []string{"deprecated:not_exists"},
-			Lmt:             10,
+			SelectorKeys:   []string{"deprecated:not_exists"},
+			Lmt:            10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(result), "Should find all 3 executions without 'deprecated' selector")
@@ -182,10 +184,10 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 	t.Run("Test selector filtering with key-value conditions", func(t *testing.T) {
 		// Test filtering by selector key-value conditions
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
-			OrganizationID: orgID,
-			EnvironmentID:  envID,
+			OrganizationID:     orgID,
+			EnvironmentID:      envID,
 			SelectorConditions: []string{"app=myapp"},
-			Lmt:             10,
+			Lmt:                10,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(result), "Should find 2 executions with app=myapp selector")
@@ -194,8 +196,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 	t.Run("Test combined filtering", func(t *testing.T) {
 		// Test combining multiple filter types
 		result, err := queries.GetTestWorkflowExecutions(ctx, GetTestWorkflowExecutionsParams{
-			OrganizationID: orgID,
-			EnvironmentID:  envID,
+			OrganizationID:  orgID,
+			EnvironmentID:   envID,
 			TagConditions:   []string{"env=prod"},
 			LabelConditions: []string{"app=myapp"},
 			Lmt:             10,
@@ -206,7 +208,8 @@ func TestGetTestWorkflowExecutionsIntegration(t *testing.T) {
 }
 
 // TestGetTestWorkflowExecutionsTotalsIntegration tests the GetTestWorkflowExecutionsTotals query with real PostgreSQL
-func TestGetTestWorkflowExecutionsTotalsIntegration(t *testing.T) {
+func TestGetTestWorkflowExecutionsTotals_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "executions_totals")
 	defer cleanup()
 
@@ -227,14 +230,14 @@ func TestGetTestWorkflowExecutionsTotalsIntegration(t *testing.T) {
 		}
 
 		_, err = testDB.Pool.Exec(ctx, `
-			INSERT INTO test_workflow_executions 
+			INSERT INTO test_workflow_executions
 			(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
 		`, execID, orgID, envID, execID, "default", int32(i+1))
 		require.NoError(t, err)
 
 		_, err = testDB.Pool.Exec(ctx, `
-			INSERT INTO test_workflow_results 
+			INSERT INTO test_workflow_results
 			(execution_id, status, created_at, updated_at)
 			VALUES ($1, $2, NOW(), NOW())
 		`, execID, status)
