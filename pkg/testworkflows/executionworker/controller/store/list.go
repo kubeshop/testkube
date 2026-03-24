@@ -105,7 +105,12 @@ func (v *list[T]) Channel(ctx context.Context) <-chan *T {
 
 			// Wait for updates
 			select {
-			case <-v.update.Next():
+			case _, ok := <-v.update.Next():
+				if !ok {
+					// The update channel is closed; no further updates will arrive.
+					// Exit to avoid spinning in the outer loop.
+					return
+				}
 			case <-v.ctx.Done():
 				return
 			case <-ctx.Done():
