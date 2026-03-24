@@ -571,7 +571,7 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
                 END
             ) > 0
         )
-        OR
+        AND
         (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
@@ -2205,7 +2205,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                 END
             ) > 0
         )
-        OR
+        AND
         (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
@@ -2541,7 +2541,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                 END
             ) > 0
         )
-        OR
+        AND
         (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
@@ -2825,7 +2825,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                 END
             ) > 0
         )
-        OR
+        AND
         (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
