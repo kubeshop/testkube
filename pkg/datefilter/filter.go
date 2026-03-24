@@ -21,6 +21,10 @@ func NewDateFilter(startDate string, endDate string) DateFilter {
 	dFilter.IsStartValid = (err == nil)
 	dFilter.End, err = time.Parse(DateFormatISO8601, endDate)
 	dFilter.IsEndValid = err == nil
+	if dFilter.IsEndValid {
+		// Advance to end of day so the full endDate day is included
+		dFilter.End = dFilter.End.Add(24*time.Hour - time.Nanosecond)
+	}
 
 	return dFilter
 }
@@ -35,7 +39,7 @@ func (dFilter DateFilter) IsPassing(date time.Time) bool {
 		if !dFilter.IsEndValid {
 			return true
 		}
-		if dFilter.End.After(date) || dFilter.End.Equal(date.Truncate(oneDay)) {
+		if !dFilter.End.Before(date) {
 			return true
 		}
 	}
