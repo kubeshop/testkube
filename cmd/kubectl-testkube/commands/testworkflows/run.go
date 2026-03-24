@@ -31,9 +31,7 @@ import (
 
 const (
 	apiErrorMessage = "processing error:"
-	logsCheckDelay  = 100 * time.Millisecond
-
-	logsRetryDelay = time.Second
+	logsRetryDelay  = time.Second
 
 	// Iteration delay thresholds and values
 	initialIterationThreshold = 5
@@ -46,8 +44,13 @@ const (
 	timestampTPosition = 10
 )
 
+type workflowExecutionGetter interface {
+	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
+}
+
 var (
-	NL = []byte("\n")
+	NL                     = []byte("\n")
+	watchWorkflowLogsSleep = time.Sleep
 )
 
 // executionError represents an error during test workflow execution
@@ -799,7 +802,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 
 		isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
 		if err != nil {
-			return nil, err
+			return result, err
 		}
 		isFirstLine = false
 	}
@@ -812,7 +815,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 func watchWorkflowLogsCommon(
 	id, prefix, spinnerMessage string,
 	signature []testkube.TestWorkflowSignature,
-	client apiclientv1.Client,
+	executionGetter workflowExecutionGetter,
 	getNotifications func() (chan testkube.TestWorkflowExecutionNotification, error),
 ) (*testkube.TestWorkflowResult, error) {
 
@@ -826,7 +829,7 @@ func watchWorkflowLogsCommon(
 	for {
 		notifications, nErr = getNotifications()
 		if nErr != nil {
-			result, finished, cErr := refreshExecutionResult(client, id, result)
+			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
 			if cErr != nil {
 				spinner.Fail()
 				return nil, cErr
@@ -837,16 +840,29 @@ func watchWorkflowLogsCommon(
 				return result, nil
 			}
 
-			time.Sleep(logsCheckDelay)
+			watchWorkflowLogsSleep(logsRetryDelay)
 			continue
 		}
 
 		spinner.Stop()
 		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
 		if nErr != nil {
+			var finished bool
+			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
+			if cErr != nil {
+				spinner.Fail()
+				return nil, cErr
+			}
+
+			if finished {
+				spinner.Success("Logs received")
+				ui.NL()
+				return result, nil
+			}
+
 			spinner.Warning("Retrying logs")
 			ui.NL()
-			time.Sleep(logsRetryDelay)
+			watchWorkflowLogsSleep(logsRetryDelay)
 			continue
 		}
 
@@ -858,8 +874,12 @@ func watchWorkflowLogsCommon(
 
 		var finished bool
 		var cErr error
-		result, finished, cErr = refreshExecutionResult(client, id, result)
-		if cErr == nil && finished {
+		result, finished, cErr = refreshExecutionResult(executionGetter, id, result)
+		if cErr != nil {
+			spinner.Fail()
+			return nil, cErr
+		}
+		if finished {
 			spinner.Success("Logs received")
 			ui.NL()
 			break
@@ -867,7 +887,7 @@ func watchWorkflowLogsCommon(
 
 		spinner.Warning("Log stream interrupted, resuming")
 		ui.NL()
-		time.Sleep(logsRetryDelay)
+		watchWorkflowLogsSleep(logsRetryDelay)
 		continue
 	}
 
@@ -890,11 +910,11 @@ func hasFinishedResult(result *testkube.TestWorkflowResult) bool {
 }
 
 func refreshExecutionResult(
-	client apiclientv1.Client,
+	executionGetter workflowExecutionGetter,
 	id string,
 	current *testkube.TestWorkflowResult,
 ) (*testkube.TestWorkflowResult, bool, error) {
-	execution, err := client.GetTestWorkflowExecution(id)
+	execution, err := executionGetter.GetTestWorkflowExecution(id)
 	if err != nil {
 		return current, false, err
 	}
