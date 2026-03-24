@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v5"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -34,8 +33,7 @@ const (
 	apiErrorMessage = "processing error:"
 	logsCheckDelay  = 100 * time.Millisecond
 
-	logsRetryAttempts = 10
-	logsRetryDelay    = time.Second
+	logsRetryDelay = time.Second
 
 	// Iteration delay thresholds and values
 	initialIterationThreshold = 5
@@ -828,29 +826,19 @@ func watchWorkflowLogsCommon(
 	for {
 		notifications, nErr = getNotifications()
 		if nErr != nil {
-			execution, cErr := client.GetTestWorkflowExecution(id)
+			result, finished, cErr := refreshExecutionResult(client, id, result)
 			if cErr != nil {
 				spinner.Fail()
 				return nil, cErr
 			}
 
-			if execution.Result != nil {
-				if execution.Result.IsFinished() {
-					nErr = executionError{
-						Operation:   "watch logs",
-						ExecutionID: id,
-						Cause:       errors.New("execution already finished"),
-					}
-				} else {
-					time.Sleep(logsCheckDelay)
-					continue
-				}
+			if finished {
+				spinner.Stop()
+				return result, nil
 			}
-		}
 
-		if nErr != nil {
-			spinner.Fail()
-			return nil, nErr
+			time.Sleep(logsCheckDelay)
+			continue
 		}
 
 		spinner.Stop()
@@ -858,12 +846,29 @@ func watchWorkflowLogsCommon(
 		if nErr != nil {
 			spinner.Warning("Retrying logs")
 			ui.NL()
+			time.Sleep(logsRetryDelay)
 			continue
 		}
 
-		spinner.Success("Logs received")
+		if hasFinishedResult(result) {
+			spinner.Success("Logs received")
+			ui.NL()
+			break
+		}
+
+		var finished bool
+		var cErr error
+		result, finished, cErr = refreshExecutionResult(client, id, result)
+		if cErr == nil && finished {
+			spinner.Success("Logs received")
+			ui.NL()
+			break
+		}
+
+		spinner.Warning("Log stream interrupted, resuming")
 		ui.NL()
-		break
+		time.Sleep(logsRetryDelay)
+		continue
 	}
 
 	return result, nil
@@ -873,33 +878,40 @@ func watchWorkflowLogsCommon(
 func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
 
-	// retry logic in case of error or closed channel with running state
-	err = retry.New(
-		retry.Attempts(logsRetryAttempts),
-		retry.Delay(logsRetryDelay),
-		retry.LastErrorOnly(true),
-	).Do(
-		func() error {
-			notifications, err := client.GetTestWorkflowExecutionNotifications(id)
-			if err != nil {
-				return err
-			}
+	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionNotifications(id)
+	}
 
-			// Check if result stream is closed and if execution is finished
-			result, err = printTestWorkflowLogs(signature, notifications, prefix)
-			if err != nil {
-				return err
-			}
+	return watchWorkflowLogsCommon(id, prefix, "Waiting for workflow logs", signature, client, getNotifications)
+}
 
-			if result != nil && result.Status != nil && !result.Status.Finished() {
-				return fmt.Errorf("test workflow execution is not finished but channel is closed")
-			}
+func hasFinishedResult(result *testkube.TestWorkflowResult) bool {
+	return result != nil && result.Status != nil && result.IsFinished()
+}
 
-			return nil
-		},
-	)
+func refreshExecutionResult(
+	client apiclientv1.Client,
+	id string,
+	current *testkube.TestWorkflowResult,
+) (*testkube.TestWorkflowResult, bool, error) {
+	execution, err := client.GetTestWorkflowExecution(id)
+	if err != nil {
+		return current, false, err
+	}
 
-	return result, err
+	if execution.Result == nil {
+		return current, false, nil
+	}
+
+	if current == nil {
+		current = execution.Result
+	}
+
+	if hasFinishedResult(execution.Result) {
+		return execution.Result, true, nil
+	}
+
+	return current, false, nil
 }
 
 // watchTestWorkflowServiceLogs streams logs for a specific service instance
