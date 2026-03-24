@@ -96,6 +96,19 @@ jobs:
         env:
           MINIO_ROOT_USER: minio99
           MINIO_ROOT_PASSWORD: minio123
+      postgres:
+        image: postgres:16.2
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testkube_users_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v6
