@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -40,20 +41,45 @@ func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, n
 
 		enc := json.NewEncoder(w)
 
-		for n := range notifications.Channel() {
-			err := enc.Encode(n)
-			if err != nil {
-				s.Log.Errorw("could not encode value", "error", err, "id", id)
-			}
+		// Send periodic SSE keep-alive comments to prevent intermediate proxies
+		// (e.g. Cloudflare) from terminating idle connections.
+		keepAliveTicker := time.NewTicker(30 * time.Second)
+		defer keepAliveTicker.Stop()
 
-			_, err = fmt.Fprintf(w, "\n")
-			if err != nil {
-				s.Log.Errorw("could not print new line", "error", err, "id", id)
-			}
+		for {
+			select {
+			case n, ok := <-notifications.Channel():
+				if !ok {
+					return
+				}
+				err := enc.Encode(n)
+				if err != nil {
+					s.Log.Errorw("could not encode value", "error", err, "id", id)
+				}
 
-			err = w.Flush()
-			if err != nil {
-				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+				_, err = fmt.Fprintf(w, "\n")
+				if err != nil {
+					s.Log.Errorw("could not print new line", "error", err, "id", id)
+				}
+
+				err = w.Flush()
+				if err != nil {
+					s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+				}
+			case <-keepAliveTicker.C:
+				// SSE comment line — ignored by spec-compliant clients but keeps
+				// the connection alive through proxies with idle timeouts.
+				_, err = fmt.Fprintf(w, ": keep-alive\n\n")
+				if err != nil {
+					s.Log.Errorw("could not write keep-alive", "error", err, "id", id)
+					return
+				}
+
+				err = w.Flush()
+				if err != nil {
+					s.Log.Errorw("could not flush keep-alive", "error", err, "id", id)
+					return
+				}
 			}
 		}
 	})

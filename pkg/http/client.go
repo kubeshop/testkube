@@ -37,13 +37,16 @@ func NewClient(insecure ...bool) *http.Client {
 
 // NewSSEClient is HTTP client with long timeout to be able to read SSE endpoints
 func NewSSEClient(insecure ...bool) *http.Client {
-	var netTransport *http.Transport
-	netTransport = http.DefaultTransport.(*http.Transport)
+	netTransport := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: NetDialTimeout,
+		}).Dial,
+		TLSHandshakeTimeout: TLSHandshakeTimeout,
+		Proxy:               http.ProxyFromEnvironment,
+	}
 	if len(insecure) == 1 && insecure[0] {
-		netTransport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+		netTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
 		}
 	}
 
