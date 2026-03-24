@@ -323,6 +323,20 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
 	}
 
+	// Ensure workflows and their specs are not nil to avoid nil pointer dereference in ConvertDots
+	if execution.Workflow == nil {
+		execution.Workflow = &testkube.TestWorkflow{}
+	}
+	if execution.ResolvedWorkflow == nil {
+		execution.ResolvedWorkflow = &testkube.TestWorkflow{}
+	}
+	if execution.Workflow.Spec == nil {
+		execution.Workflow.Spec = &testkube.TestWorkflowSpec{}
+	}
+	if execution.ResolvedWorkflow.Spec == nil {
+		execution.ResolvedWorkflow.Spec = &testkube.TestWorkflowSpec{}
+	}
+
 	return execution.UnscapeDots(), nil
 }
 

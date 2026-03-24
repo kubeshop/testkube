@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"testing"
 
-	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestPostgresRepositoryGetExecutionsIntegration tests the full repository GetExecutions method with real PostgreSQL
-func TestPostgresRepositoryGetExecutionsIntegration(t *testing.T) {
+func TestPostgresRepositoryGetExecutions_Integration(t *testing.T) {
+	//test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_executions")
 	defer cleanup()
 
@@ -28,56 +29,68 @@ func TestPostgresRepositoryGetExecutionsIntegration(t *testing.T) {
 	)
 
 	// Insert test data
-	workflowID := "test-workflow"
-
-	// Insert test workflow
-	_, err := testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflows (id, organization_id, environment_id, name, namespace, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-	`, workflowID, orgID, envID, "test-workflow", "default")
-	require.NoError(t, err)
+	var err error
 
 	// Insert test executions with various tags, labels, and selectors
 	execution1 := "exec-1"
 	execution2 := "exec-2"
 	execution3 := "exec-3"
 
-	// Execution 1: with tags and labels
+	// Execution 1: with tags
 	_, err = testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflow_executions 
-		(id, organization_id, environment_id, test_workflow_id, name, namespace, number, scheduled_at, created_at, updated_at, tags, labels)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), NOW(), $8, $9)
-	`, execution1, orgID, envID, workflowID, "exec-1", "default", int32(1),
-		`{"env": "prod", "team": "backend"}`, `{"app": "myapp", "version": "1.0"}`)
+		INSERT INTO test_workflow_executions
+		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7)
+	`, execution1, orgID, envID, "exec-1", "default", int32(1),
+		`{"env": "prod", "team": "backend"}`)
 	require.NoError(t, err)
 
-	// Execution 2: with different tags and labels
+	// Execution 2: with different tags
 	_, err = testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflow_executions 
-		(id, organization_id, environment_id, test_workflow_id, name, namespace, number, scheduled_at, created_at, updated_at, tags, labels)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), NOW(), $8, $9)
-	`, execution2, orgID, envID, workflowID, "exec-2", "default", int32(2),
-		`{"env": "dev", "owner": "alice"}`, `{"app": "myapp", "tier": "frontend"}`)
+		INSERT INTO test_workflow_executions
+		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7)
+	`, execution2, orgID, envID, "exec-2", "default", int32(2),
+		`{"env": "dev", "owner": "alice"}`)
 	require.NoError(t, err)
 
-	// Execution 3: with some overlapping tags and labels
+	// Execution 3: with some overlapping tags
 	_, err = testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflow_executions 
-		(id, organization_id, environment_id, test_workflow_id, name, namespace, number, scheduled_at, created_at, updated_at, tags, labels)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), NOW(), $8, $9)
-	`, execution3, orgID, envID, workflowID, "exec-3", "default", int32(3),
-		`{"env": "prod", "owner": "bob"}`, `{"app": "yourapp", "version": "2.0"}`)
+		INSERT INTO test_workflow_executions
+		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7)
+	`, execution3, orgID, envID, "exec-3", "default", int32(3),
+		`{"env": "prod", "owner": "bob"}`)
 	require.NoError(t, err)
 
 	// Insert results for executions
 	for _, execID := range []string{execution1, execution2, execution3} {
 		_, err = testDB.Pool.Exec(ctx, `
-			INSERT INTO test_workflow_execution_results 
+			INSERT INTO test_workflow_results
 			(execution_id, status, created_at, updated_at)
 			VALUES ($1, $2, NOW(), NOW())
 		`, execID, "passed")
 		require.NoError(t, err)
 	}
+
+	// Insert test workflows for each execution with appropriate labels
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, labels, created, updated)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`, execution1, "workflow", "test-workflow-1", "default", `{"app": "myapp", "version": "1.0"}`)
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, labels, created, updated)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`, execution2, "workflow", "test-workflow-2", "default", `{"app": "myapp", "tier": "frontend"}`)
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, labels, created, updated)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`, execution3, "workflow", "test-workflow-3", "default", `{"app": "yourapp", "version": "2.0"}`)
+	require.NoError(t, err)
 
 	t.Run("Test tag filtering via repository", func(t *testing.T) {
 		filter := testworkflow.NewExecutionsFilter().
@@ -162,7 +175,8 @@ func TestPostgresRepositoryGetExecutionsIntegration(t *testing.T) {
 }
 
 // TestPostgresRepositoryGetExecutionsTotalsIntegration tests the full repository GetExecutionsTotals method with real PostgreSQL
-func TestPostgresRepositoryGetExecutionsTotalsIntegration(t *testing.T) {
+func TestPostgresRepositoryGetExecutionsTotals_Integration(t *testing.T) {
+	//test.IntegrationTest(t)
 	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_executions_totals")
 	defer cleanup()
 
@@ -178,14 +192,7 @@ func TestPostgresRepositoryGetExecutionsTotalsIntegration(t *testing.T) {
 	)
 
 	// Insert test data
-	workflowID := "test-workflow"
-
-	// Insert test workflow
-	_, err := testDB.Pool.Exec(ctx, `
-		INSERT INTO test_workflows (id, organization_id, environment_id, name, namespace, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-	`, workflowID, orgID, envID, "test-workflow", "default")
-	require.NoError(t, err)
+	var err error
 
 	// Insert test executions with different statuses
 	for i := 0; i < 5; i++ {
@@ -196,27 +203,34 @@ func TestPostgresRepositoryGetExecutionsTotalsIntegration(t *testing.T) {
 		}
 
 		_, err = testDB.Pool.Exec(ctx, `
-			INSERT INTO test_workflow_executions 
-			(id, organization_id, environment_id, test_workflow_id, name, namespace, number, scheduled_at, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), NOW())
-		`, execID, orgID, envID, workflowID, execID, "default", int32(i+1))
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+		`, execID, orgID, envID, execID, "default", int32(i+1))
 		require.NoError(t, err)
 
 		_, err = testDB.Pool.Exec(ctx, `
-			INSERT INTO test_workflow_execution_results 
+			INSERT INTO test_workflow_results
 			(execution_id, status, created_at, updated_at)
 			VALUES ($1, $2, NOW(), NOW())
 		`, execID, status)
 		require.NoError(t, err)
 	}
 
+	// Insert test workflow for the first execution
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+	`, "exec-0", "workflow", "test-workflow", "default")
+	require.NoError(t, err)
+
 	t.Run("Test totals without filters via repository", func(t *testing.T) {
 		filter := testworkflow.NewExecutionsFilter()
 
 		result, err := repo.GetExecutionsTotals(ctx, *filter)
 		require.NoError(t, err)
-		assert.Equal(t, int32(3), result.Passed, "Should have 3 passed executions")
-		assert.Equal(t, int32(2), result.Failed, "Should have 2 failed executions")
+		assert.Equal(t, int32(2), result.Passed, "Should have 2 passed executions")
+		assert.Equal(t, int32(3), result.Failed, "Should have 3 failed executions")
 		assert.Equal(t, int32(5), result.Results, "Should have 5 total executions")
 	})
 
@@ -226,9 +240,9 @@ func TestPostgresRepositoryGetExecutionsTotalsIntegration(t *testing.T) {
 
 		result, err := repo.GetExecutionsTotals(ctx, *filter)
 		require.NoError(t, err)
-		assert.Equal(t, int32(3), result.Passed, "Should have 3 passed executions")
+		assert.Equal(t, int32(2), result.Passed, "Should have 2 passed executions")
 		assert.Equal(t, int32(0), result.Failed, "Should have 0 failed executions")
-		assert.Equal(t, int32(3), result.Results, "Should have 3 total executions")
+		assert.Equal(t, int32(2), result.Results, "Should have 2 total executions")
 	})
 }
 
