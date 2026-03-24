@@ -37,10 +37,11 @@ func TestIsPassingDateFilterWhenStartIsValidAndEndValidThenOnlyDatesBetweenAreVa
 
 func TestIsPassingDateFilterWhenStartAndEndDateAreTheSameThenValidateForSameDate(t *testing.T) {
 	assertion := require.New(t)
-	now := time.Now().Format(DateFormatISO8601)
+	nowTime := time.Now().UTC()
+	now := nowTime.Format(DateFormatISO8601)
 	dFilter := NewDateFilter(now, now)
-	assertion.True(dFilter.IsPassing(time.Now()), "Date filter should pass the current time when start and end are today")
-	assertion.False(dFilter.IsPassing(time.Now().AddDate(5, 5, 20)), "Date filter should not pass any value if it is not between the start and end")
+	assertion.True(dFilter.IsPassing(nowTime), "Date filter should pass the current time when start and end are today")
+	assertion.False(dFilter.IsPassing(nowTime.AddDate(5, 5, 20)), "Date filter should not pass any value if it is not between the start and end")
 }
 
 func TestNewDateFilterEndDateIsEndOfDay(t *testing.T) {
