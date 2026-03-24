@@ -1231,10 +1231,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
                         NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
@@ -1242,8 +1242,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                 END
             ) > 0
         )
-        OR
-        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        AND
+        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0

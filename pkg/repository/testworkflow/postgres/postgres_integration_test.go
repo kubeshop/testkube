@@ -246,6 +246,137 @@ func TestPostgresRepositoryGetExecutionsTotals_Integration(t *testing.T) {
 	})
 }
 
+// TestPostgresRepositoryCountExecutions_Integration tests the CountTestWorkflowExecutions method
+// specifically verifying that label_keys and label_conditions work together with AND logic
+func TestPostgresRepositoryCountExecutions_Integration(t *testing.T) {
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_count_executions")
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Create repository
+	orgID := "test-org"
+	envID := "test-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	// Insert test executions with workflows having different labels
+	// Execution 1: has label "app=myapp" and "version=1.0"
+	_, err := testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflow_executions
+		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+	`, "exec-1", orgID, envID, "exec-1", "default", int32(1))
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
+	`, "exec-1", "passed")
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, labels, created, updated)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`, "exec-1", "workflow", "wf-1", "default", `{"app": "myapp", "version": "1.0"}`)
+	require.NoError(t, err)
+
+	// Execution 2: has label "app=myapp" but NO "version" label
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflow_executions
+		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+	`, "exec-2", orgID, envID, "exec-2", "default", int32(2))
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
+	`, "exec-2", "passed")
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, labels, created, updated)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`, "exec-2", "workflow", "wf-2", "default", `{"app": "myapp"}`)
+	require.NoError(t, err)
+
+	// Execution 3: has label "version=2.0" but "app=otherapp"
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflow_executions
+		(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+	`, "exec-3", orgID, envID, "exec-3", "default", int32(3))
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
+	`, "exec-3", "passed")
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, labels, created, updated)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`, "exec-3", "workflow", "wf-3", "default", `{"app": "otherapp", "version": "2.0"}`)
+	require.NoError(t, err)
+
+	t.Run("Count with label existence AND value condition - should use AND logic", func(t *testing.T) {
+		// This test verifies the bug fix: label_keys and label_conditions should use AND
+		// We want: workflows that have "version" label AND "app=myapp"
+		// Expected: Only exec-1 matches (has version label AND app=myapp)
+		// If OR was used, exec-2 would also match (has app=myapp but no version)
+		exists := true
+		labelSelector := &testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "version", Exists: &exists},       // label_keys
+				{Key: "app", Value: StringPtr("myapp")}, // label_conditions
+			},
+		}
+
+		filter := testworkflow.NewExecutionsFilter().
+			WithLabelSelector(labelSelector)
+
+		count, err := repo.Count(ctx, *filter)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count, "Should count only 1 execution with both 'version' label AND 'app=myapp'")
+	})
+
+	t.Run("Count with only label existence filter", func(t *testing.T) {
+		exists := true
+		labelSelector := &testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "version", Exists: &exists},
+			},
+		}
+
+		filter := testworkflow.NewExecutionsFilter().
+			WithLabelSelector(labelSelector)
+
+		count, err := repo.Count(ctx, *filter)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), count, "Should count 2 executions with 'version' label")
+	})
+
+	t.Run("Count with only label value filter", func(t *testing.T) {
+		labelSelector := &testworkflow.LabelSelector{
+			Or: []testworkflow.Label{
+				{Key: "app", Value: StringPtr("myapp")},
+			},
+		}
+
+		filter := testworkflow.NewExecutionsFilter().
+			WithLabelSelector(labelSelector)
+
+		count, err := repo.Count(ctx, *filter)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), count, "Should count 2 executions with app=myapp")
+	})
+}
+
 // StringPtr is a helper function to create string pointers
 func StringPtr(s string) *string {
 	return &s

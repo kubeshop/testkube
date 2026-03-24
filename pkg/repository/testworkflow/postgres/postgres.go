@@ -1211,7 +1211,7 @@ func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerI
 	// Get current status for comparison
 	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
 		ID:             id,
-		OrganizationID: r.environmentID,
+		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
