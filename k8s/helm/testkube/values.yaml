@@ -125,7 +125,7 @@ mongodb:
   # -- The apply job runs after upgrade to set the final FCV once the new MongoDB binary is reachable.
   preUpgradeFCVJob:
     # -- Enable the MongoDB FCV hook jobs.
-    enabled: true
+    enabled: false
     # -- Number of retries before considering either FCV Job as failed.
     backoffLimit: 2
     # -- Extra annotations added to both FCV Job resources.
