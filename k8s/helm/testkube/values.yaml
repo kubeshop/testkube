@@ -134,9 +134,9 @@ mongodb:
     podAnnotations: {}
     # -- Image pull secrets for the FCV Jobs. Falls back to `global.imagePullSecrets`, then `mongodb.image.pullSecrets`.
     imagePullSecrets: []
-    # -- Pod security context for the FCV Jobs. Falls back to `global.podSecurityContext`, then `mongodb.podSecurityContext`.
+    # -- Pod security context for the FCV Jobs. Falls back to `global.podSecurityContext`
     podSecurityContext: {}
-    # -- Container security context for the FCV Jobs. Falls back to `global.containerSecurityContext`, then `mongodb.containerSecurityContext`.
+    # -- Container security context for the FCV Jobs. Falls back to `global.containerSecurityContext`
     securityContext: {}
     # -- Node selector for the FCV Jobs. Falls back to `global.nodeSelector`.
     nodeSelector: {}
