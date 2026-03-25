@@ -99,11 +99,14 @@ mongodb:
       memory: 100Mi
   # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
   pdb:
-    create: true
+    create: false
     # -- Minimum number/percentage of pods that must still be available after the eviction
     minAvailable: ""
     # -- Maximum number/percentage of pods that may be made unavailable after the eviction
     maxUnavailable: ""
+  # -- MongoDB NetworkPolicy settings. Disabled by default to avoid upgrade conflicts on Helm-managed dependency resources.
+  networkPolicy:
+    enabled: false
   # Image built with ZCube tool so that it can be run on ARM nodes: https://github.com/ZCube/bitnami-compat/tree/main/patches
   # Currently Bitnami doesn't support ARM: https://github.com/bitnami/charts/issues/7305
   image:
@@ -115,6 +118,36 @@ mongodb:
     tag: 8.2.5
     # -- MongoDB image pull Secret
     pullSecrets: []
+  # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs. When empty, the jobs use the major.minor part of `mongodb.image.tag`.
+  featureCompatibilityVersion: ""
+  # -- Helm hook job configuration for MongoDB Feature Compatibility Version reconciliation before and after upgrades.
+  # -- The prepare job runs before upgrade to move FCV to an intermediate compatible version when needed.
+  # -- The apply job runs after upgrade to set the final FCV once the new MongoDB binary is reachable.
+  preUpgradeFCVJob:
+    # -- Enable the MongoDB FCV hook jobs.
+    enabled: true
+    # -- Number of retries before considering either FCV Job as failed.
+    backoffLimit: 2
+    # -- Extra annotations added to both FCV Job resources.
+    annotations: {}
+    # -- Extra annotations added to Pods created by the FCV Jobs.
+    podAnnotations: {}
+    # -- Image pull secrets for the FCV Jobs. Falls back to `global.imagePullSecrets`, then `mongodb.image.pullSecrets`.
+    imagePullSecrets: []
+    # -- Pod security context for the FCV Jobs. Falls back to `global.podSecurityContext`, then `mongodb.podSecurityContext`.
+    podSecurityContext: {}
+    # -- Container security context for the FCV Jobs. Falls back to `global.containerSecurityContext`, then `mongodb.containerSecurityContext`.
+    securityContext: {}
+    # -- Node selector for the FCV Jobs. Falls back to `global.nodeSelector`.
+    nodeSelector: {}
+    # -- Affinity for the FCV Jobs. Falls back to `global.affinity`.
+    affinity: {}
+    # -- Tolerations for the FCV Jobs. Falls back to `global.tolerations`, then `mongodb.tolerations`.
+    tolerations: []
+    # -- Service account used by the FCV Jobs. Defaults to `default` when empty.
+    serviceAccountName: ""
+    # -- Additional environment variables added to both FCV Job containers.
+    extraEnv: []
   # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
   # -- Uncomment to schedule a multi-arch image to any available architecture type in a GGP Standard k8s cluster.
   #  tolerations:
