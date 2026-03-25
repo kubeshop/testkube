@@ -23,8 +23,12 @@ type DateFilter struct {
 func NewDateFilter(startDate string, endDate string) DateFilter {
 	dFilter := DateFilter{}
 
-	// Parse startDate – try RFC3339 first, fall back to date-only.
-	if t, err := time.Parse(time.RFC3339, startDate); err == nil {
+	// Parse startDate – try RFC3339Nano (superset of RFC3339, accepts fractional
+	// seconds), then RFC3339, then fall back to date-only.
+	if t, err := time.Parse(time.RFC3339Nano, startDate); err == nil {
+		dFilter.Start = t
+		dFilter.IsStartValid = true
+	} else if t, err := time.Parse(time.RFC3339, startDate); err == nil {
 		dFilter.Start = t
 		dFilter.IsStartValid = true
 	} else if t, err := time.Parse(DateFormatISO8601, startDate); err == nil {
@@ -32,8 +36,11 @@ func NewDateFilter(startDate string, endDate string) DateFilter {
 		dFilter.IsStartValid = true
 	}
 
-	// Parse endDate – try RFC3339 first, fall back to date-only.
-	if t, err := time.Parse(time.RFC3339, endDate); err == nil {
+	// Parse endDate – same priority order.
+	if t, err := time.Parse(time.RFC3339Nano, endDate); err == nil {
+		dFilter.End = t
+		dFilter.IsEndValid = true
+	} else if t, err := time.Parse(time.RFC3339, endDate); err == nil {
 		dFilter.End = t
 		dFilter.IsEndValid = true
 	} else if t, err := time.Parse(DateFormatISO8601, endDate); err == nil {

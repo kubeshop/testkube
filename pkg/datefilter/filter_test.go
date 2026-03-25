@@ -146,3 +146,17 @@ func TestNewDateFilterRFC3339WithTimezone(t *testing.T) {
 	utc := dFilter.Start.UTC()
 	assertion.Equal(13, utc.Hour())
 }
+
+func TestNewDateFilterRFC3339FractionalSeconds(t *testing.T) {
+	assertion := require.New(t)
+	// Fractional seconds are valid RFC3339 and are commonly produced by
+	// JavaScript Date.toISOString() and similar tooling.
+	dFilter := NewDateFilter("2024-01-15T13:00:00.123Z", "2024-01-15T16:00:00.999Z")
+	assertion.True(dFilter.IsStartValid, "RFC3339 startDate with fractional seconds should be valid")
+	assertion.True(dFilter.IsEndValid, "RFC3339 endDate with fractional seconds should be valid")
+	assertion.Equal(13, dFilter.Start.Hour())
+	assertion.Equal(123000000, dFilter.Start.Nanosecond())
+	assertion.Equal(16, dFilter.End.Hour())
+	// Must NOT have been advanced to 23:59
+	assertion.Equal(0, dFilter.End.Second())
+}
