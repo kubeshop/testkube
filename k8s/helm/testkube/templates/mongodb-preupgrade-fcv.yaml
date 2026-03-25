@@ -125,6 +125,8 @@ spec:
           env:
             - name: MONGO_AUTH_ENABLED
               value: "{{ .Values.mongodb.auth.enabled | default false }}"
+            - name: AUTH_ENABLED
+              value: "{{ .Values.mongodb.auth.enabled | default false }}"
             {{- if .Values.mongodb.auth.enabled }}
             - name: MONGO_USERNAME
               value: "{{ .Values.mongodb.auth.rootUser | default "root" }}"
