@@ -83,10 +83,10 @@ Mongo FCV Job containerSecurityContext
 Mongo FCV Job nodeSelector
 */}}
 {{- define "testkube.mongoFcv.nodeSelector" -}}
-{{- if .Values.global.nodeSelector }}
-{{ toYaml .Values.global.nodeSelector }}
-{{- else }}
+{{- if .Values.mongodb.preUpgradeFCVJob.nodeSelector }}
 {{ toYaml (.Values.mongodb.preUpgradeFCVJob.nodeSelector | default dict) }}
+{{- else if .Values.global.nodeSelector }}
+{{ toYaml .Values.global.nodeSelector }}
 {{- end }}
 {{- end }}
 
@@ -94,10 +94,10 @@ Mongo FCV Job nodeSelector
 Mongo FCV Job affinity
 */}}
 {{- define "testkube.mongoFcv.affinity" -}}
-{{- if .Values.global.affinity }}
-{{ toYaml .Values.global.affinity }}
-{{- else }}
+{{- if .Values.mongodb.preUpgradeFCVJob.affinity }}
 {{ toYaml (.Values.mongodb.preUpgradeFCVJob.affinity | default dict) }}
+{{- else if .Values.global.affinity }}
+{{ toYaml .Values.global.affinity }}
 {{- end }}
 {{- end }}
 
@@ -105,10 +105,10 @@ Mongo FCV Job affinity
 Mongo FCV Job tolerations
 */}}
 {{- define "testkube.mongoFcv.tolerations" -}}
-{{- if .Values.global.tolerations }}
-{{ toYaml .Values.global.tolerations }}
-{{- else if .Values.mongodb.preUpgradeFCVJob.tolerations }}
+{{- if .Values.mongodb.preUpgradeFCVJob.tolerations }}
 {{ toYaml .Values.mongodb.preUpgradeFCVJob.tolerations }}
+{{- else if .Values.global.tolerations }}
+{{ toYaml .Values.global.tolerations }}
 {{- else }}
 {{ toYaml .Values.mongodb.tolerations }}
 {{- end }}

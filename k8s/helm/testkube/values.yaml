@@ -135,11 +135,11 @@ mongodb:
     podSecurityContext: {}
     # -- Container security context for the FCV Jobs. Falls back to `global.containerSecurityContext`
     securityContext: {}
-    # -- Node selector for the FCV Jobs. Falls back to `global.nodeSelector`.
+    # -- Node selector for the FCV Jobs. Takes precedence over `global.nodeSelector`.
     nodeSelector: {}
-    # -- Affinity for the FCV Jobs. Falls back to `global.affinity`.
+    # -- Affinity for the FCV Jobs. Takes precedence over `global.affinity`.
     affinity: {}
-    # -- Tolerations for the FCV Jobs. Falls back to `global.tolerations`, then `mongodb.tolerations`.
+    # -- Tolerations for the FCV Jobs. Takes precedence over `global.tolerations`, then fall back to `mongodb.tolerations`.
     tolerations: []
     # -- Service account used by the FCV Jobs. Defaults to `default` when empty.
     serviceAccountName: ""
