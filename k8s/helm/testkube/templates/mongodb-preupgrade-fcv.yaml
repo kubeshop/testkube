@@ -50,7 +50,8 @@ spec:
               set -e
               echo "Checking MongoDB FCV prerequisites..."
               FINAL_TARGET_VERSION="{{ default (regexFind "^[0-9]+\\.[0-9]+" (.Values.mongodb.image.tag | toString)) .Values.mongodb.featureCompatibilityVersion }}"
-              HOST="{{ .Values.mongodb.fullnameOverride }}"
+              HOST="{{ .Values.mongodb.fullnameOverride | default (printf "%s-mongodb" .Release.Name) }}"
+              PORT="{{ .Values.mongodb.preUpgradeFCVJob.port | default .Values.mongodb.service.port }}"
               AUTH_ENABLED="{{ .Values.mongodb.auth.enabled | default false }}"
               TARGET_VERSION="$FINAL_TARGET_VERSION"
               if [ "$FINAL_TARGET_VERSION" = "8.2" ]; then
@@ -59,6 +60,7 @@ spec:
               echo "Final target FCV: $FINAL_TARGET_VERSION"
               echo "Pre-upgrade target FCV: $TARGET_VERSION"
               echo "Mongo host: $HOST"
+              echo "Mongo port: $PORT"
               if [ "$AUTH_ENABLED" = "true" ]; then
                 echo "MongoDB authentication is ENABLED"
               else
@@ -68,6 +70,7 @@ spec:
                 if [ "$AUTH_ENABLED" = "true" ]; then
                   mongosh \
                     --host "$HOST" \
+                    --port "$PORT" \
                     --username "$MONGO_USERNAME" \
                     --password "$MONGO_PASSWORD" \
                     --authenticationDatabase admin \
@@ -75,6 +78,7 @@ spec:
                 else
                   mongosh \
                     --host "$HOST" \
+                    --port "$PORT" \
                     "$@"
                 fi
               }

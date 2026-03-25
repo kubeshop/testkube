@@ -131,6 +131,8 @@ mongodb:
     podAnnotations: {}
     # -- Image pull secrets for the FCV Jobs. `global.imagePullSecrets` takes precedence, then `mongodb.preUpgradeFCVJob.imagePullSecrets`, then `mongodb.image.pullSecrets`.
     imagePullSecrets: []
+    # -- MongoDB port used by the FCV Jobs. Defaults to `mongodb.service.port` when empty.
+    port: ""
     # -- Pod security context for the FCV Jobs. Falls back to `global.podSecurityContext`
     podSecurityContext: {}
     # -- Container security context for the FCV Jobs. Falls back to `global.containerSecurityContext`

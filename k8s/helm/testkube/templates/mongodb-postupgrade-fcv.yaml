@@ -52,10 +52,12 @@ spec:
               TARGET_VERSION="{{ default (regexFind "^[0-9]+\\.[0-9]+" (.Values.mongodb.image.tag | toString)) .Values.mongodb.featureCompatibilityVersion }}"
               EXPECTED_SERVER_VERSION="{{ regexFind "^[0-9]+\\.[0-9]+" (.Values.mongodb.image.tag | toString) }}"
               HOST="{{ .Values.mongodb.fullnameOverride | default (printf "%s-mongodb" .Release.Name) }}"
+              PORT="{{ .Values.mongodb.preUpgradeFCVJob.port | default .Values.mongodb.service.port }}"
               AUTH_ENABLED="{{ .Values.mongodb.auth.enabled | default false }}"
               echo "Target FCV: $TARGET_VERSION"
               echo "Expected server version: $EXPECTED_SERVER_VERSION"
               echo "Mongo host: $HOST"
+              echo "Mongo port: $PORT"
               if [ "$AUTH_ENABLED" = "true" ]; then
                 echo "MongoDB authentication is ENABLED"
               else
@@ -65,6 +67,7 @@ spec:
                 if [ "$AUTH_ENABLED" = "true" ]; then
                   mongosh \
                     --host "$HOST" \
+                    --port "$PORT" \
                     --username "$MONGO_USERNAME" \
                     --password "$MONGO_PASSWORD" \
                     --authenticationDatabase admin \
@@ -72,6 +75,7 @@ spec:
                 else
                   mongosh \
                     --host "$HOST" \
+                    --port "$PORT" \
                     "$@"
                 fi
               }
