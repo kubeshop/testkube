@@ -22,7 +22,7 @@ spec:
       labels:
         {{- include "testkube.mongoFcv.labels" . | nindent 8 }}
     spec:
-      {{- $imagePullSecrets := coalesce .Values.global.imagePullSecrets .Values.mongodb.preUpgradeFCVJob.imagePullSecrets .Values.mongodb.image.pullSecrets }}
+      {{- $imagePullSecrets := .Values.global.imagePullSecrets | default .Values.mongodb.preUpgradeFCVJob.imagePullSecrets | default .Values.mongodb.image.pullSecrets }}
       {{- with $imagePullSecrets }}
       imagePullSecrets:
         {{- range . }}

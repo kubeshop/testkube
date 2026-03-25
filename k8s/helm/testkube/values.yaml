@@ -129,7 +129,7 @@ mongodb:
     annotations: {}
     # -- Extra annotations added to Pods created by the FCV Jobs.
     podAnnotations: {}
-    # -- Image pull secrets for the FCV Jobs. Falls back to `global.imagePullSecrets`, then `mongodb.image.pullSecrets`.
+    # -- Image pull secrets for the FCV Jobs. `global.imagePullSecrets` takes precedence, then `mongodb.preUpgradeFCVJob.imagePullSecrets`, then `mongodb.image.pullSecrets`.
     imagePullSecrets: []
     # -- Pod security context for the FCV Jobs. Falls back to `global.podSecurityContext`
     podSecurityContext: {}
