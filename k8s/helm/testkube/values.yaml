@@ -99,14 +99,11 @@ mongodb:
       memory: 100Mi
   # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
   pdb:
-    create: false
+    create: true
     # -- Minimum number/percentage of pods that must still be available after the eviction
     minAvailable: ""
     # -- Maximum number/percentage of pods that may be made unavailable after the eviction
     maxUnavailable: ""
-  # -- MongoDB NetworkPolicy settings. Disabled by default to avoid upgrade conflicts on Helm-managed dependency resources.
-  networkPolicy:
-    enabled: false
   # Image built with ZCube tool so that it can be run on ARM nodes: https://github.com/ZCube/bitnami-compat/tree/main/patches
   # Currently Bitnami doesn't support ARM: https://github.com/bitnami/charts/issues/7305
   image:
@@ -182,6 +179,12 @@ mongodb:
     timeoutSeconds: 10
     failureThreshold: 6
     successThreshold: 1
+  # MongoDB uses ReadWriteOnce access mode for PV. It means that the volume can be accessed by pods that reside on the same node.
+  # If during an upgrade a new Mongo pod with RollingUpdate strategy is scheduled on a different node, the upgrade will fail with the error: Volume is already used by pod.
+  # Therefore, it is required to use Recreate strategy to kill existing pods on upgrade before creating new ones.
+  updateStrategy:
+    # -- Update Strategy type
+    type: Recreate
   # -- MongoDB metrics sidecar image configuration.
   # Overrides the subchart default to prevent the tag from being embedded in the repository field,
   # which would cause an invalid duplicated-tag image reference (e.g. registry/repo:tag:tag).
