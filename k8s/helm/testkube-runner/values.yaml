@@ -23,6 +23,8 @@ globalTemplate:
 runner:
   ## Enable or disable the runner
   enabled: true
+  ## Runner name used during self-registration. Defaults to chart fullname when empty.
+  name: ""
   ## Agent ID
   id: ""
   ## Organization ID
