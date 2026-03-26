@@ -9,6 +9,17 @@ global:
   podDisruptionBudget:
     enabled: false
 
+## Global TestWorkflowTemplate that will be automatically included for all executions
+globalTemplate:
+  ## Is global template enabled
+  enabled: false
+  ## Specification for the global template
+  spec: {}
+  # spec:
+  #   pod:
+  #     imagePullSecrets:
+  #     - name: regcred
+
 runner:
   ## Enable or disable the runner
   enabled: true
@@ -51,17 +62,6 @@ runner:
     ## Whether to register with labels
     # labels:
     #   env: testing
-
-## Global TestWorkflowTemplate that will be automatically included for all executions
-globalTemplate:
-  ## Is global template enabled
-  enabled: false
-  ## Specification for the global template
-  spec: {}
-  # spec:
-  #   pod:
-  #     imagePullSecrets:
-  #     - name: regcred
 
 ## Listener configuration for triggers
 listener:

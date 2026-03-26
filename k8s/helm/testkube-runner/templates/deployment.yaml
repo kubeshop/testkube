@@ -267,13 +267,25 @@ spec:
             {{- end }}
 
             # Global template
-            {{- if and .Values.globalTemplate.enabled .Values.globalTemplate.spec }}
+            {{- $globalTemplate := .Values.globalTemplate }}
+            {{- if $globalTemplate.enabled }}
+            {{- if $globalTemplate.inline }}
+            {{- if $globalTemplate.spec }}
             - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE"
-              {{- if kindIs "map" .Values.globalTemplate.spec }}
-              value: {{ toJson .Values.globalTemplate.spec | quote }}
+              {{- if kindIs "map" $globalTemplate.spec }}
+              value: {{ toJson $globalTemplate.spec | quote }}
               {{- else }}
-              value: {{ toJson (fromYaml .Values.globalTemplate.spec) | quote }}
+              value: {{ toJson (fromYaml $globalTemplate.spec) | quote }}
               {{- end }}
+            {{- else }}
+            {{- fail "globalTemplate.spec is required when globalTemplate.inline is true and globalTemplate.enabled is true" }}
+            {{- end }}
+            {{- else if $globalTemplate.name }}
+            - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME"
+              value: "{{ $globalTemplate.name }}"
+            {{- else }}
+            {{- fail "globalTemplate.name is required when globalTemplate.inline is false and globalTemplate.enabled is true" }}
+            {{- end }}
             {{- end }}
 
             # Certificates
