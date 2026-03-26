@@ -620,9 +620,11 @@ func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notific
 					prevStatus = status
 
 					if lastResult.IsFinished() {
-						// If context was cancelled (fail-fast), override status to aborted
-						// even if the worker reported a terminal status (e.g. "passed")
-						if ctx.Err() != nil && status != testkube.FAILED_TestWorkflowStatus {
+						// If context was cancelled (fail-fast) and the worker hadn't
+						// already finished on its own, override status to aborted.
+						// Workers that genuinely completed (passed/failed) before
+						// cancellation keep their real status.
+						if ctx.Err() != nil && status != testkube.FAILED_TestWorkflowStatus && lastResult.FinishedAt.IsZero() {
 							status = testkube.ABORTED_TestWorkflowStatus
 							lastResult.Status = common.Ptr(status)
 							v.Result = lastResult.Clone()
