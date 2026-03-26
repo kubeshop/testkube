@@ -803,18 +803,20 @@ func (s *TestkubeAPI) UpdateTestWorkflowExecutionTagsHandler() fiber.Handler {
 			tags = make(map[string]string)
 		}
 
-		// Verify execution exists (and belongs to the workflow if scoped)
+		// Verify execution exists (and belongs to the workflow if scoped),
+		// and resolve the actual execution ID for the update.
+		var execution testkube.TestWorkflowExecution
 		var err error
 		if name == "" {
-			_, err = s.TestWorkflowResults.Get(ctx, executionID)
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
 		} else {
-			_, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
 		}
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		if err := s.TestWorkflowResults.UpdateTags(ctx, executionID, tags); err != nil {
+		if err := s.TestWorkflowResults.UpdateTags(ctx, execution.Id, tags); err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
 

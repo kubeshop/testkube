@@ -1503,12 +1503,19 @@ func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map
 		return err
 	}
 
-	return r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
+	rowsAffected, err := r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
 		Tags:           tagsJSON,
 		ExecutionID:    id,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
 // UpdateResourceAggregations updates resource aggregations

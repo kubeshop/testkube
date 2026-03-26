@@ -828,10 +828,10 @@ SET
     step = @step
 WHERE execution_id = @execution_id;
 
--- name: UpdateTestWorkflowExecutionTags :exec
+-- name: UpdateTestWorkflowExecutionTags :execrows
 UPDATE test_workflow_executions
 SET tags = @tags
-WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);
+WHERE (id = @execution_id OR name = @execution_id) AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
 DELETE FROM test_workflow_executions e

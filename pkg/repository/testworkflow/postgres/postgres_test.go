@@ -233,9 +233,9 @@ func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflowResourceAg
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionTags(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionTagsParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionTags(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionTagsParams) (int64, error) {
 	args := m.Called(ctx, arg)
-	return args.Error(0)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflow(ctx context.Context, arg sqlc.DeleteTestWorkflowParams) error {
@@ -949,7 +949,7 @@ func TestPostgresRepository_UpdateTags(t *testing.T) {
 		id := "test-id"
 		tags := map[string]string{"env": "prod", "team": "qa"}
 
-		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(nil)
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(int64(1), nil)
 
 		err := repo.UpdateTags(ctx, id, tags)
 
@@ -967,12 +967,26 @@ func TestPostgresRepository_UpdateTags(t *testing.T) {
 		assert.Equal(t, tags, got)
 	})
 
+	t.Run("NotFound", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{queries: mockQueries}
+		ctx := context.Background()
+
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(int64(0), nil)
+
+		err := repo.UpdateTags(ctx, "nonexistent-id", map[string]string{"key": "val"})
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, pgx.ErrNoRows)
+		mockQueries.AssertExpectations(t)
+	})
+
 	t.Run("Error", func(t *testing.T) {
 		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
 		repo := &PostgresRepository{queries: mockQueries}
 		ctx := context.Background()
 
-		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(errors.New("db error"))
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(int64(0), errors.New("db error"))
 
 		err := repo.UpdateTags(ctx, "test-id", map[string]string{"key": "val"})
 

@@ -3798,10 +3798,10 @@ func (q *Queries) UpdateTestWorkflowExecutionResultStrict(ctx context.Context, a
 	return execution_id, err
 }
 
-const updateTestWorkflowExecutionTags = `-- name: UpdateTestWorkflowExecutionTags :exec
+const updateTestWorkflowExecutionTags = `-- name: UpdateTestWorkflowExecutionTags :execrows
 UPDATE test_workflow_executions
 SET tags = $1
-WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
+WHERE (id = $2 OR name = $2) AND (organization_id = $3 AND environment_id = $4)
 `
 
 type UpdateTestWorkflowExecutionTagsParams struct {
@@ -3811,12 +3811,15 @@ type UpdateTestWorkflowExecutionTagsParams struct {
 	EnvironmentID  string `db:"environment_id" json:"environment_id"`
 }
 
-func (q *Queries) UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionTags,
+func (q *Queries) UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateTestWorkflowExecutionTags,
 		arg.Tags,
 		arg.ExecutionID,
 		arg.OrganizationID,
 		arg.EnvironmentID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
