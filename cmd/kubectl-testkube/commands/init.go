@@ -61,7 +61,9 @@ func NewInitCmd() *cobra.Command {
 
 func NewInitCmdStandalone() *cobra.Command {
 	var export bool
-	var options common.HelmOptions
+	options := common.HelmOptions{
+		NoOperator: true,
+	}
 	var setOptions, argOptions map[string]string
 
 	cmd := &cobra.Command{
