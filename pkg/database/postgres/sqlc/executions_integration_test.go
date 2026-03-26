@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 // TestGetTestWorkflowExecutionsIntegration tests the GetTestWorkflowExecutions query with real PostgreSQL
@@ -263,9 +264,10 @@ func TestGetTestWorkflowExecutionsTotals_Integration(t *testing.T) {
 		passedCount := int64(0)
 		failedCount := int64(0)
 		for _, row := range result {
-			if row.Status.String == "passed" {
+			switch row.Status.String {
+			case "passed":
 				passedCount = row.Count
-			} else if row.Status.String == "failed" {
+			case "failed":
 				failedCount = row.Count
 			}
 		}

@@ -706,33 +706,7 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams{
-		OrganizationID:     params.OrganizationID,
-		EnvironmentID:      params.EnvironmentID,
-		WorkflowName:       params.WorkflowName,
-		WorkflowNames:      params.WorkflowNames,
-		TextSearch:         params.TextSearch,
-		StartDate:          params.StartDate,
-		EndDate:            params.EndDate,
-		LastNDays:          params.LastNDays,
-		Statuses:           params.Statuses,
-		RunnerID:           params.RunnerID,
-		Assigned:           params.Assigned,
-		ActorName:          params.ActorName,
-		ActorType:          params.ActorType,
-		GroupID:            params.GroupID,
-		Initialized:        params.Initialized,
-		HealthRanges:       params.HealthRanges,
-		TagKeys:            params.TagKeys,
-		TagConditions:      params.TagConditions,
-		LabelKeys:          params.LabelKeys,
-		LabelConditions:    params.LabelConditions,
-		SelectorKeys:       params.SelectorKeys,
-		SelectorConditions: params.SelectorConditions,
-		Fst:                params.Fst,
-		Lmt:                params.Lmt,
-	}
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, summaryParams)
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
 	if err != nil {
 		return nil, err
 	}
