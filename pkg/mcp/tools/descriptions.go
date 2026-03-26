@@ -28,9 +28,9 @@ to find items containing all terms`
 
 	SinceDescription = "Filter executions created after this time (ISO 8601 format)"
 
-	StartDateDescription = "Filter executions scheduled on or after this date (YYYY-MM-DD format, e.g., '2024-01-15')"
+	StartDateDescription = "Filter executions scheduled on or after this date/time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-15') or an RFC 3339 timestamp including optional fractional seconds (e.g., '2024-01-15T13:00:00Z' or '2024-01-15T13:00:00.000Z'). Use the timestamp form to narrow results to a specific hour range within a day."
 
-	EndDateDescription = "Filter executions scheduled on or before this date (YYYY-MM-DD format, e.g., '2024-01-31')"
+	EndDateDescription = "Filter executions scheduled on or before this date/time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-31') which includes the entire day, or an RFC 3339 timestamp including optional fractional seconds (e.g., '2024-01-31T16:00:00Z') for an exact upper bound. Combine with startDate to express ranges like 'yesterday 1–4 PM'."
 
 	FilenameDescription = "The name of the artifact file to retrieve"
 

@@ -15,6 +15,10 @@ var (
 	stepResultsBase = "/data/.steps"
 )
 
+func GetStepResultsBase() string {
+	return stepResultsBase
+}
+
 func SetStepResultsBase(base string) {
 	stepResultsBase = base
 }

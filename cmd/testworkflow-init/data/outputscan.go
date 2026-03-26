@@ -77,5 +77,17 @@ func PrepareOutputsDir() error {
 	if err := os.MkdirAll(outputsDir, 0777); err != nil {
 		return fmt.Errorf("failed to create outputs directory: %w", err)
 	}
+	EnsureGroupWritable(outputsDir)
 	return nil
+}
+
+// EnsureGroupWritable adds the group write bit to a directory while preserving
+// all existing permission bits (including setgid from FSGroup).
+// This is needed because MkdirAll respects umask (typically 0022), creating
+// directories as 0755. In multi-container pods sharing an FSGroup, other
+// containers with different UIDs need the group write bit to create entries.
+func EnsureGroupWritable(path string) {
+	if info, err := os.Stat(path); err == nil {
+		_ = os.Chmod(path, info.Mode()|0020)
+	}
 }
