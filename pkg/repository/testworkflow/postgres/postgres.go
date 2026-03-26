@@ -706,8 +706,7 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams(params)
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, summaryParams)
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
 	if err != nil {
 		return nil, err
 	}
