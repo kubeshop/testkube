@@ -28,6 +28,18 @@ spec:
       - name: credential_encrypted_org_level_env_override
         value: '{{ credential("credential-encrypted-org-level-env-override") }}'
         global: true
+      - name: credential_plaintext_workflow_level
+        value: '{{ credential("credential-plaintext-workflow-level") }}'
+        global: true
+      - name: credential_encrypted_workflow_level
+        value: '{{ credential("credential-encrypted-workflow-level") }}'
+        global: true
+      - name: credential_plaintext_resource_group
+        value: '{{ credential("credential-plaintext-resource-group") }}'
+        global: true
+      - name: credential_encrypted_resource_group
+        value: '{{ credential("credential-encrypted-resource-group") }}'
+        global: true
   services:
     echo-service:
       image: alpine:3.22.0
@@ -49,6 +61,18 @@ spec:
 
         echo "credential-encrypted-org-level-env-override ENV: $credential_encrypted_org_level_env_override"
         [ "$credential_encrypted_org_level_env_override" = "credential-encrypted-org-level-env-override-value2" ] && [ '{{ credential("credential-encrypted-org-level-env-override") }}' = "credential-encrypted-org-level-env-override-value2" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-plaintext-workflow-level ENV: $credential_plaintext_workflow_level"
+        [ "$credential_plaintext_workflow_level" = "credential-plaintext-workflow-level-value" ] && [ '{{ credential("credential-plaintext-workflow-level") }}' = "credential-plaintext-workflow-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-encrypted-workflow-level ENV: $credential_encrypted_workflow_level"
+        [ "$credential_encrypted_workflow_level" = "credential-encrypted-workflow-level-value" ] && [ '{{ credential("credential-encrypted-workflow-level") }}' = "credential-encrypted-workflow-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-plaintext-resource-group ENV: $credential_plaintext_resource_group"
+        [ "$credential_plaintext_resource_group" = "credential-plaintext-resource-group-value" ] && [ '{{ credential("credential-plaintext-resource-group") }}' = "credential-plaintext-resource-group-value" ] && echo OK || (echo FAIL && exit 1)
+
+        echo "credential-encrypted-resource-group ENV: $credential_encrypted_resource_group"
+        [ "$credential_encrypted_resource_group" = "credential-encrypted-resource-group-value" ] && [ '{{ credential("credential-encrypted-resource-group") }}' = "credential-encrypted-resource-group-value" ] && echo OK || (echo FAIL && exit 1)
   steps:
     - name: Validate credentials
       run:
@@ -70,6 +94,18 @@ spec:
 
           echo "credential-encrypted-org-level-env-override ENV: $credential_encrypted_org_level_env_override"
           [ "$credential_encrypted_org_level_env_override" = "credential-encrypted-org-level-env-override-value2" ] && [ '{{ credential("credential-encrypted-org-level-env-override") }}' = "credential-encrypted-org-level-env-override-value2" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-plaintext-workflow-level ENV: $credential_plaintext_workflow_level"
+          [ "$credential_plaintext_workflow_level" = "credential-plaintext-workflow-level-value" ] && [ '{{ credential("credential-plaintext-workflow-level") }}' = "credential-plaintext-workflow-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-encrypted-workflow-level ENV: $credential_encrypted_workflow_level"
+          [ "$credential_encrypted_workflow_level" = "credential-encrypted-workflow-level-value" ] && [ '{{ credential("credential-encrypted-workflow-level") }}' = "credential-encrypted-workflow-level-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-plaintext-resource-group ENV: $credential_plaintext_resource_group"
+          [ "$credential_plaintext_resource_group" = "credential-plaintext-resource-group-value" ] && [ '{{ credential("credential-plaintext-resource-group") }}' = "credential-plaintext-resource-group-value" ] && echo OK || (echo FAIL && exit 1)
+
+          echo "credential-encrypted-resource-group ENV: $credential_encrypted_resource_group"
+          [ "$credential_encrypted_resource_group" = "credential-encrypted-resource-group-value" ] && [ '{{ credential("credential-encrypted-resource-group") }}' = "credential-encrypted-resource-group-value" ] && echo OK || (echo FAIL && exit 1)
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -87,7 +123,7 @@ spec:
       username: '{{credential("git_testkube-external-tests_username")}}'
       token: '{{credential("git_testkube-external-tests_token")}}'
       paths:
-      - testkube/k6-smoke-test.js
+        - testkube/k6-smoke-test.js
   container:
     image: grafana/k6:1.1.0
     resources:
@@ -98,11 +134,11 @@ spec:
   job:
     activeDeadlineSeconds: 300
   steps:
-  - name: Run test
-    steps:
-    - shell: mkdir /data/artifacts
-    - run:
-        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 2s
-        env:
-        - name: K6_SYSTEM_ENV
-          value: K6_SYSTEM_ENV_value
+    - name: Run test
+      steps:
+        - shell: mkdir /data/artifacts
+        - run:
+            shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --duration 2s
+            env:
+              - name: K6_SYSTEM_ENV
+                value: K6_SYSTEM_ENV_value
