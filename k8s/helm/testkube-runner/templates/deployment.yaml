@@ -374,7 +374,7 @@ spec:
                   key: {{ .Values.runner.register.tokenSecret.key | default "token" }}
               {{- end }}
             - name: RUNNER_NAME
-              value: "{{ include "testkube-runner.fullname" . }}"
+              value: "{{ include "testkube-runner.runnerName" . }}"
             - name: ENABLE_SECRETS_ENDPOINT
               value: "true"
             - name: SELF_REGISTRATION_SECRET
