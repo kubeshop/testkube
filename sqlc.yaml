@@ -63,6 +63,11 @@ sql:
               type: "TestWorkflowExecutionRuntime"
               import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
               pointer: true
+          - column: "test_workflow_executions.silent_mode"
+            go_type:
+              type: "SilentMode"
+              import: "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+              pointer: true
           # section for test_workflows
           - column: "test_workflows.labels"
             go_type:

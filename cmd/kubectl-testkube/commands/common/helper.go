@@ -41,7 +41,7 @@ type HelmOptions struct {
 	// For debug
 	DryRun         bool
 	MultiNamespace bool
-	NoOperator     bool
+	NoCRDs         bool
 	EmbeddedNATS   bool
 }
 
@@ -68,6 +68,17 @@ const (
 
 func (o HelmOptions) GetApiURI() string {
 	return o.Master.URIs.Api
+}
+
+func ShowOperatorDeprecationWarning(manager string, noCRDs bool) {
+	ui.Warn("Testkube Operator is deprecated and will not be installed.")
+	ui.Warn(fmt.Sprintf("%s now manages the related operations.", manager))
+	if noCRDs {
+		ui.Warn("CRD installation is disabled and the existing Testkube CRDs in the cluster will be reused.")
+	} else {
+		ui.Warn("Testkube CRDs will be installed by this command.")
+	}
+	ui.NL()
 }
 
 func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
@@ -391,7 +402,7 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
 		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
-		"testkube-operator.enabled":           fmt.Sprintf("%t", !options.NoOperator),
+		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
 		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
 		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
 	}

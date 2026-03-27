@@ -8,7 +8,39 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
+
+type stubWorkflowExecutionGetter struct {
+	getTestWorkflowExecution func(executionID string) (testkube.TestWorkflowExecution, error)
+}
+
+func (s stubWorkflowExecutionGetter) GetTestWorkflowExecution(executionID string) (testkube.TestWorkflowExecution, error) {
+	return s.getTestWorkflowExecution(executionID)
+}
+
+func newWorkflowResult(status testkube.TestWorkflowStatus, finished bool) *testkube.TestWorkflowResult {
+	result := &testkube.TestWorkflowResult{
+		Status: &status,
+	}
+	if finished {
+		result.FinishedAt = time.Now()
+	}
+	return result
+}
+
+func newWorkflowExecution(result *testkube.TestWorkflowResult) testkube.TestWorkflowExecution {
+	return testkube.TestWorkflowExecution{Result: result}
+}
+
+func withWorkflowLogSleepStub(t *testing.T, sleepFn func(time.Duration)) {
+	t.Helper()
+	previous := watchWorkflowLogsSleep
+	watchWorkflowLogsSleep = sleepFn
+	t.Cleanup(func() {
+		watchWorkflowLogsSleep = previous
+	})
+}
 
 func TestGetIterationDelay(t *testing.T) {
 	tests := []struct {
@@ -191,6 +223,78 @@ func TestParseConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWatchWorkflowLogsCommonReturnsFinishedExecutionAfterPrintError(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	result, err := watchWorkflowLogsCommon("exec-1", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+		notifications <- testkube.TestWorkflowExecutionNotification{Log: registry.ErrResourceNotFound.Error()}
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+}
+
+func TestWatchWorkflowLogsCommonReturnsRefreshErrorAfterInterruptedStream(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	expectedErr := errors.New("refresh failed")
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			return testkube.TestWorkflowExecution{}, expectedErr
+		},
+	}
+
+	result, err := watchWorkflowLogsCommon("exec-2", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+		notifications := make(chan testkube.TestWorkflowExecutionNotification)
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestWatchWorkflowLogsCommonUsesRetryDelayAfterNotificationError(t *testing.T) {
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(duration time.Duration) {
+		sleeps = append(sleeps, duration)
+	})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshCalls := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshCalls++
+			if refreshCalls == 1 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-3", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+		attempts++
+		return nil, errors.New("stream unavailable")
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, 2, attempts)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
 }
 
 // TestParseConfig_Integration tests the full flow from CLI parsing to backend processing
