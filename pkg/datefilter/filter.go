@@ -12,36 +12,57 @@ type DateFilter struct {
 	IsEndValid   bool
 }
 
-// NewDateFilter creates new DateFilter with the start date and end date
+// NewDateFilter creates new DateFilter with the start date and end date.
+// Both parameters accept either a date-only string (YYYY-MM-DD) or a full
+// RFC 3339 timestamp (e.g. 2024-01-15T13:00:00Z).
+//
+// When endDate is provided as a date-only value the filter is automatically
+// advanced to the last nanosecond of that day so the entire day is included.
+// When endDate is provided as an RFC 3339 timestamp the exact time is used
+// without any adjustment.
 func NewDateFilter(startDate string, endDate string) DateFilter {
-	var err error
-
 	dFilter := DateFilter{}
-	dFilter.Start, err = time.Parse(DateFormatISO8601, startDate)
-	dFilter.IsStartValid = (err == nil)
-	dFilter.End, err = time.Parse(DateFormatISO8601, endDate)
-	dFilter.IsEndValid = err == nil
-	if dFilter.IsEndValid {
-		// Advance to end of day so the full endDate day is included
-		dFilter.End = dFilter.End.Add(24*time.Hour - time.Nanosecond)
+
+	// Parse startDate – try RFC3339Nano (superset of RFC3339, accepts fractional
+	// seconds), then RFC3339, then fall back to date-only.
+	if t, err := time.Parse(time.RFC3339Nano, startDate); err == nil {
+		dFilter.Start = t
+		dFilter.IsStartValid = true
+	} else if t, err := time.Parse(time.RFC3339, startDate); err == nil {
+		dFilter.Start = t
+		dFilter.IsStartValid = true
+	} else if t, err := time.Parse(DateFormatISO8601, startDate); err == nil {
+		dFilter.Start = t
+		dFilter.IsStartValid = true
+	}
+
+	// Parse endDate – same priority order.
+	if t, err := time.Parse(time.RFC3339Nano, endDate); err == nil {
+		dFilter.End = t
+		dFilter.IsEndValid = true
+	} else if t, err := time.Parse(time.RFC3339, endDate); err == nil {
+		dFilter.End = t
+		dFilter.IsEndValid = true
+	} else if t, err := time.Parse(DateFormatISO8601, endDate); err == nil {
+		// Date-only: advance to end-of-day so the entire day is included.
+		dFilter.End = t.Add(24*time.Hour - time.Nanosecond)
+		dFilter.IsEndValid = true
 	}
 
 	return dFilter
 }
 
-// IsPassing tests if a specific date is passing the filter
+// IsPassing reports whether date falls within the filter's configured range.
+// Both the start and end bounds are inclusive.
 func (dFilter DateFilter) IsPassing(date time.Time) bool {
 	if !dFilter.IsStartValid {
 		return true
 	}
-	oneDay := 24 * time.Hour
-	if dFilter.Start.Before(date) || dFilter.Start.Equal(date.Truncate(oneDay)) {
-		if !dFilter.IsEndValid {
-			return true
-		}
-		if !dFilter.End.Before(date) {
-			return true
-		}
+	if dFilter.Start.After(date) {
+		return false
 	}
-	return false
+	if !dFilter.IsEndValid {
+		return true
+	}
+	return !dFilter.End.Before(date)
 }
