@@ -39,7 +39,6 @@ func mapPgTestWorkflowExecutionPartial(exec sqlc.TestWorkflowExecution, execResu
 		Workflow:             nil,
 		ResolvedWorkflow:     nil,
 
-		// Unimplemented!?
 		SilentMode: exec.SilentMode,
 	}
 }
