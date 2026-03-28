@@ -54,7 +54,7 @@ Before you begin, ensure you have the following installed:
   - Create MinIO buckets for artifacts and logs
   - Set up port forwards for local access
 3. **Open the Tilt UI** at [http://localhost:10350](http://localhost:10350) to monitor the deployment.
-4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI. To point it at the local API server, trigger the **configure-cli** resource in the Tilt UI. Then use the **Run** button on `run-cli-command` (e.g. enter `get testworkflows`), or run commands directly:
+4. **Verify the setup**: If you have Go installed, Tilt automatically compiles the Testkube CLI. To point it at the local API server, click the **Configure** button on the `run-cli-command` resource in the Tilt UI. Then use the **Run** button on the same resource (e.g. enter `get testworkflows`), or run commands directly:
   ```bash
    ./build/_local/kubectl-testkube get testworkflows
   ```
@@ -113,7 +113,7 @@ tilt ci
 1. Edit Go files under `cmd/kubectl-testkube/` (for command wiring) and related shared packages under `pkg/` or `internal/`
 2. Tilt detects the change and reruns the `compile:cli` resource to rebuild `build/_local/kubectl-testkube`
 3. Use `run-cli-command` in the Tilt UI (or run `./build/_local/kubectl-testkube <command>` in your terminal) to validate behavior
-4. If needed, run `configure-cli` again to point the CLI context back to your local API server
+4. If needed, click the **Configure** button on `run-cli-command` again to point the CLI context back to your local API server
 
 **Test Workflow images:**
 
@@ -137,8 +137,10 @@ In CI mode (`tilt ci`), the smoke test runs automatically and Tilt exits on succ
 When Go is installed, Tilt automatically compiles the Testkube CLI (`kubectl-testkube`) for your host OS and configures it to connect directly to the local API server. The following resources appear under the **cli** label in the Tilt UI:
 
 - **compile:cli** — Compiles `cmd/kubectl-testkube` to `build/_local/kubectl-testkube`. Rebuilds automatically when CLI or shared code changes.
-- **configure-cli** — Manually trigger to run `set context --kubeconfig`, pointing the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Not auto-run to avoid overwriting your existing CLI configuration.
-- **run-cli-command** — A dedicated resource for running arbitrary CLI commands. Click the **Run** button, enter any testkube subcommand (e.g. `run testworkflow curl-workflow-smoke`), and the output appears in the resource logs.
+- **run-cli-command** — A dedicated resource for running arbitrary CLI commands. It exposes three buttons in the Tilt UI:
+  - **Configure** — Runs `set context --kubeconfig`, pointing the CLI at the local API server (`http://localhost:8088`), the `testkube-dev` namespace, and direct client mode. Not auto-run to avoid overwriting your existing CLI configuration.
+  - **Run** — Enter any testkube subcommand (e.g. `run testworkflow curl-workflow-smoke`) and the output appears in the resource logs.
+  - **CLI Docs** — Opens the CLI reference documentation in your browser.
 
 You can also use the compiled CLI directly from your terminal:
 
@@ -148,7 +150,7 @@ You can also use the compiled CLI directly from your terminal:
 ./build/_local/kubectl-testkube get testworkflowexecutions
 ```
 
-> **Note**: The CLI context is stored in `~/.testkube/config.json`. If you also have a system-installed `testkube` CLI, the `configure-cli` step will update the shared config to point at your local dev environment. Run `testkube set context` again to reconfigure it when you're done with local development.
+> **Note**: The CLI context is stored in `~/.testkube/config.json`. If you also have a system-installed `testkube` CLI, the **Configure** button will update the shared config to point at your local dev environment. Run `testkube set context` again to reconfigure it when you're done with local development.
 
 ### Sample Test Workflows
 
