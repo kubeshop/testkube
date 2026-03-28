@@ -45,7 +45,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug builder (Delve)
 ###################################
-FROM golang:1.26.0-alpine AS debug-builder
+FROM golang:1.26.1-alpine AS debug-builder
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 
 ###################################
