@@ -15,6 +15,7 @@ metadata:
     {{- with .Values.mongodb.preUpgradeFCVJob.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
   ttlSecondsAfterFinished: {{ .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
