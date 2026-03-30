@@ -1394,7 +1394,7 @@ WHERE test_workflow_results.execution_id = @execution_id
     AND e.runner_id = @runner_id
     AND test_workflow_results.status IN (
         'queued', 'assigned', 'running', 'stopping',
-        'starting', 'scheduling', 'stopping'
+        'starting', 'scheduling'
     )
 RETURNING test_workflow_results.execution_id;
 

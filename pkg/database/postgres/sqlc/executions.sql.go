@@ -409,7 +409,7 @@ WHERE test_workflow_results.execution_id = $14
     AND e.runner_id = $15
     AND test_workflow_results.status IN (
         'queued', 'assigned', 'running', 'stopping',
-        'starting', 'scheduling', 'stopping'
+        'starting', 'scheduling'
     )
 RETURNING test_workflow_results.execution_id
 `
