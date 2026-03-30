@@ -130,6 +130,8 @@ mongodb:
     backoffLimit: 2
     # -- Number of seconds to keep finished FCV Jobs before Kubernetes garbage-collects them.
     ttlSecondsAfterFinished: 300
+    # -- Use Argo CD hook annotations instead of Helm hook annotations for the FCV jobs.
+    useArgoHooks: false
     # -- Extra annotations added to both FCV Job resources.
     annotations: {}
     # -- Extra annotations added to Pods created by the FCV Jobs.

@@ -61,9 +61,9 @@ spec:
               HOST="{{ .Values.mongodb.fullnameOverride | default (printf "%s-mongodb" .Release.Name) }}"
               PORT="{{ .Values.mongodb.preUpgradeFCVJob.port | default .Values.mongodb.service.port }}"
               AUTH_ENABLED="{{ .Values.mongodb.auth.enabled | default false }}"
-              TARGET_VERSION="$PRE_UPGRADE_TARGET_VERSION"
-              if [ -z "$TARGET_VERSION" ]; then
-                TARGET_VERSION="$FINAL_TARGET_VERSION"
+              TARGET_VERSION="$FINAL_TARGET_VERSION"
+              if [ -n "$PRE_UPGRADE_TARGET_VERSION" ]; then
+                TARGET_VERSION="$PRE_UPGRADE_TARGET_VERSION"
               fi
               echo "Final target FCV: $FINAL_TARGET_VERSION"
               echo "Requested pre-upgrade target FCV: ${PRE_UPGRADE_TARGET_VERSION:-<auto>}"

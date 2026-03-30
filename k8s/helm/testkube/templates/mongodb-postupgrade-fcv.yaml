@@ -6,6 +6,10 @@ metadata:
   labels:
     {{- include "testkube.mongoFcv.labels" . | nindent 4 }}
   annotations:
+    {{- if .Values.mongodb.preUpgradeFCVJob.useArgoHooks }}
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    {{- else }}
     "helm.sh/hook": post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
     {{- with .Values.mongodb.preUpgradeFCVJob.annotations }}
@@ -134,8 +138,6 @@ spec:
               fi
               echo "FCV post-upgrade apply completed successfully."
           env:
-            - name: AUTH_ENABLED
-              value: "{{ .Values.mongodb.auth.enabled | default false }}"
             {{- if .Values.mongodb.auth.enabled }}
             - name: MONGO_USERNAME
               value: "{{ .Values.mongodb.auth.rootUser | default "root" }}"
