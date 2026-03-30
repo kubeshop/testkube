@@ -24,7 +24,7 @@ jobs:
   pre_build:
     name: Pre-build
     runs-on: depot-ubuntu-22.04
-    if: ${{ inputs.confirm == 'yes' && !inputs.skip_build }}
+    if: ${{ inputs.confirm == 'yes' }}
     strategy:
       matrix:
         include:
