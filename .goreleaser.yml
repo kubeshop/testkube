@@ -82,4 +82,16 @@ brews:
       ln_s bin/"kubectl-testkube", bin/"tk"
       ln_s bin/"kubectl-testkube", bin/"testkube"
 
-nfpms: []
+nfpms:
+  - maintainer: Testkube team
+    license: "MIT"
+    formats:
+      - deb
+    description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
+    contents:
+      - src: /usr/bin/kubectl-testkube
+        dst: /usr/bin/tk
+        type: "symlink"
+      - src: /usr/bin/kubectl-testkube
+        dst: /usr/bin/testkube
+        type: "symlink"
