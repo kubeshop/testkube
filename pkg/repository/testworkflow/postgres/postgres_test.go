@@ -134,6 +134,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionR
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) FinishTestWorkflowExecutionResultStrict(ctx context.Context, arg sqlc.FinishTestWorkflowExecutionResultStrictParams) (string, error) {
+	args := m.Called(ctx, arg)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAt(ctx context.Context, arg sqlc.UpdateExecutionStatusAtParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
