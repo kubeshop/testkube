@@ -16,8 +16,10 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  backoffLimit: {{ .Values.mongodb.preUpgradeFCVJob.backoffLimit }}
+  {{- if .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
   ttlSecondsAfterFinished: {{ .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
+  {{- end }}
+  backoffLimit: {{ .Values.mongodb.preUpgradeFCVJob.backoffLimit }}
   template:
     metadata:
       {{- with .Values.mongodb.preUpgradeFCVJob.podAnnotations }}
