@@ -1335,8 +1335,14 @@ WHERE (e.id = @id OR e.name = @id) AND e.runner_id = @runner_id AND (e.organizat
 -- name: UpdateTestWorkflowExecutionResultStrict :one
 UPDATE test_workflow_results 
 SET 
-    status = @status,
-    predicted_status = @predicted_status,
+    status = CASE 
+        WHEN test_workflow_results.status = 'stopping' THEN 'stopping'
+        ELSE @status
+    END,
+    predicted_status = CASE
+        WHEN test_workflow_results.status = 'stopping' THEN test_workflow_results.predicted_status
+        ELSE @predicted_status
+    END,
     queued_at = @queued_at,
     started_at = @started_at,
     finished_at = @finished_at,
@@ -1354,7 +1360,7 @@ WHERE test_workflow_results.execution_id = @execution_id
     AND e.runner_id = @runner_id
     AND test_workflow_results.status IN (
         'assigned', 'starting', 'scheduling', 'running',
-        'pausing', 'paused', 'resuming'
+        'pausing', 'paused', 'resuming', 'stopping'
     )
 RETURNING test_workflow_results.execution_id;
 
@@ -1388,7 +1394,7 @@ WHERE test_workflow_results.execution_id = @execution_id
     AND e.runner_id = @runner_id
     AND test_workflow_results.status IN (
         'queued', 'assigned', 'running', 'stopping',
-        'starting', 'scheduling'
+        'starting', 'scheduling', 'stopping'
     )
 RETURNING test_workflow_results.execution_id;
 

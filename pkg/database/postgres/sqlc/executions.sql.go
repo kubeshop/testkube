@@ -409,7 +409,7 @@ WHERE test_workflow_results.execution_id = $14
     AND e.runner_id = $15
     AND test_workflow_results.status IN (
         'queued', 'assigned', 'running', 'stopping',
-        'starting', 'scheduling'
+        'starting', 'scheduling', 'stopping'
     )
 RETURNING test_workflow_results.execution_id
 `
@@ -3759,8 +3759,14 @@ func (q *Queries) UpdateTestWorkflowExecutionResult(ctx context.Context, arg Upd
 const updateTestWorkflowExecutionResultStrict = `-- name: UpdateTestWorkflowExecutionResultStrict :one
 UPDATE test_workflow_results 
 SET 
-    status = $1,
-    predicted_status = $2,
+    status = CASE 
+        WHEN test_workflow_results.status = 'stopping' THEN 'stopping'
+        ELSE $1
+    END,
+    predicted_status = CASE
+        WHEN test_workflow_results.status = 'stopping' THEN test_workflow_results.predicted_status
+        ELSE $2
+    END,
     queued_at = $3,
     started_at = $4,
     finished_at = $5,
@@ -3778,7 +3784,7 @@ WHERE test_workflow_results.execution_id = $14
     AND e.runner_id = $15
     AND test_workflow_results.status IN (
         'assigned', 'starting', 'scheduling', 'running',
-        'pausing', 'paused', 'resuming'
+        'pausing', 'paused', 'resuming', 'stopping'
     )
 RETURNING test_workflow_results.execution_id
 `

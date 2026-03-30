@@ -1302,7 +1302,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Prepare parameters
-	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+	params := sqlc.FinishTestWorkflowExecutionResultStrictParams{
 		ExecutionID:     id,
 		RunnerID:        toPgText(runnerId),
 		Status:          toPgText(string(*result.Status)),
@@ -1346,7 +1346,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Update the result
-	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	updatedID, err := qtx.FinishTestWorkflowExecutionResultStrict(ctx, params)
 	if err != nil {
 		return false, err
 	}
