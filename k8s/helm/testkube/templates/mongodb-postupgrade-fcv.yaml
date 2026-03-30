@@ -13,6 +13,7 @@ metadata:
     {{- end }}
 spec:
   backoffLimit: {{ .Values.mongodb.preUpgradeFCVJob.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
   template:
     metadata:
       {{- with .Values.mongodb.preUpgradeFCVJob.podAnnotations }}
@@ -22,26 +23,25 @@ spec:
       labels:
         {{- include "testkube.mongoFcv.labels" . | nindent 8 }}
     spec:
-      {{- $imagePullSecrets := .Values.global.imagePullSecrets | default .Values.mongodb.preUpgradeFCVJob.imagePullSecrets | default .Values.mongodb.image.pullSecrets }}
-      {{- with $imagePullSecrets }}
-      imagePullSecrets:
-        {{- range . }}
-        {{- if typeIsLike "map[string]interface {}" . }}
-        - name: {{ .name | quote }}
-        {{- else }}
-        - name: {{ . | quote }}
-        {{- end }}
-        {{- end }}
-      {{- end }}
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.mongodb.preUpgradeFCVJob.imagePullSecrets) | nindent 6 }}
+      {{- $nodeSelector := include "testkube.mongoFcv.nodeSelector" . }}
+      {{- $affinity := include "testkube.mongoFcv.affinity" . }}
+      {{- $tolerations := include "testkube.mongoFcv.tolerations" . }}
       serviceAccountName: {{ default "default" .Values.mongodb.preUpgradeFCVJob.serviceAccountName }}
       securityContext: {{ include "testkube.mongoFcv.podSecurityContext" . | nindent 8 }}
-      nodeSelector: {{- include "testkube.mongoFcv.nodeSelector" . | nindent 8 }}
-      affinity: {{- include "testkube.mongoFcv.affinity" . | nindent 8 }}
-      tolerations: {{- include "testkube.mongoFcv.tolerations" . | nindent 8 }}
+      {{- if $nodeSelector }}
+      nodeSelector: {{- $nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if $affinity }}
+      affinity: {{- $affinity | nindent 8 }}
+      {{- end }}
+      {{- if $tolerations }}
+      tolerations: {{- $tolerations | nindent 8 }}
+      {{- end }}
       restartPolicy: Never
       containers:
         - name: fcv-apply
-          image: "{{ .Values.mongodb.image.registry }}/{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          image: {{ include "global.images.image" (dict "imageRoot" .Values.mongodb.image "global" .Values.global) | quote }}
           securityContext: {{ include "testkube.mongoFcv.containerSecurityContext" . | nindent 12 }}
           command:
             - /bin/sh
@@ -134,7 +134,7 @@ spec:
               fi
               echo "FCV post-upgrade apply completed successfully."
           env:
-            - name: MONGO_AUTH_ENABLED
+            - name: AUTH_ENABLED
               value: "{{ .Values.mongodb.auth.enabled | default false }}"
             {{- if .Values.mongodb.auth.enabled }}
             - name: MONGO_USERNAME

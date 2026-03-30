@@ -6,12 +6,20 @@ metadata:
   labels:
     {{- include "testkube.mongoFcv.labels" . | nindent 4 }}
   annotations:
+    {{- if .Values.mongodb.preUpgradeFCVJob.useArgoHooks }}
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    {{- else }}
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
+    {{- end }}
     {{- with .Values.mongodb.preUpgradeFCVJob.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
+  {{- if .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
+  {{- end }}
   backoffLimit: {{ .Values.mongodb.preUpgradeFCVJob.backoffLimit }}
   template:
     metadata:
@@ -22,26 +30,25 @@ spec:
       labels:
         {{- include "testkube.mongoFcv.labels" . | nindent 8 }}
     spec:
-      {{- $imagePullSecrets := .Values.global.imagePullSecrets | default .Values.mongodb.preUpgradeFCVJob.imagePullSecrets | default .Values.mongodb.image.pullSecrets }}
-      {{- with $imagePullSecrets }}
-      imagePullSecrets:
-        {{- range . }}
-        {{- if typeIsLike "map[string]interface {}" . }}
-        - name: {{ .name | quote }}
-        {{- else }}
-        - name: {{ . | quote }}
-        {{- end }}
-        {{- end }}
-      {{- end }}
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.mongodb.preUpgradeFCVJob.imagePullSecrets) | nindent 6 }}
+      {{- $nodeSelector := include "testkube.mongoFcv.nodeSelector" . }}
+      {{- $affinity := include "testkube.mongoFcv.affinity" . }}
+      {{- $tolerations := include "testkube.mongoFcv.tolerations" . }}
       serviceAccountName: {{ default "default" .Values.mongodb.preUpgradeFCVJob.serviceAccountName }}
       securityContext: {{ include "testkube.mongoFcv.podSecurityContext" . | nindent 8 }}
-      nodeSelector: {{- include "testkube.mongoFcv.nodeSelector" . | nindent 8 }}
-      affinity: {{- include "testkube.mongoFcv.affinity" . | nindent 8 }}
-      tolerations: {{- include "testkube.mongoFcv.tolerations" . | nindent 8 }}
+      {{- if $nodeSelector }}
+      nodeSelector: {{- $nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if $affinity }}
+      affinity: {{- $affinity | nindent 8 }}
+      {{- end }}
+      {{- if $tolerations }}
+      tolerations: {{- $tolerations | nindent 8 }}
+      {{- end }}
       restartPolicy: Never
       containers:
         - name: fcv-prepare
-          image: "{{ .Values.mongodb.image.registry }}/{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          image: {{ include "global.images.image" (dict "imageRoot" .Values.mongodb.image "global" .Values.global) | quote }}
           securityContext: {{ include "testkube.mongoFcv.containerSecurityContext" . | nindent 12 }}
           command:
             - /bin/sh
@@ -49,16 +56,17 @@ spec:
             - |
               set -e
               echo "Checking MongoDB FCV prerequisites..."
+              PRE_UPGRADE_TARGET_VERSION="${PRE_UPGRADE_TARGET_VERSION:-}"
               FINAL_TARGET_VERSION="{{ default (regexFind "^[0-9]+\\.[0-9]+" (.Values.mongodb.image.tag | toString)) .Values.mongodb.featureCompatibilityVersion }}"
               HOST="{{ .Values.mongodb.fullnameOverride | default (printf "%s-mongodb" .Release.Name) }}"
               PORT="{{ .Values.mongodb.preUpgradeFCVJob.port | default .Values.mongodb.service.port }}"
               AUTH_ENABLED="{{ .Values.mongodb.auth.enabled | default false }}"
-              TARGET_VERSION="$FINAL_TARGET_VERSION"
-              if [ "$FINAL_TARGET_VERSION" = "8.2" ]; then
-                TARGET_VERSION="8.0"
+              TARGET_VERSION="$PRE_UPGRADE_TARGET_VERSION"
+              if [ -z "$TARGET_VERSION" ]; then
+                TARGET_VERSION="$FINAL_TARGET_VERSION"
               fi
               echo "Final target FCV: $FINAL_TARGET_VERSION"
-              echo "Pre-upgrade target FCV: $TARGET_VERSION"
+              echo "Requested pre-upgrade target FCV: ${PRE_UPGRADE_TARGET_VERSION:-<auto>}"
               echo "Mongo host: $HOST"
               echo "Mongo port: $PORT"
               if [ "$AUTH_ENABLED" = "true" ]; then
@@ -108,8 +116,12 @@ spec:
                 echo "ERROR: Could not determine current MongoDB server version"
                 exit 1
               fi
+              if is_version_greater "$TARGET_VERSION" "$SERVER_VERSION"; then
+                TARGET_VERSION="$SERVER_VERSION"
+              fi
               echo "Current FCV: $CURRENT_FCV"
               echo "Current server version: $SERVER_VERSION"
+              echo "Pre-upgrade target FCV: $TARGET_VERSION"
               if [ "$CURRENT_FCV" = "$TARGET_VERSION" ]; then
                 echo "Pre-upgrade FCV already correct. No action needed."
               else
@@ -127,10 +139,8 @@ spec:
               fi
               echo "FCV pre-upgrade check completed successfully."
           env:
-            - name: MONGO_AUTH_ENABLED
-              value: "{{ .Values.mongodb.auth.enabled | default false }}"
-            - name: AUTH_ENABLED
-              value: "{{ .Values.mongodb.auth.enabled | default false }}"
+            - name: PRE_UPGRADE_TARGET_VERSION
+              value: "{{ .Values.mongodb.preUpgradeFCVJob.preUpgradeTargetVersion }}"
             {{- if .Values.mongodb.auth.enabled }}
             - name: MONGO_USERNAME
               value: "{{ .Values.mongodb.auth.rootUser | default "root" }}"
