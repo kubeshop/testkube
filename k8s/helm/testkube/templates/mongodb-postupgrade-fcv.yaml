@@ -12,9 +12,9 @@ metadata:
     {{- else }}
     "helm.sh/hook": post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
+    {{- end }}
     {{- with .Values.mongodb.preUpgradeFCVJob.annotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
     {{- end }}
 spec:
   {{- if .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
