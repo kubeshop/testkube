@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -65,6 +67,10 @@ func (e *executionGroup) CreateWithContext(ctx context.Context, cmd string, args
 	// Instantiate the execution
 	ex := &execution{group: e}
 	ex.cmd = exec.CommandContext(ctx, cmd, args...)
+	ex.cmd.Cancel = func() error {
+		return ex.cmd.Process.Signal(syscall.SIGTERM)
+	}
+	ex.cmd.WaitDelay = 10 * time.Second
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 
