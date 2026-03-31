@@ -17,8 +17,10 @@ import (
 
 // ExecutionLogParams holds optional filtering parameters for log retrieval.
 // All fields are optional; zero values mean "no filter".
+// When Tail, StartLine, and EndLine are all 0 the handler injects Tail=100
+// so agents never receive an unbounded log response.
 type ExecutionLogParams struct {
-	Tail      int    // Return last N lines (0 = no tail filter, full log returned)
+	Tail      int    // Return last N lines (0 → defaulted to 100 by the handler when no other range is set)
 	StartLine int    // 1-based start line (0 = from beginning)
 	EndLine   int    // 1-based end line (0 = to end)
 	Grep      string // Filter lines containing this substring
@@ -77,6 +79,12 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 		}
 		if params.StartLine > 0 && params.EndLine > 0 && params.StartLine > params.EndLine {
 			return mcp.NewToolResultError(fmt.Sprintf("invalid line range: startLine (%d) must be less than or equal to endLine (%d)", params.StartLine, params.EndLine)), nil
+		}
+
+		// Always cap: if no range restriction was given, default to the last 100 lines
+		// so agents never accidentally receive an unbounded log response.
+		if params.Tail == 0 && params.StartLine == 0 && params.EndLine == 0 {
+			params.Tail = 100
 		}
 
 		logs, err := client.GetExecutionLogs(ctx, executionID, params)

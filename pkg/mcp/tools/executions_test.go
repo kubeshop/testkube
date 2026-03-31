@@ -31,14 +31,15 @@ func callFetchExecutionLogs(t *testing.T, mock *mockExecutionLogger, args map[st
 	return handler(context.Background(), req)
 }
 
-func TestFetchExecutionLogs_NoParams_PassesZeroValues(t *testing.T) {
+func TestFetchExecutionLogs_NoParams_DefaultsTail100(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "log output"}
 	result, err := callFetchExecutionLogs(t, m, map[string]any{
 		"executionId": "abc123",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "abc123", m.capturedID)
-	assert.Equal(t, ExecutionLogParams{}, m.capturedParams)
+	// No range params → handler must inject Tail=100 so agents never get unbounded logs.
+	assert.Equal(t, ExecutionLogParams{Tail: 100}, m.capturedParams)
 	require.NotNil(t, result)
 	require.NotEmpty(t, result.Content)
 	textContent, ok := result.Content[0].(mcp.TextContent)
@@ -75,7 +76,9 @@ func TestFetchExecutionLogs_GrepAndStep_ParsedCorrectly(t *testing.T) {
 		"step":        "setup-env",
 	})
 	require.NoError(t, err)
+	// No explicit range → handler injects Tail=100 to cap results.
 	assert.Equal(t, ExecutionLogParams{
+		Tail: 100,
 		Grep: "FAIL",
 		Step: "setup-env",
 	}, m.capturedParams)
@@ -91,18 +94,19 @@ func TestFetchExecutionLogs_InvalidIntParams_Ignored(t *testing.T) {
 	})
 	require.NoError(t, err)
 	// "not-a-number" fails Atoi; "-5" parses as -5 which fails the v>0 guard; "0" also fails v>0.
-	// All result in zero (no filter).
-	assert.Equal(t, ExecutionLogParams{}, m.capturedParams)
+	// All integer params are discarded → no range set → handler injects Tail=100.
+	assert.Equal(t, ExecutionLogParams{Tail: 100}, m.capturedParams)
 }
 
-func TestFetchExecutionLogs_TailZero_Ignored(t *testing.T) {
+func TestFetchExecutionLogs_TailZero_FallsBackToDefault(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "logs"}
 	_, err := callFetchExecutionLogs(t, m, map[string]any{
 		"executionId": "mno345",
 		"tail":        "0",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, m.capturedParams.Tail)
+	// tail=0 is rejected by the v>0 guard; no other range set → default Tail=100 applied.
+	assert.Equal(t, 100, m.capturedParams.Tail)
 }
 
 func TestFetchExecutionLogs_InvalidLineRange_ReturnsError(t *testing.T) {
