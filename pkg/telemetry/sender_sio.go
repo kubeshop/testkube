@@ -136,6 +136,11 @@ func mapProperties(name string, params Params) analytics.Properties {
 	if params.TestSuiteSteps != 0 {
 		properties = properties.Set("testSuiteSteps", params.TestSuiteSteps)
 	}
+
+	if params.Source != "" {
+		properties = properties.Set("source", params.Source)
+	}
+
 	if name == "testkube_api_run_test_workflow" {
 		properties = properties.Set("testWorkflowSteps", params.TestWorkflowSteps)
 		properties = properties.Set("testWorkflowExecuteCount", params.TestWorkflowExecuteCount)
