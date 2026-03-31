@@ -46,15 +46,7 @@ to find items containing all terms`
 	UpdateWorkflowDescription              = `Update an existing TestWorkflow in Testkube with a new YAML definition. This tool allows you to modify workflow steps, configuration, and metadata. The workflow will be updated immediately and available for execution with the new configuration.`
 
 	// Execution tool descriptions
-	FetchExecutionLogsDescription = `Retrieves logs from a test workflow execution.
-
-Supports optional filtering parameters:
-- tail: Return the last N lines (e.g., tail=50)
-- startLine / endLine: 1-based line range (e.g., startLine=100, endLine=200)
-- grep: Filter to lines containing a substring, with 2 lines of context per match (e.g., grep=ERROR)
-- step: Filter to a specific workflow step by reference name (e.g., step=run-tests)
-
-Parameters can be combined. By default, returns the full raw log.`
+	FetchExecutionLogsDescription     = "Retrieves logs from a test workflow execution. Always use tail or startLine/endLine to limit results — never request unbounded logs. Work in chunks of 100 lines. Parameters: tail (last N lines, e.g. tail=100), startLine/endLine (1-based range, e.g. startLine=1 endLine=100), grep (substring filter), step (filter to a specific step reference). Parameters can be combined."
 	ListExecutionsDescription         = "List executions with filtering and pagination options. Optionally filter by workflow name, status, or text search. Returns execution summaries with status, timing, and results."
 	GetExecutionInfoDescription       = "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
