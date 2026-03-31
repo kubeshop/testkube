@@ -105,6 +105,44 @@ func TestFetchExecutionLogs_TailZero_Ignored(t *testing.T) {
 	assert.Equal(t, 0, m.capturedParams.Tail)
 }
 
+func TestFetchExecutionLogs_InvalidLineRange_ReturnsError(t *testing.T) {
+	m := &mockExecutionLogger{}
+	result, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "pqr678",
+		"startLine":   "200",
+		"endLine":     "100",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError, "expected tool result error for startLine > endLine")
+	// Client must not have been called
+	assert.Equal(t, "", m.capturedID)
+}
+
+func TestFetchExecutionLogs_ValidLineRange_Passes(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "stu901",
+		"startLine":   "100",
+		"endLine":     "200",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 100, m.capturedParams.StartLine)
+	assert.Equal(t, 200, m.capturedParams.EndLine)
+}
+
+func TestFetchExecutionLogs_EqualLineRange_Passes(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "vwx234",
+		"startLine":   "100",
+		"endLine":     "100",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 100, m.capturedParams.StartLine)
+	assert.Equal(t, 100, m.capturedParams.EndLine)
+}
+
 func TestFetchExecutionLogs_ToolName(t *testing.T) {
 	m := &mockExecutionLogger{}
 	tool, _ := FetchExecutionLogs(m)

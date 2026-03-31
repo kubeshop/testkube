@@ -16,9 +16,9 @@ import (
 )
 
 // ExecutionLogParams holds optional filtering parameters for log retrieval.
-// All fields are optional; zero values mean "no filter" (smart default applies).
+// All fields are optional; zero values mean "no filter".
 type ExecutionLogParams struct {
-	Tail      int    // Return last N lines (0 = smart default of 200 when no other filter set)
+	Tail      int    // Return last N lines (0 = no tail filter, full log returned)
 	StartLine int    // 1-based start line (0 = from beginning)
 	EndLine   int    // 1-based end line (0 = to end)
 	Grep      string // Filter lines containing this substring
@@ -37,7 +37,7 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			mcp.Description("The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2')."),
 		),
 		mcp.WithString("tail",
-			mcp.Description("Return the last N lines of the log. Default: 200 when no other range params given. Example: '50'"),
+			mcp.Description("Return the last N lines of the log. Example: '50'"),
 		),
 		mcp.WithString("startLine",
 			mcp.Description("1-based line number to start reading from. Use with endLine for a range."),
@@ -46,10 +46,10 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			mcp.Description("1-based line number to stop reading at (inclusive). Use with startLine for a range."),
 		),
 		mcp.WithString("grep",
-			mcp.Description("Filter to lines containing this substring. Returns matching lines with 2 lines of context before/after each match."),
+			mcp.Description("Filter to lines containing this substring (e.g., grep=ERROR)."),
 		),
 		mcp.WithString("step",
-			mcp.Description("Filter to logs from a specific workflow step. Use the step reference from the metadata header (e.g., 'run-tests', 'setup-env')."),
+			mcp.Description("Filter to logs from a specific workflow step by reference name (e.g., 'run-tests', 'setup-env')."),
 		),
 	)
 
@@ -74,6 +74,9 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			if v, err := strconv.Atoi(s); err == nil && v > 0 {
 				params.EndLine = v
 			}
+		}
+		if params.StartLine > 0 && params.EndLine > 0 && params.StartLine > params.EndLine {
+			return mcp.NewToolResultError(fmt.Sprintf("invalid line range: startLine (%d) must be less than or equal to endLine (%d)", params.StartLine, params.EndLine)), nil
 		}
 
 		logs, err := client.GetExecutionLogs(ctx, executionID, params)
