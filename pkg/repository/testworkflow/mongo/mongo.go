@@ -398,6 +398,9 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testw
 			"resourceaggregations":         1,
 			"silentmode":                   1,
 		}},
+		{"$addFields": bson.M{
+			"workflow.health": "$workflow.status.health",
+		}},
 	}
 
 	if filter.PageSize() > 0 {
