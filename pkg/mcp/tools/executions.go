@@ -15,8 +15,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
+// ExecutionLogParams holds optional filtering parameters for log retrieval.
+// All fields are optional; zero values mean "no filter" (smart default applies).
+type ExecutionLogParams struct {
+	Tail      int    // Return last N lines (0 = smart default of 200 when no other filter set)
+	StartLine int    // 1-based start line (0 = from beginning)
+	EndLine   int    // 1-based end line (0 = to end)
+	Grep      string // Filter lines containing this substring
+	Step      string // Filter to a specific workflow step by reference name
+}
+
 type ExecutionLogger interface {
-	GetExecutionLogs(ctx context.Context, executionId string) (string, error)
+	GetExecutionLogs(ctx context.Context, executionId string, params ExecutionLogParams) (string, error)
 }
 
 func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc) {
@@ -26,12 +36,47 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			mcp.Required(),
 			mcp.Description("The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2')."),
 		),
+		mcp.WithString("tail",
+			mcp.Description("Return the last N lines of the log. Default: 200 when no other range params given. Example: '50'"),
+		),
+		mcp.WithString("startLine",
+			mcp.Description("1-based line number to start reading from. Use with endLine for a range."),
+		),
+		mcp.WithString("endLine",
+			mcp.Description("1-based line number to stop reading at (inclusive). Use with startLine for a range."),
+		),
+		mcp.WithString("grep",
+			mcp.Description("Filter to lines containing this substring. Returns matching lines with 2 lines of context before/after each match."),
+		),
+		mcp.WithString("step",
+			mcp.Description("Filter to logs from a specific workflow step. Use the step reference from the metadata header (e.g., 'run-tests', 'setup-env')."),
+		),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		executionID := request.GetString("executionId", "")
 
-		logs, err := client.GetExecutionLogs(ctx, executionID)
+		params := ExecutionLogParams{
+			Grep: request.GetString("grep", ""),
+			Step: request.GetString("step", ""),
+		}
+		if tailStr := request.GetString("tail", ""); tailStr != "" {
+			if v, err := strconv.Atoi(tailStr); err == nil && v > 0 {
+				params.Tail = v
+			}
+		}
+		if s := request.GetString("startLine", ""); s != "" {
+			if v, err := strconv.Atoi(s); err == nil && v > 0 {
+				params.StartLine = v
+			}
+		}
+		if s := request.GetString("endLine", ""); s != "" {
+			if v, err := strconv.Atoi(s); err == nil && v > 0 {
+				params.EndLine = v
+			}
+		}
+
+		logs, err := client.GetExecutionLogs(ctx, executionID, params)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to fetch logs: %v", err)), nil
 		}

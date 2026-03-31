@@ -289,14 +289,29 @@ func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename stri
 	return response, nil
 }
 
-func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string) (string, error) {
+func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string, params tools.ExecutionLogParams) (string, error) {
+	queryParams := make(map[string]string)
+	if params.Tail > 0 {
+		queryParams["tail"] = strconv.Itoa(params.Tail)
+	}
+	if params.StartLine > 0 {
+		queryParams["startLine"] = strconv.Itoa(params.StartLine)
+	}
+	if params.EndLine > 0 {
+		queryParams["endLine"] = strconv.Itoa(params.EndLine)
+	}
+	if params.Grep != "" {
+		queryParams["grep"] = params.Grep
+	}
+	if params.Step != "" {
+		queryParams["step"] = params.Step
+	}
 	return c.makeRequest(ctx, APIRequest{
-		Method: "GET",
-		Path:   "/agent/test-workflow-executions/{executionId}/logs",
-		Scope:  ApiScopeOrgEnv,
-		PathParams: map[string]string{
-			"executionId": executionID,
-		},
+		Method:      "GET",
+		Path:        "/agent/test-workflow-executions/{executionId}/logs",
+		Scope:       ApiScopeOrgEnv,
+		PathParams:  map[string]string{"executionId": executionID},
+		QueryParams: queryParams,
 	})
 }
 
