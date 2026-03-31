@@ -81,9 +81,10 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			return mcp.NewToolResultError(fmt.Sprintf("invalid line range: startLine (%d) must be less than or equal to endLine (%d)", params.StartLine, params.EndLine)), nil
 		}
 
-		// Always cap: if no range restriction was given, default to the last 100 lines
-		// so agents never accidentally receive an unbounded log response.
-		if params.Tail == 0 && params.StartLine == 0 && params.EndLine == 0 {
+		// Default to the last 100 lines when no range restriction is given and grep is not
+		// set. When grep is set the agent wants to search the full log; the server-side
+		// match cap (100 results) bounds the response size instead.
+		if params.Tail == 0 && params.StartLine == 0 && params.EndLine == 0 && params.Grep == "" {
 			params.Tail = 100
 		}
 

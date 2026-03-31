@@ -68,6 +68,29 @@ func TestFetchExecutionLogs_AllParams_ParsedCorrectly(t *testing.T) {
 	}, m.capturedParams)
 }
 
+func TestFetchExecutionLogs_GrepOnly_NoTailInjected(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "grep results"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "grep001",
+		"grep":        "ERROR",
+	})
+	require.NoError(t, err)
+	// grep searches the full log — Tail must NOT be injected so the whole log is scanned.
+	// Server-side match cap bounds the output size instead.
+	assert.Equal(t, ExecutionLogParams{Grep: "ERROR"}, m.capturedParams)
+}
+
+func TestFetchExecutionLogs_StepOnly_TailInjected(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "step logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "step001",
+		"step":        "run-tests",
+	})
+	require.NoError(t, err)
+	// step with no range/grep → default tail=100 applied to that step's lines.
+	assert.Equal(t, ExecutionLogParams{Tail: 100, Step: "run-tests"}, m.capturedParams)
+}
+
 func TestFetchExecutionLogs_GrepAndStep_ParsedCorrectly(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "step logs"}
 	_, err := callFetchExecutionLogs(t, m, map[string]any{
@@ -76,9 +99,8 @@ func TestFetchExecutionLogs_GrepAndStep_ParsedCorrectly(t *testing.T) {
 		"step":        "setup-env",
 	})
 	require.NoError(t, err)
-	// No explicit range → handler injects Tail=100 to cap results.
+	// grep is set → no Tail injection; server-side match cap handles output size.
 	assert.Equal(t, ExecutionLogParams{
-		Tail: 100,
 		Grep: "FAIL",
 		Step: "setup-env",
 	}, m.capturedParams)
