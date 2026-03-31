@@ -19,7 +19,9 @@ but need the execution ID for other operations.`
 	TextSearchDescription = `Text search filter for names or descriptions. Can use space-separated words 
 to find items containing all terms`
 
-	SelectorDescription = `Filter by labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'`
+	SelectorDescription = `Filter by workflow labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'. Note: this filters on workflow-level labels, not execution-level tags — use tagSelector for execution tags.`
+
+	TagSelectorDescription = `Filter by execution tags using key=value format. For single tag use 'key=value', for multiple tags use comma-separated format 'key1=value1,key2=value2'. For example: 'type=suite' or 'env=prod,type=smoke'. Note: this filters on execution-level tags (set via update_execution_tags), not workflow-level labels — use selector for workflow labels.`
 
 	StatusDescription = `Filter by execution status. Available statuses: 'queued', 'running', 'passed', 
 'failed', 'skipped', 'aborted', 'timeout', 'paused'`
@@ -47,7 +49,7 @@ to find items containing all terms`
 
 	// Execution tool descriptions
 	FetchExecutionLogsDescription     = "Retrieves logs from a test workflow execution. Default (no params, step-only, or workerRef-only with empty grep): returns the last 100 lines. When using grep, searches the full log (server caps at 100 matching lines). Always work in chunks of 100 lines when paging — never request unbounded ranges. Parameters: tail (last N lines, e.g. tail=100), startLine/endLine (1-based range, e.g. startLine=1 endLine=100), grep (substring filter), step (filter to a specific step reference). Parameters can be combined. For parallel workflows with workers: ALWAYS call get_execution_info first to get the 'workers' array, then use a 'ref' value from that array as workerRef plus the matching workerIndex (0-based, default 0). Do NOT use step refs from the main log metadata as workerRef — worker refs are distinct from step refs and only available via get_execution_info."
-	ListExecutionsDescription         = "List executions with filtering and pagination options. Optionally filter by workflow name, status, or text search. Returns execution summaries with status, timing, and results."
+	ListExecutionsDescription         = "List executions with filtering and pagination options. Optionally filter by workflow name, status, text search, workflow labels (selector), or execution tags (tagSelector). Returns execution summaries with status, timing, tags, and results."
 	GetExecutionInfoDescription       = "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
 	WaitForExecutionsDescription      = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
@@ -103,6 +105,11 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - workflowName: Filter executions by workflow name
 - status: Filter by status (passed/failed/running/aborted)
+- selector: Filter by workflow labels (e.g., 'tool=cypress')
+- tagSelector: Filter by execution tags (e.g., 'type=suite')
+- since: Filter executions after this time (ISO 8601)
+- startDate: Filter executions on or after this date/time (YYYY-MM-DD or RFC 3339)
+- endDate: Filter executions on or before this date/time (YYYY-MM-DD or RFC 3339)
 - limit: Maximum executions to fetch (default 50, max 100)
 - aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
 

@@ -134,6 +134,11 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 		mcp.WithString("expression", mcp.Required(), mcp.Description("The JSONPath expression to apply to execution data. Examples: '$.result.status', '$.result.duration', '$..errorMessage'.")),
 		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("status", mcp.Description(StatusDescription)),
+		mcp.WithString("selector", mcp.Description(SelectorDescription)),
+		mcp.WithString("tagSelector", mcp.Description(TagSelectorDescription)),
+		mcp.WithString("since", mcp.Description(SinceDescription)),
+		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
+		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
 		mcp.WithNumber("limit", mcp.Description("Maximum number of executions to fetch (default: 50, max: 100).")),
 		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all executions into an array and applies the expression once. If false (default), applies the expression to each execution separately.")),
 	)
@@ -146,6 +151,11 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 
 		workflowName, _ := OptionalParam[string](request, "workflowName")
 		status, _ := OptionalParam[string](request, "status")
+		selector, _ := OptionalParam[string](request, "selector")
+		tagSelector, _ := OptionalParam[string](request, "tagSelector")
+		since, _ := OptionalParam[string](request, "since")
+		startDate, _ := OptionalParam[string](request, "startDate")
+		endDate, _ := OptionalParam[string](request, "endDate")
 		limit, _ := OptionalIntParamWithDefault(request, "limit", defaultBulkLimit)
 		aggregate, _ := OptionalParam[bool](request, "aggregate")
 
@@ -157,6 +167,11 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 		params := ListExecutionsParams{
 			WorkflowName: workflowName,
 			Status:       status,
+			Selector:     selector,
+			TagSelector:  tagSelector,
+			Since:        since,
+			StartDate:    startDate,
+			EndDate:      endDate,
 			PageSize:     limit,
 			Page:         0,
 		}
