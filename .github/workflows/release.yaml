@@ -149,6 +149,37 @@ jobs:
           SLACK_BOT_CLIENT_SECRET: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+      - name: Publish package
+        env:
+          USERNAME: "aptly"
+          PASSWORD: ${{ secrets.APTLY_PASSWORD }}
+          APTLY_URL: "repo.testkube.io:8080"
+          VERSION: ${{steps.tag.outputs.tag}}
+        run: |
+          ### Clean temporary file directory first (in case of re-runs)
+          curl -u "${USERNAME}:${PASSWORD}" -X DELETE "http://${APTLY_URL}/api/files/testkube" || true
+
+          ### Remove existing packages from the repository (ignore errors if they don't exist)
+          curl -u "${USERNAME}:${PASSWORD}" -X DELETE "http://${APTLY_URL}/api/repos/testkube/packages?q=testkube+%28%3D+${VERSION}%29" || true
+
+          ### Upload files for all architectures
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST -F "file=@dist/testkube_${VERSION}_linux_amd64.deb" "http://${APTLY_URL}/api/files/testkube"
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST -F "file=@dist/testkube_${VERSION}_linux_arm64.deb" "http://${APTLY_URL}/api/files/testkube"
+
+          ### Add file to repo
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST "http://${APTLY_URL}/api/repos/testkube/file/testkube"
+
+          ### Create snapshot with timestamp to avoid conflicts on re-runs
+          SNAPSHOT_NAME="testkube-${VERSION}-$(date +%s)"
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST -H 'Content-Type: application/json' --data '{"Name":"'"${SNAPSHOT_NAME}"'"}' "http://${APTLY_URL}/api/repos/testkube/snapshots"
+
+          ### Publish repo with new snapshot (ForceOverwrite handles conflicts in published pool)
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "'"${SNAPSHOT_NAME}"'"}], "ForceOverwrite": true}' "http://${APTLY_URL}/api/publish/:linux/linux"
 
   # This is a Docker image for "Docker" Testkube Agent.
   # This image runs Testkube in Kind (Kubernetes in Docker) in Docker.

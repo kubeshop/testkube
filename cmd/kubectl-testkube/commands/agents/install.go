@@ -413,6 +413,7 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 	}
 	if len(globalTemplate) > 0 {
 		helmOpts.Values["globalTemplate.enabled"] = true
+		helmOpts.Values["globalTemplate.inline"] = true
 		helmOpts.Values["globalTemplate.spec"] = string(globalTemplate)
 	}
 	cliErr := common2.HelmUpgradeOrInstallGeneric(helmOpts)

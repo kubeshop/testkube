@@ -41,9 +41,10 @@ type TestWorkflowExecutionQueriesInterface interface {
 	UpdateTestWorkflowExecutionResult(ctx context.Context, arg UpdateTestWorkflowExecutionResultParams) error
 	UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecutionStatusAtParams) error
 	UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error
-	UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) error
+	UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) (int64, error)
 	UpdateExecutionStatusAtStrict(ctx context.Context, arg UpdateExecutionStatusAtStrictParams) error
 	UpdateTestWorkflowExecutionResultStrict(ctx context.Context, arg UpdateTestWorkflowExecutionResultStrictParams) (string, error)
+	FinishTestWorkflowExecutionResultStrict(ctx context.Context, arg FinishTestWorkflowExecutionResultStrictParams) (string, error)
 	UpdateExecutionStatus(ctx context.Context, arg UpdateExecutionStatusParams) error
 
 	// Delete operations

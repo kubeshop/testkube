@@ -98,7 +98,7 @@ jobs:
           MINIO_ROOT_USER: minio99
           MINIO_ROOT_PASSWORD: minio123
       postgres:
-        image: postgres:16.2
+        image: postgres:16.13
         ports:
           - 5432:5432
         env:

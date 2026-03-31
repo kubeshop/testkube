@@ -232,7 +232,9 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	}
 
 	// Parse basic JSONB fields
-	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime)
+	if err := r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime, row.SilentMode); err != nil {
+		return nil, fmt.Errorf("failed to parse execution JSON fields: %w", err)
+	}
 
 	// Build result if exists
 	if row.Status.Valid {
@@ -706,33 +708,7 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		return nil, err
 	}
 
-	summaryParams := sqlc.GetTestWorkflowExecutionsSummaryParams{
-		OrganizationID:     params.OrganizationID,
-		EnvironmentID:      params.EnvironmentID,
-		WorkflowName:       params.WorkflowName,
-		WorkflowNames:      params.WorkflowNames,
-		TextSearch:         params.TextSearch,
-		StartDate:          params.StartDate,
-		EndDate:            params.EndDate,
-		LastNDays:          params.LastNDays,
-		Statuses:           params.Statuses,
-		RunnerID:           params.RunnerID,
-		Assigned:           params.Assigned,
-		ActorName:          params.ActorName,
-		ActorType:          params.ActorType,
-		GroupID:            params.GroupID,
-		Initialized:        params.Initialized,
-		HealthRanges:       params.HealthRanges,
-		TagKeys:            params.TagKeys,
-		TagConditions:      params.TagConditions,
-		LabelKeys:          params.LabelKeys,
-		LabelConditions:    params.LabelConditions,
-		SelectorKeys:       params.SelectorKeys,
-		SelectorConditions: params.SelectorConditions,
-		Fst:                params.Fst,
-		Lmt:                params.Lmt,
-	}
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, summaryParams)
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
 	if err != nil {
 		return nil, err
 	}
@@ -849,6 +825,14 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	var silentMode []byte
+	if execution.SilentMode != nil {
+		silentMode, err = toJSONB(execution.SilentMode)
+		if err != nil {
+			return err
+		}
+	}
+
 	return qtx.InsertTestWorkflowExecution(ctx, sqlc.InsertTestWorkflowExecutionParams{
 		ID:                        execution.Id,
 		GroupID:                   toPgText(execution.GroupId),
@@ -869,6 +853,7 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
 		Runtime:                   runtime,
+		SilentMode:                silentMode,
 	})
 }
 
@@ -1317,7 +1302,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Prepare parameters
-	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+	params := sqlc.FinishTestWorkflowExecutionResultStrictParams{
 		ExecutionID:     id,
 		RunnerID:        toPgText(runnerId),
 		Status:          toPgText(string(*result.Status)),
@@ -1361,7 +1346,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Update the result
-	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	updatedID, err := qtx.FinishTestWorkflowExecutionResultStrict(ctx, params)
 	if err != nil {
 		return false, err
 	}
@@ -1503,12 +1488,19 @@ func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map
 		return err
 	}
 
-	return r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
+	rowsAffected, err := r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
 		Tags:           tagsJSON,
 		ExecutionID:    id,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
 // UpdateResourceAggregations updates resource aggregations
@@ -2130,7 +2122,7 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 
 // Helper methods for building complex objects
 
-func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams, runtime []byte) error {
+func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams, runtime, silentMode []byte) error {
 	var err error
 	if len(runnerTarget) > 0 {
 		execution.RunnerTarget, err = fromJSONB[testkube.ExecutionTarget](runnerTarget)
@@ -2163,6 +2155,13 @@ func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWo
 
 	if len(runtime) > 0 {
 		execution.Runtime, err = fromJSONB[testkube.TestWorkflowExecutionRuntime](runtime)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(silentMode) > 0 {
+		execution.SilentMode, err = fromJSONB[testkube.SilentMode](silentMode)
 		if err != nil {
 			return err
 		}
@@ -2292,6 +2291,14 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	var silentMode []byte
+	if execution.SilentMode != nil {
+		silentMode, err = toJSONB(execution.SilentMode)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Placeholder - you would call the generated method here:
 	return qtx.UpdateTestWorkflowExecution(ctx, sqlc.UpdateTestWorkflowExecutionParams{
 		GroupID:                   toPgText(execution.GroupId),
@@ -2310,6 +2317,7 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
 		Runtime:                   runtime,
+		SilentMode:                silentMode,
 		ID:                        execution.Id,
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,

@@ -67,6 +67,7 @@ type TestWorkflowExecution struct {
 	OrganizationID            string                                               `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string                                               `db:"environment_id" json:"environment_id"`
 	Runtime                   *testkube.TestWorkflowExecutionRuntime               `db:"runtime" json:"runtime"`
+	SilentMode                *testkube.SilentMode                                 `db:"silent_mode" json:"silent_mode"`
 }
 
 type TestWorkflowOutput struct {

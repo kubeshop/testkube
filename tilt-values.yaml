@@ -1,0 +1,113 @@
+# Tilt development values for testkube Helm chart
+#
+# These are the shared defaults used by all developers. They are loaded
+# automatically by the Tiltfile.
+#
+# For personal overrides create tilt-values.local.yaml (gitignored) — it is
+# loaded after this file so its values take precedence.
+
+# Testkube API configuration
+testkube-api:
+  fullnameOverride: testkube-api-server
+  
+  # Disable analytics for local dev
+  analyticsEnabled: false
+  
+  # Enable debug mode
+  enableDebugMode: true
+  
+  # Standalone mode (no cloud connection)
+  cloud:
+    key: ""
+    url: ""
+  
+  # Resource limits for development
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Disable probes during development for faster restarts
+  livenessProbe:
+    enabled: false
+  readinessProbe:
+    enabled: false
+  
+  # NATS configuration
+  nats:
+    embedded: false
+    enabled: true
+  
+  # MinIO client configuration used by testkube-api (connection credentials).
+  # Keep these values in sync with top-level minio.minioRootUser/minioRootPassword below.
+  # If you change credentials, also update the Tiltfile (minio_user / minio_pass)
+  # so the create-minio-buckets job can authenticate.
+  minio:
+    enabled: true
+    minioRootUser: minio
+    minioRootPassword: minio123
+    storage: 1Gi
+  
+  # PostgreSQL connection (configured via postgresql.* values below)
+  
+  # Test connection pod
+  testConnection:
+    enabled: false
+  
+  # Next generation features (optional)
+  next:
+    enabled: true
+    cloudStorage: false
+    runner:
+      enabled: true
+    gitops:
+      enabled: true
+      syncCloudToKubernetes: false
+      syncKubernetesToCloud: false
+
+# MongoDB (disabled - using PostgreSQL instead)
+mongodb:
+  enabled: false
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    enablePostgresUser: true
+    postgresPassword: "postgres1234"
+    username: "testkube"
+    password: "postgres5432"
+    database: "backend"
+  primary:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# MinIO deployment credentials (MinIO subchart values).
+# These control the MinIO pod's root user/password.
+# Keep these values identical to testkube-api.minio.* above.
+minio:
+  minioRootUser: minio
+  minioRootPassword: minio123
+
+# NATS configuration
+nats:
+  config:
+    jetstream:
+      enabled: true
+  natsBox:
+    enabled: false
+
+# Global settings
+global:
+  # Remove default ARM tolerations for local dev
+  tolerations: []
+  
+  # Test Workflows configuration
+  testWorkflows:
+    createServiceAccountTemplates: true
+    createOfficialTemplates: true

@@ -459,7 +459,7 @@ func NewWorkerExecutor(storage artifacts.InternalArtifactStorage, registry Worke
 // 5. Handles cleanup (logs, resources)
 // Returns true if worker passed, false if failed, and error for execution issues.
 // Uses non-blocking channel operations to prevent deadlocks.
-func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, paramsSpec *commontcl.ParamsSpec) (bool, error) {
+func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, paramsSpec *commontcl.ParamsSpec, onResult ...func(passed bool)) (bool, error) {
 	log := spawn.ParallelCreateLogger("worker", worker.Description, worker.Index, paramsSpec.Count)
 
 	cfg := *e.cfg.Internal()
@@ -511,7 +511,7 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 		return false, err
 	}
 
-	return e.monitorWorkerExecution(ctx, worker, *result, cfg, machine, paramsSpec, log)
+	return e.monitorWorkerExecution(ctx, worker, *result, cfg, machine, paramsSpec, log, onResult...)
 }
 
 // monitorWorkerExecution monitors a worker's execution and handles status updates.
@@ -519,7 +519,7 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 // Sends non-blocking updates to prevent channel congestion.
 // Ensures cleanup happens via defer even if monitoring fails.
 // Returns true if worker passed, false otherwise.
-func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker WorkerSpec, result executionworkertypes.ExecuteResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string)) (bool, error) {
+func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker WorkerSpec, result executionworkertypes.ExecuteResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string), onResult ...func(passed bool)) (bool, error) {
 	var lastResult testkube.TestWorkflowResult
 
 	defer func() {
@@ -546,7 +546,13 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 
 	log("created")
 
-	return e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
+	passed, err := e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
+	// Notify caller of pass/fail BEFORE cleanup runs (which may take 25+ seconds).
+	// This allows failFast to cancel other workers promptly.
+	for _, cb := range onResult {
+		cb(passed)
+	}
+	return passed, err
 }
 
 // processWorkerNotifications processes status updates from a worker.
@@ -563,8 +569,17 @@ func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notific
 	for {
 		select {
 		case <-ctx.Done():
-			// Context cancelled (e.g. fail-fast triggered) — exit immediately
-			// so handleWorkerCleanup can abort this worker
+			// Context cancelled (e.g. fail-fast triggered) — mark worker as aborted
+			// so the UI shows the correct status instead of the last intermediate state
+			lastResult.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+			if lastResult.FinishedAt.IsZero() {
+				lastResult.FinishedAt = time.Now().UTC()
+			}
+			instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: testkube.ABORTED_TestWorkflowStatus, Result: lastResult})
+			select {
+			case e.updates <- Update{index: worker.Index, result: lastResult.Clone()}:
+			default:
+			}
 			return false, ctx.Err()
 		case v, ok := <-notifications.Channel():
 			if !ok {
@@ -605,6 +620,15 @@ func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notific
 					prevStatus = status
 
 					if lastResult.IsFinished() {
+						// If context was cancelled (fail-fast) and the worker hadn't
+						// already finished on its own, override status to aborted.
+						// Workers that genuinely completed (passed/failed) before
+						// cancellation keep their real status.
+						if ctx.Err() != nil && status != testkube.FAILED_TestWorkflowStatus && lastResult.FinishedAt.IsZero() {
+							status = testkube.ABORTED_TestWorkflowStatus
+							lastResult.Status = common.Ptr(status)
+							v.Result = lastResult.Clone()
+						}
 						instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Result: v.Result})
 						return v.Result.IsPassed(), nil
 					}
@@ -833,12 +857,15 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 			}
 		}
 
-		passed, err := executor.ExecuteWorker(execCtx, worker, params)
+		passed, err := executor.ExecuteWorker(execCtx, worker, params, func(workerPassed bool) {
+			// failFast callback: cancel context immediately when a worker fails,
+			// BEFORE cleanup runs, so other workers see the cancellation promptly
+			if !workerPassed && failFast {
+				cancel()
+			}
+		})
 		if err != nil {
 			fmt.Printf("%d: error: %v\n", index, err)
-		}
-		if !passed && failFast {
-			cancel()
 		}
 		return passed
 	}

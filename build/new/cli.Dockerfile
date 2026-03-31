@@ -4,8 +4,8 @@ FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 
 ARG VERSION
 ARG DATE

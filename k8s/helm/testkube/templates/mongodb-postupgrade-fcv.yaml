@@ -1,0 +1,156 @@
+{{- if and .Values.mongodb.enabled .Values.mongodb.preUpgradeFCVJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "testkube.mongoFcv.applyName" . }}
+  labels:
+    {{- include "testkube.mongoFcv.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.mongodb.preUpgradeFCVJob.useArgoHooks }}
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    {{- else }}
+    "helm.sh/hook": post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    {{- end }}
+    {{- with .Values.mongodb.preUpgradeFCVJob.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.mongodb.preUpgradeFCVJob.ttlSecondsAfterFinished }}
+  {{- end }}
+  backoffLimit: {{ .Values.mongodb.preUpgradeFCVJob.backoffLimit }}
+  template:
+    metadata:
+      {{- with .Values.mongodb.preUpgradeFCVJob.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "testkube.mongoFcv.labels" . | nindent 8 }}
+    spec:
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.mongodb.preUpgradeFCVJob.imagePullSecrets) | nindent 6 }}
+      {{- $nodeSelector := include "testkube.mongoFcv.nodeSelector" . }}
+      {{- $affinity := include "testkube.mongoFcv.affinity" . }}
+      {{- $tolerations := include "testkube.mongoFcv.tolerations" . }}
+      serviceAccountName: {{ default "default" .Values.mongodb.preUpgradeFCVJob.serviceAccountName }}
+      securityContext: {{ include "testkube.mongoFcv.podSecurityContext" . | nindent 8 }}
+      {{- if $nodeSelector }}
+      nodeSelector: {{- $nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if $affinity }}
+      affinity: {{- $affinity | nindent 8 }}
+      {{- end }}
+      {{- if $tolerations }}
+      tolerations: {{- $tolerations | nindent 8 }}
+      {{- end }}
+      restartPolicy: Never
+      containers:
+        - name: fcv-apply
+          image: {{ include "global.images.image" (dict "imageRoot" .Values.mongodb.image "global" .Values.global) | quote }}
+          securityContext: {{ include "testkube.mongoFcv.containerSecurityContext" . | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Applying MongoDB FCV after upgrade..."
+              TARGET_VERSION="{{ default (regexFind "^[0-9]+\\.[0-9]+" (.Values.mongodb.image.tag | toString)) .Values.mongodb.featureCompatibilityVersion }}"
+              EXPECTED_SERVER_VERSION="{{ regexFind "^[0-9]+\\.[0-9]+" (.Values.mongodb.image.tag | toString) }}"
+              HOST="{{ .Values.mongodb.fullnameOverride | default (printf "%s-mongodb" .Release.Name) }}"
+              PORT="{{ .Values.mongodb.preUpgradeFCVJob.port | default .Values.mongodb.service.port }}"
+              AUTH_ENABLED="{{ .Values.mongodb.auth.enabled | default false }}"
+              echo "Target FCV: $TARGET_VERSION"
+              echo "Expected server version: $EXPECTED_SERVER_VERSION"
+              echo "Mongo host: $HOST"
+              echo "Mongo port: $PORT"
+              if [ "$AUTH_ENABLED" = "true" ]; then
+                echo "MongoDB authentication is ENABLED"
+              else
+                echo "MongoDB authentication is DISABLED"
+              fi
+              run_mongosh() {
+                if [ "$AUTH_ENABLED" = "true" ]; then
+                  mongosh \
+                    --host "$HOST" \
+                    --port "$PORT" \
+                    --username "$MONGO_USERNAME" \
+                    --password "$MONGO_PASSWORD" \
+                    --authenticationDatabase admin \
+                    "$@"
+                else
+                  mongosh \
+                    --host "$HOST" \
+                    --port "$PORT" \
+                    "$@"
+                fi
+              }
+              is_version_greater() {
+                [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n1)" = "$1" ]
+              }
+              echo "Waiting for upgraded MongoDB to become reachable..."
+              ATTEMPTS=0
+              MAX_ATTEMPTS=120
+              until run_mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' >/dev/null 2>&1; do
+                ATTEMPTS=$((ATTEMPTS + 1))
+                if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+                  echo "ERROR: Upgraded MongoDB did not become reachable after $MAX_ATTEMPTS attempts"
+                  exit 1
+                fi
+                echo "MongoDB is not reachable yet, retrying in 5 seconds... ($ATTEMPTS/$MAX_ATTEMPTS)"
+                sleep 5
+              done
+              echo "Waiting for upgraded MongoDB server version..."
+              ATTEMPTS=0
+              SERVER_VERSION=""
+              until [ "$SERVER_VERSION" = "$EXPECTED_SERVER_VERSION" ]; do
+                SERVER_VERSION=$(run_mongosh --quiet --eval 'db.version().match(/^[0-9]+\.[0-9]+/)[0]' 2>/dev/null || true)
+                if [ "$SERVER_VERSION" = "$EXPECTED_SERVER_VERSION" ]; then
+                  break
+                fi
+                ATTEMPTS=$((ATTEMPTS + 1))
+                if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+                  echo "ERROR: MongoDB server version did not become $EXPECTED_SERVER_VERSION after $MAX_ATTEMPTS attempts"
+                  exit 1
+                fi
+                echo "MongoDB server version is '$SERVER_VERSION', waiting for '$EXPECTED_SERVER_VERSION'... ($ATTEMPTS/$MAX_ATTEMPTS)"
+                sleep 5
+              done
+              CURRENT_FCV=$(run_mongosh --quiet --eval 'db.adminCommand({getParameter: 1, featureCompatibilityVersion: 1}).featureCompatibilityVersion.version')
+              if [ -z "$CURRENT_FCV" ] || [ -z "$SERVER_VERSION" ]; then
+                echo "ERROR: Could not determine current FCV or server version"
+                exit 1
+              fi
+              echo "Current FCV: $CURRENT_FCV"
+              echo "Current server version: $SERVER_VERSION"
+              if is_version_greater "$CURRENT_FCV" "$TARGET_VERSION"; then
+                echo "ERROR: refusing to downgrade FCV from $CURRENT_FCV to $TARGET_VERSION"
+                exit 1
+              fi
+              if is_version_greater "$TARGET_VERSION" "$SERVER_VERSION"; then
+                echo "ERROR: MongoDB server $SERVER_VERSION is not yet ready for FCV $TARGET_VERSION"
+                exit 1
+              fi
+              if [ "$CURRENT_FCV" = "$TARGET_VERSION" ]; then
+                echo "FCV already correct. No action needed."
+              else
+                echo "Updating FCV from $CURRENT_FCV to $TARGET_VERSION"
+                run_mongosh --eval "db.adminCommand({ setFeatureCompatibilityVersion: \"$TARGET_VERSION\", confirm: true })"
+                echo "FCV successfully updated."
+              fi
+              echo "FCV post-upgrade apply completed successfully."
+          env:
+            {{- if .Values.mongodb.auth.enabled }}
+            - name: MONGO_USERNAME
+              value: "{{ .Values.mongodb.auth.rootUser | default "root" }}"
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongodb.auth.existingSecret | default (.Values.mongodb.fullnameOverride | default (printf "%s-mongodb" .Release.Name)) }}
+                  key: mongodb-root-password
+            {{- end }}
+            {{- with .Values.mongodb.preUpgradeFCVJob.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+{{- end }}
