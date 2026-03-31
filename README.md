@@ -22,6 +22,8 @@ The Testkube Agent (this repo) is **100% Open-Source** and can be deployed stand
 - **AI Agents**: Build AI Agents for troubleshooting, analysis, remediation, etc - [Read More](https://docs.testkube.io/articles/ai-agents)
 - **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
 
+**See it in action:** Open the [interactive TestWorkflows showcase](test/testworkflows-showcase.html) to see how a workflow builds up from a single test to a fully orchestrated pipeline.
+
 ### Getting Started with Testkube Open Source
 
 To get started with the open source agent:
