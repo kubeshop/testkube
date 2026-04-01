@@ -297,6 +297,43 @@ func TestWatchWorkflowLogsCommonUsesRetryDelayAfterNotificationError(t *testing.
 	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
 }
 
+func TestWatchWorkflowLogsCommonWaitsForOpenButSilentStream(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	notifications := make(chan testkube.TestWorkflowExecutionNotification)
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		result, err := watchWorkflowLogsCommon("exec-silent", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+			return notifications, nil
+		})
+		assert.NoError(t, err)
+		assert.Same(t, finishedResult, result)
+	}()
+
+	select {
+	case <-done:
+		t.Fatal("watchWorkflowLogsCommon returned while the stream was still open and silent")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(notifications)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("watchWorkflowLogsCommon did not finish after the silent stream closed")
+	}
+}
+
 // TestParseConfig_Integration tests the full flow from CLI parsing to backend processing
 func TestParseConfig_Integration(t *testing.T) {
 	tests := []struct {
