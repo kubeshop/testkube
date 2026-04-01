@@ -48,7 +48,7 @@ SET initialization = (
                 NULLIF(initialization->>'startedAt', '0001-01-01T00:00:00Z'),
                 to_jsonb($1::timestamptz)
             ),
-            'finishedaAt', COALESCE(
+            'finishedAt', COALESCE(
                 NULLIF(initialization->>'finishedAt', '0001-01-01T00:00:00Z'),
                 to_jsonb($1::timestamptz)
             )
