@@ -7,6 +7,7 @@ package sqlc
 import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 type ExecutionSequence struct {
@@ -29,19 +30,19 @@ type Lease struct {
 }
 
 type TestWorkflow struct {
-	ExecutionID  string             `db:"execution_id" json:"execution_id"`
-	WorkflowType string             `db:"workflow_type" json:"workflow_type"`
-	Name         pgtype.Text        `db:"name" json:"name"`
-	Namespace    pgtype.Text        `db:"namespace" json:"namespace"`
-	Description  pgtype.Text        `db:"description" json:"description"`
-	Labels       []byte             `db:"labels" json:"labels"`
-	Annotations  []byte             `db:"annotations" json:"annotations"`
-	Spec         []byte             `db:"spec" json:"spec"`
-	ReadOnly     pgtype.Bool        `db:"read_only" json:"read_only"`
-	Status       []byte             `db:"status" json:"status"`
-	Created      pgtype.Timestamptz `db:"created" json:"created"`
-	Updated      pgtype.Timestamptz `db:"updated" json:"updated"`
-	ID           uuid.UUID          `db:"id" json:"id"`
+	ExecutionID  string                              `db:"execution_id" json:"execution_id"`
+	WorkflowType string                              `db:"workflow_type" json:"workflow_type"`
+	Name         pgtype.Text                         `db:"name" json:"name"`
+	Namespace    pgtype.Text                         `db:"namespace" json:"namespace"`
+	Description  pgtype.Text                         `db:"description" json:"description"`
+	Labels       map[string]string                   `db:"labels" json:"labels"`
+	Annotations  map[string]string                   `db:"annotations" json:"annotations"`
+	Spec         *testkube.TestWorkflowSpec          `db:"spec" json:"spec"`
+	ReadOnly     pgtype.Bool                         `db:"read_only" json:"read_only"`
+	Status       *testkube.TestWorkflowStatusSummary `db:"status" json:"status"`
+	Created      pgtype.Timestamptz                  `db:"created" json:"created"`
+	Updated      pgtype.Timestamptz                  `db:"updated" json:"updated"`
+	ID           uuid.UUID                           `db:"id" json:"id"`
 }
 
 type TestWorkflowExecution struct {
@@ -70,51 +71,51 @@ type TestWorkflowExecution struct {
 }
 
 type TestWorkflowOutput struct {
-	ExecutionID string             `db:"execution_id" json:"execution_id"`
-	Ref         pgtype.Text        `db:"ref" json:"ref"`
-	Name        pgtype.Text        `db:"name" json:"name"`
-	Value       []byte             `db:"value" json:"value"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	OutOrder    int32              `db:"out_order" json:"out_order"`
-	ID          uuid.UUID          `db:"id" json:"id"`
+	ExecutionID string                 `db:"execution_id" json:"execution_id"`
+	Ref         pgtype.Text            `db:"ref" json:"ref"`
+	Name        pgtype.Text            `db:"name" json:"name"`
+	Value       map[string]interface{} `db:"value" json:"value"`
+	CreatedAt   pgtype.Timestamptz     `db:"created_at" json:"created_at"`
+	OutOrder    int32                  `db:"out_order" json:"out_order"`
+	ID          uuid.UUID              `db:"id" json:"id"`
 }
 
 type TestWorkflowReport struct {
-	ExecutionID string             `db:"execution_id" json:"execution_id"`
-	Ref         pgtype.Text        `db:"ref" json:"ref"`
-	Kind        pgtype.Text        `db:"kind" json:"kind"`
-	File        pgtype.Text        `db:"file" json:"file"`
-	Summary     []byte             `db:"summary" json:"summary"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	RepOrder    int32              `db:"rep_order" json:"rep_order"`
-	ID          uuid.UUID          `db:"id" json:"id"`
+	ExecutionID string                              `db:"execution_id" json:"execution_id"`
+	Ref         pgtype.Text                         `db:"ref" json:"ref"`
+	Kind        pgtype.Text                         `db:"kind" json:"kind"`
+	File        pgtype.Text                         `db:"file" json:"file"`
+	Summary     *testkube.TestWorkflowReportSummary `db:"summary" json:"summary"`
+	CreatedAt   pgtype.Timestamptz                  `db:"created_at" json:"created_at"`
+	RepOrder    int32                               `db:"rep_order" json:"rep_order"`
+	ID          uuid.UUID                           `db:"id" json:"id"`
 }
 
 type TestWorkflowResourceAggregation struct {
-	ExecutionID string             `db:"execution_id" json:"execution_id"`
-	Global      []byte             `db:"global" json:"global"`
-	Step        []byte             `db:"step" json:"step"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ExecutionID string                                                                   `db:"execution_id" json:"execution_id"`
+	Global      map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations `db:"global" json:"global"`
+	Step        []testkube.TestWorkflowExecutionStepResourceAggregations                 `db:"step" json:"step"`
+	CreatedAt   pgtype.Timestamptz                                                       `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz                                                       `db:"updated_at" json:"updated_at"`
 }
 
 type TestWorkflowResult struct {
-	ExecutionID     string             `db:"execution_id" json:"execution_id"`
-	Status          pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	Duration        pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration   pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs      pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs        pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
-	Pauses          []byte             `db:"pauses" json:"pauses"`
-	Initialization  []byte             `db:"initialization" json:"initialization"`
-	Steps           []byte             `db:"steps" json:"steps"`
-	QueuedAt        pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt       pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt      pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	CreatedAt       pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	ExecutionID     string                                     `db:"execution_id" json:"execution_id"`
+	Status          pgtype.Text                                `db:"status" json:"status"`
+	PredictedStatus pgtype.Text                                `db:"predicted_status" json:"predicted_status"`
+	Duration        pgtype.Text                                `db:"duration" json:"duration"`
+	TotalDuration   pgtype.Text                                `db:"total_duration" json:"total_duration"`
+	DurationMs      pgtype.Int4                                `db:"duration_ms" json:"duration_ms"`
+	PausedMs        pgtype.Int4                                `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs pgtype.Int4                                `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses          []testkube.TestWorkflowPause               `db:"pauses" json:"pauses"`
+	Initialization  *testkube.TestWorkflowStepResult           `db:"initialization" json:"initialization"`
+	Steps           map[string]testkube.TestWorkflowStepResult `db:"steps" json:"steps"`
+	QueuedAt        pgtype.Timestamptz                         `db:"queued_at" json:"queued_at"`
+	StartedAt       pgtype.Timestamptz                         `db:"started_at" json:"started_at"`
+	FinishedAt      pgtype.Timestamptz                         `db:"finished_at" json:"finished_at"`
+	CreatedAt       pgtype.Timestamptz                         `db:"created_at" json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz                         `db:"updated_at" json:"updated_at"`
 }
 
 type TestWorkflowSignature struct {
@@ -128,4 +129,67 @@ type TestWorkflowSignature struct {
 	SigOrder    int32              `db:"sig_order" json:"sig_order"`
 	ID          pgtype.UUID        `db:"id" json:"id"`
 	ParentID    pgtype.UUID        `db:"parent_id" json:"parent_id"`
+}
+
+type VTestWorkflowExecutionDetail struct {
+	ID                          string                                                                   `db:"id" json:"id"`
+	GroupID                     pgtype.Text                                                              `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text                                                              `db:"runner_id" json:"runner_id"`
+	RunnerTarget                *testkube.ExecutionTarget                                                `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        *testkube.ExecutionTarget                                                `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string                                                                   `db:"name" json:"name"`
+	Namespace                   pgtype.Text                                                              `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4                                                              `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz                                                       `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz                                                       `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz                                                       `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text                                                              `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool                                                              `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        map[string]string                                                        `db:"tags" json:"tags"`
+	RunningContext              *testkube.TestWorkflowRunningContext                                     `db:"running_context" json:"running_context"`
+	ConfigParams                map[string]testkube.TestWorkflowExecutionConfigValue                     `db:"config_params" json:"config_params"`
+	Runtime                     *testkube.TestWorkflowExecutionRuntime                                   `db:"runtime" json:"runtime"`
+	SilentMode                  *testkube.SilentMode                                                     `db:"silent_mode" json:"silent_mode"`
+	CreatedAt                   pgtype.Timestamptz                                                       `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz                                                       `db:"updated_at" json:"updated_at"`
+	OrganizationID              string                                                                   `db:"organization_id" json:"organization_id"`
+	EnvironmentID               string                                                                   `db:"environment_id" json:"environment_id"`
+	Status                      pgtype.Text                                                              `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text                                                              `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz                                                       `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz                                                       `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz                                                       `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text                                                              `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text                                                              `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4                                                              `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4                                                              `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4                                                              `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []testkube.TestWorkflowPause                                             `db:"pauses" json:"pauses"`
+	Initialization              *testkube.TestWorkflowStepResult                                         `db:"initialization" json:"initialization"`
+	Steps                       map[string]testkube.TestWorkflowStepResult                               `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text                                                              `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text                                                              `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text                                                              `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              map[string]string                                                        `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         map[string]string                                                        `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz                                                       `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz                                                       `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                *testkube.TestWorkflowSpec                                               `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool                                                              `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              *testkube.TestWorkflowStatusSummary                                      `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text                                                              `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text                                                              `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text                                                              `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      map[string]string                                                        `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations map[string]string                                                        `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz                                                       `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz                                                       `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        *testkube.TestWorkflowSpec                                               `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool                                                              `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      *testkube.TestWorkflowStatusSummary                                      `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte                                                                   `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte                                                                   `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte                                                                   `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []testkube.TestWorkflowExecutionStepResourceAggregations                 `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }

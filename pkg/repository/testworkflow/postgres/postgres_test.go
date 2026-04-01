@@ -29,39 +29,39 @@ func (m *MockTestWorkflowExecutionQueriesInterface) WithTx(tx pgx.Tx) sqlc.TestW
 	return args.Get(0).(sqlc.TestWorkflowExecutionQueriesInterface)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecution(ctx context.Context, arg sqlc.GetTestWorkflowExecutionParams) (sqlc.GetTestWorkflowExecutionRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecution(ctx context.Context, arg sqlc.GetTestWorkflowExecutionParams) (sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.GetTestWorkflowExecutionRow), args.Error(1)
+	return args.Get(0).(sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams) (sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams) (sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow), args.Error(1)
+	return args.Get(0).(sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg sqlc.GetTestWorkflowExecutionWithRunnerParams) (sqlc.GetTestWorkflowExecutionWithRunnerRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg sqlc.GetTestWorkflowExecutionWithRunnerParams) (sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.GetTestWorkflowExecutionWithRunnerRow), args.Error(1)
+	return args.Get(0).(sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams) (sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow), args.Error(1)
+	return args.Get(0).(sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsParams) ([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, arg sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsParams) ([]sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow), args.Error(1)
+	return args.Get(0).([]sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetRunningTestWorkflowExecutions(ctx context.Context, arg sqlc.GetRunningTestWorkflowExecutionsParams) ([]sqlc.GetRunningTestWorkflowExecutionsRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetRunningTestWorkflowExecutions(ctx context.Context, arg sqlc.GetRunningTestWorkflowExecutionsParams) ([]sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetRunningTestWorkflowExecutionsRow), args.Error(1)
+	return args.Get(0).([]sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetFinishedTestWorkflowExecutions(ctx context.Context, arg sqlc.GetFinishedTestWorkflowExecutionsParams) ([]sqlc.GetFinishedTestWorkflowExecutionsRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetFinishedTestWorkflowExecutions(ctx context.Context, arg sqlc.GetFinishedTestWorkflowExecutionsParams) ([]sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetFinishedTestWorkflowExecutionsRow), args.Error(1)
+	return args.Get(0).([]sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsTotals(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsTotalsParams) ([]sqlc.GetTestWorkflowExecutionsTotalsRow, error) {
@@ -69,14 +69,14 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsTot
 	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsTotalsRow), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutions(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsParams) ([]sqlc.GetTestWorkflowExecutionsRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutions(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsParams) ([]sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsRow), args.Error(1)
+	return args.Get(0).([]sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsSummary(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsSummaryParams) ([]sqlc.GetTestWorkflowExecutionsSummaryRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsSummary(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsSummaryParams) ([]sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsSummaryRow), args.Error(1)
+	return args.Get(0).([]sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) CountTestWorkflowExecutions(ctx context.Context, arg sqlc.CountTestWorkflowExecutionsParams) (int64, error) {
@@ -203,9 +203,9 @@ func (m *MockTestWorkflowExecutionQueriesInterface) AssignTestWorkflowExecution(
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg sqlc.GetUnassignedTestWorkflowExecutionsParams) ([]sqlc.GetUnassignedTestWorkflowExecutionsRow, error) {
+func (m *MockTestWorkflowExecutionQueriesInterface) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg sqlc.GetUnassignedTestWorkflowExecutionsParams) ([]sqlc.VTestWorkflowExecutionDetail, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]sqlc.GetUnassignedTestWorkflowExecutionsRow), args.Error(1)
+	return args.Get(0).([]sqlc.VTestWorkflowExecutionDetail), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) AbortTestWorkflowExecutionIfQueued(ctx context.Context, arg sqlc.AbortTestWorkflowExecutionIfQueuedParams) (string, error) {
@@ -550,9 +550,8 @@ func createTestFilter() *MockFilter {
 	return filter
 }
 
-func createTestRow() sqlc.GetTestWorkflowExecutionRow {
-	tagsJSON, _ := json.Marshal(map[string]string{"env": "test"})
-	return sqlc.GetTestWorkflowExecutionRow{
+func createTestRow() sqlc.VTestWorkflowExecutionDetail {
+	return sqlc.VTestWorkflowExecutionDetail{
 		ID:                  "test-id",
 		GroupID:             pgtype.Text{String: "group-1", Valid: true},
 		RunnerID:            pgtype.Text{String: "runner-1", Valid: true},
@@ -562,10 +561,10 @@ func createTestRow() sqlc.GetTestWorkflowExecutionRow {
 		ScheduledAt:         pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		StatusAt:            pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		DisableWebhooks:     pgtype.Bool{Bool: false, Valid: true},
-		Tags:                tagsJSON,
-		RunningContext:      []byte(`{}`),
-		ConfigParams:        []byte(`{}`),
-		Runtime:             []byte(`{}`),
+		Tags:                map[string]string{"env": "test"},
+		RunningContext:      &testkube.TestWorkflowRunningContext{},
+		ConfigParams:        map[string]testkube.TestWorkflowExecutionConfigValue{},
+		Runtime:             &testkube.TestWorkflowExecutionRuntime{},
 		Status:              pgtype.Text{String: "passed", Valid: true},
 		PredictedStatus:     pgtype.Text{String: "passed", Valid: true},
 		QueuedAt:            pgtype.Timestamptz{Time: time.Now(), Valid: true},
@@ -576,19 +575,19 @@ func createTestRow() sqlc.GetTestWorkflowExecutionRow {
 		DurationMs:          pgtype.Int4{Int32: 300000, Valid: true},
 		PausedMs:            pgtype.Int4{Int32: 0, Valid: true},
 		TotalDurationMs:     pgtype.Int4{Int32: 300000, Valid: true},
-		Pauses:              []byte(`[]`),
-		Initialization:      []byte(`{}`),
-		Steps:               []byte(`{}`),
+		Pauses:              []testkube.TestWorkflowPause{},
+		Initialization:      &testkube.TestWorkflowStepResult{},
+		Steps:               map[string]testkube.TestWorkflowStepResult{},
 		WorkflowName:        pgtype.Text{String: "test-workflow", Valid: true},
 		WorkflowNamespace:   pgtype.Text{String: "default", Valid: true},
 		WorkflowDescription: pgtype.Text{String: "Test workflow", Valid: true},
-		WorkflowLabels:      []byte(`{}`),
-		WorkflowAnnotations: []byte(`{}`),
+		WorkflowLabels:      map[string]string{},
+		WorkflowAnnotations: map[string]string{},
 		WorkflowCreated:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		WorkflowUpdated:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
-		WorkflowSpec:        []byte(`{}`),
+		WorkflowSpec:        &testkube.TestWorkflowSpec{},
 		WorkflowReadOnly:    pgtype.Bool{Bool: false, Valid: true},
-		WorkflowStatus:      []byte(`{}`),
+		WorkflowStatus:      &testkube.TestWorkflowStatusSummary{},
 		SignaturesJson:      []byte(`[]`),
 		OutputsJson:         []byte(`[]`),
 		ReportsJson:         []byte(`[]`),
@@ -627,7 +626,7 @@ func TestPostgresRepository_Get(t *testing.T) {
 		ctx := context.Background()
 		executionID := "not-found"
 
-		mockQueries.On("GetTestWorkflowExecution", ctx, sqlc.GetTestWorkflowExecutionParams{ID: executionID, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(sqlc.GetTestWorkflowExecutionRow{}, pgx.ErrNoRows)
+		mockQueries.On("GetTestWorkflowExecution", ctx, sqlc.GetTestWorkflowExecutionParams{ID: executionID, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(sqlc.VTestWorkflowExecutionDetail{}, pgx.ErrNoRows)
 
 		_, err := repo.Get(ctx, executionID)
 
@@ -646,7 +645,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 		name := "test-execution"
 		workflowName := "test-workflow"
 
-		row := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow(createTestRow())
+		row := sqlc.VTestWorkflowExecutionDetail(createTestRow())
 		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 			Name:         name,
 			WorkflowName: workflowName,
@@ -672,7 +671,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 			WorkflowName: workflowName,
 		}
 
-		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow{}, pgx.ErrNoRows)
+		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(sqlc.VTestWorkflowExecutionDetail{}, pgx.ErrNoRows)
 
 		_, err := repo.GetByNameAndTestWorkflow(ctx, name, workflowName)
 
@@ -696,7 +695,7 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 			SortByNumber: sortByNumber,
 		}
 
-		row := sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow(createTestRow())
+		row := sqlc.VTestWorkflowExecutionDetail(createTestRow())
 		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, params).Return(row, nil)
 
 		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByNumber)
@@ -717,7 +716,7 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 			SortByNumber: sortByNumber,
 		}
 
-		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, params).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, params).Return(sqlc.VTestWorkflowExecutionDetail{}, pgx.ErrNoRows)
 
 		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName, testworkflow.LatestSortByNumber)
 
@@ -735,8 +734,8 @@ func TestPostgresRepository_GetLatestByTestWorkflows(t *testing.T) {
 		ctx := context.Background()
 		workflowNames := []string{"workflow1", "workflow2"}
 
-		rows := []sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow{
-			sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow(createTestRow()),
+		rows := []sqlc.VTestWorkflowExecutionDetail{
+			sqlc.VTestWorkflowExecutionDetail(createTestRow()),
 		}
 
 		mockQueries.On("GetLatestTestWorkflowExecutionsByTestWorkflows", ctx, sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsParams{WorkflowNames: workflowNames, OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(rows, nil)
@@ -767,8 +766,8 @@ func TestPostgresRepository_GetRunning(t *testing.T) {
 
 		row := createTestRow()
 		row.Status = pgtype.Text{String: "running", Valid: true}
-		rows := []sqlc.GetRunningTestWorkflowExecutionsRow{
-			sqlc.GetRunningTestWorkflowExecutionsRow(row),
+		rows := []sqlc.VTestWorkflowExecutionDetail{
+			sqlc.VTestWorkflowExecutionDetail(row),
 		}
 
 		mockQueries.On("GetRunningTestWorkflowExecutions", ctx, sqlc.GetRunningTestWorkflowExecutionsParams{OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(rows, nil)
@@ -786,7 +785,7 @@ func TestPostgresRepository_GetRunning(t *testing.T) {
 		repo := &PostgresRepository{queries: mockQueries, organizationID: "org-id", environmentID: "env-id"}
 		ctx := context.Background()
 
-		mockQueries.On("GetRunningTestWorkflowExecutions", ctx, sqlc.GetRunningTestWorkflowExecutionsParams{OrganizationID: "org-id", EnvironmentID: "env-id"}).Return([]sqlc.GetRunningTestWorkflowExecutionsRow{}, errors.New("database error"))
+		mockQueries.On("GetRunningTestWorkflowExecutions", ctx, sqlc.GetRunningTestWorkflowExecutionsParams{OrganizationID: "org-id", EnvironmentID: "env-id"}).Return([]sqlc.VTestWorkflowExecutionDetail{}, errors.New("database error"))
 
 		result, err := repo.GetRunning(ctx)
 
@@ -835,8 +834,8 @@ func TestPostgresRepository_GetExecutions(t *testing.T) {
 		ctx := context.Background()
 		filter := createTestFilter()
 
-		rows := []sqlc.GetTestWorkflowExecutionsRow{
-			sqlc.GetTestWorkflowExecutionsRow(createTestRow()),
+		rows := []sqlc.VTestWorkflowExecutionDetail{
+			sqlc.VTestWorkflowExecutionDetail(createTestRow()),
 		}
 
 		mockQueries.On("GetTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsParams")).Return(rows, nil)
@@ -1619,8 +1618,7 @@ func TestPostgresRepository_SilentModeGet(t *testing.T) {
 
 		ctx := context.Background()
 		row := createTestRow()
-		silentModeJSON, _ := json.Marshal(testkube.SilentMode{Health: true, Webhooks: true})
-		row.SilentMode = silentModeJSON
+		row.SilentMode = &testkube.SilentMode{Health: true, Webhooks: true}
 
 		mockQueries.On("GetTestWorkflowExecution", ctx, sqlc.GetTestWorkflowExecutionParams{ID: "test-id", OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(row, nil)
 
@@ -1664,11 +1662,10 @@ func TestPostgresRepository_GetFinished_SilentMode(t *testing.T) {
 
 		row := createTestRow()
 		row.Status = pgtype.Text{String: "passed", Valid: true}
-		silentModeJSON, _ := json.Marshal(testkube.SilentMode{Insights: true})
-		row.SilentMode = silentModeJSON
+		row.SilentMode = &testkube.SilentMode{Insights: true}
 
-		rows := []sqlc.GetFinishedTestWorkflowExecutionsRow{
-			sqlc.GetFinishedTestWorkflowExecutionsRow(row),
+		rows := []sqlc.VTestWorkflowExecutionDetail{
+			sqlc.VTestWorkflowExecutionDetail(row),
 		}
 
 		filter := createTestFilter()
@@ -1693,8 +1690,8 @@ func TestPostgresRepository_GetFinished_SilentMode(t *testing.T) {
 		row.Status = pgtype.Text{String: "passed", Valid: true}
 		row.SilentMode = nil
 
-		rows := []sqlc.GetFinishedTestWorkflowExecutionsRow{
-			sqlc.GetFinishedTestWorkflowExecutionsRow(row),
+		rows := []sqlc.VTestWorkflowExecutionDetail{
+			sqlc.VTestWorkflowExecutionDetail(row),
 		}
 
 		filter := createTestFilter()
