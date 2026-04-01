@@ -49,8 +49,10 @@ type workflowExecutionGetter interface {
 }
 
 var (
-	NL                     = []byte("\n")
-	watchWorkflowLogsSleep = time.Sleep
+	NL                      = []byte("\n")
+	watchWorkflowLogsSleep  = time.Sleep
+	workflowLogsIdleTimeout = time.Minute
+	errWorkflowLogsIdle     = errors.New("workflow log stream became idle")
 )
 
 // executionError represents an error during test workflow execution
@@ -784,31 +786,71 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string) (result *testkube.TestWorkflowResult, err error) {
 	steps := testworkflows.FlattenSignatures(signature)
 
-	var isLineBeginning = true
-	var isFirstLine = true
-	for l := range notifications {
-		if l.Output != nil {
-			isFirstLine = false
-			continue
+	var (
+		isLineBeginning = true
+		isFirstLine     = true
+		idleTimer       *time.Timer
+		idleTimeoutCh   <-chan time.Time
+	)
+
+	resetIdleTimer := func() {
+		if idleTimer == nil {
+			idleTimer = time.NewTimer(workflowLogsIdleTimeout)
+			idleTimeoutCh = idleTimer.C
+			return
 		}
-		if l.Result != nil {
-			if printResultDifference(result, l.Result, steps, prefix) {
-				isLineBeginning = true
+		if !idleTimer.Stop() {
+			select {
+			case <-idleTimer.C:
+			default:
 			}
-			result = l.Result
-			isFirstLine = false
-			continue
 		}
-
-		isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
-		if err != nil {
-			return result, err
-		}
-		isFirstLine = false
+		idleTimer.Reset(workflowLogsIdleTimeout)
 	}
+	stopIdleTimer := func() {
+		if idleTimer == nil {
+			return
+		}
+		if !idleTimer.Stop() {
+			select {
+			case <-idleTimer.C:
+			default:
+			}
+		}
+	}
+	defer stopIdleTimer()
 
-	ui.NL()
-	return result, nil
+	for {
+		select {
+		case <-idleTimeoutCh:
+			return result, errWorkflowLogsIdle
+		case l, ok := <-notifications:
+			if !ok {
+				ui.NL()
+				return result, nil
+			}
+			resetIdleTimer()
+
+			if l.Output != nil {
+				isFirstLine = false
+				continue
+			}
+			if l.Result != nil {
+				if printResultDifference(result, l.Result, steps, prefix) {
+					isLineBeginning = true
+				}
+				result = l.Result
+				isFirstLine = false
+				continue
+			}
+
+			isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
+			if err != nil {
+				return result, err
+			}
+			isFirstLine = false
+		}
+	}
 }
 
 // watchWorkflowLogsCommon retries fetching and printing logs until workflow finishes
@@ -860,7 +902,11 @@ func watchWorkflowLogsCommon(
 				return result, nil
 			}
 
-			spinner.Warning("Retrying logs")
+			if errors.Is(nErr, errWorkflowLogsIdle) {
+				spinner.Warning("Log stream idle, reconnecting")
+			} else {
+				spinner.Warning("Retrying logs")
+			}
 			ui.NL()
 			watchWorkflowLogsSleep(logsRetryDelay)
 			continue
