@@ -14,18 +14,18 @@ type TestWorkflowExecutionQueriesInterface interface {
 	WithTx(tx pgx.Tx) TestWorkflowExecutionQueriesInterface
 
 	// TestWorkflowExecution queries
-	GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkflowExecutionParams) (GetTestWorkflowExecutionRow, error)
-	GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg GetTestWorkflowExecutionByNameAndTestWorkflowParams) (GetTestWorkflowExecutionByNameAndTestWorkflowRow, error)
-	GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg GetLatestTestWorkflowExecutionByTestWorkflowParams) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error)
-	GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, arg GetLatestTestWorkflowExecutionsByTestWorkflowsParams) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error)
-	GetRunningTestWorkflowExecutions(ctx context.Context, arg GetRunningTestWorkflowExecutionsParams) ([]GetRunningTestWorkflowExecutionsRow, error)
+	GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkflowExecutionParams) (VTestWorkflowExecutionDetail, error)
+	GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg GetTestWorkflowExecutionByNameAndTestWorkflowParams) (VTestWorkflowExecutionDetail, error)
+	GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg GetLatestTestWorkflowExecutionByTestWorkflowParams) (VTestWorkflowExecutionDetail, error)
+	GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, arg GetLatestTestWorkflowExecutionsByTestWorkflowsParams) ([]VTestWorkflowExecutionDetail, error)
+	GetRunningTestWorkflowExecutions(ctx context.Context, arg GetRunningTestWorkflowExecutionsParams) ([]VTestWorkflowExecutionDetail, error)
 	GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTestWorkflowExecutionsTotalsParams) ([]GetTestWorkflowExecutionsTotalsRow, error)
-	GetTestWorkflowExecutions(ctx context.Context, arg GetTestWorkflowExecutionsParams) ([]GetTestWorkflowExecutionsRow, error)
-	GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetTestWorkflowExecutionsSummaryParams) ([]GetTestWorkflowExecutionsSummaryRow, error)
-	GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error)
-	GetUnassignedTestWorkflowExecutions(ctx context.Context, arg GetUnassignedTestWorkflowExecutionsParams) ([]GetUnassignedTestWorkflowExecutionsRow, error)
+	GetTestWorkflowExecutions(ctx context.Context, arg GetTestWorkflowExecutionsParams) ([]VTestWorkflowExecutionDetail, error)
+	GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetTestWorkflowExecutionsSummaryParams) ([]VTestWorkflowExecutionDetail, error)
+	GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]VTestWorkflowExecutionDetail, error)
+	GetUnassignedTestWorkflowExecutions(ctx context.Context, arg GetUnassignedTestWorkflowExecutionsParams) ([]VTestWorkflowExecutionDetail, error)
 	CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error)
-	GetTestWorkflowExecutionWithRunner(ctx context.Context, arg GetTestWorkflowExecutionWithRunnerParams) (GetTestWorkflowExecutionWithRunnerRow, error)
+	GetTestWorkflowExecutionWithRunner(ctx context.Context, arg GetTestWorkflowExecutionWithRunnerParams) (VTestWorkflowExecutionDetail, error)
 
 	// Insert operations
 	InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error
