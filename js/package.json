@@ -30,7 +30,7 @@
     "typescript": "6.0.2"
   },
   "optionalDependencies": {
-    "@esbuild/linux-x64": "0.27.7",
+    "@esbuild/linux-x64": "0.28.0",
     "@rollup/rollup-linux-x64-gnu": "4.60.1"
   },
   "packageManager": "npm@11.12.1",
