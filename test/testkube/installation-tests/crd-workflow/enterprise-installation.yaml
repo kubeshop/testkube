@@ -41,7 +41,7 @@ spec:
             name: testkube-agent-secrets
             key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
       - name: TESTKUBE_INIT_COMMAND
-        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m"
+        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m --helm-set testkube-cloud-api.additionalEnv.FEATURE_SOURCE_OF_TRUTH_ON_ENV_CREATE=false"
       shell: |
         helm version
         helm list -n testkube-enterprise-installation-test
