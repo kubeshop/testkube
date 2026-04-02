@@ -34,7 +34,7 @@ func (a PostgresExecutionController) StartExecution(ctx context.Context, executi
 	err = qtx.TransitionExecutionStatusAt(ctx, sqlc.TransitionExecutionStatusAtParams{
 		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID:  executionId,
-		FromStatuses: []string{"assigned", "scheduling"},
+		FromStatuses: []string{"assigned"},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to update execution status_at: %w", err)
@@ -43,7 +43,7 @@ func (a PostgresExecutionController) StartExecution(ctx context.Context, executi
 	err = qtx.TransitionExecutionResultStatus(ctx, sqlc.TransitionExecutionResultStatusParams{
 		ToStatus:     "starting",
 		ExecutionID:  executionId,
-		FromStatuses: []string{"assigned", "scheduling"},
+		FromStatuses: []string{"assigned"},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to update execution result status: %w", err)
@@ -65,7 +65,7 @@ func (a PostgresExecutionController) PauseExecution(ctx context.Context, executi
 	err = qtx.TransitionExecutionStatusAt(ctx, sqlc.TransitionExecutionStatusAtParams{
 		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID:  executionId,
-		FromStatuses: []string{"running", "resuming"},
+		FromStatuses: []string{"running"},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to update execution status_at: %w", err)
@@ -74,7 +74,7 @@ func (a PostgresExecutionController) PauseExecution(ctx context.Context, executi
 	err = qtx.TransitionExecutionResultStatus(ctx, sqlc.TransitionExecutionResultStatusParams{
 		ToStatus:     "pausing",
 		ExecutionID:  executionId,
-		FromStatuses: []string{"running", "resuming"},
+		FromStatuses: []string{"running"},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to update execution result status: %w", err)
