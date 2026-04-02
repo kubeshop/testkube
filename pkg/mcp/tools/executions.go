@@ -20,11 +20,13 @@ import (
 // When Tail, StartLine, and EndLine are all 0 the handler injects Tail=100
 // so agents never receive an unbounded log response.
 type ExecutionLogParams struct {
-	Tail      int    // Return last N lines (0 → defaulted to 100 by the handler when no other range is set)
-	StartLine int    // 1-based start line (0 = from beginning)
-	EndLine   int    // 1-based end line (0 = to end)
-	Grep      string // Filter lines containing this substring
-	Step      string // Filter to a specific workflow step by reference name
+	Tail        int    // Return last N lines (0 → defaulted to 100 by the handler when no other range is set)
+	StartLine   int    // 1-based start line (0 = from beginning)
+	EndLine     int    // 1-based end line (0 = to end)
+	Grep        string // Filter lines containing this substring
+	Step        string // Filter to a specific workflow step by reference name
+	WorkerRef   string // Parallel step reference; when set, logs are fetched from the worker artifact instead of the main log
+	WorkerIndex int    // 0-based worker index; only meaningful when WorkerRef is set (default 0)
 }
 
 type ExecutionLogger interface {
@@ -53,14 +55,21 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 		mcp.WithString("step",
 			mcp.Description("Filter to logs from a specific workflow step by reference name (e.g., 'run-tests', 'setup-env')."),
 		),
+		mcp.WithString("workerRef",
+			mcp.Description("Parallel step reference to fetch worker logs from (e.g., 'run-tests'). When set, returns logs from that parallel worker instead of the main execution log. Discover available refs via get_execution_info."),
+		),
+		mcp.WithString("workerIndex",
+			mcp.Description("0-based index of the parallel worker to fetch logs from (default: 0). Use with workerRef."),
+		),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		executionID := request.GetString("executionId", "")
 
 		params := ExecutionLogParams{
-			Grep: request.GetString("grep", ""),
-			Step: request.GetString("step", ""),
+			Grep:      request.GetString("grep", ""),
+			Step:      request.GetString("step", ""),
+			WorkerRef: request.GetString("workerRef", ""),
 		}
 		if tailStr := request.GetString("tail", ""); tailStr != "" {
 			if v, err := strconv.Atoi(tailStr); err == nil && v > 0 {
@@ -75,6 +84,11 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 		if s := request.GetString("endLine", ""); s != "" {
 			if v, err := strconv.Atoi(s); err == nil && v > 0 {
 				params.EndLine = v
+			}
+		}
+		if s := request.GetString("workerIndex", ""); s != "" {
+			if v, err := strconv.Atoi(s); err == nil && v >= 0 {
+				params.WorkerIndex = v
 			}
 		}
 		if params.StartLine > 0 && params.EndLine > 0 && params.StartLine > params.EndLine {

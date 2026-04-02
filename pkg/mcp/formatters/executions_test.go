@@ -262,6 +262,71 @@ func TestFormatExecutionInfo(t *testing.T) {
 	})
 }
 
+func TestFormatExecutionInfo_WithParallelWorkers(t *testing.T) {
+	// Output[] contains multiple entries per worker: one with the signature (no status),
+	// and later entries with status/description/logs as they update. The formatter must
+	// deduplicate by (Ref, Index), merging non-empty fields, and sort deterministically.
+	input := `{
+		"id": "exec-parallel-123",
+		"name": "parallel-workflow-1",
+		"workflow": {"name": "parallel-workflow"},
+		"result": {"status": "failed"},
+		"output": [
+			{"ref": "run-tests", "name": "parallel", "value": {"index": 0, "signature": [{"ref": "s1"}]}},
+			{"ref": "run-tests", "name": "parallel", "value": {"index": 0, "description": "Worker 1", "status": "passed", "logs": ".testkube/abc/logs/0.log"}},
+			{"ref": "run-tests", "name": "parallel", "value": {"index": 1, "description": "Worker 2", "status": "failed", "logs": ".testkube/abc/logs/1.log"}},
+			{"ref": "setup", "name": "pod", "value": {"nodeName": "node-1"}}
+		]
+	}`
+
+	result, err := FormatExecutionInfo(input)
+	require.NoError(t, err)
+
+	var output formattedExecutionInfo
+	err = json.Unmarshal([]byte(result), &output)
+	require.NoError(t, err)
+
+	require.Len(t, output.Workers, 2)
+
+	// Sorted by ref then index.
+	assert.Equal(t, "run-tests", output.Workers[0].Ref)
+	assert.Equal(t, 0, output.Workers[0].Index)
+	assert.Equal(t, "Worker 1", output.Workers[0].Description)
+	assert.Equal(t, "passed", output.Workers[0].Status)
+
+	assert.Equal(t, "run-tests", output.Workers[1].Ref)
+	assert.Equal(t, 1, output.Workers[1].Index)
+	assert.Equal(t, "Worker 2", output.Workers[1].Description)
+	assert.Equal(t, "failed", output.Workers[1].Status)
+
+	// Internal artifact paths must not be exposed.
+	assert.NotContains(t, result, ".testkube/abc/logs")
+	// Non-parallel output entries must be excluded.
+	assert.NotContains(t, result, "nodeName")
+}
+
+func TestFormatExecutionInfo_NoParallelWorkers(t *testing.T) {
+	input := `{
+		"id": "exec-simple-123",
+		"name": "simple-workflow-1",
+		"workflow": {"name": "simple-workflow"},
+		"result": {"status": "passed"},
+		"output": [
+			{"ref": "tktw-init", "name": "pod", "value": {"nodeName": "node-1"}}
+		]
+	}`
+
+	result, err := FormatExecutionInfo(input)
+	require.NoError(t, err)
+
+	var output formattedExecutionInfo
+	err = json.Unmarshal([]byte(result), &output)
+	require.NoError(t, err)
+
+	assert.Empty(t, output.Workers)
+	assert.NotContains(t, result, `"workers"`)
+}
+
 func TestFormatAbortExecution(t *testing.T) {
 	RunEmptyInputCases(t, FormatAbortExecution, "{}")
 

@@ -306,6 +306,10 @@ func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string, pa
 	if params.Step != "" {
 		queryParams["step"] = params.Step
 	}
+	if params.WorkerRef != "" {
+		queryParams["workerRef"] = params.WorkerRef
+		queryParams["workerIndex"] = strconv.Itoa(params.WorkerIndex)
+	}
 	return c.makeRequest(ctx, APIRequest{
 		Method:      "GET",
 		Path:        "/agent/test-workflow-executions/{executionId}/logs",

@@ -188,4 +188,72 @@ func TestFetchExecutionLogs_ToolHasExpectedParams(t *testing.T) {
 	assert.Contains(t, paramNames, "endLine")
 	assert.Contains(t, paramNames, "grep")
 	assert.Contains(t, paramNames, "step")
+	assert.Contains(t, paramNames, "workerRef")
+	assert.Contains(t, paramNames, "workerIndex")
+}
+
+func TestFetchExecutionLogs_WorkerRefAndIndex_ParsedCorrectly(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "worker logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"workerRef":   "run-tests",
+		"workerIndex": "2",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, 2, m.capturedParams.WorkerIndex)
+	// No other range params → default tail=100 still applies.
+	assert.Equal(t, 100, m.capturedParams.Tail)
+}
+
+func TestFetchExecutionLogs_WorkerRefOnly_DefaultsIndex0(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "worker logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"workerRef":   "run-tests",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, 0, m.capturedParams.WorkerIndex)
+}
+
+func TestFetchExecutionLogs_WorkerIndexWithoutRef_Parsed(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"workerIndex": "5",
+	})
+	require.NoError(t, err)
+	// WorkerRef is empty; WorkerIndex is parsed but the server ignores it without a ref.
+	assert.Equal(t, "", m.capturedParams.WorkerRef)
+	assert.Equal(t, 5, m.capturedParams.WorkerIndex)
+}
+
+func TestFetchExecutionLogs_WorkerWithGrep_Combined(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "filtered worker logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"workerRef":   "run-tests",
+		"workerIndex": "1",
+		"grep":        "ERROR",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, 1, m.capturedParams.WorkerIndex)
+	assert.Equal(t, "ERROR", m.capturedParams.Grep)
+	// grep set → no tail injection.
+	assert.Equal(t, 0, m.capturedParams.Tail)
+}
+
+func TestFetchExecutionLogs_InvalidWorkerIndex_FallsBackToZero(t *testing.T) {
+	m := &mockExecutionLogger{returnLogs: "logs"}
+	_, err := callFetchExecutionLogs(t, m, map[string]any{
+		"executionId": "abc123",
+		"workerRef":   "run-tests",
+		"workerIndex": "not-a-number",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	// Invalid index falls back to zero (zero value of int).
+	assert.Equal(t, 0, m.capturedParams.WorkerIndex)
 }
