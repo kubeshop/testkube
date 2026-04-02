@@ -9,11 +9,12 @@ import (
 )
 
 type ListWebhookOptions struct {
-	Labels     map[string]string
-	TextSearch string
-	Selector   string
-	Offset     uint32
-	Limit      uint32
+	Labels         map[string]string
+	TextSearch     string
+	Selector       string
+	Offset         uint32
+	Limit          uint32
+	TargetSelector map[string]string
 }
 
 type WebhooksClient interface {
@@ -24,12 +25,13 @@ var _ WebhooksClient = (*client)(nil)
 
 func (c *client) ListWebhooks(ctx context.Context, environmentId string, options ListWebhookOptions, namespace string) ([]testkube.Webhook, error) {
 	req := &cloud.ListWebhooksV2Request{
-		Offset:     options.Offset,
-		Limit:      options.Limit,
-		Labels:     options.Labels,
-		TextSearch: options.TextSearch,
-		Selector:   options.Selector,
-		Namespace:  namespace,
+		Offset:         options.Offset,
+		Limit:          options.Limit,
+		Labels:         options.Labels,
+		TextSearch:     options.TextSearch,
+		Selector:       options.Selector,
+		Namespace:      namespace,
+		TargetSelector: options.TargetSelector,
 	}
 
 	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ListWebhooksV2, req)
