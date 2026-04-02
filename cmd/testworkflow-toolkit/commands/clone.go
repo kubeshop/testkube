@@ -252,13 +252,19 @@ func performFullClone(uri, outputPath string, configArgs, authArgs []string, rev
 	ui.Debug("performing full checkout")
 
 	args := []interface{}{"clone"}
-	args = append(args, configArgs, authArgs, "--depth", "1", "--verbose")
-	if revision != "" {
-		args = append(args, "--branch", revision)
-	}
-	args = append(args, uri, outputPath)
+	// Always clone without checkout so we can resolve `revision` (branch, tag, or commit)
+	// using the same fetch+checkout logic as the sparse path.
+	args = append(args, configArgs, authArgs, "--depth", "1", "--no-checkout", "--verbose", uri, outputPath)
 
-	return RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", args...)
+	if err := RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", args...); err != nil {
+		return err
+	}
+
+	if err := checkoutRevision(outputPath, configArgs, authArgs, revision); err != nil {
+		return fmt.Errorf("checking out revision: %w", err)
+	}
+
+	return nil
 }
 
 // performSparseClone performs a sparse repository clone
