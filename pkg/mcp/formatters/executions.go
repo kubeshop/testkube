@@ -215,11 +215,15 @@ func FormatExecutionInfo(raw string) (string, error) {
 			if output.Name != "parallel" {
 				continue
 			}
-			idx, _ := output.Value["index"].(float64)
-			key := workerKey(output.Ref, int(idx))
+			rawIdx, ok := output.Value["index"].(float64)
+			if !ok {
+				continue
+			}
+			idx := int(rawIdx)
+			key := workerKey(output.Ref, idx)
 			w := workerMap[key]
 			w.Ref = output.Ref
-			w.Index = int(idx)
+			w.Index = idx
 			if desc, ok := output.Value["description"].(string); ok && desc != "" {
 				w.Description = desc
 			}
