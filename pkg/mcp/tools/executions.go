@@ -25,7 +25,7 @@ type ExecutionLogParams struct {
 	EndLine     int    // 1-based end line (0 = to end)
 	Grep        string // Filter lines containing this substring
 	Step        string // Filter to a specific workflow step by reference name
-	WorkerRef   string // Parallel step reference; when set, logs are fetched from the worker artifact instead of the main log
+	WorkerRef   string // Worker instance ref from the 'workers' array in get_execution_info; when set, logs are fetched from the worker artifact instead of the main log
 	WorkerIndex int    // 0-based worker index; only meaningful when WorkerRef is set (default 0)
 }
 

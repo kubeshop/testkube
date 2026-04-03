@@ -196,11 +196,11 @@ func TestFetchExecutionLogs_WorkerRefAndIndex_ParsedCorrectly(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "worker logs"}
 	_, err := callFetchExecutionLogs(t, m, map[string]any{
 		"executionId": "abc123",
-		"workerRef":   "run-tests",
+		"workerRef":   "r72qph9",
 		"workerIndex": "2",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, "r72qph9", m.capturedParams.WorkerRef)
 	assert.Equal(t, 2, m.capturedParams.WorkerIndex)
 	// No other range params → default tail=100 still applies.
 	assert.Equal(t, 100, m.capturedParams.Tail)
@@ -210,10 +210,10 @@ func TestFetchExecutionLogs_WorkerRefOnly_DefaultsIndex0(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "worker logs"}
 	_, err := callFetchExecutionLogs(t, m, map[string]any{
 		"executionId": "abc123",
-		"workerRef":   "run-tests",
+		"workerRef":   "r72qph9",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, "r72qph9", m.capturedParams.WorkerRef)
 	assert.Equal(t, 0, m.capturedParams.WorkerIndex)
 }
 
@@ -233,12 +233,12 @@ func TestFetchExecutionLogs_WorkerWithGrep_Combined(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "filtered worker logs"}
 	_, err := callFetchExecutionLogs(t, m, map[string]any{
 		"executionId": "abc123",
-		"workerRef":   "run-tests",
+		"workerRef":   "r72qph9",
 		"workerIndex": "1",
 		"grep":        "ERROR",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, "r72qph9", m.capturedParams.WorkerRef)
 	assert.Equal(t, 1, m.capturedParams.WorkerIndex)
 	assert.Equal(t, "ERROR", m.capturedParams.Grep)
 	// grep set → no tail injection.
@@ -249,11 +249,11 @@ func TestFetchExecutionLogs_InvalidWorkerIndex_FallsBackToZero(t *testing.T) {
 	m := &mockExecutionLogger{returnLogs: "logs"}
 	_, err := callFetchExecutionLogs(t, m, map[string]any{
 		"executionId": "abc123",
-		"workerRef":   "run-tests",
+		"workerRef":   "r72qph9",
 		"workerIndex": "not-a-number",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "run-tests", m.capturedParams.WorkerRef)
+	assert.Equal(t, "r72qph9", m.capturedParams.WorkerRef)
 	// Invalid index falls back to zero (zero value of int).
 	assert.Equal(t, 0, m.capturedParams.WorkerIndex)
 }
