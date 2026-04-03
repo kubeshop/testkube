@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows
     tool: junit
     artifacts: "true"
+    junit: "true"
     category: unit-component-testing
   annotations:
     testkube.io/icon: junit
@@ -39,6 +40,7 @@ metadata:
   labels:
     core-tests: expected-fail
     artifacts: "true"
+    junit: "true"
     category: unit-component-testing
   annotations:
     testkube.io/icon: junit
@@ -72,6 +74,7 @@ metadata:
   labels:
     core-tests: expected-fail
     artifacts: "true"
+    junit: "true"
     category: unit-component-testing
   annotations:
     testkube.io/icon: junit

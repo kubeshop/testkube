@@ -42,10 +42,27 @@ public class Tests
     }
 
     [Test]
+    [Ignore("Skipped")]
+    public void Test6()
+    {
+        System.Threading.Thread.Sleep(1000);
+        Assert.Pass();
+    }
+
+    [Test]
     public void TestA() {
         System.Threading.Thread.Sleep(2000);
         var variable1 = "A";
         var variable2 = "A";
+        Assert.That(variable1, Is.EqualTo(variable2));
+    }
+
+    [Test]
+    [Ignore("Work in progress")]
+    public void TestB() {
+        System.Threading.Thread.Sleep(500);
+        var variable1 = "B";
+        var variable2 = "B";
         Assert.That(variable1, Is.EqualTo(variable2));
     }
 

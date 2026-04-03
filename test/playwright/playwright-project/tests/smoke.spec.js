@@ -8,3 +8,7 @@ test("Smoke 1 - has title", async ({ page }) => {
 
   await expect(page).toHaveTitle(/Testkube/);
 });
+
+test.skip("Smoke 1-1 - full page validation", async ({ page }) => {
+
+});
