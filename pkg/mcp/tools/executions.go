@@ -56,7 +56,7 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			mcp.Description("Filter to logs from a specific workflow step by reference name (e.g., 'run-tests', 'setup-env')."),
 		),
 		mcp.WithString("workerRef",
-			mcp.Description("Parallel step reference to fetch worker logs from (e.g., 'run-tests'). When set, returns logs from that parallel worker instead of the main execution log. Discover available refs via get_execution_info."),
+			mcp.Description("Worker instance ref from the 'workers' array returned by get_execution_info (e.g., 'r72qph9'). ONLY use values from that array — do NOT use step refs from the main log metadata. When set, fetches that specific worker's logs instead of the main execution log."),
 		),
 		mcp.WithString("workerIndex",
 			mcp.Description("0-based index of the parallel worker to fetch logs from (default: 0). Use with workerRef."),
