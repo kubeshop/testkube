@@ -67,7 +67,7 @@ public class Tests
     }
 
     [Test]
-    public void TestB() {
+    public void TestC() {
         System.Threading.Thread.Sleep(500);
         var variable1 = "B";
         var variable2 = "B";
@@ -75,7 +75,7 @@ public class Tests
     }
 
     [Test]
-    public void TestC() {
+    public void TestD() {
         System.Threading.Thread.Sleep(1000);
         var variable1 = "C";
         var variable2 = "C";
