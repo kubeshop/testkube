@@ -535,8 +535,12 @@ func main() {
 			for k, v := range proContext.Agent.Labels {
 				agentLabels[k] = v
 			}
-			agentLabels["id"] = proContext.Agent.ID
-			agentLabels["name"] = proContext.Agent.Name
+			if proContext.Agent.ID != "" {
+				agentLabels["id"] = proContext.Agent.ID
+			}
+			if proContext.Agent.Name != "" {
+				agentLabels["name"] = proContext.Agent.Name
+			}
 			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, agentLabels, log.DefaultLogger)
 			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
 		}
