@@ -163,7 +163,7 @@ func (q *Queries) GetExecutionForceCancel(ctx context.Context, executionID strin
 const transitionExecutionResultStatus = `-- name: TransitionExecutionResultStatus :exec
 UPDATE test_workflow_results
 SET status = $1::text,
-    predicted_status = COALESCE($2::text, $1::text),
+    predicted_status = COALESCE($2, predicted_status),
     finished_at = $3
 WHERE execution_id = $4
   AND status = ANY($5::text[])
@@ -171,7 +171,7 @@ WHERE execution_id = $4
 
 type TransitionExecutionResultStatusParams struct {
 	ToStatus        string             `db:"to_status" json:"to_status"`
-	PredictedStatus string             `db:"predicted_status" json:"predicted_status"`
+	PredictedStatus pgtype.Text        `db:"predicted_status" json:"predicted_status"`
 	FinishedAt      pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
 	ExecutionID     string             `db:"execution_id" json:"execution_id"`
 	FromStatuses    []string           `db:"from_statuses" json:"from_statuses"`

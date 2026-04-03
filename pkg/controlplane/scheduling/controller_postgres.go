@@ -36,7 +36,7 @@ func (a PostgresExecutionController) StartExecution(ctx context.Context, executi
 		ExecutionID:  executionId,
 		FromStatuses: []string{"assigned"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update execution status_at: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func (a PostgresExecutionController) StartExecution(ctx context.Context, executi
 		ExecutionID:  executionId,
 		FromStatuses: []string{"assigned"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update execution result status: %w", err)
 	}
 
@@ -67,7 +67,7 @@ func (a PostgresExecutionController) PauseExecution(ctx context.Context, executi
 		ExecutionID:  executionId,
 		FromStatuses: []string{"running"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update execution status_at: %w", err)
 	}
 
@@ -76,7 +76,7 @@ func (a PostgresExecutionController) PauseExecution(ctx context.Context, executi
 		ExecutionID:  executionId,
 		FromStatuses: []string{"running"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update execution result status: %w", err)
 	}
 
@@ -98,7 +98,7 @@ func (a PostgresExecutionController) ResumeExecution(ctx context.Context, execut
 		ExecutionID:  executionId,
 		FromStatuses: []string{"paused"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update execution status_at: %w", err)
 	}
 
@@ -107,7 +107,7 @@ func (a PostgresExecutionController) ResumeExecution(ctx context.Context, execut
 		ExecutionID:  executionId,
 		FromStatuses: []string{"paused"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update execution result status: %w", err)
 	}
 
@@ -127,38 +127,39 @@ func (a PostgresExecutionController) AbortExecution(ctx context.Context, executi
 	err = qtx.TransitionExecutionStatusAt(ctx, sqlc.TransitionExecutionStatusAtParams{
 		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID:  executionId,
-		FromStatuses: []string{"running", "resuming"},
+		FromStatuses: []string{"starting", "scheduling", "running", "paused", "resuming"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update running execution status_at: %w", err)
 	}
 
 	err = qtx.TransitionExecutionResultStatus(ctx, sqlc.TransitionExecutionResultStatusParams{
 		ToStatus:        "stopping",
-		PredictedStatus: "aborted",
+		PredictedStatus: pgtype.Text{String: "aborted", Valid: true},
 		ExecutionID:     executionId,
-		FromStatuses:    []string{"running", "resuming"},
+		FromStatuses:    []string{"starting", "scheduling", "running", "paused", "resuming"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update running execution result status: %w", err)
 	}
 
 	err = qtx.TransitionExecutionStatusAt(ctx, sqlc.TransitionExecutionStatusAtParams{
 		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID:  executionId,
-		FromStatuses: []string{"queued"},
+		FromStatuses: []string{"queued", "assigned"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update queued execution status_at: %w", err)
 	}
 
 	err = qtx.TransitionExecutionResultStatus(ctx, sqlc.TransitionExecutionResultStatusParams{
-		ToStatus:     "aborted",
-		FinishedAt:   pgtype.Timestamptz{Time: now, Valid: true},
-		ExecutionID:  executionId,
-		FromStatuses: []string{"queued"},
+		ToStatus:        "aborted",
+		PredictedStatus: pgtype.Text{String: "aborted", Valid: true},
+		FinishedAt:      pgtype.Timestamptz{Time: now, Valid: true},
+		ExecutionID:     executionId,
+		FromStatuses:    []string{"queued", "assigned"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update queued execution result status: %w", err)
 	}
 
@@ -178,38 +179,39 @@ func (a PostgresExecutionController) CancelExecution(ctx context.Context, execut
 	err = qtx.TransitionExecutionStatusAt(ctx, sqlc.TransitionExecutionStatusAtParams{
 		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID:  executionId,
-		FromStatuses: []string{"running", "resuming"},
+		FromStatuses: []string{"starting", "scheduling", "running", "paused", "resuming"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update running execution status_at: %w", err)
 	}
 
 	err = qtx.TransitionExecutionResultStatus(ctx, sqlc.TransitionExecutionResultStatusParams{
 		ToStatus:        "stopping",
-		PredictedStatus: "canceled",
+		PredictedStatus: pgtype.Text{String: "canceled", Valid: true},
 		ExecutionID:     executionId,
-		FromStatuses:    []string{"running", "resuming"},
+		FromStatuses:    []string{"starting", "scheduling", "running", "paused", "resuming"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update running execution result status: %w", err)
 	}
 
 	err = qtx.TransitionExecutionStatusAt(ctx, sqlc.TransitionExecutionStatusAtParams{
 		StatusAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID:  executionId,
-		FromStatuses: []string{"queued"},
+		FromStatuses: []string{"queued", "assigned"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update queued execution status_at: %w", err)
 	}
 
 	err = qtx.TransitionExecutionResultStatus(ctx, sqlc.TransitionExecutionResultStatusParams{
-		ToStatus:     "canceled",
-		FinishedAt:   pgtype.Timestamptz{Time: now, Valid: true},
-		ExecutionID:  executionId,
-		FromStatuses: []string{"queued"},
+		ToStatus:        "canceled",
+		PredictedStatus: pgtype.Text{String: "canceled", Valid: true},
+		FinishedAt:      pgtype.Timestamptz{Time: now, Valid: true},
+		ExecutionID:     executionId,
+		FromStatuses:    []string{"queued", "assigned"},
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to update queued execution result status: %w", err)
 	}
 
@@ -254,7 +256,7 @@ func (a *PostgresExecutionController) ForceCancelExecution(ctx context.Context, 
 		FinishedAt:  pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID: executionId,
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to cancel execution steps: %w", err)
 	}
 
@@ -262,7 +264,7 @@ func (a *PostgresExecutionController) ForceCancelExecution(ctx context.Context, 
 		FinishedAt:  pgtype.Timestamptz{Time: now, Valid: true},
 		ExecutionID: executionId,
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to cancel execution initialization: %w", err)
 	}
 

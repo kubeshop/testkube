@@ -9,7 +9,7 @@ WHERE test_workflow_executions.id = @execution_id
 -- name: TransitionExecutionResultStatus :exec
 UPDATE test_workflow_results
 SET status = @to_status::text,
-    predicted_status = COALESCE(@predicted_status::text, @to_status::text),
+    predicted_status = COALESCE(sqlc.narg('predicted_status'), predicted_status),
     finished_at = @finished_at
 WHERE execution_id = @execution_id
   AND status = ANY(@from_statuses::text[]);
