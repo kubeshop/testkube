@@ -131,7 +131,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 }
 
 func (s *service) start(ctx context.Context, withRunnerRequests bool) (err error) {
-	return newAgentLoop(
+	return NewAgentLoop(
 		s.runner,
 		s.worker,
 		s.logger,
