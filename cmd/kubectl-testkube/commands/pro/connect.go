@@ -119,6 +119,7 @@ func NewConnectCmd() *cobra.Command {
 			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
 			newStatus = append(newStatus, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
 			newStatus = append(newStatus, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
+			newStatus = append(newStatus, []string{"PostgreSQL", "Stopped and scaled down (if installed), (not deleted)"})
 
 			ui.NL(2)
 
@@ -154,6 +155,11 @@ func NewConnectCmd() *cobra.Command {
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
 				spinner.Success()
 			}
+			if opts.PostgresReplicas == 0 {
+				spinner = ui.NewSpinner("Scaling down PostgreSQL")
+				common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
+				spinner.Success()
+			}
 
 			ui.H2("Testkube Pro is connected to your Testkube instance, saving local configuration")
 
@@ -183,6 +189,7 @@ func NewConnectCmd() *cobra.Command {
 
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
+	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 0, "PostgreSQL replicas")
 	return cmd
 }
 

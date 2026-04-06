@@ -29,8 +29,8 @@ import (
 
 type HelmOptions struct {
 	Name, Namespace, Chart, Values string
-	NoMinio, NoMongo, NoConfirm    bool
-	MinioReplicas, MongoReplicas   int
+	NoMinio, NoMongo, NoPostgres, NoConfirm bool
+	MinioReplicas, MongoReplicas, PostgresReplicas int
 	SetOptions, ArgOptions         map[string]string
 
 	// On-prem
@@ -125,9 +125,10 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 		return cliErr
 	}
 
-	// disable mongo and minio for cloud
+	// disable mongo, minio, and postgres for cloud
 	options.NoMinio = true
 	options.NoMongo = true
+	options.NoPostgres = true
 
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
@@ -401,6 +402,7 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
 		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
 		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
+		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
 	}
 
 	if options.Values != "" {
@@ -425,6 +427,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
+	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", false, "don't install PostgreSQL")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
@@ -757,6 +760,21 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 
 	// kubectl patch --namespace=$n deployment $1 -p "{\"spec\":{\"replicas\": $2}}"
 	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "deployment", deployment, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+func KubectlScaleStatefulSet(namespace, statefulset string, replicas int) (string, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+
+	// kubectl patch --namespace=$n statefulset $1 -p "{\"spec\":{\"replicas\": $2}}"
+	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "statefulset", statefulset, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
 	if err != nil {
 		return "", err
 	}

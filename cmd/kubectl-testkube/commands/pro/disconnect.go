@@ -96,6 +96,11 @@ func NewDisconnectCmd() *cobra.Command {
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
 				spinner.Success()
 			}
+			if opts.PostgresReplicas > 0 {
+				spinner = ui.NewSpinner("Scaling up PostgreSQL")
+				common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
+				spinner.Success()
+			}
 
 			spinner = ui.NewSpinner("Resetting Testkube config.json")
 			cfg.ContextType = config.ContextTypeKubeconfig
@@ -117,5 +122,6 @@ func NewDisconnectCmd() *cobra.Command {
 	common.PopulateHelmFlags(cmd, &opts)
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 1, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 1, "MongoDB replicas")
+	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 1, "PostgreSQL replicas")
 	return cmd
 }
