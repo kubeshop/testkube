@@ -116,7 +116,10 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			// detect which database is currently deployed so we only scale down the active one
-			dbType := common.DetectDatabaseType(opts.Namespace)
+			dbType, err := common.DetectDatabaseType(opts.Namespace)
+			if err != nil {
+				common.HandleCLIError(cliErr)
+			}
 			cfg.CloudContext.DatabaseType = dbType
 
 			// update summary

@@ -28,10 +28,10 @@ import (
 )
 
 type HelmOptions struct {
-	Name, Namespace, Chart, Values string
-	NoMinio, NoMongo, NoPostgres, NoConfirm bool
+	Name, Namespace, Chart, Values                 string
+	NoMinio, NoMongo, NoPostgres, NoConfirm        bool
 	MinioReplicas, MongoReplicas, PostgresReplicas int
-	SetOptions, ArgOptions         map[string]string
+	SetOptions, ArgOptions                         map[string]string
 
 	// On-prem
 	LicenseKey    string
@@ -800,14 +800,18 @@ func KubectlResourceExists(namespace, resourceType, name string) (bool, error) {
 
 // DetectDatabaseType inspects the given namespace and returns which database is deployed:
 // config.DatabaseTypeMongoDB, config.DatabaseTypePostgreSQL, or "" if neither is found.
-func DetectDatabaseType(namespace string) string {
-	if exists, _ := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); exists {
-		return config.DatabaseTypeMongoDB
+func DetectDatabaseType(namespace string) (string, error) {
+	if exists, err := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); err != nil {
+		return "", fmt.Errorf("checking MongoDB deployment: %w", err)
+	} else if exists {
+		return config.DatabaseTypeMongoDB, nil
 	}
-	if exists, _ := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql-primary"); exists {
-		return config.DatabaseTypePostgreSQL
+	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql-primary"); err != nil {
+		return "", fmt.Errorf("checking PostgreSQL statefulset: %w", err)
+	} else if exists {
+		return config.DatabaseTypePostgreSQL, nil
 	}
-	return ""
+	return "", nil
 }
 
 func KubectlLogs(namespace string, labels map[string]string) error {
