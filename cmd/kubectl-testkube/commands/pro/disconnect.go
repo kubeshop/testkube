@@ -113,11 +113,14 @@ func NewDisconnectCmd() *cobra.Command {
 					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
 					spinner.Success()
 				}
-				if opts.PostgresReplicas > 0 {
-					spinner = ui.NewSpinner("Scaling up PostgreSQL")
-					common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
+			if opts.PostgresReplicas > 0 {
+				spinner = ui.NewSpinner("Scaling up PostgreSQL")
+				if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to scale up PostgreSQL: %s", scaleErr))
+				} else {
 					spinner.Success()
 				}
+			}
 			}
 
 			spinner = ui.NewSpinner("Resetting Testkube config.json")
