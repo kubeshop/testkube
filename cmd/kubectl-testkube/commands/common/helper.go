@@ -357,9 +357,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
 	settings["testkube-api.cloud.key"] = options.Master.AgentToken
-	settings["testkube-api.cloud.uiURL"] = options.Master.URIs.Ui
-	settings["testkube-logs.pro.url"] = options.Master.URIs.Logs
-	settings["testkube-logs.pro.key"] = options.Master.AgentToken
+	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
 
 	if isMigration {
 		settings["testkube-api.cloud.migrate"] = "true"
@@ -367,12 +365,10 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	if options.Master.EnvId != "" {
 		settings["testkube-api.cloud.envId"] = options.Master.EnvId
-		settings["testkube-logs.pro.envId"] = options.Master.EnvId
 	}
 
 	if options.Master.OrgId != "" {
 		settings["testkube-api.cloud.orgId"] = options.Master.OrgId
-		settings["testkube-logs.pro.orgId"] = options.Master.OrgId
 	}
 
 	return appendHelmArgs(args, options, settings)
