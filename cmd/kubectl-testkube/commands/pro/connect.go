@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	docsUrl         = "https://docs.testkube.io/testkube-pro/intro"
-	tokenQueryParam = "token"
+	docsUrl = "https://docs.testkube.io/testkube-pro/intro"
 )
 
 func NewConnectCmd() *cobra.Command {
@@ -120,7 +119,6 @@ func NewConnectCmd() *cobra.Command {
 			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
 			newStatus = append(newStatus, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
 			newStatus = append(newStatus, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
-			newStatus = append(newStatus, []string{"Dashboard", "Stopped and scaled down, (not deleted)"})
 
 			ui.NL(2)
 
