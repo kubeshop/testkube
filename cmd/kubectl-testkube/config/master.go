@@ -8,7 +8,6 @@ type Master struct {
 	Insecure       bool   `json:"insecure,omitempty"`
 	UiUrlPrefix    string `json:"uiUrlPrefix,omitempty"`
 	AgentUrlPrefix string `json:"agentUrlPrefix,omitempty"`
-	LogsUrlPrefix  string `json:"logsUrlPrefix,omitempty"`
 	ApiUrlPrefix   string `json:"apiUrlPrefix,omitempty"`
 	RootDomain     string `json:"rootDomain,omitempty"`
 	CustomAuth     bool   `json:"customAuth,omitempty"`
@@ -23,7 +22,6 @@ type MasterURIs struct {
 	RootDomain string `json:"rootDomain,omitempty"`
 	Api        string `json:"api,omitempty"`
 	Agent      string `json:"agent,omitempty"`
-	Logs       string `json:"logs,omitempty"`
 	Ui         string `json:"ui,omitempty"`
 	Auth       string `json:"auth,omitempty"`
 }
@@ -37,12 +35,6 @@ func (m *MasterURIs) WithApiURI(uri string) *MasterURIs {
 // WithAgent sets whole agent URI
 func (m *MasterURIs) WithAgentURI(uri string) *MasterURIs {
 	m.Agent = uri
-	return m
-}
-
-// WithLogs sets whole logs URI
-func (m *MasterURIs) WithLogsURI(uri string) *MasterURIs {
-	m.Logs = uri
 	return m
 }
 

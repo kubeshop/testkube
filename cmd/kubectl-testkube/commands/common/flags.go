@@ -81,7 +81,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "should client connect in insecure mode (will use http instead of https)")
 	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", defaultApiPrefix, "usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.Master.LogsUrlPrefix, "logs-prefix", defaultLogsPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().BoolVar(&opts.Master.CustomAuth, "custom-auth", false, "usually don't need to be changed [required for custom cloud mode]")
@@ -92,7 +91,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().String("ui-uri-override", "", "ui uri override")
 	cmd.Flags().String("auth-uri-override", "", "auth uri override")
 	cmd.Flags().String("agent-uri-override", "", "agent uri override")
-	cmd.Flags().String("logs-uri-override", "", "logs service uri override")
 
 	agentURI := ""
 	if isDockerCmd {
@@ -100,7 +98,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	}
 
 	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", agentURI, "Testkube Pro agent URI [required for centralized mode]")
-	cmd.Flags().StringVar(&opts.Master.URIs.Logs, "logs-uri", "", "Testkube Pro logs URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Pro agent key [required for centralized mode]")
 	neededForLogin := ""
 	if isDockerCmd {
@@ -168,10 +165,6 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		opts.Master.UiUrlPrefix = cmd.Flag("ui-prefix").Value.String()
 	}
 
-	if cmd.Flag("logs-prefix") != nil && cmd.Flags().Changed("logs-prefix") {
-		opts.Master.LogsUrlPrefix = cmd.Flag("logs-prefix").Value.String()
-	}
-
 	if cmd.Flags().Changed("custom-auth") {
 		opts.Master.CustomAuth = cmd.Flag("custom-auth").Value.String() == "true"
 	}
@@ -179,19 +172,13 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 	uris := NewMasterUris(opts.Master.ApiUrlPrefix,
 		opts.Master.UiUrlPrefix,
 		opts.Master.AgentUrlPrefix,
-		opts.Master.LogsUrlPrefix,
 		opts.Master.URIs.Agent,
-		opts.Master.URIs.Logs,
 		opts.Master.RootDomain,
 		opts.Master.Insecure)
 
 	// override whole URIs usually composed from prefix - host parts
 	if cmd.Flag("agent-uri-override") != nil && cmd.Flags().Changed("agent-uri-override") {
 		uris.WithAgentURI(cmd.Flag("agent-uri-override").Value.String())
-	}
-
-	if cmd.Flag("logs-uri-override") != nil && cmd.Flags().Changed("logs-uri-override") {
-		uris.WithLogsURI(cmd.Flag("logs-uri-override").Value.String())
 	}
 
 	if cmd.Flag("api-uri-override") != nil && cmd.Flags().Changed("api-uri-override") {
