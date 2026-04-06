@@ -484,8 +484,7 @@ func TestSetupCredentialStore(t *testing.T) {
 			User:   url.UserPassword("myuser", "mytoken"),
 		}
 
-		cleanup, err := setupCredentialStore(uri, &CloneOptions{})
-		require.NoError(t, err)
+		cleanup := setupCredentialStore(uri)
 		defer cleanup()
 
 		// Verify git config was created with credential helper
@@ -504,11 +503,10 @@ func TestSetupCredentialStore(t *testing.T) {
 			User:   url.User("git"),
 		}
 
-		cleanup, err := setupCredentialStore(uri, &CloneOptions{})
-		require.NoError(t, err)
+		cleanup := setupCredentialStore(uri)
 		defer cleanup()
 
-		_, err = os.Stat(filepath.Join(tmpDir, ".gitconfig"))
+		_, err := os.Stat(filepath.Join(tmpDir, ".gitconfig"))
 		assert.True(t, os.IsNotExist(err), "git config should not be created for SSH")
 	})
 
@@ -521,11 +519,10 @@ func TestSetupCredentialStore(t *testing.T) {
 			Host:   "gitlab.com",
 		}
 
-		cleanup, err := setupCredentialStore(uri, &CloneOptions{})
-		require.NoError(t, err)
+		cleanup := setupCredentialStore(uri)
 		defer cleanup()
 
-		_, err = os.Stat(filepath.Join(tmpDir, ".gitconfig"))
+		_, err := os.Stat(filepath.Join(tmpDir, ".gitconfig"))
 		assert.True(t, os.IsNotExist(err), "git config should not be created without credentials")
 	})
 }
