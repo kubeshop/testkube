@@ -21,6 +21,8 @@ const (
 	TKErrMissingDependencyHelm ErrorCode = "TKERR-1101"
 	// TKErrMissingDependencyKubectl is returned when kubectl is not found in $PATH.
 	TKErrMissingDependencyKubectl ErrorCode = "TKERR-1102"
+	// TKErrMissingDependencyDatabase is returned when database can't be detected.
+	TKErrMissingDependencyDatabase ErrorCode = "TKERR-1103"
 
 	// TKERR-12xx errors are related to configuration issues.
 

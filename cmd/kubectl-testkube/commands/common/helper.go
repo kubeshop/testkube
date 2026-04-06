@@ -800,14 +800,24 @@ func KubectlResourceExists(namespace, resourceType, name string) (bool, error) {
 
 // DetectDatabaseType inspects the given namespace and returns which database is deployed:
 // config.DatabaseTypeMongoDB, config.DatabaseTypePostgreSQL, or "" if neither is found.
-func DetectDatabaseType(namespace string) (string, error) {
+func DetectDatabaseType(namespace string) (string, *CLIError) {
 	if exists, err := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); err != nil {
-		return "", fmt.Errorf("checking MongoDB deployment: %w", err)
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking deployment: MongoDB",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
 	} else if exists {
 		return config.DatabaseTypeMongoDB, nil
 	}
 	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql-primary"); err != nil {
-		return "", fmt.Errorf("checking PostgreSQL statefulset: %w", err)
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking statefulset: PostgeSQL",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
 	} else if exists {
 		return config.DatabaseTypePostgreSQL, nil
 	}

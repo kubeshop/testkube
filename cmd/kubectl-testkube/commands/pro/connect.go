@@ -116,7 +116,7 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			// detect which database is currently deployed so we only scale down the active one
-			dbType, err := common.DetectDatabaseType(opts.Namespace)
+			dbType, cliErr := common.DetectDatabaseType(opts.Namespace)
 			if err != nil {
 				common.HandleCLIError(cliErr)
 			}
