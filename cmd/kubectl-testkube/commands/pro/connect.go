@@ -115,11 +115,19 @@ func NewConnectCmd() *cobra.Command {
 				ui.Failf("You need pass valid organization id to connect to Pro")
 			}
 
+			// detect which database is currently deployed so we only scale down the active one
+			dbType := common.DetectDatabaseType(opts.Namespace)
+			cfg.CloudContext.DatabaseType = dbType
+
 			// update summary
 			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
 			newStatus = append(newStatus, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
-			newStatus = append(newStatus, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
-			newStatus = append(newStatus, []string{"PostgreSQL", "Stopped and scaled down (if installed), (not deleted)"})
+			switch dbType {
+			case config.DatabaseTypeMongoDB:
+				newStatus = append(newStatus, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
+			case config.DatabaseTypePostgreSQL:
+				newStatus = append(newStatus, []string{"PostgreSQL", "Stopped and scaled down, (not deleted)"})
+			}
 
 			ui.NL(2)
 
@@ -144,21 +152,25 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.NL()
 
-			// let's scale down deployment of mongo
-			if opts.MongoReplicas == 0 {
-				spinner = ui.NewSpinner("Scaling down MongoDB")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
-				spinner.Success()
-			}
 			if opts.MinioReplicas == 0 {
 				spinner = ui.NewSpinner("Scaling down MinIO")
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
 				spinner.Success()
 			}
-			if opts.PostgresReplicas == 0 {
-				spinner = ui.NewSpinner("Scaling down PostgreSQL")
-				common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
-				spinner.Success()
+			// scale down only the database that was originally deployed
+			switch dbType {
+			case config.DatabaseTypeMongoDB:
+				if opts.MongoReplicas == 0 {
+					spinner = ui.NewSpinner("Scaling down MongoDB")
+					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
+					spinner.Success()
+				}
+			case config.DatabaseTypePostgreSQL:
+				if opts.PostgresReplicas == 0 {
+					spinner = ui.NewSpinner("Scaling down PostgreSQL")
+					common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
+					spinner.Success()
+				}
 			}
 
 			ui.H2("Testkube Pro is connected to your Testkube instance, saving local configuration")

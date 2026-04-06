@@ -11,6 +11,11 @@ const (
 
 	CallbackPort            = 8090
 	AlternativeCallbackPort = 38090
+
+	// DatabaseTypeMongoDB is the identifier for MongoDB as the active database.
+	DatabaseTypeMongoDB = "mongodb"
+	// DatabaseTypePostgreSQL is the identifier for PostgreSQL as the active database.
+	DatabaseTypePostgreSQL = "postgresql"
 )
 
 type CloudContext struct {
@@ -30,6 +35,9 @@ type CloudContext struct {
 	DockerContainerName string `json:"dockerContainerName,omitempty"`
 	CustomAuth          bool   `json:"customConnector,omitempty"`
 	CallbackPort        int    `json:"callbackPort,omitempty"`
+	// DatabaseType records which database (mongodb or postgresql) was active before
+	// connecting to Pro, so it can be restored on disconnect.
+	DatabaseType string `json:"databaseType,omitempty"`
 }
 
 type Data struct {

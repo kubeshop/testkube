@@ -782,6 +782,34 @@ func KubectlScaleStatefulSet(namespace, statefulset string, replicas int) (strin
 	return strings.TrimSpace(string(out)), nil
 }
 
+// KubectlResourceExists checks whether a Kubernetes resource of the given type and name exists
+// in the specified namespace. It returns true when the resource is found.
+func KubectlResourceExists(namespace, resourceType, name string) (bool, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return false, cliErr
+	}
+
+	out, err := process.Execute(kubectl, "get", resourceType, name, "--namespace", namespace, "--ignore-not-found")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(string(out)) != "", nil
+}
+
+// DetectDatabaseType inspects the given namespace and returns which database is deployed:
+// config.DatabaseTypeMongoDB, config.DatabaseTypePostgreSQL, or "" if neither is found.
+func DetectDatabaseType(namespace string) string {
+	if exists, _ := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); exists {
+		return config.DatabaseTypeMongoDB
+	}
+	if exists, _ := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql-primary"); exists {
+		return config.DatabaseTypePostgreSQL
+	}
+	return ""
+}
+
 func KubectlLogs(namespace string, labels map[string]string) error {
 	kubectl, err := lookupKubectlPath()
 	if err != nil {

@@ -85,21 +85,39 @@ func NewDisconnectCmd() *cobra.Command {
 
 			spinner.Success()
 
-			// let's scale down deployment of mongo
-			if opts.MongoReplicas > 0 {
-				spinner = ui.NewSpinner("Scaling up MongoDB")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
-				spinner.Success()
-			}
+			// restore the database that was originally deployed before connecting to Pro
+			dbType := cfg.CloudContext.DatabaseType
 			if opts.MinioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
 				spinner.Success()
 			}
-			if opts.PostgresReplicas > 0 {
-				spinner = ui.NewSpinner("Scaling up PostgreSQL")
-				common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
-				spinner.Success()
+			switch dbType {
+			case config.DatabaseTypeMongoDB:
+				if opts.MongoReplicas > 0 {
+					spinner = ui.NewSpinner("Scaling up MongoDB")
+					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
+					spinner.Success()
+				}
+			case config.DatabaseTypePostgreSQL:
+				if opts.PostgresReplicas > 0 {
+					spinner = ui.NewSpinner("Scaling up PostgreSQL")
+					common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
+					spinner.Success()
+				}
+			default:
+				// no database type recorded – fall back to attempting both so that clusters
+				// connected before this feature was introduced are handled gracefully
+				if opts.MongoReplicas > 0 {
+					spinner = ui.NewSpinner("Scaling up MongoDB")
+					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
+					spinner.Success()
+				}
+				if opts.PostgresReplicas > 0 {
+					spinner = ui.NewSpinner("Scaling up PostgreSQL")
+					common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
+					spinner.Success()
+				}
 			}
 
 			spinner = ui.NewSpinner("Resetting Testkube config.json")
