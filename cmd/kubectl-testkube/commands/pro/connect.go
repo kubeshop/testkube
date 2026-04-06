@@ -57,7 +57,7 @@ func NewConnectCmd() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 
-			// TODO: implement context info
+			// TODO: implement context info.
 			ui.H1("Current status of your Testkube instance")
 			ui.Properties([][]string{
 				{"Context", apiContext},
