@@ -117,7 +117,7 @@ func TestSetupAuthentication(t *testing.T) {
 			},
 			inputURL:     "https://github.com/kubeshop/testkube.git",
 			expectedUser: "user",
-			expectedArgs: []string{"-c", "http.extraHeader='Authorization: Bearer token'"},
+			expectedArgs: []string{"-c", "http.extraHeader=Authorization: Bearer token"},
 		},
 		{
 			name: "header auth without token",
@@ -470,4 +470,62 @@ func TestIsCommitHash(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestSetupCredentialStore(t *testing.T) {
+	t.Run("https with username and token creates credential file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		t.Setenv("HOME", tmpDir)
+
+		uri := &url.URL{
+			Scheme: "https",
+			Host:   "gitlab.com",
+			Path:   "/group/repo.git",
+			User:   url.UserPassword("myuser", "mytoken"),
+		}
+
+		cleanup, err := setupCredentialStore(uri, &CloneOptions{})
+		require.NoError(t, err)
+		defer cleanup()
+
+		// Verify git config was created with credential helper
+		gitconfig, err := os.ReadFile(filepath.Join(tmpDir, ".gitconfig"))
+		require.NoError(t, err)
+		assert.Contains(t, string(gitconfig), "store --file")
+	})
+
+	t.Run("ssh scheme does not create credential file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		t.Setenv("HOME", tmpDir)
+
+		uri := &url.URL{
+			Scheme: "ssh",
+			Host:   "gitlab.com",
+			User:   url.User("git"),
+		}
+
+		cleanup, err := setupCredentialStore(uri, &CloneOptions{})
+		require.NoError(t, err)
+		defer cleanup()
+
+		_, err = os.Stat(filepath.Join(tmpDir, ".gitconfig"))
+		assert.True(t, os.IsNotExist(err), "git config should not be created for SSH")
+	})
+
+	t.Run("no credentials does not create credential file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		t.Setenv("HOME", tmpDir)
+
+		uri := &url.URL{
+			Scheme: "https",
+			Host:   "gitlab.com",
+		}
+
+		cleanup, err := setupCredentialStore(uri, &CloneOptions{})
+		require.NoError(t, err)
+		defer cleanup()
+
+		_, err = os.Stat(filepath.Join(tmpDir, ".gitconfig"))
+		assert.True(t, os.IsNotExist(err), "git config should not be created without credentials")
+	})
 }

@@ -90,6 +90,13 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 		return fmt.Errorf("setting up authentication: %w", err)
 	}
 
+	// Setup credential store for reliable auth across redirects
+	cleanupCreds, err := setupCredentialStore(uri, opts)
+	if err != nil {
+		return fmt.Errorf("setting up credential store: %w", err)
+	}
+	defer cleanupCreds()
+
 	// Setup SSH if provided
 	cleanupSSH, err := setupSSHKey(opts.SSHKey)
 	if err != nil {
@@ -160,7 +167,7 @@ func setupAuthentication(ctx context.Context, uri *url.URL, opts *CloneOptions) 
 	case "header":
 		ui.Debug("auth type: header")
 		if opts.Token != "" {
-			authArgs = append(authArgs, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", opts.Token))
+			authArgs = append(authArgs, "-c", fmt.Sprintf("http.extraHeader=Authorization: Bearer %s", opts.Token))
 		}
 		if opts.Username != "" {
 			uri.User = url.User(opts.Username)
@@ -219,6 +226,50 @@ func setupSSHKey(sshKey string) (func(), error) {
 	os.Setenv("GIT_SSH_COMMAND", sshCmd)
 
 	return func() { _ = os.Remove(sshKeyPath) }, nil
+}
+
+// setupCredentialStore configures a git credential store file so that credentials
+// are available even when Git strips them from the URL (e.g., after HTTP redirects).
+// Returns a cleanup function to remove the credentials file.
+func setupCredentialStore(uri *url.URL, opts *CloneOptions) (func(), error) {
+	if uri.Scheme != "https" && uri.Scheme != "http" {
+		return func() {}, nil
+	}
+
+	// Use credentials from the URI (already set by setupAuthentication)
+	if uri.User == nil {
+		return func() {}, nil
+	}
+
+	// Build the credential URL: scheme://user:token@host
+	credURL := &url.URL{
+		Scheme: uri.Scheme,
+		Host:   uri.Host,
+		User:   uri.User,
+	}
+
+	credContent := credURL.String() + "\n"
+
+	// Write the credentials file
+	credFile, err := os.CreateTemp(constants.DefaultTmpDirPath, "git-credentials-*")
+	if err != nil {
+		return nil, fmt.Errorf("creating credential store file: %w", err)
+	}
+	credPath := credFile.Name()
+	credFile.Close()
+
+	if err := os.WriteFile(credPath, []byte(credContent), 0400); err != nil {
+		_ = os.Remove(credPath)
+		return nil, fmt.Errorf("writing credential store: %w", err)
+	}
+
+	// Configure git to use the credential store
+	if err := Run("git", "config", "--global", "credential.helper", fmt.Sprintf("store --file %s", credPath)); err != nil {
+		_ = os.Remove(credPath)
+		return nil, fmt.Errorf("configuring credential helper: %w", err)
+	}
+
+	return func() { _ = os.Remove(credPath) }, nil
 }
 
 // cleanPaths prepares paths for sparse checkout
