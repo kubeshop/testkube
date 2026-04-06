@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -116,10 +115,10 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			// detect which database is currently deployed so we only scale down the active one
-				dbType, cliErr := common.DetectDatabaseType(opts.Namespace)
-				if cliErr != nil {
-					common.HandleCLIError(cliErr)
-				}
+			dbType, cliErr := common.DetectDatabaseType(opts.Namespace)
+			if cliErr != nil {
+				common.HandleCLIError(cliErr)
+			}
 			cfg.CloudContext.DatabaseType = dbType
 
 			// update summary
