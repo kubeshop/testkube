@@ -278,7 +278,13 @@ func setupCredentialStore(uri *url.URL) func() {
 		return noop
 	}
 
-	return func() { _ = os.Remove(credPath) }
+	return func() {
+		if err := Run("git", "config", "--global", "--unset", "credential.helper"); err != nil {
+	        fmt.Printf("warn: could not unset credential helper: %s\n", err)
+	    }
+		
+		_ = os.Remove(credPath) 
+	}
 }
 
 // cleanPaths prepares paths for sparse checkout
