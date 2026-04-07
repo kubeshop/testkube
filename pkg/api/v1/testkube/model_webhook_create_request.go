@@ -41,4 +41,6 @@ type WebhookCreateRequest struct {
 	Parameters         []WebhookParameterSchema      `json:"parameters,omitempty"`
 	WebhookTemplateRef *WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
 	Sync               *Syncable                     `json:"sync,omitempty"`
+	// Target helps decide on which agent the webhook is executed.
+	Target *ExecutionTarget `json:"target,omitempty"`
 }

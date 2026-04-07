@@ -531,7 +531,17 @@ func main() {
 	// Initialize event handlers
 	if !cfg.DisableWebhooks {
 		if (cfg.WebhookControlPlane || shouldUseCloudWebhooks(proContext)) && !cfg.EnableCloudWebhooks {
-			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, log.DefaultLogger)
+			agentLabels := make(map[string]string, len(proContext.Agent.Labels)+2)
+			for k, v := range proContext.Agent.Labels {
+				agentLabels[k] = v
+			}
+			if proContext.Agent.ID != "" {
+				agentLabels["id"] = proContext.Agent.ID
+			}
+			if proContext.Agent.Name != "" {
+				agentLabels["name"] = proContext.Agent.Name
+			}
+			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, agentLabels, log.DefaultLogger)
 			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
 		}
 		log.DefaultLogger.Infow("registering webhook loader", "envID", proContext.EnvID, "orgID", proContext.OrgID)

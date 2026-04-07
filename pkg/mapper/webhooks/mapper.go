@@ -6,6 +6,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
@@ -38,6 +39,7 @@ func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 		Config:                   common.MapMap(item.Spec.Config, MapConfigValueCRDToAPI),
 		Parameters:               common.MapSlice(item.Spec.Parameters, MapParameterSchemaCRDToAPI),
 		WebhookTemplateRef:       common.MapPtr(item.Spec.WebhookTemplateRef, MapTemplateRefCRDToAPI),
+		Target:                   common.MapPtr(item.Spec.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -121,6 +123,7 @@ func MapAPIToCRD(webhook testkube.Webhook) executorv1.Webhook {
 			Config:                   common.MapMap(webhook.Config, MapConfigValueAPIToCRD),
 			Parameters:               common.MapSlice(webhook.Parameters, MapParameterSchemaAPIToCRD),
 			WebhookTemplateRef:       common.MapPtr(webhook.WebhookTemplateRef, MapTemplateRefAPIToCRD),
+			Target:                   common.MapPtr(webhook.Target, commonmapper.MapTargetApiToKube),
 		},
 	}
 }
@@ -145,6 +148,7 @@ func MapAPICreateRequestToCRD(webhook testkube.WebhookCreateRequest) executorv1.
 			Config:                   common.MapMap(webhook.Config, MapConfigValueAPIToCRD),
 			Parameters:               common.MapSlice(webhook.Parameters, MapParameterSchemaAPIToCRD),
 			WebhookTemplateRef:       common.MapPtr(webhook.WebhookTemplateRef, MapTemplateRefAPIToCRD),
+			Target:                   common.MapPtr(webhook.Target, commonmapper.MapTargetApiToKube),
 		},
 	}
 }
@@ -275,6 +279,10 @@ func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.
 		webhook.Spec.WebhookTemplateRef = common.MapPtr(*request.WebhookTemplateRef, MapTemplateRefAPIToCRD)
 	}
 
+	if request.Target != nil {
+		webhook.Spec.Target = common.MapPtr(*request.Target, commonmapper.MapTargetApiToKube)
+	}
+
 	return webhook
 }
 
@@ -328,6 +336,7 @@ func MapSpecToUpdate(webhook *executorv1.Webhook) (request testkube.WebhookUpdat
 	request.Config = common.Ptr(common.MapMap(webhook.Spec.Config, MapConfigValueCRDToAPI))
 	request.Parameters = common.Ptr(common.MapSlice(webhook.Spec.Parameters, MapParameterSchemaCRDToAPI))
 	request.WebhookTemplateRef = common.Ptr(common.MapPtr(webhook.Spec.WebhookTemplateRef, MapTemplateRefCRDToAPI))
+	request.Target = common.Ptr(common.MapPtr(webhook.Spec.Target, commonmapper.MapTargetKubeToAPI))
 
 	return request
 }
