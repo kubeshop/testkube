@@ -46,11 +46,12 @@ func testGetByNameAndTestWorkflow(t *testing.T, repo testworkflow.Repository) {
 	err := repo.Insert(ctx, execution)
 	require.NoError(t, err)
 
-	got, err := repo.Get(ctx, execution.Id)
+	got, err := repo.GetByNameAndTestWorkflow(ctx, execution.TestWorkflowExecutionName, execution.Workflow.Name)
 	require.NoError(t, err)
 
 	assert.Equal(t, execution.Id, got.Id)
-	assert.Equal(t, "byname-test", got.Name)
+	assert.Equal(t, execution.TestWorkflowExecutionName, got.TestWorkflowExecutionName)
+	assert.Equal(t, execution.Workflow.Name, got.Workflow.Name)
 }
 
 func testGetWithRunner(t *testing.T, repo testworkflow.Repository) {
