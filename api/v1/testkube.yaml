@@ -3205,6 +3205,35 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /export:
+    get:
+      tags:
+        - api
+      summary: "Export execution data"
+      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive"
+      operationId: exportExecutions
+      responses:
+        200:
+          description: "successful operation"
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="testkube-export.tar.gz"'
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: "problem with exporting execution data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-sources:
     get:
       tags:
