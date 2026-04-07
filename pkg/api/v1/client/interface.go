@@ -130,6 +130,7 @@ type UpdateTestTriggerOptions testkube.TestTriggerUpsertRequest
 
 // FilterTestWorkflowExecutionOptions contains filter test workflow execution options
 type FilterTestWorkflowExecutionOptions struct {
+	Page        int
 	Selector    string
 	TagSelector string
 	ActorName   string

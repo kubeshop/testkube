@@ -19,6 +19,7 @@ const (
 
 func NewConnectCmd() *cobra.Command {
 	var opts = common.HelmOptions{}
+	var skipExport bool
 
 	cmd := &cobra.Command{
 		Use:     "connect",
@@ -144,6 +145,22 @@ func NewConnectCmd() *cobra.Command {
 				return
 			}
 
+			// Export execution data before switching to agent mode
+			if !skipExport {
+				ui.H2("Exporting execution data before connecting")
+				exportPath, exportErr := ExportData(client, ".")
+				if exportErr != nil {
+					ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
+					ui.Warn("Your data will remain in the existing database and can be exported later.")
+					if ok := ui.Confirm("Continue connecting without export?"); !ok {
+						return
+					}
+				} else {
+					ui.Info(fmt.Sprintf("Export archive saved to: %s", exportPath))
+				}
+				ui.NL()
+			}
+
 			spinner := ui.NewSpinner("Connecting Testkube Pro")
 			if cliErr = common.HelmUpgradeOrInstallTestkubeAgent(opts, cfg, true); cliErr != nil {
 				spinner.Fail()
@@ -213,6 +230,7 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
 	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 0, "PostgreSQL replicas")
+	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
 	return cmd
 }
 

@@ -201,6 +201,7 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		uri = c.testWorkflowExecutionsResultTransport.GetURI(fmt.Sprintf("/test-workflows/%s/executions", id))
 	}
 	params := map[string]string{
+		"page":        fmt.Sprintf("%d", options.Page),
 		"selector":    options.Selector,
 		"pageSize":    fmt.Sprintf("%d", limit),
 		"tagSelector": options.TagSelector,
