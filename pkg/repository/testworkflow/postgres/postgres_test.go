@@ -109,7 +109,7 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowReport(ctx
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.InsertTestWorkflowResourceAggregationsParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.UpsertTestWorkflowResourceAggregationsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }

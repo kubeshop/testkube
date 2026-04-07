@@ -1035,7 +1035,7 @@ func (r *PostgresRepository) upsertResourceAggregations(ctx context.Context, qtx
 		return err
 	}
 
-	return qtx.InsertTestWorkflowResourceAggregations(ctx, sqlc.InsertTestWorkflowResourceAggregationsParams{
+	return qtx.UpsertTestWorkflowResourceAggregations(ctx, sqlc.UpsertTestWorkflowResourceAggregationsParams{
 		ExecutionID: executionId,
 		Global:      global,
 		Step:        step,

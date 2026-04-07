@@ -33,7 +33,7 @@ type TestWorkflowExecutionQueriesInterface interface {
 	InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (pgtype.UUID, error)
 	InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWorkflowOutputParams) error
 	InsertTestWorkflowReport(ctx context.Context, arg InsertTestWorkflowReportParams) error
-	InsertTestWorkflowResourceAggregations(ctx context.Context, arg InsertTestWorkflowResourceAggregationsParams) error
+	UpsertTestWorkflowResourceAggregations(ctx context.Context, arg UpsertTestWorkflowResourceAggregationsParams) error
 	InsertTestWorkflow(ctx context.Context, arg InsertTestWorkflowParams) error
 
 	// Update operations
