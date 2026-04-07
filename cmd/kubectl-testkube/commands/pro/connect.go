@@ -156,22 +156,31 @@ func NewConnectCmd() *cobra.Command {
 
 			if opts.MinioReplicas == 0 {
 				spinner = ui.NewSpinner("Scaling down MinIO")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
-				spinner.Success()
+				if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas); scaleErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to scale downn MinIO: %s", scaleErr))
+				} else {
+					spinner.Success()
+				}
 			}
 			// scale down only the database that was originally deployed
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
 				if opts.MongoReplicas == 0 {
 					spinner = ui.NewSpinner("Scaling down MongoDB")
-					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
-					spinner.Success()
+					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale down MongoDB: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
 				}
 			case config.DatabaseTypePostgreSQL:
 				if opts.PostgresReplicas == 0 {
 					spinner = ui.NewSpinner("Scaling down PostgreSQL")
-					common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
-					spinner.Success()
+					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale down PostgreSQL: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
 				}
 			}
 

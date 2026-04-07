@@ -104,29 +104,41 @@ func NewDisconnectCmd() *cobra.Command {
 			// restore the database that was originally deployed before connecting to Pro
 			if opts.MinioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
-				spinner.Success()
+				if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas); scaleErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to scale up MinIO: %s", scaleErr))
+				} else {
+					spinner.Success()
+				}
 			}
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
 				if opts.MongoReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up MongoDB")
-					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
-					spinner.Success()
+					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale up MongoDB: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
 				}
 			case config.DatabaseTypePostgreSQL:
 				if opts.PostgresReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up PostgreSQL")
-					common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas)
-					spinner.Success()
+					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale up PostgreSQL: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
 				}
 			default:
 				// no database type recorded – fall back to attempting both so that clusters
 				// connected before this feature was introduced are handled gracefully
 				if opts.MongoReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up MongoDB")
-					common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
-					spinner.Success()
+					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale up MongoDB: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
 				}
 				if opts.PostgresReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up PostgreSQL")
