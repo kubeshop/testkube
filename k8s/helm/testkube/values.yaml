@@ -350,7 +350,7 @@ cloudnative-pg:
 postgresqlOperatorCluster:
   # -- Toggle whether to create a CloudNativePG Cluster resource for this environment.
   # -- Keep this enabled when you want to use a shared cluster-wide operator and only disable `cloudnative-pg.enabled`.
-  enabled: true
+  enabled: false
   fullnameOverride: "testkube-postgresql"
   type: postgresql
   mode: standalone
