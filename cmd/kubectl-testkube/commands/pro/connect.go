@@ -148,7 +148,7 @@ func NewConnectCmd() *cobra.Command {
 			// Export execution data before switching to agent mode
 			if !skipExport {
 				ui.H2("Exporting execution data before connecting")
-				exportPath, exportErr := ExportData(client, ".")
+				exportPath, exportErr := client.ExportExecutions(".")
 				if exportErr != nil {
 					ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
 					ui.Warn("Your data will remain in the existing database and can be exported later.")

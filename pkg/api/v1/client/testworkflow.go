@@ -287,3 +287,9 @@ func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runn
 
 	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
 }
+
+// ExportExecutions downloads the export archive from the server
+func (c TestWorkflowClient) ExportExecutions(destination string) (fileName string, err error) {
+	uri := c.testWorkflowTransport.GetURI("/export")
+	return c.testWorkflowTransport.GetFile(uri, "testkube-export.tar.gz", destination, nil)
+}

@@ -247,4 +247,6 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
+
+	root.Get("/export", s.ExportExecutionsHandler())
 }
