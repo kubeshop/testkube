@@ -1001,7 +1001,7 @@ SET
             jsonb_set(COALESCE(initialization, '{}'::jsonb), '{status}', '"aborted"'),
             '{errormessage}', '"Aborted before initialization."'
         ),
-        '{finishedat}', to_jsonb(@abort_time::timestamp)
+        '{finishedat}', to_jsonb(@abort_time::timestamptz)
     )
 WHERE execution_id = @id
     AND status IN ('queued', 'running', 'paused');
