@@ -13,6 +13,10 @@ import (
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
+const (
+	pageSize = 100
+)
+
 // sequenceEntry holds the current sequence number for a workflow.
 type sequenceEntry struct {
 	WorkflowName string `json:"workflowName"`
@@ -44,7 +48,6 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 			sequences := map[string]int32{}
 
 			page := 0
-			pageSize := 100
 			for {
 				filter := testworkflow2.NewExecutionsFilter().WithPage(page).WithPageSize(pageSize)
 				executions, err := s.TestWorkflowResults.GetExecutions(reqCtx, filter)
