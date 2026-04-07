@@ -119,9 +119,13 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 			// Close writers in order to flush all data
 			if err := tarWriter.Close(); err != nil {
 				s.Log.Errorw(errPrefix+": closing tar writer", "error", err)
+				writeErr = err
 			}
 			if err := gzWriter.Close(); err != nil {
 				s.Log.Errorw(errPrefix+": closing gzip writer", "error", err)
+				if writeErr == nil {
+					writeErr = err
+				}
 			}
 		}()
 
