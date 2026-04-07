@@ -3681,25 +3681,6 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 	return err
 }
 
-const updateTestWorkflowExecutionResourceAggregations = `-- name: UpdateTestWorkflowExecutionResourceAggregations :exec
-UPDATE test_workflow_resource_aggregations
-SET
-    global = $1,
-    step = $2
-WHERE execution_id = $3
-`
-
-type UpdateTestWorkflowExecutionResourceAggregationsParams struct {
-	Global      []byte `db:"global" json:"global"`
-	Step        []byte `db:"step" json:"step"`
-	ExecutionID string `db:"execution_id" json:"execution_id"`
-}
-
-func (q *Queries) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionResourceAggregations, arg.Global, arg.Step, arg.ExecutionID)
-	return err
-}
-
 const updateTestWorkflowExecutionResult = `-- name: UpdateTestWorkflowExecutionResult :exec
 UPDATE test_workflow_results 
 SET 

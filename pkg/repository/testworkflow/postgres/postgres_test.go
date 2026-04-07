@@ -148,11 +148,6 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAtStric
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
-
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams) error {
-	args := m.Called(ctx, arg)
-	return args.Error(0)
-}
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatus(ctx context.Context, arg sqlc.UpdateExecutionStatusParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)

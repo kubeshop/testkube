@@ -774,7 +774,7 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1024,7 +1024,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 	return nil
 }
 
-func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+func (r *PostgresRepository) upsertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	global, err := toJSONB(agg.Global)
 	if err != nil {
 		return err
@@ -1159,7 +1159,7 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1485,21 +1485,7 @@ func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map
 
 // UpdateResourceAggregations updates resource aggregations
 func (r *PostgresRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
-	global, err := toJSONB(resourceAggregations.Global)
-	if err != nil {
-		return err
-	}
-
-	step, err := toJSONB(resourceAggregations.Step)
-	if err != nil {
-		return err
-	}
-
-	return r.queries.UpdateTestWorkflowExecutionResourceAggregations(ctx, sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams{
-		ExecutionID: id,
-		Global:      global,
-		Step:        step,
-	})
+	return r.upsertResourceAggregations(ctx, r.queries, id, resourceAggregations)
 }
 
 // DeleteByTestWorkflow deletes executions by workflow name
