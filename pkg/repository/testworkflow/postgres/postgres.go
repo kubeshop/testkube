@@ -1003,6 +1003,13 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 }
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
+	if len(reports) == 0 {
+		return nil
+	}
+	maxOrder, err := qtx.GetMaxReportOrder(ctx, executionId)
+	if err != nil {
+		return err
+	}
 	for i, report := range reports {
 		summary, err := toJSONB(report.Summary)
 		if err != nil {
@@ -1015,7 +1022,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			Kind:        toPgText(report.Kind),
 			File:        toPgText(report.File),
 			Summary:     summary,
-			RepOrder:    int32(i + 1),
+			RepOrder:    maxOrder + int32(i) + 1,
 		})
 		if err != nil {
 			return err

@@ -119,6 +119,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflow(ctx conte
 	return args.Error(0)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) GetMaxReportOrder(ctx context.Context, executionID string) (int32, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).(int32), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecution(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)

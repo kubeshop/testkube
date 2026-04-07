@@ -57,9 +57,8 @@ func testUpdateReport(t *testing.T, repo testworkflow.Repository) {
 	require.NoError(t, err)
 	require.Len(t, got.Reports, 2)
 
-	refs := map[string]bool{got.Reports[0].Ref: true, got.Reports[1].Ref: true}
-	assert.True(t, refs["step-1"], "expected step-1 report to be present")
-	assert.True(t, refs["step-2"], "expected step-2 report to be present")
+	assert.Equal(t, "step-1", got.Reports[0].Ref, "first report should be step-1 (inserted first)")
+	assert.Equal(t, "step-2", got.Reports[1].Ref, "second report should be step-2 (inserted second)")
 }
 
 func testUpdateOutput(t *testing.T, repo testworkflow.Repository) {

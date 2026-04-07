@@ -744,6 +744,9 @@ ON CONFLICT (execution_id) DO UPDATE SET
 INSERT INTO test_workflow_outputs (execution_id, ref, name, value, out_order)
 VALUES (@execution_id, @ref, @name, @value, @out_order);
 
+-- name: GetMaxReportOrder :one
+SELECT COALESCE(MAX(rep_order), 0)::int FROM test_workflow_reports WHERE execution_id = @execution_id;
+
 -- name: InsertTestWorkflowReport :exec
 INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, rep_order)
 VALUES (@execution_id, @ref, @kind, @file, @summary, @rep_order);

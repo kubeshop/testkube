@@ -1214,6 +1214,17 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 	return items, nil
 }
 
+const getMaxReportOrder = `-- name: GetMaxReportOrder :one
+SELECT COALESCE(MAX(rep_order), 0)::int FROM test_workflow_reports WHERE execution_id = $1
+`
+
+func (q *Queries) GetMaxReportOrder(ctx context.Context, executionID string) (int32, error) {
+	row := q.db.QueryRow(ctx, getMaxReportOrder, executionID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getPreviousFinishedState = `-- name: GetPreviousFinishedState :one
 SELECT r.status
 FROM test_workflow_executions e

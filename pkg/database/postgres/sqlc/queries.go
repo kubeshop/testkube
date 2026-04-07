@@ -36,6 +36,9 @@ type TestWorkflowExecutionQueriesInterface interface {
 	UpsertTestWorkflowResourceAggregations(ctx context.Context, arg UpsertTestWorkflowResourceAggregationsParams) error
 	InsertTestWorkflow(ctx context.Context, arg InsertTestWorkflowParams) error
 
+	// Query operations
+	GetMaxReportOrder(ctx context.Context, executionID string) (int32, error)
+
 	// Update operations
 	UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTestWorkflowExecutionParams) error
 	UpdateTestWorkflowExecutionResult(ctx context.Context, arg UpdateTestWorkflowExecutionResultParams) error
