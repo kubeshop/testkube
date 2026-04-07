@@ -266,7 +266,7 @@ func setupCredentialStore(uri *url.URL) func() {
 	}
 
 	// Configure git to use the credential store
-	if err := Run("git", "config", "--global", "credential.helper", fmt.Sprintf("store --file %s", credPath)); err != nil {
+	if err := Run("git", "config", "--global", "credential.helper", shellquote.Join("store", "--file", credPath)); err != nil {
 		fmt.Printf("warn: could not configure credential helper: %s\n", err)
 		_ = os.Remove(credPath)
 		return noop
