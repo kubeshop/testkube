@@ -229,10 +229,12 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 - **`Webhook`** (`executor.testkube.io/v1`)
   - **Definition**: [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go)
   - **Purpose**: Defines webhooks triggered by TestWorkflow execution events
+  - **Targeting**: Supports a `target` field (`commonv1.Target`) to control which agents execute the webhook
 
 - **`WebhookTemplate`** (`executor.testkube.io/v1`)
   - **Definition**: [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go)
   - **Purpose**: Reusable webhook templates with configurable payloads
+  - **Targeting**: Supports a `target` field (`commonv1.Target`) for agent-level targeting
 
 #### Other CRDs
 

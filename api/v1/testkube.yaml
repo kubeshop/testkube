@@ -7792,12 +7792,7 @@ components:
         sync:
           $ref: "#/components/schemas/Syncable"
         target:
-          type: object
-          description: "Label selector for targeting webhook agent(s). Webhook is sent to agents whose labels match all specified key=value pairs. Empty means broadcast to all agents."
-          additionalProperties:
-            type: string
-          example:
-            region: "eu"
+          $ref: "#/components/schemas/ExecutionTarget"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7868,6 +7863,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         sync:
           $ref: "#/components/schemas/Syncable"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     Event:
       description: Event data
