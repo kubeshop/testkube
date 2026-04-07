@@ -78,6 +78,22 @@ func NewDisconnectCmd() *cobra.Command {
 
 			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
 
+			// ensure only the originally-active database is re-enabled in the Helm release;
+			// the user-supplied --no-mongo/--no-postgres flags take precedence if set explicitly
+			dbType := cfg.CloudContext.DatabaseType
+			switch dbType {
+			case config.DatabaseTypeMongoDB:
+				// original DB was Mongo – keep Postgres disabled unless the user explicitly enabled it
+				if !cmd.Flags().Changed("no-postgres") {
+					opts.NoPostgres = true
+				}
+			case config.DatabaseTypePostgreSQL:
+				// original DB was Postgres – keep Mongo disabled unless the user explicitly enabled it
+				if !cmd.Flags().Changed("no-mongo") {
+					opts.NoMongo = true
+				}
+			}
+
 			if cliErr := common.HelmUpgradeOrInstallTestkube(opts); cliErr != nil {
 				spinner.Fail()
 				common.HandleCLIError(cliErr)
@@ -86,7 +102,6 @@ func NewDisconnectCmd() *cobra.Command {
 			spinner.Success()
 
 			// restore the database that was originally deployed before connecting to Pro
-			dbType := cfg.CloudContext.DatabaseType
 			if opts.MinioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
