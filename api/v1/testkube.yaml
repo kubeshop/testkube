@@ -3217,9 +3217,10 @@ paths:
           description: "successful operation"
           headers:
             Content-Disposition:
+              description: "Content disposition with the archive filename"
               schema:
                 type: string
-              description: 'attachment; filename="testkube-export.tar.gz"'
+                example: 'attachment; filename="testkube-export.tar.gz"'
           content:
             application/gzip:
               schema:
