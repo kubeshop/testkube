@@ -1433,27 +1433,7 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 
 // UpdateReport updates a report
 func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := r.queries.WithTx(tx)
-
-	// Delete existing reports
-	err = qtx.DeleteTestWorkflowReports(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Insert new reports
-	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
+	return r.insertReports(ctx, r.queries, id, []testkube.TestWorkflowReport{*report})
 }
 
 // UpdateOutput replaces all outputs
