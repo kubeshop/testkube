@@ -90,6 +90,10 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 		return fmt.Errorf("setting up authentication: %w", err)
 	}
 
+	// Setup credential store for reliable auth across redirects (best-effort)
+	cleanupCreds := setupCredentialStore(uri)
+	defer cleanupCreds()
+
 	// Setup SSH if provided
 	cleanupSSH, err := setupSSHKey(opts.SSHKey)
 	if err != nil {
@@ -160,7 +164,7 @@ func setupAuthentication(ctx context.Context, uri *url.URL, opts *CloneOptions) 
 	case "header":
 		ui.Debug("auth type: header")
 		if opts.Token != "" {
-			authArgs = append(authArgs, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", opts.Token))
+			authArgs = append(authArgs, "-c", fmt.Sprintf("http.extraHeader=Authorization: Bearer %s", opts.Token))
 		}
 		if opts.Username != "" {
 			uri.User = url.User(opts.Username)
@@ -219,6 +223,68 @@ func setupSSHKey(sshKey string) (func(), error) {
 	os.Setenv("GIT_SSH_COMMAND", sshCmd)
 
 	return func() { _ = os.Remove(sshKeyPath) }, nil
+}
+
+// setupCredentialStore configures a git credential store file so that credentials
+// are available even when Git strips them from the URL (e.g., after HTTP redirects).
+// This is best-effort: if anything fails, it logs a warning and returns a no-op
+// cleanup, allowing the clone to proceed with URL-embedded credentials.
+func setupCredentialStore(uri *url.URL) func() {
+	noop := func() {}
+
+	if uri.Scheme != "https" && uri.Scheme != "http" {
+		return noop
+	}
+
+	// Use credentials from the URI (already set by setupAuthentication).
+	// Skip credential-store setup when the URI only has a username and no
+	// password/token, because that does not provide usable credentials and can
+	// still alter global git authentication behavior.
+	if uri.User == nil {
+		return noop
+	}
+	if _, hasPassword := uri.User.Password(); !hasPassword {
+		return noop
+	}
+
+	// Build the credential URL: scheme://user:token@host
+	credURL := &url.URL{
+		Scheme: uri.Scheme,
+		Host:   uri.Host,
+		User:   uri.User,
+	}
+
+	credContent := credURL.String() + "\n"
+
+	// Write the credentials file
+	credFile, err := os.CreateTemp(constants.DefaultTmpDirPath, "git-credentials-*")
+	if err != nil {
+		fmt.Printf("warn: could not create credential store file: %s\n", err)
+		return noop
+	}
+	credPath := credFile.Name()
+	credFile.Close()
+
+	if err := os.WriteFile(credPath, []byte(credContent), 0400); err != nil {
+		fmt.Printf("warn: could not write credential store: %s\n", err)
+		_ = os.Remove(credPath)
+		return noop
+	}
+
+	// Configure git to use the credential store
+	if err := Run("git", "config", "--global", "credential.helper", shellquote.Join("store", "--file", credPath)); err != nil {
+		fmt.Printf("warn: could not configure credential helper: %s\n", err)
+		_ = os.Remove(credPath)
+		return noop
+	}
+
+	return func() {
+		if err := Run("git", "config", "--global", "--unset", "credential.helper"); err != nil {
+			fmt.Printf("warn: could not unset credential helper: %s\n", err)
+		}
+
+		_ = os.Remove(credPath)
+	}
 }
 
 // cleanPaths prepares paths for sparse checkout
