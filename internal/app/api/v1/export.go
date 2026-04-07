@@ -26,10 +26,14 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 		c.Set("Content-Type", "application/gzip")
 		c.Set("Content-Disposition", `attachment; filename="testkube-export.tar.gz"`)
 
+		// Capture the request context for cancellation propagation.
+		// This is safe because SendStream blocks until the pipe reader is fully consumed,
+		// so the context remains valid while the goroutine runs.
+		reqCtx := c.Context()
+
 		pr, pw := io.Pipe()
 
 		go func() {
-			ctx := context.Background()
 			var writeErr error
 			defer func() { pw.CloseWithError(writeErr) }()
 
@@ -43,7 +47,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 			pageSize := 100
 			for {
 				filter := testworkflow2.NewExecutionsFilter().WithPage(page).WithPageSize(pageSize)
-				executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
+				executions, err := s.TestWorkflowResults.GetExecutions(reqCtx, filter)
 				if err != nil {
 					s.Log.Errorw(errPrefix+": listing executions", "error", err, "page", page)
 					writeErr = fmt.Errorf("listing executions: %w", err)
@@ -58,7 +62,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 					execution := &executions[i]
 
 					// Write execution metadata as JSON to executions/<id>.json
-					data, err := json.MarshalIndent(execution, "", "  ")
+					data, err := json.Marshal(execution)
 					if err != nil {
 						s.Log.Errorw(errPrefix+": marshaling execution", "error", err, "id", execution.Id)
 						continue
@@ -72,7 +76,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 
 					// Read logs from MinIO and write to logs/<id>.log
 					if execution.Workflow != nil {
-						logData, err := s.readExecutionLog(ctx, execution.Id, execution.Workflow.Name)
+						logData, err := s.readExecutionLog(reqCtx, execution.Id, execution.Workflow.Name)
 						if err != nil {
 							s.Log.Warnw(errPrefix+": reading logs", "error", err, "id", execution.Id)
 						} else if len(logData) > 0 {
@@ -105,7 +109,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 				})
 			}
 
-			seqData, err := json.MarshalIndent(entries, "", "  ")
+			seqData, err := json.Marshal(entries)
 			if err != nil {
 				s.Log.Errorw(errPrefix+": marshaling sequences", "error", err)
 			} else if err := writeTarEntry(tarWriter, "sequences.json", seqData); err != nil {
