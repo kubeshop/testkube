@@ -175,12 +175,9 @@ func createArchive(outputDir, stagingDir string) (string, error) {
 	defer outFile.Close()
 
 	gzWriter := gzip.NewWriter(outFile)
-	defer gzWriter.Close()
-
 	tarWriter := tar.NewWriter(gzWriter)
-	defer tarWriter.Close()
 
-	return archivePath, filepath.Walk(stagingDir, func(path string, info os.FileInfo, err error) error {
+	walkErr := filepath.Walk(stagingDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -214,9 +211,23 @@ func createArchive(outputDir, stagingDir string) (string, error) {
 		if err != nil {
 			return fmt.Errorf("opening file: %w", err)
 		}
-		defer f.Close()
 
-		_, err = io.Copy(tarWriter, f)
-		return err
+		_, copyErr := io.Copy(tarWriter, f)
+		f.Close()
+		return copyErr
 	})
+
+	// Close writers explicitly in order to ensure proper flushing
+	if closeErr := tarWriter.Close(); closeErr != nil && walkErr == nil {
+		walkErr = fmt.Errorf("closing tar writer: %w", closeErr)
+	}
+	if closeErr := gzWriter.Close(); closeErr != nil && walkErr == nil {
+		walkErr = fmt.Errorf("closing gzip writer: %w", closeErr)
+	}
+
+	if walkErr != nil {
+		return "", walkErr
+	}
+
+	return archivePath, nil
 }

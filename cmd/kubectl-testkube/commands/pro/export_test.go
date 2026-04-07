@@ -93,11 +93,11 @@ func TestCreateArchive(t *testing.T) {
 	// Verify archive contents
 	f, err := os.Open(archivePath)
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { require.NoError(t, f.Close()) }()
 
 	gz, err := gzip.NewReader(f)
 	require.NoError(t, err)
-	defer gz.Close()
+	defer func() { require.NoError(t, gz.Close()) }()
 
 	tr := tar.NewReader(gz)
 
