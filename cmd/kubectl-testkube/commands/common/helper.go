@@ -396,6 +396,7 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
 		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
 		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+		"postgresql.primary.replicaCount":     fmt.Sprintf("%d", options.PostgresReplicas),
 	}
 
 	if options.Values != "" {

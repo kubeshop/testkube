@@ -157,7 +157,7 @@ func NewConnectCmd() *cobra.Command {
 			if opts.MinioReplicas == 0 {
 				spinner = ui.NewSpinner("Scaling down MinIO")
 				if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas); scaleErr != nil {
-					spinner.Fail(fmt.Sprintf("Failed to scale downn MinIO: %s", scaleErr))
+					spinner.Fail(fmt.Sprintf("Failed to scale down MinIO: %s", scaleErr))
 				} else {
 					spinner.Success()
 				}
