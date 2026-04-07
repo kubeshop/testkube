@@ -5,6 +5,7 @@
 package v1
 
 import (
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -345,10 +346,8 @@ func (in *WebhookSpec) DeepCopyInto(out *WebhookSpec) {
 	}
 	if in.Target != nil {
 		in, out := &in.Target, &out.Target
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		*out = new(commonv1.Target)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -482,10 +481,8 @@ func (in *WebhookTemplateSpec) DeepCopyInto(out *WebhookTemplateSpec) {
 	}
 	if in.Target != nil {
 		in, out := &in.Target, &out.Target
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		*out = new(commonv1.Target)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
