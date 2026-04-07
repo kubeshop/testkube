@@ -236,8 +236,14 @@ func setupCredentialStore(uri *url.URL) func() {
 		return noop
 	}
 
-	// Use credentials from the URI (already set by setupAuthentication)
+	// Use credentials from the URI (already set by setupAuthentication).
+	// Skip credential-store setup when the URI only has a username and no
+	// password/token, because that does not provide usable credentials and can
+	// still alter global git authentication behavior.
 	if uri.User == nil {
+		return noop
+	}
+	if _, hasPassword := uri.User.Password(); !hasPassword {
 		return noop
 	}
 
