@@ -123,10 +123,10 @@ func NewConnectCmd() *cobra.Command {
 
 			// update summary
 			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
-			newStatus = append(newStatus, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
+			newStatus = append(newStatus, []string{"MinIO     ", "Stopped and scaled down, (not deleted)"})
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
-				newStatus = append(newStatus, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
+				newStatus = append(newStatus, []string{"MongoDB   ", "Stopped and scaled down, (not deleted)"})
 			case config.DatabaseTypePostgreSQL:
 				newStatus = append(newStatus, []string{"PostgreSQL", "Stopped and scaled down, (not deleted)"})
 			}
