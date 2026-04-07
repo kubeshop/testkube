@@ -18,6 +18,8 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -53,8 +55,8 @@ type WebhookSpec struct {
 	Parameters []WebhookParameterSchema `json:"parameters,omitempty"`
 	// webhook template reference
 	WebhookTemplateRef *WebhookTemplateRef `json:"webhookTemplateRef,omitempty"`
-	// Label selector for targeting webhook agent(s)
-	Target map[string]string `json:"target,omitempty"`
+	// Target helps decide on which agent the webhook is executed.
+	Target *commonv1.Target `json:"target,omitempty"`
 }
 
 // WebhookTemplateSpec defines the desired state of Webhook Template
@@ -82,8 +84,8 @@ type WebhookTemplateSpec struct {
 	Config map[string]WebhookConfigValue `json:"config,omitempty"`
 	// webhook parameters
 	Parameters []WebhookParameterSchema `json:"parameters,omitempty"`
-	// Label selector for targeting webhook agent(s)
-	Target map[string]string `json:"target,omitempty"`
+	// Target helps decide on which agent the webhook is executed.
+	Target *commonv1.Target `json:"target,omitempty"`
 }
 
 // webhook parameter schema

@@ -251,10 +251,6 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 			&dst.Spec.Headers,
 			&src.Spec.Headers,
 		},
-		{
-			&dst.Spec.Target,
-			&src.Spec.Target,
-		},
 	}
 
 	for _, m := range maps {
@@ -269,6 +265,10 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 				}
 			}
 		}
+	}
+
+	if dst.Spec.Target == nil && src.Spec.Target != nil {
+		dst.Spec.Target = src.Spec.Target.DeepCopy()
 	}
 
 	items := []struct {
