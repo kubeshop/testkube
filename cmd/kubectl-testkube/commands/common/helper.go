@@ -808,7 +808,7 @@ func DetectDatabaseType(namespace string) (string, *CLIError) {
 	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql-primary"); err != nil {
 		return "", NewCLIError(
 			TKErrMissingDependencyDatabase,
-			"Checking statefulset: PostgeSQL",
+			"Checking statefulset: PostgreSQL",
 			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
 			err,
 		)
