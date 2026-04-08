@@ -15,8 +15,12 @@ import (
 
 type TestWorkflowExecutionNotification struct {
 	// timestamp for the notification if available
-	Ts     time.Time           `json:"ts,omitempty"`
-	Result *TestWorkflowResult `json:"result,omitempty"`
+	Ts time.Time `json:"ts,omitempty"`
+	// monotonic application-event cursor for resumable log streams
+	SeqNo uint32 `json:"seqNo,omitempty"`
+	// stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
+	EventType string              `json:"eventType,omitempty"`
+	Result    *TestWorkflowResult `json:"result,omitempty"`
 	// step reference, if related to some specific step
 	Ref string `json:"ref,omitempty"`
 	// log content, if it's just a log. note, that it includes 30 chars timestamp + space
