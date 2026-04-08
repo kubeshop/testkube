@@ -147,9 +147,11 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			// Export execution data before switching to agent mode
+			var exportPath string
 			if !skipExport {
 				ui.H2("Exporting execution data before connecting")
-				exportPath, exportErr := client.ExportExecutions(".", exportSince)
+				var exportErr error
+				exportPath, exportErr = client.ExportExecutions(".", exportSince)
 				if exportErr != nil {
 					if strings.Contains(exportErr.Error(), "413") {
 						ui.Warn("Export archive exceeds the server size limit.")
@@ -217,6 +219,18 @@ func NewConnectCmd() *cobra.Command {
 			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, "", opts, cfg)
 
 			ui.ExitOnError("Setting Pro environment context", err)
+
+			// Upload the previously exported archive to the control plane
+			if exportPath != "" {
+				spinner = ui.NewSpinner("Importing execution data to the control plane")
+				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, token, opts.Master.OrgId, opts.Master.EnvId)
+				if importErr := importClient.Import(exportPath); importErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
+					ui.Warn("The exported archive is still available at: " + exportPath)
+				} else {
+					spinner.Success()
+				}
+			}
 
 			ui.NL(2)
 
