@@ -8956,6 +8956,13 @@ components:
           type: string
           format: date-time
           description: timestamp for the notification if available
+        seqNo:
+          type: integer
+          format: int32
+          description: monotonic application-event cursor for resumable log streams
+        eventType:
+          type: string
+          description: stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
         result:
           $ref: "#/components/schemas/TestWorkflowResult"
         ref:

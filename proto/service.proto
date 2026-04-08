@@ -133,6 +133,9 @@ enum TestWorkflowNotificationType {
   WORKFLOW_STREAM_LOG = 1;
   WORKFLOW_STREAM_RESULT = 2;
   WORKFLOW_STREAM_OUTPUT = 3;
+  WORKFLOW_STREAM_READY = 4;
+  WORKFLOW_STREAM_HEARTBEAT = 5;
+  WORKFLOW_STREAM_RESUME_UNAVAILABLE = 6;
 }
 
 message LogsStreamRequest {
@@ -170,6 +173,7 @@ message TestWorkflowNotificationsRequest {
   string execution_id = 2;
   string environment_id = 4;
   TestWorkflowNotificationsRequestType request_type = 3;
+  uint32 resume_after_seq_no = 5;
 }
 
 message TestWorkflowNotificationsResponse {
@@ -274,6 +278,7 @@ message TestWorkflowServiceNotificationsRequest {
   int32 service_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
   string runner_id = 7;
+  uint32 resume_after_seq_no = 8;
 }
 
 message TestWorkflowServiceNotificationsResponse {
@@ -293,6 +298,7 @@ message TestWorkflowParallelStepNotificationsRequest {
   int32  worker_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
   string runner_id = 7;
+  uint32 resume_after_seq_no = 8;
 }
 
 message TestWorkflowParallelStepNotificationsResponse {
