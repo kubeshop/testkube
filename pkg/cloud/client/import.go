@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/http"
 )
+
+const maxErrorResponseBytes = 1024 * 1024 // 1 MB cap for error responses
 
 // NewImportClient creates a new client for importing execution data archives to the control plane.
 func NewImportClient(baseUrl, token, orgID, envID string) *ImportClient {
@@ -37,28 +40,22 @@ func (c *ImportClient) Import(archivePath string) error {
 	}
 	defer f.Close()
 
-	pr, pw := io.Pipe()
-	writer := multipart.NewWriter(pw)
-
-	go func() {
-		defer pw.Close()
-		part, err := writer.CreateFormFile("archive", "testkube-export.tar.gz")
-		if err != nil {
-			pw.CloseWithError(fmt.Errorf("creating form file: %w", err))
-			return
-		}
-		if _, err := io.Copy(part, f); err != nil {
-			pw.CloseWithError(fmt.Errorf("copying archive data: %w", err))
-			return
-		}
-		if err := writer.Close(); err != nil {
-			pw.CloseWithError(fmt.Errorf("closing multipart writer: %w", err))
-			return
-		}
-	}()
+	// Build the multipart body in memory so the pipe goroutine cannot leak.
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	part, err := writer.CreateFormFile("archive", "testkube-export.tar.gz")
+	if err != nil {
+		return fmt.Errorf("creating form file: %w", err)
+	}
+	if _, err := io.Copy(part, f); err != nil {
+		return fmt.Errorf("copying archive data: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("closing multipart writer: %w", err)
+	}
 
 	url := c.BaseUrl + c.Path
-	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodPost, url, pr)
+	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodPost, url, &buf)
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
 	}
@@ -72,7 +69,7 @@ func (c *ImportClient) Import(archivePath string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseBytes))
 		return fmt.Errorf("import failed (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
