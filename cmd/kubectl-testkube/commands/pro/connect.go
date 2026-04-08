@@ -227,8 +227,7 @@ func NewConnectCmd() *cobra.Command {
 				importErr := importClient.Import(exportPath)
 				if importErr != nil {
 					if strings.Contains(importErr.Error(), "413") {
-						ui.Warn("Import archive exceeds the server size limit.")
-						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 					} else {
 						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
 					}
