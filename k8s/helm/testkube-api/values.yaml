@@ -516,6 +516,9 @@ securityContext: {}
 ## Toggle to enable debug mode
 enableDebugMode: false
 
+## Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+exportArchiveMaxSize: 104857600
+
 ## Service parameters
 service:
   ## Adapter service type

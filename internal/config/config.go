@@ -235,6 +235,7 @@ type Config struct {
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
 	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 
+	ExportArchiveMaxSize    int  `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
 	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
 	ForceSuperAgentMode     bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`

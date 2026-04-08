@@ -238,6 +238,8 @@ spec:
               value: "{{ .Values.allowLowSecurityFields }}"
             - name: ENABLE_K8S_CONTROLLERS
               value: "{{ .Values.next.controllers.enabled }}"
+            - name: EXPORT_ARCHIVE_MAX_SIZE
+              value: "{{ .Values.exportArchiveMaxSize }}"
             {{- if .Values.enableDebugMode }}
             - name: DEBUG
               value: "true"

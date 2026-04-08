@@ -17,9 +17,7 @@ import (
 )
 
 const (
-	exportPageSize    = 100
-	maxArchiveSize    = 100 * 1024 * 1024 // 100 MB
-	archiveLimitError = "export archive exceeds the 100 MB size limit; use the 'since' query parameter to narrow the date range"
+	exportPageSize = 100
 )
 
 // sequenceEntry holds the current sequence number for a workflow.
@@ -34,6 +32,12 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 
 		sinceParam := c.Query("since", "")
 		dFilter := datefilter.NewDateFilter(sinceParam, "")
+
+		maxSize := s.exportArchiveMaxSize
+		if maxSize <= 0 {
+			maxSize = 100 * 1024 * 1024 // fallback to 100 MB
+		}
+		archiveLimitError := fmt.Sprintf("export archive exceeds the %d MB size limit; use the 'since' query parameter to narrow the date range", maxSize/(1024*1024))
 
 		// Build archive in memory so we can enforce the size limit before sending.
 		var buf bytes.Buffer
@@ -91,7 +95,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 					}
 				}
 
-				if buf.Len() > maxArchiveSize {
+				if buf.Len() > maxSize {
 					s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())
 					return s.Error(c, http.StatusRequestEntityTooLarge, fmt.Errorf(archiveLimitError))
 				}

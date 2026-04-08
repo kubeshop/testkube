@@ -690,6 +690,7 @@ func main() {
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
 		testWorkflowExecutor,
+		cfg.ExportArchiveMaxSize,
 	)
 	api.Init(httpServer)
 
