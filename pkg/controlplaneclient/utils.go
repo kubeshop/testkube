@@ -79,8 +79,36 @@ type notificationStreamEvent struct {
 }
 
 type notificationStreamSubscription struct {
-	id uint64
-	ch chan notificationStreamEvent
+	id        uint64
+	ch        chan notificationStreamEvent
+	done      chan struct{}
+	closeOnce sync.Once
+}
+
+func newNotificationStreamSubscription(id uint64) *notificationStreamSubscription {
+	return &notificationStreamSubscription{
+		id:   id,
+		ch:   make(chan notificationStreamEvent, 256),
+		done: make(chan struct{}),
+	}
+}
+
+func (s *notificationStreamSubscription) send(event notificationStreamEvent) {
+	select {
+	case <-s.done:
+		return
+	default:
+	}
+	select {
+	case s.ch <- event:
+	case <-s.done:
+	}
+}
+
+func (s *notificationStreamSubscription) close() {
+	s.closeOnce.Do(func() {
+		close(s.done)
+	})
 }
 
 type notificationStreamSession struct {
@@ -88,7 +116,7 @@ type notificationStreamSession struct {
 	nextSeqNo   uint32
 	replay      []notificationStreamEvent
 	replayBytes int
-	subscribers map[uint64]chan notificationStreamEvent
+	subscribers map[uint64]*notificationStreamSubscription
 	done        bool
 	lastSeqNo   uint32
 	lastActive  time.Time
@@ -97,32 +125,35 @@ type notificationStreamSession struct {
 func newNotificationStreamSession() *notificationStreamSession {
 	return &notificationStreamSession{
 		nextSeqNo:   1,
-		subscribers: make(map[uint64]chan notificationStreamEvent),
+		subscribers: make(map[uint64]*notificationStreamSubscription),
 		lastActive:  time.Now(),
 	}
 }
 
-func (s *notificationStreamSession) subscribe(resumeAfterSeqNo uint32, subscriptionID uint64) (notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+func (s *notificationStreamSession) subscribe(resumeAfterSeqNo uint32, subscriptionID uint64) (*notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.lastActive = time.Now()
-	sub := notificationStreamSubscription{
-		id: subscriptionID,
-		ch: make(chan notificationStreamEvent, 256),
-	}
+	sub := newNotificationStreamSubscription(subscriptionID)
 	if !s.done {
-		s.subscribers[sub.id] = sub.ch
+		s.subscribers[sub.id] = sub
 	}
 
 	replay, available := s.replayAfterLocked(resumeAfterSeqNo)
 	return sub, replay, available, s.lastSeqNo, s.done
 }
 
-func (s *notificationStreamSession) unsubscribe(sub notificationStreamSubscription) {
+func (s *notificationStreamSession) unsubscribe(sub *notificationStreamSubscription) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.subscribers, sub.id)
+	removed, ok := s.subscribers[sub.id]
+	if ok {
+		delete(s.subscribers, sub.id)
+	}
+	s.mu.Unlock()
+	if ok {
+		removed.close()
+	}
 }
 
 func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowExecutionNotification) {
@@ -130,9 +161,8 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 		return
 	}
 
+	var subscribers []*notificationStreamSubscription
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	seqNo := s.nextSeqNo
 	s.nextSeqNo++
 	s.lastSeqNo = seqNo
@@ -151,7 +181,12 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 	}
 
 	for _, sub := range s.subscribers {
-		sub <- event
+		subscribers = append(subscribers, sub)
+	}
+	s.mu.Unlock()
+
+	for _, sub := range subscribers {
+		sub.send(event)
 	}
 }
 
@@ -165,7 +200,7 @@ func (s *notificationStreamSession) close() {
 	s.done = true
 	s.lastActive = time.Now()
 	for id, sub := range s.subscribers {
-		close(sub)
+		sub.close()
 		delete(s.subscribers, id)
 	}
 }
@@ -221,6 +256,15 @@ func approximateNotificationBytes(notification *testkube.TestWorkflowExecutionNo
 	return len(b)
 }
 
+func sendNotificationResponse[Response any](ctx context.Context, responses chan<- Response, response Response) error {
+	select {
+	case responses <- response:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 type notificationStreamSessionManager[Request notificationRequest] struct {
 	mu       sync.Mutex
 	nextID   atomic.Uint64
@@ -240,7 +284,7 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 	}
 }
 
-func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
 	key := m.key(req)
 	now := time.Now()
 
@@ -305,6 +349,9 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	}
 
 	responses := make(chan Response, 5)
+	sendResponse := func(response Response) error {
+		return sendNotificationResponse(ctx, responses, response)
+	}
 	sessionManager := newNotificationStreamSessionManager(sessionKey, process)
 
 	// Send responses in sequence
@@ -387,7 +434,9 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 			// Send PONG to the PING message
 			if req.GetRequestType() == cloud.TestWorkflowNotificationsRequestType_WORKFLOW_STREAM_HEALTH_CHECK {
-				responses <- buildPongNotification(req.GetStreamId())
+				if err = sendResponse(buildPongNotification(req.GetStreamId())); err != nil {
+					return err
+				}
 				continue
 			}
 
@@ -400,12 +449,20 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(ctx, req)
 					defer session.unsubscribe(sub)
 
-					responses <- buildProtocol(req.GetStreamId(), lastSeqNo, cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_READY, "")
+					// READY means the agent accepted this request and attached it to a logical stream session.
+					// It does not imply the Kubernetes log source has already produced data.
+					if err := sendResponse(buildProtocol(req.GetStreamId(), lastSeqNo, cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_READY, "")); err != nil {
+						return err
+					}
 					if !resumeAvailable {
-						responses <- buildProtocol(req.GetStreamId(), lastSeqNo, cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_RESUME_UNAVAILABLE, "")
+						if err := sendResponse(buildProtocol(req.GetStreamId(), lastSeqNo, cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_RESUME_UNAVAILABLE, "")); err != nil {
+							return err
+						}
 					}
 					for _, event := range replay {
-						responses <- buildNotification(req.GetStreamId(), event.seqNo, event.notification)
+						if err := sendResponse(buildNotification(req.GetStreamId(), event.seqNo, event.notification)); err != nil {
+							return err
+						}
 					}
 					if done {
 						return nil
@@ -413,15 +470,30 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 					heartbeat := time.NewTicker(workflowNotificationHeartbeatInterval)
 					defer heartbeat.Stop()
-					for {
-						select {
-						case event, ok := <-sub.ch:
-							if !ok {
+					drainSubscription := func() error {
+						for {
+							select {
+							case event := <-sub.ch:
+								if err := sendResponse(buildNotification(req.GetStreamId(), event.seqNo, event.notification)); err != nil {
+									return err
+								}
+							default:
 								return nil
 							}
-							responses <- buildNotification(req.GetStreamId(), event.seqNo, event.notification)
+						}
+					}
+					for {
+						select {
+						case event := <-sub.ch:
+							if err := sendResponse(buildNotification(req.GetStreamId(), event.seqNo, event.notification)); err != nil {
+								return err
+							}
+						case <-sub.done:
+							return drainSubscription()
 						case <-heartbeat.C:
-							responses <- buildProtocol(req.GetStreamId(), session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_HEARTBEAT, "")
+							if err := sendResponse(buildProtocol(req.GetStreamId(), session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_HEARTBEAT, "")); err != nil {
+								return err
+							}
 						case <-ctx.Done():
 							return ctx.Err()
 						}

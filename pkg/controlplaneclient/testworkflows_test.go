@@ -3,6 +3,7 @@ package controlplaneclient
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -97,22 +98,9 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 	require.False(t, done)
 	require.Empty(t, replay)
 
-	var firstPass []uint32
-	deadline := time.After(2 * time.Second)
-	for {
-		select {
-		case event, ok := <-sub.ch:
-			if !ok {
-				session.unsubscribe(sub)
-				goto reconnect
-			}
-			firstPass = append(firstPass, event.seqNo)
-		case <-deadline:
-			t.Fatal("timed out waiting for initial stream to finish")
-		}
-	}
+	firstPass := collectNotificationSubscriptionSeqNos(t, sub)
+	session.unsubscribe(sub)
 
-reconnect:
 	assert.Equal(t, []uint32{1, 2, 3}, firstPass)
 
 	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", ResumeAfterSeqNo: 1})
@@ -122,4 +110,151 @@ reconnect:
 	require.Len(t, replay, 2)
 	assert.Equal(t, []uint32{2, 3}, []uint32{replay[0].seqNo, replay[1].seqNo})
 	session.unsubscribe(sub)
+}
+
+func TestSendNotificationResponseReturnsContextErrorWhenCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	responses := make(chan string)
+	err := sendNotificationResponse(ctx, responses, "response")
+
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestNotificationStreamSessionPublishDoesNotHoldLockForSlowSubscriber(t *testing.T) {
+	session := newNotificationStreamSession()
+	sub, _, _, _, _ := session.subscribe(0, 1)
+	for i := 0; i < cap(sub.ch); i++ {
+		sub.ch <- notificationStreamEvent{}
+	}
+
+	publishDone := make(chan struct{})
+	go func() {
+		session.publish(&testkube.TestWorkflowExecutionNotification{Log: "blocked"})
+		close(publishDone)
+	}()
+
+	require.Eventually(t, func() bool {
+		return session.currentSeqNo() == 1
+	}, time.Second, time.Millisecond)
+
+	unsubscribeDone := make(chan struct{})
+	go func() {
+		session.unsubscribe(sub)
+		close(unsubscribeDone)
+	}()
+
+	select {
+	case <-unsubscribeDone:
+	case <-time.After(time.Second):
+		t.Fatal("unsubscribe blocked while publish was waiting on a slow subscriber")
+	}
+
+	select {
+	case <-publishDone:
+	case <-time.After(time.Second):
+		t.Fatal("publish did not finish after subscriber was closed")
+	}
+}
+
+func TestWorkflowProtocolEventsDoNotAdvanceApplicationSeqNo(t *testing.T) {
+	session := newNotificationStreamSession()
+
+	ready := buildCloudProtocol("stream-1", session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_READY, "")
+	require.Equal(t, uint32(0), ready.SeqNo)
+	require.Equal(t, uint32(0), session.currentSeqNo())
+
+	session.publish(&testkube.TestWorkflowExecutionNotification{Log: "application log"})
+	require.Equal(t, uint32(1), session.currentSeqNo())
+
+	heartbeat := buildCloudProtocol("stream-1", session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_HEARTBEAT, "")
+	require.Equal(t, uint32(1), heartbeat.SeqNo)
+	require.Equal(t, uint32(1), session.currentSeqNo())
+}
+
+func TestNotificationStreamSessionReplayUnavailableForTrimmedCursor(t *testing.T) {
+	session := newNotificationStreamSession()
+	for i := 0; i < workflowNotificationReplayMaxEvents+2; i++ {
+		session.publish(&testkube.TestWorkflowExecutionNotification{Log: "log"})
+	}
+
+	sub, replay, available, lastSeqNo, done := session.subscribe(1, 1)
+	t.Cleanup(func() {
+		session.unsubscribe(sub)
+	})
+
+	require.False(t, available)
+	require.False(t, done)
+	require.Empty(t, replay)
+	require.Equal(t, uint32(workflowNotificationReplayMaxEvents+2), lastSeqNo)
+}
+
+func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResume(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var processCalls atomic.Int32
+	manager := newNotificationStreamSessionManager(
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			processCalls.Add(1)
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: "done"})
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	session1, sub1, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
+	waitForNotificationSubscriptionDone(t, sub1)
+	session1.unsubscribe(sub1)
+
+	session2, sub2, replay, available, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
+	waitForNotificationSubscriptionDone(t, sub2)
+	session2.unsubscribe(sub2)
+
+	require.NotSame(t, session1, session2)
+	require.True(t, available)
+	require.Empty(t, replay)
+	require.Equal(t, int32(2), processCalls.Load())
+}
+
+func collectNotificationSubscriptionSeqNos(t *testing.T, sub *notificationStreamSubscription) []uint32 {
+	t.Helper()
+
+	deadline := time.After(2 * time.Second)
+	var seqNos []uint32
+	for {
+		select {
+		case event := <-sub.ch:
+			seqNos = append(seqNos, event.seqNo)
+		case <-sub.done:
+			for {
+				select {
+				case event := <-sub.ch:
+					seqNos = append(seqNos, event.seqNo)
+				default:
+					return seqNos
+				}
+			}
+		case <-deadline:
+			t.Fatal("timed out waiting for notification subscription to finish")
+			return nil
+		}
+	}
+}
+
+func waitForNotificationSubscriptionDone(t *testing.T, sub *notificationStreamSubscription) {
+	t.Helper()
+
+	select {
+	case <-sub.done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for notification subscription to finish")
+	}
 }
