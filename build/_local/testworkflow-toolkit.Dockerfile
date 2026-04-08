@@ -25,7 +25,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Build testworkflow-toolkit
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.26.1-alpine AS builder-toolkit
+FROM --platform=$BUILDPLATFORM golang:1.26.2-alpine AS builder-toolkit
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -45,7 +45,7 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug builder (Delve)
 ###################################
-FROM golang:1.26.1-alpine AS debug-builder
+FROM golang:1.26.2-alpine AS debug-builder
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
 
 ###################################
