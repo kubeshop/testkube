@@ -224,8 +224,14 @@ func NewConnectCmd() *cobra.Command {
 			if exportPath != "" {
 				spinner = ui.NewSpinner("Importing execution data to the control plane")
 				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, token, opts.Master.OrgId, opts.Master.EnvId)
-				if importErr := importClient.Import(exportPath); importErr != nil {
-					spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
+				importErr := importClient.Import(exportPath)
+				if importErr != nil {
+					if strings.Contains(importErr.Error(), "413") {
+						ui.Warn("Import archive exceeds the server size limit.")
+						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+					} else {
+						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
+					}
 					ui.Warn("The exported archive is still available at: " + exportPath)
 				} else {
 					spinner.Success()
