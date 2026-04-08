@@ -783,8 +783,9 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 }
 
 // printTestWorkflowLogs consumes notification stream and prints logs with step status updates
-func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string) (result *testkube.TestWorkflowResult, err error) {
+func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string, lastSeqNo uint32) (result *testkube.TestWorkflowResult, nextSeqNo uint32, err error) {
 	steps := testworkflows.FlattenSignatures(signature)
+	nextSeqNo = lastSeqNo
 
 	var (
 		isLineBeginning = true
@@ -819,17 +820,28 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 		}
 	}
 	defer stopIdleTimer()
+	resetIdleTimer()
 
 	for {
 		select {
 		case <-idleTimeoutCh:
-			return result, errWorkflowLogsIdle
+			return result, nextSeqNo, errWorkflowLogsIdle
 		case l, ok := <-notifications:
 			if !ok {
 				ui.NL()
-				return result, nil
+				return result, nextSeqNo, nil
 			}
 			resetIdleTimer()
+
+			if isWorkflowProtocolNotification(l) {
+				continue
+			}
+			if l.SeqNo > 0 {
+				if l.SeqNo <= nextSeqNo {
+					continue
+				}
+				nextSeqNo = l.SeqNo
+			}
 
 			if l.Output != nil {
 				isFirstLine = false
@@ -846,10 +858,19 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 
 			isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
 			if err != nil {
-				return result, err
+				return result, nextSeqNo, err
 			}
 			isFirstLine = false
 		}
+	}
+}
+
+func isWorkflowProtocolNotification(notification testkube.TestWorkflowExecutionNotification) bool {
+	switch notification.EventType {
+	case "ready", "heartbeat", "resume_unavailable":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -858,19 +879,22 @@ func watchWorkflowLogsCommon(
 	id, prefix, spinnerMessage string,
 	signature []testkube.TestWorkflowSignature,
 	executionGetter workflowExecutionGetter,
-	getNotifications func() (chan testkube.TestWorkflowExecutionNotification, error),
+	getNotifications func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error),
 ) (*testkube.TestWorkflowResult, error) {
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
 		result        *testkube.TestWorkflowResult
 		nErr          error
+		lastSeqNo     uint32
 	)
 
 	spinner := ui.NewSpinner(spinnerMessage)
 	for {
-		notifications, nErr = getNotifications()
+		streamCtx, streamCancel := context.WithCancel(context.Background())
+		notifications, nErr = getNotifications(streamCtx, lastSeqNo)
 		if nErr != nil {
+			streamCancel()
 			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
 			if cErr != nil {
 				spinner.Fail()
@@ -887,7 +911,8 @@ func watchWorkflowLogsCommon(
 		}
 
 		spinner.Stop()
-		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
+		result, lastSeqNo, nErr = printTestWorkflowLogs(signature, notifications, prefix, lastSeqNo)
+		streamCancel()
 		if nErr != nil {
 			var finished bool
 			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
@@ -944,8 +969,11 @@ func watchWorkflowLogsCommon(
 func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
 
-	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
-		return client.GetTestWorkflowExecutionNotifications(id)
+	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionNotificationsWithOptions(id, apiclientv1.TestWorkflowExecutionNotificationsOptions{
+			Context:          ctx,
+			ResumeAfterSeqNo: resumeAfterSeqNo,
+		})
 	}
 
 	return watchWorkflowLogsCommon(id, prefix, "Waiting for workflow logs", signature, client, getNotifications)
@@ -985,8 +1013,11 @@ func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex i
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow service job", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
 
-	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
-		return client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
+	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName, serviceIndex, apiclientv1.TestWorkflowExecutionNotificationsOptions{
+			Context:          ctx,
+			ResumeAfterSeqNo: resumeAfterSeqNo,
+		})
 	}
 
 	return watchWorkflowLogsCommon(id, prefix, "Waiting for service logs", signature, client, getNotifications)
@@ -997,8 +1028,11 @@ func watchTestWorkflowParallelStepLogs(id, prefix, ref string, workerIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
 
-	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
-		return client.GetTestWorkflowExecutionParallelStepNotifications(id, ref, workerIndex)
+	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref, workerIndex, apiclientv1.TestWorkflowExecutionNotificationsOptions{
+			Context:          ctx,
+			ResumeAfterSeqNo: resumeAfterSeqNo,
+		})
 	}
 
 	return watchWorkflowLogsCommon(id, prefix, "Waiting for parallel step logs", signature, client, getNotifications)

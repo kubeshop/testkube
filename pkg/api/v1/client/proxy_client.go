@@ -146,11 +146,15 @@ func (t ProxyClient[A]) GetURI(pathTemplate string, params ...interface{}) strin
 // GetLogsV2 returns logs version 2 stream from log server, based on job pods logs
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
-func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
-	resp, err := t.getProxy(http.MethodGet).
+func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error {
+	req := t.getProxy(http.MethodGet).
 		Suffix(uri).
-		SetHeader("Accept", "text/event-stream").
-		Stream(context.Background())
+		SetHeader("Accept", "text/event-stream")
+	if options.ResumeAfterSeqNo > 0 {
+		req.Param("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
+	}
+
+	resp, err := req.Stream(options.RequestContext())
 	if err != nil {
 		return err
 	}
