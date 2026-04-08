@@ -152,7 +152,7 @@ func NewConnectCmd() *cobra.Command {
 				exportPath, exportErr := client.ExportExecutions(".", exportSince)
 				if exportErr != nil {
 					if strings.Contains(exportErr.Error(), "413") {
-						ui.Warn("Export archive exceeds the 100 MB size limit.")
+						ui.Warn("Export archive exceeds the server size limit.")
 						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 					} else {
 						ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))

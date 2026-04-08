@@ -37,7 +37,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 		if maxSize <= 0 {
 			maxSize = 100 * 1024 * 1024 // fallback to 100 MB
 		}
-		archiveLimitError := fmt.Sprintf("export archive exceeds the %d MB size limit; use the 'since' query parameter to narrow the date range", maxSize/(1024*1024))
+		archiveLimitError := fmt.Sprintf("export archive exceeds the size limit (%d bytes); use the 'since' query parameter to narrow the date range", maxSize)
 
 		// Build archive in memory so we can enforce the size limit before sending.
 		var buf bytes.Buffer
