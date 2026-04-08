@@ -188,7 +188,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testWorkflowExecutions.Post("/:executionID/resume", s.ResumeTestWorkflowExecutionHandler())
 	testWorkflowExecutions.Get("/:executionID/logs", s.GetTestWorkflowExecutionLogsHandler())
 	testWorkflowExecutions.Get("/:executionID/artifacts", s.ListTestWorkflowExecutionArtifactsHandler())
-	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.GetTestWorkflowArtifactHandler())
+	testWorkflowExecutions.Get("/:executionID/artifacts/:filename+", s.GetTestWorkflowArtifactHandler())
 	testWorkflowExecutions.Get("/:executionID/artifact-archive", s.GetTestWorkflowArtifactArchiveHandler())
 	testWorkflowExecutions.Post("/:executionID/rerun", s.ReRunTestWorkflowExecutionHandler())
 	testWorkflowExecutions.Patch("/:executionID/tags", s.UpdateTestWorkflowExecutionTagsHandler())
