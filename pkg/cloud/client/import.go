@@ -33,7 +33,7 @@ type ImportClient struct {
 }
 
 // Import uploads an execution data archive (tar.gz) to the control plane.
-func (c *ImportClient) Import(archivePath string) error {
+func (c *ImportClient) Import(ctx context.Context, archivePath string) error {
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return fmt.Errorf("opening archive %s: %w", archivePath, err)
@@ -55,7 +55,7 @@ func (c *ImportClient) Import(archivePath string) error {
 	}
 
 	url := c.BaseUrl + c.Path
-	req, err := nethttp.NewRequestWithContext(context.Background(), nethttp.MethodPost, url, &buf)
+	req, err := nethttp.NewRequestWithContext(ctx, nethttp.MethodPost, url, &buf)
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
 	}

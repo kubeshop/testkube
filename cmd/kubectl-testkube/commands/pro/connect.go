@@ -2,6 +2,7 @@ package pro
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -224,7 +225,7 @@ func NewConnectCmd() *cobra.Command {
 			if exportPath != "" {
 				spinner = ui.NewSpinner("Importing execution data to the control plane")
 				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, token, opts.Master.OrgId, opts.Master.EnvId)
-				importErr := importClient.Import(exportPath)
+				importErr := importClient.Import(cmd.Context(), exportPath)
 				if importErr != nil {
 					if strings.Contains(importErr.Error(), "413") {
 						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
@@ -234,6 +235,10 @@ func NewConnectCmd() *cobra.Command {
 					ui.Warn("The exported archive is still available at: " + exportPath)
 				} else {
 					spinner.Success()
+					// Clean up the exported archive after successful import
+					if removeErr := os.Remove(exportPath); removeErr != nil {
+						ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
+					}
 				}
 			}
 
