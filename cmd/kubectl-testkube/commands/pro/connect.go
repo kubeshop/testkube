@@ -20,6 +20,7 @@ const (
 func NewConnectCmd() *cobra.Command {
 	var opts = common.HelmOptions{}
 	var skipExport bool
+	var exportSince string
 
 	cmd := &cobra.Command{
 		Use:     "connect",
@@ -148,9 +149,14 @@ func NewConnectCmd() *cobra.Command {
 			// Export execution data before switching to agent mode
 			if !skipExport {
 				ui.H2("Exporting execution data before connecting")
-				exportPath, exportErr := client.ExportExecutions(".")
+				exportPath, exportErr := client.ExportExecutions(".", exportSince)
 				if exportErr != nil {
-					ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
+					if strings.Contains(exportErr.Error(), "413") {
+						ui.Warn("Export archive exceeds the 100 MB size limit.")
+						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+					} else {
+						ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
+					}
 					ui.Warn("Your data will remain in the existing database and can be exported later.")
 					if ok := ui.Confirm("Continue connecting without export?"); !ok {
 						return
@@ -231,6 +237,7 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
 	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 0, "PostgreSQL replicas")
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
+	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
 	return cmd
 }
 

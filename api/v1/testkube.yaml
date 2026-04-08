@@ -3210,8 +3210,16 @@ paths:
       tags:
         - api
       summary: "Export execution data"
-      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive"
+      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive. The archive is limited to 100 MB; use the 'since' parameter to narrow the date range if the limit is exceeded."
       operationId: exportExecutions
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: "Export only executions created after this date. Accepts ISO 8601 date (YYYY-MM-DD) or RFC 3339 timestamp (e.g. 2025-01-01T00:00:00Z)."
+          schema:
+            type: string
+            format: date-time
       responses:
         200:
           description: "successful operation"
@@ -3226,6 +3234,14 @@ paths:
               schema:
                 type: string
                 format: binary
+        413:
+          description: "export archive exceeds the 100 MB size limit"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with exporting execution data"
           content:

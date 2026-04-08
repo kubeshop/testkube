@@ -289,7 +289,11 @@ func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runn
 }
 
 // ExportExecutions downloads the export archive from the server
-func (c TestWorkflowClient) ExportExecutions(destination string) (fileName string, err error) {
+func (c TestWorkflowClient) ExportExecutions(destination string, since string) (fileName string, err error) {
 	uri := c.testWorkflowTransport.GetURI("/export")
-	return c.testWorkflowTransport.GetFile(uri, "testkube-export.tar.gz", destination, nil)
+	var params map[string][]string
+	if since != "" {
+		params = map[string][]string{"since": {since}}
+	}
+	return c.testWorkflowTransport.GetFile(uri, "testkube-export.tar.gz", destination, params)
 }

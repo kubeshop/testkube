@@ -2,19 +2,24 @@ package v1
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubeshop/testkube/pkg/datefilter"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 const (
-	pageSize = 100
+	exportPageSize    = 100
+	maxArchiveSize    = 100 * 1024 * 1024 // 100 MB
+	archiveLimitError = "export archive exceeds the 100 MB size limit; use the 'since' query parameter to narrow the date range"
 )
 
 // sequenceEntry holds the current sequence number for a workflow.
@@ -27,112 +32,110 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to export executions"
 
+		sinceParam := c.Query("since", "")
+		dFilter := datefilter.NewDateFilter(sinceParam, "")
+
+		// Build archive in memory so we can enforce the size limit before sending.
+		var buf bytes.Buffer
+		gzWriter := gzip.NewWriter(&buf)
+		tarWriter := tar.NewWriter(gzWriter)
+
+		sequences := map[string]int32{}
+
+		page := 0
+		for {
+			filter := testworkflow2.NewExecutionsFilter().WithPage(page).WithPageSize(exportPageSize)
+			if dFilter.IsStartValid {
+				filter = filter.WithStartDate(dFilter.Start)
+			}
+
+			executions, err := s.TestWorkflowResults.GetExecutions(c.Context(), filter)
+			if err != nil {
+				s.Log.Errorw(errPrefix+": listing executions", "error", err, "page", page)
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("listing executions: %w", err))
+			}
+
+			if len(executions) == 0 {
+				break
+			}
+
+			for i := range executions {
+				execution := &executions[i]
+
+				data, err := json.Marshal(execution)
+				if err != nil {
+					s.Log.Errorw(errPrefix+": marshaling execution", "error", err, "id", execution.Id)
+					continue
+				}
+
+				name := fmt.Sprintf("executions/%s.json", execution.Id)
+				if err := writeTarEntry(tarWriter, name, data); err != nil {
+					s.Log.Errorw(errPrefix+": writing execution to archive", "error", err, "id", execution.Id)
+					continue
+				}
+
+				if execution.Workflow != nil {
+					logData, err := s.readExecutionLog(c.Context(), execution.Id, execution.Workflow.Name)
+					if err != nil {
+						s.Log.Warnw(errPrefix+": reading logs", "error", err, "id", execution.Id)
+					} else if len(logData) > 0 {
+						logName := fmt.Sprintf("logs/%s.log", execution.Id)
+						if err := writeTarEntry(tarWriter, logName, logData); err != nil {
+							s.Log.Errorw(errPrefix+": writing log to archive", "error", err, "id", execution.Id)
+						}
+					}
+
+					wfName := execution.Workflow.Name
+					if execution.Number > sequences[wfName] {
+						sequences[wfName] = execution.Number
+					}
+				}
+
+				if buf.Len() > maxArchiveSize {
+					s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())
+					return s.Error(c, http.StatusRequestEntityTooLarge, fmt.Errorf(archiveLimitError))
+				}
+			}
+
+			if len(executions) < exportPageSize {
+				break
+			}
+			page++
+		}
+
+		// Write sequences.json
+		entries := make([]sequenceEntry, 0, len(sequences))
+		for name, number := range sequences {
+			entries = append(entries, sequenceEntry{
+				WorkflowName: name,
+				Number:       number,
+			})
+		}
+
+		seqData, err := json.Marshal(entries)
+		if err != nil {
+			s.Log.Errorw(errPrefix+": marshaling sequences", "error", err)
+		} else if err := writeTarEntry(tarWriter, "sequences.json", seqData); err != nil {
+			s.Log.Errorw(errPrefix+": writing sequences to archive", "error", err)
+		}
+
+		if err := tarWriter.Close(); err != nil {
+			s.Log.Errorw(errPrefix+": closing tar writer", "error", err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("finalizing archive: %w", err))
+		}
+		if err := gzWriter.Close(); err != nil {
+			s.Log.Errorw(errPrefix+": closing gzip writer", "error", err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("finalizing archive: %w", err))
+		}
+
+		if buf.Len() > maxArchiveSize {
+			s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())
+			return s.Error(c, http.StatusRequestEntityTooLarge, fmt.Errorf(archiveLimitError))
+		}
+
 		c.Set("Content-Type", "application/gzip")
 		c.Set("Content-Disposition", `attachment; filename="testkube-export.tar.gz"`)
-
-		// Capture the request context for cancellation propagation.
-		// This is safe because SendStream blocks until the pipe reader is fully consumed,
-		// so the context remains valid while the goroutine runs.
-		reqCtx := c.Context()
-
-		pr, pw := io.Pipe()
-
-		go func() {
-			var writeErr error
-			defer func() { pw.CloseWithError(writeErr) }()
-
-			gzWriter := gzip.NewWriter(pw)
-			tarWriter := tar.NewWriter(gzWriter)
-
-			// Track max sequence number per workflow
-			sequences := map[string]int32{}
-
-			page := 0
-			for {
-				filter := testworkflow2.NewExecutionsFilter().WithPage(page).WithPageSize(pageSize)
-				executions, err := s.TestWorkflowResults.GetExecutions(reqCtx, filter)
-				if err != nil {
-					s.Log.Errorw(errPrefix+": listing executions", "error", err, "page", page)
-					writeErr = fmt.Errorf("listing executions: %w", err)
-					return
-				}
-
-				if len(executions) == 0 {
-					break
-				}
-
-				for i := range executions {
-					execution := &executions[i]
-
-					// Write execution metadata as JSON to executions/<id>.json
-					data, err := json.Marshal(execution)
-					if err != nil {
-						s.Log.Errorw(errPrefix+": marshaling execution", "error", err, "id", execution.Id)
-						continue
-					}
-
-					name := fmt.Sprintf("executions/%s.json", execution.Id)
-					if err := writeTarEntry(tarWriter, name, data); err != nil {
-						s.Log.Errorw(errPrefix+": writing execution to archive", "error", err, "id", execution.Id)
-						continue
-					}
-
-					// Read logs from MinIO and write to logs/<id>.log
-					if execution.Workflow != nil {
-						logData, err := s.readExecutionLog(reqCtx, execution.Id, execution.Workflow.Name)
-						if err != nil {
-							s.Log.Warnw(errPrefix+": reading logs", "error", err, "id", execution.Id)
-						} else if len(logData) > 0 {
-							logName := fmt.Sprintf("logs/%s.log", execution.Id)
-							if err := writeTarEntry(tarWriter, logName, logData); err != nil {
-								s.Log.Errorw(errPrefix+": writing log to archive", "error", err, "id", execution.Id)
-							}
-						}
-
-						// Track max sequence per workflow
-						wfName := execution.Workflow.Name
-						if execution.Number > sequences[wfName] {
-							sequences[wfName] = execution.Number
-						}
-					}
-				}
-
-				if len(executions) < pageSize {
-					break
-				}
-				page++
-			}
-
-			// Write sequences.json
-			entries := make([]sequenceEntry, 0, len(sequences))
-			for name, number := range sequences {
-				entries = append(entries, sequenceEntry{
-					WorkflowName: name,
-					Number:       number,
-				})
-			}
-
-			seqData, err := json.Marshal(entries)
-			if err != nil {
-				s.Log.Errorw(errPrefix+": marshaling sequences", "error", err)
-			} else if err := writeTarEntry(tarWriter, "sequences.json", seqData); err != nil {
-				s.Log.Errorw(errPrefix+": writing sequences to archive", "error", err)
-			}
-
-			// Close writers in order to flush all data
-			if err := tarWriter.Close(); err != nil {
-				s.Log.Errorw(errPrefix+": closing tar writer", "error", err)
-				writeErr = err
-			}
-			if err := gzWriter.Close(); err != nil {
-				s.Log.Errorw(errPrefix+": closing gzip writer", "error", err)
-				if writeErr == nil {
-					writeErr = err
-				}
-			}
-		}()
-
-		return c.SendStream(pr)
+		return c.Send(buf.Bytes())
 	}
 }
 
