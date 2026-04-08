@@ -92,7 +92,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 		},
 	)
 
-	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
+	session, sub, replay, available, _, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
 	require.True(t, available)
 	require.False(t, done)
 	require.Empty(t, replay)
@@ -115,7 +115,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 reconnect:
 	assert.Equal(t, []uint32{1, 2, 3}, firstPass)
 
-	session, sub, replay, available, lastSeqNo, done = manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", ResumeAfterSeqNo: 1})
+	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", ResumeAfterSeqNo: 1})
 	require.True(t, available)
 	require.True(t, done)
 	require.Equal(t, uint32(3), lastSeqNo)
