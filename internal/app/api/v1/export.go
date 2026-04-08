@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -139,7 +140,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 		// compressed data so the buffer may now exceed the limit.
 		if buf.Len() > maxSize {
 			s.Log.Errorw(errPrefix+": archive size limit exceeded after finalization", "size", buf.Len())
-			return s.Error(c, http.StatusRequestEntityTooLarge, fmt.Errorf(archiveLimitError))
+			return s.Error(c, http.StatusRequestEntityTooLarge, errors.New(archiveLimitError))
 		}
 
 		c.Set("Content-Type", "application/gzip")
