@@ -128,11 +128,6 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("finalizing archive: %w", err))
 		}
 
-		if buf.Len() > maxArchiveSize {
-			s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())
-			return s.Error(c, http.StatusRequestEntityTooLarge, fmt.Errorf(archiveLimitError))
-		}
-
 		c.Set("Content-Type", "application/gzip")
 		c.Set("Content-Disposition", `attachment; filename="testkube-export.tar.gz"`)
 		return c.Send(buf.Bytes())
