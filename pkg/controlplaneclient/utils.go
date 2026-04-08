@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -57,11 +58,230 @@ func getGrpcErrorCode(err error) codes.Code {
 type notificationRequest interface {
 	GetRequestType() cloud.TestWorkflowNotificationsRequestType
 	GetStreamId() string
+	GetResumeAfterSeqNo() uint32
 }
 
 type notificationSrv[Request any, Response any] interface {
 	Send(Response) error
 	Recv() (Request, error)
+}
+
+const (
+	workflowNotificationHeartbeatInterval = 20 * time.Second
+	workflowNotificationReplayMaxEvents   = 10_000
+	workflowNotificationReplayMaxBytes    = 10 * 1024 * 1024
+	workflowNotificationSessionIdleTTL    = 15 * time.Minute
+)
+
+type notificationStreamEvent struct {
+	seqNo        uint32
+	notification *testkube.TestWorkflowExecutionNotification
+}
+
+type notificationStreamSubscription struct {
+	id uint64
+	ch chan notificationStreamEvent
+}
+
+type notificationStreamSession struct {
+	mu          sync.Mutex
+	nextSeqNo   uint32
+	replay      []notificationStreamEvent
+	replayBytes int
+	subscribers map[uint64]chan notificationStreamEvent
+	done        bool
+	lastSeqNo   uint32
+	lastActive  time.Time
+}
+
+func newNotificationStreamSession() *notificationStreamSession {
+	return &notificationStreamSession{
+		nextSeqNo:   1,
+		subscribers: make(map[uint64]chan notificationStreamEvent),
+		lastActive:  time.Now(),
+	}
+}
+
+func (s *notificationStreamSession) subscribe(resumeAfterSeqNo uint32, subscriptionID uint64) (notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.lastActive = time.Now()
+	sub := notificationStreamSubscription{
+		id: subscriptionID,
+		ch: make(chan notificationStreamEvent, 256),
+	}
+	if !s.done {
+		s.subscribers[sub.id] = sub.ch
+	}
+
+	replay, available := s.replayAfterLocked(resumeAfterSeqNo)
+	return sub, replay, available, s.lastSeqNo, s.done
+}
+
+func (s *notificationStreamSession) unsubscribe(sub notificationStreamSubscription) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.subscribers, sub.id)
+}
+
+func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowExecutionNotification) {
+	if notification == nil {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	seqNo := s.nextSeqNo
+	s.nextSeqNo++
+	s.lastSeqNo = seqNo
+	s.lastActive = time.Now()
+
+	event := notificationStreamEvent{
+		seqNo:        seqNo,
+		notification: notification,
+	}
+	s.replay = append(s.replay, event)
+	s.replayBytes += approximateNotificationBytes(notification)
+	for len(s.replay) > workflowNotificationReplayMaxEvents || s.replayBytes > workflowNotificationReplayMaxBytes {
+		s.replayBytes -= approximateNotificationBytes(s.replay[0].notification)
+		s.replay[0].notification = nil
+		s.replay = s.replay[1:]
+	}
+
+	for _, sub := range s.subscribers {
+		sub <- event
+	}
+}
+
+func (s *notificationStreamSession) close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.done {
+		return
+	}
+	s.done = true
+	s.lastActive = time.Now()
+	for id, sub := range s.subscribers {
+		close(sub)
+		delete(s.subscribers, id)
+	}
+}
+
+func (s *notificationStreamSession) currentSeqNo() uint32 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastSeqNo
+}
+
+func (s *notificationStreamSession) isDone() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.done
+}
+
+func (s *notificationStreamSession) replayAfterLocked(resumeAfterSeqNo uint32) ([]notificationStreamEvent, bool) {
+	if resumeAfterSeqNo == 0 {
+		return nil, true
+	}
+	if len(s.replay) == 0 {
+		return nil, resumeAfterSeqNo >= s.lastSeqNo
+	}
+
+	earliest := s.replay[0].seqNo
+	if resumeAfterSeqNo < earliest-1 {
+		return nil, false
+	}
+
+	var replay []notificationStreamEvent
+	for _, event := range s.replay {
+		if event.seqNo > resumeAfterSeqNo {
+			replay = append(replay, event)
+		}
+	}
+	return replay, true
+}
+
+func (s *notificationStreamSession) expired(now time.Time) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.done && now.Sub(s.lastActive) >= workflowNotificationSessionIdleTTL
+}
+
+func approximateNotificationBytes(notification *testkube.TestWorkflowExecutionNotification) int {
+	if notification == nil {
+		return 0
+	}
+	b, err := json.Marshal(notification)
+	if err != nil {
+		return len(notification.Log)
+	}
+	return len(b)
+}
+
+type notificationStreamSessionManager[Request notificationRequest] struct {
+	mu       sync.Mutex
+	nextID   atomic.Uint64
+	sessions map[string]*notificationStreamSession
+	key      func(Request) string
+	process  func(ctx context.Context, req Request) NotificationWatcher
+}
+
+func newNotificationStreamSessionManager[Request notificationRequest](
+	key func(Request) string,
+	process func(ctx context.Context, req Request) NotificationWatcher,
+) *notificationStreamSessionManager[Request] {
+	return &notificationStreamSessionManager[Request]{
+		sessions: make(map[string]*notificationStreamSession),
+		key:      key,
+		process:  process,
+	}
+}
+
+func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+	key := m.key(req)
+	now := time.Now()
+
+	m.mu.Lock()
+	for sessionKey, session := range m.sessions {
+		if session.expired(now) {
+			delete(m.sessions, sessionKey)
+		}
+	}
+
+	session := m.sessions[key]
+	if session != nil && session.isDone() && req.GetResumeAfterSeqNo() == 0 {
+		delete(m.sessions, key)
+		session = nil
+	}
+	if session == nil {
+		session = newNotificationStreamSession()
+		m.sessions[key] = session
+		go m.runSource(ctx, session, req)
+	}
+	subscriptionID := m.nextID.Add(1)
+	m.mu.Unlock()
+
+	sub, replay, available, lastSeqNo, done := session.subscribe(req.GetResumeAfterSeqNo(), subscriptionID)
+	return session, sub, replay, available, lastSeqNo, done
+}
+
+func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Context, session *notificationStreamSession, req Request) {
+	defer session.close()
+
+	watcher := m.process(ctx, req)
+	for notification := range watcher.Channel() {
+		session.publish(notification)
+	}
+	if watcher.Err() != nil {
+		session.publish(&testkube.TestWorkflowExecutionNotification{
+			Ts:        time.Now(),
+			EventType: "error",
+			Log:       fmt.Sprintf("%s %s", time.Now().Format(constants.PreciseTimeFormat), watcher.Err().Error()),
+		})
+	}
 }
 
 func processNotifications[Request notificationRequest, Response any, Srv notificationSrv[Request, Response]](
@@ -71,6 +291,8 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildPongNotification func(streamId string) Response,
 	buildNotification func(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) Response,
 	buildError func(streamId string, message string) Response,
+	buildProtocol func(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) Response,
+	sessionKey func(req Request) string,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 	sendTimeout time.Duration,
 	recvTimeout time.Duration,
@@ -83,6 +305,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	}
 
 	responses := make(chan Response, 5)
+	sessionManager := newNotificationStreamSessionManager(sessionKey, process)
 
 	// Send responses in sequence
 	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
@@ -173,16 +396,36 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 			g.Go(func(req Request) func() error {
 				return func() error {
 					defer wg.Done()
-					seqNo := uint32(0)
-					watcher := process(ctx, req) // TODO: Make ctx per request, so the stream could be stopped
-					for notification := range watcher.Channel() {
-						responses <- buildNotification(req.GetStreamId(), seqNo, notification)
-						seqNo++
+
+					session, sub, replay, resumeAvailable, lastSeqNo, done := sessionManager.attach(ctx, req)
+					defer session.unsubscribe(sub)
+
+					responses <- buildProtocol(req.GetStreamId(), lastSeqNo, cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_READY, "")
+					if !resumeAvailable {
+						responses <- buildProtocol(req.GetStreamId(), lastSeqNo, cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_RESUME_UNAVAILABLE, "")
 					}
-					if watcher.Err() != nil {
-						responses <- buildError(req.GetStreamId(), watcher.Err().Error())
+					for _, event := range replay {
+						responses <- buildNotification(req.GetStreamId(), event.seqNo, event.notification)
 					}
-					return nil
+					if done {
+						return nil
+					}
+
+					heartbeat := time.NewTicker(workflowNotificationHeartbeatInterval)
+					defer heartbeat.Stop()
+					for {
+						select {
+						case event, ok := <-sub.ch:
+							if !ok {
+								return nil
+							}
+							responses <- buildNotification(req.GetStreamId(), event.seqNo, event.notification)
+						case <-heartbeat.C:
+							responses <- buildProtocol(req.GetStreamId(), session.currentSeqNo(), cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_HEARTBEAT, "")
+						case <-ctx.Done():
+							return ctx.Err()
+						}
+					}
 				}
 			}(req))
 		}
@@ -206,6 +449,9 @@ func buildCloudNotification(streamId string, seqNo uint32, notification *testkub
 		m, _ := json.Marshal(notification.Output)
 		response.Type = cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_OUTPUT
 		response.Message = string(m)
+	} else if notification.EventType == "error" {
+		response.Type = cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_ERROR
+		response.Message = notification.Log
 	} else {
 		response.Type = cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_LOG
 		response.Message = notification.Log
@@ -221,6 +467,16 @@ func buildCloudError(streamId string, message string) *cloud.TestWorkflowNotific
 		Timestamp: ts.Format(time.RFC3339Nano),
 		Type:      cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_ERROR,
 		Message:   fmt.Sprintf("%s %s", ts.Format(constants.PreciseTimeFormat), message),
+	}
+}
+
+func buildCloudProtocol(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) *cloud.TestWorkflowNotificationsResponse {
+	return &cloud.TestWorkflowNotificationsResponse{
+		StreamId:  streamId,
+		SeqNo:     seqNo,
+		Timestamp: time.Now().Format(time.RFC3339Nano),
+		Type:      notificationType,
+		Message:   message,
 	}
 }
 
@@ -241,6 +497,10 @@ func buildServiceCloudNotification(streamId string, seqNo uint32, notification *
 
 func buildServiceCloudError(streamId string, message string) *cloud.TestWorkflowServiceNotificationsResponse {
 	return convertCloudResponseToService(buildCloudError(streamId, message))
+}
+
+func buildServiceCloudProtocol(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) *cloud.TestWorkflowServiceNotificationsResponse {
+	return convertCloudResponseToService(buildCloudProtocol(streamId, seqNo, notificationType, message))
 }
 
 func buildPongNotification(streamId string) *cloud.TestWorkflowNotificationsResponse {
@@ -272,4 +532,8 @@ func buildParallelStepCloudNotification(streamId string, seqNo uint32, notificat
 
 func buildParallelStepCloudError(streamId string, message string) *cloud.TestWorkflowParallelStepNotificationsResponse {
 	return convertCloudResponseToParallelStep(buildCloudError(streamId, message))
+}
+
+func buildParallelStepCloudProtocol(streamId string, seqNo uint32, notificationType cloud.TestWorkflowNotificationType, message string) *cloud.TestWorkflowParallelStepNotificationsResponse {
+	return convertCloudResponseToParallelStep(buildCloudProtocol(streamId, seqNo, notificationType, message))
 }
