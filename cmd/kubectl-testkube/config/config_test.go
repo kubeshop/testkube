@@ -31,6 +31,59 @@ func TestSave(t *testing.T) {
 	})
 }
 
+func TestDatabaseTypeConstants(t *testing.T) {
+	assert.Equal(t, "mongodb", DatabaseTypeMongoDB)
+	assert.Equal(t, "postgresql", DatabaseTypePostgreSQL)
+	assert.NotEqual(t, DatabaseTypeMongoDB, DatabaseTypePostgreSQL)
+}
+
+func TestCloudContextDatabaseType_Persistence(t *testing.T) {
+	dir, err := os.MkdirTemp("", "test-config-dbtype")
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
+	defaultDirectory = dir
+
+	t.Run("persist MongoDB database type", func(t *testing.T) {
+		data := Data{
+			CloudContext: CloudContext{
+				DatabaseType: DatabaseTypeMongoDB,
+			},
+		}
+		err := Save(data)
+		assert.NoError(t, err)
+
+		loaded, err := Load()
+		assert.NoError(t, err)
+		assert.Equal(t, DatabaseTypeMongoDB, loaded.CloudContext.DatabaseType)
+	})
+
+	t.Run("persist PostgreSQL database type", func(t *testing.T) {
+		data := Data{
+			CloudContext: CloudContext{
+				DatabaseType: DatabaseTypePostgreSQL,
+			},
+		}
+		err := Save(data)
+		assert.NoError(t, err)
+
+		loaded, err := Load()
+		assert.NoError(t, err)
+		assert.Equal(t, DatabaseTypePostgreSQL, loaded.CloudContext.DatabaseType)
+	})
+
+	t.Run("empty database type on fresh config", func(t *testing.T) {
+		data := Data{}
+		err := Save(data)
+		assert.NoError(t, err)
+
+		loaded, err := Load()
+		assert.NoError(t, err)
+		assert.Empty(t, loaded.CloudContext.DatabaseType)
+	})
+}
+
 func TestSaveTelemetryEnabled(t *testing.T) {
 	dir, err := os.MkdirTemp("", "test-config-save")
 	assert.NoError(t, err)

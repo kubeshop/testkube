@@ -101,7 +101,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 
 				if buf.Len() > maxSize {
 					s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())
-					return s.Error(c, http.StatusRequestEntityTooLarge, fmt.Errorf(archiveLimitError))
+					return s.Error(c, http.StatusRequestEntityTooLarge, errors.New(archiveLimitError))
 				}
 			}
 
