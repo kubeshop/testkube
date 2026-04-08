@@ -32,6 +32,9 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 
 		sinceParam := c.Query("since", "")
 		dFilter := datefilter.NewDateFilter(sinceParam, "")
+		if sinceParam != "" && !dFilter.IsStartValid {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("invalid 'since' date: %q; expected YYYY-MM-DD or RFC 3339 format", sinceParam))
+		}
 
 		maxSize := s.exportArchiveMaxSize
 		if maxSize <= 0 {

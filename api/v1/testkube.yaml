@@ -3219,7 +3219,11 @@ paths:
           description: "Export only executions created after this date. Accepts ISO 8601 date (YYYY-MM-DD) or RFC 3339 timestamp (e.g. 2025-01-01T00:00:00Z)."
           schema:
             type: string
-            format: date-time
+          examples:
+            date:
+              value: "2025-01-01"
+            datetime:
+              value: "2025-01-01T00:00:00Z"
       responses:
         200:
           description: "successful operation"
