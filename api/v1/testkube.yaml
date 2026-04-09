@@ -3238,6 +3238,14 @@ paths:
               schema:
                 type: string
                 format: binary
+        400:
+          description: "invalid 'since' parameter value"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         413:
           description: "export archive exceeds the server-configured size limit"
           content:
