@@ -71,18 +71,18 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 		params.Grep = request.GetString("grep", "")
 
 		if s := request.GetString("startLine", ""); s != "" {
-			if v, err := strconv.Atoi(s); err == nil && v > 0 {
-				params.StartLine = v
+			v, err := strconv.Atoi(s)
+			if err != nil || v <= 0 {
+				return mcp.NewToolResultError(fmt.Sprintf("startLine must be a positive integer, got %q", s)), nil
 			}
+			params.StartLine = v
 		}
 		if s := request.GetString("endLine", ""); s != "" {
-			if v, err := strconv.Atoi(s); err == nil && v > 0 {
-				params.EndLine = v
+			v, err := strconv.Atoi(s)
+			if err != nil || v <= 0 {
+				return mcp.NewToolResultError(fmt.Sprintf("endLine must be a positive integer, got %q", s)), nil
 			}
-		}
-
-		if params.StartLine > 0 && params.EndLine > 0 && params.StartLine > params.EndLine {
-			return mcp.NewToolResultError("startLine must be less than or equal to endLine"), nil
+			params.EndLine = v
 		}
 
 		content, err := client.ReadArtifact(ctx, executionId, fileName, params)

@@ -226,9 +226,6 @@ func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (stri
 }
 
 func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename string, params tools.ArtifactReadParams) (string, error) {
-	// URL encode the filename to handle special characters like forward slashes
-	encodedFilename := url.QueryEscape(filename)
-
 	response, err := c.makeRequest(ctx, APIRequest{
 		Method: "POST",
 		Path:   "/test-workflow-executions/{executionId}/artifacts",
