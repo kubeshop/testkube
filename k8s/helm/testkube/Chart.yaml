@@ -16,6 +16,15 @@ dependencies:
     condition: postgresql.enabled
     version: 18.2-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
+  - name: cloudnative-pg
+    version: 0.27.0
+    repository: https://cloudnative-pg.github.io/charts
+    condition: cloudnative-pg.enabled
+  - name: cluster
+    alias: postgresqlOperatorCluster
+    version: 0.4.0
+    repository: https://cloudnative-pg.github.io/charts
+    condition: postgresqlOperatorCluster.enabled
   - name: nats
     condition: testkube-api.nats.enabled
     version: 1.2.6-4

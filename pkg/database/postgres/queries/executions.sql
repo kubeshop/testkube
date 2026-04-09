@@ -1,5 +1,5 @@
 -- name: GetTestWorkflowExecution :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -8,7 +8,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -60,7 +60,7 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.id = @id OR e.name = @id) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
 
 -- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -69,7 +69,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -121,7 +121,7 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.id = @name OR e.name = @name) AND w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
 
 -- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -130,7 +130,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -199,7 +199,7 @@ SELECT DISTINCT ON (w.name)
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -252,7 +252,7 @@ WHERE w.name = ANY(@workflow_names::text[]) AND (e.organization_id = @organizati
 ORDER BY w.name, e.status_at DESC;
 
 -- name: GetRunningTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -261,7 +261,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -314,7 +314,7 @@ WHERE r.status IN ('queued', 'assigned', 'starting', 'running', 'pausing', 'paus
 ORDER BY e.id DESC;
 
 -- name: GetFinishedTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -323,7 +323,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -366,7 +366,7 @@ SELECT
         '[]'::json
     )::json as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -484,10 +484,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
               SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
           )
@@ -561,7 +561,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -699,7 +699,7 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 -- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
-    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
+    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks,
     tags, running_context, config_params, organization_id, environment_id, runtime, silent_mode
 ) VALUES (
     @id, @group_id, @runner_id, @runner_target, @runner_original_target, @name, @namespace, @number,
@@ -744,11 +744,14 @@ ON CONFLICT (execution_id) DO UPDATE SET
 INSERT INTO test_workflow_outputs (execution_id, ref, name, value, out_order)
 VALUES (@execution_id, @ref, @name, @value, @out_order);
 
+-- name: GetMaxReportOrder :one
+SELECT COALESCE(MAX(rep_order), 0)::int FROM test_workflow_reports WHERE execution_id = @execution_id;
+
 -- name: InsertTestWorkflowReport :exec
 INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary, rep_order)
 VALUES (@execution_id, @ref, @kind, @file, @summary, @rep_order);
 
--- name: InsertTestWorkflowResourceAggregations :exec
+-- name: UpsertTestWorkflowResourceAggregations :exec
 INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
 VALUES (@execution_id, @global, @step)
 ON CONFLICT (execution_id) DO UPDATE SET
@@ -776,8 +779,8 @@ ON CONFLICT (execution_id, workflow_type) DO UPDATE SET
     status = EXCLUDED.status;
 
 -- name: UpdateTestWorkflowExecutionResult :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = @status,
     predicted_status = @predicted_status,
     queued_at = @queued_at,
@@ -794,13 +797,13 @@ SET
 WHERE execution_id = @execution_id;
 
 -- name: UpdateExecutionStatus :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = @status
 WHERE execution_id = @execution_id;
 
 -- name: UpdateExecutionStatusAt :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = @status_at
 WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);
 
@@ -822,13 +825,6 @@ DELETE FROM test_workflow_resource_aggregations WHERE execution_id = @execution_
 -- name: DeleteTestWorkflow :exec
 DELETE FROM test_workflows WHERE execution_id = @execution_id AND workflow_type = @workflow_type;
 
--- name: UpdateTestWorkflowExecutionResourceAggregations :exec
-UPDATE test_workflow_resource_aggregations
-SET
-    global = @global,
-    step = @step
-WHERE execution_id = @execution_id;
-
 -- name: UpdateTestWorkflowExecutionTags :execrows
 UPDATE test_workflow_executions
 SET tags = @tags
@@ -838,7 +834,7 @@ WHERE (id = @execution_id OR name = @execution_id) AND (organization_id = @organ
 DELETE FROM test_workflow_executions e
 USING test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-  AND w.workflow_type = 'workflow' 
+  AND w.workflow_type = 'workflow'
   AND w.name = @workflow_name::text;
 
 -- name: DeleteAllTestWorkflowExecutions :exec
@@ -848,11 +844,11 @@ DELETE FROM test_workflow_executions WHERE organization_id = @organization_id AN
 DELETE FROM test_workflow_executions e
 USING test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-  AND w.workflow_type = 'workflow' 
+  AND w.workflow_type = 'workflow'
   AND w.name = ANY(@workflow_names::text[]);
 
 -- name: GetTestWorkflowMetrics :many
-SELECT 
+SELECT
     e.id as execution_id,
     e.group_id,
     r.duration,
@@ -882,7 +878,7 @@ LIMIT 1;
 
 -- name: GetTestWorkflowExecutionTags :many
 WITH tag_extracts AS (
-    SELECT 
+    SELECT
         e.id,
         w.name as workflow_name,
         tag_pair.key as tag_key,
@@ -894,7 +890,7 @@ WITH tag_extracts AS (
         AND e.tags != '{}'::jsonb
         AND jsonb_typeof(e.tags) = 'object'
 )
-SELECT 
+SELECT
     tag_key::text,
     array_agg(DISTINCT tag_value ORDER BY tag_value)::text[] as values
 FROM tag_extracts
@@ -903,16 +899,16 @@ GROUP BY tag_key
 ORDER BY tag_key;
 
 -- name: InitTestWorkflowExecution :exec
-UPDATE test_workflow_executions 
-SET 
+UPDATE test_workflow_executions
+SET
     namespace = @namespace,
     runner_id = @runner_id,
     status_at = NOW()
 WHERE id = @id AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: AssignTestWorkflowExecution :one
-UPDATE test_workflow_executions 
-SET 
+UPDATE test_workflow_executions
+SET
     runner_id = @new_runner_id::text,
     assigned_at = @assigned_at
 FROM test_workflow_results r
@@ -925,7 +921,7 @@ WHERE test_workflow_executions.id = @id AND (test_workflow_executions.organizati
 RETURNING test_workflow_executions.id;
 
 -- name: GetUnassignedTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -934,7 +930,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -977,7 +973,7 @@ SELECT
         '[]'::json
     )::json  as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -988,7 +984,7 @@ WHERE r.status = 'queued' AND (e.organization_id = @organization_id AND e.enviro
 ORDER BY e.id DESC;
 
 -- name: AbortTestWorkflowExecutionIfQueued :one
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = @abort_time
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = @id AND (test_workflow_executions.organization_id = @organization_id AND test_workflow_executions.environment_id = @environment_id)
@@ -998,8 +994,8 @@ WHERE test_workflow_executions.id = @id AND (test_workflow_executions.organizati
 RETURNING test_workflow_executions.id;
 
 -- name: AbortTestWorkflowResultIfQueued :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = 'aborted',
     predicted_status = 'aborted',
     finished_at = @abort_time,
@@ -1008,7 +1004,7 @@ SET
             jsonb_set(COALESCE(initialization, '{}'::jsonb), '{status}', '"aborted"'),
             '{errormessage}', '"Aborted before initialization."'
         ),
-        '{finishedat}', to_jsonb(@abort_time::timestamp)
+        '{finishedat}', to_jsonb(@abort_time::timestamptz)
     )
 WHERE execution_id = @id
     AND status IN ('queued', 'running', 'paused');
@@ -1036,7 +1032,7 @@ SET
 WHERE id = @id AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: GetTestWorkflowExecutionsSummary :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -1045,7 +1041,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1088,7 +1084,7 @@ SELECT
         '[]'::json
     )::json as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -1196,28 +1192,28 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
     AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR 
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE(@assigned, NULL) IS NULL OR
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR 
+    AND (COALESCE(@initialized, NULL) IS NULL OR
          (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+    AND (
+        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
                         NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
@@ -1226,7 +1222,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@tag_keys::text[], 1)
         )
         AND
-        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
@@ -1252,10 +1248,10 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
-        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
                         NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
@@ -1264,7 +1260,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = array_length(@selector_keys::text[], 1)
         )
         AND
-        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
@@ -1272,7 +1268,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     );
 
 -- name: GetTestWorkflowExecutionWithRunner :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -1281,7 +1277,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1333,9 +1329,9 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.id = @id OR e.name = @id) AND e.runner_id = @runner_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
 
 -- name: UpdateTestWorkflowExecutionResultStrict :one
-UPDATE test_workflow_results 
-SET 
-    status = CASE 
+UPDATE test_workflow_results
+SET
+    status = CASE
         WHEN test_workflow_results.status = 'stopping' THEN 'stopping'
         ELSE @status
     END,
@@ -1365,16 +1361,16 @@ WHERE test_workflow_results.execution_id = @execution_id
 RETURNING test_workflow_results.execution_id;
 
 -- name: UpdateExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
-SET status_at = CASE 
-    WHEN @new_status != @old_status THEN @status_at 
-    ELSE status_at 
+UPDATE test_workflow_executions
+SET status_at = CASE
+    WHEN @new_status != @old_status THEN @status_at
+    ELSE status_at
 END
 WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: FinishTestWorkflowExecutionResultStrict :one
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = @status,
     predicted_status = @predicted_status,
     queued_at = @queued_at,
@@ -1399,6 +1395,6 @@ WHERE test_workflow_results.execution_id = @execution_id
 RETURNING test_workflow_results.execution_id;
 
 -- name: FinishExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = @finished_at
 WHERE id = @execution_id AND (organization_id = @organization_id AND environment_id = @environment_id);

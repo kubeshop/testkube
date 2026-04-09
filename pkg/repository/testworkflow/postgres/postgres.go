@@ -774,7 +774,7 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1003,6 +1003,13 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 }
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
+	if len(reports) == 0 {
+		return nil
+	}
+	maxOrder, err := qtx.GetMaxReportOrder(ctx, executionId)
+	if err != nil {
+		return err
+	}
 	for i, report := range reports {
 		summary, err := toJSONB(report.Summary)
 		if err != nil {
@@ -1015,7 +1022,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			Kind:        toPgText(report.Kind),
 			File:        toPgText(report.File),
 			Summary:     summary,
-			RepOrder:    int32(i + 1),
+			RepOrder:    maxOrder + int32(i) + 1,
 		})
 		if err != nil {
 			return err
@@ -1024,7 +1031,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 	return nil
 }
 
-func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+func (r *PostgresRepository) upsertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	global, err := toJSONB(agg.Global)
 	if err != nil {
 		return err
@@ -1035,7 +1042,7 @@ func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx
 		return err
 	}
 
-	return qtx.InsertTestWorkflowResourceAggregations(ctx, sqlc.InsertTestWorkflowResourceAggregationsParams{
+	return qtx.UpsertTestWorkflowResourceAggregations(ctx, sqlc.UpsertTestWorkflowResourceAggregationsParams{
 		ExecutionID: executionId,
 		Global:      global,
 		Step:        step,
@@ -1159,7 +1166,7 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1441,15 +1448,7 @@ func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report
 
 	qtx := r.queries.WithTx(tx)
 
-	// Delete existing reports
-	err = qtx.DeleteTestWorkflowReports(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Insert new reports
-	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
-	if err != nil {
+	if err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report}); err != nil {
 		return err
 	}
 
@@ -1505,21 +1504,7 @@ func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map
 
 // UpdateResourceAggregations updates resource aggregations
 func (r *PostgresRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
-	global, err := toJSONB(resourceAggregations.Global)
-	if err != nil {
-		return err
-	}
-
-	step, err := toJSONB(resourceAggregations.Step)
-	if err != nil {
-		return err
-	}
-
-	return r.queries.UpdateTestWorkflowExecutionResourceAggregations(ctx, sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams{
-		ExecutionID: id,
-		Global:      global,
-		Step:        step,
-	})
+	return r.upsertResourceAggregations(ctx, r.queries, id, resourceAggregations)
 }
 
 // DeleteByTestWorkflow deletes executions by workflow name

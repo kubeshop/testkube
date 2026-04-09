@@ -33,14 +33,16 @@ type TestWorkflowExecutionQueriesInterface interface {
 	InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (pgtype.UUID, error)
 	InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWorkflowOutputParams) error
 	InsertTestWorkflowReport(ctx context.Context, arg InsertTestWorkflowReportParams) error
-	InsertTestWorkflowResourceAggregations(ctx context.Context, arg InsertTestWorkflowResourceAggregationsParams) error
+	UpsertTestWorkflowResourceAggregations(ctx context.Context, arg UpsertTestWorkflowResourceAggregationsParams) error
 	InsertTestWorkflow(ctx context.Context, arg InsertTestWorkflowParams) error
+
+	// Query operations
+	GetMaxReportOrder(ctx context.Context, executionID string) (int32, error)
 
 	// Update operations
 	UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTestWorkflowExecutionParams) error
 	UpdateTestWorkflowExecutionResult(ctx context.Context, arg UpdateTestWorkflowExecutionResultParams) error
 	UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecutionStatusAtParams) error
-	UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error
 	UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) (int64, error)
 	UpdateExecutionStatusAtStrict(ctx context.Context, arg UpdateExecutionStatusAtStrictParams) error
 	UpdateTestWorkflowExecutionResultStrict(ctx context.Context, arg UpdateTestWorkflowExecutionResultStrictParams) (string, error)

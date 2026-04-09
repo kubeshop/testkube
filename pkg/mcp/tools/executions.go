@@ -116,6 +116,7 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 type ListExecutionsParams struct {
 	WorkflowName string
 	Selector     string
+	TagSelector  string
 	TextSearch   string
 	PageSize     int
 	Page         int
@@ -134,6 +135,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 		mcp.WithDescription(ListExecutionsDescription),
 		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
+		mcp.WithString("tagSelector", mcp.Description(TagSelectorDescription)),
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
@@ -147,6 +149,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 		params := ListExecutionsParams{
 			WorkflowName: request.GetString("workflowName", ""),
 			Selector:     request.GetString("selector", ""),
+			TagSelector:  request.GetString("tagSelector", ""),
 			TextSearch:   request.GetString("textSearch", ""),
 			Status:       request.GetString("status", ""),
 			Since:        request.GetString("since", ""),

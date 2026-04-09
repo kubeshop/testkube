@@ -109,7 +109,7 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowReport(ctx
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.InsertTestWorkflowResourceAggregationsParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.UpsertTestWorkflowResourceAggregationsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
@@ -117,6 +117,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResourceAg
 func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflow(ctx context.Context, arg sqlc.InsertTestWorkflowParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
+}
+
+func (m *MockTestWorkflowExecutionQueriesInterface) GetMaxReportOrder(ctx context.Context, executionID string) (int32, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).(int32), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecution(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionParams) error {
@@ -145,11 +150,6 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAt(ctx 
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAtStrict(ctx context.Context, arg sqlc.UpdateExecutionStatusAtStrictParams) error {
-	args := m.Called(ctx, arg)
-	return args.Error(0)
-}
-
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }

@@ -337,6 +337,9 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 	if params.Selector != "" {
 		queryParams["selector"] = params.Selector
 	}
+	if params.TagSelector != "" {
+		queryParams["tagSelector"] = params.TagSelector
+	}
 	if params.TextSearch != "" {
 		queryParams["textSearch"] = params.TextSearch
 	}
@@ -915,6 +918,21 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 	}
 	if params.TextSearch != "" {
 		queryParams["textSearch"] = params.TextSearch
+	}
+	if params.Selector != "" {
+		queryParams["selector"] = params.Selector
+	}
+	if params.TagSelector != "" {
+		queryParams["tagSelector"] = params.TagSelector
+	}
+	if params.Since != "" {
+		queryParams["since"] = params.Since
+	}
+	if params.StartDate != "" {
+		queryParams["startDate"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		queryParams["endDate"] = params.EndDate
 	}
 	if params.PageSize > 0 {
 		queryParams["pageSize"] = strconv.Itoa(params.PageSize)

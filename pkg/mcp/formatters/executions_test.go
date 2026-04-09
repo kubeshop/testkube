@@ -137,6 +137,45 @@ func TestFormatListExecutions(t *testing.T) {
 		assert.Equal(t, "running", output.Results[2].Status)
 	})
 
+	t.Run("includes execution tags when present", func(t *testing.T) {
+		input := `{
+			"totals": {"results": 2},
+			"results": [
+				{
+					"id": "exec-tagged",
+					"name": "wf-tagged-1",
+					"tags": {"type": "suite", "env": "prod"},
+					"result": {"status": "passed", "duration": "45s"}
+				},
+				{
+					"id": "exec-untagged",
+					"name": "wf-untagged-1",
+					"result": {"status": "passed", "duration": "1m20s"}
+				}
+			]
+		}`
+
+		result, err := FormatListExecutions(input)
+		require.NoError(t, err)
+
+		var output formattedExecutionsResult
+		err = json.Unmarshal([]byte(result), &output)
+		require.NoError(t, err)
+
+		require.Len(t, output.Results, 2)
+
+		// Tagged execution should have tags in output
+		assert.Equal(t, map[string]string{"type": "suite", "env": "prod"}, output.Results[0].Tags)
+		assert.Equal(t, "45s", output.Results[0].Duration)
+
+		// Untagged execution should have nil tags (omitted from JSON)
+		assert.Nil(t, output.Results[1].Tags)
+		assert.Equal(t, "1m20s", output.Results[1].Duration)
+
+		// Verify tags appear in raw JSON for tagged execution
+		assert.Contains(t, result, `"type":"suite"`)
+	})
+
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
 		input := `{"invalid json`
 		_, err := FormatListExecutions(input)

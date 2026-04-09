@@ -321,6 +321,66 @@ postgresql:
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 
+# CloudNativePG operator configuration.
+cloudnative-pg:
+  # -- Toggle whether to install the CloudNativePG operator in this environment.
+  # -- Disable this when a shared operator is already installed in the cluster and this env should only create a CNPG Cluster resource.
+  enabled: false
+  crds:
+    # -- Specifies whether the CloudNativePG CRDs should be created.
+    # -- Disable this when CRDs are installed separately by the cluster/platform team.
+    create: true
+  rbac:
+    # -- Specifies whether ClusterRole and ClusterRoleBinding should be created for the operator.
+    # -- Keep this enabled unless the required RBAC is managed outside this chart. The operator still needs permissions even when `config.clusterWide` is false.
+    create: true
+  webhook:
+    mutating:
+      # -- Specifies whether the mutating webhook configuration should be created.
+      create: true
+    validating:
+      # -- Specifies whether the validating webhook configuration should be created.
+      create: true
+  config:
+    # -- When true, the operator watches CNPG resources cluster-wide. When false, it is limited to its namespace/watch scope, but still requires RBAC to read its config and manage resources there.
+    clusterWide: true
+
+# CloudNativePG PostgreSQL Cluster configuration.
+# This section is passed directly to the official CNPG `cluster` chart.
+postgresqlOperatorCluster:
+  # -- Toggle whether to create a CloudNativePG Cluster resource for this environment.
+  # -- Keep this enabled when you want to use a shared cluster-wide operator and only disable `cloudnative-pg.enabled`.
+  enabled: false
+  fullnameOverride: "testkube-postgresql"
+  type: postgresql
+  mode: standalone
+  version:
+    # -- PostgreSQL major version to use
+    postgresql: "18"
+  cluster:
+    instances: 1
+    imageName: "kubeshop/testkube-postgres:18.2"
+    postgresUID: 999
+    postgresGID: 999
+    imagePullSecrets: []
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: "1"
+    enablePDB: false
+    storage:
+      size: 5Gi
+      storageClass: ""
+    postgresql:
+      parameters:
+        max_connections: "300"
+        shared_buffers: "256MB"
+    initdb:
+      database: "backend"
+      owner: "testkube"
 ## NATS chart parameter
 nats:
   # -- Uncomment to pass a global registry name to all NATS images
@@ -1000,6 +1060,8 @@ testkube-api:
 
   # MongoDB parameters
   mongodb:
+    # -- Enable MongoDB
+    enabled: true
     # -- MongoDB DSN
     dsn: "mongodb://testkube-mongodb:27017"
     # secretName: testkube-secrets
@@ -1032,13 +1094,14 @@ testkube-api:
     # -- Key for SSL Cert Secret k8s Secret
     # sslCertSecretSecretKey: sslCertSecretSecretKey
 
-    postgresql:
-      enabled: false
-      # -- PostgreSQL DSN
-      # dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
-      # secretName: testkube-secrets
-      # secretKey: postgresql-dsn
-
+  postgresql:
+    enabled: false
+    # -- PostgreSQL DSN
+    # dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+    # -- Secret name with DSN
+    # secretName: testkube-postgresql-app
+    # -- Secret key for DSN
+    # secretKey: uri
   # -- Testkube API Startup probe parameters
   startupProbe:
     # -- Whether startup probe is enabled

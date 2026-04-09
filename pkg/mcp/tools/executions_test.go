@@ -257,3 +257,110 @@ func TestFetchExecutionLogs_InvalidWorkerIndex_FallsBackToZero(t *testing.T) {
 	// Invalid index falls back to zero (zero value of int).
 	assert.Equal(t, 0, m.capturedParams.WorkerIndex)
 }
+
+// mockExecutionLister records the params passed to ListExecutions.
+type mockExecutionLister struct {
+	capturedParams ListExecutionsParams
+	returnResult   string
+	returnErr      error
+}
+
+func (m *mockExecutionLister) ListExecutions(_ context.Context, params ListExecutionsParams) (string, error) {
+	m.capturedParams = params
+	return m.returnResult, m.returnErr
+}
+
+func TestListExecutions_ToolHasExpectedParams(t *testing.T) {
+	m := &mockExecutionLister{}
+	tool, _ := ListExecutions(m)
+	assert.Equal(t, "list_executions", tool.Name)
+
+	paramNames := make([]string, 0)
+	for name := range tool.InputSchema.Properties {
+		paramNames = append(paramNames, name)
+	}
+	assert.Contains(t, paramNames, "workflowName")
+	assert.Contains(t, paramNames, "selector")
+	assert.Contains(t, paramNames, "tagSelector")
+	assert.Contains(t, paramNames, "status")
+	assert.Contains(t, paramNames, "since")
+	assert.Contains(t, paramNames, "startDate")
+	assert.Contains(t, paramNames, "endDate")
+	assert.Contains(t, paramNames, "pageSize")
+	assert.Contains(t, paramNames, "page")
+	assert.Contains(t, paramNames, "textSearch")
+}
+
+func TestListExecutions_TagSelectorPassedThrough(t *testing.T) {
+	m := &mockExecutionLister{returnResult: `{"totals":{"results":0},"results":[]}`}
+	_, handler := ListExecutions(m)
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"tagSelector": "type=suite,env=prod",
+		"since":       "2026-03-31T09:00:00Z",
+		"selector":    "tool=cypress",
+	}
+	_, err := handler(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, "type=suite,env=prod", m.capturedParams.TagSelector)
+	assert.Equal(t, "2026-03-31T09:00:00Z", m.capturedParams.Since)
+	assert.Equal(t, "tool=cypress", m.capturedParams.Selector)
+}
+
+// mockExecutionBulkGetter records the params passed to GetExecutions.
+type mockExecutionBulkGetter struct {
+	capturedParams ListExecutionsParams
+	returnResult   map[string]string
+	returnErr      error
+}
+
+func (m *mockExecutionBulkGetter) GetExecutions(_ context.Context, params ListExecutionsParams) (map[string]string, error) {
+	m.capturedParams = params
+	return m.returnResult, m.returnErr
+}
+
+func TestQueryExecutions_ToolHasExpectedParams(t *testing.T) {
+	m := &mockExecutionBulkGetter{}
+	tool, _ := QueryExecutions(m)
+	assert.Equal(t, "query_executions", tool.Name)
+
+	paramNames := make([]string, 0)
+	for name := range tool.InputSchema.Properties {
+		paramNames = append(paramNames, name)
+	}
+	assert.Contains(t, paramNames, "expression")
+	assert.Contains(t, paramNames, "workflowName")
+	assert.Contains(t, paramNames, "status")
+	assert.Contains(t, paramNames, "selector")
+	assert.Contains(t, paramNames, "tagSelector")
+	assert.Contains(t, paramNames, "since")
+	assert.Contains(t, paramNames, "startDate")
+	assert.Contains(t, paramNames, "endDate")
+	assert.Contains(t, paramNames, "limit")
+	assert.Contains(t, paramNames, "aggregate")
+}
+
+func TestQueryExecutions_FiltersPassedThrough(t *testing.T) {
+	m := &mockExecutionBulkGetter{returnResult: map[string]string{
+		"exec-1": `{"id":"exec-1","result":{"status":"passed","duration":"45s"}}`,
+	}}
+	_, handler := QueryExecutions(m)
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"expression":  "$.result.status",
+		"tagSelector": "type=suite",
+		"selector":    "tool=k6",
+		"since":       "2026-03-31T09:00:00Z",
+		"startDate":   "2026-03-31",
+		"endDate":     "2026-03-31",
+		"status":      "passed",
+	}
+	_, err := handler(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, "type=suite", m.capturedParams.TagSelector)
+	assert.Equal(t, "tool=k6", m.capturedParams.Selector)
+	assert.Equal(t, "2026-03-31T09:00:00Z", m.capturedParams.Since)
+	assert.Equal(t, "2026-03-31", m.capturedParams.StartDate)
+	assert.Equal(t, "2026-03-31", m.capturedParams.EndDate)
+	assert.Equal(t, "passed", m.capturedParams.Status)
+}

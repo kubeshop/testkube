@@ -12,7 +12,7 @@ import (
 )
 
 const abortTestWorkflowExecutionIfQueued = `-- name: AbortTestWorkflowExecutionIfQueued :one
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = $2 AND (test_workflow_executions.organization_id = $3 AND test_workflow_executions.environment_id = $4)
@@ -42,8 +42,8 @@ func (q *Queries) AbortTestWorkflowExecutionIfQueued(ctx context.Context, arg Ab
 }
 
 const abortTestWorkflowResultIfQueued = `-- name: AbortTestWorkflowResultIfQueued :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = 'aborted',
     predicted_status = 'aborted',
     finished_at = $1,
@@ -52,7 +52,7 @@ SET
             jsonb_set(COALESCE(initialization, '{}'::jsonb), '{status}', '"aborted"'),
             '{errormessage}', '"Aborted before initialization."'
         ),
-        '{finishedat}', to_jsonb($1::timestamp)
+        '{finishedat}', to_jsonb($1::timestamptz)
     )
 WHERE execution_id = $2
     AND status IN ('queued', 'running', 'paused')
@@ -69,8 +69,8 @@ func (q *Queries) AbortTestWorkflowResultIfQueued(ctx context.Context, arg Abort
 }
 
 const assignTestWorkflowExecution = `-- name: AssignTestWorkflowExecution :one
-UPDATE test_workflow_executions 
-SET 
+UPDATE test_workflow_executions
+SET
     runner_id = $1::text,
     assigned_at = $2
 FROM test_workflow_results r
@@ -122,28 +122,28 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+    AND (
+        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
                         NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
@@ -152,7 +152,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
                 WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
@@ -178,10 +178,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
     AND (
-        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
-                WHERE 
-                CASE 
+                WHERE
+                CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
                         NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
@@ -190,7 +190,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR 
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
@@ -285,7 +285,7 @@ const deleteTestWorkflowExecutionsByTestWorkflow = `-- name: DeleteTestWorkflowE
 DELETE FROM test_workflow_executions e
 USING test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = $1 AND e.environment_id = $2)
-  AND w.workflow_type = 'workflow' 
+  AND w.workflow_type = 'workflow'
   AND w.name = $3::text
 `
 
@@ -304,7 +304,7 @@ const deleteTestWorkflowExecutionsByTestWorkflows = `-- name: DeleteTestWorkflow
 DELETE FROM test_workflow_executions e
 USING test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = $1 AND e.environment_id = $2)
-  AND w.workflow_type = 'workflow' 
+  AND w.workflow_type = 'workflow'
   AND w.name = ANY($3::text[])
 `
 
@@ -365,7 +365,7 @@ func (q *Queries) DeleteTestWorkflowSignatures(ctx context.Context, executionID 
 }
 
 const finishExecutionStatusAtStrict = `-- name: FinishExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
 `
@@ -388,8 +388,8 @@ func (q *Queries) FinishExecutionStatusAtStrict(ctx context.Context, arg FinishE
 }
 
 const finishTestWorkflowExecutionResultStrict = `-- name: FinishTestWorkflowExecutionResultStrict :one
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = $1,
     predicted_status = $2,
     queued_at = $3,
@@ -456,7 +456,7 @@ func (q *Queries) FinishTestWorkflowExecutionResultStrict(ctx context.Context, a
 }
 
 const getFinishedTestWorkflowExecutions = `-- name: GetFinishedTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -465,7 +465,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -508,7 +508,7 @@ SELECT
         '[]'::json
     )::json as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -795,7 +795,7 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 }
 
 const getLatestTestWorkflowExecutionByTestWorkflow = `-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -804,7 +804,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1015,7 +1015,7 @@ SELECT DISTINCT ON (w.name)
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1214,6 +1214,17 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 	return items, nil
 }
 
+const getMaxReportOrder = `-- name: GetMaxReportOrder :one
+SELECT COALESCE(MAX(rep_order), 0)::int FROM test_workflow_reports WHERE execution_id = $1
+`
+
+func (q *Queries) GetMaxReportOrder(ctx context.Context, executionID string) (int32, error) {
+	row := q.db.QueryRow(ctx, getMaxReportOrder, executionID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getPreviousFinishedState = `-- name: GetPreviousFinishedState :one
 SELECT r.status
 FROM test_workflow_executions e
@@ -1246,7 +1257,7 @@ func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousF
 }
 
 const getRunningTestWorkflowExecutions = `-- name: GetRunningTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -1255,7 +1266,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1454,7 +1465,7 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context, arg GetR
 }
 
 const getTestWorkflowExecution = `-- name: GetTestWorkflowExecution :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -1463,7 +1474,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1649,7 +1660,7 @@ func (q *Queries) GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkf
 }
 
 const getTestWorkflowExecutionByNameAndTestWorkflow = `-- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -1658,7 +1669,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1851,7 +1862,7 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 
 const getTestWorkflowExecutionTags = `-- name: GetTestWorkflowExecutionTags :many
 WITH tag_extracts AS (
-    SELECT 
+    SELECT
         e.id,
         w.name as workflow_name,
         tag_pair.key as tag_key,
@@ -1863,7 +1874,7 @@ WITH tag_extracts AS (
         AND e.tags != '{}'::jsonb
         AND jsonb_typeof(e.tags) = 'object'
 )
-SELECT 
+SELECT
     tag_key::text,
     array_agg(DISTINCT tag_value ORDER BY tag_value)::text[] as values
 FROM tag_extracts
@@ -1904,7 +1915,7 @@ func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, arg GetTestW
 }
 
 const getTestWorkflowExecutionWithRunner = `-- name: GetTestWorkflowExecutionWithRunner :one
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -1913,7 +1924,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -2114,7 +2125,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -2443,7 +2454,7 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 }
 
 const getTestWorkflowExecutionsSummary = `-- name: GetTestWorkflowExecutionsSummary :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -2452,7 +2463,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -2495,7 +2506,7 @@ SELECT
         '[]'::json
     )::json as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -2805,10 +2816,10 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
               SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                 AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
           )
@@ -2947,7 +2958,7 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 }
 
 const getTestWorkflowMetrics = `-- name: GetTestWorkflowMetrics :many
-SELECT 
+SELECT
     e.id as execution_id,
     e.group_id,
     r.duration,
@@ -3020,7 +3031,7 @@ func (q *Queries) GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflo
 }
 
 const getUnassignedTestWorkflowExecutions = `-- name: GetUnassignedTestWorkflowExecutions :many
-SELECT 
+SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -3029,7 +3040,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -3072,7 +3083,7 @@ SELECT
         '[]'::json
     )::json  as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -3229,8 +3240,8 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg G
 }
 
 const initTestWorkflowExecution = `-- name: InitTestWorkflowExecution :exec
-UPDATE test_workflow_executions 
-SET 
+UPDATE test_workflow_executions
+SET
     namespace = $1,
     runner_id = $2,
     status_at = NOW()
@@ -3313,7 +3324,7 @@ func (q *Queries) InsertTestWorkflow(ctx context.Context, arg InsertTestWorkflow
 const insertTestWorkflowExecution = `-- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
-    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
+    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks,
     tags, running_context, config_params, organization_id, environment_id, runtime, silent_mode
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
@@ -3421,25 +3432,6 @@ func (q *Queries) InsertTestWorkflowReport(ctx context.Context, arg InsertTestWo
 	return err
 }
 
-const insertTestWorkflowResourceAggregations = `-- name: InsertTestWorkflowResourceAggregations :exec
-INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
-VALUES ($1, $2, $3)
-ON CONFLICT (execution_id) DO UPDATE SET
-    global = EXCLUDED.global,
-    step = EXCLUDED.step
-`
-
-type InsertTestWorkflowResourceAggregationsParams struct {
-	ExecutionID string `db:"execution_id" json:"execution_id"`
-	Global      []byte `db:"global" json:"global"`
-	Step        []byte `db:"step" json:"step"`
-}
-
-func (q *Queries) InsertTestWorkflowResourceAggregations(ctx context.Context, arg InsertTestWorkflowResourceAggregationsParams) error {
-	_, err := q.db.Exec(ctx, insertTestWorkflowResourceAggregations, arg.ExecutionID, arg.Global, arg.Step)
-	return err
-}
-
 const insertTestWorkflowResult = `-- name: InsertTestWorkflowResult :exec
 INSERT INTO test_workflow_results (
     execution_id, status, predicted_status, queued_at, started_at, finished_at,
@@ -3540,8 +3532,8 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 }
 
 const updateExecutionStatus = `-- name: UpdateExecutionStatus :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = $1
 WHERE execution_id = $2
 `
@@ -3557,7 +3549,7 @@ func (q *Queries) UpdateExecutionStatus(ctx context.Context, arg UpdateExecution
 }
 
 const updateExecutionStatusAt = `-- name: UpdateExecutionStatusAt :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
 `
@@ -3580,10 +3572,10 @@ func (q *Queries) UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecuti
 }
 
 const updateExecutionStatusAtStrict = `-- name: UpdateExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
-SET status_at = CASE 
-    WHEN $1 != $2 THEN $3 
-    ELSE status_at 
+UPDATE test_workflow_executions
+SET status_at = CASE
+    WHEN $1 != $2 THEN $3
+    ELSE status_at
 END
 WHERE id = $4 AND (organization_id = $5 AND environment_id = $6)
 `
@@ -3681,28 +3673,9 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 	return err
 }
 
-const updateTestWorkflowExecutionResourceAggregations = `-- name: UpdateTestWorkflowExecutionResourceAggregations :exec
-UPDATE test_workflow_resource_aggregations
-SET
-    global = $1,
-    step = $2
-WHERE execution_id = $3
-`
-
-type UpdateTestWorkflowExecutionResourceAggregationsParams struct {
-	Global      []byte `db:"global" json:"global"`
-	Step        []byte `db:"step" json:"step"`
-	ExecutionID string `db:"execution_id" json:"execution_id"`
-}
-
-func (q *Queries) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionResourceAggregations, arg.Global, arg.Step, arg.ExecutionID)
-	return err
-}
-
 const updateTestWorkflowExecutionResult = `-- name: UpdateTestWorkflowExecutionResult :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = $1,
     predicted_status = $2,
     queued_at = $3,
@@ -3757,9 +3730,9 @@ func (q *Queries) UpdateTestWorkflowExecutionResult(ctx context.Context, arg Upd
 }
 
 const updateTestWorkflowExecutionResultStrict = `-- name: UpdateTestWorkflowExecutionResultStrict :one
-UPDATE test_workflow_results 
-SET 
-    status = CASE 
+UPDATE test_workflow_results
+SET
+    status = CASE
         WHEN test_workflow_results.status = 'stopping' THEN 'stopping'
         ELSE $1
     END,
@@ -3854,4 +3827,23 @@ func (q *Queries) UpdateTestWorkflowExecutionTags(ctx context.Context, arg Updat
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const upsertTestWorkflowResourceAggregations = `-- name: UpsertTestWorkflowResourceAggregations :exec
+INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
+VALUES ($1, $2, $3)
+ON CONFLICT (execution_id) DO UPDATE SET
+    global = EXCLUDED.global,
+    step = EXCLUDED.step
+`
+
+type UpsertTestWorkflowResourceAggregationsParams struct {
+	ExecutionID string `db:"execution_id" json:"execution_id"`
+	Global      []byte `db:"global" json:"global"`
+	Step        []byte `db:"step" json:"step"`
+}
+
+func (q *Queries) UpsertTestWorkflowResourceAggregations(ctx context.Context, arg UpsertTestWorkflowResourceAggregationsParams) error {
+	_, err := q.db.Exec(ctx, upsertTestWorkflowResourceAggregations, arg.ExecutionID, arg.Global, arg.Step)
+	return err
 }

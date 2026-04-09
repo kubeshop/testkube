@@ -17,15 +17,16 @@ type formattedExecutionsResult struct {
 
 // formattedExecution is a compact representation of an execution for MCP responses.
 type formattedExecution struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Number       int32     `json:"number,omitempty"`
-	ScheduledAt  time.Time `json:"scheduledAt,omitempty"`
-	Status       string    `json:"status,omitempty"`
-	Duration     string    `json:"duration,omitempty"`
-	WorkflowName string    `json:"workflowName,omitempty"`
-	ActorType    string    `json:"actorType,omitempty"`
-	ActorName    string    `json:"actorName,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Number       int32             `json:"number,omitempty"`
+	ScheduledAt  time.Time         `json:"scheduledAt,omitempty"`
+	Status       string            `json:"status,omitempty"`
+	Duration     string            `json:"duration,omitempty"`
+	WorkflowName string            `json:"workflowName,omitempty"`
+	Tags         map[string]string `json:"tags,omitempty"`
+	ActorType    string            `json:"actorType,omitempty"`
+	ActorName    string            `json:"actorName,omitempty"`
 }
 
 // FormatListExecutions parses a raw API response (JSON or YAML) containing
@@ -59,6 +60,11 @@ func FormatListExecutions(raw string) (string, error) {
 		// Extract workflow name from workflow summary
 		if exec.Workflow != nil {
 			f.WorkflowName = exec.Workflow.Name
+		}
+
+		// Include execution tags
+		if len(exec.Tags) > 0 {
+			f.Tags = exec.Tags
 		}
 
 		// Extract status and duration from result
