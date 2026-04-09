@@ -131,21 +131,16 @@ func NewDisconnectCmd() *cobra.Command {
 				}
 			default:
 				// no database type recorded – fall back to attempting both so that clusters
-				// connected before this feature was introduced are handled gracefully
+				// connected before this feature was introduced are handled gracefully;
+				// errors are silently ignored because only one DB is actually deployed
 				if opts.MongoReplicas > 0 {
-					spinner = ui.NewSpinner("Scaling up MongoDB")
-					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr != nil {
-						spinner.Fail(fmt.Sprintf("Failed to scale up MongoDB: %s", scaleErr))
-					} else {
-						spinner.Success()
+					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr == nil {
+						ui.Success("Scaled up MongoDB")
 					}
 				}
 				if opts.PostgresReplicas > 0 {
-					spinner = ui.NewSpinner("Scaling up PostgreSQL")
-					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr != nil {
-						spinner.Fail(fmt.Sprintf("Failed to scale up PostgreSQL: %s", scaleErr))
-					} else {
-						spinner.Success()
+					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr == nil {
+						ui.Success("Scaled up PostgreSQL")
 					}
 				}
 			}

@@ -3210,7 +3210,7 @@ paths:
       tags:
         - api
       summary: "Export execution data"
-      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive. The archive is limited to 100 MB; use the 'since' parameter to narrow the date range if the limit is exceeded."
+      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive. The archive size is limited by the server (configured via the EXPORT_ARCHIVE_MAX_SIZE env var); use the 'since' parameter to narrow the date range if the limit is exceeded."
       operationId: exportExecutions
       parameters:
         - name: since
@@ -3239,7 +3239,7 @@ paths:
                 type: string
                 format: binary
         413:
-          description: "export archive exceeds the 100 MB size limit"
+          description: "export archive exceeds the server-configured size limit"
           content:
             application/problem+json:
               schema:
