@@ -78,7 +78,7 @@ require (
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/text v0.35.0
+	golang.org/x/text v0.36.0
 	google.golang.org/appengine/v2 v2.0.6
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
