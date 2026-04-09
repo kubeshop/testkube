@@ -70,6 +70,24 @@ func TestProcessArtifact_StartLineOnly(t *testing.T) {
 	assert.Contains(t, result, "line 499 content")
 }
 
+func TestProcessArtifact_StartLineOnlyShortFile(t *testing.T) {
+	content := []byte(makeLines(450))
+	result := ProcessArtifact(content, "test.log", ArtifactReadParams{StartLine: 400})
+
+	assert.Contains(t, result, "Showing: lines 400-450 of 450")
+	assert.Contains(t, result, "line 400 content")
+	assert.Contains(t, result, "line 450 content")
+}
+
+func TestProcessArtifact_StartLineBeyondEnd(t *testing.T) {
+	content := []byte(makeLines(100))
+	result := ProcessArtifact(content, "test.log", ArtifactReadParams{StartLine: 200})
+
+	assert.Contains(t, result, "0 lines")
+	assert.Contains(t, result, "exceeds total")
+	assert.NotContains(t, result, "line 1 content")
+}
+
 func TestProcessArtifact_Grep(t *testing.T) {
 	lines := []string{
 		"line 1 normal",

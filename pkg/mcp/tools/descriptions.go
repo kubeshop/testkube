@@ -62,7 +62,7 @@ to find items containing all terms`
 
 	// Artifact tool descriptions
 	ListArtifactsDescription = "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."
-	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."
+	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. Default (no params): returns the first 100 lines. Maximum: 200 lines per request. Parameters: startLine/endLine (1-based range, e.g. startLine=101 endLine=200 for the second page), grep (case-insensitive substring filter, returns matches with 3 lines of context). Note: grep and startLine/endLine are mutually exclusive -- when grep is specified, startLine/endLine are ignored. For binary artifacts (images, etc.), returns a summary message instead of content. Always work in chunks of 100-200 lines when paging -- never request unbounded ranges."
 
 	// Other tool descriptions
 	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions. Supports deep linking to a specific step within an execution's log view using stepRef (obtained from execution info signatures) and executionTab (defaults to 'log-output' when stepRef is provided)."

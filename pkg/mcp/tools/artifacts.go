@@ -57,14 +57,14 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		executionId := request.GetString("executionId", "")
-		if executionId == "" {
-			return mcp.NewToolResultError("executionId is required"), nil
+		executionId, err := RequiredParam[string](request, "executionId")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		fileName := request.GetString("fileName", "")
-		if fileName == "" {
-			return mcp.NewToolResultError("fileName is required"), nil
+		fileName, err := RequiredParam[string](request, "fileName")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
 		}
 
 		var params ArtifactReadParams

@@ -15,7 +15,7 @@ const (
 // ArtifactReadParams holds optional filtering parameters for artifact retrieval.
 type ArtifactReadParams struct {
 	StartLine int    // 1-based start line. 0 = from beginning.
-	EndLine   int    // 1-based end line. 0 = to end (capped at artifactMaxLines from start).
+	EndLine   int    // 1-based end line. 0 = default window of artifactDefaultLines (100) lines from startLine.
 	Grep      string // Substring filter (case-insensitive). Includes context lines.
 }
 
@@ -38,7 +38,7 @@ func ProcessArtifact(content []byte, filename string, params ArtifactReadParams)
 	lines := strings.Split(text, "\n")
 	totalLines := len(lines)
 
-	// Grep mode
+	// Grep mode -- mutually exclusive with startLine/endLine (grep takes priority).
 	if params.Grep != "" {
 		return processGrep(lines, totalLines, filename, content, params.Grep)
 	}
@@ -61,7 +61,9 @@ func ProcessArtifact(content []byte, filename string, params ArtifactReadParams)
 
 	// Clamp to actual content
 	if startLine > totalLines {
-		startLine = totalLines
+		header := fmt.Sprintf("--- Artifact Metadata ---\nFile: %s\nTotal lines: %d\nSize: %s\nShowing: 0 lines (startLine %d exceeds total %d lines)\n---",
+			filename, totalLines, formatSize(len(content)), startLine, totalLines)
+		return header
 	}
 	if endLine > totalLines {
 		endLine = totalLines
@@ -79,10 +81,12 @@ func ProcessArtifact(content []byte, filename string, params ArtifactReadParams)
 func processGrep(lines []string, totalLines int, filename string, content []byte, pattern string) string {
 	lowerPattern := strings.ToLower(pattern)
 	matchLineNums := make([]int, 0)
+	matchSet := make(map[int]bool)
 
 	for i, line := range lines {
 		if strings.Contains(strings.ToLower(line), lowerPattern) {
 			matchLineNums = append(matchLineNums, i)
+			matchSet[i] = true
 			if len(matchLineNums) >= artifactGrepMaxMatches {
 				break
 			}
@@ -109,31 +113,44 @@ func processGrep(lines []string, totalLines int, filename string, content []byte
 			result = append(result, "...")
 		}
 		prefix := "  "
-		if containsInt(matchLineNums, i) {
+		if matchSet[i] {
 			prefix = "> "
 		}
 		result = append(result, fmt.Sprintf("%s%4d: %s", prefix, i+1, lines[i]))
 		lastIncluded = i
 	}
 
-	// Cap output
-	if len(result) > artifactMaxLines {
-		result = result[:artifactMaxLines]
-	}
-
-	header := fmt.Sprintf("--- Artifact Metadata ---\nFile: %s\nTotal lines: %d\nSize: %s\nShowing: %d grep matches for %q (with %d lines context)\n---",
-		filename, totalLines, formatSize(len(content)), len(matchLineNums), pattern, artifactGrepContext)
-
-	return header + "\n" + strings.Join(result, "\n")
-}
-
-func containsInt(slice []int, val int) bool {
-	for _, v := range slice {
-		if v == val {
-			return true
+	// Cap output (only count content lines, not separators)
+	contentCount := 0
+	capIndex := len(result)
+	for i, line := range result {
+		if line != "..." {
+			contentCount++
+		}
+		if contentCount > artifactMaxLines {
+			capIndex = i
+			break
 		}
 	}
-	return false
+	result = result[:capIndex]
+
+	// Count visible matches after capping
+	visibleMatches := 0
+	for _, line := range result {
+		if len(line) > 2 && line[0] == '>' && line[1] == ' ' {
+			visibleMatches++
+		}
+	}
+
+	truncated := ""
+	if visibleMatches < len(matchLineNums) {
+		truncated = " (truncated)"
+	}
+
+	header := fmt.Sprintf("--- Artifact Metadata ---\nFile: %s\nTotal lines: %d\nSize: %s\nShowing: %d grep matches for %q (with %d lines context)%s\n---",
+		filename, totalLines, formatSize(len(content)), visibleMatches, pattern, artifactGrepContext, truncated)
+
+	return header + "\n" + strings.Join(result, "\n")
 }
 
 func formatSize(bytes int) string {
