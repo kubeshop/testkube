@@ -17,7 +17,7 @@ dependencies:
     version: 18.2-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: cloudnative-pg
-    version: 0.27.0
+    version: 0.28.0
     repository: https://cloudnative-pg.github.io/charts
     condition: cloudnative-pg.enabled
   - name: cluster
