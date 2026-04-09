@@ -1098,9 +1098,9 @@ testkube-api:
     # -- PostgreSQL DSN
     # dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
     # -- Secret name with DSN
-    secretName: testkube-postgresql-app
+    # secretName: testkube-postgresql-app
     # -- Secret key for DSN
-    secretKey: uri
+    # secretKey: uri
   # -- Testkube API Startup probe parameters
   startupProbe:
     # -- Whether startup probe is enabled
