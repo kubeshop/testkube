@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -159,7 +160,7 @@ func NewConnectCmd() *cobra.Command {
 					var httpErr *cloudclient.HTTPError
 					is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
 					if !is413 {
-						is413 = strings.Contains(exportErr.Error(), fmt.Sprintf("%d", http.StatusRequestEntityTooLarge))
+						is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
 					}
 					if is413 {
 						ui.Warn("Export archive exceeds the server size limit.")
