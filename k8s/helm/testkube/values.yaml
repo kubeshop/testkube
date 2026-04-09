@@ -370,8 +370,7 @@ postgresqlOperatorCluster:
       limits:
         memory: 2Gi
         cpu: "1"
-    enablePDB: true
-    storage:
+    enablePDB: false
       size: 5Gi
       storageClass: ""
     postgresql:
