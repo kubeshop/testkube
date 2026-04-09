@@ -1,7 +1,9 @@
 package pro
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -154,7 +156,12 @@ func NewConnectCmd() *cobra.Command {
 				var exportErr error
 				exportPath, exportErr = client.ExportExecutions(".", exportSince)
 				if exportErr != nil {
-					if strings.Contains(exportErr.Error(), "413") {
+					var httpErr *cloudclient.HTTPError
+					is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
+					if !is413 {
+						is413 = strings.Contains(exportErr.Error(), fmt.Sprintf("%d", http.StatusRequestEntityTooLarge))
+					}
+					if is413 {
 						ui.Warn("Export archive exceeds the server size limit.")
 						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 					} else {
@@ -227,7 +234,8 @@ func NewConnectCmd() *cobra.Command {
 				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, token, opts.Master.OrgId, opts.Master.EnvId)
 				importErr := importClient.Import(cmd.Context(), exportPath)
 				if importErr != nil {
-					if strings.Contains(importErr.Error(), "413") {
+					var httpErr *cloudclient.HTTPError
+					if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
 						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 					} else {
 						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))

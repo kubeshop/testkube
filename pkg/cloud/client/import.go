@@ -14,6 +14,16 @@ import (
 
 const maxErrorResponseBytes = 1024 * 1024 // 1 MB cap for error responses
 
+// HTTPError represents an HTTP error response with a status code.
+type HTTPError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("import failed (HTTP %d): %s", e.StatusCode, e.Body)
+}
+
 // NewImportClient creates a new client for importing execution data archives to the control plane.
 func NewImportClient(baseUrl, token, orgID, envID string) *ImportClient {
 	return &ImportClient{
@@ -70,7 +80,7 @@ func (c *ImportClient) Import(ctx context.Context, archivePath string) error {
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseBytes))
-		return fmt.Errorf("import failed (HTTP %d): %s", resp.StatusCode, string(body))
+		return &HTTPError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	return nil

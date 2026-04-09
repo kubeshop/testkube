@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -94,8 +95,10 @@ func TestImportClient_Import_ServerError(t *testing.T) {
 	c := NewImportClient(server.URL, "test-token", "org-1", "env-1")
 	err := c.Import(context.Background(), archivePath)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "HTTP 500")
-	assert.Contains(t, err.Error(), "internal server error")
+	var httpErr *HTTPError
+	require.True(t, errors.As(err, &httpErr))
+	assert.Equal(t, http.StatusInternalServerError, httpErr.StatusCode)
+	assert.Contains(t, httpErr.Body, "internal server error")
 }
 
 func TestImportClient_Import_413(t *testing.T) {
@@ -110,7 +113,9 @@ func TestImportClient_Import_413(t *testing.T) {
 	c := NewImportClient(server.URL, "test-token", "org-1", "env-1")
 	err := c.Import(context.Background(), archivePath)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "413")
+	var httpErr *HTTPError
+	require.True(t, errors.As(err, &httpErr))
+	assert.Equal(t, http.StatusRequestEntityTooLarge, httpErr.StatusCode)
 }
 
 func TestImportClient_Import_InvalidPath(t *testing.T) {
