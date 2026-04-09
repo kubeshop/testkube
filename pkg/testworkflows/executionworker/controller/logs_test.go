@@ -130,6 +130,58 @@ func TestWatchContainerLogsIdleTimeoutCancelsWhenDoneWithoutError(t *testing.T) 
 	}
 }
 
+func TestWatchContainerLogsIdleTimeoutCancelsWhileOpeningDoneStream(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	openerEntered := make(chan struct{})
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(ctx context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			select {
+			case <-openerEntered:
+			default:
+				close(openerEntered)
+			}
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		testBufferSizeSmall,
+		func() bool { return true },
+		func(*instructions.Instruction) bool { return false },
+		testIdleTimeoutShort,
+	)
+
+	select {
+	case <-openerEntered:
+	case <-time.After(testDeadlineShort):
+		t.Fatal("timed out waiting for log stream opener to start")
+	}
+
+	deadline := time.NewTimer(testDeadlineShort)
+	defer deadline.Stop()
+
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				return
+			}
+			if msg.Error != nil {
+				t.Fatalf("unexpected error from logs channel: %v", msg.Error)
+			}
+		case <-deadline.C:
+			t.Fatal("timed out waiting for idle timeout to cancel stream opener")
+		}
+	}
+}
+
 func TestWatchContainerLogsTerminalIdleReopensAndDrains(t *testing.T) {
 	t.Parallel()
 

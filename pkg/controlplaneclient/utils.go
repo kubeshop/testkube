@@ -78,6 +78,13 @@ type notificationStreamEvent struct {
 	notification *testkube.TestWorkflowExecutionNotification
 }
 
+func notificationResumable(notification *testkube.TestWorkflowExecutionNotification) bool {
+	if notification == nil || notification.Temporary {
+		return false
+	}
+	return notification.Result != nil || notification.Output != nil || notification.Log != ""
+}
+
 type notificationStreamSubscription struct {
 	id        uint64
 	ch        chan notificationStreamEvent
@@ -118,6 +125,7 @@ type notificationStreamSession struct {
 	replayBytes int
 	subscribers map[uint64]*notificationStreamSubscription
 	done        bool
+	errored     bool
 	lastSeqNo   uint32
 	lastActive  time.Time
 }
@@ -163,21 +171,26 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 
 	var subscribers []*notificationStreamSubscription
 	s.mu.Lock()
-	seqNo := s.nextSeqNo
-	s.nextSeqNo++
-	s.lastSeqNo = seqNo
 	s.lastActive = time.Now()
+	seqNo := uint32(0)
+	if notificationResumable(notification) {
+		seqNo = s.nextSeqNo
+		s.nextSeqNo++
+		s.lastSeqNo = seqNo
+	}
 
 	event := notificationStreamEvent{
 		seqNo:        seqNo,
 		notification: notification,
 	}
-	s.replay = append(s.replay, event)
-	s.replayBytes += approximateNotificationBytes(notification)
-	for len(s.replay) > workflowNotificationReplayMaxEvents || s.replayBytes > workflowNotificationReplayMaxBytes {
-		s.replayBytes -= approximateNotificationBytes(s.replay[0].notification)
-		s.replay[0].notification = nil
-		s.replay = s.replay[1:]
+	if seqNo > 0 {
+		s.replay = append(s.replay, event)
+		s.replayBytes += approximateNotificationBytes(notification)
+		for len(s.replay) > workflowNotificationReplayMaxEvents || s.replayBytes > workflowNotificationReplayMaxBytes {
+			s.replayBytes -= approximateNotificationBytes(s.replay[0].notification)
+			s.replay[0].notification = nil
+			s.replay = s.replay[1:]
+		}
 	}
 
 	for _, sub := range s.subscribers {
@@ -190,7 +203,7 @@ func (s *notificationStreamSession) publish(notification *testkube.TestWorkflowE
 	}
 }
 
-func (s *notificationStreamSession) close() {
+func (s *notificationStreamSession) close(errored bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -198,6 +211,7 @@ func (s *notificationStreamSession) close() {
 		return
 	}
 	s.done = true
+	s.errored = errored
 	s.lastActive = time.Now()
 	for id, sub := range s.subscribers {
 		sub.close()
@@ -211,10 +225,10 @@ func (s *notificationStreamSession) currentSeqNo() uint32 {
 	return s.lastSeqNo
 }
 
-func (s *notificationStreamSession) isDone() bool {
+func (s *notificationStreamSession) status() (done bool, errored bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.done
+	return s.done, s.errored
 }
 
 func (s *notificationStreamSession) replayAfterLocked(resumeAfterSeqNo uint32) ([]notificationStreamEvent, bool) {
@@ -239,10 +253,10 @@ func (s *notificationStreamSession) replayAfterLocked(resumeAfterSeqNo uint32) (
 	return replay, true
 }
 
-func (s *notificationStreamSession) expired(now time.Time) bool {
+func (s *notificationStreamSession) expired(now time.Time, ttl time.Duration) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.done && now.Sub(s.lastActive) >= workflowNotificationSessionIdleTTL
+	return s.done && now.Sub(s.lastActive) >= ttl
 }
 
 func approximateNotificationBytes(notification *testkube.TestWorkflowExecutionNotification) int {
@@ -266,11 +280,12 @@ func sendNotificationResponse[Response any](ctx context.Context, responses chan<
 }
 
 type notificationStreamSessionManager[Request notificationRequest] struct {
-	mu       sync.Mutex
-	nextID   atomic.Uint64
-	sessions map[string]*notificationStreamSession
-	key      func(Request) string
-	process  func(ctx context.Context, req Request) NotificationWatcher
+	mu             sync.Mutex
+	nextID         atomic.Uint64
+	sessions       map[string]*notificationStreamSession
+	sessionIdleTTL time.Duration
+	key            func(Request) string
+	process        func(ctx context.Context, req Request) NotificationWatcher
 }
 
 func newNotificationStreamSessionManager[Request notificationRequest](
@@ -278,52 +293,113 @@ func newNotificationStreamSessionManager[Request notificationRequest](
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) *notificationStreamSessionManager[Request] {
 	return &notificationStreamSessionManager[Request]{
-		sessions: make(map[string]*notificationStreamSession),
-		key:      key,
-		process:  process,
+		sessions:       make(map[string]*notificationStreamSession),
+		sessionIdleTTL: workflowNotificationSessionIdleTTL,
+		key:            key,
+		process:        process,
 	}
 }
 
-func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+func (m *notificationStreamSessionManager[Request]) sessionKey(req Request) string {
 	key := m.key(req)
+	if req.GetStreamId() == "" {
+		return key
+	}
+	return fmt.Sprintf("%s:%s", key, req.GetStreamId())
+}
+
+func (m *notificationStreamSessionManager[Request]) attach(ctx context.Context, req Request) (*notificationStreamSession, *notificationStreamSubscription, []notificationStreamEvent, bool, uint32, bool) {
+	key := m.sessionKey(req)
 	now := time.Now()
 
 	m.mu.Lock()
 	for sessionKey, session := range m.sessions {
-		if session.expired(now) {
+		if session.expired(now, m.sessionIdleTTL) {
 			delete(m.sessions, sessionKey)
 		}
 	}
 
 	session := m.sessions[key]
-	if session != nil && session.isDone() && req.GetResumeAfterSeqNo() == 0 {
-		delete(m.sessions, key)
+	if req.GetResumeAfterSeqNo() == 0 {
 		session = nil
+	} else if session != nil {
+		done, errored := session.status()
+		if done && errored {
+			delete(m.sessions, key)
+			session = nil
+		}
 	}
+	freshSession := false
 	if session == nil {
 		session = newNotificationStreamSession()
 		m.sessions[key] = session
-		go m.runSource(ctx, session, req)
+		freshSession = true
 	}
 	subscriptionID := m.nextID.Add(1)
 	m.mu.Unlock()
 
-	sub, replay, available, lastSeqNo, done := session.subscribe(req.GetResumeAfterSeqNo(), subscriptionID)
+	subscribeAfterSeqNo := req.GetResumeAfterSeqNo()
+	if freshSession && req.GetResumeAfterSeqNo() > 0 {
+		subscribeAfterSeqNo = 0
+	}
+	sub, replay, available, lastSeqNo, done := session.subscribe(subscribeAfterSeqNo, subscriptionID)
+	if freshSession {
+		liveOnlyAfter := time.Time{}
+		if req.GetResumeAfterSeqNo() > 0 {
+			liveOnlyAfter = time.Now()
+		}
+		go m.runSource(ctx, key, session, req, liveOnlyAfter)
+		if req.GetResumeAfterSeqNo() > 0 {
+			available = false
+		}
+	}
 	return session, sub, replay, available, lastSeqNo, done
 }
 
-func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Context, session *notificationStreamSession, req Request) {
-	defer session.close()
+func (m *notificationStreamSessionManager[Request]) scheduleExpiration(key string, session *notificationStreamSession) {
+	time.AfterFunc(m.sessionIdleTTL, func() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+
+		if m.sessions[key] != session {
+			return
+		}
+		if session.expired(time.Now(), m.sessionIdleTTL) {
+			delete(m.sessions, key)
+		}
+	})
+}
+
+func shouldPublishLiveResumeNotification(notification *testkube.TestWorkflowExecutionNotification, attachedAt time.Time) bool {
+	if !notificationResumable(notification) {
+		return false
+	}
+	if notification.Ts.IsZero() {
+		return false
+	}
+	return !notification.Ts.Before(attachedAt)
+}
+
+func (m *notificationStreamSessionManager[Request]) runSource(ctx context.Context, key string, session *notificationStreamSession, req Request, liveOnlyAfter time.Time) {
+	var sourceErr error
+	defer func() {
+		session.close(sourceErr != nil)
+		m.scheduleExpiration(key, session)
+	}()
 
 	watcher := m.process(ctx, req)
 	for notification := range watcher.Channel() {
+		if !liveOnlyAfter.IsZero() && !shouldPublishLiveResumeNotification(notification, liveOnlyAfter) {
+			continue
+		}
 		session.publish(notification)
 	}
-	if watcher.Err() != nil {
+	sourceErr = watcher.Err()
+	if sourceErr != nil {
 		session.publish(&testkube.TestWorkflowExecutionNotification{
 			Ts:        time.Now(),
 			EventType: "error",
-			Log:       fmt.Sprintf("%s %s", time.Now().Format(constants.PreciseTimeFormat), watcher.Err().Error()),
+			Log:       fmt.Sprintf("%s %s", time.Now().Format(constants.PreciseTimeFormat), sourceErr.Error()),
 		})
 	}
 }

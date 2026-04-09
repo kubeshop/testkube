@@ -93,7 +93,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 		},
 	)
 
-	session, sub, replay, available, _, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
+	session, sub, replay, available, _, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	require.True(t, available)
 	require.False(t, done)
 	require.Empty(t, replay)
@@ -103,7 +103,7 @@ func TestNotificationStreamSessionManagerReplaysAfterCursor(t *testing.T) {
 
 	assert.Equal(t, []uint32{1, 2, 3}, firstPass)
 
-	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", ResumeAfterSeqNo: 1})
+	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 1})
 	require.True(t, available)
 	require.True(t, done)
 	require.Equal(t, uint32(3), lastSeqNo)
@@ -210,11 +210,11 @@ func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResum
 		},
 	)
 
-	session1, sub1, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
+	session1, sub1, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	waitForNotificationSubscriptionDone(t, sub1)
 	session1.unsubscribe(sub1)
 
-	session2, sub2, replay, available, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1"})
+	session2, sub2, replay, available, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
 	waitForNotificationSubscriptionDone(t, sub2)
 	session2.unsubscribe(sub2)
 
@@ -222,6 +222,222 @@ func TestNotificationStreamSessionManagerStartsFreshAfterDoneSessionWithoutResum
 	require.True(t, available)
 	require.Empty(t, replay)
 	require.Equal(t, int32(2), processCalls.Load())
+}
+
+func TestNotificationStreamSessionManagerStartsFreshAfterErroredDoneSessionWithResume(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	releaseSecond := make(chan struct{})
+	var processCalls atomic.Int32
+	manager := newNotificationStreamSessionManager(
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			call := processCalls.Add(1)
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				if call == 1 {
+					watcher.Send(&testkube.TestWorkflowExecutionNotification{Ts: time.Now(), Log: "attempt"})
+					watcher.Close(errors.New("source failed"))
+					return
+				}
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Ts: time.Now().Add(-time.Minute), Log: "historical"})
+				<-releaseSecond
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Ts: time.Now(), Log: "live"})
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	session1, sub1, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	firstPass := collectNotificationSubscriptionSeqNos(t, sub1)
+	session1.unsubscribe(sub1)
+	require.NotEmpty(t, firstPass)
+
+	session2, sub2, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: firstPass[len(firstPass)-1]})
+	defer session2.unsubscribe(sub2)
+
+	require.NotSame(t, session1, session2)
+	require.False(t, available)
+	require.False(t, done)
+	require.Zero(t, lastSeqNo)
+	close(releaseSecond)
+
+	secondPass := collectReplaySeqNos(replay)
+	if len(secondPass) == 0 {
+		select {
+		case event := <-sub2.ch:
+			secondPass = append(secondPass, event.seqNo)
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for resumed notification")
+		}
+	}
+
+	require.Equal(t, []uint32{1}, secondPass)
+	require.Eventually(t, func() bool {
+		return processCalls.Load() == 2
+	}, 2*time.Second, time.Millisecond)
+}
+
+func TestNotificationStreamSessionManagerFreshResumeStartsFromLiveTail(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	release := make(chan struct{})
+	manager := newNotificationStreamSessionManager(
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Ts: time.Now().Add(-time.Minute), Log: "historical"})
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: "temporary", Temporary: true})
+				<-release
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Ts: time.Now(), Log: "live"})
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{
+		ExecutionId:      "exec-1",
+		StreamId:         "stream-1",
+		ResumeAfterSeqNo: 7,
+	})
+	defer session.unsubscribe(sub)
+
+	require.False(t, available)
+	require.False(t, done)
+	require.Zero(t, lastSeqNo)
+	require.Empty(t, replay)
+	close(release)
+
+	select {
+	case event := <-sub.ch:
+		require.Equal(t, uint32(1), event.seqNo)
+		require.Equal(t, "live", event.notification.Log)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for live-tail notification")
+	}
+}
+
+func TestNotificationStreamSessionManagerMarksResumeUnavailableForFreshSessionWithResume(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	release := make(chan struct{})
+	manager := newNotificationStreamSessionManager(
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				<-release
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	session, sub, replay, available, lastSeqNo, done := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1", ResumeAfterSeqNo: 7})
+	defer session.unsubscribe(sub)
+	defer close(release)
+
+	require.False(t, available)
+	require.False(t, done)
+	require.Zero(t, lastSeqNo)
+	require.Empty(t, replay)
+}
+
+func TestNotificationStreamSessionManagerStartsFreshForConcurrentViewersWithoutResume(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	releaseFirst := make(chan struct{})
+	releaseSecond := make(chan struct{})
+	var processCalls atomic.Int32
+	manager := newNotificationStreamSessionManager(
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(_ context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			call := processCalls.Add(1)
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: req.StreamId})
+				if call == 1 {
+					<-releaseFirst
+				} else {
+					<-releaseSecond
+				}
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+
+	session1, sub1, _, available1, _, done1 := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	defer session1.unsubscribe(sub1)
+	session2, sub2, replay2, available2, _, done2 := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-2"})
+	defer session2.unsubscribe(sub2)
+	defer close(releaseFirst)
+	defer close(releaseSecond)
+
+	require.NotSame(t, session1, session2)
+	require.True(t, available1)
+	require.False(t, done1)
+	require.True(t, available2)
+	require.False(t, done2)
+	require.Empty(t, replay2)
+	require.Eventually(t, func() bool {
+		return processCalls.Load() == 2
+	}, 2*time.Second, time.Millisecond)
+
+	select {
+	case event := <-sub2.ch:
+		require.Equal(t, "stream-2", event.notification.Log)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for second viewer initial notification")
+	}
+}
+
+func TestNotificationStreamSessionManagerExpiresDoneSessionsWithoutAttach(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	release := make(chan struct{})
+	manager := newNotificationStreamSessionManager(
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return req.ExecutionId
+		},
+		func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher {
+			watcher := channels.NewWatcher[*testkube.TestWorkflowExecutionNotification]()
+			go func() {
+				watcher.Send(&testkube.TestWorkflowExecutionNotification{Log: "done"})
+				<-release
+				watcher.Close(nil)
+			}()
+			return watcher
+		},
+	)
+	manager.sessionIdleTTL = 10 * time.Millisecond
+
+	session, sub, _, _, _, _ := manager.attach(ctx, &cloud.TestWorkflowNotificationsRequest{ExecutionId: "exec-1", StreamId: "stream-1"})
+	close(release)
+	waitForNotificationSubscriptionDone(t, sub)
+	session.unsubscribe(sub)
+
+	require.Eventually(t, func() bool {
+		manager.mu.Lock()
+		defer manager.mu.Unlock()
+		return len(manager.sessions) == 0
+	}, time.Second, time.Millisecond)
 }
 
 func collectNotificationSubscriptionSeqNos(t *testing.T, sub *notificationStreamSubscription) []uint32 {
@@ -247,6 +463,14 @@ func collectNotificationSubscriptionSeqNos(t *testing.T, sub *notificationStream
 			return nil
 		}
 	}
+}
+
+func collectReplaySeqNos(replay []notificationStreamEvent) []uint32 {
+	seqNos := make([]uint32, 0, len(replay))
+	for _, event := range replay {
+		seqNos = append(seqNos, event.seqNo)
+	}
+	return seqNos
 }
 
 func waitForNotificationSubscriptionDone(t *testing.T, sub *notificationStreamSubscription) {

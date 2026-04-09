@@ -6,9 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -834,6 +837,10 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 			resetIdleTimer()
 
 			if isWorkflowProtocolNotification(l) {
+				if l.EventType == "resume_unavailable" {
+					nextSeqNo = 0
+					ui.Warn("Log stream replay unavailable, continuing from live output")
+				}
 				continue
 			}
 			if l.SeqNo > 0 {
@@ -897,6 +904,12 @@ func watchWorkflowLogsCommon(
 			streamCancel()
 			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
 			if cErr != nil {
+				if isRetryableWorkflowLogsError(cErr) {
+					spinner.Warning("Retrying logs")
+					ui.NL()
+					watchWorkflowLogsSleep(logsRetryDelay)
+					continue
+				}
 				spinner.Fail()
 				return nil, cErr
 			}
@@ -917,6 +930,12 @@ func watchWorkflowLogsCommon(
 			var finished bool
 			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
 			if cErr != nil {
+				if isRetryableWorkflowLogsError(cErr) {
+					spinner.Warning("Retrying logs")
+					ui.NL()
+					watchWorkflowLogsSleep(logsRetryDelay)
+					continue
+				}
 				spinner.Fail()
 				return nil, cErr
 			}
@@ -947,6 +966,12 @@ func watchWorkflowLogsCommon(
 		var cErr error
 		result, finished, cErr = refreshExecutionResult(executionGetter, id, result)
 		if cErr != nil {
+			if isRetryableWorkflowLogsError(cErr) {
+				spinner.Warning("Retrying logs")
+				ui.NL()
+				watchWorkflowLogsSleep(logsRetryDelay)
+				continue
+			}
 			spinner.Fail()
 			return nil, cErr
 		}
@@ -963,6 +988,31 @@ func watchWorkflowLogsCommon(
 	}
 
 	return result, nil
+}
+
+func isRetryableWorkflowLogsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "broken pipe") ||
+		strings.Contains(msg, "unexpected eof") ||
+		strings.Contains(msg, "eof") ||
+		strings.Contains(msg, "timeout")
 }
 
 // watchTestWorkflowLogs streams main workflow execution logs with retry logic

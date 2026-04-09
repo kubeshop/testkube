@@ -167,11 +167,11 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 	}
 	openStream := func(since *time.Time) (io.Reader, error) {
 		streamCancelMu.Lock()
-		defer streamCancelMu.Unlock()
-
 		streamCancel()
 		streamCtx, streamCtxCancel := context.WithCancel(ctx)
 		streamCancel = streamCtxCancel
+		streamCancelMu.Unlock()
+
 		return opener(streamCtx, clientSet, namespace, podName, containerName, isDone, since)
 	}
 
