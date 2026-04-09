@@ -22,7 +22,7 @@ dependencies:
     condition: cloudnative-pg.enabled
   - name: cluster
     alias: postgresqlOperatorCluster
-    version: 0.4.0
+    version: 0.6.0
     repository: https://cloudnative-pg.github.io/charts
     condition: postgresqlOperatorCluster.enabled
   - name: nats
