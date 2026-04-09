@@ -367,6 +367,9 @@ postgresqlOperatorCluster:
       requests:
         memory: 1Gi
         cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: "1"
     enablePDB: true
     storage:
       size: 5Gi
