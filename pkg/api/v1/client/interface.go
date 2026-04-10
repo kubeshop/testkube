@@ -175,6 +175,7 @@ type Transport[A All] interface {
 type TestWorkflowExecutionNotificationsOptions struct {
 	Context          context.Context
 	ResumeAfterSeqNo uint32
+	StreamID         string
 }
 
 func (o TestWorkflowExecutionNotificationsOptions) RequestContext() context.Context {

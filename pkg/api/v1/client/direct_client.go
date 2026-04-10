@@ -178,6 +178,11 @@ func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notif
 		q.Set("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
 		req.URL.RawQuery = q.Encode()
 	}
+	if options.StreamID != "" {
+		q := req.URL.Query()
+		q.Set("streamId", options.StreamID)
+		req.URL.RawQuery = q.Encode()
+	}
 
 	req.Header.Set("Accept", "text/event-stream")
 	resp, err := t.sseClient.Do(req)

@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -1018,11 +1019,13 @@ func isRetryableWorkflowLogsError(err error) bool {
 // watchTestWorkflowLogs streams main workflow execution logs with retry logic
 func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
+	streamID := uuid.NewString()
 
 	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		return client.GetTestWorkflowExecutionNotificationsWithOptions(id, apiclientv1.TestWorkflowExecutionNotificationsOptions{
 			Context:          ctx,
 			ResumeAfterSeqNo: resumeAfterSeqNo,
+			StreamID:         streamID,
 		})
 	}
 
@@ -1062,11 +1065,13 @@ func refreshExecutionResult(
 func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow service job", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
+	streamID := uuid.NewString()
 
 	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		return client.GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName, serviceIndex, apiclientv1.TestWorkflowExecutionNotificationsOptions{
 			Context:          ctx,
 			ResumeAfterSeqNo: resumeAfterSeqNo,
+			StreamID:         streamID,
 		})
 	}
 
@@ -1077,11 +1082,13 @@ func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex i
 func watchTestWorkflowParallelStepLogs(id, prefix, ref string, workerIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
+	streamID := uuid.NewString()
 
 	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		return client.GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref, workerIndex, apiclientv1.TestWorkflowExecutionNotificationsOptions{
 			Context:          ctx,
 			ResumeAfterSeqNo: resumeAfterSeqNo,
+			StreamID:         streamID,
 		})
 	}
 

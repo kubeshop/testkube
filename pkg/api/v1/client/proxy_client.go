@@ -153,6 +153,9 @@ func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifi
 	if options.ResumeAfterSeqNo > 0 {
 		req.Param("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
 	}
+	if options.StreamID != "" {
+		req.Param("streamId", options.StreamID)
+	}
 
 	resp, err := req.Stream(options.RequestContext())
 	if err != nil {

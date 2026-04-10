@@ -34,12 +34,14 @@ func TestDirectClientGetTestWorkflowExecutionNotificationsUsesResumeQueryAndCont
 	err := client.GetTestWorkflowExecutionNotifications(server.URL+"/notifications", notifications, TestWorkflowExecutionNotificationsOptions{
 		Context:          ctx,
 		ResumeAfterSeqNo: 42,
+		StreamID:         "stream-123",
 	})
 	require.NoError(t, err)
 
 	select {
 	case req := <-requests:
 		assert.Equal(t, "42", req.URL.Query().Get("resumeAfterSeqNo"))
+		assert.Equal(t, "stream-123", req.URL.Query().Get("streamId"))
 		assert.Equal(t, "text/event-stream", req.Header.Get("Accept"))
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for SSE request")
