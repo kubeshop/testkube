@@ -1431,29 +1431,39 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 	return nil
 }
 
-// UpdateReport updates a report
+// UpdateReport updates a report (appends to existing reports).
 func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := r.queries.WithTx(tx)
-
-	// Delete existing reports
-	err = qtx.DeleteTestWorkflowReports(ctx, id)
+	row, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
+		ID:             id,
+		OrganizationID: r.organizationID,
+		EnvironmentID:  r.environmentID,
+	})
 	if err != nil {
 		return err
 	}
 
-	// Insert new reports
-	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
+	reportsCount := 0
+	if len(row.ReportsJson) > 0 {
+		var existingReports []map[string]interface{}
+		if err = json.Unmarshal(row.ReportsJson, &existingReports); err != nil {
+			return err
+		}
+		reportsCount = len(existingReports)
+	}
+
+	summary, err := toJSONB(report.Summary)
 	if err != nil {
 		return err
 	}
 
-	return tx.Commit(ctx)
+	return r.queries.InsertTestWorkflowReport(ctx, sqlc.InsertTestWorkflowReportParams{
+		ExecutionID: id,
+		Ref:         toPgText(report.Ref),
+		Kind:        toPgText(report.Kind),
+		File:        toPgText(report.File),
+		Summary:     summary,
+		RepOrder:    int32(reportsCount + 1),
+	})
 }
 
 // UpdateOutput replaces all outputs

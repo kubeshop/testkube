@@ -942,6 +942,47 @@ func TestPostgresRepository_UpdateResult(t *testing.T) {
 	})
 }
 
+func TestPostgresRepository_UpdateReport(t *testing.T) {
+	t.Run("AppendsReportWithNextOrder", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+		id := "test-id"
+		report := &testkube.TestWorkflowReport{
+			Ref:  "ref-3",
+			Kind: "junit",
+			File: "report-3.xml",
+			Summary: &testkube.TestWorkflowReportSummary{
+				Passed: 1,
+			},
+		}
+
+		mockQueries.On("GetTestWorkflowExecution", ctx, sqlc.GetTestWorkflowExecutionParams{
+			ID:             id,
+			OrganizationID: "org-1",
+			EnvironmentID:  "env-1",
+		}).Return(sqlc.GetTestWorkflowExecutionRow{
+			ReportsJson: []byte(`[{"id":"1"},{"id":"2"}]`),
+		}, nil)
+
+		mockQueries.On("InsertTestWorkflowReport", ctx, mock.MatchedBy(func(p sqlc.InsertTestWorkflowReportParams) bool {
+			return p.ExecutionID == id &&
+				p.Ref.String == "ref-3" &&
+				p.Kind.String == "junit" &&
+				p.File.String == "report-3.xml" &&
+				p.RepOrder == int32(3)
+		})).Return(nil)
+
+		err := repo.UpdateReport(ctx, id, report)
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
 func TestPostgresRepository_UpdateTags(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
