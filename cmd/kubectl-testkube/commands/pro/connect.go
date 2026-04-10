@@ -231,8 +231,14 @@ func NewConnectCmd() *cobra.Command {
 
 			// Upload the previously exported archive to the control plane
 			if exportPath != "" {
+				// Resolve effective credential: use locally-obtained token when non-empty,
+				// otherwise fall back to the value already stored in the config.
+				effectiveToken := token
+				if effectiveToken == "" {
+					effectiveToken = cfg.CloudContext.ApiKey
+				}
 				spinner = ui.NewSpinner("Importing execution data to the control plane")
-				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, token, opts.Master.OrgId, opts.Master.EnvId)
+				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, effectiveToken, opts.Master.OrgId, opts.Master.EnvId)
 				importErr := importClient.Import(cmd.Context(), exportPath)
 				if importErr != nil {
 					var httpErr *cloudclient.HTTPError
@@ -244,6 +250,7 @@ func NewConnectCmd() *cobra.Command {
 					ui.Warn("The exported archive is still available at: " + exportPath)
 				} else {
 					spinner.Success()
+					ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
 					// Clean up the exported archive after successful import
 					if removeErr := os.Remove(exportPath); removeErr != nil {
 						ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
