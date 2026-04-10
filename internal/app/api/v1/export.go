@@ -83,7 +83,12 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 				}
 
 				if execution.Workflow != nil {
-					logData, err := s.readExecutionLog(c.Context(), execution.Id, execution.Workflow.Name)
+					remaining := int64(maxSize - buf.Len())
+					if remaining <= 0 {
+						// already at limit; size check below will return 413
+						break
+					}
+					logData, err := s.readExecutionLog(c.Context(), execution.Id, execution.Workflow.Name, remaining+1)
 					if err != nil {
 						s.Log.Warnw(errPrefix+": reading logs", "error", err, "id", execution.Id)
 					} else if len(logData) > 0 {
@@ -149,13 +154,13 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) readExecutionLog(ctx context.Context, executionID, workflowName string) ([]byte, error) {
+func (s *TestkubeAPI) readExecutionLog(ctx context.Context, executionID, workflowName string, limit int64) ([]byte, error) {
 	rc, err := s.TestWorkflowOutput.ReadLog(ctx, executionID, workflowName)
 	if err != nil {
 		return nil, err
 	}
 	defer rc.Close()
-	return io.ReadAll(rc)
+	return io.ReadAll(io.LimitReader(rc, limit))
 }
 
 // writeTarEntry writes a single file entry to a tar archive.

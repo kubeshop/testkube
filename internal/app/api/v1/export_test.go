@@ -255,8 +255,10 @@ func TestExportExecutionsHandler_WithExecutions(t *testing.T) {
 }
 
 func TestExportExecutionsHandler_SizeLimitExceeded(t *testing.T) {
-	// Use a tiny limit so even a small execution exceeds it
-	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 10)
+	// Use a tiny limit so even a small execution exceeds it.
+	// With maxSize=10 the budget is exhausted after writing the execution
+	// JSON metadata, so the log read is skipped (capped by remaining budget).
+	app, ctrl, mockRepo, _ := setupExportTestServer(t, 10)
 	defer ctrl.Finish()
 
 	executions := []testkube.TestWorkflowExecution{
@@ -270,8 +272,6 @@ func TestExportExecutionsHandler_SizeLimitExceeded(t *testing.T) {
 	}
 
 	mockRepo.EXPECT().GetExecutions(gomock.Any(), gomock.Any()).Return(executions, nil)
-	mockOutput.EXPECT().ReadLog(gomock.Any(), "exec-1", "workflow-a").
-		Return(io.NopCloser(strings.NewReader("some log data that is large enough")), nil)
 
 	req := httptest.NewRequestWithContext(context.Background(), "GET", "/export", nil)
 	resp, err := app.Test(req)
