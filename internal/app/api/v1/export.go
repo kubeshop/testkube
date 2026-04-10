@@ -88,6 +88,8 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 						// already at limit; size check below will return 413
 						break
 					}
+					// Read up to remaining+1 bytes so oversized logs are detected
+					// by the buf.Len() > maxSize check without over-allocating.
 					logData, err := s.readExecutionLog(c.Context(), execution.Id, execution.Workflow.Name, remaining+1)
 					if err != nil {
 						s.Log.Warnw(errPrefix+": reading logs", "error", err, "id", execution.Id)
