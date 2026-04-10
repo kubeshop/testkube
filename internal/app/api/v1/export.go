@@ -84,9 +84,10 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 
 				if execution.Workflow != nil {
 					remaining := int64(maxSize - buf.Len())
-					if remaining <= 0 {
-						// already at limit; size check below will return 413
-						break
+						if remaining <= 0 {
+							s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())
+							return s.Error(c, http.StatusRequestEntityTooLarge, errors.New(archiveLimitError))
+						}
 					}
 					// Read up to remaining+1 bytes so oversized logs are detected
 					// by the buf.Len() > maxSize check without over-allocating.
