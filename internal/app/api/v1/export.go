@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
 
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
@@ -153,7 +154,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 		}
 
 		c.Set("Content-Type", "application/gzip")
-		c.Set("Content-Disposition", `attachment; filename="testkube-export.tar.gz"`)
+		c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, apiclient.ExportArchiveFileName))
 		return c.Send(buf.Bytes())
 	}
 }

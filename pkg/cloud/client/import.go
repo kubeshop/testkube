@@ -9,6 +9,7 @@ import (
 	nethttp "net/http"
 	"os"
 
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
@@ -53,7 +54,7 @@ func (c *ImportClient) Import(ctx context.Context, archivePath string) error {
 	// Build the multipart body in memory so the pipe goroutine cannot leak.
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
-	part, err := writer.CreateFormFile("archive", "testkube-export.tar.gz")
+	part, err := writer.CreateFormFile("archive", apiclient.ExportArchiveFileName)
 	if err != nil {
 		return fmt.Errorf("creating form file: %w", err)
 	}

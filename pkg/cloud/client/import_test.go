@@ -14,6 +14,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 )
 
 func TestNewImportClient(t *testing.T) {
@@ -65,7 +67,7 @@ func TestImportClient_Import_Success(t *testing.T) {
 		file, header, err := r.FormFile("archive")
 		require.NoError(t, err)
 		defer file.Close()
-		assert.Equal(t, "testkube-export.tar.gz", header.Filename)
+		assert.Equal(t, apiclient.ExportArchiveFileName, header.Filename)
 
 		// Verify it's a valid gzip
 		gr, err := gzip.NewReader(file)

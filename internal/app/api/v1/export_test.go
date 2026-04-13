@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -170,7 +171,7 @@ func TestExportExecutionsHandler_EmptyExport(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "application/gzip", resp.Header.Get("Content-Type"))
-	assert.Contains(t, resp.Header.Get("Content-Disposition"), "testkube-export.tar.gz")
+	assert.Contains(t, resp.Header.Get("Content-Disposition"), apiclient.ExportArchiveFileName)
 
 	// Verify it's a valid gzip archive with a sequences.json entry
 	body, _ := io.ReadAll(resp.Body)

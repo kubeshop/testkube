@@ -4,6 +4,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// ExportArchiveFileName is the default file name for execution export archives.
+const ExportArchiveFileName = "testkube-export.tar.gz"
+
 // Client is the Testkube API client abstraction
 type Client interface {
 	WebhookAPI

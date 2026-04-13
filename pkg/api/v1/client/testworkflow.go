@@ -294,5 +294,5 @@ func (c TestWorkflowClient) ExportExecutions(destination string, since string) (
 	if since != "" {
 		params = map[string][]string{"since": {since}}
 	}
-	return c.testWorkflowTransport.GetFile(uri, "testkube-export.tar.gz", destination, params)
+	return c.testWorkflowTransport.GetFile(uri, ExportArchiveFileName, destination, params)
 }
