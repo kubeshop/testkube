@@ -19,6 +19,7 @@ import (
 
 const (
 	exportPageSize = 100
+	defaultMaxSize = 100 * 1024 * 1024 // fallback to 100 MB
 )
 
 // sequenceEntry holds the current sequence number for a workflow.
@@ -39,7 +40,7 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 
 		maxSize := s.exportArchiveMaxSize
 		if maxSize <= 0 {
-			maxSize = 100 * 1024 * 1024 // fallback to 100 MB
+			maxSize = defaultMaxSize
 		}
 		archiveLimitError := fmt.Sprintf("export archive exceeds the size limit (%d bytes); use the 'since' query parameter to narrow the date range", maxSize)
 
