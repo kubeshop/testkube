@@ -15,7 +15,7 @@ import (
 
 const (
 	maxErrorResponseBytes = 1024 * 1024 // 1 MB cap for error responses
-	importFormFileKey     = "archive"
+	importFormFileKey     = "file"
 )
 
 // HTTPError represents an HTTP error response with a status code.

@@ -64,7 +64,7 @@ func TestImportClient_Import_Success(t *testing.T) {
 		// Verify file in multipart body
 		err := r.ParseMultipartForm(10 << 20)
 		require.NoError(t, err)
-		file, header, err := r.FormFile("archive")
+		file, header, err := r.FormFile("file")
 		require.NoError(t, err)
 		defer file.Close()
 		assert.Equal(t, apiclient.ExportArchiveFileName, header.Filename)
