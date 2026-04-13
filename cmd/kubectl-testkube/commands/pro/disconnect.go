@@ -92,6 +92,12 @@ func NewDisconnectCmd() *cobra.Command {
 				if !cmd.Flags().Changed("no-mongo") {
 					opts.NoMongo = true
 				}
+			default:
+				// DatabaseType was never recorded (cluster connected before this feature).
+				// Old clusters only ever had MongoDB, so keep PostgreSQL disabled.
+				if !cmd.Flags().Changed("no-postgres") {
+					opts.NoPostgres = true
+				}
 			}
 
 			if cliErr := common.HelmUpgradeOrInstallTestkube(opts); cliErr != nil {
