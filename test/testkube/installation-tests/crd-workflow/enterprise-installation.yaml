@@ -9,7 +9,7 @@ spec:
   system:
     pureByDefault: true
   job:
-    activeDeadlineSeconds: 600
+    activeDeadlineSeconds: 900
   content:
     git:
       uri: https://github.com/kubeshop/testkube
@@ -48,6 +48,7 @@ spec:
         echo $TESTKUBE_INIT_COMMAND
         chmod +x enterprise-installation-expect-file.exp
         expect enterprise-installation-expect-file.exp
+    timeout: 720s
   - name: Wait for Testkube core components to be ready
     optional: true
     shell: |
