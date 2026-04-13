@@ -13,7 +13,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
-const maxErrorResponseBytes = 1024 * 1024 // 1 MB cap for error responses
+const (
+	maxErrorResponseBytes = 1024 * 1024 // 1 MB cap for error responses
+	importFormFileKey     = "archive"
+)
 
 // HTTPError represents an HTTP error response with a status code.
 type HTTPError struct {
@@ -54,7 +57,7 @@ func (c *ImportClient) Import(ctx context.Context, archivePath string) error {
 	// Build the multipart body in memory so the pipe goroutine cannot leak.
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
-	part, err := writer.CreateFormFile("archive", apiclient.ExportArchiveFileName)
+	part, err := writer.CreateFormFile(importFormFileKey, apiclient.ExportArchiveFileName)
 	if err != nil {
 		return fmt.Errorf("creating form file: %w", err)
 	}
