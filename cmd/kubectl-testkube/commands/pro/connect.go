@@ -1,19 +1,13 @@
 package pro
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
-	"os"
-	"strconv"
 	"strings"
 
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -23,8 +17,7 @@ const (
 
 func NewConnectCmd() *cobra.Command {
 	var opts = common.HelmOptions{}
-	var skipExport bool
-	var exportSince string
+	var setOptions, argOptions map[string]string
 
 	cmd := &cobra.Command{
 		Use:     "connect",
@@ -69,55 +62,25 @@ func NewConnectCmd() *cobra.Command {
 				{"Namespace", cfg.Namespace},
 			})
 
+			// validate required flags
+			if opts.Master.AgentToken == "" {
+				ui.Failf("You need to pass a valid agent token to connect to Pro (--agent-token)")
+			}
+			if opts.Master.OrgId == "" {
+				ui.Failf("You need to pass a valid organization id to connect to Pro (--org-id)")
+			}
+			if opts.Master.EnvId == "" {
+				ui.Failf("You need to pass a valid environment id to connect to Pro (--env-id)")
+			}
+
 			newStatus := [][]string{
 				{"Testkube mode"},
 				{"Context", contextDescription["cloud"]},
 				{"Kubectl context", clusterContext},
 				{"Namespace", cfg.Namespace},
 				{ui.Separator, ""},
-			}
-
-			var (
-				token        string
-				refreshToken string
-			)
-			// if no agent is passed create new environment and get its token
-			if opts.Master.AgentToken == "" && opts.Master.OrgId == "" && opts.Master.EnvId == "" {
-				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
-				ui.ExitOnError("login", err)
-
-				orgId, orgName, err := common.UiGetOrganizationId(opts.Master.URIs.Api, token)
-				ui.ExitOnError("getting organization", err)
-
-				envName, err := uiGetEnvName()
-				ui.ExitOnError("getting environment name", err)
-
-				envClient := cloudclient.NewEnvironmentsClient(opts.Master.URIs.Api, token, orgId)
-				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
-				ui.ExitOnError("creating environment", err)
-
-				opts.Master.OrgId = orgId
-				opts.Master.EnvId = env.Id
-				opts.Master.AgentToken = env.AgentToken
-
-				newStatus = append(
-					newStatus,
-					[][]string{
-						{"Testkube will be connected to Pro org/env"},
-						{"Organization Id", opts.Master.OrgId},
-						{"Organization name", orgName},
-						{"Environment Id", opts.Master.EnvId},
-						{"Environment name", env.Name},
-						{ui.Separator, ""},
-					}...)
-			}
-
-			// validate if user created env - or was passed from flags
-			if opts.Master.EnvId == "" {
-				ui.Failf("You need pass valid environment id to connect to Pro")
-			}
-			if opts.Master.OrgId == "" {
-				ui.Failf("You need pass valid organization id to connect to Pro")
+				{"Organization Id", opts.Master.OrgId},
+				{"Environment Id", opts.Master.EnvId},
 			}
 
 			// detect which database is currently deployed so we only scale down the active one
@@ -128,6 +91,7 @@ func NewConnectCmd() *cobra.Command {
 			cfg.CloudContext.DatabaseType = dbType
 
 			// update summary
+			newStatus = append(newStatus, []string{ui.Separator, ""})
 			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
 			newStatus = append(newStatus, []string{"MinIO     ", "Stopped and scaled down, (not deleted)"})
 			switch dbType {
@@ -150,35 +114,9 @@ func NewConnectCmd() *cobra.Command {
 				return
 			}
 
-			// Export execution data before switching to agent mode
-			var exportPath string
-			if !skipExport {
-				ui.H2("Exporting execution data before connecting")
-				var exportErr error
-				exportPath, exportErr = client.ExportExecutions(".", exportSince)
-				if exportErr != nil {
-					var httpErr *cloudclient.HTTPError
-					is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
-					if !is413 {
-						is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
-					}
-					if is413 {
-						ui.Warn("Export archive exceeds the server size limit.")
-						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
-					} else {
-						ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
-					}
-					ui.Warn("Your data will remain in the existing database and can be exported later.")
-					if ok := ui.Confirm("Continue connecting without export?"); !ok {
-						return
-					}
-				} else {
-					ui.Info(fmt.Sprintf("Export archive saved to: %s", exportPath))
-				}
-				ui.NL()
-			}
-
 			spinner := ui.NewSpinner("Connecting Testkube Pro")
+			opts.SetOptions = setOptions
+			opts.ArgOptions = argOptions
 			if cliErr = common.HelmUpgradeOrInstallTestkubeAgent(opts, cfg, true); cliErr != nil {
 				spinner.Fail()
 				common.HandleCLIError(cliErr)
@@ -218,45 +156,10 @@ func NewConnectCmd() *cobra.Command {
 				}
 			}
 
-			ui.H2("Testkube Pro is connected to your Testkube instance, saving local configuration")
-
 			ui.H2("Saving Testkube CLI Pro context")
-			if token == "" && !common.IsUserLoggedIn(cfg, opts) {
-				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
-				ui.ExitOnError("user login", err)
-			}
-			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, "", opts, cfg)
-
+			cfg.ContextType = config.ContextTypeCloud
+			err = common.PopulateAgentDataToContext(opts, cfg)
 			ui.ExitOnError("Setting Pro environment context", err)
-
-			// Upload the previously exported archive to the control plane
-			if exportPath != "" {
-				// Resolve effective credential: use locally-obtained token when non-empty,
-				// otherwise fall back to the value already stored in the config.
-				effectiveToken := token
-				if effectiveToken == "" {
-					effectiveToken = cfg.CloudContext.ApiKey
-				}
-				spinner = ui.NewSpinner("Importing execution data to the control plane")
-				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, effectiveToken, opts.Master.OrgId, opts.Master.EnvId)
-				importErr := importClient.Import(cmd.Context(), exportPath)
-				if importErr != nil {
-					var httpErr *cloudclient.HTTPError
-					if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
-						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
-					} else {
-						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
-					}
-					ui.Warn("The exported archive is still available at: " + exportPath)
-				} else {
-					spinner.Success()
-					ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
-					// Clean up the exported archive after successful import
-					if removeErr := os.Remove(exportPath); removeErr != nil {
-						ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
-					}
-				}
-			}
 
 			ui.NL(2)
 
@@ -276,8 +179,10 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
 	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 0, "PostgreSQL replicas")
-	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
-	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
+	cmd.Flags().BoolVar(&opts.MultiNamespace, "multi-namespace", false, "multi namespace mode")
+	cmd.Flags().BoolVar(&opts.NoCRDs, "no-crds", false, "Skip installing CRDs, useful when you have them already installed in the cluster")
+	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
+	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
 	return cmd
 }
 
@@ -285,15 +190,4 @@ var contextDescription = map[string]string{
 	"":      "Unknown context, try updating your testkube cluster installation",
 	"oss":   "Open Source Testkube",
 	"cloud": "Testkube in Pro mode",
-}
-
-func uiGetEnvName() (string, error) {
-	for i := 0; i < 3; i++ {
-		if envName := ui.TextInput("Tell us the name of your environment"); envName != "" {
-			return envName, nil
-		}
-		pterm.Error.Println("Environment name cannot be empty")
-	}
-
-	return "", fmt.Errorf("environment name cannot be empty")
 }
