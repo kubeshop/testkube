@@ -161,7 +161,7 @@ func NewConnectCmd() *cobra.Command {
 			// (ApiKey, ApiUri, OrganizationId) populated from a previous login.
 			cfg.ContextType = config.ContextTypeCloud
 			err = config.Save(cfg)
-			ui.ExitOnError("switching to cloud context", err)
+			ui.ExitOnError("saving cloud context configuration", err)
 
 			// Install agent using same mechanism as "install agent" command
 			agentName := ""
