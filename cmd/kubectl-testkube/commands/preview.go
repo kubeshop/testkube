@@ -21,11 +21,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const shareUploadTimeout = 60 * time.Second
+const previewUploadTimeout = 60 * time.Second
 
-// shareHTTPClient is used for unauthenticated uploads to the public shares endpoint.
-var shareHTTPClient = &http.Client{
-	Timeout: shareUploadTimeout,
+// previewHTTPClient is used for unauthenticated uploads to the public shares endpoint.
+var previewHTTPClient = &http.Client{
+	Timeout: previewUploadTimeout,
 }
 
 func NewPreviewCmd() *cobra.Command {
@@ -53,7 +53,7 @@ func NewPreviewCmd() *cobra.Command {
 				}
 			}
 
-			shareAndOpenExecution(cmd, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts)
+			previewExecution(cmd, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts)
 		},
 	}
 
@@ -65,7 +65,7 @@ func NewPreviewCmd() *cobra.Command {
 	return cmd
 }
 
-func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
+func previewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
 	uris := common.NewMasterUris("", "", "", "", "", "", "", false)
 	if sharesAPIURL == "" {
 		sharesAPIURL = uris.Api
@@ -121,7 +121,7 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 		ui.ExitOnError("getting artifacts list", err)
 
 		if len(artifacts) > 0 {
-			tmpDir, err = os.MkdirTemp("", "testkube-share-*")
+			tmpDir, err = os.MkdirTemp("", "testkube-preview-*")
 			ui.ExitOnError("creating temp directory", err)
 			defer os.RemoveAll(tmpDir)
 
@@ -137,8 +137,8 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 		}
 	}
 
-	ui.Info("Uploading to share viewer...")
-	token, err := uploadShare(sharesAPIURL, executionJSON, logs, artifactPaths)
+	ui.Info("Uploading to preview viewer...")
+	token, err := uploadPreview(sharesAPIURL, executionJSON, logs, artifactPaths)
 	if err != nil {
 		cfg, cfgErr := config.Load()
 		if cfgErr == nil && cfg.TelemetryEnabled {
@@ -148,12 +148,12 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 			}
 			ui.Debug("telemetry preview error event response", out)
 		}
-		ui.ExitOnError("uploading share", err)
+		ui.ExitOnError("uploading preview", err)
 	}
 
 	viewerURL := fmt.Sprintf("%s/view/%s", viewerBaseURL, token)
 	ui.NL()
-	ui.Success("Share created successfully:", viewerURL)
+	ui.Success("Preview created successfully:", viewerURL)
 
 	cfg, cfgErr := config.Load()
 	if cfgErr == nil && cfg.TelemetryEnabled {
@@ -168,14 +168,14 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 	ui.PrintOnError("opening browser", err)
 }
 
-type shareResponse struct {
+type previewResponse struct {
 	Token        string `json:"token"`
 	ExecutionID  string `json:"executionId"`
 	WorkflowName string `json:"workflowName"`
 	Status       string `json:"status"`
 }
 
-func uploadShare(sharesAPIURL string, executionJSON, logs []byte, artifactPaths []string) (string, error) {
+func uploadPreview(sharesAPIURL string, executionJSON, logs []byte, artifactPaths []string) (string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -220,9 +220,9 @@ func uploadShare(sharesAPIURL string, executionJSON, logs []byte, artifactPaths 
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	resp, err := shareHTTPClient.Do(req)
+	resp, err := previewHTTPClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("uploading share: %w", err)
+		return "", fmt.Errorf("uploading preview: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -240,13 +240,13 @@ func uploadShare(sharesAPIURL string, executionJSON, logs []byte, artifactPaths 
 			Detail string `json:"detail"`
 		}
 		if err := json.Unmarshal(body, &prob); err == nil && prob.Detail != "" {
-			return "", fmt.Errorf("share upload failed (HTTP %d): %s", resp.StatusCode, prob.Detail)
+			return "", fmt.Errorf("preview upload failed (HTTP %d): %s", resp.StatusCode, prob.Detail)
 		}
 
-		return "", fmt.Errorf("share upload failed (HTTP %d)", resp.StatusCode)
+		return "", fmt.Errorf("preview upload failed (HTTP %d)", resp.StatusCode)
 	}
 
-	var result shareResponse
+	var result previewResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		return "", fmt.Errorf("parsing response: %w", err)
 	}
