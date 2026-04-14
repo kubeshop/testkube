@@ -44,7 +44,6 @@ func NewConnectCmd() *cobra.Command {
 		listener           bool
 		gitops             bool
 		webhooks           bool
-		agentType          string
 
 		// Export/import flags
 		skipExport  bool
@@ -297,10 +296,6 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
 	cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
 	cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
-
-	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
 
 	// Export/import flags
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
