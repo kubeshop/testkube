@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
@@ -21,14 +22,34 @@ const (
 )
 
 func NewConnectCmd() *cobra.Command {
-	var opts = common.HelmOptions{}
-	var setOptions, argOptions map[string]string
-	var skipExport bool
-	var exportSince string
+	var (
+		// Agent installer flags (matching NewInstallAgentCommand)
+		secretKey          string
+		executionNamespace string
+		version            string
+		dryRun             bool
+		globalTemplatePath string
+		global             bool
+		group              string
+		autoCreate         bool
+		floating           bool
+		labelPairs         []string
+		environmentIds     []string
+		runner             bool
+		listener           bool
+		gitops             bool
+		webhooks           bool
+		agentType          string
+
+		// Export/import flags
+		skipExport  bool
+		exportSince string
+	)
 
 	cmd := &cobra.Command{
-		Use:     "connect",
+		Use:     "connect [agent-name]",
 		Aliases: []string{"c"},
+		Args:    cobra.MaximumNArgs(1),
 		Short:   "Testkube Pro connect ",
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
@@ -52,8 +73,6 @@ func NewConnectCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config", err)
 
-			common.ProcessMasterFlags(cmd, &opts, &cfg)
-
 			var clusterContext string
 			var cliErr *common.CLIError
 			if cfg.ContextType == config.ContextTypeKubeconfig {
@@ -69,38 +88,23 @@ func NewConnectCmd() *cobra.Command {
 				{"Namespace", cfg.Namespace},
 			})
 
-			// validate required flags
-			if opts.Master.AgentToken == "" {
-				ui.Failf("You need to pass a valid agent token to connect to Pro (--agent-token)")
-			}
-			if opts.Master.OrgId == "" {
-				ui.Failf("You need to pass a valid organization id to connect to Pro (--org-id)")
-			}
-			if opts.Master.EnvId == "" {
-				ui.Failf("You need to pass a valid environment id to connect to Pro (--env-id)")
-			}
-
-			newStatus := [][]string{
-				{"Testkube mode"},
-				{"Context", contextDescription["cloud"]},
-				{"Kubectl context", clusterContext},
-				{"Namespace", cfg.Namespace},
-				{ui.Separator, ""},
-				{"Organization Id", opts.Master.OrgId},
-				{"Environment Id", opts.Master.EnvId},
-			}
-
 			// detect which database is currently deployed so we only scale down the active one
-			dbType, cliErr := common.DetectDatabaseType(opts.Namespace)
+			dbType, cliErr := common.DetectDatabaseType(cfg.Namespace)
 			if cliErr != nil {
 				common.HandleCLIError(cliErr)
 			}
 			cfg.CloudContext.DatabaseType = dbType
 
 			// update summary
-			newStatus = append(newStatus, []string{ui.Separator, ""})
-			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
-			newStatus = append(newStatus, []string{"MinIO     ", "Stopped and scaled down, (not deleted)"})
+			newStatus := [][]string{
+				{"Testkube mode"},
+				{"Context", contextDescription["cloud"]},
+				{"Kubectl context", clusterContext},
+				{"Namespace", cfg.Namespace},
+				{ui.Separator, ""},
+				{"Testkube support services not needed anymore"},
+				{"MinIO     ", "Stopped and scaled down, (not deleted)"},
+			}
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
 				newStatus = append(newStatus, []string{"MongoDB   ", "Stopped and scaled down, (not deleted)"})
@@ -149,79 +153,87 @@ func NewConnectCmd() *cobra.Command {
 				ui.NL()
 			}
 
-			spinner := ui.NewSpinner("Connecting Testkube Pro")
-			opts.SetOptions = setOptions
-			opts.ArgOptions = argOptions
-			if cliErr = common.HelmUpgradeOrInstallTestkubeAgent(opts, cfg, true); cliErr != nil {
-				spinner.Fail()
-				common.HandleCLIError(cliErr)
+			// Install agent using same mechanism as "install agent" command
+			agentName := ""
+			if len(args) > 0 {
+				agentName = args[0]
+			}
+			agents.UiInstallAgent(cmd, agentName)
+
+			// Check if dry-run mode — skip post-install steps
+			if dryRun {
+				return
 			}
 
-			spinner.Success()
-
-			ui.NL()
-
-			if opts.MinioReplicas == 0 {
-				spinner = ui.NewSpinner("Scaling down MinIO")
-				if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas); scaleErr != nil {
-					spinner.Fail(fmt.Sprintf("Failed to scale down MinIO: %s", scaleErr))
-				} else {
-					spinner.Success()
-				}
+			// Scale down old support services in the original namespace
+			origNs := cfg.Namespace
+			spinner := ui.NewSpinner("Scaling down MinIO")
+			if _, scaleErr := common.KubectlScaleDeployment(origNs, "testkube-minio-testkube", 0); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale down MinIO: %s", scaleErr))
+			} else {
+				spinner.Success()
 			}
 			// scale down only the database that was originally deployed
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
-				if opts.MongoReplicas == 0 {
-					spinner = ui.NewSpinner("Scaling down MongoDB")
-					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr != nil {
-						spinner.Fail(fmt.Sprintf("Failed to scale down MongoDB: %s", scaleErr))
-					} else {
-						spinner.Success()
-					}
+				spinner = ui.NewSpinner("Scaling down MongoDB")
+				if _, scaleErr := common.KubectlScaleDeployment(origNs, "testkube-mongodb", 0); scaleErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to scale down MongoDB: %s", scaleErr))
+				} else {
+					spinner.Success()
 				}
 			case config.DatabaseTypePostgreSQL:
-				if opts.PostgresReplicas == 0 {
-					spinner = ui.NewSpinner("Scaling down PostgreSQL")
-					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr != nil {
-						spinner.Fail(fmt.Sprintf("Failed to scale down PostgreSQL: %s", scaleErr))
-					} else {
-						spinner.Success()
-					}
+				spinner = ui.NewSpinner("Scaling down PostgreSQL")
+				if _, scaleErr := common.KubectlScaleStatefulSet(origNs, "testkube-postgresql-primary", 0); scaleErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to scale down PostgreSQL: %s", scaleErr))
+				} else {
+					spinner.Success()
 				}
 			}
 
+			// Save context
 			ui.H2("Saving Testkube CLI Pro context")
+			cfg, err = config.Load()
+			ui.ExitOnError("loading config", err)
+			cfg.CloudContext.DatabaseType = dbType
 			cfg.ContextType = config.ContextTypeCloud
-			err = common.PopulateAgentDataToContext(opts, cfg)
-			ui.ExitOnError("Setting Pro environment context", err)
+			err = config.Save(cfg)
+			ui.ExitOnError("Saving Pro context", err)
 
 			// Upload the previously exported archive to the control plane
 			if exportPath != "" {
-				// Resolve effective credential: use agent token from flags,
-				// otherwise fall back to the value already stored in the config.
-				effectiveToken := opts.Master.AgentToken
+				effectiveToken := cfg.CloudContext.ApiKey
 				if effectiveToken == "" {
 					effectiveToken = cfg.CloudContext.AgentKey
 				}
-				spinner = ui.NewSpinner("Importing execution data to the control plane")
-				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, effectiveToken, opts.Master.OrgId, opts.Master.EnvId)
-				importErr := importClient.Import(cmd.Context(), exportPath)
-				if importErr != nil {
-					var httpErr *cloudclient.HTTPError
-					if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
-						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+				if cfg.CloudContext.OrganizationId != "" && cfg.CloudContext.EnvironmentId != "" && effectiveToken != "" {
+					spinner = ui.NewSpinner("Importing execution data to the control plane")
+					importClient := cloudclient.NewImportClient(
+						cfg.CloudContext.ApiUri,
+						effectiveToken,
+						cfg.CloudContext.OrganizationId,
+						cfg.CloudContext.EnvironmentId,
+					)
+					importErr := importClient.Import(cmd.Context(), exportPath)
+					if importErr != nil {
+						var httpErr *cloudclient.HTTPError
+						if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
+							spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+						} else {
+							spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
+						}
+						ui.Warn("The exported archive is still available at: " + exportPath)
 					} else {
-						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
+						spinner.Success()
+						ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
+						// Clean up the exported archive after successful import
+						if removeErr := os.Remove(exportPath); removeErr != nil {
+							ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
+						}
 					}
-					ui.Warn("The exported archive is still available at: " + exportPath)
 				} else {
-					spinner.Success()
-					ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
-					// Clean up the exported archive after successful import
-					if removeErr := os.Remove(exportPath); removeErr != nil {
-						ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
-					}
+					ui.Warn("Skipping import: organization ID, environment ID, or API token not available in config.")
+					ui.Warn("The exported archive is available at: " + exportPath)
 				}
 			}
 
@@ -229,26 +241,45 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube pro disconnect")
 
-			ui.Success("You can now login to Testkube Pro and validate your connection:")
-			ui.NL()
-			ui.Link(opts.Master.URIs.Ui + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
+			ui.Success("You can now login to Testkube Pro and validate your connection")
 
 			ui.NL(2)
 		},
 	}
 
-	common.PopulateHelmFlags(cmd, &opts)
-	common.PopulateMasterFlags(cmd, &opts, false)
+	// Installation > General (matching NewInstallAgentCommand)
+	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
+	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
 
-	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
-	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
-	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 0, "PostgreSQL replicas")
-	cmd.Flags().BoolVar(&opts.MultiNamespace, "multi-namespace", false, "multi namespace mode")
-	cmd.Flags().BoolVar(&opts.NoCRDs, "no-crds", false, "Skip installing CRDs, useful when you have them already installed in the cluster")
-	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
-	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
+	// Installation > Runner
+	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
+
+	// Install existing
+	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
+
+	// Create and install
+	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
+	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
+	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
+
+	// Components selection
+	cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
+	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
+	cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
+	cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
+
+	// Deprecated flag
+	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
+
+	// Export/import flags
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
 	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
+
 	return cmd
 }
 
