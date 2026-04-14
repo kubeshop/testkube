@@ -1,13 +1,18 @@
 package pro
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -18,6 +23,8 @@ const (
 func NewConnectCmd() *cobra.Command {
 	var opts = common.HelmOptions{}
 	var setOptions, argOptions map[string]string
+	var skipExport bool
+	var exportSince string
 
 	cmd := &cobra.Command{
 		Use:     "connect",
@@ -114,6 +121,34 @@ func NewConnectCmd() *cobra.Command {
 				return
 			}
 
+			// Export execution data before switching to agent mode
+			var exportPath string
+			if !skipExport {
+				ui.H2("Exporting execution data before connecting")
+				var exportErr error
+				exportPath, exportErr = client.ExportExecutions(".", exportSince)
+				if exportErr != nil {
+					var httpErr *cloudclient.HTTPError
+					is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
+					if !is413 {
+						is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
+					}
+					if is413 {
+						ui.Warn("Export archive exceeds the server size limit.")
+						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+					} else {
+						ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
+					}
+					ui.Warn("Your data will remain in the existing database and can be exported later.")
+					if ok := ui.Confirm("Continue connecting without export?"); !ok {
+						return
+					}
+				} else {
+					ui.Info(fmt.Sprintf("Export archive saved to: %s", exportPath))
+				}
+				ui.NL()
+			}
+
 			spinner := ui.NewSpinner("Connecting Testkube Pro")
 			opts.SetOptions = setOptions
 			opts.ArgOptions = argOptions
@@ -161,6 +196,35 @@ func NewConnectCmd() *cobra.Command {
 			err = common.PopulateAgentDataToContext(opts, cfg)
 			ui.ExitOnError("Setting Pro environment context", err)
 
+			// Upload the previously exported archive to the control plane
+			if exportPath != "" {
+				// Resolve effective credential: use agent token from flags,
+				// otherwise fall back to the value already stored in the config.
+				effectiveToken := opts.Master.AgentToken
+				if effectiveToken == "" {
+					effectiveToken = cfg.CloudContext.AgentKey
+				}
+				spinner = ui.NewSpinner("Importing execution data to the control plane")
+				importClient := cloudclient.NewImportClient(opts.Master.URIs.Api, effectiveToken, opts.Master.OrgId, opts.Master.EnvId)
+				importErr := importClient.Import(cmd.Context(), exportPath)
+				if importErr != nil {
+					var httpErr *cloudclient.HTTPError
+					if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
+						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+					} else {
+						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
+					}
+					ui.Warn("The exported archive is still available at: " + exportPath)
+				} else {
+					spinner.Success()
+					ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
+					// Clean up the exported archive after successful import
+					if removeErr := os.Remove(exportPath); removeErr != nil {
+						ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
+					}
+				}
+			}
+
 			ui.NL(2)
 
 			ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube pro disconnect")
@@ -183,6 +247,8 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.NoCRDs, "no-crds", false, "Skip installing CRDs, useful when you have them already installed in the cluster")
 	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
 	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
+	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
+	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
 	return cmd
 }
 
