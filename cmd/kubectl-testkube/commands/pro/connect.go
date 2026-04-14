@@ -157,10 +157,22 @@ func NewConnectCmd() *cobra.Command {
 			ui.ExitOnError("saving cloud context configuration", err)
 
 			// Install agent using same mechanism as "install agent" command
-			agentName := ""
-			if len(args) > 0 {
+			agentName := "default-oss"
+			if len(args) > 0 && args[0] != "" {
 				agentName = args[0]
 			}
+
+			// Set pro connect defaults: enable all capabilities, auto-create, global
+			for _, flag := range []string{"runner", "listener", "gitops", "webhooks", "create", "global"} {
+				if !cmd.Flags().Changed(flag) {
+					_ = cmd.Flags().Set(flag, "true")
+				}
+			}
+			// Default the namespace to the current OSS installation namespace
+			if !cmd.Flags().Changed("namespace") {
+				_ = cmd.Flags().Set("namespace", cfg.Namespace)
+			}
+
 			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"}, map[string]interface{}{
 				// Disable CRD installation in the runner chart — the OSS chart already
 				// has the CRDs installed via the testkube-operator subchart. This prevents
