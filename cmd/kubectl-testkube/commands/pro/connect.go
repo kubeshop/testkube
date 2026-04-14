@@ -155,6 +155,14 @@ func NewConnectCmd() *cobra.Command {
 				ui.NL()
 			}
 
+			// Switch CLI context to cloud mode so that UiInstallAgent and control
+			// plane API calls (listing agents, fetching secret keys, etc.) use cloud
+			// authentication. The config should already have CloudContext fields
+			// (ApiKey, ApiUri, OrganizationId) populated from a previous login.
+			cfg.ContextType = config.ContextTypeCloud
+			err = config.Save(cfg)
+			ui.ExitOnError("switching to cloud context", err)
+
 			// Install agent using same mechanism as "install agent" command
 			agentName := ""
 			if len(args) > 0 {
