@@ -125,6 +125,42 @@ func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
 	return sendData(senders, payload)
 }
 
+// SendPreviewEvent sends a preview-specific telemetry event with execution context
+func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactCount int32, skipArtifacts bool, previewErr string) (string, error) {
+	machineID := GetMachineID()
+	eventName := "preview_execution"
+	if previewErr != "" {
+		eventName = "preview_execution_error"
+	}
+
+	payload := Payload{
+		ClientID: machineID,
+		UserID:   machineID,
+		Events: []Event{
+			{
+				Name: text.GAEventName(eventName),
+				Params: Params{
+					EventCount:           1,
+					EventCategory:        "cli_command_execution",
+					AppVersion:           version,
+					AppName:              "kubectl-testkube",
+					MachineID:            machineID,
+					OperatingSystem:      runtime.GOOS,
+					Architecture:         runtime.GOARCH,
+					Context:              getCurrentContext(),
+					ClusterType:          GetClusterType(),
+					CliContext:           GetCliRunContext(),
+					PreviewExecutionID:   executionID,
+					PreviewArtifacts:     artifactCount,
+					PreviewSkipArtifacts: skipArtifacts,
+					PreviewError:         previewErr,
+				},
+			},
+		},
+	}
+	return sendData(senders, payload)
+}
+
 // SendHeartbeatEvent will send CLI event to GA
 func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
 	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host, GetClusterType())

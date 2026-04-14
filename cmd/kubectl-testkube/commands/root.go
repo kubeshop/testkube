@@ -59,6 +59,7 @@ func init() {
 	RootCmd.AddCommand(NewPurgeCmd())
 	RootCmd.AddCommand(NewWatchCmd())
 	RootCmd.AddCommand(NewDashboardCmd())
+	RootCmd.AddCommand(NewPreviewCmd())
 	RootCmd.AddCommand(NewMigrateCmd())
 	RootCmd.AddCommand(NewVersionCmd())
 

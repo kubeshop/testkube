@@ -24,31 +24,18 @@ func NewDashboardCmd() *cobra.Command {
 	var namespace string
 	var verbose bool
 	var skipBrowser bool
-	var sharesAPIURL string
-	var viewerBaseURL string
-	var skipArtifacts bool
 
 	cmd := &cobra.Command{
-		Use:     "dashboard [executionId]",
+		Use:     "dashboard",
 		Aliases: []string{"d", "open-dashboard", "ui"},
 		Short:   "Open Testkube dashboard",
 		Long:    `Open Testkube dashboard`,
-		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
 			if namespace != "" {
 				cfg.Namespace = namespace
-			}
-
-			if len(args) == 1 {
-				if cfg.ContextType == config.ContextTypeCloud {
-					ui.Failf("sharing executions is unavailable in cloud context")
-				}
-
-				shareAndOpenExecution(cmd, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts)
-				return
 			}
 
 			if cfg.ContextType != config.ContextTypeCloud {
@@ -67,9 +54,6 @@ func NewDashboardCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
 	cmd.Flags().BoolVarP(&skipBrowser, "skip-browser", "", false, "skip opening dashboard in the browser, only for on-premise installation")
-	cmd.Flags().StringVar(&sharesAPIURL, "shares-api-url", "", "shares API base URL (default: https://api.testkube.io)")
-	cmd.Flags().StringVar(&viewerBaseURL, "viewer-url", "", "viewer base URL (default: https://app.testkube.io)")
-	cmd.Flags().BoolVar(&skipArtifacts, "skip-artifacts", false, "skip uploading artifacts when sharing an execution")
 
 	return cmd
 }

@@ -16,18 +16,53 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const (
-	maxBundleSize      = 10 * 1024 * 1024
-	shareUploadTimeout = 60 * time.Second
-)
+const shareUploadTimeout = 60 * time.Second
 
 // shareHTTPClient is used for unauthenticated uploads to the public shares endpoint.
 var shareHTTPClient = &http.Client{
 	Timeout: shareUploadTimeout,
+}
+
+func NewPreviewCmd() *cobra.Command {
+	var sharesAPIURL string
+	var viewerBaseURL string
+	var skipArtifacts bool
+	var assumeYes bool
+
+	cmd := &cobra.Command{
+		Use:   "preview <executionId>",
+		Short: "Share and preview a test workflow execution",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config file", err)
+
+			if cfg.ContextType == config.ContextTypeCloud {
+				ui.Failf("preview is unavailable in cloud context")
+			}
+
+			if !assumeYes {
+				ui.Warn("This will make the execution data, logs, and artifacts fully public via a tokenized URL.")
+				if !ui.Confirm("Do you want to continue?") {
+					return
+				}
+			}
+
+			shareAndOpenExecution(cmd, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts)
+		},
+	}
+
+	cmd.Flags().StringVar(&sharesAPIURL, "shares-api-url", "", "shares API base URL (default: https://api.testkube.io)")
+	cmd.Flags().StringVar(&viewerBaseURL, "viewer-url", "", "viewer base URL (default: https://app.testkube.io)")
+	cmd.Flags().BoolVar(&skipArtifacts, "skip-artifacts", false, "skip uploading artifacts when sharing an execution")
+	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip confirmation prompt")
+
+	return cmd
 }
 
 func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
@@ -75,13 +110,9 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 	executionJSON, err := json.Marshal(payload)
 	ui.ExitOnError("marshaling execution metadata", err)
 
-	var totalSize int64
-	totalSize += int64(len(executionJSON))
-
 	ui.Info("Fetching execution logs...")
 	logs, err := client.GetTestWorkflowExecutionLogs(executionID)
 	ui.ExitOnError("getting execution logs", err)
-	totalSize += int64(len(logs))
 
 	var artifactPaths []string
 	var tmpDir string
@@ -96,17 +127,9 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 
 			ui.Info("Downloading artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 			for _, artifact := range artifacts {
+				ui.Warn(" - downloading artifact ", artifact.Name)
 				f, err := client.DownloadTestWorkflowArtifact(executionID, artifact.Name, tmpDir)
 				ui.ExitOnError("downloading artifact "+artifact.Name, err)
-				ui.Warn(" - downloading artifact ", artifact.Name)
-
-				fi, err := os.Stat(f)
-				ui.ExitOnError("reading artifact size", err)
-				totalSize += fi.Size()
-
-				if totalSize > maxBundleSize {
-					ui.Failf("Total upload size (%d bytes) exceeds the %d byte limit. Use --skip-artifacts to share without artifacts.", totalSize, maxBundleSize)
-				}
 
 				artifactPaths = append(artifactPaths, f)
 			}
@@ -116,11 +139,31 @@ func shareAndOpenExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewer
 
 	ui.Info("Uploading to share viewer...")
 	token, err := uploadShare(sharesAPIURL, executionJSON, logs, artifactPaths)
-	ui.ExitOnError("uploading share", err)
+	if err != nil {
+		cfg, cfgErr := config.Load()
+		if cfgErr == nil && cfg.TelemetryEnabled {
+			out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, executionID, int32(len(artifactPaths)), skipArtifacts, err.Error())
+			if ui.Verbose && telErr != nil {
+				ui.Err(telErr)
+			}
+			ui.Debug("telemetry preview error event response", out)
+		}
+		ui.ExitOnError("uploading share", err)
+	}
 
 	viewerURL := fmt.Sprintf("%s/view/%s", viewerBaseURL, token)
 	ui.NL()
 	ui.Success("Share created successfully:", viewerURL)
+
+	cfg, cfgErr := config.Load()
+	if cfgErr == nil && cfg.TelemetryEnabled {
+		out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, executionID, int32(len(artifactPaths)), skipArtifacts, "")
+		if ui.Verbose && telErr != nil {
+			ui.Err(telErr)
+		}
+		ui.Debug("telemetry preview event response", out)
+	}
+
 	err = open.Run(viewerURL)
 	ui.PrintOnError("opening browser", err)
 }
