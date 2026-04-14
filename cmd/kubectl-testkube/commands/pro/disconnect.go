@@ -76,6 +76,16 @@ func NewDisconnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
+			// uninstall the runner chart that was installed by "pro connect"
+			if cfg.CloudContext.AgentReleaseName != "" && cfg.CloudContext.AgentNamespace != "" {
+				spinner := ui.NewSpinner("Uninstalling agent runner")
+				if cliErr := common.HelmUninstall(cfg.CloudContext.AgentNamespace, cfg.CloudContext.AgentReleaseName); cliErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to uninstall runner release %s: %s", cfg.CloudContext.AgentReleaseName, cliErr))
+				} else {
+					spinner.Success()
+				}
+			}
+
 			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
 
 			// ensure only the originally-active database is re-enabled in the Helm release;

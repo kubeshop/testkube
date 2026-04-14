@@ -1,10 +1,12 @@
 package pro
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -197,6 +199,11 @@ func NewConnectCmd() *cobra.Command {
 			ui.ExitOnError("loading config", err)
 			cfg.CloudContext.DatabaseType = dbType
 			cfg.ContextType = config.ContextTypeCloud
+			// detect the runner release installed by UiInstallAgent so disconnect can uninstall it
+			if relName, relNs := findRunnerRelease(); relName != "" {
+				cfg.CloudContext.AgentReleaseName = relName
+				cfg.CloudContext.AgentNamespace = relNs
+			}
 			err = config.Save(cfg)
 			ui.ExitOnError("Saving Pro context", err)
 
@@ -281,6 +288,35 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
 
 	return cmd
+}
+
+// helmRelease represents a single entry from `helm list --output json`.
+type helmRelease struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Chart     string `json:"chart"`
+}
+
+// findRunnerRelease uses `helm list` to find the most recently installed testkube-runner release.
+func findRunnerRelease() (releaseName, namespace string) {
+	helmPath, err := exec.LookPath("helm")
+	if err != nil {
+		return "", ""
+	}
+	out, execErr := exec.Command(helmPath, "list", "--all-namespaces", "--output", "json").CombinedOutput()
+	if execErr != nil {
+		return "", ""
+	}
+	var releases []helmRelease
+	if jsonErr := json.Unmarshal(out, &releases); jsonErr != nil {
+		return "", ""
+	}
+	for _, r := range releases {
+		if strings.HasPrefix(r.Chart, "testkube-runner-") {
+			return r.Name, r.Namespace
+		}
+	}
+	return "", ""
 }
 
 var contextDescription = map[string]string{

@@ -38,6 +38,10 @@ type CloudContext struct {
 	// DatabaseType records which database (mongodb or postgresql) was active before
 	// connecting to Pro, so it can be restored on disconnect.
 	DatabaseType string `json:"databaseType,omitempty"`
+	// AgentReleaseName is the Helm release name of the runner chart installed by "pro connect".
+	AgentReleaseName string `json:"agentReleaseName,omitempty"`
+	// AgentNamespace is the Kubernetes namespace where the runner chart was installed by "pro connect".
+	AgentNamespace string `json:"agentNamespace,omitempty"`
 }
 
 type Data struct {

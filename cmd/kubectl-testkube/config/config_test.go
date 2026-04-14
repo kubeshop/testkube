@@ -84,6 +84,42 @@ func TestCloudContextDatabaseType_Persistence(t *testing.T) {
 	})
 }
 
+func TestCloudContextAgentRelease_Persistence(t *testing.T) {
+	dir, err := os.MkdirTemp("", "test-config-agentrelease")
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
+	defaultDirectory = dir
+
+	t.Run("persist agent release name and namespace", func(t *testing.T) {
+		data := Data{
+			CloudContext: CloudContext{
+				AgentReleaseName: "testkube-my-agent",
+				AgentNamespace:   "testkube-agents",
+			},
+		}
+		err := Save(data)
+		assert.NoError(t, err)
+
+		loaded, err := Load()
+		assert.NoError(t, err)
+		assert.Equal(t, "testkube-my-agent", loaded.CloudContext.AgentReleaseName)
+		assert.Equal(t, "testkube-agents", loaded.CloudContext.AgentNamespace)
+	})
+
+	t.Run("empty agent release on fresh config", func(t *testing.T) {
+		data := Data{}
+		err := Save(data)
+		assert.NoError(t, err)
+
+		loaded, err := Load()
+		assert.NoError(t, err)
+		assert.Empty(t, loaded.CloudContext.AgentReleaseName)
+		assert.Empty(t, loaded.CloudContext.AgentNamespace)
+	})
+}
+
 func TestSaveTelemetryEnabled(t *testing.T) {
 	dir, err := os.MkdirTemp("", "test-config-save")
 	assert.NoError(t, err)
