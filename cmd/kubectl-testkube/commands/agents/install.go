@@ -127,7 +127,7 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 	spinner.Success("CRDs installed")
 }
 
-func UiInstallAgent(cmd *cobra.Command, name string, defaultlLabels []string) {
+func UiInstallAgent(cmd *cobra.Command, name string, defaultlLabels []string, extraHelmValues ...map[string]interface{}) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
 	executionNs, _ := cmd.Flags().GetString("execution-namespace")
@@ -305,6 +305,12 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultlLabels []string) {
 		"gitops.enabled":   enableGitops,
 		"webhooks.enabled": enableWebhooks,
 	})
+	// Apply caller-provided extra Helm values (e.g. pro connect disabling CRD install)
+	for _, extra := range extraHelmValues {
+		for k, v := range extra {
+			helmOpts.Values[k] = v
+		}
+	}
 	// When listener capability is enabled, pass the environment ID to the runner
 	if enableListener && controlPlane.EnvironmentID != "" {
 		helmOpts.Values["runner.envId"] = controlPlane.EnvironmentID

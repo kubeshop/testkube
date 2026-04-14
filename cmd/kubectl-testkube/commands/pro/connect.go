@@ -161,7 +161,13 @@ func NewConnectCmd() *cobra.Command {
 			if len(args) > 0 {
 				agentName = args[0]
 			}
-			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"})
+			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"}, map[string]interface{}{
+				// Disable CRD installation in the runner chart — the OSS chart already
+				// has the CRDs installed via the testkube-operator subchart. This prevents
+				// duplicate ownership and ensures disconnect (helm uninstall) does not
+				// remove CRDs still needed by the OSS chart.
+				"gitops.installCRD": false,
+			})
 
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			// Check if dry-run mode — skip post-install steps
