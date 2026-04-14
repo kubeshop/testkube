@@ -122,7 +122,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
 	}
 
-	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.storageSkipVerify)
+	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.proContext.CloudStorage, r.storageSkipVerify)
 	if err != nil {
 		return err
 	}

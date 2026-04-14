@@ -77,6 +77,11 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 - TestWorkflow processing and step execution
 - Result aggregation and status management
 
+**Runner finalization**: [`pkg/runner/`](pkg/runner/)
+
+- The runner persists the final `TestWorkflowResult` through the control plane client when a workflow reaches a terminal state.
+- Full execution log archive upload is skipped when TestWorkflow object storage is disabled. When object storage is enabled, archive upload is required during finalization and upload failures prevent final result persistence.
+
 ### 4. Storage Layer
 
 **PostgreSQL** (Future Primary Database, currently in Preview)
@@ -96,6 +101,7 @@ Testkube uses [Test Workflows](https://docs.testkube.io/articles/test-workflows)
 **MinIO** (Object Storage)
 
 - Stores TestWorkflow execution artifacts (logs, reports, files)
+- TestWorkflow finalization treats log archive upload failures as degraded observability, not as a reason to keep the execution running.
 - Buckets: `testkube-artifacts`, `testkube-logs`
 - Storage interface: [`pkg/storage/`](pkg/storage/)
 
