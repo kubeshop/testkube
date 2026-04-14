@@ -14,7 +14,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -257,7 +256,7 @@ func NewConnectCmd() *cobra.Command {
 		},
 	}
 
-	common2.PopulateRunnerFlags(cmd)
+	common.PopulateRunnerFlags(cmd)
 
 	// Export/import flags
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
