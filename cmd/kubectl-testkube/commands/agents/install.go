@@ -19,29 +19,6 @@ import (
 )
 
 func NewInstallAgentCommand() *cobra.Command {
-	var (
-		secretKey string
-
-		namespace          string
-		executionNamespace string
-		version            string
-		dryRun             bool
-
-		globalTemplatePath string
-		global             bool
-		group              string
-
-		autoCreate     bool
-		floating       bool
-		labelPairs     []string
-		environmentIds []string
-
-		runner    bool
-		listener  bool
-		gitops    bool
-		webhooks  bool
-		agentType string
-	)
 	cmd := &cobra.Command{
 		Use:  "agent <name>",
 		Args: cobra.MaximumNArgs(1),
@@ -58,67 +35,17 @@ func NewInstallAgentCommand() *cobra.Command {
 				return
 			}
 
-			UiInstallAgent(cmd, strings.Join(args, ""))
+			UiInstallAgent(cmd, strings.Join(args, ""), []string{"testkube.io/source=cloud"})
 		},
 	}
 
-	// Installation > General
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
-	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
-
-	// Installation > Runner
-	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
-	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
-	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
-
-	// Install existing
-	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
-
-	// Create and install
-	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
-	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
-	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
-
-	// Components selection
-	cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
-	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
-	cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
-	cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
-
-	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
-
+	common2.PopulateRunnerFlags(cmd)
 	return cmd
 }
 
 // NewInstallRunnerCommand creates a command equivalent to `install agent --runner`.
 // It intentionally does not expose the --listener flag.
 func NewInstallRunnerCommand() *cobra.Command {
-	var (
-		secretKey string
-
-		namespace          string
-		executionNamespace string
-		version            string
-		dryRun             bool
-
-		globalTemplatePath string
-		global             bool
-		group              string
-
-		autoCreate     bool
-		floating       bool
-		labelPairs     []string
-		environmentIds []string
-
-		runner    bool
-		agentType string
-	)
-
 	cmd := &cobra.Command{
 		Use:  "runner <name>",
 		Args: cobra.MaximumNArgs(1),
@@ -138,38 +65,11 @@ func NewInstallRunnerCommand() *cobra.Command {
 
 			// Force runner-only behavior
 			_ = cmd.Flags().Set("runner", "true")
-			UiInstallAgent(cmd, strings.Join(args, ""))
+			UiInstallAgent(cmd, strings.Join(args, ""), []string{"testkube.io/source=cloud"})
 		},
 	}
 
-	// Installation > General
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
-	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
-	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
-
-	// Installation > Runner
-	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
-	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
-	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
-
-	// Install existing
-	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
-
-	// Create and install
-	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
-	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
-	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
-
-	// Component selection: only runner; keep flag hidden and force it on
-	cmd.Flags().BoolVar(&runner, "runner", true, "enable runner component")
-	_ = cmd.Flags().MarkHidden("runner")
-
-	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - this command installs runner-only agents")
-	cmd.Flags().MarkDeprecated("type", "this command installs runner-only agents by default")
-
+	common2.PopulateRunnerFlags(cmd)
 	return cmd
 }
 
@@ -227,7 +127,7 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 	spinner.Success("CRDs installed")
 }
 
-func UiInstallAgent(cmd *cobra.Command, name string) {
+func UiInstallAgent(cmd *cobra.Command, name string, defaultlLabels []string) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
 	executionNs, _ := cmd.Flags().GetString("execution-namespace")
@@ -286,6 +186,7 @@ func UiInstallAgent(cmd *cobra.Command, name string) {
 	// Create new Agent if it's expected
 	if agent == nil && autoCreate {
 		labels, _ := cmd.Flags().GetStringSlice("label")
+		labels = append(labels, defaultlLabels...)
 		environmentIds, _ := cmd.Flags().GetStringSlice("env")
 		agent = UiCreateAgent(
 			cmd,

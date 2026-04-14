@@ -14,6 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -27,23 +28,6 @@ func NewConnectCmd() *cobra.Command {
 	var (
 		// Cloud/master flags (resolved via PopulateMasterFlags + ProcessMasterFlags)
 		masterOpts common.HelmOptions
-
-		// Agent installer flags (matching NewInstallAgentCommand)
-		secretKey          string
-		executionNamespace string
-		version            string
-		dryRun             bool
-		globalTemplatePath string
-		global             bool
-		group              string
-		autoCreate         bool
-		floating           bool
-		labelPairs         []string
-		environmentIds     []string
-		runner             bool
-		listener           bool
-		gitops             bool
-		webhooks           bool
 
 		// Export/import flags
 		skipExport  bool
@@ -178,8 +162,9 @@ func NewConnectCmd() *cobra.Command {
 			if len(args) > 0 {
 				agentName = args[0]
 			}
-			agents.UiInstallAgent(cmd, agentName)
+			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"})
 
+			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			// Check if dry-run mode — skip post-install steps
 			if dryRun {
 				return
@@ -272,30 +257,7 @@ func NewConnectCmd() *cobra.Command {
 		},
 	}
 
-	// Installation > General (matching NewInstallAgentCommand)
-	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
-	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
-
-	// Installation > Runner
-	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
-	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
-	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
-
-	// Install existing
-	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
-
-	// Create and install
-	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
-	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
-	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
-
-	// Components selection
-	cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
-	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
-	cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
-	cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
+	common2.PopulateRunnerFlags(cmd)
 
 	// Export/import flags
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")

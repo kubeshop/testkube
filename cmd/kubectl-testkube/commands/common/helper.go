@@ -359,7 +359,6 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
 	settings["testkube-api.cloud.key"] = options.Master.AgentToken
 	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
-	settings["global.labels.testkube\\.io/source"] = "oss"
 
 	if isMigration {
 		settings["testkube-api.cloud.migrate"] = "true"
