@@ -76,11 +76,12 @@ func NewDisconnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			// uninstall the runner chart that was installed by "pro connect"
+			// uninstall the runner chart that was installed by "pro connect";
+			// failures are non-fatal so disconnect can still restore OSS mode
 			if cfg.CloudContext.AgentReleaseName != "" && cfg.CloudContext.AgentNamespace != "" {
 				spinner := ui.NewSpinner("Uninstalling agent runner")
 				if cliErr := common.HelmUninstall(cfg.CloudContext.AgentNamespace, cfg.CloudContext.AgentReleaseName); cliErr != nil {
-					spinner.Fail(fmt.Sprintf("Failed to uninstall runner release %s: %s", cfg.CloudContext.AgentReleaseName, cliErr))
+					spinner.Fail(fmt.Sprintf("Failed to uninstall runner release %s (continuing with disconnect): %s", cfg.CloudContext.AgentReleaseName, cliErr))
 				} else {
 					spinner.Success()
 				}

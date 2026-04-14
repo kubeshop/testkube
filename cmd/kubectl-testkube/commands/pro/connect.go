@@ -297,18 +297,22 @@ type helmRelease struct {
 	Chart     string `json:"chart"`
 }
 
-// findRunnerRelease uses `helm list` to find the most recently installed testkube-runner release.
+// findRunnerRelease uses `helm list` to find a testkube-runner release installed by pro connect.
+// Returns empty strings if helm is not available or no runner release is found.
 func findRunnerRelease() (releaseName, namespace string) {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
+		ui.Debug("findRunnerRelease: helm not found in PATH")
 		return "", ""
 	}
 	out, execErr := exec.Command(helmPath, "list", "--all-namespaces", "--output", "json").CombinedOutput()
 	if execErr != nil {
+		ui.Debug(fmt.Sprintf("findRunnerRelease: helm list failed: %s", execErr))
 		return "", ""
 	}
 	var releases []helmRelease
 	if jsonErr := json.Unmarshal(out, &releases); jsonErr != nil {
+		ui.Debug(fmt.Sprintf("findRunnerRelease: failed to parse helm list output: %s", jsonErr))
 		return "", ""
 	}
 	for _, r := range releases {
@@ -316,6 +320,7 @@ func findRunnerRelease() (releaseName, namespace string) {
 			return r.Name, r.Namespace
 		}
 	}
+	ui.Debug("findRunnerRelease: no testkube-runner release found")
 	return "", ""
 }
 
