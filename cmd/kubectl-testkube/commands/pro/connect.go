@@ -25,6 +25,9 @@ const (
 
 func NewConnectCmd() *cobra.Command {
 	var (
+		// Cloud/master flags (resolved via PopulateMasterFlags + ProcessMasterFlags)
+		masterOpts common.HelmOptions
+
 		// Agent installer flags (matching NewInstallAgentCommand)
 		secretKey          string
 		executionNamespace string
@@ -155,10 +158,18 @@ func NewConnectCmd() *cobra.Command {
 				ui.NL()
 			}
 
-			// Switch CLI context to cloud mode so that UiInstallAgent and control
-			// plane API calls (listing agents, fetching secret keys, etc.) use cloud
-			// authentication. The config should already have CloudContext fields
-			// (ApiKey, ApiUri, OrganizationId) populated from a previous login.
+			// Populate cloud context from the master flags (--org-id, --env-id,
+			// --root-domain, --agent-token, etc.) so that UiInstallAgent and
+			// control plane API calls use the correct URIs and credentials.
+			common.ProcessMasterFlags(cmd, &masterOpts, &cfg)
+			err = common.PopulateAgentDataToContext(masterOpts, cfg)
+			ui.ExitOnError("populating cloud context from flags", err)
+
+			// Reload after PopulateAgentDataToContext may have saved
+			cfg, err = config.Load()
+			ui.ExitOnError("reloading config", err)
+
+			// Switch CLI context to cloud mode
 			cfg.ContextType = config.ContextTypeCloud
 			err = config.Save(cfg)
 			ui.ExitOnError("saving cloud context configuration", err)
@@ -294,6 +305,9 @@ func NewConnectCmd() *cobra.Command {
 	// Export/import flags
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")
 	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
+
+	// Cloud/master flags (--org-id, --env-id, --root-domain, --agent-token, etc.)
+	common.PopulateMasterFlags(cmd, &masterOpts, false)
 
 	return cmd
 }
