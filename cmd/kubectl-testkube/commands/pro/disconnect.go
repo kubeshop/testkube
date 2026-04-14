@@ -99,9 +99,12 @@ func NewDisconnectCmd() *cobra.Command {
 					opts.NoPostgres = true
 				}
 			case config.DatabaseTypePostgreSQL:
-				// original DB was Postgres – keep Mongo disabled unless the user explicitly enabled it
+				// original DB was Postgres – keep Mongo disabled and re-enable Postgres
 				if !cmd.Flags().Changed("no-mongo") {
 					opts.NoMongo = true
+				}
+				if !cmd.Flags().Changed("no-postgres") {
+					opts.NoPostgres = false
 				}
 			default:
 				// DatabaseType was never recorded (cluster connected before this feature).

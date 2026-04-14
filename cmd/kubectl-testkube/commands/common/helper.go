@@ -422,7 +422,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
-	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", false, "don't install PostgreSQL")
+	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", true, "don't install PostgreSQL")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
