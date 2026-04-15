@@ -393,6 +393,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 				containers[i].SecurityContext.RunAsGroup = fsGroup
 			}
 		}
+
+		// Propagate spec container securityContext to all containers (including init containers)
+		if workflow.Spec.Container != nil && workflow.Spec.Container.SecurityContext != nil {
+			specSC := workflow.Spec.Container.SecurityContext
+			if containers[i].SecurityContext == nil {
+				containers[i].SecurityContext = specSC.DeepCopy()
+			} else {
+				containers[i].SecurityContext = testworkflowresolver.MergeSecurityContext(specSC.DeepCopy(), containers[i].SecurityContext)
+			}
+		}
 	}
 
 	options.Config.Execution.SecretMountPaths = secretMountPaths

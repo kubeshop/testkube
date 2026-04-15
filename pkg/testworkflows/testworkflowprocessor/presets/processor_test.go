@@ -1461,3 +1461,125 @@ func TestProcess_MergingActions(t *testing.T) {
 	assert.Equal(t, wantActions, res.LiteActions())
 	assert.Equal(t, res.Job.Spec.Template.Spec.Containers[0].Image, "custom-image:1.2.3")
 }
+
+func TestProcessSecurityContextPropagatedToInitContainers(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: &testworkflowsv1.Content{
+					Git: &testworkflowsv1.ContentGit{
+						Uri:      "https://github.com/example/example",
+						Revision: "main",
+						Paths:    []string{"tests/"},
+					},
+				},
+				Container: &testworkflowsv1.ContainerConfig{
+					Image: "custom-image:v1",
+					SecurityContext: &corev1.SecurityContext{
+						RunAsNonRoot:             common.Ptr(true),
+						AllowPrivilegeEscalation: common.Ptr(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "npm ci"}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	assert.NoError(t, err)
+
+	podSpec := res.Job.Spec.Template.Spec
+
+	// Verify init containers get the security context from spec.container
+	for _, c := range podSpec.InitContainers {
+		assert.NotNil(t, c.SecurityContext, "init container %s should have SecurityContext", c.Name)
+		assert.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation, "init container %s should have AllowPrivilegeEscalation", c.Name)
+		assert.False(t, *c.SecurityContext.AllowPrivilegeEscalation, "init container %s should have AllowPrivilegeEscalation=false", c.Name)
+		assert.NotNil(t, c.SecurityContext.RunAsNonRoot, "init container %s should have RunAsNonRoot", c.Name)
+		assert.True(t, *c.SecurityContext.RunAsNonRoot, "init container %s should have RunAsNonRoot=true", c.Name)
+		assert.NotNil(t, c.SecurityContext.Capabilities, "init container %s should have Capabilities", c.Name)
+		assert.Equal(t, []corev1.Capability{"ALL"}, c.SecurityContext.Capabilities.Drop, "init container %s should have capabilities.drop=[ALL]", c.Name)
+		assert.NotNil(t, c.SecurityContext.SeccompProfile, "init container %s should have SeccompProfile", c.Name)
+		assert.Equal(t, corev1.SeccompProfileTypeRuntimeDefault, c.SecurityContext.SeccompProfile.Type, "init container %s should have SeccompProfile.Type=RuntimeDefault", c.Name)
+	}
+
+	// Verify main containers also get the security context
+	for _, c := range podSpec.Containers {
+		assert.NotNil(t, c.SecurityContext, "container %s should have SecurityContext", c.Name)
+		assert.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation, "container %s should have AllowPrivilegeEscalation", c.Name)
+		assert.False(t, *c.SecurityContext.AllowPrivilegeEscalation, "container %s should have AllowPrivilegeEscalation=false", c.Name)
+		assert.NotNil(t, c.SecurityContext.Capabilities, "container %s should have Capabilities", c.Name)
+		assert.Equal(t, []corev1.Capability{"ALL"}, c.SecurityContext.Capabilities.Drop, "container %s should have capabilities.drop=[ALL] (no duplicates)", c.Name)
+	}
+}
+
+func TestProcessSecurityContextPropagatedToMultipleInitContainers(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Container: &testworkflowsv1.ContainerConfig{
+					Image: "custom-image:v1",
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: common.Ptr(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "step-1"}},
+				{StepDefaults: testworkflowsv1.StepDefaults{
+					Container: &testworkflowsv1.ContainerConfig{
+						Image: "another-image:v2",
+					},
+				}, StepOperations: testworkflowsv1.StepOperations{Shell: "step-2"}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	assert.NoError(t, err)
+
+	podSpec := res.Job.Spec.Template.Spec
+
+	// All containers (init + main) should have the security context
+	allContainers := append(podSpec.InitContainers, podSpec.Containers...)
+	for _, c := range allContainers {
+		assert.NotNil(t, c.SecurityContext, "container %s should have SecurityContext", c.Name)
+		assert.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation, "container %s should have AllowPrivilegeEscalation", c.Name)
+		assert.False(t, *c.SecurityContext.AllowPrivilegeEscalation, "container %s should have AllowPrivilegeEscalation=false", c.Name)
+		assert.NotNil(t, c.SecurityContext.Capabilities, "container %s should have Capabilities", c.Name)
+		assert.Equal(t, []corev1.Capability{"ALL"}, c.SecurityContext.Capabilities.Drop, "container %s should have capabilities.drop=[ALL]", c.Name)
+	}
+}
+
+func TestProcessSecurityContextNoSpecContainerUnchanged(t *testing.T) {
+	// When spec.container has no securityContext, containers should still only get RunAsGroup from fsGroup
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "test"}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	assert.NoError(t, err)
+
+	// Main container should only have RunAsGroup (no capabilities etc.)
+	for _, c := range res.Job.Spec.Template.Spec.Containers {
+		assert.NotNil(t, c.SecurityContext)
+		assert.NotNil(t, c.SecurityContext.RunAsGroup)
+		assert.Nil(t, c.SecurityContext.Capabilities)
+		assert.Nil(t, c.SecurityContext.AllowPrivilegeEscalation)
+	}
+}

@@ -202,14 +202,29 @@ func MergeContentGit(dst, include *testworkflowsv1.ContentGit) *testworkflowsv1.
 	return include
 }
 
+func dedupeCapabilities(caps []corev1.Capability) []corev1.Capability {
+	if len(caps) == 0 {
+		return caps
+	}
+	seen := make(map[corev1.Capability]struct{}, len(caps))
+	result := make([]corev1.Capability, 0, len(caps))
+	for _, c := range caps {
+		if _, ok := seen[c]; !ok {
+			seen[c] = struct{}{}
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
 func MergeCapabilities(dst, include *corev1.Capabilities) *corev1.Capabilities {
 	if dst == nil {
 		return include
 	} else if include == nil {
 		return dst
 	}
-	dst.Add = append(dst.Add, include.Add...)
-	dst.Drop = append(dst.Drop, include.Drop...)
+	dst.Add = dedupeCapabilities(append(dst.Add, include.Add...))
+	dst.Drop = dedupeCapabilities(append(dst.Drop, include.Drop...))
 	return dst
 }
 
