@@ -120,7 +120,7 @@ func NewConnectCmd() *cobra.Command {
 				var mkErr error
 				exportDir, mkErr = os.MkdirTemp("", "testkube-export-*")
 				if mkErr != nil {
-					ui.Warn(fmt.Sprintf("Warning: could not create temp directory for export: %s", mkErr))
+					ui.Warn(fmt.Sprintf("Could not create temp directory for export: %s", mkErr))
 				} else {
 					defer os.RemoveAll(exportDir)
 					var exportErr error
@@ -135,7 +135,7 @@ func NewConnectCmd() *cobra.Command {
 							ui.Warn("Export archive exceeds the server size limit.")
 							ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 						} else {
-							ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
+							ui.Warn(fmt.Sprintf("Data export failed: %s", exportErr))
 						}
 						ui.Warn("Your data will remain in the existing database and can be exported later.")
 						if ok := ui.Confirm("Continue connecting without export?"); !ok {
