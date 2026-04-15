@@ -17,13 +17,14 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const viewUploadTimeout = 60 * time.Second
 
-// viewHTTPClient is used for unauthenticated uploads to the public shares endpoint.
 var viewHTTPClient = &http.Client{
 	Timeout: viewUploadTimeout,
 }
@@ -33,9 +34,9 @@ func NewViewCmd() *cobra.Command {
 	var viewerBaseURL string
 	var skipArtifacts bool
 	var force bool
-
+	var wait bool
 	cmd := &cobra.Command{
-		Use:   "view <executionId>",
+		Use:   "view <executionId|executionName>",
 		Short: "View a test workflow execution in the browser",
 		Long: `Open a test workflow execution in the browser.
 
@@ -43,7 +44,9 @@ When connected to Testkube Cloud / Control Plane the execution is opened
 directly in the dashboard — no data is uploaded.
 
 When running standalone (kubeconfig context) the execution data is uploaded
-as a public tokenized preview and the viewer URL is opened instead.`,
+as a public tokenized preview and the viewer URL is opened instead.
+
+Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-12345).`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
@@ -61,7 +64,7 @@ as a public tokenized preview and the viewer URL is opened instead.`,
 				}
 			}
 
-			uploadAndViewExecution(cmd, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts)
+			uploadAndViewExecution(cmd, cfg, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts, wait)
 		},
 	}
 
@@ -69,11 +72,11 @@ as a public tokenized preview and the viewer URL is opened instead.`,
 	cmd.Flags().StringVar(&viewerBaseURL, "viewer-url", "", "viewer base URL (default: https://app.testkube.io)")
 	cmd.Flags().BoolVar(&skipArtifacts, "skip-artifacts", false, "skip uploading artifacts when sharing an execution")
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip confirmation prompt")
-
+	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait for the execution to finish before uploading")
 	return cmd
 }
 
-func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
+func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIURL, viewerBaseURL string, skipArtifacts, wait bool) {
 	uris := common.NewMasterUris("", "", "", "", "", "", "", false)
 	if sharesAPIURL == "" {
 		sharesAPIURL = uris.Api
@@ -87,9 +90,20 @@ func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewe
 
 	installationID := telemetry.GetMachineID()
 
-	ui.Info("Fetching execution", executionID)
-	execution, err := client.GetTestWorkflowExecution(executionID)
+	ui.Info("Fetching execution", arg)
+	execution, err := client.GetTestWorkflowExecution(arg)
 	ui.ExitOnError("getting execution", err)
+
+	if execution.Result == nil || !execution.Result.IsFinished() {
+		if !wait {
+			ui.Failf("Execution is still running. Use --wait (-w) to wait for it to finish before uploading.")
+			return
+		}
+		ui.Info("Waiting for execution to finish...")
+		execution, err = waitForExecution(client, execution.Id)
+		ui.ExitOnError("waiting for execution to finish", err)
+		ui.Info("Execution finished with status", string(*execution.Result.Status))
+	}
 
 	fullJSON, err := json.Marshal(execution)
 	ui.ExitOnError("marshaling execution", err)
@@ -119,13 +133,13 @@ func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewe
 	ui.ExitOnError("marshaling execution metadata", err)
 
 	ui.Info("Fetching execution logs...")
-	logs, err := client.GetTestWorkflowExecutionLogs(executionID)
+	allLogs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
 	ui.ExitOnError("getting execution logs", err)
 
 	var artifactPaths []string
 	var tmpDir string
 	if !skipArtifacts {
-		artifacts, err := client.GetTestWorkflowExecutionArtifacts(executionID)
+		artifacts, err := client.GetTestWorkflowExecutionArtifacts(execution.Id)
 		ui.ExitOnError("getting artifacts list", err)
 
 		if len(artifacts) > 0 {
@@ -136,7 +150,7 @@ func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewe
 			ui.Info("Downloading artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 			for _, artifact := range artifacts {
 				ui.Warn(" - downloading artifact ", artifact.Name)
-				f, err := client.DownloadTestWorkflowArtifact(executionID, artifact.Name, tmpDir)
+				f, err := client.DownloadTestWorkflowArtifact(execution.Id, artifact.Name, tmpDir)
 				ui.ExitOnError("downloading artifact "+artifact.Name, err)
 
 				artifactPaths = append(artifactPaths, f)
@@ -146,11 +160,10 @@ func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewe
 	}
 
 	ui.Info("Uploading to viewer...")
-	token, err := uploadExecution(sharesAPIURL, executionJSON, logs, artifactPaths)
+	token, err := uploadExecution(sharesAPIURL, executionJSON, allLogs, artifactPaths)
 	if err != nil {
-		cfg, cfgErr := config.Load()
-		if cfgErr == nil && cfg.TelemetryEnabled {
-			out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, executionID, int32(len(artifactPaths)), skipArtifacts, err.Error())
+		if cfg.TelemetryEnabled {
+			out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactPaths)), skipArtifacts, err.Error())
 			if ui.Verbose && telErr != nil {
 				ui.Err(telErr)
 			}
@@ -163,9 +176,8 @@ func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewe
 	ui.NL()
 	ui.Success("View created successfully:", viewerURL)
 
-	cfg, cfgErr := config.Load()
-	if cfgErr == nil && cfg.TelemetryEnabled {
-		out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, executionID, int32(len(artifactPaths)), skipArtifacts, "")
+	if cfg.TelemetryEnabled {
+		out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactPaths)), skipArtifacts, "")
 		if ui.Verbose && telErr != nil {
 			ui.Err(telErr)
 		}
@@ -176,6 +188,35 @@ func uploadAndViewExecution(cmd *cobra.Command, executionID, sharesAPIURL, viewe
 	ui.PrintOnError("opening browser", err)
 }
 
+func waitForExecution(client apiclientv1.Client, executionID string) (testkube.TestWorkflowExecution, error) {
+	var elapsed time.Duration
+	for i := 0; ; i++ {
+		execution, err := client.GetTestWorkflowExecution(executionID)
+		if err != nil {
+			return testkube.TestWorkflowExecution{}, err
+		}
+		if execution.Result != nil && execution.Result.IsFinished() {
+			ui.Printf("\r")
+			return execution, nil
+		}
+
+		delay := viewPollDelay(i)
+		elapsed += delay
+		ui.Printf("\r  Waiting... (elapsed %s)", elapsed.Round(time.Second))
+		time.Sleep(delay)
+	}
+}
+
+func viewPollDelay(iteration int) time.Duration {
+	if iteration < 5 {
+		return 500 * time.Millisecond
+	}
+	if iteration < 50 {
+		return 2 * time.Second
+	}
+	return 5 * time.Second
+}
+
 type viewResponse struct {
 	Token        string `json:"token"`
 	ExecutionID  string `json:"executionId"`
@@ -183,7 +224,7 @@ type viewResponse struct {
 	Status       string `json:"status"`
 }
 
-func uploadExecution(sharesAPIURL string, executionJSON, logs []byte, artifactPaths []string) (string, error) {
+func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifactPaths []string) (string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -191,12 +232,12 @@ func uploadExecution(sharesAPIURL string, executionJSON, logs []byte, artifactPa
 		return "", fmt.Errorf("writing execution field: %w", err)
 	}
 
-	if len(logs) > 0 {
+	if len(allLogs) > 0 {
 		part, err := writer.CreateFormFile("logs", "logs.txt")
 		if err != nil {
 			return "", fmt.Errorf("creating logs part: %w", err)
 		}
-		if _, err := part.Write(logs); err != nil {
+		if _, err := part.Write(allLogs); err != nil {
 			return "", fmt.Errorf("writing logs: %w", err)
 		}
 	}
@@ -265,11 +306,11 @@ func uploadExecution(sharesAPIURL string, executionJSON, logs []byte, artifactPa
 	return result.Token, nil
 }
 
-func openCloudExecution(cmd *cobra.Command, cfg config.Data, executionID string) {
+func openCloudExecution(cmd *cobra.Command, cfg config.Data, arg string) {
 	client, _, err := common.GetClient(cmd)
 	ui.ExitOnError("getting client", err)
 
-	execution, err := client.GetTestWorkflowExecution(executionID)
+	execution, err := client.GetTestWorkflowExecution(arg)
 	ui.ExitOnError("getting execution", err)
 
 	workflowName := ""
