@@ -32,7 +32,7 @@ func NewViewCmd() *cobra.Command {
 	var sharesAPIURL string
 	var viewerBaseURL string
 	var skipArtifacts bool
-	var assumeYes bool
+	var force bool
 
 	cmd := &cobra.Command{
 		Use:   "view <executionId>",
@@ -54,7 +54,7 @@ as a public tokenized preview and the viewer URL is opened instead.`,
 				return
 			}
 
-			if !assumeYes {
+			if !force {
 				ui.Warn("This will make the execution data, logs, and artifacts fully public via a tokenized URL.")
 				if !ui.Confirm("Do you want to continue?") {
 					return
@@ -68,7 +68,7 @@ as a public tokenized preview and the viewer URL is opened instead.`,
 	cmd.Flags().StringVar(&sharesAPIURL, "shares-api-url", "", "shares API base URL (default: https://api.testkube.io)")
 	cmd.Flags().StringVar(&viewerBaseURL, "viewer-url", "", "viewer base URL (default: https://app.testkube.io)")
 	cmd.Flags().BoolVar(&skipArtifacts, "skip-artifacts", false, "skip uploading artifacts when sharing an execution")
-	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip confirmation prompt")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip confirmation prompt")
 
 	return cmd
 }
