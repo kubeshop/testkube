@@ -805,7 +805,7 @@ func DetectDatabaseType(namespace string) (string, *CLIError) {
 	} else if exists {
 		return config.DatabaseTypeMongoDB, nil
 	}
-	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql-primary"); err != nil {
+	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql"); err != nil {
 		return "", NewCLIError(
 			TKErrMissingDependencyDatabase,
 			"Checking statefulset: PostgreSQL",

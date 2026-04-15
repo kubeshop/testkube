@@ -19,6 +19,8 @@ import (
 )
 
 func NewInstallAgentCommand() *cobra.Command {
+	var namespace string
+
 	cmd := &cobra.Command{
 		Use:  "agent <name>",
 		Args: cobra.MaximumNArgs(1),
@@ -39,6 +41,7 @@ func NewInstallAgentCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
 	common2.PopulateRunnerFlags(cmd, false)
 	return cmd
 }
@@ -46,6 +49,8 @@ func NewInstallAgentCommand() *cobra.Command {
 // NewInstallRunnerCommand creates a command equivalent to `install agent --runner`.
 // It intentionally does not expose the --listener flag.
 func NewInstallRunnerCommand() *cobra.Command {
+	var namespace string
+
 	cmd := &cobra.Command{
 		Use:  "runner <name>",
 		Args: cobra.MaximumNArgs(1),
@@ -69,6 +74,7 @@ func NewInstallRunnerCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
 	common2.PopulateRunnerFlags(cmd, true)
 	return cmd
 }

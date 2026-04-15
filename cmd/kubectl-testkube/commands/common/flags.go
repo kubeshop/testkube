@@ -229,7 +229,6 @@ func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
 	var (
 		secretKey string
 
-		namespace          string
 		executionNamespace string
 		version            string
 		dryRun             bool
@@ -251,7 +250,6 @@ func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
 	)
 
 	// Installation > General
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
 	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
 	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")

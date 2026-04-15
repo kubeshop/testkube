@@ -191,10 +191,6 @@ func NewConnectCmd() *cobra.Command {
 					_ = cmd.Flags().Set(flag, "true")
 				}
 			}
-			// Default the namespace to the current OSS installation namespace
-			if !cmd.Flags().Changed("namespace") {
-				_ = cmd.Flags().Set("namespace", cfg.Namespace)
-			}
 
 			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"}, map[string]interface{}{
 				// Disable CRD installation in the runner chart — the OSS chart already
@@ -229,7 +225,7 @@ func NewConnectCmd() *cobra.Command {
 				}
 			case config.DatabaseTypePostgreSQL:
 				spinner = ui.NewSpinner("Scaling down PostgreSQL")
-				if _, scaleErr := common.KubectlScaleStatefulSet(origNs, "testkube-postgresql-primary", 0); scaleErr != nil {
+				if _, scaleErr := common.KubectlScaleStatefulSet(origNs, "testkube-postgresql", 0); scaleErr != nil {
 					spinner.Fail(fmt.Sprintf("Failed to scale down PostgreSQL: %s", scaleErr))
 				} else {
 					spinner.Success()

@@ -143,7 +143,7 @@ func NewDisconnectCmd() *cobra.Command {
 			case config.DatabaseTypePostgreSQL:
 				if opts.PostgresReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up PostgreSQL")
-					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr != nil {
+					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql", opts.PostgresReplicas); scaleErr != nil {
 						spinner.Fail(fmt.Sprintf("Failed to scale up PostgreSQL: %s", scaleErr))
 					} else {
 						spinner.Success()
@@ -159,7 +159,7 @@ func NewDisconnectCmd() *cobra.Command {
 					}
 				}
 				if opts.PostgresReplicas > 0 {
-					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql-primary", opts.PostgresReplicas); scaleErr == nil {
+					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql", opts.PostgresReplicas); scaleErr == nil {
 						ui.Success("Scaled up PostgreSQL")
 					}
 				}
