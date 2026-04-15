@@ -144,6 +144,20 @@ func NewConnectCmd() *cobra.Command {
 			// --root-domain, --agent-token, etc.) so that UiInstallAgent and
 			// control plane API calls use the correct URIs and credentials.
 			common.ProcessMasterFlags(cmd, &masterOpts, &cfg)
+
+			if masterOpts.Master.EnvId == "" {
+				ui.Failf("You need pass valid environment id to connect to Pro")
+			}
+			if masterOpts.Master.OrgId == "" {
+				ui.Failf("You need pass valid organization id to connect to Pro")
+			}
+			if masterOpts.Master.AgentToken == "" {
+				ui.Failf("You need pass valid agent token to connect to Pro")
+			}
+			if masterOpts.Master.URIs.Api == "" {
+				ui.Failf("You need pass valid uri api to connect to Pro")
+			}
+
 			err = common.PopulateAgentDataToContext(masterOpts, cfg)
 			ui.ExitOnError("populating cloud context from flags", err)
 
