@@ -346,7 +346,8 @@ func TestExportExecutionsHandler_LogReadFailure(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 	gr, err := gzip.NewReader(bytes.NewReader(body))
 	require.NoError(t, err)
 	defer gr.Close()
@@ -359,7 +360,8 @@ func TestExportExecutionsHandler_LogReadFailure(t *testing.T) {
 			break
 		}
 		require.NoError(t, err)
-		content, _ := io.ReadAll(tr)
+		content, err := io.ReadAll(tr)
+		require.NoError(t, err)
 		files[header.Name] = string(content)
 	}
 
@@ -396,7 +398,8 @@ func TestExportExecutionsHandler_MultipleWorkflowSequences(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 	gr, err := gzip.NewReader(bytes.NewReader(body))
 	require.NoError(t, err)
 	defer gr.Close()
@@ -409,7 +412,8 @@ func TestExportExecutionsHandler_MultipleWorkflowSequences(t *testing.T) {
 			break
 		}
 		require.NoError(t, err)
-		content, _ := io.ReadAll(tr)
+		content, err := io.ReadAll(tr)
+		require.NoError(t, err)
 		files[header.Name] = string(content)
 	}
 
@@ -494,7 +498,8 @@ func TestExportExecutionsHandler_NoWorkflow(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 	gr, err := gzip.NewReader(bytes.NewReader(body))
 	require.NoError(t, err)
 	defer gr.Close()
@@ -507,7 +512,8 @@ func TestExportExecutionsHandler_NoWorkflow(t *testing.T) {
 			break
 		}
 		require.NoError(t, err)
-		content, _ := io.ReadAll(tr)
+		content, err := io.ReadAll(tr)
+		require.NoError(t, err)
 		files[header.Name] = string(content)
 	}
 
