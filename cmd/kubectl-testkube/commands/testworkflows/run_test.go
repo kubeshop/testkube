@@ -1,6 +1,7 @@
 package testworkflows
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -244,7 +245,7 @@ func TestWatchWorkflowLogsCommonReturnsFinishedExecutionAfterPrintError(t *testi
 		},
 	}
 
-	result, err := watchWorkflowLogsCommon("exec-1", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+	result, err := watchWorkflowLogsCommon("exec-1", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
 		notifications <- testkube.TestWorkflowExecutionNotification{Log: registry.ErrResourceNotFound.Error()}
 		close(notifications)
@@ -265,7 +266,7 @@ func TestWatchWorkflowLogsCommonReturnsRefreshErrorAfterInterruptedStream(t *tes
 		},
 	}
 
-	result, err := watchWorkflowLogsCommon("exec-2", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+	result, err := watchWorkflowLogsCommon("exec-2", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		notifications := make(chan testkube.TestWorkflowExecutionNotification)
 		close(notifications)
 		return notifications, nil
@@ -295,7 +296,7 @@ func TestWatchWorkflowLogsCommonUsesRetryDelayAfterNotificationError(t *testing.
 	}
 
 	attempts := 0
-	result, err := watchWorkflowLogsCommon("exec-3", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+	result, err := watchWorkflowLogsCommon("exec-3", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		attempts++
 		return nil, errors.New("stream unavailable")
 	})
@@ -306,84 +307,200 @@ func TestWatchWorkflowLogsCommonUsesRetryDelayAfterNotificationError(t *testing.
 	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
 }
 
-func TestWatchWorkflowLogsCommonWaitsForOpenButSilentStream(t *testing.T) {
-	withWorkflowLogSleepStub(t, func(time.Duration) {})
+func TestWatchWorkflowLogsCommonReconnectsOpenButSilentStream(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
 
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(duration time.Duration) {
+		sleeps = append(sleeps, duration)
+	})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
 	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshCalls := 0
 	executionGetter := stubWorkflowExecutionGetter{
 		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshCalls++
+			if refreshCalls == 1 {
+				return newWorkflowExecution(runningResult), nil
+			}
 			return newWorkflowExecution(finishedResult), nil
 		},
 	}
 
-	notifications := make(chan testkube.TestWorkflowExecutionNotification)
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		result, err := watchWorkflowLogsCommon("exec-silent", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+	attempts := 0
+	var firstAttemptDone <-chan struct{}
+	result, err := watchWorkflowLogsCommon("exec-silent", "", "Waiting for workflow logs", nil, executionGetter, func(ctx context.Context, _ uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		attempts++
+		if attempts == 1 {
+			firstAttemptDone = ctx.Done()
+			notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				EventType: "heartbeat",
+			}
 			return notifications, nil
-		})
-		assert.NoError(t, err)
-		assert.Same(t, finishedResult, result)
-	}()
+		}
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			SeqNo:  1,
+			Result: finishedResult,
+		}
+		close(notifications)
+		return notifications, nil
+	})
 
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, 2, attempts)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
 	select {
-	case <-done:
-		t.Fatal("watchWorkflowLogsCommon returned while the stream was still open and silent")
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	close(notifications)
-
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("watchWorkflowLogsCommon did not finish after the silent stream closed")
+	case <-firstAttemptDone:
+	default:
+		t.Fatal("first silent stream context was not canceled before reconnect")
 	}
 }
 
-func TestPrintTestWorkflowLogsDoesNotTimeoutBeforeFirstNotification(t *testing.T) {
-	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+func TestPrintTestWorkflowLogsDoesNotTimeOutBeforeFirstPlainNotification(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 50*time.Millisecond)
 
-	notifications := make(chan testkube.TestWorkflowExecutionNotification)
-	done := make(chan struct{})
-
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
 	go func() {
-		defer close(done)
-		result, err := printTestWorkflowLogs(nil, notifications, "")
-		assert.NoError(t, err)
-		assert.Nil(t, result)
+		time.Sleep(20 * time.Millisecond)
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			Result: finishedResult,
+		}
+		close(notifications)
 	}()
 
-	select {
-	case <-done:
-		t.Fatal("printTestWorkflowLogs returned before the first notification arrived")
-	case <-time.After(50 * time.Millisecond):
-	}
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
 
-	close(notifications)
-
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("printTestWorkflowLogs did not finish after the stream closed")
-	}
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(0), nextSeqNo)
 }
 
-func TestPrintTestWorkflowLogsTimesOutAfterFirstNotificationSilence(t *testing.T) {
+func TestPrintTestWorkflowLogsAcceptsProtocolHeartbeatBeforeApplicationLog(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 20*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:     0,
+		EventType: "heartbeat",
+	}
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  1,
+		Result: finishedResult,
+	}
+	close(notifications)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(1), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsContinuesAfterResumeUnavailable(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 20*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:     3,
+		EventType: "resume_unavailable",
+	}
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  1,
+		Result: finishedResult,
+	}
+	close(notifications)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 3)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(1), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsTimesOutAfterPlainNotificationSilence(t *testing.T) {
 	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
 
 	notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
-	notifications <- testkube.TestWorkflowExecutionNotification{
-		Result: newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false),
-	}
+	go func() {
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			Log: "still quiet\n",
+		}
+	}()
 
-	result, err := printTestWorkflowLogs(nil, notifications, "")
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
 
 	assert.ErrorIs(t, err, errWorkflowLogsIdle)
-	assert.NotNil(t, result)
-	assert.Equal(t, testkube.RUNNING_TestWorkflowStatus, *result.Status)
+	assert.Nil(t, result)
+	assert.Equal(t, uint32(0), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsTimesOutWithoutAnyNotifications(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	notifications := make(chan testkube.TestWorkflowExecutionNotification)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.ErrorIs(t, err, errWorkflowLogsIdle)
+	assert.Nil(t, result)
+	assert.Equal(t, uint32(0), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsStaysAliveWithHeartbeatTraffic(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 4)
+	stopHeartbeats := make(chan struct{})
+	defer close(stopHeartbeats)
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Millisecond)
+		defer ticker.Stop()
+		for i := 0; i < 3; i++ {
+			<-ticker.C
+			notifications <- testkube.TestWorkflowExecutionNotification{EventType: "heartbeat"}
+		}
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			SeqNo:  1,
+			Result: finishedResult,
+		}
+		close(notifications)
+	}()
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(1), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsSuppressesDuplicateSeqNo(t *testing.T) {
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  3,
+		Result: runningResult,
+	}
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  3,
+		Result: finishedResult,
+	}
+	close(notifications)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 2)
+
+	assert.NoError(t, err)
+	assert.Same(t, runningResult, result)
+	assert.Equal(t, uint32(3), nextSeqNo)
 }
 
 func TestWatchWorkflowLogsCommonRetriesAfterIdleStream(t *testing.T) {
@@ -408,12 +525,12 @@ func TestWatchWorkflowLogsCommonRetriesAfterIdleStream(t *testing.T) {
 		},
 	}
 
-	result, err := watchWorkflowLogsCommon("exec-idle", "", "Waiting for workflow logs", nil, executionGetter, func() (chan testkube.TestWorkflowExecutionNotification, error) {
+	result, err := watchWorkflowLogsCommon("exec-idle", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
 		attempts++
 		if attempts == 1 {
 			notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
 			notifications <- testkube.TestWorkflowExecutionNotification{
-				Result: unfinishedResult,
+				EventType: "heartbeat",
 			}
 			return notifications, nil
 		}
@@ -424,6 +541,143 @@ func TestWatchWorkflowLogsCommonRetriesAfterIdleStream(t *testing.T) {
 	assert.Same(t, finishedResult, result)
 	assert.Equal(t, 2, attempts)
 	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
+}
+
+func TestWatchWorkflowLogsCommonResumesWithLastSeqNoAfterInterruptedStream(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshes := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			if refreshes == 1 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	var resumeCursors []uint32
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-resume", "", "Waiting for workflow logs", nil, executionGetter, func(_ context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		resumeCursors = append(resumeCursors, resumeAfterSeqNo)
+		attempts++
+		if attempts == 1 {
+			notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  3,
+				Result: runningResult,
+			}
+			close(notifications)
+			return notifications, nil
+		}
+		return nil, errors.New("stream unavailable")
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, []uint32{0, 3}, resumeCursors)
+}
+
+func TestWatchWorkflowLogsCommonRetriesTransientRefreshErrorAfterInterruptedStream(t *testing.T) {
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(d time.Duration) {
+		sleeps = append(sleeps, d)
+	})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshes := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			switch refreshes {
+			case 1:
+				return testkube.TestWorkflowExecution{}, errors.New("Get \"https://api.example.test/execution\": EOF")
+			case 2:
+				return newWorkflowExecution(runningResult), nil
+			default:
+				return newWorkflowExecution(finishedResult), nil
+			}
+		},
+	}
+
+	var resumeCursors []uint32
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-refresh-retry", "", "Waiting for workflow logs", nil, executionGetter, func(_ context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		resumeCursors = append(resumeCursors, resumeAfterSeqNo)
+		attempts++
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+		switch attempts {
+		case 1:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  3,
+				Result: runningResult,
+			}
+			close(notifications)
+		case 2:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  4,
+				Result: finishedResult,
+			}
+			close(notifications)
+		}
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, []uint32{0, 3}, resumeCursors)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
+}
+
+func TestWatchWorkflowLogsCommonKeepsReplacementStreamAfterResumeUnavailable(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshes := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			if refreshes < 2 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	var resumeCursors []uint32
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-resume-gap", "", "Waiting for workflow logs", nil, executionGetter, func(_ context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		resumeCursors = append(resumeCursors, resumeAfterSeqNo)
+		attempts++
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+		switch attempts {
+		case 1:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  3,
+				Result: runningResult,
+			}
+		case 2:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:     3,
+				EventType: "resume_unavailable",
+			}
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  1,
+				Result: finishedResult,
+			}
+		}
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, []uint32{0, 3}, resumeCursors)
 }
 
 // TestParseConfig_Integration tests the full flow from CLI parsing to backend processing

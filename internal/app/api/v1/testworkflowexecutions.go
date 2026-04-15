@@ -24,7 +24,70 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
-func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, notifications executionworkertypes.NotificationsWatcher) {
+func parseResumeAfterSeqNo(c *fiber.Ctx) (uint32, error) {
+	value := c.Query("resumeAfterSeqNo", "")
+	if value == "" {
+		return 0, nil
+	}
+
+	resumeAfterSeqNo, err := strconv.ParseUint(value, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint32(resumeAfterSeqNo), nil
+}
+
+func workflowNotificationEventType(notification testkube.TestWorkflowExecutionNotification) string {
+	switch {
+	case notification.Result != nil:
+		return "result"
+	case notification.Output != nil:
+		return "output"
+	case notification.Log != "":
+		return "log"
+	default:
+		return ""
+	}
+}
+
+func workflowNotificationResumable(notification testkube.TestWorkflowExecutionNotification) bool {
+	if notification.Temporary {
+		return false
+	}
+	return notification.Result != nil || notification.Output != nil || notification.Log != ""
+}
+
+func streamableWorkflowNotifications(source <-chan *testkube.TestWorkflowExecutionNotification, resumeAfterSeqNo uint32) <-chan testkube.TestWorkflowExecutionNotification {
+	notifications := make(chan testkube.TestWorkflowExecutionNotification)
+	go func() {
+		defer close(notifications)
+
+		var seqNo uint32
+		for notification := range source {
+			if notification == nil {
+				continue
+			}
+
+			streamNotification := *notification
+			if streamNotification.EventType == "" {
+				streamNotification.EventType = workflowNotificationEventType(streamNotification)
+			}
+			if workflowNotificationResumable(streamNotification) {
+				seqNo++
+				streamNotification.SeqNo = seqNo
+				if seqNo <= resumeAfterSeqNo {
+					continue
+				}
+			}
+
+			notifications <- streamNotification
+		}
+	}()
+	return notifications
+}
+
+func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, notifications executionworkertypes.NotificationsWatcher, resumeAfterSeqNo uint32) {
 	// Initiate processing event stream
 	ctx.SetContentType("text/event-stream")
 	ctx.Response.Header.Set("Cache-Control", "no-cache")
@@ -40,7 +103,24 @@ func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, n
 
 		enc := json.NewEncoder(w)
 
-		for n := range notifications.Channel() {
+		for n := range streamableWorkflowNotifications(notifications.Channel(), resumeAfterSeqNo) {
+			if n.SeqNo > 0 {
+				_, err = fmt.Fprintf(w, "id: %d\n", n.SeqNo)
+				if err != nil {
+					s.Log.Errorw("could not print SSE id", "error", err, "id", id)
+				}
+			}
+			if n.EventType != "" {
+				_, err = fmt.Fprintf(w, "event: %s\n", n.EventType)
+				if err != nil {
+					s.Log.Errorw("could not print SSE event", "error", err, "id", id)
+				}
+			}
+			_, err = fmt.Fprintf(w, "data: ")
+			if err != nil {
+				s.Log.Errorw("could not print SSE data prefix", "error", err, "id", id)
+			}
+
 			err := enc.Encode(n)
 			if err != nil {
 				s.Log.Errorw("could not encode value", "error", err, "id", id)
@@ -64,6 +144,10 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 		ctx := c.Context()
 		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution notifications '%s'", id)
+		resumeAfterSeqNo, err := parseResumeAfterSeqNo(c)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "could not parse query string", err)
+		}
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, id)
@@ -83,7 +167,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		s.streamNotifications(ctx, id, notifications)
+		s.streamNotifications(ctx, id, notifications, resumeAfterSeqNo)
 		return nil
 	}
 }
@@ -96,6 +180,10 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 		serviceIndex := c.Params("serviceIndex")
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution service '%s' instance '%s' notifications '%s'",
 			serviceName, serviceIndex, executionID)
+		resumeAfterSeqNo, err := parseResumeAfterSeqNo(c)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "could not parse query string", err)
+		}
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
@@ -124,7 +212,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		s.streamNotifications(ctx, id, notifications)
+		s.streamNotifications(ctx, id, notifications, resumeAfterSeqNo)
 		return nil
 	}
 }
@@ -137,6 +225,10 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandle
 		workerIndex := c.Params("workerIndex")
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution parallel step '%s' instance '%s' notifications '%s'",
 			ref, workerIndex, executionID)
+		resumeAfterSeqNo, err := parseResumeAfterSeqNo(c)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "could not parse query string", err)
+		}
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
@@ -161,7 +253,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandle
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		s.streamNotifications(ctx, id, notifications)
+		s.streamNotifications(ctx, id, notifications, resumeAfterSeqNo)
 		return nil
 	}
 }

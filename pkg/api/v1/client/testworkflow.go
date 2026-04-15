@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -166,25 +167,37 @@ func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, request testku
 
 // GetTestWorkflowExecutionNotifications returns events stream from job pods, based on job pods logs
 func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	return c.GetTestWorkflowExecutionNotificationsWithOptions(id, TestWorkflowExecutionNotificationsOptions{Context: context.Background()})
+}
+
+func (c TestWorkflowClient) GetTestWorkflowExecutionNotificationsWithOptions(id string, options TestWorkflowExecutionNotificationsOptions) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
 	notifications = make(chan testkube.TestWorkflowExecutionNotification)
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications", id)
-	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications, options)
 	return notifications, err
 }
 
 // GetTestWorkflowExecutionServiceNotifications returns events stream from job pods, based on job pods logs
 func (c TestWorkflowClient) GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	return c.GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName, serviceIndex, TestWorkflowExecutionNotificationsOptions{Context: context.Background()})
+}
+
+func (c TestWorkflowClient) GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName string, serviceIndex int, options TestWorkflowExecutionNotificationsOptions) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
 	notifications = make(chan testkube.TestWorkflowExecutionNotification)
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/services/%s/%d", id, serviceName, serviceIndex)
-	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications, options)
 	return notifications, err
 }
 
 // GetTestWorkflowExecutionParallelStepNotifications returns events stream from job pods, based on job pods logs
 func (c TestWorkflowClient) GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	return c.GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref, workerIndex, TestWorkflowExecutionNotificationsOptions{Context: context.Background()})
+}
+
+func (c TestWorkflowClient) GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref string, workerIndex int, options TestWorkflowExecutionNotificationsOptions) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
 	notifications = make(chan testkube.TestWorkflowExecutionNotification)
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/parallel-steps/%s/%d", id, ref, workerIndex)
-	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications, options)
 	return notifications, err
 }
 

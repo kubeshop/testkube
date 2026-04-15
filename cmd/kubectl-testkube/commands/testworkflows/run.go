@@ -6,11 +6,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -783,8 +787,9 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 }
 
 // printTestWorkflowLogs consumes notification stream and prints logs with step status updates
-func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string) (result *testkube.TestWorkflowResult, err error) {
+func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string, lastSeqNo uint32) (result *testkube.TestWorkflowResult, nextSeqNo uint32, err error) {
 	steps := testworkflows.FlattenSignatures(signature)
+	nextSeqNo = lastSeqNo
 
 	var (
 		isLineBeginning = true
@@ -819,17 +824,32 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 		}
 	}
 	defer stopIdleTimer()
+	resetIdleTimer()
 
 	for {
 		select {
 		case <-idleTimeoutCh:
-			return result, errWorkflowLogsIdle
+			return result, nextSeqNo, errWorkflowLogsIdle
 		case l, ok := <-notifications:
 			if !ok {
 				ui.NL()
-				return result, nil
+				return result, nextSeqNo, nil
 			}
 			resetIdleTimer()
+
+			if isWorkflowProtocolNotification(l) {
+				if l.EventType == "resume_unavailable" {
+					nextSeqNo = 0
+					ui.Warn("Log stream replay unavailable, continuing from live output")
+				}
+				continue
+			}
+			if l.SeqNo > 0 {
+				if l.SeqNo <= nextSeqNo {
+					continue
+				}
+				nextSeqNo = l.SeqNo
+			}
 
 			if l.Output != nil {
 				isFirstLine = false
@@ -846,10 +866,19 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 
 			isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
 			if err != nil {
-				return result, err
+				return result, nextSeqNo, err
 			}
 			isFirstLine = false
 		}
+	}
+}
+
+func isWorkflowProtocolNotification(notification testkube.TestWorkflowExecutionNotification) bool {
+	switch notification.EventType {
+	case "ready", "heartbeat", "resume_unavailable":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -858,21 +887,30 @@ func watchWorkflowLogsCommon(
 	id, prefix, spinnerMessage string,
 	signature []testkube.TestWorkflowSignature,
 	executionGetter workflowExecutionGetter,
-	getNotifications func() (chan testkube.TestWorkflowExecutionNotification, error),
+	getNotifications func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error),
 ) (*testkube.TestWorkflowResult, error) {
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
 		result        *testkube.TestWorkflowResult
 		nErr          error
+		lastSeqNo     uint32
 	)
 
 	spinner := ui.NewSpinner(spinnerMessage)
 	for {
-		notifications, nErr = getNotifications()
+		streamCtx, streamCancel := context.WithCancel(context.Background())
+		notifications, nErr = getNotifications(streamCtx, lastSeqNo)
 		if nErr != nil {
+			streamCancel()
 			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
 			if cErr != nil {
+				if isRetryableWorkflowLogsError(cErr) {
+					spinner.Warning("Retrying logs")
+					ui.NL()
+					watchWorkflowLogsSleep(logsRetryDelay)
+					continue
+				}
 				spinner.Fail()
 				return nil, cErr
 			}
@@ -887,11 +925,18 @@ func watchWorkflowLogsCommon(
 		}
 
 		spinner.Stop()
-		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
+		result, lastSeqNo, nErr = printTestWorkflowLogs(signature, notifications, prefix, lastSeqNo)
+		streamCancel()
 		if nErr != nil {
 			var finished bool
 			result, finished, cErr := refreshExecutionResult(executionGetter, id, result)
 			if cErr != nil {
+				if isRetryableWorkflowLogsError(cErr) {
+					spinner.Warning("Retrying logs")
+					ui.NL()
+					watchWorkflowLogsSleep(logsRetryDelay)
+					continue
+				}
 				spinner.Fail()
 				return nil, cErr
 			}
@@ -922,6 +967,12 @@ func watchWorkflowLogsCommon(
 		var cErr error
 		result, finished, cErr = refreshExecutionResult(executionGetter, id, result)
 		if cErr != nil {
+			if isRetryableWorkflowLogsError(cErr) {
+				spinner.Warning("Retrying logs")
+				ui.NL()
+				watchWorkflowLogsSleep(logsRetryDelay)
+				continue
+			}
 			spinner.Fail()
 			return nil, cErr
 		}
@@ -940,12 +991,42 @@ func watchWorkflowLogsCommon(
 	return result, nil
 }
 
+func isRetryableWorkflowLogsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "broken pipe") ||
+		strings.Contains(msg, "unexpected eof") ||
+		strings.Contains(msg, "eof") ||
+		strings.Contains(msg, "timeout")
+}
+
 // watchTestWorkflowLogs streams main workflow execution logs with retry logic
 func watchTestWorkflowLogs(id, prefix string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
+	streamID := uuid.NewString()
 
-	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
-		return client.GetTestWorkflowExecutionNotifications(id)
+	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionNotificationsWithOptions(id, apiclientv1.TestWorkflowExecutionNotificationsOptions{
+			Context:          ctx,
+			ResumeAfterSeqNo: resumeAfterSeqNo,
+			StreamID:         streamID,
+		})
 	}
 
 	return watchWorkflowLogsCommon(id, prefix, "Waiting for workflow logs", signature, client, getNotifications)
@@ -984,9 +1065,14 @@ func refreshExecutionResult(
 func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow service job", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
+	streamID := uuid.NewString()
 
-	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
-		return client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
+	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName, serviceIndex, apiclientv1.TestWorkflowExecutionNotificationsOptions{
+			Context:          ctx,
+			ResumeAfterSeqNo: resumeAfterSeqNo,
+			StreamID:         streamID,
+		})
 	}
 
 	return watchWorkflowLogsCommon(id, prefix, "Waiting for service logs", signature, client, getNotifications)
@@ -996,9 +1082,14 @@ func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex i
 func watchTestWorkflowParallelStepLogs(id, prefix, ref string, workerIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
+	streamID := uuid.NewString()
 
-	getNotifications := func() (chan testkube.TestWorkflowExecutionNotification, error) {
-		return client.GetTestWorkflowExecutionParallelStepNotifications(id, ref, workerIndex)
+	getNotifications := func(ctx context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		return client.GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref, workerIndex, apiclientv1.TestWorkflowExecutionNotificationsOptions{
+			Context:          ctx,
+			ResumeAfterSeqNo: resumeAfterSeqNo,
+			StreamID:         streamID,
+		})
 	}
 
 	return watchWorkflowLogsCommon(id, prefix, "Waiting for parallel step logs", signature, client, getNotifications)
