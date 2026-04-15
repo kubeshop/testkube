@@ -114,28 +114,37 @@ func NewConnectCmd() *cobra.Command {
 
 			// Export execution data before switching to agent mode
 			var exportPath string
+			var exportDir string
 			if !skipExport {
 				ui.H2("Exporting execution data before connecting")
-				var exportErr error
-				exportPath, exportErr = client.ExportExecutions(".", exportSince)
-				if exportErr != nil {
-					var httpErr *cloudclient.HTTPError
-					is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
-					if !is413 {
-						is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
-					}
-					if is413 {
-						ui.Warn("Export archive exceeds the server size limit.")
-						ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
-					} else {
-						ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
-					}
-					ui.Warn("Your data will remain in the existing database and can be exported later.")
-					if ok := ui.Confirm("Continue connecting without export?"); !ok {
-						return
-					}
+				var mkErr error
+				exportDir, mkErr = os.MkdirTemp("", "testkube-export-*")
+				if mkErr != nil {
+					ui.Warn(fmt.Sprintf("Warning: could not create temp directory for export: %s", mkErr))
 				} else {
-					ui.Info(fmt.Sprintf("Export archive saved to: %s", exportPath))
+					defer os.RemoveAll(exportDir)
+					var exportErr error
+					exportPath, exportErr = client.ExportExecutions(exportDir, exportSince)
+					if exportErr != nil {
+						var httpErr *cloudclient.HTTPError
+						is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
+						if !is413 {
+							is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
+						}
+						if is413 {
+							ui.Warn("Export archive exceeds the server size limit.")
+							ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+						} else {
+							ui.Warn(fmt.Sprintf("Warning: data export failed: %s", exportErr))
+						}
+						ui.Warn("Your data will remain in the existing database and can be exported later.")
+						if ok := ui.Confirm("Continue connecting without export?"); !ok {
+							return
+						}
+						exportPath = ""
+					} else {
+						ui.Info("Export archive created successfully")
+					}
 				}
 				ui.NL()
 			}
@@ -263,18 +272,12 @@ func NewConnectCmd() *cobra.Command {
 						} else {
 							spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
 						}
-						ui.Warn("The exported archive is still available at: " + exportPath)
 					} else {
 						spinner.Success()
 						ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
-						// Clean up the exported archive after successful import
-						if removeErr := os.Remove(exportPath); removeErr != nil {
-							ui.Warn(fmt.Sprintf("Warning: could not remove export file %s: %s", exportPath, removeErr))
-						}
 					}
 				} else {
 					ui.Warn("Skipping import: organization ID, environment ID, or API token not available in config.")
-					ui.Warn("The exported archive is available at: " + exportPath)
 				}
 			}
 
