@@ -4,7 +4,7 @@ go 1.26
 
 tool github.com/bufbuild/buf/cmd/buf
 
-require github.com/bufbuild/buf v1.68.0 // indirect
+require github.com/bufbuild/buf v1.68.1 // indirect
 
 require (
 	buf.build/gen/go/bufbuild/bufplugin/protocolbuffers/go v1.36.11-20250718181942-e35f9b667443.1 // indirect
@@ -25,7 +25,7 @@ require (
 	connectrpc.com/otelconnect v0.9.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
-	github.com/bufbuild/protocompile v0.14.2-0.20260414151636-6b2e7e07d2a7 // indirect
+	github.com/bufbuild/protocompile v0.14.2-0.20260414204819-0b1a6cd46bcb // indirect
 	github.com/bufbuild/protoplugin v0.0.0-20260414125817-25d1d281b46b // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cli/browser v1.3.0 // indirect
