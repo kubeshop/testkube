@@ -225,7 +225,7 @@ func (s *CommaList) Enabled(value string) bool {
 	return false
 }
 
-func PopulateRunnerFlags(cmd *cobra.Command) {
+func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
 	var (
 		secretKey string
 
@@ -271,10 +271,16 @@ func PopulateRunnerFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
 
 	// Components selection
-	cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
-	cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
-	cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
-	cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
+	if forUpdate {
+		// only runner; keep flag hidden and force it on
+		cmd.Flags().BoolVar(&runner, "runner", true, "enable runner component")
+		_ = cmd.Flags().MarkHidden("runner")
+	} else {
+		cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
+		cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
+		cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
+		cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
+	}
 
 	// Deprecated flag
 	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")

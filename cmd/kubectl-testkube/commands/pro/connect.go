@@ -274,7 +274,7 @@ func NewConnectCmd() *cobra.Command {
 		},
 	}
 
-	common.PopulateRunnerFlags(cmd)
+	common.PopulateRunnerFlags(cmd, false)
 
 	// Export/import flags
 	cmd.Flags().BoolVar(&skipExport, "skip-export", false, "Skip exporting execution data before connecting")

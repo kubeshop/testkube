@@ -39,7 +39,7 @@ func NewInstallAgentCommand() *cobra.Command {
 		},
 	}
 
-	common2.PopulateRunnerFlags(cmd)
+	common2.PopulateRunnerFlags(cmd, false)
 	return cmd
 }
 
@@ -69,7 +69,7 @@ func NewInstallRunnerCommand() *cobra.Command {
 		},
 	}
 
-	common2.PopulateRunnerFlags(cmd)
+	common2.PopulateRunnerFlags(cmd, true)
 	return cmd
 }
 
