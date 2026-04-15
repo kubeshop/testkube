@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -318,6 +319,204 @@ func TestExportExecutionsHandler_ValidSinceDateRFC3339(t *testing.T) {
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestExportExecutionsHandler_LogReadFailure(t *testing.T) {
+	// When log reading fails, the execution JSON should still be present in
+	// the archive but no log entry should be written.
+	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 100*1024*1024)
+	defer ctrl.Finish()
+
+	executions := []testkube.TestWorkflowExecution{
+		{
+			Id:     "exec-logfail",
+			Number: 1,
+			Workflow: &testkube.TestWorkflow{
+				Name: "workflow-logfail",
+			},
+		},
+	}
+
+	mockRepo.EXPECT().GetExecutions(gomock.Any(), gomock.Any()).Return(executions, nil)
+	mockOutput.EXPECT().ReadLog(gomock.Any(), "exec-logfail", "workflow-logfail").
+		Return(nil, fmt.Errorf("log storage unavailable"))
+
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/export", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	gr, err := gzip.NewReader(bytes.NewReader(body))
+	require.NoError(t, err)
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	files := map[string]string{}
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		content, _ := io.ReadAll(tr)
+		files[header.Name] = string(content)
+	}
+
+	// Execution JSON should be present even when log read failed
+	assert.Contains(t, files, "executions/exec-logfail.json")
+	// Log entry should NOT be present since read failed
+	assert.NotContains(t, files, "logs/exec-logfail.log")
+	// sequences.json should track the workflow
+	assert.Contains(t, files, "sequences.json")
+}
+
+func TestExportExecutionsHandler_MultipleWorkflowSequences(t *testing.T) {
+	// Verify that sequences.json correctly tracks the highest execution number
+	// across multiple workflows.
+	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 100*1024*1024)
+	defer ctrl.Finish()
+
+	executions := []testkube.TestWorkflowExecution{
+		{Id: "exec-a1", Number: 3, Workflow: &testkube.TestWorkflow{Name: "workflow-a"}},
+		{Id: "exec-a2", Number: 7, Workflow: &testkube.TestWorkflow{Name: "workflow-a"}},
+		{Id: "exec-b1", Number: 2, Workflow: &testkube.TestWorkflow{Name: "workflow-b"}},
+		{Id: "exec-b2", Number: 5, Workflow: &testkube.TestWorkflow{Name: "workflow-b"}},
+		{Id: "exec-c1", Number: 1, Workflow: &testkube.TestWorkflow{Name: "workflow-c"}},
+	}
+
+	mockRepo.EXPECT().GetExecutions(gomock.Any(), gomock.Any()).Return(executions, nil)
+	for _, e := range executions {
+		mockOutput.EXPECT().ReadLog(gomock.Any(), e.Id, e.Workflow.Name).
+			Return(io.NopCloser(strings.NewReader("log")), nil)
+	}
+
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/export", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	gr, err := gzip.NewReader(bytes.NewReader(body))
+	require.NoError(t, err)
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	files := map[string]string{}
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		content, _ := io.ReadAll(tr)
+		files[header.Name] = string(content)
+	}
+
+	var seqs []sequenceEntry
+	require.NoError(t, json.Unmarshal([]byte(files["sequences.json"]), &seqs))
+	assert.Len(t, seqs, 3)
+
+	seqMap := map[string]int32{}
+	for _, s := range seqs {
+		seqMap[s.WorkflowName] = s.Number
+	}
+	assert.Equal(t, int32(7), seqMap["workflow-a"])
+	assert.Equal(t, int32(5), seqMap["workflow-b"])
+	assert.Equal(t, int32(1), seqMap["workflow-c"])
+}
+
+func TestExportExecutionsHandler_BudgetCappedLogRead(t *testing.T) {
+	// With a very small size limit (100 bytes), even the execution metadata
+	// plus a modest log will exceed the budget. The log read is capped to
+	// remaining+1 bytes via LimitReader — when that capped data is written
+	// to the tar archive, buf.Len() exceeds maxSize and 413 is returned.
+	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 100)
+	defer ctrl.Finish()
+
+	executions := []testkube.TestWorkflowExecution{
+		{
+			Id:     "exec-capped",
+			Number: 1,
+			Workflow: &testkube.TestWorkflow{
+				Name: "workflow-capped",
+			},
+		},
+	}
+
+	// Return a log that's larger than the total size limit. The LimitReader
+	// will cap the read to the remaining budget + 1, then the buf.Len() > maxSize
+	// check will trigger 413.
+	largeLog := strings.Repeat("X", 1000)
+	mockRepo.EXPECT().GetExecutions(gomock.Any(), gomock.Any()).Return(executions, nil)
+	mockOutput.EXPECT().ReadLog(gomock.Any(), "exec-capped", "workflow-capped").
+		Return(io.NopCloser(strings.NewReader(largeLog)), nil)
+
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/export", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
+}
+
+func TestExportExecutionsHandler_GetExecutionsError(t *testing.T) {
+	// When GetExecutions returns an error, the handler should return 500.
+	app, ctrl, mockRepo, _ := setupExportTestServer(t, 100*1024*1024)
+	defer ctrl.Finish()
+
+	mockRepo.EXPECT().GetExecutions(gomock.Any(), gomock.Any()).
+		Return(nil, fmt.Errorf("database connection lost"))
+
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/export", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
+func TestExportExecutionsHandler_NoWorkflow(t *testing.T) {
+	// Executions without a Workflow set should not trigger log reads
+	// or sequence tracking, and should still be included in the archive.
+	app, ctrl, mockRepo, _ := setupExportTestServer(t, 100*1024*1024)
+	defer ctrl.Finish()
+
+	executions := []testkube.TestWorkflowExecution{
+		{
+			Id:       "exec-nowf",
+			Number:   1,
+			Workflow: nil, // no workflow
+		},
+	}
+
+	mockRepo.EXPECT().GetExecutions(gomock.Any(), gomock.Any()).Return(executions, nil)
+	// No ReadLog expectation since Workflow is nil
+
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/export", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	gr, err := gzip.NewReader(bytes.NewReader(body))
+	require.NoError(t, err)
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	files := map[string]string{}
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		content, _ := io.ReadAll(tr)
+		files[header.Name] = string(content)
+	}
+
+	assert.Contains(t, files, "executions/exec-nowf.json")
+	assert.NotContains(t, files, "logs/exec-nowf.log")
+	// sequences.json should be empty since no workflow was present
+	var seqs []sequenceEntry
+	require.NoError(t, json.Unmarshal([]byte(files["sequences.json"]), &seqs))
+	assert.Len(t, seqs, 0)
 }
 
 func TestExportExecutionsHandler_PostGzipCloseRecheck(t *testing.T) {

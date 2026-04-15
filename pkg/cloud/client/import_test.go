@@ -143,6 +143,100 @@ func TestImportClient_Import_ContextCancellation(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestHTTPError_ErrorString(t *testing.T) {
+	err := &HTTPError{StatusCode: 413, Body: "too large"}
+	assert.Equal(t, "import failed (HTTP 413): too large", err.Error())
+}
+
+func TestHTTPError_ErrorsAs(t *testing.T) {
+	// Verify that errors.As can extract HTTPError from a generic error interface
+	var baseErr error = &HTTPError{StatusCode: http.StatusRequestEntityTooLarge, Body: "archive too large"}
+
+	var httpErr *HTTPError
+	require.True(t, errors.As(baseErr, &httpErr))
+	assert.Equal(t, http.StatusRequestEntityTooLarge, httpErr.StatusCode)
+	assert.Equal(t, "archive too large", httpErr.Body)
+}
+
+func TestHTTPError_ErrorsAs_Negative(t *testing.T) {
+	// A plain error should not match HTTPError via errors.As
+	plainErr := errors.New("some other error")
+
+	var httpErr *HTTPError
+	assert.False(t, errors.As(plainErr, &httpErr))
+}
+
+func TestImportClient_Import_401Unauthorized(t *testing.T) {
+	archivePath := createTestArchive(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte("unauthorized"))
+	}))
+	defer server.Close()
+
+	c := NewImportClient(server.URL, "bad-token", "org-1", "env-1")
+	err := c.Import(context.Background(), archivePath)
+	assert.Error(t, err)
+	var httpErr *HTTPError
+	require.True(t, errors.As(err, &httpErr))
+	assert.Equal(t, http.StatusUnauthorized, httpErr.StatusCode)
+	assert.Contains(t, httpErr.Body, "unauthorized")
+}
+
+func TestImportClient_Import_EmptyBaseUrl(t *testing.T) {
+	archivePath := createTestArchive(t)
+
+	c := NewImportClient("", "token", "org-1", "env-1")
+	err := c.Import(context.Background(), archivePath)
+	assert.Error(t, err)
+}
+
+func TestImportClient_Import_VerifiesPath(t *testing.T) {
+	archivePath := createTestArchive(t)
+
+	var receivedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := NewImportClient(server.URL, "token", "my-org", "my-env")
+	err := c.Import(context.Background(), archivePath)
+	assert.NoError(t, err)
+	assert.Equal(t, "/organizations/my-org/environments/my-env/agent/import", receivedPath)
+}
+
+func TestNewImportClient_PathConstruction(t *testing.T) {
+	tests := []struct {
+		name   string
+		orgID  string
+		envID  string
+		expect string
+	}{
+		{
+			name:   "standard IDs",
+			orgID:  "org-123",
+			envID:  "env-456",
+			expect: "/organizations/org-123/environments/env-456/agent/import",
+		},
+		{
+			name:   "empty IDs",
+			orgID:  "",
+			envID:  "",
+			expect: "/organizations//environments//agent/import",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewImportClient("https://api.example.com", "token", tt.orgID, tt.envID)
+			assert.Equal(t, tt.expect, c.Path)
+		})
+	}
+}
+
 func TestImportClient_Import_ErrorResponseTruncation(t *testing.T) {
 	archivePath := createTestArchive(t)
 
