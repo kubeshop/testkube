@@ -118,10 +118,12 @@ func NewConnectCmd() *cobra.Command {
 			var exportDir string
 			if !skipExport {
 				ui.H2("Exporting execution data before connecting")
+
+				spinner := ui.NewSpinner("Downloading executon data")
 				var mkErr error
 				exportDir, mkErr = os.MkdirTemp("", "testkube-export-*")
 				if mkErr != nil {
-					ui.Warn(fmt.Sprintf("Could not create temp directory for export: %s", mkErr))
+					spinner.Fail(fmt.Sprintf("Could not create temp directory for export: %s", mkErr))
 				} else {
 					defer os.RemoveAll(exportDir)
 					var exportErr error
@@ -133,10 +135,9 @@ func NewConnectCmd() *cobra.Command {
 							is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
 						}
 						if is413 {
-							ui.Warn("Export archive exceeds the server size limit.")
-							ui.Warn("Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
+							spinner.Fail("Export archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 						} else {
-							ui.Warn(fmt.Sprintf("Data export failed: %s", exportErr))
+							spinner.Fail(fmt.Sprintf("Data export failed: %s", exportErr))
 						}
 						ui.Warn("Your data will remain in the existing database and can be exported later.")
 						if ok := ui.Confirm("Continue connecting without export?"); !ok {
@@ -144,7 +145,7 @@ func NewConnectCmd() *cobra.Command {
 						}
 						exportPath = ""
 					} else {
-						ui.Info("Export archive created successfully")
+						spinner.Success()
 					}
 				}
 				ui.NL()
@@ -195,6 +196,8 @@ func NewConnectCmd() *cobra.Command {
 				}
 			}
 
+			ui.H2("Switching OSS Standalone Agent to Cloud Runner mode")
+
 			agents.UiInstallAgent(cmd, agentName, []string{"testkube.io/source=oss"}, map[string]interface{}{
 				// Disable CRD installation in the runner chart — the OSS chart already
 				// has the CRDs installed via the testkube-operator subchart. This prevents
@@ -208,6 +211,8 @@ func NewConnectCmd() *cobra.Command {
 			if dryRun {
 				return
 			}
+
+			ui.NL(2)
 
 			// Scale down old support services in the original namespace
 			origNs := cfg.Namespace
@@ -245,32 +250,26 @@ func NewConnectCmd() *cobra.Command {
 
 			// Upload the previously exported archive to the control plane
 			if exportPath != "" {
-				effectiveToken := cfg.CloudContext.ApiKey
-				if effectiveToken == "" {
-					effectiveToken = cfg.CloudContext.AgentKey
-				}
-				if cfg.CloudContext.OrganizationId != "" && cfg.CloudContext.EnvironmentId != "" && effectiveToken != "" {
-					spinner = ui.NewSpinner("Importing execution data to the control plane")
-					importClient := cloudclient.NewImportClient(
-						cfg.CloudContext.ApiUri,
-						effectiveToken,
-						cfg.CloudContext.OrganizationId,
-						cfg.CloudContext.EnvironmentId,
-					)
-					importErr := importClient.Import(cmd.Context(), exportPath)
-					if importErr != nil {
-						var httpErr *cloudclient.HTTPError
-						if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
-							spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
-						} else {
-							spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
-						}
+				ui.H2("Importing execution data to the control plane")
+
+				spinner := ui.NewSpinner("Uploading executon data")
+				importClient := cloudclient.NewImportClient(
+					cfg.CloudContext.ApiUri,
+					cfg.CloudContext.ApiKey,
+					cfg.CloudContext.OrganizationId,
+					cfg.CloudContext.EnvironmentId,
+				)
+				importErr := importClient.Import(cmd.Context(), exportPath)
+				if importErr != nil {
+					var httpErr *cloudclient.HTTPError
+					if errors.As(importErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge {
+						spinner.Fail("Import archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 					} else {
-						spinner.Success()
-						ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
+						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
 					}
 				} else {
-					ui.Warn("Skipping import: organization ID, environment ID, or API token not available in config.")
+					spinner.Success()
+					ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
 				}
 			}
 
