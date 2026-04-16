@@ -121,7 +121,7 @@ func NewDisconnectCmd() *cobra.Command {
 
 			spinner.Success()
 
-			// restore the database that was originally deployed before connecting to Pro
+			// restore support services that were scaled down by pro connect
 			if opts.MinioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
 				if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas); scaleErr != nil {
@@ -129,6 +129,14 @@ func NewDisconnectCmd() *cobra.Command {
 				} else {
 					spinner.Success()
 				}
+			}
+			// restore NATS StatefulSet that was scaled down on connect;
+			// the OSS testkube-api needs it for internal event communication
+			spinner = ui.NewSpinner("Scaling up NATS")
+			if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-nats", 1); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale up NATS: %s", scaleErr))
+			} else {
+				spinner.Success()
 			}
 			switch dbType {
 			case config.DatabaseTypeMongoDB:

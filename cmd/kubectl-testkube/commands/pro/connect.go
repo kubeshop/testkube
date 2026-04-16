@@ -92,6 +92,7 @@ func NewConnectCmd() *cobra.Command {
 				{ui.Separator, ""},
 				{"Testkube support services not needed anymore"},
 				{"MinIO     ", "Stopped and scaled down, (not deleted)"},
+				{"NATS      ", "Stopped and scaled down, (not deleted)"},
 			}
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
@@ -218,6 +219,14 @@ func NewConnectCmd() *cobra.Command {
 			spinner := ui.NewSpinner("Scaling down MinIO")
 			if _, scaleErr := common.KubectlScaleDeployment(origNs, "testkube-minio-testkube", 0); scaleErr != nil {
 				spinner.Fail(fmt.Sprintf("Failed to scale down MinIO: %s", scaleErr))
+			} else {
+				spinner.Success()
+			}
+			// scale down NATS — the runner chart uses embedded NATS so the
+			// standalone StatefulSet is no longer needed
+			spinner = ui.NewSpinner("Scaling down NATS")
+			if _, scaleErr := common.KubectlScaleStatefulSet(origNs, "testkube-nats", 0); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale down NATS: %s", scaleErr))
 			} else {
 				spinner.Success()
 			}
