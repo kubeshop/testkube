@@ -203,20 +203,20 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
-	key := newStatusKey(t.Namespace, t.Name)
-	s.triggerStatus[key] = newTriggerStatus(t)
+	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
+	s.triggerStatus[key] = newTriggerStatusFromV1(t)
 }
 
 func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	if s.triggerStatus[key] != nil {
-		s.triggerStatus[key].testTrigger = target
+		s.triggerStatus[key].trigger = convertV1ToInternal(target)
 	} else {
-		s.triggerStatus[key] = newTriggerStatus(target)
+		s.triggerStatus[key] = newTriggerStatusFromV1(target)
 	}
 }
 
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	delete(s.triggerStatus, key)
 }
