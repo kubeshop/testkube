@@ -308,17 +308,17 @@ type helmRelease struct {
 func findRunnerRelease() (releaseName, namespace string) {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
-		ui.Debug("findRunnerRelease: helm not found in PATH")
+		ui.Warn("findRunnerRelease: helm not found in PATH")
 		return "", ""
 	}
 	out, execErr := exec.Command(helmPath, "list", "--all-namespaces", "--output", "json").CombinedOutput()
 	if execErr != nil {
-		ui.Debug(fmt.Sprintf("findRunnerRelease: helm list failed: %s", execErr))
+		ui.Warn(fmt.Sprintf("findRunnerRelease: helm list failed: %s", execErr))
 		return "", ""
 	}
 	var releases []helmRelease
 	if jsonErr := json.Unmarshal(out, &releases); jsonErr != nil {
-		ui.Debug(fmt.Sprintf("findRunnerRelease: failed to parse helm list output: %s", jsonErr))
+		ui.Warn(fmt.Sprintf("findRunnerRelease: failed to parse helm list output: %s", jsonErr))
 		return "", ""
 	}
 	for _, r := range releases {
@@ -326,7 +326,7 @@ func findRunnerRelease() (releaseName, namespace string) {
 			return r.Name, r.Namespace
 		}
 	}
-	ui.Debug("findRunnerRelease: no testkube-runner release found")
+	ui.Info("findRunnerRelease: no testkube-runner release found")
 	return "", ""
 }
 
