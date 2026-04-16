@@ -49,11 +49,6 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 		limit, _ := OptionalIntParamWithDefault(request, "limit", defaultBulkLimit)
 		aggregate, _ := OptionalParam[bool](request, "aggregate")
 
-		// Cap limit at 100
-		if limit > 100 {
-			limit = 100
-		}
-
 		params := ListWorkflowsParams{
 			Selector:      selector,
 			ResourceGroup: resourceGroup,
@@ -164,11 +159,6 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 		endDate, _ := OptionalParam[string](request, "endDate")
 		limit, _ := OptionalIntParamWithDefault(request, "limit", defaultBulkLimit)
 		aggregate, _ := OptionalParam[bool](request, "aggregate")
-
-		// Cap limit at 100
-		if limit > 100 {
-			limit = 100
-		}
 
 		params := ListExecutionsParams{
 			WorkflowName: workflowName,

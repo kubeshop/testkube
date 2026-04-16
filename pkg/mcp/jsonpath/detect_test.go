@@ -73,6 +73,16 @@ func TestIsRootLevelFilter(t *testing.T) {
 			path:     "$",
 			expected: false,
 		},
+		{
+			name:     "chained root-level filters",
+			path:     "$[?(@.x)][?(@.y)]",
+			expected: true,
+		},
+		{
+			name:     "at-sign root is not dollar root",
+			path:     "@[?(@.x=='y')]",
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -820,6 +820,11 @@ spec:
 		text := getResultText(result)
 		assert.Contains(t, text, "wf-silent")
 		assert.NotContains(t, text, "wf-normal")
+
+		// Auto-aggregate should return array format, not per-item map
+		var parsed []any
+		err = json.Unmarshal([]byte(text), &parsed)
+		require.NoError(t, err, "auto-aggregate result should be a JSON array")
 	})
 
 	t.Run("non-filter expression stays in per-item mode", func(t *testing.T) {
