@@ -2,12 +2,24 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // ExportArchiveFileName is the default file name for execution export archives.
 const ExportArchiveFileName = "testkube-export.tar.gz"
+
+// HTTPStatusError represents an HTTP error response with a status code.
+// It is returned by Transport.GetFile (and similar methods) so callers can
+// programmatically inspect the server status code via errors.As.
+type HTTPStatusError struct {
+	StatusCode int
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("HTTP status %d", e.StatusCode)
+}
 
 // Client is the Testkube API client abstraction
 type Client interface {

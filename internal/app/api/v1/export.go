@@ -85,6 +85,14 @@ func (s *TestkubeAPI) ExportExecutionsHandler() fiber.Handler {
 				}
 
 				if execution.Workflow != nil {
+					// Flush gzip so buf.Len() reflects the actual compressed
+					// output written so far, not just what the internal gzip
+					// buffer has released.
+					if flushErr := gzWriter.Flush(); flushErr != nil {
+						s.Log.Errorw(errPrefix+": flushing gzip writer", "error", flushErr)
+						return s.Error(c, http.StatusInternalServerError, fmt.Errorf("flushing archive: %w", flushErr))
+					}
+
 					remaining := int64(maxSize - buf.Len())
 					if remaining <= 0 {
 						s.Log.Errorw(errPrefix+": archive size limit exceeded", "size", buf.Len())

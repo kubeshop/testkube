@@ -224,7 +224,7 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[s
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		return name, fmt.Errorf("error: %d", resp.StatusCode)
+		return name, &HTTPStatusError{StatusCode: resp.StatusCode}
 	}
 
 	target := filepath.Join(destination, fileName)

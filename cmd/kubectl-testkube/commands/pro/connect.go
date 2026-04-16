@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -15,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -147,11 +147,8 @@ func NewConnectCmd() *cobra.Command {
 					var exportErr error
 					exportPath, exportErr = client.ExportExecutions(exportDir, exportSince)
 					if exportErr != nil {
-						var httpErr *cloudclient.HTTPError
-						is413 := errors.As(exportErr, &httpErr) && httpErr.StatusCode == http.StatusRequestEntityTooLarge
-						if !is413 {
-							is413 = strings.Contains(exportErr.Error(), strconv.Itoa(http.StatusRequestEntityTooLarge))
-						}
+						var httpStatusErr *apiclient.HTTPStatusError
+						is413 := errors.As(exportErr, &httpStatusErr) && httpStatusErr.StatusCode == http.StatusRequestEntityTooLarge
 						if is413 {
 							spinner.Fail("Export archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 						} else {

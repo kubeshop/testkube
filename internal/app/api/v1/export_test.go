@@ -431,11 +431,12 @@ func TestExportExecutionsHandler_MultipleWorkflowSequences(t *testing.T) {
 }
 
 func TestExportExecutionsHandler_BudgetCappedLogRead(t *testing.T) {
-	// With a very small size limit (100 bytes), even the execution metadata
-	// plus a modest log will exceed the budget. The log read is capped to
+	// The execution metadata compresses to ~190 bytes in the gzip stream.
+	// With maxSize=300, there is some budget left for the log, but the
+	// large log (1000 bytes) will exceed it. The log read is capped to
 	// remaining+1 bytes via LimitReader — when that capped data is written
 	// to the tar archive, buf.Len() exceeds maxSize and 413 is returned.
-	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 100)
+	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 300)
 	defer ctrl.Finish()
 
 	executions := []testkube.TestWorkflowExecution{
