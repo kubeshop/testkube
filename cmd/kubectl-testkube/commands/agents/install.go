@@ -133,7 +133,7 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 	spinner.Success("CRDs installed")
 }
 
-func UiInstallAgent(cmd *cobra.Command, name string, defaultlLabels []string, extraHelmValues ...map[string]interface{}) {
+func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, extraHelmValues ...map[string]interface{}) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
 	executionNs, _ := cmd.Flags().GetString("execution-namespace")
@@ -192,7 +192,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultlLabels []string, ex
 	// Create new Agent if it's expected
 	if agent == nil && autoCreate {
 		labels, _ := cmd.Flags().GetStringSlice("label")
-		labels = append(labels, defaultlLabels...)
+		labels = append(labels, defaultLabels...)
 		environmentIds, _ := cmd.Flags().GetStringSlice("env")
 		agent = UiCreateAgent(
 			cmd,
