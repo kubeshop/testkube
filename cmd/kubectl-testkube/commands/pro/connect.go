@@ -137,7 +137,7 @@ func NewConnectCmd() *cobra.Command {
 			if !skipExport {
 				ui.H2("Exporting execution data before connecting")
 
-				spinner := ui.NewSpinner("Downloading executon data")
+				spinner := ui.NewSpinner("Downloading execution data")
 				var mkErr error
 				exportDir, mkErr = os.MkdirTemp("", "testkube-export-*")
 				if mkErr != nil {
@@ -260,7 +260,7 @@ func NewConnectCmd() *cobra.Command {
 			if exportPath != "" {
 				ui.H2("Importing execution data to the control plane")
 
-				spinner := ui.NewSpinner("Uploading executon data")
+				spinner := ui.NewSpinner("Uploading execution data")
 				importClient := cloudclient.NewImportClient(
 					cfg.CloudContext.ApiUri,
 					cfg.CloudContext.ApiKey,
