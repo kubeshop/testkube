@@ -226,61 +226,38 @@ func (s *CommaList) Enabled(value string) bool {
 }
 
 func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
-	var (
-		secretKey string
-
-		executionNamespace string
-		version            string
-		dryRun             bool
-
-		globalTemplatePath string
-		global             bool
-		group              string
-
-		autoCreate     bool
-		floating       bool
-		labelPairs     []string
-		environmentIds []string
-
-		runner    bool
-		listener  bool
-		gitops    bool
-		webhooks  bool
-		agentType string
-	)
-
 	// Installation > General
-	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
-	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
+	cmd.Flags().StringP("execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
+	cmd.Flags().String("version", "", "agent version to use (defaults to latest)")
+	cmd.Flags().Bool("dry-run", false, "display helm commands only")
 
 	// Installation > Runner
-	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
-	cmd.Flags().BoolVar(&global, "global", false, "make it global agent")
-	cmd.Flags().StringVar(&group, "group", "", "make it grouped agent")
+	cmd.Flags().StringP("global-template-path", "g", "", "include global template")
+	cmd.Flags().Bool("global", false, "make it global agent")
+	cmd.Flags().String("group", "", "make it grouped agent")
 
 	// Install existing
-	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
+	cmd.Flags().StringP("secret", "s", "", "secret key for the selected agent")
 
 	// Create and install
-	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
-	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
-	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
-	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating agent")
+	cmd.Flags().Bool("create", false, "auto create that agent")
+	cmd.Flags().StringSliceP("env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
+	cmd.Flags().StringSliceP("label", "l", nil, "(with --create) label key value pair: --label key1=value1")
+	cmd.Flags().Bool("floating", false, "(with --create) create as a floating agent")
 
 	// Components selection
 	if forUpdate {
 		// only runner; keep flag hidden and force it on
-		cmd.Flags().BoolVar(&runner, "runner", true, "enable runner component")
+		cmd.Flags().Bool("runner", true, "enable runner component")
 		_ = cmd.Flags().MarkHidden("runner")
 	} else {
-		cmd.Flags().BoolVar(&runner, "runner", false, "enable runner component (default: enabled when no component flags are set)")
-		cmd.Flags().BoolVar(&listener, "listener", false, "enable listener component (default: enabled when no component flags are set)")
-		cmd.Flags().BoolVar(&gitops, "gitops", false, "enable gitops capability")
-		cmd.Flags().BoolVar(&webhooks, "webhooks", false, "enable webhooks capability")
+		cmd.Flags().Bool("runner", false, "enable runner component (default: enabled when no component flags are set)")
+		cmd.Flags().Bool("listener", false, "enable listener component (default: enabled when no component flags are set)")
+		cmd.Flags().Bool("gitops", false, "enable gitops capability")
+		cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 	}
 
 	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().StringP("type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
 	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
 }
