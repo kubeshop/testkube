@@ -38,6 +38,7 @@ type watcherEvent struct {
 	resourceLabels   map[string]string
 	objectMeta       metav1.Object
 	Object           any `json:"object"`
+	OldObject        any `json:"oldObject,omitempty"`
 	eventType        testtrigger.EventType
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
@@ -53,6 +54,12 @@ type watcherAgent struct {
 }
 
 type watcherOpts func(*watcherEvent)
+
+func withOldObject(old any) watcherOpts {
+	return func(w *watcherEvent) {
+		w.OldObject = old
+	}
+}
 
 func withCauses(causes []testtrigger.Cause) watcherOpts {
 	return func(w *watcherEvent) {
