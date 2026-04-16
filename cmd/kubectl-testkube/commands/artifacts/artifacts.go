@@ -35,6 +35,10 @@ func NewListArtifactsCmd() *cobra.Command {
 				artifacts, errArtifacts = client.GetTestWorkflowExecutionArtifacts(twExecution.Id)
 				ui.ExitOnError("getting test workflow artifacts", errArtifacts)
 				ui.Table(artifacts, os.Stdout)
+				ui.ShellCommand(
+					"View test workflow execution in your browser",
+					"kubectl testkube view "+twExecution.Id,
+				)
 				return
 			}
 			if err == nil {

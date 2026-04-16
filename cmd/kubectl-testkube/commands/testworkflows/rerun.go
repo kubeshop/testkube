@@ -136,6 +136,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 
 				render.PrintTestWorkflowExecutionURIs(&execution)
 				uiShellGetExecution(execution.Id)
+				uiShellViewExecution(execution.Id)
 			}
 
 			if exitCode != 0 {

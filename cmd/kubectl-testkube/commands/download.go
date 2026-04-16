@@ -64,6 +64,10 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 				f, err := client.DownloadTestWorkflowArtifact(executionID, filename, destination)
 				ui.ExitOnError("downloading file "+filename, err)
 				ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
+				ui.ShellCommand(
+					"View test workflow execution in your browser",
+					"kubectl testkube view "+exec.Id,
+				)
 				return
 			}
 
@@ -96,6 +100,10 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 			exec, err := client.GetTestWorkflowExecution(executionID)
 			if err == nil && exec.Id != "" {
 				common.DownloadTestWorkflowArtifacts(executionID, downloadDir, format, masks, client, true)
+				ui.ShellCommand(
+					"View test workflow execution in your browser",
+					"kubectl testkube view "+exec.Id,
+				)
 				return
 			}
 		},

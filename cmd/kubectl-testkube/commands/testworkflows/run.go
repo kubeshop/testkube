@@ -547,6 +547,7 @@ func processExecutions(
 
 			render.PrintTestWorkflowExecutionURIs(&execution)
 			uiShellGetExecution(executionId)
+			uiShellViewExecution(executionId)
 		}
 	}
 
@@ -739,6 +740,14 @@ func uiShellGetExecution(id string) {
 	ui.ShellCommand(
 		"Use following command to get test workflow execution details",
 		"kubectl testkube get twe "+id,
+	)
+}
+
+// uiShellViewExecution prints kubectl command to view execution in the browser
+func uiShellViewExecution(id string) {
+	ui.ShellCommand(
+		"View test workflow execution in your browser",
+		"kubectl testkube view "+id,
 	)
 }
 
