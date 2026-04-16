@@ -886,6 +886,9 @@ func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.Lis
 	} else {
 		queryParams["pageSize"] = "50" // Default limit
 	}
+	if params.FetchAll {
+		queryParams["fetchAll"] = "true"
+	}
 
 	result, err := c.makeRequest(ctx, APIRequest{
 		Method:      http.MethodGet,
@@ -938,6 +941,9 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
 	} else {
 		queryParams["pageSize"] = "50" // Default limit
+	}
+	if params.FetchAll {
+		queryParams["fetchAll"] = "true"
 	}
 
 	result, err := c.makeRequest(ctx, APIRequest{

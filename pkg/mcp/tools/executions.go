@@ -124,6 +124,7 @@ type ListExecutionsParams struct {
 	Since        string
 	StartDate    string
 	EndDate      string
+	FetchAll     bool
 }
 
 type ExecutionLister interface {

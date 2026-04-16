@@ -59,6 +59,7 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 			ResourceGroup: resourceGroup,
 			PageSize:      limit,
 			Page:          0,
+			FetchAll:      true,
 		}
 
 		// Fetch workflow definitions
@@ -179,6 +180,7 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 			EndDate:      endDate,
 			PageSize:     limit,
 			Page:         0,
+			FetchAll:     true,
 		}
 
 		// Fetch executions
