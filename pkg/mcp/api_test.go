@@ -31,19 +31,18 @@ func TestAPIClient_ReadArtifact_UsesArtifactLookupPost(t *testing.T) {
 
 			var body map[string]string
 			err := json.NewDecoder(r.Body).Decode(&body)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, artifactID, body["artifactID"])
 
 			w.Header().Set("Content-Type", "application/json")
 			err = json.NewEncoder(w).Encode(map[string]string{
 				"url": serverURL + "/download/artifact",
 			})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 		case r.Method == http.MethodGet && r.URL.Path == "/download/artifact":
 			_, err := io.WriteString(w, content)
-			require.NoError(t, err)
-
+			assert.NoError(t, err)
 		default:
 			http.NotFound(w, r)
 		}
