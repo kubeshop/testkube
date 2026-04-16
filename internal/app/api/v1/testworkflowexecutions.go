@@ -732,8 +732,13 @@ func (s *TestkubeAPI) ListTestWorkflowExecutionArtifactsHandler() fiber.Handler 
 func (s *TestkubeAPI) GetTestWorkflowArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
-		fileName := c.Params("filename")
+		fileName := c.Params("filename+")
 		errPrefix := fmt.Sprintf("failed to get artifact %s for workflow execution %s", fileName, executionID)
+
+		// Fiber greedy params keep percent-encoding intact, so decode first.
+		if decoded, err := url.PathUnescape(fileName); err == nil {
+			fileName = decoded
+		}
 
 		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
 		// remember about CLI client and Dashboard client too!
