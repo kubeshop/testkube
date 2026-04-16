@@ -86,7 +86,7 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
 - resourceGroup: Filter by resource group slug
-- limit: Maximum workflows to fetch (default 50, max 100)
+- limit: Page size for fetching workflows (default 50). All matching workflows are fetched across multiple pages
 - aggregate: If true, combines all workflows into an array and applies expression once; if false (default), applies expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
 Returns: Map of workflow name → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
@@ -110,7 +110,7 @@ Parameters:
 - since: Filter executions after this time (ISO 8601)
 - startDate: Filter executions on or after this date/time (YYYY-MM-DD or RFC 3339)
 - endDate: Filter executions on or before this date/time (YYYY-MM-DD or RFC 3339)
-- limit: Maximum executions to fetch (default 50, max 100)
+- limit: Page size for fetching executions (default 50). All matching executions are fetched across multiple pages
 - aggregate: If true, combines all executions into an array and applies expression once; if false (default), applies expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
 Returns: Map of execution ID → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`

@@ -34,7 +34,7 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 		mcp.WithString("expression", mcp.Required(), mcp.Description("The JSONPath expression to apply to workflow definitions. Examples: '$..image', '$.spec.steps[*].name', '$.metadata.labels'.")),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 		mcp.WithString("resourceGroup", mcp.Description(ResourceGroupDescription)),
-		mcp.WithNumber("limit", mcp.Description("Maximum number of workflows to fetch (default: 50, max: 100).")),
+		mcp.WithNumber("limit", mcp.Description("Page size for fetching workflows (default: 50). All matching workflows are fetched across multiple pages.")),
 		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all workflows into an array and applies the expression once. If false (default), applies the expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].")),
 	)
 
@@ -140,7 +140,7 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 		mcp.WithString("since", mcp.Description(SinceDescription)),
 		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
 		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
-		mcp.WithNumber("limit", mcp.Description("Maximum number of executions to fetch (default: 50, max: 100).")),
+		mcp.WithNumber("limit", mcp.Description("Page size for fetching executions (default: 50). All matching executions are fetched across multiple pages.")),
 		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all executions into an array and applies the expression once. If false (default), applies the expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].")),
 	)
 
