@@ -113,6 +113,23 @@ func NewConnectCmd() *cobra.Command {
 				return
 			}
 
+			// Validate required flags before export so that ui.Failf (which calls
+			// os.Exit) cannot leak a temp directory created by the export block.
+			common.ProcessMasterFlags(cmd, &masterOpts, &cfg)
+
+			if masterOpts.Master.EnvId == "" {
+				ui.Failf("You need pass valid environment id to connect to Pro")
+			}
+			if masterOpts.Master.OrgId == "" {
+				ui.Failf("You need pass valid organization id to connect to Pro")
+			}
+			if apiKey == "" {
+				ui.Failf("You need pass valid api key to connect to Pro")
+			}
+			if masterOpts.Master.URIs.Api == "" {
+				ui.Failf("You need pass valid uri api to connect to Pro")
+			}
+
 			// Export execution data before switching to agent mode
 			var exportPath string
 			var exportDir string
@@ -149,24 +166,6 @@ func NewConnectCmd() *cobra.Command {
 					}
 				}
 				ui.NL()
-			}
-
-			// Populate cloud context from the master flags (--org-id, --env-id,
-			// --root-domain, --agent-token, etc.) so that UiInstallAgent and
-			// control plane API calls use the correct URIs and credentials.
-			common.ProcessMasterFlags(cmd, &masterOpts, &cfg)
-
-			if masterOpts.Master.EnvId == "" {
-				ui.Failf("You need pass valid environment id to connect to Pro")
-			}
-			if masterOpts.Master.OrgId == "" {
-				ui.Failf("You need pass valid organization id to connect to Pro")
-			}
-			if apiKey == "" {
-				ui.Failf("You need pass valid api key to connect to Pro")
-			}
-			if masterOpts.Master.URIs.Api == "" {
-				ui.Failf("You need pass valid uri api to connect to Pro")
 			}
 
 			err = common.PopulateAgentDataToContext(masterOpts, cfg)
