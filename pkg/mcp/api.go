@@ -226,17 +226,17 @@ func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (stri
 }
 
 func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename string) (string, error) {
-	// First, get the artifact (could be direct content or a URL)
-	// URL encode the filename to handle special characters like forward slashes
-	encodedFilename := url.QueryEscape(filename)
-
+	// First, resolve the artifact by name. The control plane returns an ArtifactURL
+	// with a signed storage link rather than the artifact content directly.
 	response, err := c.makeRequest(ctx, APIRequest{
-		Method: "GET",
-		Path:   "/agent/test-workflow-executions/{executionId}/artifacts/{filename}",
+		Method: "POST",
+		Path:   "/test-workflow-executions/{executionId}/artifacts",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"executionId": executionID,
-			"filename":    encodedFilename,
+		},
+		Body: map[string]string{
+			"artifactID": filename,
 		},
 	})
 	if err != nil {
