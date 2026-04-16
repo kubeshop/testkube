@@ -87,9 +87,9 @@ Parameters:
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
 - resourceGroup: Filter by resource group slug
 - limit: Maximum workflows to fetch (default 50, max 100)
-- aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
+- aggregate: If true, combines all workflows into an array and applies expression once; if false (default), applies expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
-Returns: Map of workflow name → extracted values. Missing paths return empty arrays, not errors.`
+Returns: Map of workflow name → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
 
 	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
 Fetches execution JSON data and extracts data matching the path.
@@ -111,9 +111,9 @@ Parameters:
 - startDate: Filter executions on or after this date/time (YYYY-MM-DD or RFC 3339)
 - endDate: Filter executions on or before this date/time (YYYY-MM-DD or RFC 3339)
 - limit: Maximum executions to fetch (default 50, max 100)
-- aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
+- aggregate: If true, combines all executions into an array and applies expression once; if false (default), applies expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
-Returns: Map of execution ID → extracted values. Missing paths return empty arrays, not errors.`
+Returns: Map of execution ID → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
 
 	// WorkflowTemplate tool descriptions
 	TemplateNameDescription = `The name of the workflow template. Template names are lowercase alphanumeric with dashes 
