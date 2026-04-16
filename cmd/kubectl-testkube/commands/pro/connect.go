@@ -25,6 +25,7 @@ const (
 
 func NewConnectCmd() *cobra.Command {
 	var (
+		apiKey string
 		// Cloud/master flags (resolved via PopulateMasterFlags + ProcessMasterFlags)
 		masterOpts common.HelmOptions
 
@@ -160,8 +161,8 @@ func NewConnectCmd() *cobra.Command {
 			if masterOpts.Master.OrgId == "" {
 				ui.Failf("You need pass valid organization id to connect to Pro")
 			}
-			if masterOpts.Master.AgentToken == "" {
-				ui.Failf("You need pass valid agent token to connect to Pro")
+			if apiKey == "" {
+				ui.Failf("You need pass valid api key to connect to Pro")
 			}
 			if masterOpts.Master.URIs.Api == "" {
 				ui.Failf("You need pass valid uri api to connect to Pro")
@@ -175,7 +176,9 @@ func NewConnectCmd() *cobra.Command {
 			ui.ExitOnError("reloading config", err)
 
 			// Switch CLI context to cloud mode
+			ui.H2("Saving Testkube CLI Pro context")
 			cfg.ContextType = config.ContextTypeCloud
+			cfg.CloudContext.ApiKey = apiKey
 			err = config.Save(cfg)
 			ui.ExitOnError("saving cloud context configuration", err)
 
@@ -232,12 +235,6 @@ func NewConnectCmd() *cobra.Command {
 				}
 			}
 
-			// Save context
-			ui.H2("Saving Testkube CLI Pro context")
-			cfg, err = config.Load()
-			ui.ExitOnError("loading config", err)
-			cfg.CloudContext.DatabaseType = dbType
-			cfg.ContextType = config.ContextTypeCloud
 			// detect the runner release installed by UiInstallAgent so disconnect can uninstall it
 			if relName, relNs := findRunnerRelease(); relName != "" {
 				cfg.CloudContext.AgentReleaseName = relName
@@ -294,6 +291,7 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&exportSince, "since", "", "Export only executions created after this date (e.g. 2025-01-01 or 2025-01-01T00:00:00Z)")
 
 	// Cloud/master flags (--org-id, --env-id, --root-domain, --agent-token, etc.)
+	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Pro")
 	common.PopulateMasterFlags(cmd, &masterOpts, false)
 
 	return cmd
