@@ -247,7 +247,7 @@ func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.To
 			return mcp.NewToolResultError(fmt.Sprintf("failed to lookup execution ID: %v", err)), nil
 		}
 
-		executionID, err := extractExecutionIdFromResponse(result)
+		executionID, err := extractExecutionIdFromResponse(result, executionName)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
@@ -272,23 +272,21 @@ func isValidExecutionName(executionName string) bool {
 // extractExecutionIdFromResponse parses a direct {"id": "..."} response from the
 // dedicated lookup endpoint. Falls back to the legacy list format for backwards
 // compatibility with the standalone API client.
-func extractExecutionIdFromResponse(responseJSON string) (string, error) {
+func extractExecutionIdFromResponse(responseJSON string, targetExecutionName string) (string, error) {
 	var response struct {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal([]byte(responseJSON), &response); err == nil && response.ID != "" {
 		return response.ID, nil
 	}
-	// Fall back to legacy list format for backwards compatibility.
-	// The APIClient (standalone CLI) still uses the list endpoint which returns {"results": [...]}.
-	// The HandlerClient (cloud-api bridge) returns {"id": "..."} from the dedicated lookup endpoint;
-	// if the execution is not found, the handler returns HTTP 404 before reaching this point.
-	return extractExecutionIdFromListResponse(responseJSON)
+	return extractExecutionIdFromListResponse(responseJSON, targetExecutionName)
 }
 
 // extractExecutionIdFromListResponse parses the legacy list format returned by
-// the standalone API client ({"results": [{"id": "...", ...}, ...]}).
-func extractExecutionIdFromListResponse(responseJSON string) (string, error) {
+// the standalone API client ({"results": [{"id": "...", ...}, ...]}). The list
+// endpoint is a text search, so results may include substring/prefix matches --
+// verify the exact name before returning an ID.
+func extractExecutionIdFromListResponse(responseJSON string, targetExecutionName string) (string, error) {
 	var resultObject map[string]any
 	if err := json.Unmarshal([]byte(responseJSON), &resultObject); err != nil {
 		return "", fmt.Errorf("failed to parse response: %v", err)
@@ -296,16 +294,24 @@ func extractExecutionIdFromListResponse(responseJSON string) (string, error) {
 
 	results, ok := resultObject["results"].([]any)
 	if !ok || len(results) == 0 {
-		return "", fmt.Errorf("no execution found")
+		return "", fmt.Errorf("no execution found with name %q", targetExecutionName)
 	}
 
-	if execution, ok := results[0].(map[string]any); ok {
+	for _, result := range results {
+		execution, ok := result.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, nameOk := execution["name"].(string)
+		if !nameOk || name != targetExecutionName {
+			continue
+		}
 		if executionID, idOk := execution["id"].(string); idOk && executionID != "" {
 			return executionID, nil
 		}
 	}
 
-	return "", fmt.Errorf("no execution ID found in response")
+	return "", fmt.Errorf("no execution ID found for %q", targetExecutionName)
 }
 
 type ExecutionTagUpdater interface {
