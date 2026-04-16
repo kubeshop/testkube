@@ -79,12 +79,12 @@ func TestService_matchConditionsRetry(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -157,12 +157,12 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -231,12 +231,12 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		},
 	}
 
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -299,12 +299,12 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		},
 	}
 
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -403,14 +403,14 @@ func TestService_match(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -455,14 +455,14 @@ func TestService_matchRegex(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -503,9 +503,9 @@ func TestService_noMatch(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
-	testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
+	testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		assert.Fail(t, "should not match event")
 		return nil
 	}
@@ -521,14 +521,14 @@ func TestService_noMatch(t *testing.T) {
 }
 
 func newDefaultTestTriggersService(t *testing.T, trigger *testtriggersv1.TestTrigger) *Service {
-	key := newStatusKey(trigger.Namespace, trigger.Name)
-	status := &triggerStatus{testTrigger: trigger}
+	key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	status := &triggerStatus{trigger: convertV1ToInternal(trigger)}
 	return &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			t.Log("default test trigger executor")
 			return nil
 		},
@@ -562,7 +562,7 @@ func TestService_matchResourceSelector_matchLabels(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -596,7 +596,7 @@ func TestService_matchResourceSelector_matchLabels_noMatch(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not trigger")
 		return nil
 	}
@@ -632,7 +632,7 @@ func TestService_matchResourceSelector_matchExpression(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -669,7 +669,7 @@ func TestService_matchResourceSelector_matchExpression_noMatch(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not trigger executor")
 		return nil
 	}
@@ -698,7 +698,7 @@ func TestService_matchSelector_nilSelector(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not match")
 		return nil
 	}
@@ -727,7 +727,7 @@ func TestService_matchSelector_emptySelector(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not match")
 		return nil
 	}
@@ -763,7 +763,7 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -811,7 +811,7 @@ func TestService_matchSelector_matchLabels_resourceKindCaseInsensitive(t *testin
 
 			s := newDefaultTestTriggersService(t, testTrigger)
 			triggerCount := 0
-			s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+			s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 				triggerCount++
 				assert.Equal(t, "testkube", trigger.Namespace)
 				assert.Equal(t, "test-trigger", trigger.Name)
@@ -855,7 +855,7 @@ func TestService_matchSelector_matchExpression(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -893,7 +893,7 @@ func TestService_matchSelector_noMatch(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not trigger")
 		return nil
 	}
@@ -935,7 +935,7 @@ func TestService_matchSelector_matchResourceSelector(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -978,7 +978,7 @@ func TestService_matchSelector_noMatchResourceSelector(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not match")
 		return nil
 	}

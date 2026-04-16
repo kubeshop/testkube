@@ -57,7 +57,7 @@ func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
-		_, ok := service.triggerStatus[newStatusKey(namespace, "test-trigger")]
+		_, ok := service.triggerStatus[newStatusKey(triggerSourceV1, namespace, "test-trigger")]
 		return ok
 	}, time.Second, 10*time.Millisecond)
 

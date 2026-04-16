@@ -6,16 +6,17 @@ import (
 	"time"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
 type statusKey string
 
-func newStatusKey(namespace, name string) statusKey {
-	return statusKey(fmt.Sprintf("%s/%s", namespace, name))
+func newStatusKey(source, namespace, name string) statusKey {
+	return statusKey(fmt.Sprintf("%s:%s/%s", source, namespace, name))
 }
 
 type triggerStatus struct {
-	testTrigger              *testtriggersv1.TestTrigger
+	trigger                  *internalTrigger
 	lastExecutionStarted     *time.Time
 	lastExecutionFinished    *time.Time
 	testExecutionIDs         []string
@@ -24,8 +25,12 @@ type triggerStatus struct {
 	sync.RWMutex
 }
 
-func newTriggerStatus(testTrigger *testtriggersv1.TestTrigger) *triggerStatus {
-	return &triggerStatus{testTrigger: testTrigger}
+func newTriggerStatusFromV1(t *testtriggersv1.TestTrigger) *triggerStatus {
+	return &triggerStatus{trigger: convertV1ToInternal(t)}
+}
+
+func newTriggerStatusFromV2(t *workflowtriggersv1.WorkflowTrigger) *triggerStatus {
+	return &triggerStatus{trigger: convertV2ToInternal(t)}
 }
 
 func (s *triggerStatus) hasActiveTests() bool {
@@ -80,7 +85,7 @@ func (s *triggerStatus) done() {
 	s.lastExecutionFinished = &now
 }
 
-func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *triggerStatus {
-	key := newStatusKey(t.Namespace, t.Name)
+func (s *Service) getStatusForTrigger(t *internalTrigger) *triggerStatus {
+	key := newStatusKey(t.Source, t.Namespace, t.Name)
 	return s.triggerStatus[key]
 }

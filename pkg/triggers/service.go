@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/coordination/leader"
@@ -203,20 +204,39 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
-	key := newStatusKey(t.Namespace, t.Name)
-	s.triggerStatus[key] = newTriggerStatus(t)
+	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
+	s.triggerStatus[key] = newTriggerStatusFromV1(t)
 }
 
 func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	if s.triggerStatus[key] != nil {
-		s.triggerStatus[key].testTrigger = target
+		s.triggerStatus[key].trigger = convertV1ToInternal(target)
 	} else {
-		s.triggerStatus[key] = newTriggerStatus(target)
+		s.triggerStatus[key] = newTriggerStatusFromV1(target)
 	}
 }
 
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
+	delete(s.triggerStatus, key)
+}
+
+func (s *Service) addWorkflowTrigger(t *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, t.Namespace, t.Name)
+	s.triggerStatus[key] = newTriggerStatusFromV2(t)
+}
+
+func (s *Service) updateWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
+	if s.triggerStatus[key] != nil {
+		s.triggerStatus[key].trigger = convertV2ToInternal(target)
+	} else {
+		s.triggerStatus[key] = newTriggerStatusFromV2(target)
+	}
+}
+
+func (s *Service) removeWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
 	delete(s.triggerStatus, key)
 }

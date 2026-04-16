@@ -14,6 +14,9 @@ import (
 const (
 	triggerSourceV1 = "v1"
 	triggerSourceV2 = "v2"
+
+	concurrencyPolicyForbid  = "forbid"
+	concurrencyPolicyReplace = "replace"
 )
 
 // internalTrigger is the unified trigger representation used by the matcher and executor.
@@ -31,6 +34,9 @@ type internalTrigger struct {
 	ResourceName      string
 	ResourceNamespace string
 	Selector          *internalTriggerSelector
+
+	// v1 legacy: event label selector (matches against auto-generated event labels)
+	EventLabelSelector *metav1.LabelSelector
 
 	// When
 	Event string
@@ -111,8 +117,9 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Namespace: t.Namespace,
 		Labels:    t.Labels,
 		Source:    triggerSourceV1,
-		Event:     string(t.Spec.Event),
-		Disabled:  t.Spec.Disabled,
+		Event:              string(t.Spec.Event),
+		EventLabelSelector: t.Spec.Selector,
+		Disabled:           t.Spec.Disabled,
 	}
 
 	// Resolve v1 resource enum to GVK
