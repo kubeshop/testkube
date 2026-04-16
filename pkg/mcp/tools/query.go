@@ -71,6 +71,11 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 			return mcp.NewToolResultText("No workflows found matching the criteria."), nil
 		}
 
+		// Root-level filters like $[?(@.field==value)] require array input to work correctly.
+		if !aggregate && jsonpath.IsRootLevelFilter(expression) {
+			aggregate = true
+		}
+
 		var result string
 		if aggregate {
 			// Combine all workflows into an array and query once
@@ -184,6 +189,11 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 
 		if len(executions) == 0 {
 			return mcp.NewToolResultText("No executions found matching the criteria."), nil
+		}
+
+		// Root-level filters like $[?(@.field==value)] require array input to work correctly.
+		if !aggregate && jsonpath.IsRootLevelFilter(expression) {
+			aggregate = true
 		}
 
 		var result string
