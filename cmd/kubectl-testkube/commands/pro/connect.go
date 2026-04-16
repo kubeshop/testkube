@@ -148,8 +148,7 @@ func NewConnectCmd() *cobra.Command {
 					exportPath, exportErr = client.ExportExecutions(exportDir, exportSince)
 					if exportErr != nil {
 						var httpStatusErr *apiclient.HTTPStatusError
-						is413 := errors.As(exportErr, &httpStatusErr) && httpStatusErr.StatusCode == http.StatusRequestEntityTooLarge
-						if is413 {
+						if errors.As(exportErr, &httpStatusErr) && httpStatusErr.StatusCode == http.StatusRequestEntityTooLarge {
 							spinner.Fail("Export archive exceeds the server size limit. Use the --since flag to limit the export to recent executions, e.g.: --since 2025-01-01")
 						} else {
 							spinner.Fail(fmt.Sprintf("Data export failed: %s", exportErr))
