@@ -95,7 +95,7 @@ execution:
       autoCreate: true
       ## Use an external service account for executions
       name: ""
-      ## Extra annotations for the auto-created execution service account in default namespace
+      ## Extra annotations for the auto-created execution service account
       annotations: {}
   ## Allow run in other namespaces
   additionalNamespaces:
