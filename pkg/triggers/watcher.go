@@ -432,7 +432,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				newDeployment.Namespace, newDeployment.Name,
 			)
 			causes := diffDeployments(oldDeployment, newDeployment)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newDeployment.ObjectMeta, newDeployment, testtrigger.ResourceDeployment, withCauses(causes), withConditionsGetter(getConditions(newDeployment)))
+			event := s.newWatcherEvent(testtrigger.EventModified, &newDeployment.ObjectMeta, newDeployment, testtrigger.ResourceDeployment, withCauses(causes), withConditionsGetter(getConditions(newDeployment)), withOldObject(oldDeployment))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update deployment event: %v", err)
 			}
@@ -503,7 +503,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 				"trigger service: watcher component: emiting event: statefulset %s/%s updated",
 				newStatefulSet.Namespace, newStatefulSet.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newStatefulSet.ObjectMeta, newStatefulSet, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(newStatefulSet)))
+			event := s.newWatcherEvent(testtrigger.EventModified, &newStatefulSet.ObjectMeta, newStatefulSet, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(newStatefulSet)), withOldObject(oldStatefulSet))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update statefulset event: %v", err)
 			}
@@ -574,7 +574,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 				"trigger service: watcher component: emiting event: daemonset %s/%s updated",
 				newDaemonSet.Namespace, newDaemonSet.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newDaemonSet.ObjectMeta, newDaemonSet, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(newDaemonSet)))
+			event := s.newWatcherEvent(testtrigger.EventModified, &newDaemonSet.ObjectMeta, newDaemonSet, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(newDaemonSet)), withOldObject(oldDaemonSet))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update daemonset event: %v", err)
 			}
@@ -652,7 +652,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 				newService.Namespace, newService.Name,
 			)
 			event := s.newWatcherEvent(testtrigger.EventModified, &newService.ObjectMeta, newService, testtrigger.ResourceService,
-				withConditionsGetter(getConditions(newService)), withAddressGetter(getAddrress(newService)))
+				withConditionsGetter(getConditions(newService)), withAddressGetter(getAddrress(newService)), withOldObject(oldService))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update service event: %v", err)
 			}
@@ -719,7 +719,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 				"trigger service: watcher component: emiting event: ingress %s/%s updated",
 				oldIngress.Namespace, newIngress.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newIngress.ObjectMeta, newIngress, testtrigger.ResourceIngress)
+			event := s.newWatcherEvent(testtrigger.EventModified, &newIngress.ObjectMeta, newIngress, testtrigger.ResourceIngress, withOldObject(oldIngress))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update ingress event: %v", err)
 			}
@@ -956,7 +956,7 @@ func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEvent
 				"trigger service: watcher component: emiting event: config map %s/%s updated",
 				oldConfigMap.Namespace, newConfigMap.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newConfigMap.ObjectMeta, newConfigMap, testtrigger.ResourceConfigMap)
+			event := s.newWatcherEvent(testtrigger.EventModified, &newConfigMap.ObjectMeta, newConfigMap, testtrigger.ResourceConfigMap, withOldObject(oldConfigMap))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update config map event: %v", err)
 			}
