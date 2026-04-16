@@ -431,11 +431,13 @@ func TestExportExecutionsHandler_MultipleWorkflowSequences(t *testing.T) {
 }
 
 func TestExportExecutionsHandler_BudgetCappedLogRead(t *testing.T) {
-	// The execution metadata compresses to ~190 bytes in the gzip stream.
-	// With maxSize=300, there is some budget left for the log, but the
-	// large log (1000 bytes) will exceed it. The log read is capped to
-	// remaining+1 bytes via LimitReader — when that capped data is written
-	// to the tar archive, buf.Len() exceeds maxSize and 413 is returned.
+	// A single execution's JSON metadata + tar/gzip overhead occupies
+	// roughly 190–200 compressed bytes (measured empirically; varies with
+	// field content). With maxSize=300 there is budget left for the log,
+	// but the large log (1000 bytes) will exceed it. The log read is
+	// capped to remaining+1 bytes via LimitReader — when that capped
+	// data is written to the tar archive, buf.Len() exceeds maxSize
+	// and 413 is returned.
 	app, ctrl, mockRepo, mockOutput := setupExportTestServer(t, 300)
 	defer ctrl.Finish()
 
