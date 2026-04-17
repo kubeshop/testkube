@@ -391,12 +391,21 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	settings := map[string]string{
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
-		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
 		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
 		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
 		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
-		"postgresql.primary.replicaCount":     fmt.Sprintf("%d", options.PostgresReplicas),
+	}
+
+	if options.MinioReplicas > 0 {
+		settings["testkube-api.minio.replicas"] = fmt.Sprintf("%d", options.MinioReplicas)
+	}
+
+	if options.MongoReplicas > 0 {
+		settings["mongodb.replicas"] = fmt.Sprintf("%d", options.MongoReplicas)
+	}
+
+	if options.PostgresReplicas > 0 {
+		settings["postgresql.primary.replicaCount"] = fmt.Sprintf("%d", options.PostgresReplicas)
 	}
 
 	if options.Values != "" {
