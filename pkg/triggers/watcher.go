@@ -12,9 +12,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -30,6 +32,7 @@ import (
 
 	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/operator/informers/externalversions"
 	testkubeexecutorinformerv1 "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/executor/v1"
@@ -100,9 +103,18 @@ func (s *Service) runWatcher(ctx context.Context) {
 	s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
 	s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 
+	if s.dynamicClient != nil {
+		mapper := newCachedRESTMapper(s.clientset.Discovery())
+		s.dynamicManager = newDynamicInformerManager(s.dynamicClient, mapper, s.watcherNamespaces, s.logger)
+	}
+
 	stopChan := make(chan struct{})
 	defer func() {
 		close(stopChan)
+		if s.dynamicManager != nil {
+			s.dynamicManager.stopAll()
+			s.dynamicManager = nil
+		}
 		s.informers = nil
 		s.logger.Infof("trigger service: instance %s in cluster %s released lease", s.identifier, s.clusterID)
 	}()
@@ -156,6 +168,15 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.startCloudTestTriggerWatch(ctx, stop)
 	} else {
 		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	}
+
+	// WorkflowTrigger v2 (testworkflows.testkube.io/v1): no generated clientset yet,
+	// so watch via the dynamic informer scoped to the Testkube namespace.
+	if s.dynamicClient != nil {
+		wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, s.testkubeNamespace, nil)
+		wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
+		wtInformer.AddEventHandler(s.workflowTriggerEventHandler())
+		go wtInformer.Run(stop)
 	}
 	if watchWebhookResources {
 		s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
@@ -274,6 +295,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			Labels:            t.Labels,
 			Selector:          t.Selector,
 			Resource:          t.Resource,
+			ResourceRef:       t.ResourceRef,
 			ResourceSelector:  t.ResourceSelector,
 			Event:             t.Event,
 			ConditionSpec:     t.ConditionSpec,
@@ -824,6 +846,62 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTrigger, t.Name))
 		},
 	}
+}
+
+// workflowTriggerEventHandler handles add/update/delete events on the
+// WorkflowTrigger v2 CRD (testworkflows.testkube.io/v1), converting the
+// unstructured payload to the typed CRD and forwarding to the service's
+// add/update/remove methods which keep status + dynamic-informer state in sync.
+func (s *Service) workflowTriggerEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			t, err := unstructuredToWorkflowTrigger(obj)
+			if err != nil {
+				s.logger.Errorf("failed to process create WorkflowTrigger event: %v", err)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: adding WorkflowTrigger %s/%s", t.Namespace, t.Name)
+			s.addWorkflowTrigger(t)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTrigger, t.Name))
+		},
+		UpdateFunc: func(_, newObj any) {
+			t, err := unstructuredToWorkflowTrigger(newObj)
+			if err != nil {
+				s.logger.Errorf("failed to process update WorkflowTrigger event: %v", err)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: updating WorkflowTrigger %s/%s", t.Namespace, t.Name)
+			s.updateWorkflowTrigger(t)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTrigger, t.Name))
+		},
+		DeleteFunc: func(obj any) {
+			t, err := unstructuredToWorkflowTrigger(obj)
+			if err != nil {
+				if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+					t, err = unstructuredToWorkflowTrigger(tombstone.Obj)
+				}
+				if err != nil {
+					s.logger.Errorf("failed to process delete WorkflowTrigger event: %v", err)
+					return
+				}
+			}
+			s.logger.Debugf("trigger service: watcher component: deleting WorkflowTrigger %s/%s", t.Namespace, t.Name)
+			s.removeWorkflowTrigger(t)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTrigger, t.Name))
+		},
+	}
+}
+
+func unstructuredToWorkflowTrigger(obj any) (*workflowtriggersv1.WorkflowTrigger, error) {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type %T", obj)
+	}
+	var t workflowtriggersv1.WorkflowTrigger
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &t); err != nil {
+		return nil, fmt.Errorf("convert unstructured to WorkflowTrigger: %w", err)
+	}
+	return &t, nil
 }
 
 func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
