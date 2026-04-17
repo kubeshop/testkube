@@ -2,7 +2,6 @@ package pro
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pterm/pterm"
 
@@ -15,7 +14,11 @@ import (
 
 func NewDisconnectCmd() *cobra.Command {
 
-	var opts common.HelmOptions
+	var (
+		minioReplicas    int
+		mongoReplicas    int
+		postgresReplicas int
+	)
 
 	cmd := &cobra.Command{
 		Use:     "disconnect",
@@ -34,18 +37,6 @@ func NewDisconnectCmd() *cobra.Command {
 				return
 			}
 
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
-
-			info, err := client.GetServerInfo()
-			firstInstall := err != nil && strings.Contains(err.Error(), "not found")
-			if err != nil && !firstInstall {
-				ui.Failf("Can't get Testkube cluster information: %s", err.Error())
-			}
-			var apiContext string
-			if actx, ok := contextDescription[info.Context]; ok {
-				apiContext = actx
-			}
 			var clusterContext string
 			var cliErr *common.CLIError
 			if cfg.ContextType == config.ContextTypeKubeconfig {
@@ -53,12 +44,11 @@ func NewDisconnectCmd() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 
-			// TODO: implement context info
 			ui.H1("Current status of your Testkube instance")
 
 			summary := [][]string{
 				{"Testkube mode"},
-				{"Context", apiContext},
+				{"Context", contextDescription["cloud"]},
 				{"Kubectl context", clusterContext},
 				{"Namespace", cfg.Namespace},
 				{ui.Separator, ""},
@@ -87,71 +77,46 @@ func NewDisconnectCmd() *cobra.Command {
 				}
 			}
 
-			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
+			ns := cfg.Namespace
 
-			// ensure only the originally-active database is re-enabled in the Helm release;
-			// the user-supplied --no-mongo/--no-postgres flags take precedence if set explicitly
-			dbType := cfg.CloudContext.DatabaseType
-			switch dbType {
-			case config.DatabaseTypeMongoDB:
-				// original DB was Mongo – keep Postgres disabled unless the user explicitly enabled it
-				if !cmd.Flags().Changed("no-postgres") {
-					opts.NoPostgres = true
-				}
-			case config.DatabaseTypePostgreSQL:
-				// original DB was Postgres – keep Mongo disabled and re-enable Postgres
-				if !cmd.Flags().Changed("no-mongo") {
-					opts.NoMongo = true
-				}
-				if !cmd.Flags().Changed("no-postgres") {
-					opts.NoPostgres = false
-				}
-			default:
-				// DatabaseType was never recorded (cluster connected before this feature).
-				// Old clusters only ever had MongoDB, so keep PostgreSQL disabled.
-				if !cmd.Flags().Changed("no-postgres") {
-					opts.NoPostgres = true
-				}
+			// Scale up the OSS API server that was scaled down by pro connect
+			spinner := ui.NewSpinner("Scaling up testkube-api-server")
+			if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-api-server", 1); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale up testkube-api-server: %s", scaleErr))
+			} else {
+				spinner.Success()
 			}
 
-			if cliErr := common.HelmUpgradeOrInstallTestkube(opts); cliErr != nil {
-				spinner.Fail()
-				common.HandleCLIError(cliErr)
-			}
-
-			spinner.Success()
-
-			// restore support services that were scaled down by pro connect
-			if opts.MinioReplicas > 0 {
+			// Restore support services that were scaled down by pro connect
+			if minioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
-				if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas); scaleErr != nil {
+				if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-minio-testkube", minioReplicas); scaleErr != nil {
 					spinner.Fail(fmt.Sprintf("Failed to scale up MinIO: %s", scaleErr))
 				} else {
 					spinner.Success()
 				}
 			}
-			// restore NATS StatefulSet that was scaled down on connect;
-			// the OSS testkube-api needs it for internal event communication
 			spinner = ui.NewSpinner("Scaling up NATS")
-			if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-nats", 1); scaleErr != nil {
+			if _, scaleErr := common.KubectlScaleStatefulSet(ns, "testkube-nats", 1); scaleErr != nil {
 				spinner.Fail(fmt.Sprintf("Failed to scale up NATS: %s", scaleErr))
 			} else {
 				spinner.Success()
 			}
+			dbType := cfg.CloudContext.DatabaseType
 			switch dbType {
 			case config.DatabaseTypeMongoDB:
-				if opts.MongoReplicas > 0 {
+				if mongoReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up MongoDB")
-					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr != nil {
+					if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-mongodb", mongoReplicas); scaleErr != nil {
 						spinner.Fail(fmt.Sprintf("Failed to scale up MongoDB: %s", scaleErr))
 					} else {
 						spinner.Success()
 					}
 				}
 			case config.DatabaseTypePostgreSQL:
-				if opts.PostgresReplicas > 0 {
+				if postgresReplicas > 0 {
 					spinner = ui.NewSpinner("Scaling up PostgreSQL")
-					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql", opts.PostgresReplicas); scaleErr != nil {
+					if _, scaleErr := common.KubectlScaleStatefulSet(ns, "testkube-postgresql", postgresReplicas); scaleErr != nil {
 						spinner.Fail(fmt.Sprintf("Failed to scale up PostgreSQL: %s", scaleErr))
 					} else {
 						spinner.Success()
@@ -161,13 +126,13 @@ func NewDisconnectCmd() *cobra.Command {
 				// no database type recorded – fall back to attempting both so that clusters
 				// connected before this feature was introduced are handled gracefully;
 				// errors are silently ignored because only one DB is actually deployed
-				if opts.MongoReplicas > 0 {
-					if _, scaleErr := common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas); scaleErr == nil {
+				if mongoReplicas > 0 {
+					if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-mongodb", mongoReplicas); scaleErr == nil {
 						ui.Success("Scaled up MongoDB")
 					}
 				}
-				if opts.PostgresReplicas > 0 {
-					if _, scaleErr := common.KubectlScaleStatefulSet(opts.Namespace, "testkube-postgresql", opts.PostgresReplicas); scaleErr == nil {
+				if postgresReplicas > 0 {
+					if _, scaleErr := common.KubectlScaleStatefulSet(ns, "testkube-postgresql", postgresReplicas); scaleErr == nil {
 						ui.Success("Scaled up PostgreSQL")
 					}
 				}
@@ -189,10 +154,8 @@ func NewDisconnectCmd() *cobra.Command {
 		},
 	}
 
-	// populate options
-	common.PopulateHelmFlags(cmd, &opts)
-	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 1, "MinIO replicas")
-	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 1, "MongoDB replicas")
-	cmd.Flags().IntVar(&opts.PostgresReplicas, "postgres-replicas", 1, "PostgreSQL replicas")
+	cmd.Flags().IntVar(&minioReplicas, "minio-replicas", 1, "MinIO replicas to restore on disconnect")
+	cmd.Flags().IntVar(&mongoReplicas, "mongo-replicas", 1, "MongoDB replicas to restore on disconnect")
+	cmd.Flags().IntVar(&postgresReplicas, "postgres-replicas", 1, "PostgreSQL replicas to restore on disconnect")
 	return cmd
 }

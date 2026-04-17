@@ -90,7 +90,8 @@ func NewConnectCmd() *cobra.Command {
 				{"Kubectl context", clusterContext},
 				{"Namespace", cfg.Namespace},
 				{ui.Separator, ""},
-				{"Testkube support services not needed anymore"},
+				{"Testkube services not needed anymore"},
+				{"API Server", "Stopped and scaled down, (not deleted)"},
 				{"MinIO     ", "Stopped and scaled down, (not deleted)"},
 				{"NATS      ", "Stopped and scaled down, (not deleted)"},
 			}
@@ -210,9 +211,16 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			// Scale down old support services in the original namespace
+			// Scale down the OSS API server and support services in the original namespace —
+			// they are no longer needed while the runner is connected to the control plane
 			origNs := cfg.Namespace
-			spinner := ui.NewSpinner("Scaling down MinIO")
+			spinner := ui.NewSpinner("Scaling down testkube-api-server")
+			if _, scaleErr := common.KubectlScaleDeployment(origNs, "testkube-api-server", 0); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale down testkube-api-server: %s", scaleErr))
+			} else {
+				spinner.Success()
+			}
+			spinner = ui.NewSpinner("Scaling down MinIO")
 			if _, scaleErr := common.KubectlScaleDeployment(origNs, "testkube-minio-testkube", 0); scaleErr != nil {
 				spinner.Fail(fmt.Sprintf("Failed to scale down MinIO: %s", scaleErr))
 			} else {
