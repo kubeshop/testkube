@@ -475,8 +475,8 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 		updated = true
 	}
-	if options.Master.URIs.Api != "" {
-		cfg.CloudContext.AgentUri = options.Master.URIs.Api
+	if options.Master.URIs.Agent != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Agent
 		updated = true
 	}
 	if options.Master.URIs.Ui != "" {
@@ -485,6 +485,9 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		if options.Master.URIs.Agent == "" {
+			cfg.CloudContext.AgentUri = options.Master.URIs.Api
+		}
 		updated = true
 	}
 	if options.Master.URIs.Auth != "" {
