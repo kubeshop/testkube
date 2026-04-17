@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kubeshop/testkube/pkg/mcp/tools"
 )
 
 func TestAPIClient_ReadArtifact_UsesArtifactLookupPost(t *testing.T) {
@@ -57,7 +59,7 @@ func TestAPIClient_ReadArtifact_UsesArtifactLookupPost(t *testing.T) {
 		EnvId:           envID,
 	}, server.Client())
 
-	body, err := client.ReadArtifact(context.Background(), executionID, artifactID)
+	body, err := client.ReadArtifact(context.Background(), executionID, artifactID, tools.ArtifactReadParams{})
 	require.NoError(t, err)
 	assert.Equal(t, content, body)
 }
