@@ -131,6 +131,9 @@ func NewConnectCmd() *cobra.Command {
 			if masterOpts.Master.URIs.Api == "" {
 				ui.Failf("You need pass valid uri api to connect to Pro")
 			}
+			if masterOpts.Master.URIs.Agent == "" {
+				ui.Failf("You need pass valid uri agent to connect to Pro")
+			}
 
 			// Export execution data before switching to agent mode
 			var exportPath string
