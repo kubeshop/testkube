@@ -1218,6 +1218,34 @@ func TestService_match_v1Scenarios(t *testing.T) {
 			},
 			shouldFire: true,
 		},
+		"custom resource via resourceRef matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-ref", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+						Group:   "kafka.strimzi.io",
+						Version: "v1beta2",
+						Kind:    "KafkaTopic",
+					},
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "my-topic",
+						Namespace: "kafka",
+					},
+					Event:     testtriggersv1.TestTriggerEventCreated,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "kafka-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "kafkatopic",
+				name:      "my-topic",
+				Namespace: "kafka",
+				eventType: "created",
+			},
+			shouldFire: true,
+		},
 		"configmap matches": {
 			trigger: &testtriggersv1.TestTrigger{
 				ObjectMeta: metav1.ObjectMeta{Name: "t10", Namespace: "default"},
@@ -1408,7 +1436,11 @@ func TestService_match_v1Scenarios(t *testing.T) {
 
 			err := s.match(context.Background(), tc.event)
 			require.NoError(t, err)
-			assert.Equal(t, tc.shouldFire, fired, "trigger should%s have fired", map[bool]string{true: "", false: " not"}[tc.shouldFire])
+			if tc.shouldFire {
+				assert.True(t, fired, "trigger should have fired")
+			} else {
+				assert.False(t, fired, "trigger should not have fired")
+			}
 		})
 	}
 }

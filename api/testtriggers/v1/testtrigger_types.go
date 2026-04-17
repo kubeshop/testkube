@@ -48,6 +48,9 @@ type TestTriggerSpec struct {
 	// For which Resource do we monitor Event which triggers an Action on certain conditions
 	// +optional
 	Resource TestTriggerResource `json:"resource,omitempty"`
+	// ResourceRef specifies a resource to watch by Group/Version/Kind.
+	// Works for any K8s resource including CRDs. Mutually exclusive with Resource.
+	ResourceRef *TestTriggerResourceRef `json:"resourceRef,omitempty"`
 	// ResourceSelector identifies which Kubernetes Objects should be watched
 	// +optional
 	ResourceSelector TestTriggerSelector `json:"resourceSelector,omitempty"`
@@ -89,6 +92,16 @@ const (
 	TestTriggerResourceEvent       TestTriggerResource = "event"
 	TestTriggerResourceConfigMap   TestTriggerResource = "configmap"
 )
+
+// TestTriggerResourceRef identifies a K8s resource by GVK.
+type TestTriggerResourceRef struct {
+	// Group is the API group (empty for core resources like Pod, Service).
+	Group string `json:"group,omitempty"`
+	// Version is the API version.
+	Version string `json:"version,omitempty"`
+	// Kind is the resource kind (e.g. Deployment, KafkaTopic).
+	Kind string `json:"kind"`
+}
 
 // TestTriggerEvent defines event for test triggers
 // +kubebuilder:validation:Enum=created;modified;deleted;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted

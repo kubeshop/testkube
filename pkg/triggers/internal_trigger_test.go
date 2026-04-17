@@ -216,6 +216,41 @@ func TestConvertV2ToInternal(t *testing.T) {
 	assert.Equal(t, 5_000_000_000, int(it.Delay.Nanoseconds()))
 }
 
+func TestConvertV1ToInternal_ResourceRef(t *testing.T) {
+	v1 := &testtriggersv1.TestTrigger{
+		Spec: testtriggersv1.TestTriggerSpec{
+			Resource: testtriggersv1.TestTriggerResourceDeployment,
+			ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+				Group:   "kafka.strimzi.io",
+				Version: "v1beta2",
+				Kind:    "KafkaTopic",
+			},
+			Event: testtriggersv1.TestTriggerEventCreated,
+		},
+	}
+	it := convertV1ToInternal(v1)
+	assert.Equal(t, "kafka.strimzi.io", it.ResourceGroup)
+	assert.Equal(t, "v1beta2", it.ResourceVersion)
+	assert.Equal(t, "KafkaTopic", it.ResourceKind)
+}
+
+func TestConvertV1ToInternal_ResourceRefOnly(t *testing.T) {
+	v1 := &testtriggersv1.TestTrigger{
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+				Group:   "argoproj.io",
+				Version: "v1alpha1",
+				Kind:    "Rollout",
+			},
+			Event: testtriggersv1.TestTriggerEventModified,
+		},
+	}
+	it := convertV1ToInternal(v1)
+	assert.Equal(t, "argoproj.io", it.ResourceGroup)
+	assert.Equal(t, "v1alpha1", it.ResourceVersion)
+	assert.Equal(t, "Rollout", it.ResourceKind)
+}
+
 func TestConvertV1ToInternal_AllResourceTypes(t *testing.T) {
 	tests := map[string]struct {
 		resource      testtriggersv1.TestTriggerResource
