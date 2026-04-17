@@ -143,8 +143,11 @@ func NewConnectCmd() *cobra.Command {
 				exportDir, mkErr = os.MkdirTemp("", "testkube-export-*")
 				if mkErr != nil {
 					spinner.Fail(fmt.Sprintf("Could not create temp directory for export: %s", mkErr))
+					ui.Warn("Your data will remain in the existing database and can be exported later.")
+					if ok := ui.Confirm("Continue connecting without export?"); !ok {
+						return
+					}
 				} else {
-					defer os.RemoveAll(exportDir)
 					var exportErr error
 					exportPath, exportErr = client.ExportExecutions(exportDir, exportSince)
 					if exportErr != nil {
@@ -159,6 +162,9 @@ func NewConnectCmd() *cobra.Command {
 							return
 						}
 						exportPath = ""
+						// Clean up the temp dir since no archive is being kept
+						os.RemoveAll(exportDir)
+						exportDir = ""
 					} else {
 						spinner.Success()
 					}
@@ -279,9 +285,15 @@ func NewConnectCmd() *cobra.Command {
 					} else {
 						spinner.Fail(fmt.Sprintf("Failed to import execution data: %s", importErr))
 					}
+					ui.Warn(fmt.Sprintf("The exported archive is available at: %s", exportPath))
+					ui.Info("You can retry the import manually later.")
 				} else {
 					spinner.Success()
 					ui.Info("Archive processing is done asynchronously and can take up to a few minutes depending on the number of executions.")
+					// Clean up the temp directory only after a successful import
+					if exportDir != "" {
+						os.RemoveAll(exportDir)
+					}
 				}
 			}
 
