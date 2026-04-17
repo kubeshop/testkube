@@ -132,6 +132,13 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		it.ResourceKind = string(t.Spec.Resource)
 	}
 
+	// If ResourceRef is set, use it directly (overrides Resource enum)
+	if t.Spec.ResourceRef != nil {
+		it.ResourceGroup = t.Spec.ResourceRef.Group
+		it.ResourceVersion = t.Spec.ResourceRef.Version
+		it.ResourceKind = t.Spec.ResourceRef.Kind
+	}
+
 	// Resource selector
 	sel := t.Spec.ResourceSelector
 	it.ResourceName = sel.Name
