@@ -62,7 +62,7 @@ to find items containing all terms`
 
 	// Artifact tool descriptions
 	ListArtifactsDescription = "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."
-	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."
+	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. Default (no params): returns the first 100 lines. Maximum: 200 lines per request. Parameters: startLine/endLine (1-based range, e.g. startLine=101 endLine=200 for the second page), grep (case-insensitive substring filter, returns matches with 3 lines of context). Note: grep and startLine/endLine are mutually exclusive -- when grep is specified, startLine/endLine are ignored. For binary artifacts (images, etc.), returns a summary message instead of content. Always work in chunks of 100-200 lines when paging -- never request unbounded ranges."
 
 	// Other tool descriptions
 	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions. Supports deep linking to a specific step within an execution's log view using stepRef (obtained from execution info signatures) and executionTab (defaults to 'log-output' when stepRef is provided)."
@@ -86,10 +86,10 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
 - resourceGroup: Filter by resource group slug
-- limit: Maximum workflows to fetch (default 50, max 100)
-- aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
+- limit: Page size for fetching workflows (default 50). All matching workflows are fetched across multiple pages
+- aggregate: If true, combines all workflows into an array and applies expression once; if false (default), applies expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
-Returns: Map of workflow name → extracted values. Missing paths return empty arrays, not errors.`
+Returns: Map of workflow name → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
 
 	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
 Fetches execution JSON data and extracts data matching the path.
@@ -110,10 +110,10 @@ Parameters:
 - since: Filter executions after this time (ISO 8601)
 - startDate: Filter executions on or after this date/time (YYYY-MM-DD or RFC 3339)
 - endDate: Filter executions on or before this date/time (YYYY-MM-DD or RFC 3339)
-- limit: Maximum executions to fetch (default 50, max 100)
-- aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
+- limit: Page size for fetching executions (default 50). All matching executions are fetched across multiple pages
+- aggregate: If true, combines all executions into an array and applies expression once; if false (default), applies expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
-Returns: Map of execution ID → extracted values. Missing paths return empty arrays, not errors.`
+Returns: Map of execution ID → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
 
 	// WorkflowTemplate tool descriptions
 	TemplateNameDescription = `The name of the workflow template. Template names are lowercase alphanumeric with dashes 

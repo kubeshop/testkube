@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -35,10 +36,8 @@ func ListArtifacts(client ArtifactLister) (tool mcp.Tool, handler server.ToolHan
 	return tool, handler
 }
 
-const MaxLines = 100
-
 type ArtifactReader interface {
-	ReadArtifact(ctx context.Context, executionId, filename string) (string, error)
+	ReadArtifact(ctx context.Context, executionId, filename string, params ArtifactReadParams) (string, error)
 }
 
 func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHandlerFunc) {
@@ -46,6 +45,15 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 		mcp.WithDescription(ReadArtifactDescription),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
 		mcp.WithString("fileName", mcp.Required(), mcp.Description(FilenameDescription)),
+		mcp.WithString("startLine",
+			mcp.Description("1-based line number to start reading from. Use with endLine for a range."),
+		),
+		mcp.WithString("endLine",
+			mcp.Description("1-based line number to stop reading at (inclusive). Use with startLine for a range."),
+		),
+		mcp.WithString("grep",
+			mcp.Description("Case-insensitive substring filter. Returns matching lines with 3 lines of context."),
+		),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -59,7 +67,25 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		content, err := client.ReadArtifact(ctx, executionId, fileName)
+		var params ArtifactReadParams
+		params.Grep = request.GetString("grep", "")
+
+		if s := request.GetString("startLine", ""); s != "" {
+			v, err := strconv.Atoi(s)
+			if err != nil || v <= 0 {
+				return mcp.NewToolResultError(fmt.Sprintf("startLine must be a positive integer, got %q", s)), nil
+			}
+			params.StartLine = v
+		}
+		if s := request.GetString("endLine", ""); s != "" {
+			v, err := strconv.Atoi(s)
+			if err != nil || v <= 0 {
+				return mcp.NewToolResultError(fmt.Sprintf("endLine must be a positive integer, got %q", s)), nil
+			}
+			params.EndLine = v
+		}
+
+		content, err := client.ReadArtifact(ctx, executionId, fileName, params)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error reading artifact: %v", err)), nil
 		}
@@ -68,9 +94,8 @@ func ReadArtifact(client ArtifactReader) (tool mcp.Tool, handler server.ToolHand
 			return mcp.NewToolResultText(fmt.Sprintf("Artifact \"%s\" is empty or not found", fileName)), nil
 		}
 
-		// Limit content to max lines
-		limitedContent := LimitContentToLines(content, MaxLines)
-		return mcp.NewToolResultText(limitedContent), nil
+		result := ProcessArtifact([]byte(content), fileName, params)
+		return mcp.NewToolResultText(result), nil
 	}
 
 	return tool, handler

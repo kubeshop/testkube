@@ -686,3 +686,69 @@ func TestEstimateSize(t *testing.T) {
 		assert.Greater(t, largeSize, smallSize)
 	})
 }
+
+func TestQuery_RootLevelFilterOnArray(t *testing.T) {
+	workflows := []any{
+		map[string]any{
+			"metadata": map[string]any{"name": "wf-silent"},
+			"spec": map[string]any{
+				"execution": map[string]any{"silent": true},
+			},
+		},
+		map[string]any{
+			"metadata": map[string]any{"name": "wf-normal"},
+			"spec": map[string]any{
+				"steps": []any{map[string]any{"name": "test"}},
+			},
+		},
+		map[string]any{
+			"metadata": map[string]any{"name": "wf-loud"},
+			"spec": map[string]any{
+				"execution": map[string]any{"silent": false},
+			},
+		},
+	}
+
+	t.Run("filter by boolean true", func(t *testing.T) {
+		result, err := Query("$[?(@.spec.execution.silent==true)].metadata.name", workflows)
+		require.NoError(t, err)
+		assert.Equal(t, []any{"wf-silent"}, result)
+	})
+
+	t.Run("filter by boolean false", func(t *testing.T) {
+		result, err := Query("$[?(@.spec.execution.silent==false)].metadata.name", workflows)
+		require.NoError(t, err)
+		assert.Equal(t, []any{"wf-loud"}, result)
+	})
+
+	t.Run("filter returns full matching objects", func(t *testing.T) {
+		result, err := Query("$[?(@.spec.execution.silent==true)]", workflows)
+		require.NoError(t, err)
+		require.Len(t, result, 1)
+		m, ok := result[0].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "wf-silent", m["metadata"].(map[string]any)["name"])
+	})
+
+	t.Run("filter with no matches returns empty", func(t *testing.T) {
+		result, err := Query("$[?(@.spec.execution.silent=='yes')]", workflows)
+		require.NoError(t, err)
+		assert.Empty(t, result)
+	})
+}
+
+func TestQuery_RootLevelFilterOnMap(t *testing.T) {
+	// Documents the ojg limitation: root-level filters on a map iterate the map's
+	// values instead of matching the object as a whole, so the filter never matches.
+	// This is why IsRootLevelFilter exists to auto-switch to aggregate mode.
+	workflow := map[string]any{
+		"metadata": map[string]any{"name": "wf-silent"},
+		"spec": map[string]any{
+			"execution": map[string]any{"silent": true},
+		},
+	}
+
+	result, err := Query("$[?(@.spec.execution.silent==true)].metadata.name", workflow)
+	require.NoError(t, err)
+	assert.Empty(t, result, "root-level filter on a single map returns empty due to ojg behavior")
+}
