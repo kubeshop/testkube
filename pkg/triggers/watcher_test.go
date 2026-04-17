@@ -46,6 +46,8 @@ func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 	go service.runWatcher(ctx)
 
 	require.Eventually(t, func() bool {
+		service.informersMu.RLock()
+		defer service.informersMu.RUnlock()
 		return service.informers != nil
 	}, time.Second, 10*time.Millisecond)
 
@@ -57,6 +59,8 @@ func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
 		_, ok := service.triggerStatus[newStatusKey(namespace, "test-trigger")]
 		return ok
 	}, time.Second, 10*time.Millisecond)
@@ -65,6 +69,8 @@ func TestService_runWatcher_createsAndDeletesTrigger(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
 		return len(service.triggerStatus) == 0
 	}, time.Second, 10*time.Millisecond)
 }
@@ -85,6 +91,8 @@ func TestService_runWatcher_stopsOnContextCancellation(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
+		service.informersMu.RLock()
+		defer service.informersMu.RUnlock()
 		return service.informers != nil
 	}, time.Second, 10*time.Millisecond)
 
@@ -97,6 +105,8 @@ func TestService_runWatcher_stopsOnContextCancellation(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
+		service.informersMu.RLock()
+		defer service.informersMu.RUnlock()
 		return service.informers == nil
 	}, time.Second, 10*time.Millisecond)
 }

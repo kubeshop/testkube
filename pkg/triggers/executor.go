@@ -36,7 +36,14 @@ const (
 type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
 
 func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger) error {
+	// If the trigger was removed between match() and execute() (concurrent
+	// DeleteFunc), the status entry is gone — don't fire executions for a
+	// trigger that's no longer registered.
 	status := s.getStatusForTrigger(t)
+	if status == nil {
+		s.logger.Debugf("trigger service: executor component: trigger %s/%s no longer tracked, skipping execution", t.Namespace, t.Name)
+		return nil
+	}
 
 	variables := map[string]testkube.Variable{
 		"WATCHER_EVENT_RESOURCE": {

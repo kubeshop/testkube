@@ -28,6 +28,18 @@ func newTriggerStatus(testTrigger *testtriggersv1.TestTrigger) *triggerStatus {
 	return &triggerStatus{testTrigger: testTrigger}
 }
 
+func (s *triggerStatus) getTestTrigger() *testtriggersv1.TestTrigger {
+	s.RLock()
+	defer s.RUnlock()
+	return s.testTrigger
+}
+
+func (s *triggerStatus) setTestTrigger(t *testtriggersv1.TestTrigger) {
+	s.Lock()
+	defer s.Unlock()
+	s.testTrigger = t
+}
+
 func (s *triggerStatus) hasActiveTests() bool {
 	defer s.RUnlock()
 
@@ -82,5 +94,7 @@ func (s *triggerStatus) done() {
 
 func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *triggerStatus {
 	key := newStatusKey(t.Namespace, t.Name)
+	s.triggerStatusMu.RLock()
+	defer s.triggerStatusMu.RUnlock()
 	return s.triggerStatus[key]
 }

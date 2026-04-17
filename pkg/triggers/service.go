@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -37,8 +38,21 @@ const (
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
+// Service watches Kubernetes resources and TestTrigger CRDs in-cluster,
+// matches events against registered triggers, and executes actions.
+//
+// Lock ordering (deadlock-avoidance): acquire triggerStatusMu before any
+// per-status RWMutex. snapshotStatuses takes triggerStatusMu and releases it
+// before callers touch a status's lock; updateTrigger holds triggerStatusMu
+// across the inner setTestTrigger call. Never acquire the status lock first
+// and then triggerStatusMu.
 type Service struct {
+	// informers is set on lease acquisition (runWatcher) and nil-ed on
+	// release. informersMu guards the pointer so tests and external callers
+	// can safely observe it; runInformers reads it from the same goroutine
+	// that writes it and therefore doesn't need the lock.
 	informers                     *k8sInformers
+	informersMu                   sync.RWMutex
 	identifier                    string
 	clusterID                     string
 	agentName                     string
@@ -49,7 +63,12 @@ type Service struct {
 	defaultProbesCheckTimeout     time.Duration
 	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
+	// triggerStatus is mutated by informer event handlers (addTrigger /
+	// updateTrigger / removeTrigger) and read by the matcher and scraper.
+	// triggerStatusMu guards the map itself; concurrency on individual
+	// *triggerStatus values is handled by their own embedded sync.RWMutex.
 	triggerStatus                 map[statusKey]*triggerStatus
+	triggerStatusMu               sync.RWMutex
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
 	testWorkflowsClient           testworkflowclient.TestWorkflowClient
@@ -204,19 +223,43 @@ func (s *Service) Run(ctx context.Context) {
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
 	key := newStatusKey(t.Namespace, t.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
 	s.triggerStatus[key] = newTriggerStatus(t)
 }
 
 func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
 	key := newStatusKey(target.Namespace, target.Name)
-	if s.triggerStatus[key] != nil {
-		s.triggerStatus[key].testTrigger = target
-	} else {
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	existing := s.triggerStatus[key]
+	if existing == nil {
 		s.triggerStatus[key] = newTriggerStatus(target)
+		return
 	}
+	existing.setTestTrigger(target)
 }
 
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
 	key := newStatusKey(target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
 	delete(s.triggerStatus, key)
+}
+
+type triggerStatusEntry struct {
+	key    statusKey
+	status *triggerStatus
+}
+
+// snapshotStatuses returns a shallow copy so match/scraper can iterate without
+// blocking high-volume informer events on the map lock.
+func (s *Service) snapshotStatuses() []triggerStatusEntry {
+	s.triggerStatusMu.RLock()
+	defer s.triggerStatusMu.RUnlock()
+	out := make([]triggerStatusEntry, 0, len(s.triggerStatus))
+	for k, v := range s.triggerStatus {
+		out = append(out, triggerStatusEntry{key: k, status: v})
+	}
+	return out
 }

@@ -98,12 +98,17 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 
 func (s *Service) runWatcher(ctx context.Context) {
 	s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
-	s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	informers := newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	s.informersMu.Lock()
+	s.informers = informers
+	s.informersMu.Unlock()
 
 	stopChan := make(chan struct{})
 	defer func() {
 		close(stopChan)
+		s.informersMu.Lock()
 		s.informers = nil
+		s.informersMu.Unlock()
 		s.logger.Infof("trigger service: instance %s in cluster %s released lease", s.identifier, s.clusterID)
 	}()
 

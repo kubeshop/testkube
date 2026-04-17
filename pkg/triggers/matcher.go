@@ -32,8 +32,9 @@ var (
 )
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
-	for _, status := range s.triggerStatus {
-		t := status.testTrigger
+	for _, entry := range s.snapshotStatuses() {
+		status := entry.status
+		t := status.getTestTrigger()
 		if t.Spec.Disabled {
 			continue
 		}
@@ -101,7 +102,6 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			}
 		}
 
-		status := s.getStatusForTrigger(t)
 		if t.Spec.ConcurrencyPolicy == testtriggersv1.TestTriggerConcurrencyPolicyForbid {
 			if status.hasActiveTests() {
 				s.logger.Infof(
