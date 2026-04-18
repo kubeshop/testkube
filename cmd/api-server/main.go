@@ -70,6 +70,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	cloudwebhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient"
@@ -412,6 +413,8 @@ func main() {
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
+	workflowTriggersClient := workflowtriggerclient.NewKubernetesWorkflowTriggerClient(kubeClient, cfg.TestkubeNamespace)
+
 	if !useCloudTestTriggers && !cfg.DisableTestTriggers && shouldUseCloudTestTriggers(proContext) {
 		log.DefaultLogger.Infow("control plane is source of truth, using cloud test trigger client")
 		testTriggersClient = cloudTestTriggersClient
@@ -682,6 +685,7 @@ func main() {
 		webhooksClient,
 		webhookTemplatesClient,
 		testTriggersClient,
+		workflowTriggersClient,
 		testWorkflowsClient,
 		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
 		testWorkflowTemplatesClient,

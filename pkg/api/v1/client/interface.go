@@ -16,6 +16,7 @@ type Client interface {
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
 	TestTriggerAPI
+	WorkflowTriggerAPI
 	SharedAPI
 }
 
@@ -48,6 +49,16 @@ type TestTriggerAPI interface {
 	ListTestTriggers(selector string) (testTriggers []testkube.TestTrigger, err error)
 	DeleteTestTrigger(name string) (err error)
 	DeleteTestTriggers(selector string) (err error)
+}
+
+// WorkflowTriggerAPI describes workflow trigger (v2) api methods
+type WorkflowTriggerAPI interface {
+	CreateWorkflowTrigger(trigger testkube.WorkflowTrigger) (testkube.WorkflowTrigger, error)
+	UpdateWorkflowTrigger(trigger testkube.WorkflowTrigger) (testkube.WorkflowTrigger, error)
+	GetWorkflowTrigger(name string) (testkube.WorkflowTrigger, error)
+	ListWorkflowTriggers(selector string) ([]testkube.WorkflowTrigger, error)
+	DeleteWorkflowTrigger(name string) error
+	DeleteWorkflowTriggers(selector string) error
 }
 
 // ConfigAPI describes config api methods
@@ -146,7 +157,7 @@ type FilterTestWorkflowExecutionOptions struct {
 type Gettable interface {
 	testkube.Webhook | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
-		testkube.TestTrigger | testkube.WebhookTemplate | map[string][]string
+		testkube.TestTrigger | testkube.WorkflowTrigger | testkube.WebhookTemplate | map[string][]string
 }
 
 // Executable is an interface of executable objects

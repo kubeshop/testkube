@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/workflowtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -39,6 +40,7 @@ func NewGetCmd() *cobra.Command {
 
 	cmd.AddCommand(webhooks.NewGetWebhookCmd())
 	cmd.AddCommand(webhooktemplates.NewGetWebhookTemplateCmd())
+	cmd.AddCommand(workflowtriggers.NewGetWorkflowTriggerCmd())
 	cmd.AddCommand(artifacts.NewListArtifactsCmd())
 	cmd.AddCommand(context.NewGetContextCmd())
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowsCmd())
