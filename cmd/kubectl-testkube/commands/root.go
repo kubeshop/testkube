@@ -72,6 +72,7 @@ func init() {
 	RootCmd.AddCommand(NewProCmd())
 	RootCmd.AddCommand(NewMcpCmd())
 	RootCmd.AddCommand(NewDockerCmd())
+	RootCmd.AddCommand(NewMarketplaceCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
 	RootCmd.AddCommand(NewInstallCmd())
 
