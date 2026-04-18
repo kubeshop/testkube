@@ -168,6 +168,32 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  verify-generated-protobuf:
+    name: Verify generated protobuf
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+            bin/tooling
+          key: ${{ runner.os }}-go-verify-proto-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-verify-proto-
+
+      - name: Verify generated protobuf
+        run: make verify-protobuf-generated
+
   verify-generated-crds:
     name: Verify generated CRDs
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'

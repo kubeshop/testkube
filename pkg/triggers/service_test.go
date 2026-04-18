@@ -19,7 +19,7 @@ func TestService_addTrigger(t *testing.T) {
 	s.addTrigger(&testTrigger)
 
 	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-1")
+	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.NotNil(t, s.triggerStatus[key])
 }
 
@@ -41,9 +41,9 @@ func TestService_removeTrigger(t *testing.T) {
 	s.removeTrigger(&testTrigger1)
 
 	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-2")
+	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-2")
 	assert.NotNil(t, s.triggerStatus[key])
-	deletedKey := newStatusKey("testkube", "test-trigger-1")
+	deletedKey := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.Nil(t, s.triggerStatus[deletedKey])
 }
 
@@ -65,6 +65,6 @@ func TestService_updateTrigger(t *testing.T) {
 	s.updateTrigger(&newTestTrigger)
 
 	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-1")
+	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.NotNil(t, s.triggerStatus[key])
 }
