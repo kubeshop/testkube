@@ -33,6 +33,8 @@ import (
 	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	workflowtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/workflowtriggers"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/operator/informers/externalversions"
 	testkubeexecutorinformerv1 "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/executor/v1"
@@ -170,9 +172,12 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	}
 
-	// WorkflowTrigger v2 (testworkflows.testkube.io/v1): no generated clientset yet,
-	// so watch via the dynamic informer scoped to the Testkube namespace.
-	if s.dynamicClient != nil {
+	// WorkflowTrigger v2: when on control plane, poll via the cloud client.
+	// Otherwise watch the CRD directly via a dynamic informer scoped to the
+	// Testkube namespace (no generated clientset yet for this CRD).
+	if s.testTriggerControlPlane && s.workflowTriggersClient != nil {
+		s.startCloudWorkflowTriggerWatch(ctx, stop)
+	} else if s.dynamicClient != nil {
 		wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, s.testkubeNamespace, nil)
 		wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
 		wtInformer.AddEventHandler(s.workflowTriggerEventHandler())
@@ -280,6 +285,63 @@ func (s *Service) canWatchWebhookResources() bool {
 		hasWebhooks, hasWebhookTemplates,
 	)
 	return false
+}
+
+// startCloudWorkflowTriggerWatch mirrors startCloudTestTriggerWatch for v2: it
+// periodically lists WorkflowTriggers from the control plane, diffs against the
+// previous snapshot, and calls the same add/update/remove methods used by the
+// local dynamic informer so the agent's triggerStatus map stays authoritative
+// regardless of source.
+func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-chan struct{}) {
+	ticker := time.NewTicker(s.scraperInterval)
+
+	prev := map[string]testkube.WorkflowTrigger{}
+
+	syncOnce := func() {
+		list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, s.testkubeNamespace)
+		if err != nil {
+			s.logger.Errorf("trigger service: error listing cloud workflow triggers: %v", err)
+			return
+		}
+
+		curr := map[string]testkube.WorkflowTrigger{}
+		for _, t := range list {
+			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+			curr[key] = t
+
+			crd := workflowtriggersmapper.MapAPIToCRD(t)
+			if old, ok := prev[key]; !ok {
+				s.addWorkflowTrigger(&crd)
+				s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTrigger, t.Name))
+			} else if !cmp.Equal(old, t) {
+				s.updateWorkflowTrigger(&crd)
+				s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTrigger, t.Name))
+			}
+		}
+
+		for key, t := range prev {
+			if _, ok := curr[key]; !ok {
+				crd := workflowtriggersmapper.MapAPIToCRD(t)
+				s.removeWorkflowTrigger(&crd)
+				s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTrigger, t.Name))
+			}
+		}
+
+		prev = curr
+	}
+
+	go func() {
+		defer ticker.Stop()
+		syncOnce()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				syncOnce()
+			}
+		}
+	}()
 }
 
 // startCloudTestTriggerWatch periodically lists triggers and mirrors changes into local handlers

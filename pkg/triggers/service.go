@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	testkubeclientsetv1 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
@@ -58,6 +59,7 @@ type Service struct {
 	testKubeClientset             testkubeclientsetv1.Interface
 	testWorkflowsClient           testworkflowclient.TestWorkflowClient
 	testTriggersClient            testtriggerclient.TestTriggerClient
+	workflowTriggersClient        workflowtriggerclient.WorkflowTriggerClient
 	logger                        *zap.SugaredLogger
 	httpClient                    http.HttpClient
 	eventsBus                     bus.Bus
@@ -186,6 +188,15 @@ func WithWatcherNamespaces(namespaces string) Option {
 func WithTestTriggerControlPlane(enabled bool) Option {
 	return func(s *Service) {
 		s.testTriggerControlPlane = enabled
+	}
+}
+
+// WithWorkflowTriggersClient injects the client used for control-plane-backed
+// WorkflowTrigger v2 polling. When set alongside testTriggerControlPlane=true
+// the dynamic informer is bypassed and this client is polled instead.
+func WithWorkflowTriggersClient(client workflowtriggerclient.WorkflowTriggerClient) Option {
+	return func(s *Service) {
+		s.workflowTriggersClient = client
 	}
 }
 

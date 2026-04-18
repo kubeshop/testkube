@@ -413,11 +413,18 @@ func main() {
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
-	workflowTriggersClient := workflowtriggerclient.NewKubernetesWorkflowTriggerClient(kubeClient, cfg.TestkubeNamespace)
+	var workflowTriggersClient workflowtriggerclient.WorkflowTriggerClient
+	if useCloudTestTriggers {
+		// Cloud-connected mode: poll control plane for v2 triggers, same as TestTrigger.
+		workflowTriggersClient = workflowtriggerclient.NewCloudWorkflowTriggerClient(client)
+	} else {
+		workflowTriggersClient = workflowtriggerclient.NewKubernetesWorkflowTriggerClient(kubeClient, cfg.TestkubeNamespace)
+	}
 
 	if !useCloudTestTriggers && !cfg.DisableTestTriggers && shouldUseCloudTestTriggers(proContext) {
 		log.DefaultLogger.Infow("control plane is source of truth, using cloud test trigger client")
 		testTriggersClient = cloudTestTriggersClient
+		workflowTriggersClient = workflowtriggerclient.NewCloudWorkflowTriggerClient(client)
 		useCloudTestTriggers = true
 	}
 	useTestTriggerControlPlane := cfg.TestTriggerControlPlane || useCloudTestTriggers
@@ -789,6 +796,7 @@ func main() {
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),
+			triggers.WithWorkflowTriggersClient(workflowTriggersClient),
 			triggers.WithEventLabels(cfg.EventLabels),
 			triggers.WithDynamicClient(dynamicClient),
 		)

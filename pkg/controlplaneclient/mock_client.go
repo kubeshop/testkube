@@ -99,6 +99,20 @@ func (mr *MockClientMockRecorder) CreateTestWorkflowTemplate(ctx, environmentId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).CreateTestWorkflowTemplate), ctx, environmentId, workflow)
 }
 
+// CreateWorkflowTrigger mocks base method.
+func (m *MockClient) CreateWorkflowTrigger(ctx context.Context, environmentId string, trigger testkube.WorkflowTrigger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorkflowTrigger", ctx, environmentId, trigger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateWorkflowTrigger indicates an expected call of CreateWorkflowTrigger.
+func (mr *MockClientMockRecorder) CreateWorkflowTrigger(ctx, environmentId, trigger any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkflowTrigger", reflect.TypeOf((*MockClient)(nil).CreateWorkflowTrigger), ctx, environmentId, trigger)
+}
+
 // DeleteAllTestTriggers mocks base method.
 func (m *MockClient) DeleteAllTestTriggers(ctx context.Context, environmentId, namespace string) (uint32, error) {
 	m.ctrl.T.Helper()
@@ -112,6 +126,21 @@ func (m *MockClient) DeleteAllTestTriggers(ctx context.Context, environmentId, n
 func (mr *MockClientMockRecorder) DeleteAllTestTriggers(ctx, environmentId, namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllTestTriggers", reflect.TypeOf((*MockClient)(nil).DeleteAllTestTriggers), ctx, environmentId, namespace)
+}
+
+// DeleteAllWorkflowTriggers mocks base method.
+func (m *MockClient) DeleteAllWorkflowTriggers(ctx context.Context, environmentId, namespace string) (uint32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllWorkflowTriggers", ctx, environmentId, namespace)
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteAllWorkflowTriggers indicates an expected call of DeleteAllWorkflowTriggers.
+func (mr *MockClientMockRecorder) DeleteAllWorkflowTriggers(ctx, environmentId, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllWorkflowTriggers", reflect.TypeOf((*MockClient)(nil).DeleteAllWorkflowTriggers), ctx, environmentId, namespace)
 }
 
 // DeleteTestTrigger mocks base method.
@@ -199,6 +228,35 @@ func (m *MockClient) DeleteTestWorkflowsByLabels(ctx context.Context, environmen
 func (mr *MockClientMockRecorder) DeleteTestWorkflowsByLabels(ctx, environmentId, labels any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTestWorkflowsByLabels", reflect.TypeOf((*MockClient)(nil).DeleteTestWorkflowsByLabels), ctx, environmentId, labels)
+}
+
+// DeleteWorkflowTrigger mocks base method.
+func (m *MockClient) DeleteWorkflowTrigger(ctx context.Context, environmentId, name, namespace string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkflowTrigger", ctx, environmentId, name, namespace)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkflowTrigger indicates an expected call of DeleteWorkflowTrigger.
+func (mr *MockClientMockRecorder) DeleteWorkflowTrigger(ctx, environmentId, name, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkflowTrigger", reflect.TypeOf((*MockClient)(nil).DeleteWorkflowTrigger), ctx, environmentId, name, namespace)
+}
+
+// DeleteWorkflowTriggersByLabels mocks base method.
+func (m *MockClient) DeleteWorkflowTriggersByLabels(ctx context.Context, environmentId, selector, namespace string) (uint32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkflowTriggersByLabels", ctx, environmentId, selector, namespace)
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteWorkflowTriggersByLabels indicates an expected call of DeleteWorkflowTriggersByLabels.
+func (mr *MockClientMockRecorder) DeleteWorkflowTriggersByLabels(ctx, environmentId, selector, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkflowTriggersByLabels", reflect.TypeOf((*MockClient)(nil).DeleteWorkflowTriggersByLabels), ctx, environmentId, selector, namespace)
 }
 
 // FinishExecutionResult mocks base method.
@@ -335,6 +393,21 @@ func (mr *MockClientMockRecorder) GetTestWorkflowTemplate(ctx, environmentId, na
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).GetTestWorkflowTemplate), ctx, environmentId, name)
 }
 
+// GetWorkflowTrigger mocks base method.
+func (m *MockClient) GetWorkflowTrigger(ctx context.Context, environmentId, name, namespace string) (*testkube.WorkflowTrigger, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkflowTrigger", ctx, environmentId, name, namespace)
+	ret0, _ := ret[0].(*testkube.WorkflowTrigger)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkflowTrigger indicates an expected call of GetWorkflowTrigger.
+func (mr *MockClientMockRecorder) GetWorkflowTrigger(ctx, environmentId, name, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkflowTrigger", reflect.TypeOf((*MockClient)(nil).GetWorkflowTrigger), ctx, environmentId, name, namespace)
+}
+
 // InitExecution mocks base method.
 func (m *MockClient) InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error {
 	m.ctrl.T.Helper()
@@ -462,6 +535,20 @@ func (m *MockClient) ListWebhooks(ctx context.Context, environmentId string, opt
 func (mr *MockClientMockRecorder) ListWebhooks(ctx, environmentId, options, namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWebhooks", reflect.TypeOf((*MockClient)(nil).ListWebhooks), ctx, environmentId, options, namespace)
+}
+
+// ListWorkflowTriggers mocks base method.
+func (m *MockClient) ListWorkflowTriggers(ctx context.Context, environmentId string, options ListWorkflowTriggerOptions, namespace string) WorkflowTriggersReader {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkflowTriggers", ctx, environmentId, options, namespace)
+	ret0, _ := ret[0].(WorkflowTriggersReader)
+	return ret0
+}
+
+// ListWorkflowTriggers indicates an expected call of ListWorkflowTriggers.
+func (mr *MockClientMockRecorder) ListWorkflowTriggers(ctx, environmentId, options, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkflowTriggers", reflect.TypeOf((*MockClient)(nil).ListWorkflowTriggers), ctx, environmentId, options, namespace)
 }
 
 // ProcessExecutionNotificationRequests mocks base method.
@@ -632,6 +719,20 @@ func (m *MockClient) UpdateTestWorkflowTemplate(ctx context.Context, environment
 func (mr *MockClientMockRecorder) UpdateTestWorkflowTemplate(ctx, environmentId, workflow any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).UpdateTestWorkflowTemplate), ctx, environmentId, workflow)
+}
+
+// UpdateWorkflowTrigger mocks base method.
+func (m *MockClient) UpdateWorkflowTrigger(ctx context.Context, environmentId string, trigger testkube.WorkflowTrigger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWorkflowTrigger", ctx, environmentId, trigger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateWorkflowTrigger indicates an expected call of UpdateWorkflowTrigger.
+func (mr *MockClientMockRecorder) UpdateWorkflowTrigger(ctx, environmentId, trigger any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowTrigger", reflect.TypeOf((*MockClient)(nil).UpdateWorkflowTrigger), ctx, environmentId, trigger)
 }
 
 // WatchRunnerRequests mocks base method.
