@@ -78,6 +78,14 @@ service TestKubeCloudAPI {
     rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate) {
       option deprecated = true;
     };
+    // -- Workflow Triggers (v2)
+    rpc GetWorkflowTrigger(GetWorkflowTriggerRequest) returns (GetWorkflowTriggerResponse);
+    rpc ListWorkflowTriggers(ListWorkflowTriggersRequest) returns (stream WorkflowTriggerListItem);
+    rpc CreateWorkflowTrigger(CreateWorkflowTriggerRequest) returns (CreateWorkflowTriggerResponse);
+    rpc UpdateWorkflowTrigger(UpdateWorkflowTriggerRequest) returns (UpdateWorkflowTriggerResponse);
+    rpc DeleteWorkflowTrigger(DeleteWorkflowTriggerRequest) returns (DeleteWorkflowTriggerResponse);
+    rpc DeleteAllWorkflowTriggers(DeleteAllWorkflowTriggersRequest) returns (DeleteAllWorkflowTriggersResponse);
+    rpc DeleteWorkflowTriggersByLabels(DeleteWorkflowTriggersByLabelsRequest) returns (DeleteWorkflowTriggersByLabelsResponse);
     // -- Webhook
     rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse) {
       option deprecated = true;
@@ -831,6 +839,70 @@ message TestTriggerUpdate {
   google.protobuf.Timestamp timestamp = 2;
   UpdateType type = 3;
   bytes resource = 4; // TestTrigger
+}
+
+// CRD Synchronisation -- Workflow Triggers (v2)
+
+message GetWorkflowTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger (flat REST shape, JSON-encoded)
+}
+
+message ListWorkflowTriggersRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message WorkflowTriggerListItem {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message CreateWorkflowTriggerRequest {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message CreateWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message UpdateWorkflowTriggerRequest {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message UpdateWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message DeleteWorkflowTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteWorkflowTriggerResponse {}
+
+message DeleteAllWorkflowTriggersRequest {
+  string namespace = 1;
+}
+
+message DeleteAllWorkflowTriggersResponse {
+  uint32 count = 1;
+}
+
+message DeleteWorkflowTriggersByLabelsRequest {
+  string selector = 1;
+  string namespace = 2;
+}
+
+message DeleteWorkflowTriggersByLabelsResponse {
+  uint32 count = 1;
 }
 
 // CRD Synchronisation -- Webhooks

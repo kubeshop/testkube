@@ -1491,12 +1491,13 @@ func TestService_match_V1_ExecutionFilter(t *testing.T) {
 	}
 }
 
-// TestService_match_V1_AllBuiltinResources_CaseFolded is a regression guard
-// for the case-insensitive resource comparison in matchInternalResource. The
-// internalTrigger stores canonical PascalCase (from builtinTypes, e.g. "Pod")
-// while the watcher dispatches events with the v1 lowercase enum value
-// (e.g. "pod"). strings.EqualFold bridges the two. Each of the 8 v1 resource
-// types must match when the event's resource field equals the enum value.
+// TestService_match_V1_AllBuiltinResources_CaseFolded guards the case-folded
+// comparison in matchInternalResource that lets v1 TestTriggers keep firing
+// after the internalTrigger refactor. convertV1ToInternal stores the canonical
+// PascalCase Kind (e.g. "Pod") in internalTrigger; the v1 watcher dispatches
+// events with the lowercase enum value (e.g. "pod"). strings.EqualFold bridges
+// the two. If EqualFold is replaced with == by a future refactor, all 8
+// subtests here must fail.
 func TestService_match_V1_AllBuiltinResources_CaseFolded(t *testing.T) {
 	resources := []testtriggersv1.TestTriggerResource{
 		testtriggersv1.TestTriggerResourcePod,

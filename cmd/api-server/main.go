@@ -73,6 +73,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	cloudwebhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
@@ -412,9 +413,18 @@ func main() {
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
+	var workflowTriggersClient workflowtriggerclient.WorkflowTriggerClient
+	if useCloudTestTriggers {
+		// Cloud-connected mode: poll control plane for v2 triggers, same as TestTrigger.
+		workflowTriggersClient = workflowtriggerclient.NewCloudWorkflowTriggerClient(client)
+	} else {
+		workflowTriggersClient = workflowtriggerclient.NewKubernetesWorkflowTriggerClient(kubeClient, cfg.TestkubeNamespace)
+	}
+
 	if !useCloudTestTriggers && !cfg.DisableTestTriggers && shouldUseCloudTestTriggers(proContext) {
 		log.DefaultLogger.Infow("control plane is source of truth, using cloud test trigger client")
 		testTriggersClient = cloudTestTriggersClient
+		workflowTriggersClient = workflowtriggerclient.NewCloudWorkflowTriggerClient(client)
 		useCloudTestTriggers = true
 	}
 	useTestTriggerControlPlane := cfg.TestTriggerControlPlane || useCloudTestTriggers
@@ -682,6 +692,7 @@ func main() {
 		webhooksClient,
 		webhookTemplatesClient,
 		testTriggersClient,
+		workflowTriggersClient,
 		testWorkflowsClient,
 		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
 		testWorkflowTemplatesClient,
@@ -786,6 +797,7 @@ func main() {
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),
+			triggers.WithWorkflowTriggersClient(workflowTriggersClient),
 			triggers.WithEventLabels(cfg.EventLabels),
 			triggers.WithDynamicClient(dynamicClient),
 		)

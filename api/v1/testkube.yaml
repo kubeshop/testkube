@@ -7975,6 +7975,7 @@ components:
         - testsuite
         - executor
         - trigger
+        - workflowtrigger
         - webhook
         - webhooktemplate
         - testexecution

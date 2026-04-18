@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	testkubeclientsetv1 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -77,6 +78,7 @@ type Service struct {
 	testKubeClientset             testkubeclientsetv1.Interface
 	testWorkflowsClient           testworkflowclient.TestWorkflowClient
 	testTriggersClient            testtriggerclient.TestTriggerClient
+	workflowTriggersClient        workflowtriggerclient.WorkflowTriggerClient
 	logger                        *zap.SugaredLogger
 	httpClient                    http.HttpClient
 	eventsBus                     bus.Bus
@@ -208,6 +210,15 @@ func WithTestTriggerControlPlane(enabled bool) Option {
 	}
 }
 
+// WithWorkflowTriggersClient injects the client used for control-plane-backed
+// WorkflowTrigger v2 polling. When set alongside testTriggerControlPlane=true
+// the dynamic informer is bypassed and this client is polled instead.
+func WithWorkflowTriggersClient(client workflowtriggerclient.WorkflowTriggerClient) Option {
+	return func(s *Service) {
+		s.workflowTriggersClient = client
+	}
+}
+
 func WithEventLabels(eventLabels map[string]string) Option {
 	return func(s *Service) {
 		s.eventLabels = eventLabels
@@ -233,7 +244,7 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
+func (s *Service) addTrigger(ctx context.Context, t *testtriggersv1.TestTrigger) {
 	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
@@ -243,10 +254,10 @@ func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
 		return
 	}
 	s.triggerStatus[key] = newTriggerStatusFromV1(t)
-	s.ensureDynamicInformerForTrigger(t, key)
+	s.ensureDynamicInformerForTrigger(ctx, t, key)
 }
 
-func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
+func (s *Service) updateTrigger(ctx context.Context, target *testtriggersv1.TestTrigger) {
 	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
@@ -270,11 +281,11 @@ func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
 		s.triggerStatus[key].trigger = newInternal
 
 		if gvrChanged {
-			s.ensureDynamicInformerForTrigger(target, key)
+			s.ensureDynamicInformerForTrigger(ctx, target, key)
 		}
 	} else {
 		s.triggerStatus[key] = newTriggerStatusFromV1(target)
-		s.ensureDynamicInformerForTrigger(target, key)
+		s.ensureDynamicInformerForTrigger(ctx, target, key)
 	}
 }
 
@@ -289,7 +300,9 @@ func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
 // ensureDynamicInformerForTrigger starts a dynamic informer if the trigger
 // uses resourceRef pointing to a custom resource. Built-in types already
 // have typed informers and must NOT get a dynamic informer to avoid double-firing.
-func (s *Service) ensureDynamicInformerForTrigger(t *testtriggersv1.TestTrigger, key statusKey) {
+// The caller's ctx is propagated so in-flight probe/condition waits cancel
+// when the trigger service loses its lease.
+func (s *Service) ensureDynamicInformerForTrigger(ctx context.Context, t *testtriggersv1.TestTrigger, key statusKey) {
 	if t.Spec.ResourceRef == nil {
 		return
 	}
@@ -311,7 +324,6 @@ func (s *Service) ensureDynamicInformerForTrigger(t *testtriggersv1.TestTrigger,
 		return
 	}
 
-	ctx := context.Background()
 	s.dynamicManager.ensureInformer(ctx, gvr, string(key), s.dynamicEventHandler(ctx, gvr))
 }
 
@@ -340,7 +352,7 @@ func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key s
 	s.dynamicManager.releaseInformer(gvr, string(key))
 }
 
-func (s *Service) addWorkflowTrigger(t *workflowtriggersv1.WorkflowTrigger) {
+func (s *Service) addWorkflowTrigger(ctx context.Context, t *workflowtriggersv1.WorkflowTrigger) {
 	key := newStatusKey(triggerSourceV2, t.Namespace, t.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
@@ -349,10 +361,10 @@ func (s *Service) addWorkflowTrigger(t *workflowtriggersv1.WorkflowTrigger) {
 		return
 	}
 	s.triggerStatus[key] = &triggerStatus{trigger: convertV2ToInternal(t)}
-	s.ensureDynamicInformerForWorkflowTrigger(t, key)
+	s.ensureDynamicInformerForWorkflowTrigger(ctx, t, key)
 }
 
-func (s *Service) updateWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigger) {
+func (s *Service) updateWorkflowTrigger(ctx context.Context, target *workflowtriggersv1.WorkflowTrigger) {
 	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
@@ -371,11 +383,11 @@ func (s *Service) updateWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigg
 		s.triggerStatus[key].trigger = newInternal
 
 		if gvrChanged {
-			s.ensureDynamicInformerForWorkflowTrigger(target, key)
+			s.ensureDynamicInformerForWorkflowTrigger(ctx, target, key)
 		}
 	} else {
 		s.triggerStatus[key] = &triggerStatus{trigger: convertV2ToInternal(target)}
-		s.ensureDynamicInformerForWorkflowTrigger(target, key)
+		s.ensureDynamicInformerForWorkflowTrigger(ctx, target, key)
 	}
 }
 
@@ -393,7 +405,9 @@ func (s *Service) removeWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigg
 // ensureDynamicInformerForWorkflowTrigger starts a dynamic informer for the
 // custom resource kind the trigger watches. Built-in types already have typed
 // informers in the trigger service; skipping them here prevents double-firing.
-func (s *Service) ensureDynamicInformerForWorkflowTrigger(t *workflowtriggersv1.WorkflowTrigger, key statusKey) {
+// The caller's ctx is propagated so in-flight probe/condition waits cancel
+// when the trigger service loses its lease.
+func (s *Service) ensureDynamicInformerForWorkflowTrigger(ctx context.Context, t *workflowtriggersv1.WorkflowTrigger, key statusKey) {
 	if t.Spec.Watch == nil || t.Spec.Watch.Resource.Kind == "" {
 		return
 	}
@@ -413,7 +427,6 @@ func (s *Service) ensureDynamicInformerForWorkflowTrigger(t *workflowtriggersv1.
 		s.logger.Errorf("trigger service: failed to resolve GVR for %s: %v", t.Spec.Watch.Resource.Kind, err)
 		return
 	}
-	ctx := context.Background()
 	s.dynamicManager.ensureInformer(ctx, gvr, string(key), s.dynamicEventHandler(ctx, gvr))
 }
 
