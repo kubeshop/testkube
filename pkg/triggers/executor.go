@@ -13,11 +13,11 @@ import (
 	"k8s.io/client-go/util/jsonpath"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
-	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
@@ -33,9 +33,9 @@ const (
 	JsonPathPrefix        = "jsonpath="
 )
 
-type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
+type ExecutorF func(context.Context, *watcherEvent, *internalTrigger) error
 
-func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger) error {
+func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigger) error {
 	// If the trigger was removed between match() and execute() (concurrent
 	// DeleteFunc), the status entry is gone — don't fire executions for a
 	// trigger that's no longer registered.
@@ -68,11 +68,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		},
 	}
 
-	if t.Spec.Execution != ExecutionTestWorkflow && t.Spec.Execution != "" {
-		return errors.New("deprecated: please upgrade to test workflows")
-	}
-
-	testWorkflows, err := s.getTestWorkflows(t)
+	testWorkflows, err := s.getTestWorkflowsFromInternal(t)
 	if err != nil {
 		return err
 	}
@@ -88,61 +84,61 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 				execution.Config[variable.Name] = variable.Value
 			}
 
-			if t.Spec.ActionParameters != nil {
-				if len(t.Spec.ActionParameters.Tags) > 0 && execution.Tags == nil {
-					execution.Tags = make(map[string]string)
-				}
+			if len(t.Tags) > 0 {
+				execution.Tags = make(map[string]string)
+			}
 
-				var parameters = []struct {
-					name string
-					s    *map[string]string
-					d    *map[string]string
-				}{
-					{
-						"config",
-						&t.Spec.ActionParameters.Config,
-						&execution.Config,
-					},
-					{
-						"tag",
-						&t.Spec.ActionParameters.Tags,
-						&execution.Tags,
-					},
-				}
+			// Resolve config and tag values
+			var parameters = []struct {
+				name string
+				s    map[string]string
+				d    *map[string]string
+			}{
+				{"config", t.Config, &execution.Config},
+				{"tag", t.Tags, &execution.Tags},
+			}
 
-				for _, parameter := range parameters {
-					for key, value := range *parameter.s {
-						if strings.HasPrefix(value, JsonPathPrefix) {
-							s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s",
-								t.Namespace, t.Name, key, parameter.name, value)
+			// Build expression machine once, reuse for all config/tag keys
+			var exprMachine expressions.Machine
+			if t.Source == triggerSourceV2 {
+				exprMachine = buildEventExpressionMachine(e)
+			}
 
-							data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
-
-							if err != nil {
-								s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s error %v",
-									t.Namespace, t.Name, key, value, parameter.name, err)
-								continue
-							}
-
-							(*parameter.d)[key] = data
-						} else {
-							s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s",
-								t.Namespace, t.Name, key, parameter.name, value)
-							data, err := s.getTemplateData(e, value)
-							if err != nil {
-								s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s error %v",
-									t.Namespace, t.Name, key, value, parameter.name, err)
-								continue
-							}
-
-							(*parameter.d)[key] = string(data)
+			for _, parameter := range parameters {
+				for key, value := range parameter.s {
+					if t.Source == triggerSourceV2 {
+						// v2: use expression engine
+						resolved, err := resolveExpressionWithMachine(exprMachine, value)
+						if err != nil {
+							s.logger.Errorf("trigger service: executor component: trigger %s/%s resolving %s %s error %v",
+								t.Namespace, t.Name, parameter.name, key, err)
+							continue
 						}
+						(*parameter.d)[key] = resolved
+					} else if strings.HasPrefix(value, JsonPathPrefix) {
+						// v1: jsonpath= prefix
+						data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
+						if err != nil {
+							s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s error %v",
+								t.Namespace, t.Name, key, value, parameter.name, err)
+							continue
+						}
+						(*parameter.d)[key] = data
+					} else {
+						// v1: Go template
+						data, err := s.getTemplateData(e, value)
+						if err != nil {
+							s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s error %v",
+								t.Namespace, t.Name, key, value, parameter.name, err)
+							continue
+						}
+						(*parameter.d)[key] = string(data)
 					}
 				}
 			}
 
-			if t.Spec.ActionParameters != nil && t.Spec.ActionParameters.Target != nil {
-				if target := s.mapTargetKubeToGrpcWithEvent(e, t, t.Spec.ActionParameters.Target); target != nil {
+			if t.Target != nil {
+				if target := s.mapTargetKubeToGrpcWithEvent(e, t, t.Target); target != nil {
 					execution.Targets = []*cloud.ExecutionTarget{target}
 				}
 			}
@@ -156,13 +152,12 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(triggerstcl.GetRunningContext(t.Name), nil)
 	}
 
-	isDelayDefined := t.Spec.Delay != nil
-	if isDelayDefined {
+	if t.Delay != nil {
 		s.logger.Infof(
 			"trigger service: executor component: trigger %s/%s has delayed testworkflow execution configured for %f seconds",
-			t.Namespace, t.Name, t.Spec.Delay.Seconds(),
+			t.Namespace, t.Name, t.Delay.Seconds(),
 		)
-		time.Sleep(t.Spec.Delay.Duration)
+		time.Sleep(*t.Delay)
 	}
 	s.logger.Infof(
 		"trigger service: executor component: scheduling testworkflow executions for trigger %s/%s",
@@ -245,9 +240,56 @@ func (s *Service) getJsonPathDataFromEvent(e *watcherEvent, value string) (strin
 	return buf.String(), nil
 }
 
+// buildEventExpressionMachine creates a reusable expression machine for a watcher event.
+// Call once per execution, reuse across all config/tag value resolutions.
+func buildEventExpressionMachine(e *watcherEvent) expressions.Machine {
+	machine := expressions.NewMachine().
+		Register("resource", derefPtr(e.Object)).
+		Register("event", map[string]interface{}{
+			"type":      string(e.eventType),
+			"name":      e.name,
+			"namespace": e.Namespace,
+		}).
+		Register("agent", map[string]interface{}{
+			"name":   e.Agent.Name,
+			"labels": e.Agent.Labels,
+		})
+	if e.OldObject != nil {
+		machine.Register("oldResource", derefPtr(e.OldObject))
+	}
+	return expressions.CombinedMachines(expressions.StdLibMachine, machine)
+}
+
+// resolveExpressionWithMachine resolves a v2 expression value against a pre-built machine.
+func resolveExpressionWithMachine(machine expressions.Machine, value string) (string, error) {
+	compiled, err := expressions.CompileTemplate(value)
+	if err != nil {
+		return "", fmt.Errorf("compile expression %q: %w", value, err)
+	}
+
+	result, err := compiled.Resolve(machine)
+	if err != nil {
+		return "", fmt.Errorf("resolve expression %q: %w", value, err)
+	}
+
+	if result.Static() == nil {
+		return "", fmt.Errorf("expression %q could not be fully resolved", value)
+	}
+
+	if result.Static().IsNone() {
+		return "", fmt.Errorf("expression %q resolved to null", value)
+	}
+
+	val, err := result.Static().StringValue()
+	if err != nil {
+		return "", fmt.Errorf("expression %q: %w", value, err)
+	}
+	return val, nil
+}
+
 // mapTargetKubeToGrpcWithEvent converts a K8s Target into a gRPC ExecutionTarget,
 // resolving JSONPath (jsonpath=...) and Go templates using the watcher event object.
-func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *testtriggersv1.TestTrigger, src *commonv1.Target) *cloud.ExecutionTarget {
+func (s *Service) mapTargetKubeToGrpcWithEvent(e *watcherEvent, t *internalTrigger, src *commonv1.Target) *cloud.ExecutionTarget {
 	if src == nil {
 		return nil
 	}
@@ -335,26 +377,27 @@ func (s *Service) getEnvironmentId() string {
 	return ""
 }
 
-func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflowsv1.TestWorkflow, error) {
+func (s *Service) getTestWorkflowsFromInternal(t *internalTrigger) ([]testworkflowsv1.TestWorkflow, error) {
+	sel := t.WorkflowSelector
 	var testWorkflows []testworkflowsv1.TestWorkflow
-	if t.Spec.TestSelector.Name != "" {
-		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv3.TestWorkflow with name %s", t.Spec.TestSelector.Name)
 
-		testWorkflow, err := s.testWorkflowsClient.Get(context.Background(), s.getEnvironmentId(), t.Spec.TestSelector.Name)
+	if sel.Name != "" {
+		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with name %s", sel.Name)
+		testWorkflow, err := s.testWorkflowsClient.Get(context.Background(), s.getEnvironmentId(), sel.Name)
 		if err != nil {
 			return nil, err
 		}
 		testWorkflows = append(testWorkflows, *testworkflows.MapAPIToKube(testWorkflow))
 	}
 
-	if t.Spec.TestSelector.NameRegex != "" {
-		s.logger.Debugf("trigger service: executor component: fetching testworkflosv1.TestWorkflow with name regex %s", t.Spec.TestSelector.NameRegex)
+	if sel.NameRegex != "" {
+		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with name regex %s", sel.NameRegex)
 		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
 
-		re, err := regexp.Compile(t.Spec.TestSelector.NameRegex)
+		re, err := regexp.Compile(sel.NameRegex)
 		if err != nil {
 			return nil, err
 		}
@@ -366,13 +409,13 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 		}
 	}
 
-	if t.Spec.TestSelector.LabelSelector != nil {
-		if len(t.Spec.TestSelector.LabelSelector.MatchExpressions) > 0 {
+	if sel.LabelSelector != nil {
+		if len(sel.LabelSelector.MatchExpressions) > 0 {
 			return nil, errors.New("error creating selector from test resource label selector: MatchExpressions not supported")
 		}
-		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv1.TestWorkflow with label %s", t.Spec.TestSelector.LabelSelector.MatchLabels)
+		s.logger.Debugf("trigger service: executor component: fetching TestWorkflow with label %s", sel.LabelSelector.MatchLabels)
 		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{
-			Labels: t.Spec.TestSelector.LabelSelector.MatchLabels,
+			Labels: sel.LabelSelector.MatchLabels,
 		})
 		if err != nil {
 			return nil, err

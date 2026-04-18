@@ -1,0 +1,9 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// WorkflowTriggerId is the information required to
+// uniquely identify a WorkflowTrigger object.
+message WorkflowTriggerId {
+  string id = 1;
+}

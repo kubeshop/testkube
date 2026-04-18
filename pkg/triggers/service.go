@@ -42,10 +42,10 @@ const (
 // matches events against registered triggers, and executes actions.
 //
 // Lock ordering (deadlock-avoidance): acquire triggerStatusMu before any
-// per-status RWMutex. snapshotStatuses takes triggerStatusMu and releases it
-// before callers touch a status's lock; updateTrigger holds triggerStatusMu
-// across the inner setTestTrigger call. Never acquire the status lock first
-// and then triggerStatusMu.
+// per-status RWMutex. snapshotStatuses takes triggerStatusMu, copies each
+// status's trigger pointer into the returned entry, and releases the lock
+// before callers touch a status's own per-status lock. updateTrigger writes
+// the trigger pointer directly while holding triggerStatusMu.Lock().
 type Service struct {
 	// informers is set on lease acquisition (runWatcher) and nil-ed on
 	// release. informersMu guards the pointer so tests and external callers
@@ -222,26 +222,25 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
-	key := newStatusKey(t.Namespace, t.Name)
+	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
-	s.triggerStatus[key] = newTriggerStatus(t)
+	s.triggerStatus[key] = newTriggerStatusFromV1(t)
 }
 
 func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
-	existing := s.triggerStatus[key]
-	if existing == nil {
-		s.triggerStatus[key] = newTriggerStatus(target)
-		return
+	if s.triggerStatus[key] != nil {
+		s.triggerStatus[key].trigger = convertV1ToInternal(target)
+	} else {
+		s.triggerStatus[key] = newTriggerStatusFromV1(target)
 	}
-	existing.setTestTrigger(target)
 }
 
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
 	delete(s.triggerStatus, key)
@@ -250,6 +249,9 @@ func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
 type triggerStatusEntry struct {
 	key    statusKey
 	status *triggerStatus
+	// trigger is captured under triggerStatusMu so matcher reads don't race
+	// with updateTrigger's direct assignment to status.trigger.
+	trigger *internalTrigger
 }
 
 // snapshotStatuses returns a shallow copy so match/scraper can iterate without
@@ -259,7 +261,7 @@ func (s *Service) snapshotStatuses() []triggerStatusEntry {
 	defer s.triggerStatusMu.RUnlock()
 	out := make([]triggerStatusEntry, 0, len(s.triggerStatus))
 	for k, v := range s.triggerStatus {
-		out = append(out, triggerStatusEntry{key: k, status: v})
+		out = append(out, triggerStatusEntry{key: k, status: v, trigger: v.trigger})
 	}
 	return out
 }
