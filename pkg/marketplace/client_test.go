@@ -2,6 +2,7 @@ package marketplace
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -53,8 +54,33 @@ func TestClient_GetWorkflow(t *testing.T) {
 		t.Errorf("expected path p.yaml, got %q", got.Path)
 	}
 
-	if _, err := c.GetWorkflow(context.Background(), "nope"); err == nil {
-		t.Errorf("expected error for missing workflow")
+	_, err = c.GetWorkflow(context.Background(), "nope")
+	if err == nil {
+		t.Fatalf("expected error for missing workflow")
+	}
+	if !errors.Is(err, ErrWorkflowNotFound) {
+		t.Errorf("expected ErrWorkflowNotFound sentinel, got %v", err)
+	}
+}
+
+// TestClient_GetWorkflow_CatalogFetchErrorIsNotMisclassified guards against a
+// regression where a 404 from the catalog endpoint itself gets interpreted as
+// ErrWorkflowNotFound by string matching. Callers rely on errors.Is to
+// distinguish between "catalog unreachable" and "workflow missing".
+func TestClient_GetWorkflow_CatalogFetchErrorIsNotMisclassified(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("not found"))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(WithBaseURL(srv.URL))
+	_, err := c.GetWorkflow(context.Background(), "redis-connectivity")
+	if err == nil {
+		t.Fatal("expected error when catalog fetch returns 404")
+	}
+	if errors.Is(err, ErrWorkflowNotFound) {
+		t.Errorf("catalog fetch 404 must not be reported as ErrWorkflowNotFound, got %v", err)
 	}
 }
 

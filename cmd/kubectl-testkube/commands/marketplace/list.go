@@ -89,12 +89,15 @@ func (t workflowsTable) Table() ([]string, [][]string) {
 	return header, data
 }
 
+// truncate caps a string at max characters, counting by runes so multi-byte
+// UTF-8 sequences are never split mid-character.
 func truncate(s string, max int) string {
-	if max <= 0 || len(s) <= max {
+	runes := []rune(s)
+	if max <= 0 || len(runes) <= max {
 		return s
 	}
 	if max <= 3 {
-		return s[:max]
+		return string(runes[:max])
 	}
-	return s[:max-3] + "..."
+	return string(runes[:max-3]) + "..."
 }

@@ -20,11 +20,13 @@ type Workflow struct {
 
 // Parameter describes a single entry from a TestWorkflow's spec.config block.
 // Value starts equal to Default and is mutated as the user supplies overrides.
+// Field tags are explicit so that the marketplace CLI's JSON and YAML output
+// use stable lowercase names regardless of Go field naming.
 type Parameter struct {
-	Key         string
-	Default     string
-	Value       string
-	Type        string
-	Description string
-	Sensitive   bool
+	Key         string `json:"key" yaml:"key"`
+	Default     string `json:"default" yaml:"default"`
+	Value       string `json:"value" yaml:"value"`
+	Type        string `json:"type" yaml:"type"`
+	Description string `json:"description" yaml:"description"`
+	Sensitive   bool   `json:"sensitive" yaml:"sensitive"`
 }

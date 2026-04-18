@@ -64,7 +64,10 @@ const (
 	TKErrMarketplaceFetchFailed ErrorCode = "TKERR-1601"
 	// TKErrMarketplaceWorkflowNotFound is returned when the requested workflow is not present in the catalog.
 	TKErrMarketplaceWorkflowNotFound ErrorCode = "TKERR-1602"
-	// TKErrMarketplaceInvalidParameter is returned when a --set value cannot be parsed or references an unknown key.
+	// TKErrMarketplaceInvalidParameter is returned for any parameter-related
+	// failure: the workflow spec.config could not be parsed, a --set value
+	// is malformed or references an unknown key, or the parameter values
+	// could not be re-applied to the workflow YAML.
 	TKErrMarketplaceInvalidParameter ErrorCode = "TKERR-1603"
 )
 

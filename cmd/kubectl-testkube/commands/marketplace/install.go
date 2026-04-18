@@ -1,7 +1,7 @@
 package marketplace
 
 import (
-	"strings"
+	"errors"
 
 	"github.com/spf13/cobra"
 
@@ -32,13 +32,14 @@ TestWorkflow in the target namespace.`,
 
 			wf, err := client.GetWorkflow(cmd.Context(), workflowName)
 			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
+				if errors.Is(err, marketplace.ErrWorkflowNotFound) {
 					common.HandleCLIError(common.NewCLIError(
 						common.TKErrMarketplaceWorkflowNotFound,
 						"Workflow not found",
 						"",
 						err,
 					))
+					return
 				}
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrMarketplaceFetchFailed,
@@ -46,6 +47,7 @@ TestWorkflow in the target namespace.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			yamlBytes, err := client.GetWorkflowYAML(cmd.Context(), *wf)
@@ -56,6 +58,7 @@ TestWorkflow in the target namespace.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			params, err := marketplace.ExtractParameters(yamlBytes)
@@ -66,6 +69,7 @@ TestWorkflow in the target namespace.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			params, err = marketplace.ParseSetFlags(params, setFlags)
@@ -76,6 +80,7 @@ TestWorkflow in the target namespace.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			updated, err := marketplace.ApplyParameters(yamlBytes, params)
@@ -86,6 +91,7 @@ TestWorkflow in the target namespace.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			testworkflows.CreateOrUpdateFromBytes(cmd, updated, name, update, dryRun)

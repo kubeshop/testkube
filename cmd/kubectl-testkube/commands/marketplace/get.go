@@ -1,9 +1,9 @@
 package marketplace
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -42,13 +42,14 @@ and readme content for a marketplace TestWorkflow.`,
 
 			wf, err := client.GetWorkflow(cmd.Context(), name)
 			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
+				if errors.Is(err, marketplace.ErrWorkflowNotFound) {
 					common.HandleCLIError(common.NewCLIError(
 						common.TKErrMarketplaceWorkflowNotFound,
 						"Workflow not found",
 						"",
 						err,
 					))
+					return
 				}
 				common.HandleCLIError(common.NewCLIError(
 					common.TKErrMarketplaceFetchFailed,
@@ -56,6 +57,7 @@ and readme content for a marketplace TestWorkflow.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			yamlBytes, err := client.GetWorkflowYAML(cmd.Context(), *wf)
@@ -66,15 +68,32 @@ and readme content for a marketplace TestWorkflow.`,
 					"",
 					err,
 				))
+				return
 			}
 
 			params, err := marketplace.ExtractParameters(yamlBytes)
-			ui.ExitOnError("parsing workflow parameters", err)
+			if err != nil {
+				common.HandleCLIError(common.NewCLIError(
+					common.TKErrMarketplaceInvalidParameter,
+					"Failed to parse workflow parameters",
+					"",
+					err,
+				))
+				return
+			}
 
 			var readme []byte
 			if showReadme {
 				readme, err = client.GetReadme(cmd.Context(), *wf)
-				ui.ExitOnError("fetching readme", err)
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrMarketplaceFetchFailed,
+						"Failed to download readme",
+						"",
+						err,
+					))
+					return
+				}
 			}
 
 			outputType := cmd.Flag("output").Value.String()

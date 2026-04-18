@@ -3,6 +3,7 @@ package marketplace
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,13 @@ import (
 
 	tkhttp "github.com/kubeshop/testkube/pkg/http"
 )
+
+// ErrWorkflowNotFound is returned by GetWorkflow when the requested entry is
+// absent from the marketplace catalog. Callers should check with errors.Is
+// so that failures from catalog fetching (network errors, HTTP 404s whose
+// error message happens to contain the phrase "not found", etc.) are not
+// misclassified as a missing workflow.
+var ErrWorkflowNotFound = errors.New("workflow not found in marketplace catalog")
 
 // DefaultBaseURL is the raw GitHub URL for the kubeshop/testkube-marketplace
 // main branch. It is the same base used by the Dashboard in useCatalog.ts.
@@ -90,7 +98,7 @@ func (c *Client) GetWorkflow(ctx context.Context, name string) (*Workflow, error
 			return &workflows[i], nil
 		}
 	}
-	return nil, fmt.Errorf("workflow %q not found in marketplace catalog", name)
+	return nil, fmt.Errorf("%w: %q", ErrWorkflowNotFound, name)
 }
 
 // GetWorkflowYAML downloads the raw YAML for a catalog entry's Path field.
