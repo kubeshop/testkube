@@ -2,6 +2,7 @@ package marketplace
 
 import (
 	"errors"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -12,10 +13,11 @@ import (
 
 func NewInstallCmd() *cobra.Command {
 	var (
-		name     string
-		update   bool
-		dryRun   bool
-		setFlags []string
+		name        string
+		update      bool
+		dryRun      bool
+		interactive bool
+		setFlags    []string
 	)
 
 	cmd := &cobra.Command{
@@ -24,7 +26,12 @@ func NewInstallCmd() *cobra.Command {
 		Short: "Install a marketplace TestWorkflow into the cluster",
 		Long: `Downloads a TestWorkflow from the Testkube Marketplace, applies any --set
 parameter overrides to its spec.config defaults, and creates (or updates) the
-TestWorkflow in the target namespace.`,
+TestWorkflow in the target namespace.
+
+Use --interactive/-i to be prompted for every parameter the workflow exposes.
+Values supplied via --set are used as the prompt default, and empty input
+keeps the current value. Parameters marked sensitive are read with masked
+input and their current value is never echoed.`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			workflowName := args[0]
@@ -83,6 +90,19 @@ TestWorkflow in the target namespace.`,
 				return
 			}
 
+			if interactive {
+				params, err = promptForParameters(os.Stdout, params, ptermPrompter{})
+				if err != nil {
+					common.HandleCLIError(common.NewCLIError(
+						common.TKErrMarketplaceInvalidParameter,
+						"Failed to read interactive input",
+						"",
+						err,
+					))
+					return
+				}
+			}
+
 			updated, err := marketplace.ApplyParameters(yamlBytes, params)
 			if err != nil {
 				common.HandleCLIError(common.NewCLIError(
@@ -101,6 +121,7 @@ TestWorkflow in the target namespace.`,
 	cmd.Flags().StringVar(&name, "name", "", "override the TestWorkflow name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow already exists")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate the workflow (with overrides applied) without creating it")
+	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "prompt for every spec.config parameter the workflow exposes")
 	cmd.Flags().StringArrayVar(&setFlags, "set", nil, "override a spec.config parameter, in key=value form (repeatable)")
 
 	return cmd
