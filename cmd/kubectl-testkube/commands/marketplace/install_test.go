@@ -16,8 +16,10 @@ func newInstallCmdForTest() *cobra.Command {
 		run         bool
 		interactive bool
 	)
+	var follow bool
 	cmd.Flags().BoolVar(&run, "run", false, "run after install")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "prompt for params")
+	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "follow execution")
 	return cmd
 }
 
@@ -36,7 +38,7 @@ func TestResolveRunDecision_ExplicitTrueSkipsPrompt(t *testing.T) {
 	}
 	stub := &stubPrompter{}
 
-	shouldRun, decided := resolveRunDecision(cmd, true, stub)
+	shouldRun, decided := resolveRunDecision(cmd, true, false, stub)
 	if !decided {
 		t.Fatal("expected a decision to be reached")
 	}
@@ -55,7 +57,7 @@ func TestResolveRunDecision_ExplicitFalseSkipsPromptAndRun(t *testing.T) {
 	}
 	stub := &stubPrompter{}
 
-	shouldRun, decided := resolveRunDecision(cmd, false, stub)
+	shouldRun, decided := resolveRunDecision(cmd, false, false, stub)
 	if !decided {
 		t.Fatal("expected a decision to be reached")
 	}
@@ -64,6 +66,46 @@ func TestResolveRunDecision_ExplicitFalseSkipsPromptAndRun(t *testing.T) {
 	}
 	if stub.confirmCalls != 0 {
 		t.Errorf("prompter should not be invoked, got %d calls", stub.confirmCalls)
+	}
+}
+
+func TestResolveRunDecision_ExplicitRunFalseBeatsFollow(t *testing.T) {
+	// --run=false is an explicit opt-out that must beat -f; otherwise the
+	// user could not install + follow-later with a separate `run` command.
+	cmd := newInstallCmdForTest()
+	if err := cmd.ParseFlags([]string{"--run=false", "-f"}); err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	stub := &stubPrompter{}
+
+	shouldRun, decided := resolveRunDecision(cmd, false, true, stub)
+	if !decided {
+		t.Fatal("expected a decision to be reached")
+	}
+	if shouldRun {
+		t.Error("expected shouldRun=false when --run=false even with -f")
+	}
+	if stub.confirmCalls != 0 {
+		t.Errorf("prompter should not be invoked, got %d calls", stub.confirmCalls)
+	}
+}
+
+func TestResolveRunDecision_FollowImpliesRunWhenRunUnset(t *testing.T) {
+	cmd := newInstallCmdForTest()
+	if err := cmd.ParseFlags([]string{"-f"}); err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	stub := &stubPrompter{}
+
+	shouldRun, decided := resolveRunDecision(cmd, false, true, stub)
+	if !decided {
+		t.Fatal("expected a decision to be reached")
+	}
+	if !shouldRun {
+		t.Error("expected shouldRun=true when -f is supplied without --run")
+	}
+	if stub.confirmCalls != 0 {
+		t.Errorf("-f should bypass the prompt, got %d calls", stub.confirmCalls)
 	}
 }
 
@@ -83,7 +125,7 @@ func TestResolveRunDecision_NoFlagPromptsAndReturnsAnswer(t *testing.T) {
 			}
 			stub := &stubPrompter{confirmAns: tc.yes}
 
-			shouldRun, decided := resolveRunDecision(cmd, false, stub)
+			shouldRun, decided := resolveRunDecision(cmd, false, false, stub)
 			if !decided {
 				t.Fatal("expected a decision to be reached")
 			}

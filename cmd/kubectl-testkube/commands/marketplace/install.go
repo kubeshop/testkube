@@ -25,6 +25,7 @@ func NewInstallCmd() *cobra.Command {
 		dryRun      bool
 		interactive bool
 		run         bool
+		follow      bool
 		setFlags    []string
 	)
 
@@ -45,7 +46,9 @@ any --set overrides as-is. --interactive=true forces prompting even off a TTY.
 
 After a successful create/update the command asks whether to run the workflow
 immediately. Use --run=true to skip the prompt and trigger a run, or
---run=false to skip both the prompt and the run (useful for CI/automation).`,
+--run=false to skip both the prompt and the run (useful for CI/automation).
+Pass -f/--follow to stream logs and wait for completion (implies --run=true
+when --run was not supplied).`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			workflowName := args[0]
@@ -136,11 +139,11 @@ immediately. Use --run=true to skip the prompt and trigger a run, or
 				return
 			}
 
-			shouldRun, decided := resolveRunDecision(cmd, run, ptermPrompter{})
+			shouldRun, decided := resolveRunDecision(cmd, run, follow, ptermPrompter{})
 			if !decided || !shouldRun {
 				return
 			}
-			testworkflows.RunWorkflowByName(cmd, resolvedName)
+			testworkflows.RunWorkflowByName(cmd, resolvedName, follow)
 		},
 	}
 
@@ -149,6 +152,7 @@ immediately. Use --run=true to skip the prompt and trigger a run, or
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate the workflow (with overrides applied) without creating it")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "prompt for every spec.config parameter (default: auto — prompt when attached to a terminal). Use --interactive=false to force non-interactive, --interactive to force prompting.")
 	cmd.Flags().BoolVar(&run, "run", false, "run the workflow after install (default: ask). Use --run=true to skip the prompt and run, --run=false to skip both prompt and run")
+	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "follow the execution (stream logs and wait for completion); implies --run=true when --run is not supplied")
 	cmd.Flags().StringArrayVar(&setFlags, "set", nil, "override a spec.config parameter, in key=value form (repeatable)")
 
 	return cmd
@@ -174,14 +178,21 @@ func shouldPromptForParameters(cmd *cobra.Command, interactiveFlag, hasParams bo
 }
 
 // resolveRunDecision determines whether to run the workflow after install.
-// If --run was supplied explicitly (either true or false) its value wins and
-// the user is not prompted. Otherwise the prompter is asked and its answer
-// is returned. The second return value is true when a decision was reached
-// (it is false only when prompting failed, in which case the caller should
-// skip running).
-func resolveRunDecision(cmd *cobra.Command, runFlag bool, prompter Prompter) (shouldRun, decided bool) {
+//
+// Precedence (first match wins):
+//  1. --run was supplied explicitly (either true or false) — its value wins.
+//  2. -f/--follow was supplied without --run — imply run=true; following an
+//     install that did not trigger a run would never yield any output.
+//  3. Otherwise ask the user via the prompter.
+//
+// The second return value is true when a decision was reached (it is false
+// only when prompting failed, in which case the caller should skip running).
+func resolveRunDecision(cmd *cobra.Command, runFlag, followFlag bool, prompter Prompter) (shouldRun, decided bool) {
 	if cmd.Flags().Changed("run") {
 		return runFlag, true
+	}
+	if followFlag {
+		return true, true
 	}
 	answer, err := prompter.Confirm("Run the workflow now?", true)
 	if err != nil {
