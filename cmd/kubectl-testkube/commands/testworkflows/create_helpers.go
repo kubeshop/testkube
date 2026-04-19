@@ -16,9 +16,11 @@ import (
 // `testkube marketplace install` so both entry points share the same
 // validation and upsert semantics.
 //
-// When dryRun is true the function returns after successful schema
-// validation (matching the existing CLI behavior).
-func CreateOrUpdateFromBytes(cmd *cobra.Command, raw []byte, overrideName string, update, dryRun bool) {
+// The resolved workflow name (after --name override, if any) is returned so
+// callers can perform follow-up operations such as triggering a run.
+// When dryRun is true the function exits after successful schema validation
+// (matching the existing CLI behavior) and does not return.
+func CreateOrUpdateFromBytes(cmd *cobra.Command, raw []byte, overrideName string, update, dryRun bool) string {
 	namespace := cmd.Flag("namespace").Value.String()
 
 	client, _, err := common.GetClient(cmd)
@@ -56,10 +58,11 @@ func CreateOrUpdateFromBytes(cmd *cobra.Command, raw []byte, overrideName string
 		_, err = client.UpdateTestWorkflow(testworkflows.MapTestWorkflowKubeToAPI(*obj))
 		ui.ExitOnError("updating test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 		ui.Success("Test workflow updated", namespace, "/", obj.Name)
-		return
+		return obj.Name
 	}
 
 	_, err = client.CreateTestWorkflow(testworkflows.MapTestWorkflowKubeToAPI(*obj))
 	ui.ExitOnError("creating test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 	ui.Success("Test workflow created", namespace, "/", obj.Name)
+	return obj.Name
 }

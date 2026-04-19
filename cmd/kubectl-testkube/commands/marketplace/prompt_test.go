@@ -13,9 +13,13 @@ import (
 // which params were asked, in order. An answer of "" simulates the user
 // hitting Enter with no input.
 type stubPrompter struct {
-	answers map[string]string
-	asked   []marketplace.Parameter
-	err     map[string]error
+	answers      map[string]string
+	asked        []marketplace.Parameter
+	err          map[string]error
+	confirmAns   bool
+	confirmErr   error
+	confirmCalls int
+	confirmMsg   string
 }
 
 func (s *stubPrompter) Prompt(p marketplace.Parameter) (string, error) {
@@ -26,6 +30,15 @@ func (s *stubPrompter) Prompt(p marketplace.Parameter) (string, error) {
 		}
 	}
 	return s.answers[p.Key], nil
+}
+
+func (s *stubPrompter) Confirm(message string, _ bool) (bool, error) {
+	s.confirmCalls++
+	s.confirmMsg = message
+	if s.confirmErr != nil {
+		return false, s.confirmErr
+	}
+	return s.confirmAns, nil
 }
 
 func TestPromptForParameters(t *testing.T) {

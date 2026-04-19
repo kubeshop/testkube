@@ -9,14 +9,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/marketplace"
 )
 
-// Prompter is the narrow interface promptForParameters uses to collect
-// values from the user. It is implemented by the pterm-backed prompter at
-// runtime and by stubs in tests.
+// Prompter is the narrow interface used to collect input from the user
+// during `testkube marketplace install`. It is implemented by the pterm-backed
+// prompter at runtime and by stubs in tests.
 type Prompter interface {
 	// Prompt is called once per parameter. The returned string is the raw
 	// user input. An empty string means "keep the current value" (which is
 	// either the parameter's YAML default or a prior --set override).
 	Prompt(p marketplace.Parameter) (string, error)
+
+	// Confirm asks a yes/no question and returns the user's answer.
+	// defaultYes controls which option is highlighted as the default when
+	// the user simply presses enter.
+	Confirm(message string, defaultYes bool) (bool, error)
 }
 
 // promptForParameters walks the parameters and asks the supplied prompter
@@ -74,4 +79,8 @@ func (ptermPrompter) Prompt(p marketplace.Parameter) (string, error) {
 		t = t.WithDefaultValue(p.Value)
 	}
 	return t.Show("value")
+}
+
+func (ptermPrompter) Confirm(message string, defaultYes bool) (bool, error) {
+	return pterm.DefaultInteractiveConfirm.WithDefaultValue(defaultYes).Show(message)
 }
