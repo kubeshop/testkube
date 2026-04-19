@@ -7,14 +7,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newInstallCmdForTest builds a cobra command mirroring install.go's run flag
-// definition. We only need the flag wiring to exercise resolveRunDecision,
-// so we avoid pulling in the full install.go Run body.
+// newInstallCmdForTest builds a cobra command mirroring install.go's flag
+// definitions. We only need the flag wiring to exercise the decision
+// helpers, so we avoid pulling in the full install.go Run body.
 func newInstallCmdForTest() *cobra.Command {
 	cmd := &cobra.Command{Use: "install"}
-	var run bool
+	var (
+		run         bool
+		interactive bool
+	)
 	cmd.Flags().BoolVar(&run, "run", false, "run after install")
+	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "prompt for params")
 	return cmd
+}
+
+// withStubbedTTY swaps isStdinTTY for the duration of a test.
+func withStubbedTTY(t *testing.T, tty bool) {
+	t.Helper()
+	prev := isStdinTTY
+	isStdinTTY = func() bool { return tty }
+	t.Cleanup(func() { isStdinTTY = prev })
 }
 
 func TestResolveRunDecision_ExplicitTrueSkipsPrompt(t *testing.T) {
@@ -98,5 +110,65 @@ func TestStubPrompter_ConfirmSurfacesErrors(t *testing.T) {
 	_, err := stub.Confirm("Run?", true)
 	if err == nil {
 		t.Fatal("expected error to propagate")
+	}
+}
+
+func TestShouldPromptForParameters(t *testing.T) {
+	tests := []struct {
+		name      string
+		flags     []string
+		interFlag bool
+		hasParams bool
+		tty       bool
+		want      bool
+	}{
+		{
+			name: "no flag + TTY + params -> prompt",
+			tty:  true, hasParams: true, want: true,
+		},
+		{
+			name: "no flag + TTY + no params -> skip",
+			tty:  true, hasParams: false, want: false,
+		},
+		{
+			name: "no flag + no TTY + params -> skip (CI path)",
+			tty:  false, hasParams: true, want: false,
+		},
+		{
+			name:  "--interactive=true forces prompt even without TTY",
+			flags: []string{"--interactive=true"}, interFlag: true,
+			tty: false, hasParams: true, want: true,
+		},
+		{
+			name:  "--interactive=true with no params still returns true",
+			flags: []string{"--interactive=true"}, interFlag: true,
+			tty: true, hasParams: false, want: true,
+		},
+		{
+			name:  "--interactive=false skips even on TTY with params",
+			flags: []string{"--interactive=false"}, interFlag: false,
+			tty: true, hasParams: true, want: false,
+		},
+		{
+			name:  "-i shorthand forces prompt",
+			flags: []string{"-i"}, interFlag: true,
+			tty: false, hasParams: true, want: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			withStubbedTTY(t, tc.tty)
+			cmd := newInstallCmdForTest()
+			if err := cmd.ParseFlags(tc.flags); err != nil {
+				t.Fatalf("ParseFlags: %v", err)
+			}
+			// Re-read the flag to mirror how install.go's Run body sees it.
+			interactive, _ := cmd.Flags().GetBool("interactive")
+			got := shouldPromptForParameters(cmd, interactive, tc.hasParams)
+			if got != tc.want {
+				t.Errorf("shouldPromptForParameters = %v, want %v (interFlag=%v tty=%v hasParams=%v)",
+					got, tc.want, tc.interFlag, tc.tty, tc.hasParams)
+			}
+		})
 	}
 }
