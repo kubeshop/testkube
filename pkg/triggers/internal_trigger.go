@@ -100,22 +100,6 @@ type internalProbe struct {
 	Headers map[string]string
 }
 
-// builtinKindToGVR maps the 8 v1 resource enum values to their GVK components.
-var builtinKindToGVR = map[string]struct {
-	Group   string
-	Version string
-	Kind    string
-}{
-	"pod":         {Group: "", Version: "v1", Kind: "Pod"},
-	"deployment":  {Group: "apps", Version: "v1", Kind: "Deployment"},
-	"statefulset": {Group: "apps", Version: "v1", Kind: "StatefulSet"},
-	"daemonset":   {Group: "apps", Version: "v1", Kind: "DaemonSet"},
-	"service":     {Group: "", Version: "v1", Kind: "Service"},
-	"ingress":     {Group: "networking.k8s.io", Version: "v1", Kind: "Ingress"},
-	"event":       {Group: "", Version: "v1", Kind: "Event"},
-	"configmap":   {Group: "", Version: "v1", Kind: "ConfigMap"},
-}
-
 // convertV1ToInternal converts a v1 TestTrigger CRD to the internal representation.
 func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 	it := &internalTrigger{
@@ -129,14 +113,21 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Disabled:           t.Spec.Disabled,
 	}
 
-	// Resolve v1 resource enum to GVK
+	// Resolve v1 resource enum to GVK via the single builtinTypes source of truth.
 	resourceStr := strings.ToLower(string(t.Spec.Resource))
-	if gvk, ok := builtinKindToGVR[resourceStr]; ok {
-		it.ResourceGroup = gvk.Group
-		it.ResourceVersion = gvk.Version
-		it.ResourceKind = gvk.Kind
+	if b, ok := builtinTypes[resourceStr]; ok {
+		it.ResourceGroup = b.Group
+		it.ResourceVersion = b.Version
+		it.ResourceKind = b.Kind
 	} else {
 		it.ResourceKind = string(t.Spec.Resource)
+	}
+
+	// If ResourceRef is set, use it directly (overrides Resource enum)
+	if t.Spec.ResourceRef != nil {
+		it.ResourceGroup = t.Spec.ResourceRef.Group
+		it.ResourceVersion = t.Spec.ResourceRef.Version
+		it.ResourceKind = t.Spec.ResourceRef.Kind
 	}
 
 	// Resource selector

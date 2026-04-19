@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -31,6 +32,7 @@ import (
 	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -149,6 +151,8 @@ func main() {
 	commons.ExitOnError("getting Kubernetes config", err)
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	commons.ExitOnError("creating k8s clientset", err)
+	dynamicClient, err := dynamic.NewForConfig(kubeConfig)
+	commons.ExitOnError("creating k8s dynamic client", err)
 
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
@@ -606,6 +610,8 @@ func main() {
 		commons.ExitOnError("add TestWorkflows to kubernetes runtime scheme", err)
 		err = testtriggersv1.AddToScheme(scheme)
 		commons.ExitOnError("add TestTriggers to kubernetes runtime scheme", err)
+		err = workflowtriggersv1.AddToScheme(scheme)
+		commons.ExitOnError("add WorkflowTriggers to kubernetes runtime scheme", err)
 		err = executorv1.AddToScheme(scheme)
 		commons.ExitOnError("add Webhooks to kubernetes runtime scheme", err)
 
@@ -630,6 +636,8 @@ func main() {
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
 			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestTrigger sync controller", err)
+			err = synccontroller.NewWorkflowTriggerSyncController(mgr, syncStore)
+			commons.ExitOnError("creating WorkflowTrigger sync controller", err)
 			err = synccontroller.NewTestWorkflowSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflow sync controller", err)
 			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, syncStore)
@@ -779,6 +787,7 @@ func main() {
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),
 			triggers.WithEventLabels(cfg.EventLabels),
+			triggers.WithDynamicClient(dynamicClient),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {

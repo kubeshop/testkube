@@ -20,6 +20,7 @@ type TestTrigger struct {
 	Annotations      map[string]string                            `json:"annotations,omitempty"`
 	Selector         *IoK8sApimachineryPkgApisMetaV1LabelSelector `json:"selector,omitempty"`
 	Resource         *TestTriggerResources                        `json:"resource,omitempty"`
+	ResourceRef      *TestTriggerResourceRef                      `json:"resourceRef,omitempty"`
 	ResourceSelector *TestTriggerSelector                         `json:"resourceSelector,omitempty"`
 	// listen for event for selected resource
 	Event             string                          `json:"event"`

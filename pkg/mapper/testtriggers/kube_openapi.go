@@ -41,12 +41,22 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		concurrencyPolicy = (*testkube.TestTriggerConcurrencyPolicies)(&crd.Spec.ConcurrencyPolicy)
 	}
 
+	var resourceRef *testkube.TestTriggerResourceRef
+	if crd.Spec.ResourceRef != nil {
+		resourceRef = &testkube.TestTriggerResourceRef{
+			Group:   crd.Spec.ResourceRef.Group,
+			Version: crd.Spec.ResourceRef.Version,
+			Kind:    crd.Spec.ResourceRef.Kind,
+		}
+	}
+
 	return testkube.TestTrigger{
 		Name:              crd.Name,
 		Namespace:         crd.Namespace,
 		Labels:            crd.Labels,
 		Selector:          mapLabelSelectorFromCRD(crd.Spec.Selector),
 		Resource:          resource,
+		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:             string(crd.Spec.Event),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
@@ -145,6 +155,15 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		concurrencyPolicy = (*testkube.TestTriggerConcurrencyPolicies)(&request.Spec.ConcurrencyPolicy)
 	}
 
+	var resourceRef *testkube.TestTriggerResourceRef
+	if request.Spec.ResourceRef != nil {
+		resourceRef = &testkube.TestTriggerResourceRef{
+			Group:   request.Spec.ResourceRef.Group,
+			Version: request.Spec.ResourceRef.Version,
+			Kind:    request.Spec.ResourceRef.Kind,
+		}
+	}
+
 	return testkube.TestTriggerUpsertRequest{
 		Name:              request.Name,
 		Namespace:         request.Namespace,
@@ -152,6 +171,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		Annotations:       request.Annotations,
 		Selector:          mapLabelSelectorFromCRD(request.Spec.Selector),
 		Resource:          resource,
+		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:             string(request.Spec.Event),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
