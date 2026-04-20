@@ -1095,6 +1095,35 @@ func TestProcessShellDisableFsGroupDefaulting(t *testing.T) {
 
 func TestProcessParallelWorkerDisableFsGroupDefaulting(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{{
+				Parallel: &testworkflowsv1.StepParallel{
+					Steps: []testworkflowsv1.Step{
+						{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+					},
+				},
+			}},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessParallelWorkerDisableFsGroupDefaultingOverride(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
 		Spec: *(&testworkflowsv1.StepParallel{
 			Pod: &testworkflowsv1.PodConfig{
 				DisableFsGroupDefaulting: common.Ptr(true),

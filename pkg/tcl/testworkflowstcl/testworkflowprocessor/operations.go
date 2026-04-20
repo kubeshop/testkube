@@ -127,17 +127,11 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
-	// Pass down image pull secrets
-	parallel := step.Parallel
-	if pod := layer.PodConfig(); len(pod.ImagePullSecrets) > 0 {
-		parallel = parallel.DeepCopy()
-		if parallel.Pod == nil {
-			parallel.Pod = &testworkflowsv1.PodConfig{}
-		} else {
-			parallel.Pod = parallel.Pod.DeepCopy()
-		}
-		parallel.Pod.ImagePullSecrets = append(parallel.Pod.ImagePullSecrets, pod.ImagePullSecrets...)
-	}
+	// Parallel workers should inherit the resolved root pod config, while allowing
+	// the parallel block to override any pod-level fields explicitly.
+	parallel := step.Parallel.DeepCopy()
+	pod := layer.PodConfig()
+	parallel.Pod = testworkflowresolver.MergePodConfig(pod.DeepCopy(), parallel.Pod)
 
 	// Base64 encode to prevent testworkflow-init from prematurely resolving expressions.
 	// The parallel spec can contain expressions that need matrix/shard/count variables
