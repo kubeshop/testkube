@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/skratchdot/open-golang/open"
@@ -321,6 +322,24 @@ func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifac
 }
 
 func openCloudExecution(cmd *cobra.Command, cfg config.Data, arg string) {
+	var missing []string
+	if cfg.CloudContext.UiUri == "" {
+		missing = append(missing, "uiUri")
+	}
+	if cfg.CloudContext.OrganizationId == "" {
+		missing = append(missing, "organizationId")
+	}
+	if cfg.CloudContext.EnvironmentId == "" {
+		missing = append(missing, "environmentId")
+	}
+	if len(missing) > 0 {
+		hint := "Run `testkube login` to authenticate with Testkube Cloud, or set it manually with `testkube set context --org-id <id> --env-id <id>`"
+		if cfg.CloudContext.UiUri == "" {
+			hint += " (to also set the dashboard URL, pass `--ui-uri-override <url>` to `testkube login` or `testkube set context`)"
+		}
+		ui.Failf("cloud context is incomplete, missing: %s. %s", strings.Join(missing, ", "), hint)
+	}
+
 	client, _, err := common.GetClient(cmd)
 	ui.ExitOnError("getting client", err)
 
