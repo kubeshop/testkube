@@ -136,34 +136,38 @@ func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIU
 	allLogs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
 	ui.ExitOnError("getting execution logs", err)
 
-	var artifactPaths []string
-	var tmpDir string
+	
+	var artifactUploads []artifactUpload
 	if !skipArtifacts {
 		artifacts, err := client.GetTestWorkflowExecutionArtifacts(execution.Id)
 		ui.ExitOnError("getting artifacts list", err)
 
 		if len(artifacts) > 0 {
-			tmpDir, err = os.MkdirTemp("", "testkube-view-*")
+			tmpDir, err := os.MkdirTemp("", "testkube-view-*")
 			ui.ExitOnError("creating temp directory", err)
 			defer os.RemoveAll(tmpDir)
 
 			ui.Info("Downloading artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 			for _, artifact := range artifacts {
 				ui.Warn(" - downloading artifact ", artifact.Name)
+			
 				f, err := client.DownloadTestWorkflowArtifact(execution.Id, artifact.Name, tmpDir)
 				ui.ExitOnError("downloading artifact "+artifact.Name, err)
 
-				artifactPaths = append(artifactPaths, f)
+				artifactUploads = append(artifactUploads, artifactUpload{
+					Path: f,
+					Name: artifact.Name,
+				})
 			}
 			ui.NL()
 		}
 	}
 
 	ui.Info("Uploading to viewer...")
-	token, err := uploadExecution(sharesAPIURL, executionJSON, allLogs, artifactPaths)
+	token, err := uploadExecution(sharesAPIURL, executionJSON, allLogs, artifactUploads)
 	if err != nil {
 		if cfg.TelemetryEnabled {
-			out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactPaths)), skipArtifacts, err.Error())
+			out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactUploads)), skipArtifacts, err.Error())
 			if ui.Verbose && telErr != nil {
 				ui.Err(telErr)
 			}
@@ -172,12 +176,12 @@ func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIU
 		ui.ExitOnError("uploading execution", err)
 	}
 
-	viewerURL := fmt.Sprintf("%s/view/%s", viewerBaseURL, token)
+	viewerURL := fmt.Sprintf("%s/execution-views/%s", viewerBaseURL, token)
 	ui.NL()
 	ui.Success("View created successfully:", viewerURL)
 
 	if cfg.TelemetryEnabled {
-		out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactPaths)), skipArtifacts, "")
+		out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactUploads)), skipArtifacts, "")
 		if ui.Verbose && telErr != nil {
 			ui.Err(telErr)
 		}
@@ -224,7 +228,13 @@ type viewResponse struct {
 	Status       string `json:"status"`
 }
 
-func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifactPaths []string) (string, error) {
+
+type artifactUpload struct {
+	Path string 
+	Name string 
+}
+
+func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifacts []artifactUpload) (string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -242,13 +252,20 @@ func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifac
 		}
 	}
 
-	for _, artifactPath := range artifactPaths {
-		filename := filepath.Base(artifactPath)
+	for _, a := range artifacts {
+		
+		filename := filepath.ToSlash(a.Name)
+
+	
+		if err := writer.WriteField("artifactPaths", filename); err != nil {
+			return "", fmt.Errorf("writing artifactPaths field for %s: %w", filename, err)
+		}
+
 		part, err := writer.CreateFormFile("artifacts", filename)
 		if err != nil {
 			return "", fmt.Errorf("creating artifact part for %s: %w", filename, err)
 		}
-		f, err := os.Open(artifactPath)
+		f, err := os.Open(a.Path)
 		if err != nil {
 			return "", fmt.Errorf("opening artifact %s: %w", filename, err)
 		}
