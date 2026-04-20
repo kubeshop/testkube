@@ -127,7 +127,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 							common.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
 						}
 					} else {
-						uiShellWatchExecution(execution.Id)
+						common.UIShellWatchExecution(execution.Id)
 					}
 				}
 
@@ -135,7 +135,8 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 				ui.ExitOnError("get test workflow execution failed", err)
 
 				render.PrintTestWorkflowExecutionURIs(&execution)
-				uiShellGetExecution(execution.Id)
+				common.UIShellGetExecution(execution.Id)
+				common.UIShellViewExecution(execution.Id)
 			}
 
 			if exitCode != 0 {

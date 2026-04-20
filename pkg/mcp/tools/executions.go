@@ -261,7 +261,7 @@ func LookupExecutionId(client ExecutionLookup) (tool mcp.Tool, handler server.To
 
 func isValidExecutionName(executionName string) bool {
 	lastDashIndex := strings.LastIndex(executionName, "-")
-	if lastDashIndex == -1 {
+	if lastDashIndex <= 0 {
 		return false
 	}
 
@@ -270,37 +270,49 @@ func isValidExecutionName(executionName string) bool {
 	return matched
 }
 
+// extractExecutionIdFromResponse parses a direct {"id": "..."} response from the
+// dedicated lookup endpoint. Falls back to the legacy list format for backwards
+// compatibility with the standalone API client.
 func extractExecutionIdFromResponse(responseJSON string, targetExecutionName string) (string, error) {
+	var response struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal([]byte(responseJSON), &response); err == nil && response.ID != "" {
+		return response.ID, nil
+	}
+	return extractExecutionIdFromListResponse(responseJSON, targetExecutionName)
+}
+
+// extractExecutionIdFromListResponse parses the legacy list format returned by
+// the standalone API client ({"results": [{"id": "...", ...}, ...]}). The list
+// endpoint is a text search, so results may include substring/prefix matches --
+// verify the exact name before returning an ID.
+func extractExecutionIdFromListResponse(responseJSON string, targetExecutionName string) (string, error) {
 	var resultObject map[string]any
 	if err := json.Unmarshal([]byte(responseJSON), &resultObject); err != nil {
-		return "", fmt.Errorf("failed to parse response JSON: %v", err)
+		return "", fmt.Errorf("failed to parse response: %v", err)
 	}
 
 	results, ok := resultObject["results"].([]any)
 	if !ok || len(results) == 0 {
-		return "", fmt.Errorf("no execution found with name \"%s\"", targetExecutionName)
+		return "", fmt.Errorf("no execution found with name %q", targetExecutionName)
 	}
 
 	for _, result := range results {
-		if execution, ok := result.(map[string]any); ok {
-			if name, nameOk := execution["name"].(string); nameOk && name == targetExecutionName {
-				if executionID, idOk := execution["id"].(string); idOk && executionID != "" {
-					return executionID, nil
-				}
-			}
+		execution, ok := result.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, nameOk := execution["name"].(string)
+		if !nameOk || name != targetExecutionName {
+			continue
+		}
+		if executionID, idOk := execution["id"].(string); idOk && executionID != "" {
+			return executionID, nil
 		}
 	}
 
-	// Fallback to single result for backwards compatibility
-	if len(results) == 1 {
-		if execution, ok := results[0].(map[string]any); ok {
-			if executionID, idOk := execution["id"].(string); idOk && executionID != "" {
-				return executionID, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("no execution ID found for \"%s\"", targetExecutionName)
+	return "", fmt.Errorf("no execution ID found for %q", targetExecutionName)
 }
 
 type ExecutionTagUpdater interface {

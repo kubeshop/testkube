@@ -54,6 +54,7 @@ type Params struct {
 	Step                       string     `json:"step,omitempty"`
 	Email                      string     `json:"email,omitempty"`
 	Source                     string     `json:"source,omitempty"`
+	AgentCapabilities          []string   `json:"agent_capabilities,omitempty"`
 }
 
 type Event struct {
@@ -170,7 +171,7 @@ func NewCLIWithLicensePayload(context RunContext, id, name, version, category, c
 	}
 }
 
-func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
+func NewAPIPayload(clusterId, name, version, host, clusterType string, capabilities []string) Payload {
 	return Payload{
 		ClientID: clusterId,
 		UserID:   clusterId,
@@ -178,17 +179,18 @@ func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
 			{
 				Name: text.GAEventName(name),
 				Params: Params{
-					EventCount:      1,
-					EventCategory:   "api",
-					AppVersion:      version,
-					AppName:         "testkube-api-server",
-					Host:            AnonymizeHost(host),
-					OperatingSystem: runtime.GOOS,
-					Architecture:    runtime.GOARCH,
-					MachineID:       GetMachineID(),
-					ClusterID:       clusterId,
-					ClusterType:     clusterType,
-					Context:         getAgentContext(),
+					EventCount:        1,
+					EventCategory:     "api",
+					AppVersion:        version,
+					AppName:           "testkube-api-server",
+					Host:              AnonymizeHost(host),
+					OperatingSystem:   runtime.GOOS,
+					Architecture:      runtime.GOARCH,
+					MachineID:         GetMachineID(),
+					ClusterID:         clusterId,
+					ClusterType:       clusterType,
+					Context:           getAgentContext(),
+					AgentCapabilities: capabilities,
 				},
 			}},
 	}

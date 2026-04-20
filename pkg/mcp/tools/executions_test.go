@@ -364,3 +364,172 @@ func TestQueryExecutions_FiltersPassedThrough(t *testing.T) {
 	assert.Equal(t, "2026-03-31", m.capturedParams.EndDate)
 	assert.Equal(t, "passed", m.capturedParams.Status)
 }
+
+func TestExtractExecutionIdFromResponse(t *testing.T) {
+	tests := []struct {
+		name          string
+		responseJSON  string
+		targetName    string
+		wantID        string
+		wantErr       bool
+		wantErrSubstr string
+	}{
+		{
+			name:         "direct id response returns id",
+			responseJSON: `{"id":"abc123"}`,
+			targetName:   "workflow-name-1",
+			wantID:       "abc123",
+		},
+		{
+			name:         "empty direct id falls back to list and resolves exact name",
+			responseJSON: `{"id":"","results":[{"name":"foo","id":"xyz"}]}`,
+			targetName:   "foo",
+			wantID:       "xyz",
+		},
+		{
+			// Top-level JSON null unmarshals cleanly into the struct with ID="", so
+			// we fall through to extractExecutionIdFromListResponse. `null` also
+			// unmarshals cleanly into a nil map[string]any, so the map parse does
+			// not error either; the `results` type-assertion fails (nil map), and
+			// the "no execution found" branch reports the miss.
+			name:          "top-level null falls through to list parser and errors on missing results",
+			responseJSON:  `null`,
+			targetName:    "workflow-name-1",
+			wantErr:       true,
+			wantErrSubstr: "no execution found",
+		},
+		{
+			// Top-level JSON array fails the struct unmarshal (err != nil branch),
+			// then the list parser's map unmarshal also fails, yielding the parse
+			// error from the list path.
+			name:          "top-level array falls through to list parser and errors on parse",
+			responseJSON:  `[]`,
+			targetName:    "workflow-name-1",
+			wantErr:       true,
+			wantErrSubstr: "failed to parse response",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			id, err := extractExecutionIdFromResponse(tc.responseJSON, tc.targetName)
+			if tc.wantErr {
+				require.Error(t, err)
+				if tc.wantErrSubstr != "" {
+					assert.Contains(t, err.Error(), tc.wantErrSubstr)
+				}
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantID, id)
+		})
+	}
+}
+
+func TestExtractExecutionIdFromListResponse(t *testing.T) {
+	// The legacy /agent/tests list endpoint is a text search, so the results slice can
+	// contain substring/prefix matches of the requested name. These tests verify the
+	// exact-name guard and a few edge cases.
+	tests := []struct {
+		name          string
+		responseJSON  string
+		targetName    string
+		wantID        string
+		wantErr       bool
+		wantErrSubstr string
+	}{
+		{
+			// Substring-collision guard: asking for "my-test-1" must not return the
+			// id of "my-test-10" or "my-test-100" just because they share a prefix.
+			name:         "substring collision: target my-test-1 returns only exact match",
+			responseJSON: `{"results":[{"name":"my-test-1","id":"ONE"},{"name":"my-test-10","id":"TEN"},{"name":"my-test-100","id":"HUNDRED"}]}`,
+			targetName:   "my-test-1",
+			wantID:       "ONE",
+		},
+		{
+			// Reverse order to prove exact matching does not depend on array position.
+			name:         "substring collision reverse order still returns exact match",
+			responseJSON: `{"results":[{"name":"my-test-100","id":"HUNDRED"},{"name":"my-test-10","id":"TEN"},{"name":"my-test-1","id":"ONE"}]}`,
+			targetName:   "my-test-1",
+			wantID:       "ONE",
+		},
+		{
+			name:         "exact match at non-first position",
+			responseJSON: `{"results":[{"name":"other","id":"X"},{"name":"target","id":"Y"}]}`,
+			targetName:   "target",
+			wantID:       "Y",
+		},
+		{
+			// First match has empty id, a later exact-name entry with a populated id wins.
+			// This reflects actual behaviour: the name-match block does not `continue` on
+			// empty id, it falls through the inner `if` and advances the loop.
+			name:         "match with empty id is skipped and later populated id wins",
+			responseJSON: `{"results":[{"name":"foo","id":""},{"name":"foo","id":"BAR"}]}`,
+			targetName:   "foo",
+			wantID:       "BAR",
+		},
+		{
+			name:          "empty results errors",
+			responseJSON:  `{"results":[]}`,
+			targetName:    "foo",
+			wantErr:       true,
+			wantErrSubstr: "no execution found",
+		},
+		{
+			name:          "no matching name errors",
+			responseJSON:  `{"results":[{"name":"bar","id":"1"},{"name":"baz","id":"2"}]}`,
+			targetName:    "foo",
+			wantErr:       true,
+			wantErrSubstr: "no execution ID found",
+		},
+		{
+			name:          "invalid JSON errors",
+			responseJSON:  `{not json`,
+			targetName:    "foo",
+			wantErr:       true,
+			wantErrSubstr: "failed to parse response",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			id, err := extractExecutionIdFromListResponse(tc.responseJSON, tc.targetName)
+			if tc.wantErr {
+				require.Error(t, err)
+				if tc.wantErrSubstr != "" {
+					assert.Contains(t, err.Error(), tc.wantErrSubstr)
+				}
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantID, id)
+		})
+	}
+}
+
+func TestIsValidExecutionName(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "typical workflow-number", input: "my-test-123", want: true},
+		{name: "zero-padded number", input: "workflow-name-000001", want: true},
+		// Empty-prefix input is the new behaviour from the `<=0` guard in this PR.
+		// For "-123", LastIndex returns 0 (the only dash, at position 0), which
+		// the old `== -1` check would have accepted (suffix "123" is numeric);
+		// `<=0` now correctly rejects names with an empty prefix.
+		{name: "empty prefix rejected (new guard)", input: "-123", want: false},
+		// Leading dash with a later dash is still accepted because LastIndex
+		// returns a positive index (>0). Documented for clarity; this is NOT
+		// changed by the `<=0` guard.
+		{name: "leading dash with later dash still accepted", input: "-foo-123", want: true},
+		{name: "no dash", input: "noDash", want: false},
+		{name: "trailing dash only", input: "foo-", want: false},
+		{name: "non-numeric suffix", input: "my-test-abc", want: false},
+		{name: "empty string", input: "", want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isValidExecutionName(tc.input))
+		})
+	}
+}
