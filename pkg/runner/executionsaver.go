@@ -147,13 +147,13 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 		s.outputSaved.Store(true)
 	}
 
-	if !s.logs.Saved() && !s.logs.Enabled() {
-		log.DefaultLogger.Infow("TestWorkflow execution log storage is disabled; skipping log archive upload", "id", s.id)
-	}
-
-	if !s.logs.Saved() && s.logs.Enabled() {
-		if err := s.logs.Save(ctx); err != nil {
-			return err
+	if !s.logs.Saved() {
+		if s.logs.Enabled() {
+			if err := s.logs.Save(ctx); err != nil {
+				return err
+			}
+		} else {
+			log.DefaultLogger.Infow("TestWorkflow execution log storage is disabled; skipping log archive upload", "id", s.id)
 		}
 	}
 
