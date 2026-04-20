@@ -530,7 +530,7 @@ func processExecutions(
 					exitCode = handleWatchMode(cmd, args, &execution, &wg, &mu, &exitCode,
 						client, watchOpts, outputPretty)
 				} else {
-					uiShellWatchExecution(execution.Id)
+					common.UIShellWatchExecution(execution.Id)
 				}
 			}
 
@@ -546,8 +546,8 @@ func processExecutions(
 			}
 
 			render.PrintTestWorkflowExecutionURIs(&execution)
-			uiShellGetExecution(executionId)
-			uiShellViewExecution(executionId)
+			common.UIShellGetExecution(executionId)
+			common.UIShellViewExecution(executionId)
 		}
 	}
 
@@ -733,30 +733,6 @@ func uiWatch(
 		ui.Success("test workflow execution completed with success in " + result.FinishedAt.Sub(result.QueuedAt).String())
 	}
 	return 0
-}
-
-// uiShellGetExecution prints kubectl command to get execution details
-func uiShellGetExecution(id string) {
-	ui.ShellCommand(
-		"Use following command to get test workflow execution details",
-		"kubectl testkube get twe "+id,
-	)
-}
-
-// uiShellViewExecution prints kubectl command to view execution in the browser
-func uiShellViewExecution(id string) {
-	ui.ShellCommand(
-		"View test workflow execution in your browser",
-		"kubectl testkube view "+id,
-	)
-}
-
-// uiShellWatchExecution prints kubectl command to watch execution
-func uiShellWatchExecution(id string) {
-	ui.ShellCommand(
-		"Watch test workflow execution until complete",
-		"kubectl testkube watch twe "+id,
-	)
 }
 
 // printSingleResultDifference prints status change between two step results, returns true if changed

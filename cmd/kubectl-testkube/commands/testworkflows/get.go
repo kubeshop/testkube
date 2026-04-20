@@ -64,7 +64,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 					ui.NL()
 					err = render.Obj(cmd, *workflow.LatestExecution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
 					ui.ExitOnError("rendering obj", err)
-					uiShellViewExecution(workflow.LatestExecution.Id)
+					common.UIShellViewExecution(workflow.LatestExecution.Id)
 				}
 			}
 		},
