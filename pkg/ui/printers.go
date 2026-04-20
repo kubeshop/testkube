@@ -140,6 +140,15 @@ func (ui *UI) Info(message string, subMessages ...string) {
 	fmt.Fprintln(ui.Writer)
 }
 
+// Hint shows a tip/hint message prefixed with a lightbulb icon.
+func (ui *UI) Hint(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s  %s", IconSuggestion, LightGray(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", White(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
 func (ui *UI) Err(err error) {
 	fmt.Fprintf(ui.Writer, "%s %s %s\n", LightRed("⨯"), Red(err.Error()), IconError)
 }

@@ -147,7 +147,7 @@ func NewInitCmd() *cobra.Command {
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
 	var errorStackTrace = fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
@@ -159,7 +159,7 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string,
 
 func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version)
 		if ui.Verbose && err != nil {
 			ui.Err(err)

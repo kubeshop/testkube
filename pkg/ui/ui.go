@@ -71,6 +71,7 @@ func LogLine(message string)                              { ui.LogLine(message) 
 func LogMultiLine(message string)                         { ui.LogMultiLine(message) }
 func Debug(message string, subMessages ...string)         { ui.Debug(message, subMessages...) }
 func Info(message string, subMessages ...string)          { ui.Info(message, subMessages...) }
+func Hint(message string, subMessages ...string)          { ui.Hint(message, subMessages...) }
 func Link(message string, subMessages ...string)          { ui.Link(message, subMessages...) }
 func ExecutionLink(message string, subMessages ...string) { ui.ExecutionLink(message, subMessages...) }
 func Err(err error)                                       { ui.Err(err) }

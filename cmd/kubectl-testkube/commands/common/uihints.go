@@ -1,27 +1,29 @@
 package common
 
-import "github.com/kubeshop/testkube/pkg/ui"
+import (
+	"github.com/kubeshop/testkube/pkg/ui"
+)
 
-// UIShellGetExecution prints kubectl command to get test workflow execution details.
+// UIShellGetExecution prints the testkube command to get test workflow execution details.
 func UIShellGetExecution(id string) {
+	ui.Hint("Get the TestWorkflow execution details:")
 	ui.ShellCommand(
-		"Use following command to get test workflow execution details",
-		"testkube get twe "+id,
+		"testkube get twe " + id,
 	)
 }
 
-// UIShellViewExecution prints kubectl command to view test workflow execution in the browser.
+// UIShellViewExecution prints the testkube command to view a test workflow execution in the browser.
 func UIShellViewExecution(id string) {
+	ui.Hint("View the TestWorkflow execution details in your browser:")
 	ui.ShellCommand(
-		"View test workflow execution in your browser",
-		"testkube view "+id,
+		"testkube view " + id,
 	)
 }
 
-// UIShellWatchExecution prints kubectl command to watch a test workflow execution until complete.
+// UIShellWatchExecution prints the testkube command to watch a test workflow execution until complete.
 func UIShellWatchExecution(id string) {
+	ui.Hint("Watch the TestWorkflow execution until complete:")
 	ui.ShellCommand(
-		"Watch test workflow execution until complete",
-		"testkube watch twe "+id,
+		"testkube watch twe " + id,
 	)
 }

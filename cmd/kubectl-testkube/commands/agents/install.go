@@ -127,7 +127,7 @@ func NewInstallRunnerCommand() *cobra.Command {
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
 				ui.Info("This command installs a runner-only agent by default.")
-				ui.Info("For more flexibility, use 'kubectl testkube install agent' with:")
+				ui.Hint("For more flexibility, use 'testkube install agent' with:")
 				ui.Info("  --runner    : Enable runner capability")
 				ui.Info("  --listener  : Enable listener capability")
 				ui.Info("  --gitops    : Enable GitOps capability")

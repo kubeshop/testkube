@@ -29,14 +29,15 @@ func RunWorkflowByName(cmd *cobra.Command, name string, follow bool) {
 	execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{})
 	ui.ExitOnError(fmt.Sprintf("starting test workflow %q", name), err)
 
-	ui.Success("Test workflow execution started", execution.Name)
+	ui.Success("TestWorkflow execution started", execution.Name)
 	if execution.Id == "" {
 		return
 	}
 	ui.Info("Execution ID:", execution.Id)
 
 	if !follow {
-		ui.Info("Watch live:", fmt.Sprintf("kubectl testkube watch twe %s", execution.Id))
+		ui.Hint("Watch live:", fmt.Sprintf("testkube watch twe %s", execution.Id))
+		common.UIShellViewExecution(execution.Id)
 		return
 	}
 
@@ -47,6 +48,8 @@ func RunWorkflowByName(cmd *cobra.Command, name string, follow bool) {
 	if refreshed, err := client.GetTestWorkflowExecution(execution.Id); err == nil {
 		render.PrintTestWorkflowExecutionURIs(&refreshed)
 	}
+
+	common.UIShellViewExecution(execution.Id)
 
 	if exitCode != 0 {
 		os.Exit(exitCode)
