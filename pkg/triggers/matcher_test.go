@@ -1218,6 +1218,34 @@ func TestService_match_v1Scenarios(t *testing.T) {
 			},
 			shouldFire: true,
 		},
+		"custom resource via resourceRef matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-ref", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+						Group:   "kafka.strimzi.io",
+						Version: "v1beta2",
+						Kind:    "KafkaTopic",
+					},
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "my-topic",
+						Namespace: "kafka",
+					},
+					Event:     testtriggersv1.TestTriggerEventCreated,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "kafka-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "kafkatopic",
+				name:      "my-topic",
+				Namespace: "kafka",
+				eventType: "created",
+			},
+			shouldFire: true,
+		},
 		"configmap matches": {
 			trigger: &testtriggersv1.TestTrigger{
 				ObjectMeta: metav1.ObjectMeta{Name: "t10", Namespace: "default"},
@@ -1408,7 +1436,104 @@ func TestService_match_v1Scenarios(t *testing.T) {
 
 			err := s.match(context.Background(), tc.event)
 			require.NoError(t, err)
-			assert.Equal(t, tc.shouldFire, fired, "trigger should%s have fired", map[bool]string{true: "", false: " not"}[tc.shouldFire])
+			if tc.shouldFire {
+				assert.True(t, fired, "trigger should have fired")
+			} else {
+				assert.False(t, fired, "trigger should not have fired")
+			}
+		})
+	}
+}
+
+// TestService_match_V1_ExecutionFilter guards the pre-refactor behavior that
+// v1 TestTriggers with Execution set to "test" or "testsuite" must be skipped
+// by the matcher — we only run TestWorkflow executions. The filter was briefly
+// dropped during the internalTrigger refactor; this table documents the
+// expected contract so a future refactor can't silently re-break it.
+func TestService_match_V1_ExecutionFilter(t *testing.T) {
+	tests := map[string]struct {
+		execution  testtriggersv1.TestTriggerExecution
+		shouldFire bool
+	}{
+		"testworkflow fires":       {execution: testtriggersv1.TestTriggerExecutionTestWorkflow, shouldFire: true},
+		"empty defaults to fire":   {execution: "", shouldFire: true},
+		"legacy test is skipped":   {execution: testtriggersv1.TestTriggerExecutionTest, shouldFire: false},
+		"legacy testsuite skipped": {execution: testtriggersv1.TestTriggerExecutionTestsuite, shouldFire: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			trigger := &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource:         testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "api-server", Namespace: "production"},
+					Event:            testtriggersv1.TestTriggerEventModified,
+					Execution:        tc.execution,
+					TestSelector:     testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			}
+			event := &watcherEvent{resource: "deployment", name: "api-server", Namespace: "production", eventType: "modified"}
+			key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+			fired := false
+			s := &Service{
+				triggerStatus: map[statusKey]*triggerStatus{key: {trigger: convertV1ToInternal(trigger)}},
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				logger:  log.DefaultLogger,
+				metrics: metrics.NewMetrics(),
+			}
+			require.NoError(t, s.match(context.Background(), event))
+			assert.Equal(t, tc.shouldFire, fired)
+		})
+	}
+}
+
+// TestService_match_V1_AllBuiltinResources_CaseFolded is a regression guard
+// for the case-insensitive resource comparison in matchInternalResource. The
+// internalTrigger stores canonical PascalCase (from builtinTypes, e.g. "Pod")
+// while the watcher dispatches events with the v1 lowercase enum value
+// (e.g. "pod"). strings.EqualFold bridges the two. Each of the 8 v1 resource
+// types must match when the event's resource field equals the enum value.
+func TestService_match_V1_AllBuiltinResources_CaseFolded(t *testing.T) {
+	resources := []testtriggersv1.TestTriggerResource{
+		testtriggersv1.TestTriggerResourcePod,
+		testtriggersv1.TestTriggerResourceDeployment,
+		testtriggersv1.TestTriggerResourceStatefulSet,
+		testtriggersv1.TestTriggerResourceDaemonSet,
+		testtriggersv1.TestTriggerResourceService,
+		testtriggersv1.TestTriggerResourceIngress,
+		testtriggersv1.TestTriggerResourceEvent,
+		testtriggersv1.TestTriggerResourceConfigMap,
+	}
+	for _, r := range resources {
+		t.Run(string(r), func(t *testing.T) {
+			trigger := &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource:         r,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "target", Namespace: "ns"},
+					Event:            testtriggersv1.TestTriggerEventModified,
+					Execution:        testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector:     testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			}
+			event := &watcherEvent{resource: testtrigger.ResourceType(r), name: "target", Namespace: "ns", eventType: "modified"}
+			key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+			fired := false
+			s := &Service{
+				triggerStatus: map[statusKey]*triggerStatus{key: {trigger: convertV1ToInternal(trigger)}},
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				logger:  log.DefaultLogger,
+				metrics: metrics.NewMetrics(),
+			}
+			require.NoError(t, s.match(context.Background(), event))
+			assert.True(t, fired, "v1 %q trigger must match an event with resource=%q (case-folded)", r, r)
 		})
 	}
 }

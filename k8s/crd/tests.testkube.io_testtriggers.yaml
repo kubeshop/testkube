@@ -250,6 +250,24 @@ spec:
                 - event
                 - configmap
                 type: string
+              resourceRef:
+                description: |-
+                  ResourceRef specifies a resource to watch by Group/Version/Kind.
+                  Works for any K8s resource including CRDs. Mutually exclusive with Resource.
+                properties:
+                  group:
+                    description: Group is the API group (empty for core resources
+                      like Pod, Service).
+                    type: string
+                  kind:
+                    description: Kind is the resource kind (e.g. Deployment, KafkaTopic).
+                    type: string
+                  version:
+                    description: Version is the API version.
+                    type: string
+                required:
+                - kind
+                type: object
               resourceSelector:
                 description: ResourceSelector identifies which Kubernetes Objects
                   should be watched
