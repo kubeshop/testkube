@@ -136,7 +136,6 @@ func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIU
 	allLogs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
 	ui.ExitOnError("getting execution logs", err)
 
-	
 	var artifactUploads []artifactUpload
 	if !skipArtifacts {
 		artifacts, err := client.GetTestWorkflowExecutionArtifacts(execution.Id)
@@ -150,7 +149,7 @@ func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIU
 			ui.Info("Downloading artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 			for _, artifact := range artifacts {
 				ui.Warn(" - downloading artifact ", artifact.Name)
-			
+
 				f, err := client.DownloadTestWorkflowArtifact(execution.Id, artifact.Name, tmpDir)
 				ui.ExitOnError("downloading artifact "+artifact.Name, err)
 
@@ -228,10 +227,9 @@ type viewResponse struct {
 	Status       string `json:"status"`
 }
 
-
 type artifactUpload struct {
-	Path string 
-	Name string 
+	Path string
+	Name string
 }
 
 func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifacts []artifactUpload) (string, error) {
@@ -253,10 +251,9 @@ func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifac
 	}
 
 	for _, a := range artifacts {
-		
+
 		filename := filepath.ToSlash(a.Name)
 
-	
 		if err := writer.WriteField("artifactPaths", filename); err != nil {
 			return "", fmt.Errorf("writing artifactPaths field for %s: %w", filename, err)
 		}
@@ -280,7 +277,7 @@ func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifac
 		return "", fmt.Errorf("closing multipart writer: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, sharesAPIURL+"/shares", &buf)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, sharesAPIURL+"/public-executions", &buf)
 	if err != nil {
 		return "", fmt.Errorf("creating request: %w", err)
 	}
