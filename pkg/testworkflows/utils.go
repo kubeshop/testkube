@@ -33,10 +33,10 @@ func FlattenSignatures(sig []testkube.TestWorkflowSignature) []testkube.TestWork
 }
 
 func IsWorkflowSilent(workflow *testkube.TestWorkflow) bool {
-	if workflow == nil || workflow.Spec == nil || workflow.Spec.Execution == nil || workflow.Spec.Execution.Silent == nil {
+	if workflow == nil || workflow.Spec == nil || workflow.Spec.Execution == nil {
 		return false
 	}
-	return *workflow.Spec.Execution.Silent
+	return workflow.Spec.Execution.Silent
 }
 
 // NewSilenceAllSilentMode returns a SilentMode that silences all processing.

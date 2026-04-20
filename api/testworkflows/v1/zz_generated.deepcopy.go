@@ -640,6 +640,11 @@ func (in *PodConfig) DeepCopyInto(out *PodConfig) {
 		*out = new(corev1.PodSecurityContext)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DisableFsGroupDefaulting != nil {
+		in, out := &in.DisableFsGroupDefaulting, &out.DisableFsGroupDefaulting
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		*out = new(corev1.Affinity)

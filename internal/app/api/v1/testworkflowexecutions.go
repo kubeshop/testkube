@@ -75,7 +75,7 @@ func streamableWorkflowNotifications(source <-chan *testkube.TestWorkflowExecuti
 			}
 			if workflowNotificationResumable(streamNotification) {
 				seqNo++
-				streamNotification.SeqNo = seqNo
+				streamNotification.SeqNo = int32(seqNo)
 				if seqNo <= resumeAfterSeqNo {
 					continue
 				}

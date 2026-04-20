@@ -102,6 +102,9 @@ type PodConfig struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty" expr:"force"`
 
+	// disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+	DisableFsGroupDefaulting *bool `json:"disableFsGroupDefaulting,omitempty" expr:"template"`
+
 	// Specifies the hostname of the Pod
 	Hostname string `json:"hostname,omitempty" expr:"template"`
 

@@ -10216,6 +10216,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -11646,6 +11649,9 @@ spec:
                         type: string
                       description: annotations added to the scheduled pod
                       type: object
+                    disableFsGroupDefaulting:
+                      description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                      type: boolean
                     dnsConfig:
                       properties:
                         nameservers:
@@ -12476,6 +12482,9 @@ spec:
                               type: string
                             description: annotations added to the scheduled pod
                             type: object
+                          disableFsGroupDefaulting:
+                            description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                            type: boolean
                           dnsConfig:
                             properties:
                               nameservers:
@@ -15763,6 +15772,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -19104,6 +19116,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -22661,6 +22676,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -24034,6 +24052,9 @@ spec:
                         type: string
                       description: annotations added to the scheduled pod
                       type: object
+                    disableFsGroupDefaulting:
+                      description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                      type: boolean
                     dnsConfig:
                       properties:
                         nameservers:
@@ -24864,6 +24885,9 @@ spec:
                               type: string
                             description: annotations added to the scheduled pod
                             type: object
+                          disableFsGroupDefaulting:
+                            description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                            type: boolean
                           dnsConfig:
                             properties:
                               nameservers:
@@ -28066,6 +28090,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -31285,6 +31312,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:

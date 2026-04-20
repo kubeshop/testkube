@@ -17,7 +17,7 @@ type TestWorkflowExecutionNotification struct {
 	// timestamp for the notification if available
 	Ts time.Time `json:"ts,omitempty"`
 	// monotonic application-event cursor for resumable log streams
-	SeqNo uint32 `json:"seqNo,omitempty"`
+	SeqNo int32 `json:"seqNo,omitempty"`
 	// stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
 	EventType string              `json:"eventType,omitempty"`
 	Result    *TestWorkflowResult `json:"result,omitempty"`

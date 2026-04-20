@@ -41,6 +41,9 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 		dst.NodeName = include.NodeName
 	}
 	dst.SecurityContext = MergePodSecurityContext(dst.SecurityContext, include.SecurityContext)
+	if include.DisableFsGroupDefaulting != nil {
+		dst.DisableFsGroupDefaulting = include.DisableFsGroupDefaulting
+	}
 	if include.Hostname != "" {
 		dst.Hostname = include.Hostname
 	}

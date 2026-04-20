@@ -31,7 +31,7 @@ func TestStreamableWorkflowNotificationsAppliesResumeCursorAndSequencing(t *test
 	assert.Equal(t, "log", notifications[0].EventType)
 	assert.Equal(t, "temporary", notifications[0].Log)
 
-	assert.Equal(t, uint32(2), notifications[1].SeqNo)
+	assert.Equal(t, int32(2), notifications[1].SeqNo)
 	assert.Equal(t, "result", notifications[1].EventType)
 	require.NotNil(t, notifications[1].Result)
 }

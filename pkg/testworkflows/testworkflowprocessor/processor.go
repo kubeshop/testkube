@@ -256,6 +256,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing pod config")
 	}
+	disableFsGroupDefaulting := podConfig.DisableFsGroupDefaulting != nil && *podConfig.DisableFsGroupDefaulting
 
 	// Build signature
 	sig := root.Signature().Children()
@@ -310,13 +311,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			sc.RunAsGroup = common.Ptr(images[image].Group)
 			otherContainers[0].Container().SetSecurityContext(sc)
 		}
-		if podConfig.SecurityContext.FSGroup == nil {
+		if !disableFsGroupDefaulting && podConfig.SecurityContext.FSGroup == nil {
 			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
 		}
 	}
 
 	// Determine FS Group for the containers
-	fsGroup := common.Ptr(constants.DefaultFsGroup)
+	var fsGroup *int64
+	if !disableFsGroupDefaulting {
+		fsGroup = common.Ptr(constants.DefaultFsGroup)
+	}
 	if podConfig.SecurityContext != nil && podConfig.SecurityContext.FSGroup != nil {
 		fsGroup = podConfig.SecurityContext.FSGroup
 	}
@@ -407,7 +411,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if podConfig.SecurityContext == nil {
 		podConfig.SecurityContext = &corev1.PodSecurityContext{}
 	}
-	if podConfig.SecurityContext.FSGroup == nil {
+	if !disableFsGroupDefaulting && podConfig.SecurityContext.FSGroup == nil {
 		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 	hostPID := false

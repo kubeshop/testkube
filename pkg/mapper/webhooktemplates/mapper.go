@@ -222,7 +222,7 @@ func MapUpdateToSpec(request testkube.WebhookTemplateUpdateRequest, webhookTempl
 	}
 
 	if request.Target != nil {
-		webhookTemplate.Spec.Target = common.MapPtr(*request.Target, commonmapper.MapTargetApiToKube)
+		webhookTemplate.Spec.Target = common.MapPtr(request.Target, commonmapper.MapTargetApiToKube)
 	}
 
 	return webhookTemplate
@@ -277,7 +277,7 @@ func MapSpecToUpdate(webhookTemplate *executorv1.WebhookTemplate) (request testk
 	request.Disabled = &webhookTemplate.Spec.Disabled
 	request.Config = common.Ptr(common.MapMap(webhookTemplate.Spec.Config, MapConfigValueCRDToAPI))
 	request.Parameters = common.Ptr(common.MapSlice(webhookTemplate.Spec.Parameters, MapParameterSchemaCRDToAPI))
-	request.Target = common.Ptr(common.MapPtr(webhookTemplate.Spec.Target, commonmapper.MapTargetKubeToAPI))
+	request.Target = common.MapPtr(webhookTemplate.Spec.Target, commonmapper.MapTargetKubeToAPI)
 
 	return request
 }

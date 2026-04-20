@@ -61,9 +61,9 @@ func TestStreamToTestWorkflowExecutionNotificationsChannel_HandlesSSEEventFields
 	}
 
 	require.Len(t, received, 2)
-	assert.Equal(t, uint32(7), received[0].SeqNo)
+	assert.Equal(t, int32(7), received[0].SeqNo)
 	assert.Equal(t, "heartbeat", received[0].EventType)
-	assert.Equal(t, uint32(8), received[1].SeqNo)
+	assert.Equal(t, int32(8), received[1].SeqNo)
 	assert.Equal(t, "log", received[1].EventType)
 	assert.Equal(t, "hello", received[1].Log)
 }

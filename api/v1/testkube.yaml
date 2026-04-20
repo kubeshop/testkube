@@ -10195,6 +10195,8 @@ components:
           type: string
         securityContext:
           $ref: "#/components/schemas/PodSecurityContext"
+        disableFsGroupDefaulting:
+          $ref: "#/components/schemas/BoxedBoolean"
         hostname:
           type: string
         subdomain:

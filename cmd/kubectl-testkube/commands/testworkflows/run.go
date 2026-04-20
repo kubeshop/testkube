@@ -845,10 +845,11 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 				continue
 			}
 			if l.SeqNo > 0 {
-				if l.SeqNo <= nextSeqNo {
+				seqNo := uint32(l.SeqNo)
+				if seqNo <= nextSeqNo {
 					continue
 				}
-				nextSeqNo = l.SeqNo
+				nextSeqNo = seqNo
 			}
 
 			if l.Output != nil {

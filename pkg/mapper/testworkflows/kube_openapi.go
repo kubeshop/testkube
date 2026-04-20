@@ -779,6 +779,7 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		DnsPolicy:                 common.MapEnumToString(v.DNSPolicy),
 		NodeName:                  v.NodeName,
 		SecurityContext:           common.MapPtr(v.SecurityContext, MapPodSecurityContextKubeToAPI),
+		DisableFsGroupDefaulting:  MapBoolToBoxedBoolean(v.DisableFsGroupDefaulting),
 		Hostname:                  v.Hostname,
 		Subdomain:                 v.Subdomain,
 		Affinity:                  common.MapPtr(v.Affinity, MapAffinityKubeToAPI),
@@ -1385,7 +1386,7 @@ func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowExecutionSc
 	return testkube.TestWorkflowExecutionSchema{
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
-		Silent: v.Silent,
+		Silent: common.ResolvePtr(v.Silent, false),
 	}
 }
 
