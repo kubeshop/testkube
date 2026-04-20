@@ -337,6 +337,10 @@ var (
 		Execution: &testworkflowsv1.TestWorkflowExecutionSchema{
 			Tags: map[string]string{"some-key": "some-value"},
 		},
+		Timeouts: &testworkflowsv1.TestWorkflowTimeouts{
+			Queue:          "30s",
+			Initialization: "60s",
+		},
 	}
 )
 

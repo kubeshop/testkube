@@ -74,6 +74,7 @@ func (s *groupStage) signature(full bool) Signature {
 
 	return &signature{
 		RefValue:      s.ref,
+		IdValue:       s.id,
 		NameValue:     s.name,
 		CategoryValue: s.category,
 		OptionalValue: s.optional,
@@ -147,6 +148,9 @@ func (s *groupStage) Flatten() []Stage {
 	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (!s.paused || !first.Paused()) {
 		if first.Name() == "" {
 			first.SetName(s.name)
+		}
+		if first.Id() == "" {
+			first.SetId(s.id)
 		}
 		if first.Condition() == "" {
 			// Virtualize with the default condition

@@ -42,7 +42,7 @@ spec:
             name:
             - testkube-cloud-test-dev-runner-1-global
             - testkube-cloud-test-dev-runner-3-ind-ns
-      - name: nunit-workflow-smoke-junit-report
+      - name: nunit-workflow-smoke
         description: "runner: 2 runners (runner-2 AND separate-ns)"
         target:
           match:

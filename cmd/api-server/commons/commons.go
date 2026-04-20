@@ -216,9 +216,9 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 }
 
 func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, postgresmigrations.Fs)
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, postgresmigrations.Fs, goose.WithAllowOutofOrder(true))
 	if err != nil {
-		return errors.Wrap(err, "failed to plan Postgres migrations")
+		return errors.Wrap(err, "failed to initialize Postgres migrations provider")
 	}
 
 	results, err := provider.Up(ctx)

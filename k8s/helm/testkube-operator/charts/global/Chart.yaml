@@ -1,0 +1,23 @@
+apiVersion: v2
+version: 0.1.3
+name: global
+description: A Library Helm Chart for definitions that can be shared by Helm templates in other charts.
+home: https://github.com/kubeshop/helm-charts/tree/main/charts/global
+type: library
+# This version number should be incremented each time the changes are made to the chart and its templates, including the app version.
+annotations:
+  category: Infrastructure
+keywords:
+  - global
+  - helper
+  - template
+  - function
+  - testkube
+maintainers:
+  - name: Testkube
+    url: https://github.com/kubeshop/testkube
+sources:
+  - https://github.com/kubeshop/helm-charts
+  - https://testkube.io/
+
+appVersion: "0.1.2"

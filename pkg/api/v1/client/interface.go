@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -78,9 +80,12 @@ type TestWorkflowAPI interface {
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
 	ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionNotificationsWithOptions(id string, options TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
 	GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName string, serviceIndex int, options TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref string, workerIndex int, options TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods
@@ -161,8 +166,21 @@ type Transport[A All] interface {
 	Delete(uri, selector string, isContentExpected bool) error
 	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
-	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
+	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 	GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error)
 	Validate(method, uri string, body []byte, params map[string]string) error
+}
+
+type TestWorkflowExecutionNotificationsOptions struct {
+	Context          context.Context
+	ResumeAfterSeqNo uint32
+	StreamID         string
+}
+
+func (o TestWorkflowExecutionNotificationsOptions) RequestContext() context.Context {
+	if o.Context != nil {
+		return o.Context
+	}
+	return context.Background()
 }

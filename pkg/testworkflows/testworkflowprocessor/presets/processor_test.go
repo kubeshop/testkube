@@ -161,8 +161,8 @@ func TestProcessBasic(t *testing.T) {
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -246,14 +246,16 @@ func TestProcessBasic(t *testing.T) {
 
 	assert.Equal(t, want, res.Job)
 
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 3, len(volumes))
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 4, len(volumes))
 	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
 	assert.Equal(t, constants.DefaultTmpDirPath, volumeMounts[1].MountPath)
 	assert.Equal(t, constants.DefaultDataPath, volumeMounts[2].MountPath)
+	assert.Equal(t, constants.DefaultTestkubePath, volumeMounts[3].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
+	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
 }
 
 func TestProcessShellWithNonStandardImage(t *testing.T) {
@@ -283,8 +285,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				Setup(true, false, true).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -384,14 +386,16 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 
 	assert.Equal(t, want, res.Job)
 
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 3, len(volumes))
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 4, len(volumes))
 	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
 	assert.Equal(t, constants.DefaultTmpDirPath, volumeMounts[1].MountPath)
 	assert.Equal(t, constants.DefaultDataPath, volumeMounts[2].MountPath)
+	assert.Equal(t, constants.DefaultTestkubePath, volumeMounts[3].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
+	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
 }
 
 func TestProcessBasicEnvReference(t *testing.T) {
@@ -425,8 +429,8 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -508,9 +512,9 @@ func TestProcessMultipleSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -623,12 +627,12 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
-				Declare(sig[1].Children()[0].Ref(), sig[0].Ref(), constants.RootOperationName, sig[1].Ref()).
-				Declare(sig[1].Children()[1].Ref(), and(sig[1].Children()[0].Ref(), sig[0].Ref()), constants.RootOperationName, sig[1].Ref()).
-				Declare(sig[2].Ref(), and(sig[1].Ref(), sig[0].Ref()), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[1].Children()[0].Ref(), sig[1].Children()[0].Id(), sig[0].Ref(), constants.RootOperationName, sig[1].Ref()).
+				Declare(sig[1].Children()[1].Ref(), sig[1].Children()[1].Id(), and(sig[1].Children()[0].Ref(), sig[0].Ref()), constants.RootOperationName, sig[1].Ref()).
+				Declare(sig[2].Ref(), sig[2].Id(), and(sig[1].Ref(), sig[0].Ref()), constants.RootOperationName).
 				Result(sig[1].Ref(), and(sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref())).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref(), sig[2].Ref())).
 				Result("", constants.RootOperationName).
@@ -847,14 +851,14 @@ func TestProcessLocalContent(t *testing.T) {
 	}
 
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 4, len(volumeMountsWithContent))
-	assert.Equal(t, volumeMounts, volumeMountsWithContent[:3])
-	assert.Equal(t, "/some/path", volumeMountsWithContent[3].MountPath)
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 5, len(volumeMountsWithContent))
+	assert.Equal(t, volumeMounts, volumeMountsWithContent[:4])
+	assert.Equal(t, "/some/path", volumeMountsWithContent[4].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMountsWithContent[3].Name, volumes[3].Name)
-	assert.Equal(t, volumes[3].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[3].SubPath])
+	assert.Equal(t, volumeMountsWithContent[4].Name, volumes[4].Name)
+	assert.Equal(t, volumes[4].ConfigMap.Name, res.ConfigMaps[0].Name)
+	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[4].SubPath])
 }
 
 func TestProcessGlobalContent(t *testing.T) {
@@ -935,12 +939,12 @@ func TestProcessGlobalContent(t *testing.T) {
 	fmt.Println(string(v))
 
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 4, len(volumeMounts))
-	assert.Equal(t, "/some/path", volumeMounts[3].MountPath)
+	assert.Equal(t, 5, len(volumeMounts))
+	assert.Equal(t, "/some/path", volumeMounts[4].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMounts[3].Name, volumes[3].Name)
-	assert.Equal(t, volumes[3].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[3].SubPath])
+	assert.Equal(t, volumeMounts[4].Name, volumes[4].Name)
+	assert.Equal(t, volumes[4].ConfigMap.Name, res.ConfigMaps[0].Name)
+	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[4].SubPath])
 }
 
 func TestProcessEscapedAnnotations(t *testing.T) {
@@ -980,8 +984,8 @@ func TestProcessShell(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1027,9 +1031,9 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1087,9 +1091,9 @@ func TestProcessNestedCondition(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1149,11 +1153,11 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(virtual.Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "true", constants.RootOperationName, virtual.Ref()).
-				Declare(sig[2].Ref(), "true", constants.RootOperationName, virtual.Ref()).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(virtual.Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", "true", constants.RootOperationName, virtual.Ref()).
+				Declare(sig[2].Ref(), "", "true", constants.RootOperationName, virtual.Ref()).
 				Result(virtual.Ref(), and(sig[1].Ref(), sig[2].Ref())).
 				Result(constants.RootOperationName, and(sig[0].Ref(), virtual.Ref())).
 				Result("", constants.RootOperationName).
@@ -1227,10 +1231,10 @@ func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
 			return list.
 				// configure
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[0].Children()[0].Ref(), "false").
-				Declare(sig[0].Children()[1].Ref(), "false").
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[0].Children()[0].Ref(), sig[0].Children()[0].Id(), "false").
+				Declare(sig[0].Children()[1].Ref(), sig[0].Children()[1].Id(), "false").
 				Result(sig[0].Ref(), "true").
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
@@ -1290,9 +1294,9 @@ func TestProcess_ConditionAlways(t *testing.T) {
 			return list.
 				// configure
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 
@@ -1356,9 +1360,9 @@ func TestProcess_PureShellAtTheEnd(t *testing.T) {
 			return list.
 				// configure
 				Setup(true, false, true).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 
@@ -1419,9 +1423,9 @@ func TestProcess_MergingActions(t *testing.T) {
 			return list.
 				// configure
 				Setup(true, false, true).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 

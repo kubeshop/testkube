@@ -10,6 +10,8 @@
 package testkube
 
 type TestWorkflowIndependentStep struct {
+	// stable identifier for referencing this step in expressions
+	Id string `json:"id,omitempty"`
 	// readable name for the step
 	Name string `json:"name,omitempty"`
 	// expression to declare under which conditions the step should be run; defaults to \"passed\", except artifacts where it defaults to \"always\"

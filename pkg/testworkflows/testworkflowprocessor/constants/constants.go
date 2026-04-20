@@ -16,6 +16,7 @@ import (
 const (
 	DefaultInternalPath       = "/.tktw"
 	DefaultDataPath           = "/data"
+	DefaultTestkubePath       = "/testkube"
 	DefaultTerminationLogPath = "/dev/termination-log"
 	DefaultFsGroup            = int64(1001)
 	// TODO: move to the execution worker (?)

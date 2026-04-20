@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: nunit-workflow-smoke-junit-report
+  name: nunit-workflow-smoke
   labels:
     core-tests: workflows
     tool: nunit

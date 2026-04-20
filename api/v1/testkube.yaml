@@ -6673,8 +6673,6 @@ components:
           deprecated: true
         secret:
           $ref: "#/components/schemas/SecretConfig"
-        features:
-          $ref: "#/components/schemas/Features"
         executionNamespaces:
           type: array
           description: execution namespaces
@@ -7793,6 +7791,8 @@ components:
           $ref: "#/components/schemas/WebhookTemplateRef"
         sync:
           $ref: "#/components/schemas/Syncable"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7863,6 +7863,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         sync:
           $ref: "#/components/schemas/Syncable"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     Event:
       description: Event data
@@ -7926,26 +7928,6 @@ components:
     EventType:
       type: string
       enum:
-        - start-test
-        - end-test-success
-        - end-test-failed
-        - end-test-aborted
-        - end-test-timeout
-        - become-test-up
-        - become-test-down
-        - become-test-failed
-        - become-test-aborted
-        - become-test-timeout
-        - start-testsuite
-        - end-testsuite-success
-        - end-testsuite-failed
-        - end-testsuite-aborted
-        - end-testsuite-timeout
-        - become-testsuite-up
-        - become-testsuite-down
-        - become-testsuite-failed
-        - become-testsuite-aborted
-        - become-testsuite-timeout
         - queue-testworkflow
         - start-testworkflow
         - end-testworkflow-success
@@ -8062,15 +8044,6 @@ components:
           items:
             type: string
           example: ["logline1", "logline2", "logline3"]
-
-    Features:
-      type: object
-      required:
-        - logsV2
-      properties:
-        logsV2:
-          type: boolean
-          description: Log processing version 2
 
     TestTrigger:
       type: object
@@ -8983,6 +8956,13 @@ components:
           type: string
           format: date-time
           description: timestamp for the notification if available
+        seqNo:
+          type: integer
+          format: int32
+          description: monotonic application-event cursor for resumable log streams
+        eventType:
+          type: string
+          description: stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
         result:
           $ref: "#/components/schemas/TestWorkflowResult"
         ref:
@@ -9244,6 +9224,9 @@ components:
         ref:
           type: string
           description: step reference
+        id:
+          type: string
+          description: stable step identifier for expressions
         name:
           type: string
           description: step name
@@ -9500,6 +9483,17 @@ components:
         isolatedContainers:
           $ref: "#/components/schemas/BoxedBoolean"
 
+    TestWorkflowTimeouts:
+      type: object
+      description: configures timeout behavior for a workflow (queue, initialization)
+      properties:
+        queue:
+          type: string
+          description: maximum time the execution may spend in queue before starting (e.g. 30s, 5m)
+        initialization:
+          type: string
+          description: maximum time for initialization/transitioning before steps run (e.g. 60s, 2m)
+
     TestWorkflowSpec:
       type: object
       properties:
@@ -9543,6 +9537,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowExecutionSchema"
+        timeouts:
+          $ref: "#/components/schemas/TestWorkflowTimeouts"
         pvcs:
           type: object
           additionalProperties:
@@ -9587,6 +9583,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowExecutionSchema"
+        timeouts:
+          $ref: "#/components/schemas/TestWorkflowTimeouts"
         pvcs:
           type: object
           additionalProperties:
@@ -9630,6 +9628,9 @@ components:
     TestWorkflowIndependentStep:
       type: object
       properties:
+        id:
+          type: string
+          description: stable identifier for referencing this step in expressions
         name:
           type: string
           description: readable name for the step
@@ -9691,6 +9692,9 @@ components:
     TestWorkflowStep:
       type: object
       properties:
+        id:
+          type: string
+          description: stable identifier for referencing this step in expressions
         name:
           type: string
           description: readable name for the step

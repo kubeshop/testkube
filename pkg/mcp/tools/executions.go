@@ -15,8 +15,22 @@ import (
 	"github.com/kubeshop/testkube/pkg/mcp/formatters"
 )
 
+// ExecutionLogParams holds optional filtering parameters for log retrieval.
+// All fields are optional; zero values mean "no filter".
+// When Tail, StartLine, and EndLine are all 0 the handler injects Tail=100
+// so agents never receive an unbounded log response.
+type ExecutionLogParams struct {
+	Tail        int    // Return last N lines (0 → defaulted to 100 by the handler when no other range is set)
+	StartLine   int    // 1-based start line (0 = from beginning)
+	EndLine     int    // 1-based end line (0 = to end)
+	Grep        string // Filter lines containing this substring
+	Step        string // Filter to a specific workflow step by reference name
+	WorkerRef   string // Worker instance ref from the 'workers' array in get_execution_info; when set, logs are fetched from the worker artifact instead of the main log
+	WorkerIndex int    // 0-based worker index; only meaningful when WorkerRef is set (default 0)
+}
+
 type ExecutionLogger interface {
-	GetExecutionLogs(ctx context.Context, executionId string) (string, error)
+	GetExecutionLogs(ctx context.Context, executionId string, params ExecutionLogParams) (string, error)
 }
 
 func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc) {
@@ -26,12 +40,69 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 			mcp.Required(),
 			mcp.Description("The unique execution ID in MongoDB format (e.g., '67d2cdbc351aecb2720afdf2')."),
 		),
+		mcp.WithString("tail",
+			mcp.Description("Return the last N lines of the log. Example: '50'"),
+		),
+		mcp.WithString("startLine",
+			mcp.Description("1-based line number to start reading from. Use with endLine for a range."),
+		),
+		mcp.WithString("endLine",
+			mcp.Description("1-based line number to stop reading at (inclusive). Use with startLine for a range."),
+		),
+		mcp.WithString("grep",
+			mcp.Description("Filter to lines containing this substring (e.g., grep=ERROR)."),
+		),
+		mcp.WithString("step",
+			mcp.Description("Filter to logs from a specific workflow step by reference name (e.g., 'run-tests', 'setup-env')."),
+		),
+		mcp.WithString("workerRef",
+			mcp.Description("Worker instance ref from the 'workers' array returned by get_execution_info (e.g., 'r72qph9'). ONLY use values from that array — do NOT use step refs from the main log metadata. When set, fetches that specific worker's logs instead of the main execution log."),
+		),
+		mcp.WithString("workerIndex",
+			mcp.Description("0-based index of the parallel worker to fetch logs from (default: 0). Use with workerRef."),
+		),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		executionID := request.GetString("executionId", "")
 
-		logs, err := client.GetExecutionLogs(ctx, executionID)
+		params := ExecutionLogParams{
+			Grep:      request.GetString("grep", ""),
+			Step:      request.GetString("step", ""),
+			WorkerRef: request.GetString("workerRef", ""),
+		}
+		if tailStr := request.GetString("tail", ""); tailStr != "" {
+			if v, err := strconv.Atoi(tailStr); err == nil && v > 0 {
+				params.Tail = v
+			}
+		}
+		if s := request.GetString("startLine", ""); s != "" {
+			if v, err := strconv.Atoi(s); err == nil && v > 0 {
+				params.StartLine = v
+			}
+		}
+		if s := request.GetString("endLine", ""); s != "" {
+			if v, err := strconv.Atoi(s); err == nil && v > 0 {
+				params.EndLine = v
+			}
+		}
+		if s := request.GetString("workerIndex", ""); s != "" {
+			if v, err := strconv.Atoi(s); err == nil && v >= 0 {
+				params.WorkerIndex = v
+			}
+		}
+		if params.StartLine > 0 && params.EndLine > 0 && params.StartLine > params.EndLine {
+			return mcp.NewToolResultError(fmt.Sprintf("invalid line range: startLine (%d) must be less than or equal to endLine (%d)", params.StartLine, params.EndLine)), nil
+		}
+
+		// Default to the last 100 lines when no range restriction is given and grep is not
+		// set. When grep is set the agent wants to search the full log; the server-side
+		// match cap (100 results) bounds the response size instead.
+		if params.Tail == 0 && params.StartLine == 0 && params.EndLine == 0 && params.Grep == "" {
+			params.Tail = 100
+		}
+
+		logs, err := client.GetExecutionLogs(ctx, executionID, params)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to fetch logs: %v", err)), nil
 		}
@@ -45,6 +116,7 @@ func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.T
 type ListExecutionsParams struct {
 	WorkflowName string
 	Selector     string
+	TagSelector  string
 	TextSearch   string
 	PageSize     int
 	Page         int
@@ -52,6 +124,7 @@ type ListExecutionsParams struct {
 	Since        string
 	StartDate    string
 	EndDate      string
+	FetchAll     bool
 }
 
 type ExecutionLister interface {
@@ -63,6 +136,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 		mcp.WithDescription(ListExecutionsDescription),
 		mcp.WithString("workflowName", mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
+		mcp.WithString("tagSelector", mcp.Description(TagSelectorDescription)),
 		mcp.WithString("pageSize", mcp.Description(PageSizeDescription)),
 		mcp.WithString("page", mcp.Description(PageDescription)),
 		mcp.WithString("textSearch", mcp.Description(TextSearchDescription)),
@@ -76,6 +150,7 @@ func ListExecutions(client ExecutionLister) (tool mcp.Tool, handler server.ToolH
 		params := ListExecutionsParams{
 			WorkflowName: request.GetString("workflowName", ""),
 			Selector:     request.GetString("selector", ""),
+			TagSelector:  request.GetString("tagSelector", ""),
 			TextSearch:   request.GetString("textSearch", ""),
 			Status:       request.GetString("status", ""),
 			Since:        request.GetString("since", ""),

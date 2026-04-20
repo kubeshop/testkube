@@ -12,7 +12,7 @@ import (
 )
 
 const abortTestWorkflowExecutionIfQueued = `-- name: AbortTestWorkflowExecutionIfQueued :one
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 FROM test_workflow_results r
 WHERE test_workflow_executions.id = $2 AND (test_workflow_executions.organization_id = $3 AND test_workflow_executions.environment_id = $4)
@@ -42,8 +42,8 @@ func (q *Queries) AbortTestWorkflowExecutionIfQueued(ctx context.Context, arg Ab
 }
 
 const abortTestWorkflowResultIfQueued = `-- name: AbortTestWorkflowResultIfQueued :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = 'aborted',
     predicted_status = 'aborted',
     finished_at = $1,
@@ -52,7 +52,7 @@ SET
             jsonb_set(COALESCE(initialization, '{}'::jsonb), '{status}', '"aborted"'),
             '{errormessage}', '"Aborted before initialization."'
         ),
-        '{finishedat}', to_jsonb($1::timestamp)
+        '{finishedat}', to_jsonb($1::timestamptz)
     )
 WHERE execution_id = $2
     AND status IN ('queued', 'running', 'paused')
@@ -69,8 +69,8 @@ func (q *Queries) AbortTestWorkflowResultIfQueued(ctx context.Context, arg Abort
 }
 
 const assignTestWorkflowExecution = `-- name: AssignTestWorkflowExecution :one
-UPDATE test_workflow_executions 
-SET 
+UPDATE test_workflow_executions
+SET
     runner_id = $1::text,
     assigned_at = $2
 FROM test_workflow_results r
@@ -122,84 +122,78 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+    AND (
+        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length($17::jsonb)
+            ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
-        OR
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        AND
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($21::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length($21::jsonb)
+            ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($22::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length($22::jsonb)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 `
@@ -221,12 +215,12 @@ type CountTestWorkflowExecutionsParams struct {
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
-	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
-	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
-	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
-	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
-	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 }
 
 func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTestWorkflowExecutionsParams) (int64, error) {
@@ -291,7 +285,7 @@ const deleteTestWorkflowExecutionsByTestWorkflow = `-- name: DeleteTestWorkflowE
 DELETE FROM test_workflow_executions e
 USING test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = $1 AND e.environment_id = $2)
-  AND w.workflow_type = 'workflow' 
+  AND w.workflow_type = 'workflow'
   AND w.name = $3::text
 `
 
@@ -310,7 +304,7 @@ const deleteTestWorkflowExecutionsByTestWorkflows = `-- name: DeleteTestWorkflow
 DELETE FROM test_workflow_executions e
 USING test_workflows w
 WHERE e.id = w.execution_id AND (e.organization_id = $1 AND e.environment_id = $2)
-  AND w.workflow_type = 'workflow' 
+  AND w.workflow_type = 'workflow'
   AND w.name = ANY($3::text[])
 `
 
@@ -371,7 +365,7 @@ func (q *Queries) DeleteTestWorkflowSignatures(ctx context.Context, executionID 
 }
 
 const finishExecutionStatusAtStrict = `-- name: FinishExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
 `
@@ -394,8 +388,8 @@ func (q *Queries) FinishExecutionStatusAtStrict(ctx context.Context, arg FinishE
 }
 
 const finishTestWorkflowExecutionResultStrict = `-- name: FinishTestWorkflowExecutionResultStrict :one
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = $1,
     predicted_status = $2,
     queued_at = $3,
@@ -462,8 +456,8 @@ func (q *Queries) FinishTestWorkflowExecutionResultStrict(ctx context.Context, a
 }
 
 const getFinishedTestWorkflowExecutions = `-- name: GetFinishedTestWorkflowExecutions :many
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -471,7 +465,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -514,13 +508,14 @@ SELECT
         '[]'::json
     )::json as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AND e.environment_id = $2)
+    AND (e.silent_mode IS NULL OR (e.silent_mode->>'health')::boolean IS NOT TRUE)
     AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
     AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
@@ -529,84 +524,78 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (     
-        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+   AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+          EXISTS (
+              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+          )
+      )
+    AND (
+        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length($17::jsonb)
+            ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
-        OR
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        AND
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($21::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length($21::jsonb)
+            ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($22::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length($22::jsonb)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -630,12 +619,12 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
-	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
-	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
-	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
-	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
-	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -658,6 +647,7 @@ type GetFinishedTestWorkflowExecutionsRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -752,6 +742,7 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 			&i.RunningContext,
 			&i.ConfigParams,
 			&i.Runtime,
+			&i.SilentMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -804,8 +795,8 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 }
 
 const getLatestTestWorkflowExecutionByTestWorkflow = `-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -813,7 +804,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -899,6 +890,7 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -968,6 +960,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 		&i.RunningContext,
 		&i.ConfigParams,
 		&i.Runtime,
+		&i.SilentMode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -1014,7 +1007,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 
 const getLatestTestWorkflowExecutionsByTestWorkflows = `-- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many
 SELECT DISTINCT ON (w.name)
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1022,7 +1015,7 @@ SELECT DISTINCT ON (w.name)
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1099,6 +1092,7 @@ type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1168,6 +1162,7 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 			&i.RunningContext,
 			&i.ConfigParams,
 			&i.Runtime,
+			&i.SilentMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -1219,6 +1214,17 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 	return items, nil
 }
 
+const getMaxReportOrder = `-- name: GetMaxReportOrder :one
+SELECT COALESCE(MAX(rep_order), 0)::int FROM test_workflow_reports WHERE execution_id = $1
+`
+
+func (q *Queries) GetMaxReportOrder(ctx context.Context, executionID string) (int32, error) {
+	row := q.db.QueryRow(ctx, getMaxReportOrder, executionID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getPreviousFinishedState = `-- name: GetPreviousFinishedState :one
 SELECT r.status
 FROM test_workflow_executions e
@@ -1251,8 +1257,8 @@ func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousF
 }
 
 const getRunningTestWorkflowExecutions = `-- name: GetRunningTestWorkflowExecutions :many
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1260,7 +1266,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1336,6 +1342,7 @@ type GetRunningTestWorkflowExecutionsRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1405,6 +1412,7 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context, arg GetR
 			&i.RunningContext,
 			&i.ConfigParams,
 			&i.Runtime,
+			&i.SilentMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -1457,8 +1465,8 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context, arg GetR
 }
 
 const getTestWorkflowExecution = `-- name: GetTestWorkflowExecution :one
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1466,7 +1474,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1542,6 +1550,7 @@ type GetTestWorkflowExecutionRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1605,6 +1614,7 @@ func (q *Queries) GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkf
 		&i.RunningContext,
 		&i.ConfigParams,
 		&i.Runtime,
+		&i.SilentMode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -1650,8 +1660,8 @@ func (q *Queries) GetTestWorkflowExecution(ctx context.Context, arg GetTestWorkf
 }
 
 const getTestWorkflowExecutionByNameAndTestWorkflow = `-- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1659,7 +1669,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1736,6 +1746,7 @@ type GetTestWorkflowExecutionByNameAndTestWorkflowRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -1804,6 +1815,7 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 		&i.RunningContext,
 		&i.ConfigParams,
 		&i.Runtime,
+		&i.SilentMode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -1850,7 +1862,7 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 
 const getTestWorkflowExecutionTags = `-- name: GetTestWorkflowExecutionTags :many
 WITH tag_extracts AS (
-    SELECT 
+    SELECT
         e.id,
         w.name as workflow_name,
         tag_pair.key as tag_key,
@@ -1862,7 +1874,7 @@ WITH tag_extracts AS (
         AND e.tags != '{}'::jsonb
         AND jsonb_typeof(e.tags) = 'object'
 )
-SELECT 
+SELECT
     tag_key::text,
     array_agg(DISTINCT tag_value ORDER BY tag_value)::text[] as values
 FROM tag_extracts
@@ -1903,8 +1915,8 @@ func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, arg GetTestW
 }
 
 const getTestWorkflowExecutionWithRunner = `-- name: GetTestWorkflowExecutionWithRunner :one
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -1912,7 +1924,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -1989,6 +2001,7 @@ type GetTestWorkflowExecutionWithRunnerRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -2057,6 +2070,7 @@ func (q *Queries) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg Ge
 		&i.RunningContext,
 		&i.ConfigParams,
 		&i.Runtime,
+		&i.SilentMode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -2102,8 +2116,8 @@ func (q *Queries) GetTestWorkflowExecutionWithRunner(ctx context.Context, arg Ge
 }
 
 const getTestWorkflowExecutions = `-- name: GetTestWorkflowExecutions :many
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -2111,7 +2125,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -2169,84 +2183,78 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (     
-        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+   AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+          EXISTS (
+              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+          )
+      )
+    AND (
+        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length($17::jsonb)
+            ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
-        OR
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        AND
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($21::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length($21::jsonb)
+            ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($22::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length($22::jsonb)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -2270,12 +2278,12 @@ type GetTestWorkflowExecutionsParams struct {
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
-	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
-	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
-	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
-	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
-	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2298,6 +2306,7 @@ type GetTestWorkflowExecutionsRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -2392,6 +2401,7 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 			&i.RunningContext,
 			&i.ConfigParams,
 			&i.Runtime,
+			&i.SilentMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -2444,8 +2454,8 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 }
 
 const getTestWorkflowExecutionsSummary = `-- name: GetTestWorkflowExecutionsSummary :many
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -2453,7 +2463,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -2496,7 +2506,7 @@ SELECT
         '[]'::json
     )::json as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -2511,84 +2521,78 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
+             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
          )
     )
-    AND (     
-        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+    AND (
+        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length($17::jsonb)
+            ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
-        OR
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        AND
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($21::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length($21::jsonb)
+            ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($22::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length($22::jsonb)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
@@ -2612,12 +2616,12 @@ type GetTestWorkflowExecutionsSummaryParams struct {
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
-	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
-	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
-	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
-	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
-	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
 	Lmt                interface{}        `db:"lmt" json:"lmt"`
 }
@@ -2640,6 +2644,7 @@ type GetTestWorkflowExecutionsSummaryRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -2734,6 +2739,7 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 			&i.RunningContext,
 			&i.ConfigParams,
 			&i.Runtime,
+			&i.SilentMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -2786,7 +2792,7 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 }
 
 const getTestWorkflowExecutionsTotals = `-- name: GetTestWorkflowExecutionsTotals :many
-SELECT 
+SELECT
     r.status,
     COUNT(*) as count
 FROM test_workflow_executions e
@@ -2801,84 +2807,78 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
     AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
-    AND (COALESCE($11, NULL) IS NULL OR 
-         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+    AND (COALESCE($11, NULL) IS NULL OR
+         ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
          ($11::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
     AND (COALESCE($12::text, '') = '' OR e.running_context->'actor'->>'name' = $12::text)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
-    AND (COALESCE($15, NULL) IS NULL OR 
+    AND (COALESCE($15, NULL) IS NULL OR
          ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL 
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (     
-        (COALESCE($17::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($17::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (e.tags ? (key_condition->>'key'))
+    AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+          EXISTS (
+              SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
+              WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+          )
+      )
+    AND (
+        (COALESCE($17::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($17::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        e.tags ? (key_condition->>'key')
+                        e.tags ? key_condition
                 END
-            ) = jsonb_array_length($17::jsonb)
+            ) = array_length($17::text[], 1)
         )
         AND
-        (COALESCE($18::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($18::jsonb) AS condition
-                WHERE e.tags->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($18::text[]) AS cond
+                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($19::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($19::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
             ) > 0
         )
-        OR
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
+        AND
+        (COALESCE($20::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($20::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
     )
     AND (
-        (COALESCE($21::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($21::jsonb) AS key_condition
-                WHERE 
-                CASE 
-                    WHEN key_condition->>'operator' = 'not_exists' THEN
-                        NOT (w.labels ? (key_condition->>'key'))
+        (COALESCE($21::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($21::text[]) AS key_condition
+                WHERE
+                CASE
+                    WHEN key_condition LIKE '%:not_exists' THEN
+                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
                     ELSE
-                        w.labels ? (key_condition->>'key')
+                        w.labels ? key_condition
                 END
-            ) = jsonb_array_length($21::jsonb)
+            ) = array_length($21::text[], 1)
         )
         AND
-        (COALESCE($22::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($22::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
-                    SELECT jsonb_array_elements_text(condition->'values')
-                )
-            ) = jsonb_array_length($22::jsonb)
+        (COALESCE($22::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond
+                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
 GROUP BY r.status
@@ -2901,12 +2901,12 @@ type GetTestWorkflowExecutionsTotalsParams struct {
 	GroupID            string             `db:"group_id" json:"group_id"`
 	Initialized        interface{}        `db:"initialized" json:"initialized"`
 	HealthRanges       []byte             `db:"health_ranges" json:"health_ranges"`
-	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
-	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
-	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
-	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
-	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
-	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
+	TagKeys            []string           `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
+	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 }
 
 type GetTestWorkflowExecutionsTotalsRow struct {
@@ -2958,7 +2958,7 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 }
 
 const getTestWorkflowMetrics = `-- name: GetTestWorkflowMetrics :many
-SELECT 
+SELECT
     e.id as execution_id,
     e.group_id,
     r.duration,
@@ -3031,8 +3031,8 @@ func (q *Queries) GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflo
 }
 
 const getUnassignedTestWorkflowExecutions = `-- name: GetUnassignedTestWorkflowExecutions :many
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.created_at, e.updated_at,
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
     r.pauses, r.initialization, r.steps,
@@ -3040,7 +3040,7 @@ SELECT
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
     w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
@@ -3083,7 +3083,7 @@ SELECT
         '[]'::json
     )::json  as reports_json,
     ra.global as resource_aggregations_global,
-    ra.step as resource_aggregations_step    
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -3117,6 +3117,7 @@ type GetUnassignedTestWorkflowExecutionsRow struct {
 	RunningContext              []byte             `db:"running_context" json:"running_context"`
 	ConfigParams                []byte             `db:"config_params" json:"config_params"`
 	Runtime                     []byte             `db:"runtime" json:"runtime"`
+	SilentMode                  []byte             `db:"silent_mode" json:"silent_mode"`
 	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 	Status                      pgtype.Text        `db:"status" json:"status"`
@@ -3186,6 +3187,7 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg G
 			&i.RunningContext,
 			&i.ConfigParams,
 			&i.Runtime,
+			&i.SilentMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -3238,8 +3240,8 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context, arg G
 }
 
 const initTestWorkflowExecution = `-- name: InitTestWorkflowExecution :exec
-UPDATE test_workflow_executions 
-SET 
+UPDATE test_workflow_executions
+SET
     namespace = $1,
     runner_id = $2,
     status_at = NOW()
@@ -3322,12 +3324,12 @@ func (q *Queries) InsertTestWorkflow(ctx context.Context, arg InsertTestWorkflow
 const insertTestWorkflowExecution = `-- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
     id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
-    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
-    tags, running_context, config_params, organization_id, environment_id, runtime
+    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks,
+    tags, running_context, config_params, organization_id, environment_id, runtime, silent_mode
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12, $13,
-    $14, $15, $16, $17, $18, $19
+    $14, $15, $16, $17, $18, $19, $20
 )
 `
 
@@ -3351,6 +3353,7 @@ type InsertTestWorkflowExecutionParams struct {
 	OrganizationID            string             `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
 	Runtime                   []byte             `db:"runtime" json:"runtime"`
+	SilentMode                []byte             `db:"silent_mode" json:"silent_mode"`
 }
 
 func (q *Queries) InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error {
@@ -3374,6 +3377,7 @@ func (q *Queries) InsertTestWorkflowExecution(ctx context.Context, arg InsertTes
 		arg.OrganizationID,
 		arg.EnvironmentID,
 		arg.Runtime,
+		arg.SilentMode,
 	)
 	return err
 }
@@ -3425,25 +3429,6 @@ func (q *Queries) InsertTestWorkflowReport(ctx context.Context, arg InsertTestWo
 		arg.Summary,
 		arg.RepOrder,
 	)
-	return err
-}
-
-const insertTestWorkflowResourceAggregations = `-- name: InsertTestWorkflowResourceAggregations :exec
-INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
-VALUES ($1, $2, $3)
-ON CONFLICT (execution_id) DO UPDATE SET
-    global = EXCLUDED.global,
-    step = EXCLUDED.step
-`
-
-type InsertTestWorkflowResourceAggregationsParams struct {
-	ExecutionID string `db:"execution_id" json:"execution_id"`
-	Global      []byte `db:"global" json:"global"`
-	Step        []byte `db:"step" json:"step"`
-}
-
-func (q *Queries) InsertTestWorkflowResourceAggregations(ctx context.Context, arg InsertTestWorkflowResourceAggregationsParams) error {
-	_, err := q.db.Exec(ctx, insertTestWorkflowResourceAggregations, arg.ExecutionID, arg.Global, arg.Step)
 	return err
 }
 
@@ -3547,8 +3532,8 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 }
 
 const updateExecutionStatus = `-- name: UpdateExecutionStatus :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = $1
 WHERE execution_id = $2
 `
@@ -3564,7 +3549,7 @@ func (q *Queries) UpdateExecutionStatus(ctx context.Context, arg UpdateExecution
 }
 
 const updateExecutionStatusAt = `-- name: UpdateExecutionStatusAt :exec
-UPDATE test_workflow_executions 
+UPDATE test_workflow_executions
 SET status_at = $1
 WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
 `
@@ -3587,10 +3572,10 @@ func (q *Queries) UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecuti
 }
 
 const updateExecutionStatusAtStrict = `-- name: UpdateExecutionStatusAtStrict :exec
-UPDATE test_workflow_executions 
-SET status_at = CASE 
-    WHEN $1 != $2 THEN $3 
-    ELSE status_at 
+UPDATE test_workflow_executions
+SET status_at = CASE
+    WHEN $1 != $2 THEN $3
+    ELSE status_at
 END
 WHERE id = $4 AND (organization_id = $5 AND environment_id = $6)
 `
@@ -3634,8 +3619,9 @@ SET
     tags = $13,
     running_context = $14,
     config_params = $15,
-    runtime = $16
-WHERE id = $17 AND (organization_id = $18 AND environment_id = $19)
+    runtime = $16,
+    silent_mode = $17
+WHERE id = $18 AND (organization_id = $19 AND environment_id = $20)
 `
 
 type UpdateTestWorkflowExecutionParams struct {
@@ -3655,6 +3641,7 @@ type UpdateTestWorkflowExecutionParams struct {
 	RunningContext            []byte             `db:"running_context" json:"running_context"`
 	ConfigParams              []byte             `db:"config_params" json:"config_params"`
 	Runtime                   []byte             `db:"runtime" json:"runtime"`
+	SilentMode                []byte             `db:"silent_mode" json:"silent_mode"`
 	ID                        string             `db:"id" json:"id"`
 	OrganizationID            string             `db:"organization_id" json:"organization_id"`
 	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
@@ -3678,6 +3665,7 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 		arg.RunningContext,
 		arg.ConfigParams,
 		arg.Runtime,
+		arg.SilentMode,
 		arg.ID,
 		arg.OrganizationID,
 		arg.EnvironmentID,
@@ -3685,28 +3673,9 @@ func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTes
 	return err
 }
 
-const updateTestWorkflowExecutionResourceAggregations = `-- name: UpdateTestWorkflowExecutionResourceAggregations :exec
-UPDATE test_workflow_resource_aggregations
-SET
-    global = $1,
-    step = $2
-WHERE execution_id = $3
-`
-
-type UpdateTestWorkflowExecutionResourceAggregationsParams struct {
-	Global      []byte `db:"global" json:"global"`
-	Step        []byte `db:"step" json:"step"`
-	ExecutionID string `db:"execution_id" json:"execution_id"`
-}
-
-func (q *Queries) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionResourceAggregations, arg.Global, arg.Step, arg.ExecutionID)
-	return err
-}
-
 const updateTestWorkflowExecutionResult = `-- name: UpdateTestWorkflowExecutionResult :exec
-UPDATE test_workflow_results 
-SET 
+UPDATE test_workflow_results
+SET
     status = $1,
     predicted_status = $2,
     queued_at = $3,
@@ -3761,10 +3730,16 @@ func (q *Queries) UpdateTestWorkflowExecutionResult(ctx context.Context, arg Upd
 }
 
 const updateTestWorkflowExecutionResultStrict = `-- name: UpdateTestWorkflowExecutionResultStrict :one
-UPDATE test_workflow_results 
-SET 
-    status = $1,
-    predicted_status = $2,
+UPDATE test_workflow_results
+SET
+    status = CASE
+        WHEN test_workflow_results.status = 'stopping' THEN 'stopping'
+        ELSE $1
+    END,
+    predicted_status = CASE
+        WHEN test_workflow_results.status = 'stopping' THEN test_workflow_results.predicted_status
+        ELSE $2
+    END,
     queued_at = $3,
     started_at = $4,
     finished_at = $5,
@@ -3782,7 +3757,7 @@ WHERE test_workflow_results.execution_id = $14
     AND e.runner_id = $15
     AND test_workflow_results.status IN (
         'assigned', 'starting', 'scheduling', 'running',
-        'pausing', 'paused', 'resuming'
+        'pausing', 'paused', 'resuming', 'stopping'
     )
 RETURNING test_workflow_results.execution_id
 `
@@ -3828,10 +3803,10 @@ func (q *Queries) UpdateTestWorkflowExecutionResultStrict(ctx context.Context, a
 	return execution_id, err
 }
 
-const updateTestWorkflowExecutionTags = `-- name: UpdateTestWorkflowExecutionTags :exec
+const updateTestWorkflowExecutionTags = `-- name: UpdateTestWorkflowExecutionTags :execrows
 UPDATE test_workflow_executions
 SET tags = $1
-WHERE id = $2 AND (organization_id = $3 AND environment_id = $4)
+WHERE (id = $2 OR name = $2) AND (organization_id = $3 AND environment_id = $4)
 `
 
 type UpdateTestWorkflowExecutionTagsParams struct {
@@ -3841,12 +3816,34 @@ type UpdateTestWorkflowExecutionTagsParams struct {
 	EnvironmentID  string `db:"environment_id" json:"environment_id"`
 }
 
-func (q *Queries) UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecutionTags,
+func (q *Queries) UpdateTestWorkflowExecutionTags(ctx context.Context, arg UpdateTestWorkflowExecutionTagsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateTestWorkflowExecutionTags,
 		arg.Tags,
 		arg.ExecutionID,
 		arg.OrganizationID,
 		arg.EnvironmentID,
 	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const upsertTestWorkflowResourceAggregations = `-- name: UpsertTestWorkflowResourceAggregations :exec
+INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
+VALUES ($1, $2, $3)
+ON CONFLICT (execution_id) DO UPDATE SET
+    global = EXCLUDED.global,
+    step = EXCLUDED.step
+`
+
+type UpsertTestWorkflowResourceAggregationsParams struct {
+	ExecutionID string `db:"execution_id" json:"execution_id"`
+	Global      []byte `db:"global" json:"global"`
+	Step        []byte `db:"step" json:"step"`
+}
+
+func (q *Queries) UpsertTestWorkflowResourceAggregations(ctx context.Context, arg UpsertTestWorkflowResourceAggregationsParams) error {
+	_, err := q.db.Exec(ctx, upsertTestWorkflowResourceAggregations, arg.ExecutionID, arg.Global, arg.Step)
 	return err
 }

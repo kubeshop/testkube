@@ -4,6 +4,8 @@ on:
   push:
     branches-ignore:
       - main
+      - renovate/**
+      - dependabot/**
 
 permissions:
   # allow read access to the content for analysis.
@@ -27,7 +29,7 @@ jobs:
       - name: Lint Go
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.11.3
+          version: v2.11.4
           args: --timeout=10m
           only-new-issues: true
           verify: true
@@ -35,7 +37,7 @@ jobs:
       - name: Lint Protocol Buffers
         uses: bufbuild/buf-action@v1
         with:
-          version: 1.56.0
+          version: 1.68.1
           # Prevent buf from attempting to create a PR comment.
           pr_comment: false
           # buf config files are in the ./proto directory.

@@ -324,7 +324,7 @@ config:
 container:
   image:
     repository: nats
-    tag: 2.12.5-alpine
+    tag: 2.12.7-alpine
     pullPolicy:
     registry:
 
@@ -365,7 +365,7 @@ reloader:
   enabled: true
   image:
     repository: natsio/nats-server-config-reloader
-    tag: 0.22.3
+    tag: 0.22.4
     pullPolicy:
     registry:
 
@@ -390,7 +390,7 @@ promExporter:
   enabled: false
   image:
     repository: natsio/prometheus-nats-exporter
-    tag: 0.19.1
+    tag: 0.19.2
     pullPolicy:
     registry:
 

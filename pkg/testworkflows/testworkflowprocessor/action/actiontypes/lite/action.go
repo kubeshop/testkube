@@ -13,6 +13,7 @@ type ActionResult struct {
 type ActionDeclare struct {
 	Condition string   `json:"c"`
 	Ref       string   `json:"r"`
+	Id        string   `json:"i,omitempty"`
 	Parents   []string `json:"p,omitempty"`
 }
 

@@ -1,6 +1,8 @@
 package formatters
 
 import (
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -15,15 +17,16 @@ type formattedExecutionsResult struct {
 
 // formattedExecution is a compact representation of an execution for MCP responses.
 type formattedExecution struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Number       int32     `json:"number,omitempty"`
-	ScheduledAt  time.Time `json:"scheduledAt,omitempty"`
-	Status       string    `json:"status,omitempty"`
-	Duration     string    `json:"duration,omitempty"`
-	WorkflowName string    `json:"workflowName,omitempty"`
-	ActorType    string    `json:"actorType,omitempty"`
-	ActorName    string    `json:"actorName,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Number       int32             `json:"number,omitempty"`
+	ScheduledAt  time.Time         `json:"scheduledAt,omitempty"`
+	Status       string            `json:"status,omitempty"`
+	Duration     string            `json:"duration,omitempty"`
+	WorkflowName string            `json:"workflowName,omitempty"`
+	Tags         map[string]string `json:"tags,omitempty"`
+	ActorType    string            `json:"actorType,omitempty"`
+	ActorName    string            `json:"actorName,omitempty"`
 }
 
 // FormatListExecutions parses a raw API response (JSON or YAML) containing
@@ -59,6 +62,11 @@ func FormatListExecutions(raw string) (string, error) {
 			f.WorkflowName = exec.Workflow.Name
 		}
 
+		// Include execution tags
+		if len(exec.Tags) > 0 {
+			f.Tags = exec.Tags
+		}
+
 		// Extract status and duration from result
 		if exec.Result != nil {
 			if exec.Result.Status != nil {
@@ -81,9 +89,18 @@ func FormatListExecutions(raw string) (string, error) {
 	return FormatJSON(formatted)
 }
 
+// formattedWorker is a compact summary of a parallel worker from execution output.
+type formattedWorker struct {
+	Ref         string `json:"ref"`
+	Index       int    `json:"index"`
+	Description string `json:"description,omitempty"`
+	Status      string `json:"status,omitempty"`
+}
+
 // formattedExecutionInfo is a compact representation of execution details.
 // It strips the verbose workflow/resolvedWorkflow specs, detailed output array,
 // and step-level timing, keeping only essential status and identification info.
+// Parallel workers discovered from Output entries are surfaced as the Workers field.
 type formattedExecutionInfo struct {
 	ID           string                    `json:"id"`
 	Name         string                    `json:"name"`
@@ -97,6 +114,7 @@ type formattedExecutionInfo struct {
 	ActorType    string                    `json:"actorType,omitempty"`
 	ActorName    string                    `json:"actorName,omitempty"`
 	Tags         map[string]string         `json:"tags,omitempty"`
+	Workers      []formattedWorker         `json:"workers,omitempty"`
 }
 
 // formattedExecutionResult is a compact representation of execution result.
@@ -190,6 +208,47 @@ func FormatExecutionInfo(raw string) (string, error) {
 		formatted.ActorName = exec.RunningContext.Actor.Name
 		if exec.RunningContext.Actor.Type_ != nil {
 			formatted.ActorType = string(*exec.RunningContext.Actor.Type_)
+		}
+	}
+
+	// Extract parallel worker summaries from Output entries.
+	// Multiple entries exist per worker (signature, status updates, log path);
+	// deduplicate by (Ref, Index) keeping the latest non-empty description and status.
+	if len(exec.Output) > 0 {
+		workerKey := func(ref string, idx int) string { return fmt.Sprintf("%s/%d", ref, idx) }
+		workerMap := make(map[string]formattedWorker)
+		for _, output := range exec.Output {
+			if output.Name != "parallel" {
+				continue
+			}
+			rawIdx, ok := output.Value["index"].(float64)
+			if !ok {
+				continue
+			}
+			idx := int(rawIdx)
+			key := workerKey(output.Ref, idx)
+			w := workerMap[key]
+			w.Ref = output.Ref
+			w.Index = idx
+			if desc, ok := output.Value["description"].(string); ok && desc != "" {
+				w.Description = desc
+			}
+			if status, ok := output.Value["status"].(string); ok && status != "" {
+				w.Status = status
+			}
+			workerMap[key] = w
+		}
+		if len(workerMap) > 0 {
+			formatted.Workers = make([]formattedWorker, 0, len(workerMap))
+			for _, w := range workerMap {
+				formatted.Workers = append(formatted.Workers, w)
+			}
+			sort.Slice(formatted.Workers, func(i, j int) bool {
+				if formatted.Workers[i].Ref != formatted.Workers[j].Ref {
+					return formatted.Workers[i].Ref < formatted.Workers[j].Ref
+				}
+				return formatted.Workers[i].Index < formatted.Workers[j].Index
+			})
 		}
 	}
 

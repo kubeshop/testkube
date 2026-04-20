@@ -15,6 +15,10 @@
 {{- end }}
 {{- end }}
 
+{{- define "testkube-runner.runnerName" -}}
+{{- default (include "testkube-runner.fullname" .) .Values.runner.name -}}
+{{- end }}
+
 {{- define "testkube-runner.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "testkube-runner.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}

@@ -50,6 +50,7 @@ func NewInitCmd() *cobra.Command {
 			ui.NL()
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
+			common.ShowOperatorDeprecationWarning("Testkube Agent", options.NoCRDs)
 
 			sendAttemptTelemetry(cmd, cfg)
 
@@ -128,7 +129,7 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
-	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
+	cmd.Flags().BoolVar(&options.NoCRDs, "no-crds", false, "Skip installing CRDs, useful when you have them already installed in the cluster")
 	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
 	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
 

@@ -13,8 +13,6 @@ data:
 {{- if .Values.next.enabled }}
   enable-cron-jobs: "{{ .Values.next.cronJobs.enabled }}"
 {{- end }}
-  executors.json: |-
-{{ include "testkube-api.executors" . | indent 4 }}
   job-container-template.yml: |-
 {{- if .Values.jobContainerTemplate }}
   {{ toYaml .Values.jobContainerTemplate | trimAll "|" | trim | indent 4 }}
@@ -37,10 +35,3 @@ data:
 {{ include "testkube-api.pvc-template" . | indent 4 }}
   slave-pod-template.yml: |-
 {{ include "testkube-api.slave-pod-template" . | indent 4 }}
-{{- $executors := "" }}
-{{- range $k, $v := .Values.enabledExecutors }}
-  {{- if $v.enabled }}
-    {{- $executors = print $executors "," $k }}
-  {{- end }}
-{{- end }}
-  enabledExecutors: "{{ $executors }}"

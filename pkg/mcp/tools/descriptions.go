@@ -19,7 +19,9 @@ but need the execution ID for other operations.`
 	TextSearchDescription = `Text search filter for names or descriptions. Can use space-separated words 
 to find items containing all terms`
 
-	SelectorDescription = `Filter by labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'`
+	SelectorDescription = `Filter by workflow labels using key=value format. For single label use 'key=value', for multiple labels use comma-separated format 'key1=value1,key2=value2'. For example: 'tool=cypress' or 'tool=cypress,env=prod'. Note: this filters on workflow-level labels, not execution-level tags — use tagSelector for execution tags.`
+
+	TagSelectorDescription = `Filter by execution tags using key=value format. For single tag use 'key=value', for multiple tags use comma-separated format 'key1=value1,key2=value2'. For example: 'type=suite' or 'env=prod,type=smoke'. Note: this filters on execution-level tags (set via update_execution_tags), not workflow-level labels — use selector for workflow labels.`
 
 	StatusDescription = `Filter by execution status. Available statuses: 'queued', 'running', 'passed', 
 'failed', 'skipped', 'aborted', 'timeout', 'paused'`
@@ -28,9 +30,9 @@ to find items containing all terms`
 
 	SinceDescription = "Filter executions created after this time (ISO 8601 format)"
 
-	StartDateDescription = "Filter executions scheduled on or after this date (YYYY-MM-DD format, e.g., '2024-01-15')"
+	StartDateDescription = "Filter executions scheduled on or after this date/time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-15') or an RFC 3339 timestamp including optional fractional seconds (e.g., '2024-01-15T13:00:00Z' or '2024-01-15T13:00:00.000Z'). Use the timestamp form to narrow results to a specific hour range within a day."
 
-	EndDateDescription = "Filter executions scheduled on or before this date (YYYY-MM-DD format, e.g., '2024-01-31')"
+	EndDateDescription = "Filter executions scheduled on or before this date/time. Accepts a date (YYYY-MM-DD, e.g., '2024-01-31') which includes the entire day, or an RFC 3339 timestamp including optional fractional seconds (e.g., '2024-01-31T16:00:00Z') for an exact upper bound. Combine with startDate to express ranges like 'yesterday 1–4 PM'."
 
 	FilenameDescription = "The name of the artifact file to retrieve"
 
@@ -46,8 +48,8 @@ to find items containing all terms`
 	UpdateWorkflowDescription              = `Update an existing TestWorkflow in Testkube with a new YAML definition. This tool allows you to modify workflow steps, configuration, and metadata. The workflow will be updated immediately and available for execution with the new configuration.`
 
 	// Execution tool descriptions
-	FetchExecutionLogsDescription     = "Retrieves the full logs of a test workflow execution for debugging and analysis."
-	ListExecutionsDescription         = "List executions with filtering and pagination options. Optionally filter by workflow name, status, or text search. Returns execution summaries with status, timing, and results."
+	FetchExecutionLogsDescription     = "Retrieves logs from a test workflow execution. Default (no params, step-only, or workerRef-only with empty grep): returns the last 100 lines. When using grep, searches the full log (server caps at 100 matching lines). Always work in chunks of 100 lines when paging — never request unbounded ranges. Parameters: tail (last N lines, e.g. tail=100), startLine/endLine (1-based range, e.g. startLine=1 endLine=100), grep (substring filter), step (filter to a specific step reference). Parameters can be combined. For parallel workflows with workers: ALWAYS call get_execution_info first to get the 'workers' array, then use a 'ref' value from that array as workerRef plus the matching workerIndex (0-based, default 0). Do NOT use step refs from the main log metadata as workerRef — worker refs are distinct from step refs and only available via get_execution_info."
+	ListExecutionsDescription         = "List executions with filtering and pagination. Parameters: workflowName (filter to a specific workflow), status (passed/failed/running/etc.), since (ISO 8601 timestamp, e.g. '2024-01-15T13:00:00Z'), startDate/endDate (date or RFC 3339 range), selector (workflow labels, e.g. 'tool=cypress'), tagSelector (execution tags, e.g. 'type=suite'), textSearch (name/description substring), page/pageSize (pagination, default 10). Returns execution summaries including id, name, status, duration, scheduledAt, workflowName, tags, and actor info. Duration is returned as a human-readable string (e.g. '2m30s', '45s')."
 	GetExecutionInfoDescription       = "Get detailed information about a specific test workflow execution, including status, timing, results, and configuration."
 	LookupExecutionIdDescription      = "Resolves an execution name to its corresponding execution ID. Use this tool when you have an execution name (e.g., 'my-workflow-123', 'my-test-987-1') but need the execution ID. Many other tools require execution IDs (MongoDB format) rather than names."
 	WaitForExecutionsDescription      = "Wait for a list of workflow executions to complete (pass, fail, or timeout). Returns the final status of all executions. Useful for synchronizing multiple test runs or waiting for dependent workflows to finish."
@@ -60,7 +62,7 @@ to find items containing all terms`
 
 	// Artifact tool descriptions
 	ListArtifactsDescription = "Retrieves all artifacts generated during a workflow execution. Use this tool to discover available outputs, reports, logs, or other files produced by test runs. These artifacts provide valuable context for understanding test results, accessing detailed reports, or examining generated data. The response includes artifact names, sizes, and their current status."
-	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. This tool fetches up to 100 lines of text content from the requested file."
+	ReadArtifactDescription  = "Retrieves the content of a specific artifact from a workflow execution. Default (no params): returns the first 100 lines. Maximum: 200 lines per request. Parameters: startLine/endLine (1-based range, e.g. startLine=101 endLine=200 for the second page), grep (case-insensitive substring filter, returns matches with 3 lines of context). Note: grep and startLine/endLine are mutually exclusive -- when grep is specified, startLine/endLine are ignored. For binary artifacts (images, etc.), returns a summary message instead of content. Always work in chunks of 100-200 lines when paging -- never request unbounded ranges."
 
 	// Other tool descriptions
 	BuildDashboardUrlDescription  = "Build dashboard URLs for Testkube workflows and executions. Supports deep linking to a specific step within an execution's log view using stepRef (obtained from execution info signatures) and executionTab (defaults to 'log-output' when stepRef is provided)."
@@ -84,10 +86,10 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - selector: Filter workflows by labels (e.g., 'tool=cypress,env=prod')
 - resourceGroup: Filter by resource group slug
-- limit: Maximum workflows to fetch (default 50, max 100)
-- aggregate: If true, combines all workflows into an array and applies expression once; if false, applies expression to each workflow separately
+- limit: Page size for fetching workflows (default 50). All matching workflows are fetched across multiple pages
+- aggregate: If true, combines all workflows into an array and applies expression once; if false (default), applies expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
-Returns: Map of workflow name → extracted values. Missing paths return empty arrays, not errors.`
+Returns: Map of workflow name → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
 
 	QueryExecutionsDescription = `Query multiple execution records using JSONPath expressions.
 Fetches execution JSON data and extracts data matching the path.
@@ -103,10 +105,24 @@ Parameters:
 - expression: The JSONPath expression to apply (required)
 - workflowName: Filter executions by workflow name
 - status: Filter by status (passed/failed/running/aborted)
-- limit: Maximum executions to fetch (default 50, max 100)
-- aggregate: If true, combines all executions into an array and applies expression once; if false, applies expression to each execution separately
+- selector: Filter by workflow labels (e.g., 'tool=cypress')
+- tagSelector: Filter by execution tags (e.g., 'type=suite')
+- since: Filter executions after this time (ISO 8601)
+- startDate: Filter executions on or after this date/time (YYYY-MM-DD or RFC 3339)
+- endDate: Filter executions on or before this date/time (YYYY-MM-DD or RFC 3339)
+- limit: Page size for fetching executions (default 50). All matching executions are fetched across multiple pages
+- aggregate: If true, combines all executions into an array and applies expression once; if false (default), applies expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].
 
-Returns: Map of execution ID → extracted values. Missing paths return empty arrays, not errors.`
+Returns: Map of execution ID → extracted values (per-item mode) or a single array of matches (aggregate mode). Missing paths return empty arrays, not errors.`
+
+	// WorkflowTemplate tool descriptions
+	TemplateNameDescription = `The name of the workflow template. Template names are lowercase alphanumeric with dashes 
+(e.g., 'my-template', 'official--k6--v1'). This uniquely identifies a TestWorkflowTemplate within the environment.`
+
+	ListWorkflowTemplatesDescription         = "List all TestWorkflowTemplates in the current Testkube environment with optional label filtering. Returns template names, descriptions, and labels."
+	GetWorkflowTemplateDefinitionDescription = "Get the YAML definition of a specific TestWorkflowTemplate. Returns the complete template specification including all steps, configuration schema, and metadata."
+	CreateWorkflowTemplateDescription        = "Create a new TestWorkflowTemplate in Testkube from a YAML definition. The template will be immediately available for use by workflows after creation."
+	UpdateWorkflowTemplateDescription        = "Update an existing TestWorkflowTemplate in Testkube with a new YAML definition. The template will be updated immediately and workflows using it will pick up the changes."
 
 	// Schema tool descriptions
 	GetWorkflowSchemaDescription  = "Get the YAML schema for TestWorkflow definitions. Returns all available fields, their types, and descriptions. Use this to understand workflow structure when creating, updating, or querying workflows."

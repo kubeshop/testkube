@@ -9,9 +9,22 @@ global:
   podDisruptionBudget:
     enabled: false
 
+## Global TestWorkflowTemplate that will be automatically included for all executions
+globalTemplate:
+  ## Is global template enabled
+  enabled: false
+  ## Specification for the global template
+  spec: {}
+  # spec:
+  #   pod:
+  #     imagePullSecrets:
+  #     - name: regcred
+
 runner:
   ## Enable or disable the runner
   enabled: true
+  ## Runner name used during self-registration. Defaults to chart fullname when empty.
+  name: ""
   ## Agent ID
   id: ""
   ## Organization ID
@@ -52,17 +65,6 @@ runner:
     # labels:
     #   env: testing
 
-## Global TestWorkflowTemplate that will be automatically included for all executions
-globalTemplate:
-  ## Is global template enabled
-  enabled: false
-  ## Specification for the global template
-  spec: {}
-  # spec:
-  #   pod:
-  #     imagePullSecrets:
-  #     - name: regcred
-
 ## Listener configuration for triggers
 listener:
   ## Enable listener functionality
@@ -95,12 +97,15 @@ execution:
       autoCreate: true
       ## Use an external service account for executions
       name: ""
+      ## Extra annotations for the auto-created execution service account
+      annotations: {}
   ## Allow run in other namespaces
   additionalNamespaces:
   # another:
   #   serviceAccount:
   #     autoCreate: true
   #     name: ""
+  #     annotations: {}
 
 cloud:
   ## URL of the Cloud Saas Control Plane
@@ -177,6 +182,8 @@ pod:
     autoCreate: true
     ## Use an external service account
     name: ""
+    ## Extra annotations for the auto-created runner service account
+    annotations: {}
   ## Extra labels for Testkube Agent pod
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   labels: {}

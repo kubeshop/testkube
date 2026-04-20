@@ -3,7 +3,6 @@ package tools
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -144,15 +143,4 @@ func OptionalStringArrayParam(r mcp.CallToolRequest, p string) ([]string, error)
 	default:
 		return []string{}, fmt.Errorf("parameter %s could not be coerced to []string, is %T", p, r.GetArguments()[p])
 	}
-}
-
-// LimitContentToLines limits content to a maximum number of lines
-func LimitContentToLines(content string, maxLines int) string {
-	lines := strings.Split(content, "\n")
-	if len(lines) <= maxLines {
-		return content
-	}
-
-	limitedContent := strings.Join(lines[:maxLines], "\n")
-	return limitedContent
 }

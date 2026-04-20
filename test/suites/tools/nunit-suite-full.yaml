@@ -16,4 +16,4 @@ spec:
   - execute:
       parallelism: 2
       workflows:
-      - name: nunit-workflow-smoke-junit-report
+      - name: nunit-workflow-smoke

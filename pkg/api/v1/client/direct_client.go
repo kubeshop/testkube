@@ -167,10 +167,21 @@ func (t DirectClient[A]) GetURI(pathTemplate string, params ...interface{}) stri
 }
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
-func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, uri, nil)
+func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error {
+	req, err := http.NewRequestWithContext(options.RequestContext(), http.MethodGet, uri, nil)
 	if err != nil {
 		return err
+	}
+
+	if options.ResumeAfterSeqNo > 0 {
+		q := req.URL.Query()
+		q.Set("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
+		req.URL.RawQuery = q.Encode()
+	}
+	if options.StreamID != "" {
+		q := req.URL.Query()
+		q.Set("streamId", options.StreamID)
+		req.URL.RawQuery = q.Encode()
 	}
 
 	req.Header.Set("Accept", "text/event-stream")

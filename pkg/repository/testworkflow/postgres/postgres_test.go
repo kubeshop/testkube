@@ -109,7 +109,7 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowReport(ctx
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.InsertTestWorkflowResourceAggregationsParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.UpsertTestWorkflowResourceAggregationsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
@@ -117,6 +117,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflowResourceAg
 func (m *MockTestWorkflowExecutionQueriesInterface) InsertTestWorkflow(ctx context.Context, arg sqlc.InsertTestWorkflowParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
+}
+
+func (m *MockTestWorkflowExecutionQueriesInterface) GetMaxReportOrder(ctx context.Context, executionID string) (int32, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).(int32), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecution(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionParams) error {
@@ -134,17 +139,17 @@ func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionR
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) FinishTestWorkflowExecutionResultStrict(ctx context.Context, arg sqlc.FinishTestWorkflowExecutionResultStrictParams) (string, error) {
+	args := m.Called(ctx, arg)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAt(ctx context.Context, arg sqlc.UpdateExecutionStatusAtParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) UpdateExecutionStatusAtStrict(ctx context.Context, arg sqlc.UpdateExecutionStatusAtStrictParams) error {
-	args := m.Called(ctx, arg)
-	return args.Error(0)
-}
-
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
 }
@@ -233,9 +238,9 @@ func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflowResourceAg
 	return args.Error(0)
 }
 
-func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionTags(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionTagsParams) error {
+func (m *MockTestWorkflowExecutionQueriesInterface) UpdateTestWorkflowExecutionTags(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionTagsParams) (int64, error) {
 	args := m.Called(ctx, arg)
-	return args.Error(0)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) DeleteTestWorkflow(ctx context.Context, arg sqlc.DeleteTestWorkflowParams) error {
@@ -949,7 +954,7 @@ func TestPostgresRepository_UpdateTags(t *testing.T) {
 		id := "test-id"
 		tags := map[string]string{"env": "prod", "team": "qa"}
 
-		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(nil)
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(int64(1), nil)
 
 		err := repo.UpdateTags(ctx, id, tags)
 
@@ -967,12 +972,26 @@ func TestPostgresRepository_UpdateTags(t *testing.T) {
 		assert.Equal(t, tags, got)
 	})
 
+	t.Run("NotFound", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{queries: mockQueries}
+		ctx := context.Background()
+
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(int64(0), nil)
+
+		err := repo.UpdateTags(ctx, "nonexistent-id", map[string]string{"key": "val"})
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, pgx.ErrNoRows)
+		mockQueries.AssertExpectations(t)
+	})
+
 	t.Run("Error", func(t *testing.T) {
 		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
 		repo := &PostgresRepository{queries: mockQueries}
 		ctx := context.Background()
 
-		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(errors.New("db error"))
+		mockQueries.On("UpdateTestWorkflowExecutionTags", ctx, mock.AnythingOfType("sqlc.UpdateTestWorkflowExecutionTagsParams")).Return(int64(0), errors.New("db error"))
 
 		err := repo.UpdateTags(ctx, "test-id", map[string]string{"key": "val"})
 
@@ -1275,6 +1294,213 @@ func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 	assert.Equal(t, "test-workflow", params.WorkflowName)
 }
 
+func TestParseSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("empty selector", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("")
+		assert.Equal(t, []string{""}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key exists", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env")
+		assert.Equal(t, []string{"env"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key=value", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env=prod")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("multiple keys", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env,team")
+		assert.Equal(t, []string{"env", "team"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("multiple key=value pairs", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env=prod,team=backend")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod", "team=backend"}, conditions)
+	})
+
+	t.Run("mixed keys and key=value", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("env,team=backend,version")
+		assert.Equal(t, []string{"env", "version"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("key with dots escaped", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("app.kubernetes.io/name")
+		assert.Equal(t, []string{"app．kubernetes．io/name"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("key=value with dots in key escaped", func(t *testing.T) {
+		keys, conditions := repo.parseSelectorToText("app.kubernetes.io/name=myapp")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"app．kubernetes．io/name=myapp"}, conditions)
+	})
+}
+
+func TestParseTagSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("empty selector", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("")
+		assert.Equal(t, []string{""}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key exists", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env")
+		assert.Equal(t, []string{"env"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single key=value", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env=prod")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("multiple keys", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env,team")
+		assert.Equal(t, []string{"env", "team"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("multiple key=value pairs", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env=prod,team=backend")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod", "team=backend"}, conditions)
+	})
+
+	t.Run("mixed keys and key=value", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env,team=backend,version")
+		assert.Equal(t, []string{"env", "version"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("with spaces around comma separators", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("env , team=backend , version")
+		assert.Equal(t, []string{"env", "version"}, keys)
+		assert.Equal(t, []string{"team=backend"}, conditions)
+	})
+
+	t.Run("key with dots escaped", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("app.kubernetes.io/name")
+		assert.Equal(t, []string{"app．kubernetes．io/name"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("key=value with dots in key escaped", func(t *testing.T) {
+		keys, conditions := repo.parseTagSelectorToText("app.kubernetes.io/name=myapp")
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"app．kubernetes．io/name=myapp"}, conditions)
+	})
+}
+
+func TestParseLabelSelectorToText(t *testing.T) {
+	repo := &PostgresRepository{}
+
+	t.Run("empty label selector", func(t *testing.T) {
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single label with value", func(t *testing.T) {
+		value := "prod"
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("single label exists", func(t *testing.T) {
+		exists := true
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"env"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("single label not exists", func(t *testing.T) {
+		exists := false
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"env:not_exists"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("multiple labels with values", func(t *testing.T) {
+		value1 := "prod"
+		value2 := "backend"
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value1},
+			{Key: "team", Value: &value2},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"env=prod", "team=backend"}, conditions)
+	})
+
+	t.Run("mixed exists and value labels", func(t *testing.T) {
+		value := "prod"
+		exists := true
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value},
+			{Key: "team", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"team"}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("mixed not_exists and value labels", func(t *testing.T) {
+		value := "prod"
+		exists := false
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "env", Value: &value},
+			{Key: "deprecated", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"deprecated:not_exists"}, keys)
+		assert.Equal(t, []string{"env=prod"}, conditions)
+	})
+
+	t.Run("key with dots escaped", func(t *testing.T) {
+		exists := true
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "app.kubernetes.io/name", Exists: &exists},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{"app．kubernetes．io/name"}, keys)
+		assert.Equal(t, []string{}, conditions)
+	})
+
+	t.Run("key=value with dots in key escaped", func(t *testing.T) {
+		value := "myapp"
+		selector := &testworkflow.LabelSelector{Or: []testworkflow.Label{
+			{Key: "app.kubernetes.io/name", Value: &value},
+		}}
+		keys, conditions := repo.parseLabelSelectorToText(selector)
+		assert.Equal(t, []string{}, keys)
+		assert.Equal(t, []string{"app．kubernetes．io/name=myapp"}, conditions)
+	})
+}
+
 func TestPopulateConfigParams(t *testing.T) {
 	resolvedWorkflow := &testkube.TestWorkflow{
 		Spec: &testkube.TestWorkflowSpec{
@@ -1304,4 +1530,181 @@ func TestPopulateConfigParams(t *testing.T) {
 	assert.True(t, result["param1"].EmptyValue)
 	assert.Equal(t, "custom-value", result["param2"].Value)
 	assert.Equal(t, "default-value", result["param2"].DefaultValue)
+}
+
+func TestPostgresRepository_SilentModeInsert(t *testing.T) {
+	t.Run("SilentModeIsSerializedOnInsert", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:      mockDB,
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		execution := createTestExecution()
+		execution.SilentMode = &testkube.SilentMode{
+			Health:  true,
+			Metrics: true,
+		}
+
+		mockDB.On("Begin", ctx).Return(mockTx, nil)
+		mockTx.On("Rollback", ctx).Return(nil)
+		mockTx.On("Commit", ctx).Return(nil)
+		mockQueries.On("WithTx", mockTx).Return(mockQueries)
+
+		var capturedParams sqlc.InsertTestWorkflowExecutionParams
+		mockQueries.On("InsertTestWorkflowExecution", ctx, mock.MatchedBy(func(p sqlc.InsertTestWorkflowExecutionParams) bool {
+			capturedParams = p
+			return true
+		})).Return(nil)
+		mockQueries.On("InsertTestWorkflowResult", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowResultParams")).Return(nil)
+		mockQueries.On("InsertTestWorkflow", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowParams")).Return(nil)
+
+		err := repo.Insert(ctx, *execution)
+
+		assert.NoError(t, err)
+		// Verify SilentMode was serialized as JSONB
+		assert.NotEmpty(t, capturedParams.SilentMode)
+		var silentMode testkube.SilentMode
+		assert.NoError(t, json.Unmarshal(capturedParams.SilentMode, &silentMode))
+		assert.True(t, silentMode.Health)
+		assert.True(t, silentMode.Metrics)
+	})
+
+	t.Run("NilSilentModeIsSerializedAsNullOnInsert", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:      mockDB,
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		execution := createTestExecution()
+		execution.SilentMode = nil
+
+		mockDB.On("Begin", ctx).Return(mockTx, nil)
+		mockTx.On("Rollback", ctx).Return(nil)
+		mockTx.On("Commit", ctx).Return(nil)
+		mockQueries.On("WithTx", mockTx).Return(mockQueries)
+
+		var capturedParams sqlc.InsertTestWorkflowExecutionParams
+		mockQueries.On("InsertTestWorkflowExecution", ctx, mock.MatchedBy(func(p sqlc.InsertTestWorkflowExecutionParams) bool {
+			capturedParams = p
+			return true
+		})).Return(nil)
+		mockQueries.On("InsertTestWorkflowResult", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowResultParams")).Return(nil)
+		mockQueries.On("InsertTestWorkflow", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowParams")).Return(nil)
+
+		err := repo.Insert(ctx, *execution)
+
+		assert.NoError(t, err)
+		assert.Nil(t, capturedParams.SilentMode)
+	})
+}
+
+func TestPostgresRepository_SilentModeGet(t *testing.T) {
+	t.Run("SilentModeIsDeserializedOnGet", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		repo := &PostgresRepository{
+			db:             mockDB,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
+		}
+
+		ctx := context.Background()
+		row := createTestRow()
+		silentModeJSON, _ := json.Marshal(testkube.SilentMode{Health: true, Webhooks: true})
+		row.SilentMode = silentModeJSON
+
+		mockQueries.On("GetTestWorkflowExecution", ctx, sqlc.GetTestWorkflowExecutionParams{ID: "test-id", OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(row, nil)
+
+		result, err := repo.Get(ctx, "test-id")
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result.SilentMode)
+		assert.True(t, result.SilentMode.Health)
+		assert.True(t, result.SilentMode.Webhooks)
+		assert.False(t, result.SilentMode.Metrics)
+	})
+
+	t.Run("NilSilentModeOnGet", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		repo := &PostgresRepository{
+			db:             mockDB,
+			queries:        mockQueries,
+			organizationID: "org-id",
+			environmentID:  "env-id",
+		}
+
+		ctx := context.Background()
+		row := createTestRow()
+		row.SilentMode = nil
+
+		mockQueries.On("GetTestWorkflowExecution", ctx, sqlc.GetTestWorkflowExecutionParams{ID: "test-id", OrganizationID: "org-id", EnvironmentID: "env-id"}).Return(row, nil)
+
+		result, err := repo.Get(ctx, "test-id")
+
+		assert.NoError(t, err)
+		assert.Nil(t, result.SilentMode)
+	})
+}
+
+func TestPostgresRepository_GetFinished_SilentMode(t *testing.T) {
+	t.Run("SilentModeIsPopulatedFromGetFinished", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{queries: mockQueries, organizationID: "org-id", environmentID: "env-id"}
+		ctx := context.Background()
+
+		row := createTestRow()
+		row.Status = pgtype.Text{String: "passed", Valid: true}
+		silentModeJSON, _ := json.Marshal(testkube.SilentMode{Insights: true})
+		row.SilentMode = silentModeJSON
+
+		rows := []sqlc.GetFinishedTestWorkflowExecutionsRow{
+			sqlc.GetFinishedTestWorkflowExecutionsRow(row),
+		}
+
+		filter := createTestFilter()
+		mockQueries.On("GetFinishedTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetFinishedTestWorkflowExecutionsParams")).Return(rows, nil)
+
+		result, err := repo.GetFinished(ctx, filter)
+
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.NotNil(t, result[0].SilentMode)
+		assert.True(t, result[0].SilentMode.Insights)
+		assert.False(t, result[0].SilentMode.Health)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("ExecutionWithoutSilentModeReturnedFromGetFinished", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{queries: mockQueries, organizationID: "org-id", environmentID: "env-id"}
+		ctx := context.Background()
+
+		row := createTestRow()
+		row.Status = pgtype.Text{String: "passed", Valid: true}
+		row.SilentMode = nil
+
+		rows := []sqlc.GetFinishedTestWorkflowExecutionsRow{
+			sqlc.GetFinishedTestWorkflowExecutionsRow(row),
+		}
+
+		filter := createTestFilter()
+		mockQueries.On("GetFinishedTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetFinishedTestWorkflowExecutionsParams")).Return(rows, nil)
+
+		result, err := repo.GetFinished(ctx, filter)
+
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.Nil(t, result[0].SilentMode)
+		mockQueries.AssertExpectations(t)
+	})
 }

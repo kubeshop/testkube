@@ -17,6 +17,7 @@ type RetryPolicy struct {
 
 type StepData struct {
 	Ref           string                `json:"_,omitempty"`
+	Id            string                `json:"I,omitempty"`
 	ExitCode      uint8                 `json:"e,omitempty"`
 	Status        *constants.StepStatus `json:"s,omitempty"`
 	StartedAt     *time.Time            `json:"S,omitempty"`
@@ -77,6 +78,11 @@ func (s *StepData) SetExitCode(exitCode uint8) *StepData {
 	return s
 }
 
+func (s *StepData) SetId(id string) *StepData {
+	s.Id = id
+	return s
+}
+
 func (s *StepData) SetCondition(expression string) *StepData {
 	s.Condition = expression
 	return s
@@ -97,6 +103,7 @@ func (s *StepData) SetPausedOnStart(pause bool) *StepData {
 func (s *StepData) SetTimeout(timeout string) *StepData {
 	if timeout == "" {
 		s.Timeout = nil
+		return s
 	}
 	duration, err := time.ParseDuration(timeout)
 	if err != nil {
@@ -129,8 +136,7 @@ func (s *StepData) RegisterPauseStart(ts time.Time) bool {
 		return false
 	}
 	s.paused = true
-	start := ts
-	s.PausedStart = &start
+	s.PausedStart = &ts
 	return true
 }
 

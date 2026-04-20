@@ -232,7 +232,9 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	}
 
 	// Parse basic JSONB fields
-	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime)
+	if err := r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams, row.Runtime, row.SilentMode); err != nil {
+		return nil, fmt.Errorf("failed to parse execution JSON fields: %w", err)
+	}
 
 	// Build result if exists
 	if row.Status.Valid {
@@ -321,6 +323,20 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	// Populate config params if resolved workflow exists
 	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
 		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
+	}
+
+	// Ensure workflows and their specs are not nil to avoid nil pointer dereference in ConvertDots
+	if execution.Workflow == nil {
+		execution.Workflow = &testkube.TestWorkflow{}
+	}
+	if execution.ResolvedWorkflow == nil {
+		execution.ResolvedWorkflow = &testkube.TestWorkflow{}
+	}
+	if execution.Workflow.Spec == nil {
+		execution.Workflow.Spec = &testkube.TestWorkflowSpec{}
+	}
+	if execution.ResolvedWorkflow.Spec == nil {
+		execution.ResolvedWorkflow.Spec = &testkube.TestWorkflowSpec{}
 	}
 
 	return execution.UnscapeDots(), nil
@@ -758,7 +774,7 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -809,6 +825,14 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	var silentMode []byte
+	if execution.SilentMode != nil {
+		silentMode, err = toJSONB(execution.SilentMode)
+		if err != nil {
+			return err
+		}
+	}
+
 	return qtx.InsertTestWorkflowExecution(ctx, sqlc.InsertTestWorkflowExecutionParams{
 		ID:                        execution.Id,
 		GroupID:                   toPgText(execution.GroupId),
@@ -829,6 +853,7 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.T
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
 		Runtime:                   runtime,
+		SilentMode:                silentMode,
 	})
 }
 
@@ -978,6 +1003,13 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 }
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
+	if len(reports) == 0 {
+		return nil
+	}
+	maxOrder, err := qtx.GetMaxReportOrder(ctx, executionId)
+	if err != nil {
+		return err
+	}
 	for i, report := range reports {
 		summary, err := toJSONB(report.Summary)
 		if err != nil {
@@ -990,7 +1022,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			Kind:        toPgText(report.Kind),
 			File:        toPgText(report.File),
 			Summary:     summary,
-			RepOrder:    int32(i + 1),
+			RepOrder:    maxOrder + int32(i) + 1,
 		})
 		if err != nil {
 			return err
@@ -999,7 +1031,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 	return nil
 }
 
-func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+func (r *PostgresRepository) upsertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	global, err := toJSONB(agg.Global)
 	if err != nil {
 		return err
@@ -1010,7 +1042,7 @@ func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx
 		return err
 	}
 
-	return qtx.InsertTestWorkflowResourceAggregations(ctx, sqlc.InsertTestWorkflowResourceAggregationsParams{
+	return qtx.UpsertTestWorkflowResourceAggregations(ctx, sqlc.UpsertTestWorkflowResourceAggregationsParams{
 		ExecutionID: executionId,
 		Global:      global,
 		Step:        step,
@@ -1134,7 +1166,7 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1171,7 +1203,7 @@ func (r *PostgresRepository) UpdateResultStrict(ctx context.Context, id, runnerI
 	// Get current status for comparison
 	currentExecution, err := r.queries.GetTestWorkflowExecution(ctx, sqlc.GetTestWorkflowExecutionParams{
 		ID:             id,
-		OrganizationID: r.environmentID,
+		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
 	if err != nil {
@@ -1277,7 +1309,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Prepare parameters
-	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+	params := sqlc.FinishTestWorkflowExecutionResultStrictParams{
 		ExecutionID:     id,
 		RunnerID:        toPgText(runnerId),
 		Status:          toPgText(string(*result.Status)),
@@ -1321,7 +1353,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Update the result
-	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	updatedID, err := qtx.FinishTestWorkflowExecutionResultStrict(ctx, params)
 	if err != nil {
 		return false, err
 	}
@@ -1416,15 +1448,7 @@ func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report
 
 	qtx := r.queries.WithTx(tx)
 
-	// Delete existing reports
-	err = qtx.DeleteTestWorkflowReports(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Insert new reports
-	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
-	if err != nil {
+	if err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report}); err != nil {
 		return err
 	}
 
@@ -1463,31 +1487,24 @@ func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map
 		return err
 	}
 
-	return r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
+	rowsAffected, err := r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
 		Tags:           tagsJSON,
 		ExecutionID:    id,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
 // UpdateResourceAggregations updates resource aggregations
 func (r *PostgresRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
-	global, err := toJSONB(resourceAggregations.Global)
-	if err != nil {
-		return err
-	}
-
-	step, err := toJSONB(resourceAggregations.Step)
-	if err != nil {
-		return err
-	}
-
-	return r.queries.UpdateTestWorkflowExecutionResourceAggregations(ctx, sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams{
-		ExecutionID: id,
-		Global:      global,
-		Step:        step,
-	})
+	return r.upsertResourceAggregations(ctx, r.queries, id, resourceAggregations)
 }
 
 // DeleteByTestWorkflow deletes executions by workflow name
@@ -1908,42 +1925,21 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	}
 
 	if filter.Selector() != "" {
-		keys, conditions := r.parseSelector(filter.Selector())
-		params.SelectorKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.SelectorConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseSelectorToText(filter.Selector())
+		params.SelectorKeys = keys
+		params.SelectorConditions = conditions
 	}
 
 	if filter.LabelSelector() != nil {
-		keys, conditions := r.parseLabelSelector(filter.LabelSelector())
-		params.LabelKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.LabelConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseLabelSelectorToText(filter.LabelSelector())
+		params.LabelKeys = keys
+		params.LabelConditions = conditions
 	}
 
 	if filter.TagSelector() != "" {
-		keys, conditions := r.parseTagSelector(filter.TagSelector())
-		params.TagKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.TagConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseTagSelectorToText(filter.TagSelector())
+		params.TagKeys = keys
+		params.TagConditions = conditions
 	}
 
 	if filter.SkipDefined() {
@@ -1963,99 +1959,60 @@ type ValueCondition struct {
 	Values []string `json:"values"` // Multiple values for the same key (OR logic within the same key)
 }
 
-// Parse selector into conditions
-func (r *PostgresRepository) parseSelector(selector string) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
+func (r *PostgresRepository) parseSelectorToText(selector string) ([]string, []string) {
+	keys := make([]string, 0)
+	conditions := make([]string, 0)
 	items := strings.Split(selector, ",")
 	for _, item := range items {
 		elements := strings.Split(item, "=")
 		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+			conditions = append(conditions, utils.EscapeDots(elements[0])+"="+elements[1])
 		} else if len(elements) == 1 {
-			condType := "exists"
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(elements[0]),
-			})
+			key := utils.EscapeDots(elements[0])
+			keys = append(keys, key)
 		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
 	}
 
 	return keys, conditions
 }
 
-// Parse label selector into conditions
-func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.LabelSelector) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
+func (r *PostgresRepository) parseLabelSelectorToText(labelSelector *testworkflow.LabelSelector) ([]string, []string) {
+	keys := make([]string, 0)
+	conditions := make([]string, 0)
 	for _, label := range labelSelector.Or {
 		if label.Value != nil {
-			values[utils.EscapeDots(label.Key)] = append(values[utils.EscapeDots(label.Key)], *label.Value)
+			conditions = append(conditions, utils.EscapeDots(label.Key)+"="+*label.Value)
 		} else if label.Exists != nil {
-			// Label exists/not exists
-			condType := "exists"
+			key := utils.EscapeDots(label.Key)
 			if !*label.Exists {
-				condType = "not_exists"
+				key = key + ":not_exists"
 			}
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(label.Key),
-			})
+			keys = append(keys, key)
 		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
 	}
 
 	return keys, conditions
 }
 
-// Parse tag selector into conditions
-func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
+func (r *PostgresRepository) parseTagSelectorToText(tagSelector string) ([]string, []string) {
+	keys := make([]string, 0)
+	conditions := make([]string, 0)
 	items := strings.Split(tagSelector, ",")
 	for _, item := range items {
 		item = strings.TrimSpace(item)
 		elements := strings.Split(item, "=")
 		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+			conditions = append(conditions, utils.EscapeDots(elements[0])+"="+elements[1])
 		} else if len(elements) == 1 {
-			// Tag exists: tag
-			condType := "exists"
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(elements[0]),
-			})
+			key := utils.EscapeDots(elements[0])
+			keys = append(keys, key)
 		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
 	}
 
 	return keys, conditions
 }
 
 func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testworkflow.Filter) (sqlc.GetTestWorkflowExecutionsTotalsParams, error) {
-	var err error
 	params := sqlc.GetTestWorkflowExecutionsTotalsParams{
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
@@ -2128,42 +2085,21 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 	}
 
 	if filter.Selector() != "" {
-		keys, conditions := r.parseSelector(filter.Selector())
-		params.SelectorKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.SelectorConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseSelectorToText(filter.Selector())
+		params.SelectorKeys = keys
+		params.SelectorConditions = conditions
 	}
 
 	if filter.LabelSelector() != nil {
-		keys, conditions := r.parseLabelSelector(filter.LabelSelector())
-		params.LabelKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.LabelConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseLabelSelectorToText(filter.LabelSelector())
+		params.LabelKeys = keys
+		params.LabelConditions = conditions
 	}
 
 	if filter.TagSelector() != "" {
-		keys, conditions := r.parseTagSelector(filter.TagSelector())
-		params.TagKeys, err = json.Marshal(keys)
-		if err != nil {
-			return params, err
-		}
-
-		params.TagConditions, err = json.Marshal(conditions)
-		if err != nil {
-			return params, err
-		}
+		keys, conditions := r.parseTagSelectorToText(filter.TagSelector())
+		params.TagKeys = keys
+		params.TagConditions = conditions
 	}
 
 	return params, nil
@@ -2171,7 +2107,7 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 
 // Helper methods for building complex objects
 
-func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams, runtime []byte) error {
+func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams, runtime, silentMode []byte) error {
 	var err error
 	if len(runnerTarget) > 0 {
 		execution.RunnerTarget, err = fromJSONB[testkube.ExecutionTarget](runnerTarget)
@@ -2204,6 +2140,13 @@ func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWo
 
 	if len(runtime) > 0 {
 		execution.Runtime, err = fromJSONB[testkube.TestWorkflowExecutionRuntime](runtime)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(silentMode) > 0 {
+		execution.SilentMode, err = fromJSONB[testkube.SilentMode](silentMode)
 		if err != nil {
 			return err
 		}
@@ -2333,6 +2276,14 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		return err
 	}
 
+	var silentMode []byte
+	if execution.SilentMode != nil {
+		silentMode, err = toJSONB(execution.SilentMode)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Placeholder - you would call the generated method here:
 	return qtx.UpdateTestWorkflowExecution(ctx, sqlc.UpdateTestWorkflowExecutionParams{
 		GroupID:                   toPgText(execution.GroupId),
@@ -2351,6 +2302,7 @@ func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.T
 		RunningContext:            runningContext,
 		ConfigParams:              configParams,
 		Runtime:                   runtime,
+		SilentMode:                silentMode,
 		ID:                        execution.Id,
 		OrganizationID:            r.organizationID,
 		EnvironmentID:             r.environmentID,
