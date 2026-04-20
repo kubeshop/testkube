@@ -266,6 +266,8 @@ func NewConnectCmd() *cobra.Command {
 				cfg.CloudContext.AgentReleaseName = relName
 				cfg.CloudContext.AgentNamespace = relNs
 			}
+			// Remember the agent name so disconnect can delete the control plane record
+			cfg.CloudContext.AgentName = agentName
 			err = config.Save(cfg)
 			ui.ExitOnError("Saving Pro context", err)
 

@@ -77,6 +77,16 @@ func NewDisconnectCmd() *cobra.Command {
 				}
 			}
 
+			// Delete the agent record from the control plane that was created by "pro connect"
+			if cfg.CloudContext.AgentName != "" && cfg.CloudContext.ApiUri != "" && cfg.CloudContext.ApiKey != "" && cfg.CloudContext.OrganizationId != "" {
+				spinner := ui.NewSpinner("Deleting agent from control plane")
+				if err := common.DeleteAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.CloudContext.AgentName); err != nil {
+					spinner.Fail(fmt.Sprintf("Failed to delete agent %q from control plane (continuing with disconnect): %s", cfg.CloudContext.AgentName, err))
+				} else {
+					spinner.Success()
+				}
+			}
+
 			ns := cfg.Namespace
 
 			// Scale up the OSS API server that was scaled down by pro connect

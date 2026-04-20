@@ -42,6 +42,8 @@ type CloudContext struct {
 	AgentReleaseName string `json:"agentReleaseName,omitempty"`
 	// AgentNamespace is the Kubernetes namespace where the runner chart was installed by "pro connect".
 	AgentNamespace string `json:"agentNamespace,omitempty"`
+	// AgentName is the name of the agent record created in the control plane by "pro connect".
+	AgentName string `json:"agentName,omitempty"`
 }
 
 type Data struct {
