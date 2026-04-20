@@ -41,6 +41,7 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			} else {
 				file, err := os.Open(filePath)
 				ui.ExitOnError("reading "+filePath+" file", err)
+				defer file.Close()
 				input = file
 			}
 

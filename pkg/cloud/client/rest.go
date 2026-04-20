@@ -73,6 +73,7 @@ func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
 		d, err := io.ReadAll(resp.Body)
@@ -174,6 +175,7 @@ func (c RESTClient[I, O]) Patch(id string, entity I, overridePath ...string) (er
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)
@@ -203,6 +205,7 @@ func (c RESTClient[I, O]) Delete(id string, overridePath ...string) (err error) 
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
 		d, err := io.ReadAll(resp.Body)

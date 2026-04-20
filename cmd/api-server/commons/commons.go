@@ -68,6 +68,7 @@ func HandleCancelSignal(ctx context.Context) func() error {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	return func() error {
+		defer signal.Stop(stopSignal)
 		select {
 		case <-ctx.Done():
 			return nil

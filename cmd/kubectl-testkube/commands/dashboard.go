@@ -111,6 +111,7 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(c)
 
 	ui.Success("The dashboard is accessible here:", uri)
 	ui.Success("Port forwarding the necessary services, hit Ctrl+c (or Cmd+c) to stop")

@@ -104,6 +104,11 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 	if err != nil {
 		return name, err
 	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	if _, err = io.Copy(f, resp.Body); err != nil {
 		return name, err
