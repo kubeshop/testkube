@@ -378,6 +378,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
 	args, settings := prepareCommonHelmArgs(options)
+	settings["testkube-api.logs.storage"] = "minio"
 	return appendHelmArgs(args, options, settings)
 }
 
