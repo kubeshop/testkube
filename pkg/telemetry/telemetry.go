@@ -157,7 +157,6 @@ func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactC
 	return sendData(senders, payload)
 }
 
-
 // SendHeartbeatEvent will send event to GA
 func SendHeartbeatEvent(host, version, clusterId string, capabilities []string) (string, error) {
 	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host, GetClusterType(), capabilities)

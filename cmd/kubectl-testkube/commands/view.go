@@ -78,7 +78,7 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 }
 
 func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIURL, viewerBaseURL string, skipArtifacts, wait bool) {
-	uris := common.NewMasterUris("", "", "", "", "", "", "", false)
+	uris := common.NewMasterUris("", "", "", "", "", false)
 	if sharesAPIURL == "" {
 		sharesAPIURL = uris.Api
 	}
