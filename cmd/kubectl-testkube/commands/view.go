@@ -70,7 +70,7 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 	}
 
 	cmd.Flags().StringVar(&sharesAPIURL, "shares-api-url", "", "shares API base URL (default: https://api.testkube.io)")
-	cmd.Flags().StringVar(&viewerBaseURL, "viewer-url", "", "viewer base URL (default: https://app.testkube.io)")
+	cmd.Flags().StringVar(&viewerBaseURL, "viewer-url", "", "viewer base URL (default: https://view.testkube.io)")
 	cmd.Flags().BoolVar(&skipArtifacts, "skip-artifacts", false, "skip uploading artifacts when sharing an execution")
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip confirmation prompt")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait for the execution to finish before uploading")
@@ -83,7 +83,7 @@ func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIU
 		sharesAPIURL = uris.Api
 	}
 	if viewerBaseURL == "" {
-		viewerBaseURL = uris.Ui
+		viewerBaseURL = uris.View
 	}
 
 	client, _, err := common.GetClient(cmd)

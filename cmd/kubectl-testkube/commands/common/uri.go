@@ -11,6 +11,7 @@ const (
 	defaultLogsPort    = 443
 	defaultAgentPrefix = "agent"
 	defaultUiPrefix    = "app"
+	defaultViewPrefix  = "view"
 	defaultLogsPrefix  = "logs"
 	defaultApiPrefix   = "api"
 	defaultRootDomain  = "testkube.io"
@@ -51,6 +52,7 @@ func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, logsPrefix, agentURI, logsU
 		Agent:      agentURI,
 		Logs:       logsURI,
 		Ui:         fmt.Sprintf("%s://%s.%s", protocol, uiPrefix, rootDomain),
+		View:       fmt.Sprintf("%s://%s.%s", protocol, defaultViewPrefix, rootDomain),
 		Auth:       fmt.Sprintf("%s://%s.%s/idp", protocol, apiPrefix, rootDomain),
 	}
 }

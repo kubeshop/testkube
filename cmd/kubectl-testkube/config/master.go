@@ -25,6 +25,7 @@ type MasterURIs struct {
 	Agent      string `json:"agent,omitempty"`
 	Logs       string `json:"logs,omitempty"`
 	Ui         string `json:"ui,omitempty"`
+	View       string `json:"view,omitempty"`
 	Auth       string `json:"auth,omitempty"`
 }
 
@@ -49,6 +50,12 @@ func (m *MasterURIs) WithLogsURI(uri string) *MasterURIs {
 // WithUi sets whole ui URI
 func (m *MasterURIs) WithUiURI(uri string) *MasterURIs {
 	m.Ui = uri
+	return m
+}
+
+// WithViewURI sets whole public viewer URI
+func (m *MasterURIs) WithViewURI(uri string) *MasterURIs {
+	m.View = uri
 	return m
 }
 
