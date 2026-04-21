@@ -6,8 +6,9 @@ const (
 	ContextTypeCloud      ContextType = "cloud"
 	ContextTypeKubeconfig ContextType = "kubeconfig"
 
-	TokenTypeOIDC = "oidc"
-	TokenTypeAPI  = "api"
+	TokenTypeOIDC      = "oidc"
+	TokenTypeAPI       = "api"
+	TokenTypeEmailLink = "emailLink"
 
 	CallbackPort            = 8090
 	AlternativeCallbackPort = 38090

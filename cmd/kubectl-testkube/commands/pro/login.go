@@ -28,6 +28,7 @@ type CloudConfig struct {
 func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
 	var email string
+	var emailLink string
 
 	cmd := &cobra.Command{
 		Use:     "login [apiUrl]",
@@ -137,13 +138,19 @@ func NewLoginCmd() *cobra.Command {
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
 			var token, refreshToken string
+			tokenType := config.TokenTypeOIDC
 
-			if email != "" {
+			switch {
+			case emailLink != "":
+				// Email magic-link flow (via --email-link flag)
+				token, refreshToken, err = common.LoginUserEmailLink(opts.Master.URIs.Api, emailLink, opts.Master.CallbackPort)
+				tokenType = config.TokenTypeEmailLink
+			case email != "":
 				// SSO authentication flow
 				token, refreshToken, err = common.LoginUserSSO(opts.Master.URIs.Api, opts.Master.URIs.Auth, email, opts.Master.CallbackPort)
-			} else {
-				// Traditional OAuth flow (GitHub/GitLab)
-				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
+			default:
+				// Interactive selector: GitHub / GitLab / Google / Email magic-link
+				tokenType, token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.URIs.Api, opts.Master.CustomAuth, opts.Master.CallbackPort)
 			}
 			ui.ExitOnError("getting token", err)
 
@@ -159,7 +166,7 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("getting environment", err)
 			}
 
-			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, "", opts, cfg)
+			err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", opts, cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")
@@ -170,6 +177,8 @@ func NewLoginCmd() *cobra.Command {
 
 	common.PopulateMasterFlags(cmd, &opts, false)
 	cmd.Flags().StringVar(&email, "email", "", "email address for SSO authentication")
+	cmd.Flags().StringVar(&emailLink, "email-link", "", "email address for magic-link authentication")
+	cmd.MarkFlagsMutuallyExclusive("email", "email-link")
 
 	return cmd
 }

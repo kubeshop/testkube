@@ -120,12 +120,18 @@ func NewInitCmd() *cobra.Command {
 
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
+			// Preserve the existing session's token type; fall back to OIDC
+			// for brand-new contexts with nothing stored yet.
+			tokenType := cfg.CloudContext.TokenType
+			if tokenType == "" {
+				tokenType = config.TokenTypeOIDC
+			}
 			if !common.IsUserLoggedIn(cfg, options) {
-				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth, options.Master.CallbackPort)
+				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, dockerContainerName, options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, tokenType, token, refreshToken, dockerContainerName, options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)

@@ -68,25 +68,36 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		token := cfg.CloudContext.ApiKey
 
 		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
+			newTokenType := cfg.CloudContext.TokenType
 			var refreshToken string
-			authURI := cfg.CloudContext.AuthUri
-			if cfg.CloudContext.AuthUri == "" {
-				authURI = fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
-			}
-			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
+			token, refreshToken, err = refreshUserToken(context.Background(), cfg)
 			if err != nil {
-				// Error: failed refreshing, go thru login flow
+				if cfg.CloudContext.TokenType == config.TokenTypeEmailLink {
+					// Don't auto-restart the email-link flow from inside an
+					// unrelated command — a 5-minute "check your inbox" wait
+					// mid-command is worse UX than a hard error. Surface the
+					// exact command to re-run, filling in the user's email
+					// from the stored ID token when we can recover it.
+					hint := "testkube pro login --email-link <email>"
+					if stored := cloudlogin.EmailFromIDToken(cfg.CloudContext.ApiKey); stored != "" {
+						hint = fmt.Sprintf("testkube pro login --email-link %s", stored)
+					}
+					return nil, "", fmt.Errorf("email-link token refresh failed; re-run `%s`: %w", hint, err)
+				}
+				authURI := cfg.CloudContext.AuthUri
+				if authURI == "" {
+					authURI = fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
+				}
 				port := config.CallbackPort
 				if cfg.CloudContext.CallbackPort != 0 {
 					port = cfg.CloudContext.CallbackPort
 				}
-
-				token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.CustomAuth, port)
+				newTokenType, token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.ApiUri, cfg.CloudContext.CustomAuth, port)
 				if err != nil {
 					return nil, "", fmt.Errorf("error logging in: %w", err)
 				}
 			}
-			if err := UpdateTokens(cfg, token, refreshToken); err != nil {
+			if err := UpdateTokens(cfg, newTokenType, token, refreshToken); err != nil {
 				return nil, "", fmt.Errorf("error storing new token: %w", err)
 			}
 		}

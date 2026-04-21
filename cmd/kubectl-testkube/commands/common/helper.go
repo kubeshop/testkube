@@ -63,6 +63,7 @@ const (
 	github                = "GitHub"
 	gitlab                = "GitLab"
 	google                = "Google"
+	emailLink             = "Email (magic link)"
 	dockerDaemonPrefixLen = 8
 	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
@@ -438,7 +439,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
@@ -460,7 +461,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
-	cfg.CloudContext.TokenType = config.TokenTypeOIDC
+	cfg.CloudContext.TokenType = tokenType
 	if token != "" {
 		cfg.CloudContext.ApiKey = token
 	}
@@ -543,7 +544,7 @@ func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
 	return false
 }
 
-func UpdateTokens(cfg config.Data, token, refreshToken string) error {
+func UpdateTokens(cfg config.Data, tokenType, token, refreshToken string) error {
 	var updated bool
 	if token != cfg.CloudContext.ApiKey {
 		cfg.CloudContext.ApiKey = token
@@ -551,6 +552,10 @@ func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 	}
 	if refreshToken != cfg.CloudContext.RefreshToken {
 		cfg.CloudContext.RefreshToken = refreshToken
+		updated = true
+	}
+	if tokenType != "" && tokenType != cfg.CloudContext.TokenType {
+		cfg.CloudContext.TokenType = tokenType
 		updated = true
 	}
 
@@ -607,19 +612,32 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	return cfg
 }
 
-func LoginUser(authUri string, customConnector bool, port int) (string, string, error) {
+// LoginUser runs the interactive login method selector and returns the chosen
+// tokenType together with the tokens. Picking "Email (magic link)" delegates to
+// the email-link flow; everything else uses the Dex OIDC flow.
+func LoginUser(authUri, apiUri string, customConnector bool, port int) (tokenType, idToken, refreshToken string, err error) {
 	ui.H1("Login")
 	connectorID := ""
 	if !customConnector {
-		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google})
+		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
 	}
 
-	// Handle the common case where th Demo instance is running on reserved port
+	if connectorID == emailLink {
+		emailAddr := ui.TextInput("Enter your email", "")
+		if emailAddr == "" {
+			return "", "", "", fmt.Errorf("email is required for magic-link login")
+		}
+		idToken, refreshToken, err = LoginUserEmailLink(apiUri, emailAddr, port)
+		if err != nil {
+			return "", "", "", err
+		}
+		return config.TokenTypeEmailLink, idToken, refreshToken, nil
+	}
 
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
 	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port)
 	if err != nil {
-		return "", "", fmt.Errorf("cloud login: %w", err)
+		return "", "", "", fmt.Errorf("cloud login: %w", err)
 	}
 
 	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
@@ -628,18 +646,17 @@ func LoginUser(authUri string, customConnector bool, port int) (string, string, 
 	ui.Paragraph("")
 
 	if ok := ui.Confirm("Continue"); !ok {
-		return "", "", fmt.Errorf("login cancelled")
+		return "", "", "", fmt.Errorf("login cancelled")
 	}
 
 	ui.Debug("Opening login page in browser to get a token", authUrl)
-	// open browser with login page and redirect to localhost
 	open.Run(authUrl)
 
-	idToken, refreshToken, err := uiGetToken(tokenChan)
+	idToken, refreshToken, err = uiGetToken(tokenChan)
 	if err != nil {
-		return "", "", fmt.Errorf("getting token")
+		return "", "", "", fmt.Errorf("getting token: %w", err)
 	}
-	return idToken, refreshToken, nil
+	return config.TokenTypeOIDC, idToken, refreshToken, nil
 }
 
 // extractAndCleanDomain extracts domain from email and removes dots and hyphens for connector ID
@@ -725,6 +742,34 @@ func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, erro
 	idToken, refreshToken, err := uiGetToken(tokenChan)
 	if err != nil {
 		return "", "", fmt.Errorf("getting token: %w", err)
+	}
+	return idToken, refreshToken, nil
+}
+
+func LoginUserEmailLink(apiUrl, email string, port int) (string, string, error) {
+	ui.Debug("Requesting email-link for", email)
+
+	// Bound the callback server's lifetime to the same 5-minute budget as
+	// uiGetToken so a user walking away doesn't leak the loopback listener.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	tokenChan, err := cloudlogin.CloudLoginEmailLink(ctx, apiUrl, email, port)
+	if err != nil {
+		return "", "", fmt.Errorf("email link login: %w", err)
+	}
+
+	ui.Paragraph(fmt.Sprintf("We've sent a sign-in link to %s.", email))
+	ui.Paragraph("Open the email on this machine and click the link to complete login.")
+	ui.Paragraph("(the CLI will continue automatically once the link is clicked)")
+	ui.Paragraph("")
+
+	idToken, refreshToken, err := uiGetToken(tokenChan)
+	if err != nil {
+		return "", "", fmt.Errorf("getting token: %w", err)
+	}
+	if idToken == "" || refreshToken == "" {
+		return "", "", fmt.Errorf("email-link login did not return tokens")
 	}
 	return idToken, refreshToken, nil
 }
