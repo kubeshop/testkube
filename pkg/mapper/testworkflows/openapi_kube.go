@@ -34,6 +34,13 @@ func MapBoxedStringToIntOrString(v *testkube.BoxedString) *intstr.IntOrString {
 	return &intstr.IntOrString{Type: intstr.String, StrVal: v.Value}
 }
 
+func MapTemplatableBoxedIntegerToIntOrString(v *testkube.TemplatableBoxedInteger) *intstr.IntOrString {
+	if v == nil {
+		return nil
+	}
+	return common.Ptr(MapStringToIntOrString(v.Value))
+}
+
 func MapStringPtrToIntOrStringPtr(i *string) *intstr.IntOrString {
 	if i == nil {
 		return nil
@@ -207,17 +214,17 @@ func MapEnvFromSourceAPIToKube(v testkube.EnvFromSource) corev1.EnvFromSource {
 	}
 }
 
-func MapSecurityContextAPIToKube(v *testkube.SecurityContext) *corev1.SecurityContext {
+func MapSecurityContextAPIToKube(v *testkube.SecurityContext) *testworkflowsv1.WorkflowSecurityContext {
 	if v == nil {
 		return nil
 	}
-	return &corev1.SecurityContext{
+	return &testworkflowsv1.WorkflowSecurityContext{
 		Capabilities:             MapCapabilitiesAPIToKube(v.Capabilities),
 		Privileged:               MapBoxedBooleanToBool(v.Privileged),
 		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
-		RunAsUser:                MapBoxedIntegerToInt64(v.RunAsUser),
-		RunAsGroup:               MapBoxedIntegerToInt64(v.RunAsGroup),
+		RunAsUser:                MapTemplatableBoxedIntegerToIntOrString(v.RunAsUser),
+		RunAsGroup:               MapTemplatableBoxedIntegerToIntOrString(v.RunAsGroup),
 		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
 		ReadOnlyRootFilesystem:   MapBoxedBooleanToBool(v.ReadOnlyRootFilesystem),
 		AllowPrivilegeEscalation: MapBoxedBooleanToBool(v.AllowPrivilegeEscalation),
@@ -650,16 +657,16 @@ func MapPodResourceClaimAPIToKube(v testkube.PodResourceClaim) corev1.PodResourc
 	}
 }
 
-func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) corev1.PodSecurityContext {
-	return corev1.PodSecurityContext{
+func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) testworkflowsv1.WorkflowPodSecurityContext {
+	return testworkflowsv1.WorkflowPodSecurityContext{
 		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
-		RunAsUser:                MapBoxedIntegerToInt64(v.RunAsUser),
-		RunAsGroup:               MapBoxedIntegerToInt64(v.RunAsGroup),
+		RunAsUser:                MapTemplatableBoxedIntegerToIntOrString(v.RunAsUser),
+		RunAsGroup:               MapTemplatableBoxedIntegerToIntOrString(v.RunAsGroup),
 		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
 		SupplementalGroups:       v.SupplementalGroups,
 		SupplementalGroupsPolicy: common.MapPtr(MapBoxedStringToString(v.SupplementalGroupsPolicy), common.MapStringToEnum[corev1.SupplementalGroupsPolicy]),
-		FSGroup:                  MapBoxedIntegerToInt64(v.FsGroup),
+		FSGroup:                  MapTemplatableBoxedIntegerToIntOrString(v.FsGroup),
 		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlAPIToKube),
 		FSGroupChangePolicy:      common.MapPtr(MapBoxedStringToString(v.FsGroupChangePolicy), common.MapStringToEnum[corev1.PodFSGroupChangePolicy]),
 		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileAPIToKube),
@@ -1638,10 +1645,14 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 }
 
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowExecutionSchema) testworkflowsv1.TestWorkflowExecutionSchema {
+	var silent *bool
+	if v.Silent {
+		silent = common.Ptr(true)
+	}
 	return testworkflowsv1.TestWorkflowExecutionSchema{
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
-		Silent: common.PtrOrNil(v.Silent),
+		Silent: silent,
 	}
 }
 

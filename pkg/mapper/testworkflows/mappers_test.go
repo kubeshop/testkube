@@ -67,7 +67,7 @@ var (
 				corev1.ResourceMemory: {Type: intstr.Int, IntVal: 10204},
 			},
 		},
-		SecurityContext: &corev1.SecurityContext{
+		SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add:  []corev1.Capability{"NET_ADMIN"},
 				Drop: []corev1.Capability{"ALL"},
@@ -80,7 +80,7 @@ var (
 			SeccompProfile: &corev1.SeccompProfile{
 				Type: corev1.SeccompProfileTypeRuntimeDefault,
 			},
-		},
+		}),
 	}
 	content = testworkflowsv1.Content{
 		Git: &testworkflowsv1.ContentGit{
@@ -207,10 +207,10 @@ var (
 					corev1.ResourceMemory: {Type: intstr.String, StrVal: "300m"},
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
+			SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 				Privileged: common.Ptr(true),
 				RunAsUser:  common.Ptr(int64(33)),
-			},
+			}),
 		},
 	}
 	stepBaseOperations = testworkflowsv1.StepOperations{
@@ -234,13 +234,13 @@ var (
 						corev1.ResourceCPU: {Type: intstr.Int, IntVal: 444},
 					},
 				},
-				SecurityContext: &corev1.SecurityContext{
+				SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 					RunAsUser:                common.Ptr(int64(444)),
 					RunAsGroup:               nil,
 					RunAsNonRoot:             common.Ptr(true),
 					ReadOnlyRootFilesystem:   nil,
 					AllowPrivilegeEscalation: nil,
-				},
+				}),
 			},
 		},
 		Execute: &testworkflowsv1.StepExecute{

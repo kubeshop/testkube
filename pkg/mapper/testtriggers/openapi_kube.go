@@ -40,7 +40,6 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 		Spec: testsv1.TestTriggerSpec{
 			Selector:          mapLabelSelectorToCRD(request.Selector),
 			Resource:          resource,
-			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
 			Match:             mapFieldConditionsToCRD(request.Match),
@@ -53,17 +52,6 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			ConcurrencyPolicy: concurrencyPolicy,
 			Disabled:          request.Disabled,
 		},
-	}
-}
-
-func mapResourceRefToCRD(ref *testkube.TestTriggerResourceRef) *testsv1.TestTriggerResourceRef {
-	if ref == nil {
-		return nil
-	}
-	return &testsv1.TestTriggerResourceRef{
-		Group:   ref.Group,
-		Version: ref.Version,
-		Kind:    ref.Kind,
 	}
 }
 
@@ -104,7 +92,6 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 		Spec: testsv1.TestTriggerSpec{
 			Selector:          mapLabelSelectorToCRD(request.Selector),
 			Resource:          resource,
-			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
 			Match:             mapFieldConditionsToCRD(request.Match),

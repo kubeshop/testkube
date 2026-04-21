@@ -368,10 +368,10 @@ func (mr *MockContainerMockRecorder) Root() *gomock.Call {
 }
 
 // SecurityContext mocks base method.
-func (m *MockContainer) SecurityContext() *v10.SecurityContext {
+func (m *MockContainer) SecurityContext() *v1.WorkflowSecurityContext {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SecurityContext")
-	ret0, _ := ret[0].(*v10.SecurityContext)
+	ret0, _ := ret[0].(*v1.WorkflowSecurityContext)
 	return ret0
 }
 
@@ -460,7 +460,7 @@ func (mr *MockContainerMockRecorder) SetResources(resources any) *gomock.Call {
 }
 
 // SetSecurityContext mocks base method.
-func (m *MockContainer) SetSecurityContext(sc *v10.SecurityContext) Container {
+func (m *MockContainer) SetSecurityContext(sc *v1.WorkflowSecurityContext) Container {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetSecurityContext", sc)
 	ret0, _ := ret[0].(Container)

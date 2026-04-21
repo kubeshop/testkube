@@ -63,7 +63,7 @@ func streamableWorkflowNotifications(source <-chan *testkube.TestWorkflowExecuti
 	go func() {
 		defer close(notifications)
 
-		var seqNo uint32
+		var seqNo int32
 		for notification := range source {
 			if notification == nil {
 				continue
@@ -75,8 +75,8 @@ func streamableWorkflowNotifications(source <-chan *testkube.TestWorkflowExecuti
 			}
 			if workflowNotificationResumable(streamNotification) {
 				seqNo++
-				streamNotification.SeqNo = int32(seqNo)
-				if seqNo <= resumeAfterSeqNo {
+				streamNotification.SeqNo = seqNo
+				if uint32(seqNo) <= resumeAfterSeqNo {
 					continue
 				}
 			}

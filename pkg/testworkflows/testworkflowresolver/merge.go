@@ -101,7 +101,7 @@ func MergePodDNSConfig(dst, include *corev1.PodDNSConfig) *corev1.PodDNSConfig {
 	return dst
 }
 
-func MergePodSecurityContext(dst, include *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+func MergePodSecurityContext(dst, include *testworkflowsv1.WorkflowPodSecurityContext) *testworkflowsv1.WorkflowPodSecurityContext {
 	if dst == nil {
 		return include
 	} else if include == nil {
@@ -258,7 +258,7 @@ func MergeWindowsSecurityContextOptions(dst, include *corev1.WindowsSecurityCont
 	return dst
 }
 
-func MergeSecurityContext(dst, include *corev1.SecurityContext) *corev1.SecurityContext {
+func MergeSecurityContext(dst, include *testworkflowsv1.WorkflowSecurityContext) *testworkflowsv1.WorkflowSecurityContext {
 	if dst == nil {
 		return include
 	} else if include == nil {

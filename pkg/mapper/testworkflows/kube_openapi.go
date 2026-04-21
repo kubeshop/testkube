@@ -31,6 +31,13 @@ func MapIntOrStringToBoxedString(v *intstr.IntOrString) *testkube.BoxedString {
 	return MapStringToBoxedString(common.Ptr(v.String()))
 }
 
+func MapIntOrStringToTemplatableBoxedInteger(v *intstr.IntOrString) *testkube.TemplatableBoxedInteger {
+	if v == nil {
+		return nil
+	}
+	return &testkube.TemplatableBoxedInteger{Value: v.String()}
+}
+
 func MapStringToBoxedString(v *string) *testkube.BoxedString {
 	if v == nil {
 		return nil
@@ -391,7 +398,7 @@ func MapEnvFromSourceKubeToAPI(v corev1.EnvFromSource) testkube.EnvFromSource {
 	}
 }
 
-func MapSecurityContextKubeToAPI(v *corev1.SecurityContext) *testkube.SecurityContext {
+func MapSecurityContextKubeToAPI(v *testworkflowsv1.WorkflowSecurityContext) *testkube.SecurityContext {
 	if v == nil {
 		return nil
 	}
@@ -400,8 +407,8 @@ func MapSecurityContextKubeToAPI(v *corev1.SecurityContext) *testkube.SecurityCo
 		Privileged:               MapBoolToBoxedBoolean(v.Privileged),
 		SeLinuxOptions:           common.MapPtr(v.SELinuxOptions, MapSELinuxOptionsKubeToAPI),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsKubeToAPI),
-		RunAsUser:                MapInt64ToBoxedInteger(v.RunAsUser),
-		RunAsGroup:               MapInt64ToBoxedInteger(v.RunAsGroup),
+		RunAsUser:                MapIntOrStringToTemplatableBoxedInteger(v.RunAsUser),
+		RunAsGroup:               MapIntOrStringToTemplatableBoxedInteger(v.RunAsGroup),
 		RunAsNonRoot:             MapBoolToBoxedBoolean(v.RunAsNonRoot),
 		ReadOnlyRootFilesystem:   MapBoolToBoxedBoolean(v.ReadOnlyRootFilesystem),
 		AllowPrivilegeEscalation: MapBoolToBoxedBoolean(v.AllowPrivilegeEscalation),
@@ -613,16 +620,16 @@ func MapPodResourceClaimKubeToAPI(v corev1.PodResourceClaim) testkube.PodResourc
 	}
 }
 
-func MapPodSecurityContextKubeToAPI(v corev1.PodSecurityContext) testkube.PodSecurityContext {
+func MapPodSecurityContextKubeToAPI(v testworkflowsv1.WorkflowPodSecurityContext) testkube.PodSecurityContext {
 	return testkube.PodSecurityContext{
 		SeLinuxOptions:           common.MapPtr(v.SELinuxOptions, MapSELinuxOptionsKubeToAPI),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsKubeToAPI),
-		RunAsUser:                MapInt64ToBoxedInteger(v.RunAsUser),
-		RunAsGroup:               MapInt64ToBoxedInteger(v.RunAsGroup),
+		RunAsUser:                MapIntOrStringToTemplatableBoxedInteger(v.RunAsUser),
+		RunAsGroup:               MapIntOrStringToTemplatableBoxedInteger(v.RunAsGroup),
 		RunAsNonRoot:             MapBoolToBoxedBoolean(v.RunAsNonRoot),
 		SupplementalGroups:       v.SupplementalGroups,
 		SupplementalGroupsPolicy: MapStringToBoxedString((*string)(v.SupplementalGroupsPolicy)),
-		FsGroup:                  MapInt64ToBoxedInteger(v.FSGroup),
+		FsGroup:                  MapIntOrStringToTemplatableBoxedInteger(v.FSGroup),
 		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlKubeToAPI),
 		FsGroupChangePolicy:      MapStringToBoxedString((*string)(v.FSGroupChangePolicy)),
 		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileKubeToAPI),

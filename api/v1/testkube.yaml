@@ -10645,6 +10645,14 @@ components:
       required:
         - value
 
+    TemplatableBoxedInteger:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+
     BoxedBoolean:
       type: object
       properties:
@@ -10718,9 +10726,9 @@ components:
         windowsOptions:
           $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
         readOnlyRootFilesystem:
@@ -10754,9 +10762,9 @@ components:
         windowsOptions:
           $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
         supplementalGroups:
@@ -10767,7 +10775,7 @@ components:
         supplementalGroupsPolicy:
           $ref: "#/components/schemas/BoxedString"
         fsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         sysctls:
           type: array
           items:

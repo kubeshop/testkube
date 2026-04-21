@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
@@ -24,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 const (
@@ -126,6 +128,10 @@ func getSpec(actions actiontypes.ActionGroups) string {
 		panic(err)
 	}
 	return string(v)
+}
+
+func workflowInt(v int32) *intstr.IntOrString {
+	return &intstr.IntOrString{Type: intstr.Int, IntVal: v}
 }
 
 func TestProcessEmpty(t *testing.T) {
@@ -427,6 +433,70 @@ func TestProcessShellWithNonStandardImageDisableFsGroupDefaulting(t *testing.T) 
 	if assert.Len(t, res.Job.Spec.Template.Spec.InitContainers, 1) && res.Job.Spec.Template.Spec.InitContainers[0].SecurityContext != nil {
 		assert.Nil(t, res.Job.Spec.Template.Spec.InitContainers[0].SecurityContext.RunAsGroup)
 	}
+}
+
+func TestProcessTemplateIntegerSecurityContextConfig(t *testing.T) {
+	templates := map[string]*testworkflowsv1.TestWorkflowTemplate{
+		"repro-integer-config": {
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Config: map[string]testworkflowsv1.ParameterSchema{
+						"runAsUser": {
+							Type:    testworkflowsv1.ParameterTypeInteger,
+							Default: workflowInt(65532),
+						},
+						"runAsGroup": {
+							Type:    testworkflowsv1.ParameterTypeInteger,
+							Default: workflowInt(65532),
+						},
+					},
+					Container: &testworkflowsv1.ContainerConfig{
+						SecurityContext: &testworkflowsv1.WorkflowSecurityContext{
+							RunAsUser:  &intstr.IntOrString{Type: intstr.String, StrVal: "{{ config.runAsUser }}"},
+							RunAsGroup: &intstr.IntOrString{Type: intstr.String, StrVal: "{{ config.runAsGroup }}"},
+						},
+					},
+					Pod: &testworkflowsv1.PodConfig{
+						SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+							FSGroup: &intstr.IntOrString{Type: intstr.String, StrVal: "{{ config.runAsGroup }}"},
+						},
+					},
+				},
+			},
+		},
+	}
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Use: []testworkflowsv1.TemplateRef{{Name: "repro-integer-config"}},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+			},
+		},
+	}
+
+	err := testworkflowresolver.ApplyTemplates(wf, templates, nil)
+	assert.NoError(t, err)
+	runAsUser, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsUser", wf.Spec.Container.SecurityContext.RunAsUser)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsUser)
+
+	runAsGroup, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsGroup", wf.Spec.Container.SecurityContext.RunAsGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsGroup)
+
+	fsGroup, err := testworkflowsv1.ResolveWorkflowInt64("pod.securityContext.fsGroup", wf.Spec.Pod.SecurityContext.FSGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *fsGroup)
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+	assert.NoError(t, err)
+
+	assert.Len(t, res.Job.Spec.Template.Spec.InitContainers, 0)
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) {
+		assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser)
+		assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+	assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
 }
 
 func TestProcessBasicEnvReference(t *testing.T) {
