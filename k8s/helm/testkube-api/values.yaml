@@ -51,6 +51,27 @@ kubeVersion: ""
 ## create roles and rolebindings
 rbac:
   create: true
+  ## Additional resources the agent is allowed to watch.
+  ## Required when TestTriggers or WorkflowTriggers use `resourceRef` to
+  ## target a CRD that isn't covered by the default watchers role
+  ## (e.g. cert-manager.io/certificates, kafka.strimzi.io/kafkatopics).
+  ##
+  ## Applied to all three watcher role variants:
+  ##   - the cluster-wide ClusterRole (default, multinamespace.enabled=false)
+  ##   - the release-namespace Role (multinamespace.enabled=true)
+  ##   - the per-namespace Roles generated from additionalNamespaces
+  ##
+  ## Verbs default to [get, list, watch] (read-only; triggers do not mutate
+  ## the watched resource). Override per-entry if you need something else.
+  ##
+  ## Example:
+  ## extraWatchedResources:
+  ##   - apiGroups: ["cert-manager.io"]
+  ##     resources: ["certificates", "certificaterequests"]
+  ##   - apiGroups: ["kafka.strimzi.io"]
+  ##     resources: ["kafkatopics"]
+  ##     verbs: ["get", "list", "watch"]
+  extraWatchedResources: []
 
 ## Number of Testkube API Pod replicas
 replicaCount: 1
