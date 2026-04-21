@@ -25,7 +25,6 @@ type ExecutionLogsWriter interface {
 	WriteStart(ref string) error
 	Save(ctx context.Context) error
 	Saved() bool
-	Enabled() bool
 	Cleanup()
 	Reset() error
 }
@@ -35,7 +34,6 @@ type executionLogsWriter struct {
 	environmentId string
 	id            string
 	workflowName  string
-	enabled       bool
 	skipVerify    bool
 
 	writer *io.PipeWriter
@@ -43,13 +41,12 @@ type executionLogsWriter struct {
 	mu     sync.Mutex
 }
 
-func NewExecutionLogsWriter(client controlplaneclient.Client, environmentId, id string, workflowName string, enabled, skipVerify bool) (ExecutionLogsWriter, error) {
+func NewExecutionLogsWriter(client controlplaneclient.Client, environmentId, id string, workflowName string, skipVerify bool) (ExecutionLogsWriter, error) {
 	e := &executionLogsWriter{
 		client:        client,
 		environmentId: environmentId,
 		id:            id,
 		workflowName:  workflowName,
-		enabled:       enabled,
 		skipVerify:    skipVerify,
 	}
 	err := e.Reset()
@@ -133,10 +130,6 @@ func (e *executionLogsWriter) Saved() bool {
 		return e.buffer == nil
 	}
 	return false
-}
-
-func (e *executionLogsWriter) Enabled() bool {
-	return e.enabled
 }
 
 func (e *executionLogsWriter) Reset() error {

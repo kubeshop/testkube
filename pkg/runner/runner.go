@@ -67,14 +67,15 @@ type Runner interface {
 }
 
 type runner struct {
-	worker            executionworkertypes.Worker
-	client            controlplaneclient.Client
-	configRepository  configRepo.Repository
-	emitter           event.Interface
-	metrics           metrics.Metrics
-	proContext        config.ProContext // TODO: Include Agent ID in pro context
-	storageSkipVerify bool
-	getGlobalTemplate GlobalTemplateFactory
+	worker                         executionworkertypes.Worker
+	client                         controlplaneclient.Client
+	configRepository               configRepo.Repository
+	emitter                        event.Interface
+	metrics                        metrics.Metrics
+	proContext                     config.ProContext // TODO: Include Agent ID in pro context
+	storageSkipVerify              bool
+	allowFinalizeWithoutLogArchive bool
+	getGlobalTemplate              GlobalTemplateFactory
 
 	watching sync.Map
 	sf       singleflight.Group
@@ -88,17 +89,19 @@ func New(
 	metrics metrics.Metrics,
 	proContext config.ProContext,
 	storageSkipVerify bool,
+	allowFinalizeWithoutLogArchive bool,
 	getGlobalTemplate GlobalTemplateFactory,
 ) Runner {
 	return &runner{
-		worker:            worker,
-		configRepository:  configRepository,
-		client:            client,
-		emitter:           emitter,
-		metrics:           metrics,
-		proContext:        proContext,
-		storageSkipVerify: storageSkipVerify,
-		getGlobalTemplate: getGlobalTemplate,
+		worker:                         worker,
+		configRepository:               configRepository,
+		client:                         client,
+		emitter:                        emitter,
+		metrics:                        metrics,
+		proContext:                     proContext,
+		storageSkipVerify:              storageSkipVerify,
+		allowFinalizeWithoutLogArchive: allowFinalizeWithoutLogArchive,
+		getGlobalTemplate:              getGlobalTemplate,
 	}
 }
 
@@ -122,11 +125,11 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
 	}
 
-	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.logArchiveEnabled(), r.storageSkipVerify)
+	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.storageSkipVerify)
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs)
+	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs, r.allowFinalizeWithoutLogArchive)
 	if err != nil {
 		return err
 	}
@@ -290,12 +293,6 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 
 	return nil
-}
-
-func (r *runner) logArchiveEnabled() bool {
-	// Log archive uploads depend on control-plane storage support, not on the
-	// broader cloud-storage feature flag that also switches workflow clients.
-	return r.proContext.CloudStorageSupportedInControlPlane
 }
 
 func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {

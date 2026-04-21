@@ -25,12 +25,13 @@ type ExecutionSaver interface {
 }
 
 type executionSaver struct {
-	id             string
-	organizationId string
-	environmentId  string
-	runnerId       string
-	client         controlplaneclient.Client
-	logs           ExecutionLogsWriter
+	id                             string
+	organizationId                 string
+	environmentId                  string
+	runnerId                       string
+	client                         controlplaneclient.Client
+	logs                           ExecutionLogsWriter
+	allowFinalizeWithoutLogArchive bool
 
 	// Intermediate data
 	output       []testkube.TestWorkflowOutput
@@ -53,21 +54,23 @@ func NewExecutionSaver(
 	environmentId string,
 	runnerId string,
 	logs ExecutionLogsWriter,
+	allowFinalizeWithoutLogArchive bool,
 ) (ExecutionSaver, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	outputSaved := atomic.Bool{}
 	outputSaved.Store(true)
 	saver := &executionSaver{
-		id:             id,
-		organizationId: organizationId,
-		environmentId:  environmentId,
-		runnerId:       runnerId,
-		client:         grpcClient,
-		logs:           logs,
-		resultUpdate:   store.NewUpdate(),
-		outputSaved:    &outputSaved,
-		ctx:            ctx,
-		ctxCancel:      cancel,
+		id:                             id,
+		organizationId:                 organizationId,
+		environmentId:                  environmentId,
+		runnerId:                       runnerId,
+		client:                         grpcClient,
+		logs:                           logs,
+		allowFinalizeWithoutLogArchive: allowFinalizeWithoutLogArchive,
+		resultUpdate:                   store.NewUpdate(),
+		outputSaved:                    &outputSaved,
+		ctx:                            ctx,
+		ctxCancel:                      cancel,
 	}
 	go saver.watchResultUpdates()
 
@@ -148,12 +151,11 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 	}
 
 	if !s.logs.Saved() {
-		if s.logs.Enabled() {
-			if err := s.logs.Save(ctx); err != nil {
+		if err := s.logs.Save(ctx); err != nil {
+			if !s.allowFinalizeWithoutLogArchive {
 				return err
 			}
-		} else {
-			log.DefaultLogger.Infow("TestWorkflow execution log storage is disabled; skipping log archive upload", "id", s.id)
+			log.DefaultLogger.Warnw("failed to save TestWorkflow log archive during finalization; continuing because feature flag is enabled", "id", s.id, "error", err)
 		}
 	}
 
