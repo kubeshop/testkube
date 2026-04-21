@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/context"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
@@ -41,6 +42,7 @@ func NewGetCmd() *cobra.Command {
 	cmd.AddCommand(webhooks.NewGetWebhookCmd())
 	cmd.AddCommand(webhooktemplates.NewGetWebhookTemplateCmd())
 	cmd.AddCommand(workflowtriggers.NewGetWorkflowTriggerCmd())
+	cmd.AddCommand(testtriggers.NewGetTestTriggerCmd())
 	cmd.AddCommand(artifacts.NewListArtifactsCmd())
 	cmd.AddCommand(context.NewGetContextCmd())
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowsCmd())
