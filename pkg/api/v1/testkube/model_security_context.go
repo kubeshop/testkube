@@ -10,16 +10,16 @@
 package testkube
 
 type SecurityContext struct {
-	Capabilities             *Capabilities                `json:"capabilities,omitempty"`
-	Privileged               *BoxedBoolean                `json:"privileged,omitempty"`
-	SeLinuxOptions           *SeLinuxOptions               `json:"seLinuxOptions,omitempty"`
+	Capabilities             *Capabilities                  `json:"capabilities,omitempty"`
+	Privileged               *BoxedBoolean                  `json:"privileged,omitempty"`
+	SeLinuxOptions           *SeLinuxOptions                `json:"seLinuxOptions,omitempty"`
 	WindowsOptions           *WindowsSecurityContextOptions `json:"windowsOptions,omitempty"`
-	RunAsUser                *BoxedInteger                `json:"runAsUser,omitempty"`
-	RunAsGroup               *BoxedInteger                `json:"runAsGroup,omitempty"`
-	RunAsNonRoot             *BoxedBoolean                `json:"runAsNonRoot,omitempty"`
-	ReadOnlyRootFilesystem   *BoxedBoolean                `json:"readOnlyRootFilesystem,omitempty"`
-	AllowPrivilegeEscalation *BoxedBoolean                `json:"allowPrivilegeEscalation,omitempty"`
-	ProcMount                *BoxedString                 `json:"procMount,omitempty"`
-	SeccompProfile           *SeccompProfile              `json:"seccompProfile,omitempty"`
-	AppArmorProfile          *AppArmorProfile             `json:"appArmorProfile,omitempty"`
+	RunAsUser                *TemplatableBoxedInteger       `json:"runAsUser,omitempty"`
+	RunAsGroup               *TemplatableBoxedInteger       `json:"runAsGroup,omitempty"`
+	RunAsNonRoot             *BoxedBoolean                  `json:"runAsNonRoot,omitempty"`
+	ReadOnlyRootFilesystem   *BoxedBoolean                  `json:"readOnlyRootFilesystem,omitempty"`
+	AllowPrivilegeEscalation *BoxedBoolean                  `json:"allowPrivilegeEscalation,omitempty"`
+	ProcMount                *BoxedString                   `json:"procMount,omitempty"`
+	SeccompProfile           *SeccompProfile                `json:"seccompProfile,omitempty"`
+	AppArmorProfile          *AppArmorProfile               `json:"appArmorProfile,omitempty"`
 }
