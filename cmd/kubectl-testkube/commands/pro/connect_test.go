@@ -32,11 +32,11 @@ func TestHelmRelease_JSONParsing(t *testing.T) {
 
 func TestHelmRelease_FindRunnerChartPrefix(t *testing.T) {
 	tests := []struct {
-		name          string
-		releases      []helmRelease
-		expectName    string
-		expectNs      string
-		expectFound   bool
+		name        string
+		releases    []helmRelease
+		expectName  string
+		expectNs    string
+		expectFound bool
 	}{
 		{
 			name: "runner release found",

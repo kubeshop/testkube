@@ -62,6 +62,7 @@ type HelmGenericOptions struct {
 const (
 	github                = "GitHub"
 	gitlab                = "GitLab"
+	google                = "Google"
 	dockerDaemonPrefixLen = 8
 	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
@@ -610,7 +611,7 @@ func LoginUser(authUri string, customConnector bool, port int) (string, string, 
 	ui.H1("Login")
 	connectorID := ""
 	if !customConnector {
-		connectorID = ui.Select("Choose your login method", []string{github, gitlab})
+		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google})
 	}
 
 	// Handle the common case where th Demo instance is running on reserved port

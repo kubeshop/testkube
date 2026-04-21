@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -340,7 +341,7 @@ func findRunnerRelease() (releaseName, namespace string) {
 		ui.Warn("findRunnerRelease: helm not found in PATH")
 		return "", ""
 	}
-	out, execErr := exec.Command(helmPath, "list", "--all-namespaces", "--output", "json").CombinedOutput()
+	out, execErr := exec.CommandContext(context.Background(), helmPath, "list", "--all-namespaces", "--output", "json").CombinedOutput()
 	if execErr != nil {
 		ui.Warn(fmt.Sprintf("findRunnerRelease: helm list failed: %s", execErr))
 		return "", ""
