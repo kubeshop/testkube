@@ -236,7 +236,7 @@ roleRef:
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
 metadata:
-  name: "watchers-role-rb-{{ $ns }}"
+  name: "watchers-role-rb-{{ .Release.Name }}"
   namespace: {{ $ns }}
   labels:
     {{- if .Values.global.labels }}
@@ -257,7 +257,7 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: "watchers-role-{{ $ns }}"
+  name: "watchers-role-{{ .Release.Name }}"
 {{ end }}
 {{- end }}
 {{- end }}
