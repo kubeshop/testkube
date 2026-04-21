@@ -122,7 +122,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
 	}
 
-	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.proContext.CloudStorage, r.storageSkipVerify)
+	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.logArchiveEnabled(), r.storageSkipVerify)
 	if err != nil {
 		return err
 	}
@@ -290,6 +290,12 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 
 	return nil
+}
+
+func (r *runner) logArchiveEnabled() bool {
+	// Log archive uploads depend on control-plane storage support, not on the
+	// broader cloud-storage feature flag that also switches workflow clients.
+	return r.proContext.CloudStorageSupportedInControlPlane
 }
 
 func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {
