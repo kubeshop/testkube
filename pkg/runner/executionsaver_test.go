@@ -46,11 +46,11 @@ func (w *failingExecutionLogsWriter) Reset() error {
 	return nil
 }
 
-func TestExecutionSaverEnd_AllowsFinalizationWhenLogArchiveFailsAndFeatureFlagIsEnabled(t *testing.T) {
+func TestExecutionSaverEnd_AllowsFinalizationWhenLogArchiveFailsAndArchiveIsNotRequired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := controlplaneclient.NewMockClient(ctrl)
 	logs := &failingExecutionLogsWriter{saveErr: errors.New("object storage unavailable")}
-	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, true)
+	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, false)
 	require.NoError(t, err)
 
 	status := testkube.PASSED_TestWorkflowStatus
@@ -68,11 +68,11 @@ func TestExecutionSaverEnd_AllowsFinalizationWhenLogArchiveFailsAndFeatureFlagIs
 	require.True(t, logs.saveCalled)
 }
 
-func TestExecutionSaverEnd_LogSaveFailureBlocksFinalizationWhenFeatureFlagIsDisabled(t *testing.T) {
+func TestExecutionSaverEnd_LogSaveFailureBlocksFinalizationWhenArchiveIsRequired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := controlplaneclient.NewMockClient(ctrl)
 	logs := &failingExecutionLogsWriter{saveErr: errors.New("object storage unavailable")}
-	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, false)
+	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, true)
 	require.NoError(t, err)
 
 	status := testkube.PASSED_TestWorkflowStatus
@@ -87,7 +87,7 @@ func TestExecutionSaverEnd_OutputSaveFailureBlocksFinalization(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := controlplaneclient.NewMockClient(ctrl)
 	logs := &failingExecutionLogsWriter{}
-	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, true)
+	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, false)
 	require.NoError(t, err)
 
 	saver.AppendOutput(testkube.TestWorkflowOutput{Name: "artifact"})

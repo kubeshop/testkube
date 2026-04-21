@@ -67,15 +67,15 @@ type Runner interface {
 }
 
 type runner struct {
-	worker                         executionworkertypes.Worker
-	client                         controlplaneclient.Client
-	configRepository               configRepo.Repository
-	emitter                        event.Interface
-	metrics                        metrics.Metrics
-	proContext                     config.ProContext // TODO: Include Agent ID in pro context
-	storageSkipVerify              bool
-	allowFinalizeWithoutLogArchive bool
-	getGlobalTemplate              GlobalTemplateFactory
+	worker             executionworkertypes.Worker
+	client             controlplaneclient.Client
+	configRepository   configRepo.Repository
+	emitter            event.Interface
+	metrics            metrics.Metrics
+	proContext         config.ProContext // TODO: Include Agent ID in pro context
+	storageSkipVerify  bool
+	logArchiveRequired bool
+	getGlobalTemplate  GlobalTemplateFactory
 
 	watching sync.Map
 	sf       singleflight.Group
@@ -89,19 +89,19 @@ func New(
 	metrics metrics.Metrics,
 	proContext config.ProContext,
 	storageSkipVerify bool,
-	allowFinalizeWithoutLogArchive bool,
+	logArchiveRequired bool,
 	getGlobalTemplate GlobalTemplateFactory,
 ) Runner {
 	return &runner{
-		worker:                         worker,
-		configRepository:               configRepository,
-		client:                         client,
-		emitter:                        emitter,
-		metrics:                        metrics,
-		proContext:                     proContext,
-		storageSkipVerify:              storageSkipVerify,
-		allowFinalizeWithoutLogArchive: allowFinalizeWithoutLogArchive,
-		getGlobalTemplate:              getGlobalTemplate,
+		worker:             worker,
+		configRepository:   configRepository,
+		client:             client,
+		emitter:            emitter,
+		metrics:            metrics,
+		proContext:         proContext,
+		storageSkipVerify:  storageSkipVerify,
+		logArchiveRequired: logArchiveRequired,
+		getGlobalTemplate:  getGlobalTemplate,
 	}
 }
 
@@ -129,7 +129,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs, r.allowFinalizeWithoutLogArchive)
+	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs, r.logArchiveRequired)
 	if err != nil {
 		return err
 	}

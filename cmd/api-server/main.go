@@ -487,7 +487,7 @@ func main() {
 		metrics,
 		proContext,
 		runnerOpts.StorageSkipVerify,
-		cfg.FeatureTestWorkflowFinalizeWithoutLogArchive,
+		cfg.TestWorkflowLogArchiveRequired,
 		runnerOpts.GlobalTemplate,
 	)
 	runnerService := runner2.NewService(
