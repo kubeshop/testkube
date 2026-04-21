@@ -25,13 +25,12 @@ type ExecutionSaver interface {
 }
 
 type executionSaver struct {
-	id                 string
-	organizationId     string
-	environmentId      string
-	runnerId           string
-	client             controlplaneclient.Client
-	logs               ExecutionLogsWriter
-	logArchiveRequired bool
+	id             string
+	organizationId string
+	environmentId  string
+	runnerId       string
+	client         controlplaneclient.Client
+	logs           ExecutionLogsWriter
 
 	// Intermediate data
 	output       []testkube.TestWorkflowOutput
@@ -54,23 +53,21 @@ func NewExecutionSaver(
 	environmentId string,
 	runnerId string,
 	logs ExecutionLogsWriter,
-	logArchiveRequired bool,
 ) (ExecutionSaver, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	outputSaved := atomic.Bool{}
 	outputSaved.Store(true)
 	saver := &executionSaver{
-		id:                 id,
-		organizationId:     organizationId,
-		environmentId:      environmentId,
-		runnerId:           runnerId,
-		client:             grpcClient,
-		logs:               logs,
-		logArchiveRequired: logArchiveRequired,
-		resultUpdate:       store.NewUpdate(),
-		outputSaved:        &outputSaved,
-		ctx:                ctx,
-		ctxCancel:          cancel,
+		id:             id,
+		organizationId: organizationId,
+		environmentId:  environmentId,
+		runnerId:       runnerId,
+		client:         grpcClient,
+		logs:           logs,
+		resultUpdate:   store.NewUpdate(),
+		outputSaved:    &outputSaved,
+		ctx:            ctx,
+		ctxCancel:      cancel,
 	}
 	go saver.watchResultUpdates()
 
@@ -151,11 +148,12 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 	}
 
 	if !s.logs.Saved() {
-		if err := s.logs.Save(ctx); err != nil {
-			if s.logArchiveRequired {
+		if s.logs.Enabled() {
+			if err := s.logs.Save(ctx); err != nil {
 				return err
 			}
-			log.DefaultLogger.Warnw("failed to save TestWorkflow log archive during finalization; continuing because log archive is not required", "id", s.id, "error", err)
+		} else {
+			log.DefaultLogger.Infow("TestWorkflow log archive is not required; skipping log archive upload", "id", s.id)
 		}
 	}
 

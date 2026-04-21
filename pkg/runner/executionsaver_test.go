@@ -13,6 +13,7 @@ import (
 )
 
 type failingExecutionLogsWriter struct {
+	enabled    bool
 	saveErr    error
 	saved      bool
 	saveCalled bool
@@ -39,6 +40,10 @@ func (w *failingExecutionLogsWriter) Saved() bool {
 	return w.saved
 }
 
+func (w *failingExecutionLogsWriter) Enabled() bool {
+	return w.enabled
+}
+
 func (w *failingExecutionLogsWriter) Cleanup() {}
 
 func (w *failingExecutionLogsWriter) Reset() error {
@@ -46,11 +51,11 @@ func (w *failingExecutionLogsWriter) Reset() error {
 	return nil
 }
 
-func TestExecutionSaverEnd_AllowsFinalizationWhenLogArchiveFailsAndArchiveIsNotRequired(t *testing.T) {
+func TestExecutionSaverEnd_SkipsLogSaveWhenArchiveIsNotRequired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := controlplaneclient.NewMockClient(ctrl)
-	logs := &failingExecutionLogsWriter{saveErr: errors.New("object storage unavailable")}
-	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, false)
+	logs := &failingExecutionLogsWriter{}
+	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs)
 	require.NoError(t, err)
 
 	status := testkube.PASSED_TestWorkflowStatus
@@ -65,14 +70,14 @@ func TestExecutionSaverEnd_AllowsFinalizationWhenLogArchiveFailsAndArchiveIsNotR
 
 	err = saver.End(context.Background(), result)
 	require.NoError(t, err)
-	require.True(t, logs.saveCalled)
+	require.False(t, logs.saveCalled)
 }
 
 func TestExecutionSaverEnd_LogSaveFailureBlocksFinalizationWhenArchiveIsRequired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := controlplaneclient.NewMockClient(ctrl)
-	logs := &failingExecutionLogsWriter{saveErr: errors.New("object storage unavailable")}
-	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, true)
+	logs := &failingExecutionLogsWriter{enabled: true, saveErr: errors.New("object storage unavailable")}
+	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs)
 	require.NoError(t, err)
 
 	status := testkube.PASSED_TestWorkflowStatus
@@ -87,7 +92,7 @@ func TestExecutionSaverEnd_OutputSaveFailureBlocksFinalization(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := controlplaneclient.NewMockClient(ctrl)
 	logs := &failingExecutionLogsWriter{}
-	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs, false)
+	saver, err := NewExecutionSaver(context.Background(), client, "execution-id", "org-id", "env-id", "runner-id", logs)
 	require.NoError(t, err)
 
 	saver.AppendOutput(testkube.TestWorkflowOutput{Name: "artifact"})
