@@ -8,7 +8,6 @@ import (
 
 const (
 	defaultAgentPort   = 443
-	defaultLogsPort    = 443
 	defaultAgentPrefix = "agent"
 	defaultUiPrefix    = "app"
 	defaultViewPrefix  = "view"
@@ -17,7 +16,7 @@ const (
 	defaultRootDomain  = "testkube.io"
 )
 
-func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, logsPrefix, agentURI, logsURI, rootDomain string, insecure bool) config.MasterURIs {
+func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, agentURI, rootDomain string, insecure bool) config.MasterURIs {
 	protocol := "https"
 	if insecure {
 		protocol = "http"
@@ -31,17 +30,11 @@ func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, logsPrefix, agentURI, logsU
 	if agentPrefix == "" {
 		agentPrefix = defaultAgentPrefix
 	}
-	if logsPrefix == "" {
-		logsPrefix = defaultLogsPrefix
-	}
 	if rootDomain == "" {
 		rootDomain = defaultRootDomain
 	}
 	if agentURI == "" {
 		agentURI = fmt.Sprintf("%s.%s:%d", agentPrefix, rootDomain, defaultAgentPort)
-	}
-	if logsURI == "" {
-		logsURI = fmt.Sprintf("%s.%s:%d", logsPrefix, rootDomain, defaultLogsPort)
 	}
 
 	return config.MasterURIs{
@@ -50,7 +43,6 @@ func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, logsPrefix, agentURI, logsU
 		RootDomain: rootDomain,
 		Api:        fmt.Sprintf("%s://%s.%s", protocol, apiPrefix, rootDomain),
 		Agent:      agentURI,
-		Logs:       logsURI,
 		Ui:         fmt.Sprintf("%s://%s.%s", protocol, uiPrefix, rootDomain),
 		View:       fmt.Sprintf("%s://%s.%s", protocol, defaultViewPrefix, rootDomain),
 		Auth:       fmt.Sprintf("%s://%s.%s/idp", protocol, apiPrefix, rootDomain),

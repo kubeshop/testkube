@@ -3205,6 +3205,64 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /export:
+    get:
+      tags:
+        - api
+      summary: "Export execution data"
+      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive. The archive size is limited by the server (configured via the EXPORT_ARCHIVE_MAX_SIZE env var); use the 'since' parameter to narrow the date range if the limit is exceeded."
+      operationId: exportExecutions
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: "Export only executions created after this date. Accepts ISO 8601 date (YYYY-MM-DD) or RFC 3339 timestamp (e.g. 2025-01-01T00:00:00Z)."
+          schema:
+            type: string
+          examples:
+            date:
+              value: "2025-01-01"
+            datetime:
+              value: "2025-01-01T00:00:00Z"
+      responses:
+        200:
+          description: "successful operation"
+          headers:
+            Content-Disposition:
+              description: "Content disposition with the archive filename"
+              schema:
+                type: string
+                example: 'attachment; filename="testkube-export.tar.gz"'
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        400:
+          description: "invalid 'since' parameter value"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        413:
+          description: "export archive exceeds the server-configured size limit"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with exporting execution data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-sources:
     get:
       tags:
@@ -8956,6 +9014,13 @@ components:
           type: string
           format: date-time
           description: timestamp for the notification if available
+        seqNo:
+          type: integer
+          format: int32
+          description: monotonic application-event cursor for resumable log streams
+        eventType:
+          type: string
+          description: stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
         result:
           $ref: "#/components/schemas/TestWorkflowResult"
         ref:

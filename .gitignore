@@ -61,3 +61,4 @@ depot-build-meta.json
 
 # GitHub Actions temporary Google credentials
 gha-creds-*.json
+.cursor/settings.json

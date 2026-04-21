@@ -35,6 +35,7 @@ func NewListArtifactsCmd() *cobra.Command {
 				artifacts, errArtifacts = client.GetTestWorkflowExecutionArtifacts(twExecution.Id)
 				ui.ExitOnError("getting test workflow artifacts", errArtifacts)
 				ui.Table(artifacts, os.Stdout)
+				common.UIShellViewExecution(twExecution.Id)
 				return
 			}
 			if err == nil {

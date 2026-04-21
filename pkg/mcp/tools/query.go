@@ -34,8 +34,8 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 		mcp.WithString("expression", mcp.Required(), mcp.Description("The JSONPath expression to apply to workflow definitions. Examples: '$..image', '$.spec.steps[*].name', '$.metadata.labels'.")),
 		mcp.WithString("selector", mcp.Description(SelectorDescription)),
 		mcp.WithString("resourceGroup", mcp.Description(ResourceGroupDescription)),
-		mcp.WithNumber("limit", mcp.Description("Maximum number of workflows to fetch (default: 50, max: 100).")),
-		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all workflows into an array and applies the expression once. If false (default), applies the expression to each workflow separately.")),
+		mcp.WithNumber("limit", mcp.Description("Page size for fetching workflows (default: 50). All matching workflows are fetched across multiple pages.")),
+		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all workflows into an array and applies the expression once. If false (default), applies the expression to each workflow separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -49,16 +49,12 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 		limit, _ := OptionalIntParamWithDefault(request, "limit", defaultBulkLimit)
 		aggregate, _ := OptionalParam[bool](request, "aggregate")
 
-		// Cap limit at 100
-		if limit > 100 {
-			limit = 100
-		}
-
 		params := ListWorkflowsParams{
 			Selector:      selector,
 			ResourceGroup: resourceGroup,
 			PageSize:      limit,
 			Page:          0,
+			FetchAll:      true,
 		}
 
 		// Fetch workflow definitions
@@ -69,6 +65,11 @@ func QueryWorkflows(client WorkflowDefinitionBulkGetter) (tool mcp.Tool, handler
 
 		if len(definitions) == 0 {
 			return mcp.NewToolResultText("No workflows found matching the criteria."), nil
+		}
+
+		// Root-level filters like $[?(@.field==value)] require array input to work correctly.
+		if !aggregate && jsonpath.IsRootLevelFilter(expression) {
+			aggregate = true
 		}
 
 		var result string
@@ -139,8 +140,8 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 		mcp.WithString("since", mcp.Description(SinceDescription)),
 		mcp.WithString("startDate", mcp.Description(StartDateDescription)),
 		mcp.WithString("endDate", mcp.Description(EndDateDescription)),
-		mcp.WithNumber("limit", mcp.Description("Maximum number of executions to fetch (default: 50, max: 100).")),
-		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all executions into an array and applies the expression once. If false (default), applies the expression to each execution separately.")),
+		mcp.WithNumber("limit", mcp.Description("Page size for fetching executions (default: 50). All matching executions are fetched across multiple pages.")),
+		mcp.WithBoolean("aggregate", mcp.Description("If true, combines all executions into an array and applies the expression once. If false (default), applies the expression to each execution separately. Automatically enabled for root-level filter expressions like $[?(@.field==value)].")),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -159,11 +160,6 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 		limit, _ := OptionalIntParamWithDefault(request, "limit", defaultBulkLimit)
 		aggregate, _ := OptionalParam[bool](request, "aggregate")
 
-		// Cap limit at 100
-		if limit > 100 {
-			limit = 100
-		}
-
 		params := ListExecutionsParams{
 			WorkflowName: workflowName,
 			Status:       status,
@@ -174,6 +170,7 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 			EndDate:      endDate,
 			PageSize:     limit,
 			Page:         0,
+			FetchAll:     true,
 		}
 
 		// Fetch executions
@@ -184,6 +181,11 @@ func QueryExecutions(client ExecutionBulkGetter) (tool mcp.Tool, handler server.
 
 		if len(executions) == 0 {
 			return mcp.NewToolResultText("No executions found matching the criteria."), nil
+		}
+
+		// Root-level filters like $[?(@.field==value)] require array input to work correctly.
+		if !aggregate && jsonpath.IsRootLevelFilter(expression) {
+			aggregate = true
 		}
 
 		var result string

@@ -81,7 +81,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "should client connect in insecure mode (will use http instead of https)")
 	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", defaultApiPrefix, "usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.Master.LogsUrlPrefix, "logs-prefix", defaultLogsPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().BoolVar(&opts.Master.CustomAuth, "custom-auth", false, "usually don't need to be changed [required for custom cloud mode]")
@@ -92,7 +91,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().String("ui-uri-override", "", "ui uri override")
 	cmd.Flags().String("auth-uri-override", "", "auth uri override")
 	cmd.Flags().String("agent-uri-override", "", "agent uri override")
-	cmd.Flags().String("logs-uri-override", "", "logs service uri override")
 
 	agentURI := ""
 	if isDockerCmd {
@@ -100,7 +98,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	}
 
 	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", agentURI, "Testkube Pro agent URI [required for centralized mode]")
-	cmd.Flags().StringVar(&opts.Master.URIs.Logs, "logs-uri", "", "Testkube Pro logs URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Pro agent key [required for centralized mode]")
 	neededForLogin := ""
 	if isDockerCmd {
@@ -168,10 +165,6 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		opts.Master.UiUrlPrefix = cmd.Flag("ui-prefix").Value.String()
 	}
 
-	if cmd.Flag("logs-prefix") != nil && cmd.Flags().Changed("logs-prefix") {
-		opts.Master.LogsUrlPrefix = cmd.Flag("logs-prefix").Value.String()
-	}
-
 	if cmd.Flags().Changed("custom-auth") {
 		opts.Master.CustomAuth = cmd.Flag("custom-auth").Value.String() == "true"
 	}
@@ -179,19 +172,13 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 	uris := NewMasterUris(opts.Master.ApiUrlPrefix,
 		opts.Master.UiUrlPrefix,
 		opts.Master.AgentUrlPrefix,
-		opts.Master.LogsUrlPrefix,
 		opts.Master.URIs.Agent,
-		opts.Master.URIs.Logs,
 		opts.Master.RootDomain,
 		opts.Master.Insecure)
 
 	// override whole URIs usually composed from prefix - host parts
 	if cmd.Flag("agent-uri-override") != nil && cmd.Flags().Changed("agent-uri-override") {
 		uris.WithAgentURI(cmd.Flag("agent-uri-override").Value.String())
-	}
-
-	if cmd.Flag("logs-uri-override") != nil && cmd.Flags().Changed("logs-uri-override") {
-		uris.WithLogsURI(cmd.Flag("logs-uri-override").Value.String())
 	}
 
 	if cmd.Flag("api-uri-override") != nil && cmd.Flags().Changed("api-uri-override") {
@@ -236,4 +223,41 @@ func (s *CommaList) Enabled(value string) bool {
 		}
 	}
 	return false
+}
+
+func PopulateRunnerFlags(cmd *cobra.Command, forUpdate bool) {
+	// Installation > General
+	cmd.Flags().StringP("execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
+	cmd.Flags().String("version", "", "agent version to use (defaults to latest)")
+	cmd.Flags().Bool("dry-run", false, "display helm commands only")
+
+	// Installation > Runner
+	cmd.Flags().StringP("global-template-path", "g", "", "include global template")
+	cmd.Flags().Bool("global", false, "make it global agent")
+	cmd.Flags().String("group", "", "make it grouped agent")
+
+	// Install existing
+	cmd.Flags().StringP("secret", "s", "", "secret key for the selected agent")
+
+	// Create and install
+	cmd.Flags().Bool("create", false, "auto create that agent")
+	cmd.Flags().StringSliceP("env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
+	cmd.Flags().StringSliceP("label", "l", nil, "(with --create) label key value pair: --label key1=value1")
+	cmd.Flags().Bool("floating", false, "(with --create) create as a floating agent")
+
+	// Components selection
+	if forUpdate {
+		// only runner; keep flag hidden and force it on
+		cmd.Flags().Bool("runner", true, "enable runner component")
+		_ = cmd.Flags().MarkHidden("runner")
+	} else {
+		cmd.Flags().Bool("runner", false, "enable runner component (default: enabled when no component flags are set)")
+		cmd.Flags().Bool("listener", false, "enable listener component (default: enabled when no component flags are set)")
+		cmd.Flags().Bool("gitops", false, "enable gitops capability")
+		cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
+	}
+
+	// Deprecated flag
+	cmd.Flags().StringP("type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
 }

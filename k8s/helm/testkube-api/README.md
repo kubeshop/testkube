@@ -176,6 +176,8 @@ A Helm chart for Testkube api
 | podStartTimeout | string | `"30m"` | Testkube timeout for pod start |
 | postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` |  |
 | postgresql.enabled | bool | `false` |  |
+| postgresql.secretKey | string | `""` |  |
+| postgresql.secretName | string | `""` |  |
 | priorityClassName | string | `""` |  |
 | prometheus.enabled | bool | `false` |  |
 | prometheus.interval | string | `"15s"` |  |

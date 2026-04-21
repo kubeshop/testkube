@@ -102,6 +102,10 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("errorStackTrace", params.ErrorStackTrace).
 		Set("errorCode", params.ErrorCode)
 
+	if len(params.AgentCapabilities) > 0 {
+		properties = properties.Set("agentCapabilities", params.AgentCapabilities)
+	}
+
 	if params.License != "" {
 		properties = properties.Set("license", params.License)
 	}

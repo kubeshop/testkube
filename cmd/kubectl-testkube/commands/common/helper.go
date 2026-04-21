@@ -28,10 +28,10 @@ import (
 )
 
 type HelmOptions struct {
-	Name, Namespace, Chart, Values string
-	NoMinio, NoMongo, NoConfirm    bool
-	MinioReplicas, MongoReplicas   int
-	SetOptions, ArgOptions         map[string]string
+	Name, Namespace, Chart, Values                 string
+	NoMinio, NoMongo, NoPostgres, NoConfirm        bool
+	MinioReplicas, MongoReplicas, PostgresReplicas int
+	SetOptions, ArgOptions                         map[string]string
 
 	// On-prem
 	LicenseKey    string
@@ -125,9 +125,10 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 		return cliErr
 	}
 
-	// disable mongo and minio for cloud
+	// disable mongo, minio, and postgres for cloud
 	options.NoMinio = true
 	options.NoMongo = true
+	options.NoPostgres = true
 
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
@@ -357,9 +358,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
 	settings["testkube-api.cloud.key"] = options.Master.AgentToken
-	settings["testkube-api.cloud.uiURL"] = options.Master.URIs.Ui
-	settings["testkube-logs.pro.url"] = options.Master.URIs.Logs
-	settings["testkube-logs.pro.key"] = options.Master.AgentToken
+	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
 
 	if isMigration {
 		settings["testkube-api.cloud.migrate"] = "true"
@@ -367,12 +366,10 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	if options.Master.EnvId != "" {
 		settings["testkube-api.cloud.envId"] = options.Master.EnvId
-		settings["testkube-logs.pro.envId"] = options.Master.EnvId
 	}
 
 	if options.Master.OrgId != "" {
 		settings["testkube-api.cloud.orgId"] = options.Master.OrgId
-		settings["testkube-logs.pro.orgId"] = options.Master.OrgId
 	}
 
 	return appendHelmArgs(args, options, settings)
@@ -381,13 +378,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
 	args, settings := prepareCommonHelmArgs(options)
-
-	if options.NoMinio {
-		settings["testkube-api.logs.storage"] = "mongo"
-	} else {
-		settings["testkube-api.logs.storage"] = "minio"
-	}
-
+	settings["testkube-api.logs.storage"] = "minio"
 	return appendHelmArgs(args, options, settings)
 }
 
@@ -401,10 +392,21 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	settings := map[string]string{
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
-		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
 		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
 		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
+		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+	}
+
+	if options.MinioReplicas > 0 {
+		settings["testkube-api.minio.replicas"] = fmt.Sprintf("%d", options.MinioReplicas)
+	}
+
+	if options.MongoReplicas > 0 {
+		settings["mongodb.replicas"] = fmt.Sprintf("%d", options.MongoReplicas)
+	}
+
+	if options.PostgresReplicas > 0 {
+		settings["postgresql.primary.replicaCount"] = fmt.Sprintf("%d", options.PostgresReplicas)
 	}
 
 	if options.Values != "" {
@@ -429,6 +431,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
+	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", true, "don't install PostgreSQL")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
@@ -482,8 +485,8 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 		updated = true
 	}
-	if options.Master.URIs.Api != "" {
-		cfg.CloudContext.AgentUri = options.Master.URIs.Api
+	if options.Master.URIs.Agent != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Agent
 		updated = true
 	}
 	if options.Master.URIs.Ui != "" {
@@ -492,6 +495,9 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		if options.Master.URIs.Agent == "" {
+			cfg.CloudContext.AgentUri = options.Master.URIs.Api
+		}
 		updated = true
 	}
 	if options.Master.URIs.Auth != "" {
@@ -766,6 +772,63 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 	}
 
 	return strings.TrimSpace(string(out)), nil
+}
+
+func KubectlScaleStatefulSet(namespace, statefulset string, replicas int) (string, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+
+	// kubectl patch --namespace=$n statefulset $1 -p "{\"spec\":{\"replicas\": $2}}"
+	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "statefulset", statefulset, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+// KubectlResourceExists checks whether a Kubernetes resource of the given type and name exists
+// in the specified namespace. It returns true when the resource is found.
+func KubectlResourceExists(namespace, resourceType, name string) (bool, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return false, cliErr
+	}
+
+	out, err := process.Execute(kubectl, "get", resourceType, name, "--namespace", namespace, "--ignore-not-found")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(string(out)) != "", nil
+}
+
+// DetectDatabaseType inspects the given namespace and returns which database is deployed:
+// config.DatabaseTypeMongoDB, config.DatabaseTypePostgreSQL, or "" if neither is found.
+func DetectDatabaseType(namespace string) (string, *CLIError) {
+	if exists, err := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking deployment: MongoDB",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	} else if exists {
+		return config.DatabaseTypeMongoDB, nil
+	}
+	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql"); err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking statefulset: PostgreSQL",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	} else if exists {
+		return config.DatabaseTypePostgreSQL, nil
+	}
+	return "", nil
 }
 
 func KubectlLogs(namespace string, labels map[string]string) error {

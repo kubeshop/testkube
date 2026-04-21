@@ -542,6 +542,9 @@ testkube-api:
   # Toggle to enable debug mode
   enableDebugMode: false
 
+  # Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+  exportArchiveMaxSize: 104857600
+
   # jobPodAnnotations adds annotations to the pods spawned to execute tests using
   # prebuilt and container executors.
   # For test workflows you can specify annotations either individually on each workflow
@@ -1097,11 +1100,11 @@ testkube-api:
   postgresql:
     enabled: false
     # -- PostgreSQL DSN
-    # dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
-    # -- Secret name with DSN
-    # secretName: testkube-postgresql-app
-    # -- Secret key for DSN
-    # secretKey: uri
+    dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+    # -- Secret name with PostgreSQL DSN
+    secretName: ""
+    # -- Secret key for PostgreSQL DSN
+    secretKey: ""
   # -- Testkube API Startup probe parameters
   startupProbe:
     # -- Whether startup probe is enabled

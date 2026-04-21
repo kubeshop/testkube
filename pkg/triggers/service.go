@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+
+	"k8s.io/client-go/dynamic"
+
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/coordination/leader"
@@ -37,8 +42,21 @@ const (
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
+// Service watches Kubernetes resources and TestTrigger CRDs in-cluster,
+// matches events against registered triggers, and executes actions.
+//
+// Lock ordering (deadlock-avoidance): acquire triggerStatusMu before any
+// per-status RWMutex. snapshotStatuses takes triggerStatusMu, copies each
+// status's trigger pointer into the returned entry, and releases the lock
+// before callers touch a status's own per-status lock. updateTrigger writes
+// the trigger pointer directly while holding triggerStatusMu.Lock().
 type Service struct {
+	// informers is set on lease acquisition (runWatcher) and nil-ed on
+	// release. informersMu guards the pointer so tests and external callers
+	// can safely observe it; runInformers reads it from the same goroutine
+	// that writes it and therefore doesn't need the lock.
 	informers                     *k8sInformers
+	informersMu                   sync.RWMutex
 	identifier                    string
 	clusterID                     string
 	agentName                     string
@@ -49,7 +67,12 @@ type Service struct {
 	defaultProbesCheckTimeout     time.Duration
 	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
+	// triggerStatus is mutated by informer event handlers (addTrigger /
+	// updateTrigger / removeTrigger) and read by the matcher and scraper.
+	// triggerStatusMu guards the map itself; concurrency on individual
+	// *triggerStatus values is handled by their own embedded sync.RWMutex.
 	triggerStatus                 map[statusKey]*triggerStatus
+	triggerStatusMu               sync.RWMutex
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
 	testWorkflowsClient           testworkflowclient.TestWorkflowClient
@@ -66,6 +89,8 @@ type Service struct {
 	proContext                    *intconfig.ProContext
 	testTriggerControlPlane       bool
 	eventLabels                   map[string]string
+	dynamicClient                 dynamic.Interface
+	dynamicManager                *dynamicInformerManager
 	Agent                         watcherAgent
 	coordinator                   *leader.Coordinator
 }
@@ -189,6 +214,12 @@ func WithEventLabels(eventLabels map[string]string) Option {
 	}
 }
 
+func WithDynamicClient(client dynamic.Interface) Option {
+	return func(s *Service) {
+		s.dynamicClient = client
+	}
+}
+
 func (s *Service) Run(ctx context.Context) {
 	if s.coordinator == nil {
 		<-ctx.Done()
@@ -203,20 +234,205 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
-	key := newStatusKey(t.Namespace, t.Name)
-	s.triggerStatus[key] = newTriggerStatus(t)
+	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	if _, exists := s.triggerStatus[key]; exists {
+		// Informer resyncs replay AddFunc for every existing object. Skip to
+		// avoid re-registering the same trigger's dynamic informer reference.
+		return
+	}
+	s.triggerStatus[key] = newTriggerStatusFromV1(t)
+	s.ensureDynamicInformerForTrigger(t, key)
 }
 
 func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
 	if s.triggerStatus[key] != nil {
-		s.triggerStatus[key].testTrigger = target
+		old := s.triggerStatus[key].trigger
+		newInternal := convertV1ToInternal(target)
+
+		// Only restart dynamic informer if the GVR actually changed
+		gvrChanged := old != nil && (old.ResourceGroup != newInternal.ResourceGroup ||
+			old.ResourceVersion != newInternal.ResourceVersion ||
+			old.ResourceKind != newInternal.ResourceKind)
+
+		if gvrChanged && old.ResourceKind != "" {
+			s.releaseDynamicInformerForTrigger(&testtriggersv1.TestTrigger{
+				Spec: testtriggersv1.TestTriggerSpec{ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+					Group: old.ResourceGroup, Version: old.ResourceVersion, Kind: old.ResourceKind,
+				}},
+			}, key)
+		}
+
+		s.triggerStatus[key].trigger = newInternal
+
+		if gvrChanged {
+			s.ensureDynamicInformerForTrigger(target, key)
+		}
 	} else {
-		s.triggerStatus[key] = newTriggerStatus(target)
+		s.triggerStatus[key] = newTriggerStatusFromV1(target)
+		s.ensureDynamicInformerForTrigger(target, key)
 	}
 }
 
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
 	delete(s.triggerStatus, key)
+	s.releaseDynamicInformerForTrigger(target, key)
+}
+
+// ensureDynamicInformerForTrigger starts a dynamic informer if the trigger
+// uses resourceRef pointing to a custom resource. Built-in types already
+// have typed informers and must NOT get a dynamic informer to avoid double-firing.
+func (s *Service) ensureDynamicInformerForTrigger(t *testtriggersv1.TestTrigger, key statusKey) {
+	if t.Spec.ResourceRef == nil {
+		return
+	}
+	if s.dynamicManager == nil {
+		s.logger.Warnf(
+			"trigger service: TestTrigger %s/%s has resourceRef=%s but no dynamic client is configured; custom-resource events will be ignored",
+			t.Namespace, t.Name, t.Spec.ResourceRef.Kind,
+		)
+		return
+	}
+	if isBuiltinResource(t.Spec.ResourceRef.Kind) {
+		s.logger.Debugf("trigger service: skipping dynamic informer for built-in type %s", t.Spec.ResourceRef.Kind)
+		return
+	}
+
+	gvr, err := resolveGVR(s.dynamicManager.mapper, t.Spec.ResourceRef.Group, t.Spec.ResourceRef.Version, t.Spec.ResourceRef.Kind)
+	if err != nil {
+		s.logger.Errorf("trigger service: failed to resolve GVR for %s: %v", t.Spec.ResourceRef.Kind, err)
+		return
+	}
+
+	ctx := context.Background()
+	s.dynamicManager.ensureInformer(ctx, gvr, string(key), s.dynamicEventHandler(ctx, gvr))
+}
+
+func (s *Service) releaseDynamicInformerForTrigger(t *testtriggersv1.TestTrigger, key statusKey) {
+	if t.Spec.ResourceRef == nil {
+		return
+	}
+	s.releaseDynamicInformerByGVK(t.Spec.ResourceRef.Group, t.Spec.ResourceRef.Version, t.Spec.ResourceRef.Kind, key)
+}
+
+// releaseDynamicInformerByGVK resolves the GVR for the given kind and releases
+// the dynamic informer reference held under the given key. Safe to call when
+// the CRD has already been deleted — resolveGVR fails and we skip at Debug
+// level because that's an expected cleanup ordering, not an operator-actionable
+// condition.
+func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key statusKey) {
+	if s.dynamicManager == nil || isBuiltinResource(kind) {
+		return
+	}
+	gvr, err := resolveGVR(s.dynamicManager.mapper, group, version, kind)
+	if err != nil {
+		s.logger.Debugf("trigger service: informer cleanup skipped for %s/%s/%s (key=%s): %v",
+			group, version, kind, key, err)
+		return
+	}
+	s.dynamicManager.releaseInformer(gvr, string(key))
+}
+
+func (s *Service) addWorkflowTrigger(t *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, t.Namespace, t.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	if _, exists := s.triggerStatus[key]; exists {
+		// Informer resyncs replay AddFunc. Skip to avoid re-registering dynamic informers.
+		return
+	}
+	s.triggerStatus[key] = &triggerStatus{trigger: convertV2ToInternal(t)}
+	s.ensureDynamicInformerForWorkflowTrigger(t, key)
+}
+
+func (s *Service) updateWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	if s.triggerStatus[key] != nil {
+		old := s.triggerStatus[key].trigger
+		newInternal := convertV2ToInternal(target)
+
+		gvrChanged := old != nil && (old.ResourceGroup != newInternal.ResourceGroup ||
+			old.ResourceVersion != newInternal.ResourceVersion ||
+			old.ResourceKind != newInternal.ResourceKind)
+
+		if gvrChanged && old.ResourceKind != "" {
+			s.releaseDynamicInformerByGVK(old.ResourceGroup, old.ResourceVersion, old.ResourceKind, key)
+		}
+
+		s.triggerStatus[key].trigger = newInternal
+
+		if gvrChanged {
+			s.ensureDynamicInformerForWorkflowTrigger(target, key)
+		}
+	} else {
+		s.triggerStatus[key] = &triggerStatus{trigger: convertV2ToInternal(target)}
+		s.ensureDynamicInformerForWorkflowTrigger(target, key)
+	}
+}
+
+func (s *Service) removeWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	delete(s.triggerStatus, key)
+	if target.Spec.Watch == nil {
+		return
+	}
+	s.releaseDynamicInformerByGVK(target.Spec.Watch.Resource.Group, target.Spec.Watch.Resource.Version, target.Spec.Watch.Resource.Kind, key)
+}
+
+// ensureDynamicInformerForWorkflowTrigger starts a dynamic informer for the
+// custom resource kind the trigger watches. Built-in types already have typed
+// informers in the trigger service; skipping them here prevents double-firing.
+func (s *Service) ensureDynamicInformerForWorkflowTrigger(t *workflowtriggersv1.WorkflowTrigger, key statusKey) {
+	if t.Spec.Watch == nil || t.Spec.Watch.Resource.Kind == "" {
+		return
+	}
+	if s.dynamicManager == nil {
+		s.logger.Warnf(
+			"trigger service: WorkflowTrigger %s/%s watches %s but no dynamic client is configured; events will be ignored",
+			t.Namespace, t.Name, t.Spec.Watch.Resource.Kind,
+		)
+		return
+	}
+	if isBuiltinResource(t.Spec.Watch.Resource.Kind) {
+		s.logger.Debugf("trigger service: skipping dynamic informer for built-in type %s", t.Spec.Watch.Resource.Kind)
+		return
+	}
+	gvr, err := resolveGVR(s.dynamicManager.mapper, t.Spec.Watch.Resource.Group, t.Spec.Watch.Resource.Version, t.Spec.Watch.Resource.Kind)
+	if err != nil {
+		s.logger.Errorf("trigger service: failed to resolve GVR for %s: %v", t.Spec.Watch.Resource.Kind, err)
+		return
+	}
+	ctx := context.Background()
+	s.dynamicManager.ensureInformer(ctx, gvr, string(key), s.dynamicEventHandler(ctx, gvr))
+}
+
+type triggerStatusEntry struct {
+	key    statusKey
+	status *triggerStatus
+	// trigger is captured under triggerStatusMu so matcher reads don't race
+	// with updateTrigger's direct assignment to status.trigger.
+	trigger *internalTrigger
+}
+
+// snapshotStatuses returns a shallow copy so match/scraper can iterate without
+// blocking high-volume informer events on the map lock.
+func (s *Service) snapshotStatuses() []triggerStatusEntry {
+	s.triggerStatusMu.RLock()
+	defer s.triggerStatusMu.RUnlock()
+	out := make([]triggerStatusEntry, 0, len(s.triggerStatus))
+	for k, v := range s.triggerStatus {
+		out = append(out, triggerStatusEntry{key: k, status: v, trigger: v.trigger})
+	}
+	return out
 }

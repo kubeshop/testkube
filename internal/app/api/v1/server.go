@@ -51,6 +51,7 @@ func NewTestkubeAPI(
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	exportArchiveMaxSize int,
 ) TestkubeAPI {
 
 	return TestkubeAPI{
@@ -81,6 +82,7 @@ func NewTestkubeAPI(
 		dockerImageVersion:             dockerImageVersion,
 		proContext:                     proContext,
 		testWorkflowExecutor:           testWorkflowExecutor,
+		exportArchiveMaxSize:           exportArchiveMaxSize,
 	}
 }
 
@@ -122,6 +124,8 @@ type TestkubeAPI struct {
 	// note: the execution scheduling's behaviour is special; as this will _not_ keep the old behaviour.
 	// It now always schedules executions on the control plane instead of being able to incorrectly bypass it.
 	isStandalone bool
+
+	exportArchiveMaxSize int
 
 	executionController scheduling.Controller
 }
@@ -247,4 +251,6 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
+
+	root.Get("/export", s.ExportExecutionsHandler())
 }

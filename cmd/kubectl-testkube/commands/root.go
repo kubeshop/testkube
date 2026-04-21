@@ -73,6 +73,7 @@ func init() {
 	RootCmd.AddCommand(NewProCmd())
 	RootCmd.AddCommand(NewMcpCmd())
 	RootCmd.AddCommand(NewDockerCmd())
+	RootCmd.AddCommand(NewMarketplaceCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
 	RootCmd.AddCommand(NewInstallCmd())
 
@@ -162,7 +163,7 @@ func isPreRunTelemetry(cmd *cobra.Command) bool {
 func handleTelemetry(cmd *cobra.Command, cfg *config.Data, isPreRun bool) {
 	// Send telemetry early to ensure it's captured even if command fails
 	if cfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdEvent(cmd, common.Version)
 		if ui.Verbose && err != nil {
 			ui.Err(err)

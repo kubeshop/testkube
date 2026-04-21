@@ -97,12 +97,15 @@ execution:
       autoCreate: true
       ## Use an external service account for executions
       name: ""
+      ## Extra annotations for the auto-created execution service account
+      annotations: {}
   ## Allow run in other namespaces
   additionalNamespaces:
   # another:
   #   serviceAccount:
   #     autoCreate: true
   #     name: ""
+  #     annotations: {}
 
 cloud:
   ## URL of the Cloud Saas Control Plane
@@ -179,6 +182,8 @@ pod:
     autoCreate: true
     ## Use an external service account
     name: ""
+    ## Extra annotations for the auto-created runner service account
+    annotations: {}
   ## Extra labels for Testkube Agent pod
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   labels: {}

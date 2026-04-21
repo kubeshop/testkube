@@ -127,6 +127,7 @@ roleRef:
 
 # Apply roles for execution workers (default namespace)
 {{- if .Values.execution.default.serviceAccount.autoCreate }}
+{{- $defaultExecutionNamespace := default .Release.Namespace .Values.execution.default.namespace }}
 ---
 
 # Apply execution in default namespace role
@@ -134,11 +135,7 @@ apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
 metadata:
   name: "exec-rb-{{ .Release.Name }}"
-  {{- if .Values.execution.default.namespace }}
-  namespace: "{{ .Values.execution.default.namespace }}"
-  {{- else }}
-  namespace: "{{ .Release.Namespace }}"
-  {{- end }}
+  namespace: "{{ $defaultExecutionNamespace }}"
   labels:
     {{- if .Values.global.labels }}
     {{- toYaml .Values.global.labels | nindent 4 }}
@@ -149,7 +146,7 @@ metadata:
     {{- end }}
 subjects:
 - kind: ServiceAccount
-  namespace: "{{ .Release.Namespace }}"
+  namespace: "{{ $defaultExecutionNamespace }}"
   {{- if .Values.execution.default.serviceAccount.name }}
   name: "{{ .Values.execution.default.serviceAccount.name }}"
   {{- else }}

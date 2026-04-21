@@ -516,6 +516,9 @@ securityContext: {}
 ## Toggle to enable debug mode
 enableDebugMode: false
 
+## Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+exportArchiveMaxSize: 104857600
+
 ## Service parameters
 service:
   ## Adapter service type
@@ -572,11 +575,12 @@ mongodb:
 postgresql:
   ## Deploy PostgreSQL server to the cluster
   enabled: false
-  ## Define dsn connection string
+  ## Define PostgreSQL DSN connection string
   dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
-  ## or use dsn in secrets
-  # secretName: testkube-secrets
-  # secretKey: postgresql-dsn
+  ## Name of the Kubernetes secret containing the PostgreSQL DSN
+  secretName: ""
+  ## Key in the Kubernetes secret containing the PostgreSQL DSN
+  secretKey: ""
 
 ## NATS parameters
 ## ref: https://github.com/nats-io/nats-server

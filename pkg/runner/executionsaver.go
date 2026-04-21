@@ -6,10 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 )
 
@@ -139,23 +138,23 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 	s.saveMu.Lock()
 	defer s.saveMu.Unlock()
 
-	// Save the logs and output
-	g, _ := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		if s.outputSaved.Load() {
-			return nil
+	// Save structured output metadata before finalizing. This remains required
+	// because it is part of the execution record, unlike archived logs.
+	if !s.outputSaved.Load() {
+		if err := s.saveOutput(ctx); err != nil {
+			return err
 		}
-		return s.saveOutput(ctx)
-	})
-	g.Go(func() error {
-		if s.logs.Saved() {
-			return nil
+		s.outputSaved.Store(true)
+	}
+
+	if !s.logs.Saved() {
+		if s.logs.Enabled() {
+			if err := s.logs.Save(ctx); err != nil {
+				return err
+			}
+		} else {
+			log.DefaultLogger.Infow("TestWorkflow execution log storage is disabled; skipping log archive upload", "id", s.id)
 		}
-		return s.logs.Save(ctx)
-	})
-	err := g.Wait()
-	if err != nil {
-		return err
 	}
 
 	// Save the final result

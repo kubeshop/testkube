@@ -3,6 +3,7 @@ package controlplaneclient
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -182,6 +183,10 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 		buildPongNotification,
 		buildCloudNotification,
 		buildCloudError,
+		buildCloudProtocol,
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
+		},
 		process,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
@@ -197,6 +202,10 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 		buildParallelStepPongNotification,
 		buildParallelStepCloudNotification,
 		buildParallelStepCloudError,
+		buildParallelStepCloudProtocol,
+		func(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
+			return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
+		},
 		process,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,
@@ -212,6 +221,10 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 		buildServicePongNotification,
 		buildServiceCloudNotification,
 		buildServiceCloudError,
+		buildServiceCloudProtocol,
+		func(req *cloud.TestWorkflowServiceNotificationsRequest) string {
+			return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
+		},
 		process,
 		c.opts.SendTimeout,
 		c.opts.RecvTimeout,

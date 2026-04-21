@@ -225,18 +225,16 @@ func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (stri
 	})
 }
 
-func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename string) (string, error) {
-	// First, get the artifact (could be direct content or a URL)
-	// URL encode the filename to handle special characters like forward slashes
-	encodedFilename := url.QueryEscape(filename)
-
+func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename string, params tools.ArtifactReadParams) (string, error) {
 	response, err := c.makeRequest(ctx, APIRequest{
-		Method: "GET",
-		Path:   "/agent/test-workflow-executions/{executionId}/artifacts/{filename}",
+		Method: "POST",
+		Path:   "/test-workflow-executions/{executionId}/artifacts",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"executionId": executionID,
-			"filename":    encodedFilename,
+		},
+		Body: map[string]string{
+			"artifactID": filename,
 		},
 	})
 	if err != nil {
@@ -886,6 +884,9 @@ func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.Lis
 	} else {
 		queryParams["pageSize"] = "50" // Default limit
 	}
+	if params.FetchAll {
+		queryParams["fetchAll"] = "true"
+	}
 
 	result, err := c.makeRequest(ctx, APIRequest{
 		Method:      http.MethodGet,
@@ -938,6 +939,9 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
 	} else {
 		queryParams["pageSize"] = "50" // Default limit
+	}
+	if params.FetchAll {
+		queryParams["fetchAll"] = "true"
 	}
 
 	result, err := c.makeRequest(ctx, APIRequest{
