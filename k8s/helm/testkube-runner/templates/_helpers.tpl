@@ -189,6 +189,7 @@ rules:
     resources:
       - testworkflows
       - testworkflowtemplates
+      - workflowtriggers
     verbs:
       - get
       - list
