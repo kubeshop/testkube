@@ -543,7 +543,7 @@ testkube-api:
   enableDebugMode: false
 
   # Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
-  exportArchiveMaxSize: 104857600
+  exportArchiveMaxSize: "104857600"
 
   # jobPodAnnotations adds annotations to the pods spawned to execute tests using
   # prebuilt and container executors.
