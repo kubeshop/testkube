@@ -108,11 +108,11 @@ mongodb:
   # Currently Bitnami doesn't support ARM: https://github.com/bitnami/charts/issues/7305
   image:
     # -- MongoDB image registry
-    registry: us-east1-docker.pkg.dev
+    registry: docker.io
     # -- MongoDB image repository
-    repository: testkube-cloud-372110/testkube/mongodb
+    repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.2.5
+    tag: 8.2.7
     # -- MongoDB image pull Secret
     pullSecrets: []
   # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
@@ -313,11 +313,11 @@ postgresql:
   # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
   image:
     # -- PostgreSQL image registry
-    registry: us-east1-docker.pkg.dev
+    registry: docker.io
     # -- PostgreSQL image repository
-    repository: testkube-cloud-372110/testkube/postgresql
+    repository: kubeshop/testkube-postgres
     # -- PostgreSQL image tag
-    tag: 18.2
+    tag: 18.3
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 
@@ -359,7 +359,7 @@ postgresqlOperatorCluster:
     postgresql: "18"
   cluster:
     instances: 1
-    imageName: "kubeshop/testkube-postgres:18.2"
+    imageName: "kubeshop/testkube-postgres:18.3"
     postgresUID: 999
     postgresGID: 999
     imagePullSecrets: []

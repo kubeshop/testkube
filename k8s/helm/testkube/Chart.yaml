@@ -14,7 +14,7 @@ dependencies:
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: postgresql
     condition: postgresql.enabled
-    version: 18.2-0
+    version: 18.3-0
     repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: cloudnative-pg
     version: 0.27.0
