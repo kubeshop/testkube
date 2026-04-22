@@ -359,7 +359,7 @@ postgresqlOperatorCluster:
     postgresql: "18"
   cluster:
     instances: 1
-    imageName: "kubeshop/testkube-postgres:18.2"
+    imageName: "kubeshop/testkube-postgres:18.3"
     postgresUID: 999
     postgresGID: 999
     imagePullSecrets: []
