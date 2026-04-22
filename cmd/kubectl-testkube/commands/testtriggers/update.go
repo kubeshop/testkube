@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -24,7 +25,7 @@ func NewUpdateTestTriggerCmd() *cobra.Command {
 			req, err := readTestTriggerFromInput(file)
 			ui.ExitOnError("reading test trigger input", err)
 
-			updated, err := client.UpdateTestTrigger(toUpdateOptions(req))
+			updated, err := client.UpdateTestTrigger(apiv1.UpdateTestTriggerOptions(req))
 			ui.ExitOnError("updating test trigger", err)
 
 			err = render.Obj(cmd, updated, os.Stdout)

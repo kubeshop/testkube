@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -36,7 +37,7 @@ func NewGetTestTriggerCmd() *cobra.Command {
 			triggers, err := client.ListTestTriggers(strings.Join(selectors, ","))
 			ui.ExitOnError("listing test triggers", err)
 
-			err = render.List(cmd, triggers, os.Stdout)
+			err = render.List(cmd, testkube.TestTriggers(triggers), os.Stdout)
 			ui.ExitOnError("rendering list", err)
 		},
 	}

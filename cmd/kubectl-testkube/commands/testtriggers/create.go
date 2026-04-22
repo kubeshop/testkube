@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -27,10 +28,9 @@ func NewCreateTestTriggerCmd() *cobra.Command {
 			ui.ExitOnError("reading test trigger input", err)
 
 			if update {
-				// Upsert: update if exists, else create.
 				existing, getErr := client.GetTestTrigger(req.Name)
 				if getErr == nil && existing.Name != "" {
-					updated, err := client.UpdateTestTrigger(toUpdateOptions(req))
+					updated, err := client.UpdateTestTrigger(apiv1.UpdateTestTriggerOptions(req))
 					ui.ExitOnError("updating test trigger", err)
 					err = render.Obj(cmd, updated, os.Stdout)
 					ui.ExitOnError("rendering obj", err)
@@ -38,7 +38,7 @@ func NewCreateTestTriggerCmd() *cobra.Command {
 				}
 			}
 
-			created, err := client.CreateTestTrigger(toCreateOptions(req))
+			created, err := client.CreateTestTrigger(apiv1.CreateTestTriggerOptions(req))
 			ui.ExitOnError("creating test trigger", err)
 
 			err = render.Obj(cmd, created, os.Stdout)

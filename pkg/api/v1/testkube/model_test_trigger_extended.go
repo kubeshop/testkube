@@ -11,6 +11,36 @@ package testkube
 
 import "fmt"
 
+type TestTriggers []TestTrigger
+
+func (list TestTriggers) Table() (header []string, output [][]string) {
+	header = []string{"Name", "Namespace", "Resource", "Event", "Action", "Execution", "Disabled"}
+	for _, t := range list {
+		resource := ""
+		if t.ResourceRef != nil && t.ResourceRef.Kind != "" {
+			if t.ResourceRef.Group == "" {
+				resource = fmt.Sprintf("%s/%s", t.ResourceRef.Version, t.ResourceRef.Kind)
+			} else {
+				resource = fmt.Sprintf("%s/%s/%s", t.ResourceRef.Group, t.ResourceRef.Version, t.ResourceRef.Kind)
+			}
+		} else if t.Resource != nil {
+			resource = string(*t.Resource)
+		}
+		action := ""
+		if t.Action != nil {
+			action = string(*t.Action)
+		}
+		execution := ""
+		if t.Execution != nil {
+			execution = string(*t.Execution)
+		}
+		output = append(output, []string{
+			t.Name, t.Namespace, resource, t.Event, action, execution, fmt.Sprint(t.Disabled),
+		})
+	}
+	return
+}
+
 func (t TestTrigger) GetName() string {
 	return t.Name
 }
