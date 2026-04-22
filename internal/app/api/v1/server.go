@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/clusterdiscovery"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
@@ -132,12 +133,16 @@ type TestkubeAPI struct {
 	exportArchiveMaxSize int
 
 	executionController scheduling.Controller
+
+	// Optional; when nil the /cluster-resources endpoint returns 501.
+	ClusterDiscoverer *clusterdiscovery.Discoverer
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	// TODO: Consider extracting outside?
 	server.Routes.Get("/info", s.InfoHandler())
 	server.Routes.Get("/debug", s.DebugHandler())
+	server.Routes.Get("/cluster-resources", s.ListClusterResourcesHandler())
 
 	root := server.Routes
 
