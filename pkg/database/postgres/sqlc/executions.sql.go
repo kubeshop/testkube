@@ -2914,14 +2914,6 @@ type GetTestWorkflowExecutionsTotalsRow struct {
 	Count  int64       `db:"count" json:"count"`
 }
 
-// Totals are read from denormalized columns on test_workflow_executions
-// (status, workflow_name) maintained by triggers on test_workflow_results and
-// test_workflows. The LEFT JOINs are kept only because the @initialized,
-// @label_*, @selector_* and @health_ranges filters reference r.steps,
-// w.labels and w.status; when none of those filters are set, the planner
-// elides both joins (the right sides are unique on execution_id), letting the
-// query be served by an index-only scan over
-// idx_twe_org_env_wfname_status.
 func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTestWorkflowExecutionsTotalsParams) ([]GetTestWorkflowExecutionsTotalsRow, error) {
 	rows, err := q.db.Query(ctx, getTestWorkflowExecutionsTotals,
 		arg.OrganizationID,
