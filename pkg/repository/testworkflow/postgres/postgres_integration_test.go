@@ -384,3 +384,192 @@ func TestPostgresRepositoryCountExecutions_Integration(t *testing.T) {
 func StringPtr(s string) *string {
 	return &s
 }
+
+func TestPostgresDenormalizedExecutionColumns_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_denorm_status_name")
+	t.Cleanup(cleanup)
+
+	ctx := context.Background()
+
+	orgID := "test-org"
+	envID := "test-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	insertExecution := func(t *testing.T, id string, num int32) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+		`, id, orgID, envID, id, "default", num)
+		require.NoError(t, err)
+	}
+
+	readDenormalized := func(t *testing.T, id string) (workflowName, status *string) {
+		t.Helper()
+		err := testDB.Pool.QueryRow(ctx,
+			`SELECT workflow_name, status FROM test_workflow_executions WHERE id = $1`,
+			id,
+		).Scan(&workflowName, &status)
+		require.NoError(t, err)
+		return
+	}
+
+	t.Run("status trigger populates on insert into test_workflow_results", func(t *testing.T) {
+		insertExecution(t, "exec-status-insert", 1)
+
+		// Before any result exists, status is NULL.
+		_, status := readDenormalized(t, "exec-status-insert")
+		assert.Nil(t, status, "status should be NULL before any test_workflow_results row exists")
+
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, $2, NOW(), NOW())
+		`, "exec-status-insert", "queued")
+		require.NoError(t, err)
+
+		_, status = readDenormalized(t, "exec-status-insert")
+		require.NotNil(t, status)
+		assert.Equal(t, "queued", *status)
+	})
+
+	t.Run("status trigger updates on test_workflow_results.status change", func(t *testing.T) {
+		insertExecution(t, "exec-status-update", 2)
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, $2, NOW(), NOW())
+		`, "exec-status-update", "running")
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx,
+			`UPDATE test_workflow_results SET status = $1 WHERE execution_id = $2`,
+			"passed", "exec-status-update",
+		)
+		require.NoError(t, err)
+
+		_, status := readDenormalized(t, "exec-status-update")
+		require.NotNil(t, status)
+		assert.Equal(t, "passed", *status)
+	})
+
+	t.Run("workflow_name trigger populates on insert with workflow_type='workflow'", func(t *testing.T) {
+		insertExecution(t, "exec-name-insert", 3)
+
+		name, _ := readDenormalized(t, "exec-name-insert")
+		assert.Nil(t, name, "workflow_name should be NULL before any test_workflows row exists")
+
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-insert", "workflow", "my-workflow", "default")
+		require.NoError(t, err)
+
+		name, _ = readDenormalized(t, "exec-name-insert")
+		require.NotNil(t, name)
+		assert.Equal(t, "my-workflow", *name)
+	})
+
+	t.Run("workflow_name trigger ignores workflow_type='resolved_workflow'", func(t *testing.T) {
+		insertExecution(t, "exec-name-resolved", 4)
+
+		// Insert only the resolved_workflow row — should not populate workflow_name.
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-resolved", "resolved_workflow", "resolved-name", "default")
+		require.NoError(t, err)
+
+		name, _ := readDenormalized(t, "exec-name-resolved")
+		assert.Nil(t, name, "workflow_name must not be populated by resolved_workflow rows")
+
+		// Now insert the canonical 'workflow' row — workflow_name should appear.
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-resolved", "workflow", "canonical-name", "default")
+		require.NoError(t, err)
+
+		name, _ = readDenormalized(t, "exec-name-resolved")
+		require.NotNil(t, name)
+		assert.Equal(t, "canonical-name", *name)
+	})
+
+	t.Run("workflow_name trigger updates when canonical row's name changes", func(t *testing.T) {
+		insertExecution(t, "exec-name-update", 5)
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-update", "workflow", "old-name", "default")
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx,
+			`UPDATE test_workflows SET name = $1 WHERE execution_id = $2 AND workflow_type = 'workflow'`,
+			"new-name", "exec-name-update",
+		)
+		require.NoError(t, err)
+
+		name, _ := readDenormalized(t, "exec-name-update")
+		require.NotNil(t, name)
+		assert.Equal(t, "new-name", *name)
+	})
+
+	t.Run("GetExecutionsTotals reads denormalized columns and filters by workflow_name", func(t *testing.T) {
+		// Set up two distinct workflows with mixed statuses.
+		// wf-a: 2 passed, 1 failed
+		// wf-b: 1 passed, 2 failed
+		cases := []struct {
+			id       string
+			num      int32
+			workflow string
+			status   string
+		}{
+			{"tot-a-1", 100, "wf-a", "passed"},
+			{"tot-a-2", 101, "wf-a", "passed"},
+			{"tot-a-3", 102, "wf-a", "failed"},
+			{"tot-b-1", 103, "wf-b", "passed"},
+			{"tot-b-2", 104, "wf-b", "failed"},
+			{"tot-b-3", 105, "wf-b", "failed"},
+		}
+		for _, c := range cases {
+			insertExecution(t, c.id, c.num)
+			_, err := testDB.Pool.Exec(ctx, `
+				INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+				VALUES ($1, $2, NOW(), NOW())
+			`, c.id, c.status)
+			require.NoError(t, err)
+			_, err = testDB.Pool.Exec(ctx, `
+				INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+				VALUES ($1, $2, $3, $4, NOW(), NOW())
+			`, c.id, "workflow", c.workflow, "default")
+			require.NoError(t, err)
+		}
+
+		// Sanity: triggers populated all rows.
+		var nullCount int
+		require.NoError(t, testDB.Pool.QueryRow(ctx, `
+			SELECT COUNT(*) FROM test_workflow_executions
+			WHERE id LIKE 'tot-%' AND (status IS NULL OR workflow_name IS NULL)
+		`).Scan(&nullCount))
+		assert.Equal(t, 0, nullCount, "all denormalized columns should be populated by triggers")
+
+		// Filter by workflow_name — must match what the trigger wrote into e.workflow_name.
+		filterA := testworkflow.NewExecutionsFilter().WithName("wf-a")
+		resultA, err := repo.GetExecutionsTotals(ctx, *filterA)
+		require.NoError(t, err)
+		assert.Equal(t, int32(2), resultA.Passed, "wf-a should have 2 passed")
+		assert.Equal(t, int32(1), resultA.Failed, "wf-a should have 1 failed")
+		assert.Equal(t, int32(3), resultA.Results, "wf-a should have 3 total")
+
+		filterB := testworkflow.NewExecutionsFilter().WithName("wf-b")
+		resultB, err := repo.GetExecutionsTotals(ctx, *filterB)
+		require.NoError(t, err)
+		assert.Equal(t, int32(1), resultB.Passed, "wf-b should have 1 passed")
+		assert.Equal(t, int32(2), resultB.Failed, "wf-b should have 2 failed")
+		assert.Equal(t, int32(3), resultB.Results, "wf-b should have 3 total")
+	})
+}
