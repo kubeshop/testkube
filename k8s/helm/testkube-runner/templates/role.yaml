@@ -214,7 +214,7 @@ metadata:
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
-  name: "watchers-role-{{ $ns }}"
+  name: "watchers-role-{{ .Release.Name }}"
   namespace: {{ $ns }}
   labels:
     {{- if .Values.global.labels }}
