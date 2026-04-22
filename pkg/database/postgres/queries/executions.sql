@@ -461,19 +461,19 @@ LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: GetTestWorkflowExecutionsTotals :many
 SELECT
-    r.status,
+    e.status,
     COUNT(*) as count
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
-    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
     AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
-    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -482,8 +482,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
-         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+         (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
     AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
               SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
@@ -549,7 +549,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     )
-GROUP BY r.status;
+GROUP BY e.status;
 
 -- name: GetTestWorkflowExecutions :many
 SELECT

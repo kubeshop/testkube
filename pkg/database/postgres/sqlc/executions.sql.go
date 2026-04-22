@@ -2793,19 +2793,19 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 
 const getTestWorkflowExecutionsTotals = `-- name: GetTestWorkflowExecutionsTotals :many
 SELECT
-    r.status,
+    e.status,
     COUNT(*) as count
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE (e.organization_id = $1 AND e.environment_id = $2)
-    AND (COALESCE($3::text, '') = '' OR w.name = $3::text)
-    AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY($4::text[]))
+    AND (COALESCE($3::text, '') = '' OR e.workflow_name = $3::text)
+    AND (COALESCE($4::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY($4::text[]))
     AND (COALESCE($5::text, '') = '' OR e.name ILIKE '%' || $5::text || '%')
     AND (COALESCE($6::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= $6::timestamptz)
     AND (COALESCE($7::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= $7::timestamptz)
     AND (COALESCE($8::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE($8::integer, 0) || ' days')::interval)
-    AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY($9::text[]))
+    AND (COALESCE($9::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY($9::text[]))
     AND (COALESCE($10::text, '') = '' OR e.runner_id = $10::text)
     AND (COALESCE($11, NULL) IS NULL OR
          ($11::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -2814,8 +2814,8 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
     AND (COALESCE($13::text, '') = '' OR e.running_context->'actor'->>'type_' = $13::text)
     AND (COALESCE($14::text, '') = '' OR e.id = $14::text OR e.group_id = $14::text)
     AND (COALESCE($15, NULL) IS NULL OR
-         ($15::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         ($15::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+         ($15::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($15::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
     AND (COALESCE($16::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
               SELECT 1 FROM jsonb_array_elements($16::jsonb) AS range_obj
@@ -2881,7 +2881,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
-GROUP BY r.status
+GROUP BY e.status
 `
 
 type GetTestWorkflowExecutionsTotalsParams struct {
