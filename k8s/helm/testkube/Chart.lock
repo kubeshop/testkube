@@ -4,7 +4,7 @@ dependencies:
   version: 2.7.0-rc.0
 - name: mongodb
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
-  version: 8.2.5-0
+  version: 8.2.7-0
 - name: postgresql
   repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   version: 18.2-0
@@ -23,5 +23,5 @@ dependencies:
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:ae268cedc228fb70bbc3429f12a1d826f6fd7cc84ba12b39f061548db5861350
-generated: "2026-04-21T14:23:47.408540685Z"
+digest: sha256:9eb8abd8c0007ab615332c513af3c3e345c989d5bb7cb80e87f38e665c1720cb
+generated: "2026-04-22T04:50:02.804457816Z"
