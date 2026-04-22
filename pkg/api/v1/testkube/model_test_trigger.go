@@ -23,7 +23,9 @@ type TestTrigger struct {
 	ResourceRef      *TestTriggerResourceRef                      `json:"resourceRef,omitempty"`
 	ResourceSelector *TestTriggerSelector                         `json:"resourceSelector,omitempty"`
 	// listen for event for selected resource
-	Event             string                          `json:"event"`
+	Event string `json:"event"`
+	// Match filters which object changes fire the trigger (ANDed).
+	Match             []TestTriggerFieldCondition     `json:"match,omitempty"`
 	ConditionSpec     *TestTriggerConditionSpec       `json:"conditionSpec,omitempty"`
 	ProbeSpec         *TestTriggerProbeSpec           `json:"probeSpec,omitempty"`
 	Action            *TestTriggerActions             `json:"action"`

@@ -6633,6 +6633,40 @@ spec:
                 - testsuite
                 - testworkflow
                 type: string
+              match:
+                description: |-
+                  Match filters which object changes fire the trigger.
+                  Each entry evaluates a dot-path on the watched object (e.g. ".status.currentStepIndex",
+                  ".spec.template.spec.containers.0.image") with an operator. All entries must pass (AND logic).
+                items:
+                  description: WorkflowTriggerFieldCondition defines a field-level
+                    match condition.
+                  properties:
+                    operator:
+                      description: Operator is the comparison operator.
+                      enum:
+                      - equals
+                      - not_equals
+                      - exists
+                      - not_exists
+                      - changed
+                      - changed_to
+                      - changed_from
+                      type: string
+                    path:
+                      description: |-
+                        Path is a dot-path to a field on the K8s object, e.g. ".spec.replicas",
+                        ".spec.template.spec.containers.0.image". Array elements use .N syntax.
+                      type: string
+                    value:
+                      description: Value to compare against. Required for equals,
+                        not_equals, changed_to, changed_from.
+                      type: string
+                  required:
+                  - operator
+                  - path
+                  type: object
+                type: array
               probeSpec:
                 description: What resource probes should be matched
                 properties:

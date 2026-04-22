@@ -6,6 +6,7 @@ package v1
 
 import (
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -238,6 +239,11 @@ func (in *TestTriggerSpec) DeepCopyInto(out *TestTriggerSpec) {
 		**out = **in
 	}
 	in.ResourceSelector.DeepCopyInto(&out.ResourceSelector)
+	if in.Match != nil {
+		in, out := &in.Match, &out.Match
+		*out = make([]workflowtriggersv1.WorkflowTriggerFieldCondition, len(*in))
+		copy(*out, *in)
+	}
 	if in.ConditionSpec != nil {
 		in, out := &in.ConditionSpec, &out.ConditionSpec
 		*out = new(TestTriggerConditionSpec)

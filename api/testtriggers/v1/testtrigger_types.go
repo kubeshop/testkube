@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -56,6 +57,10 @@ type TestTriggerSpec struct {
 	ResourceSelector TestTriggerSelector `json:"resourceSelector,omitempty"`
 	// On which Event for a Resource should an Action be triggered
 	Event TestTriggerEvent `json:"event"`
+	// Match filters which object changes fire the trigger.
+	// Each entry evaluates a dot-path on the watched object (e.g. ".status.currentStepIndex",
+	// ".spec.template.spec.containers.0.image") with an operator. All entries must pass (AND logic).
+	Match []workflowtriggersv1.WorkflowTriggerFieldCondition `json:"match,omitempty"`
 	// What resource conditions should be matched
 	ConditionSpec *TestTriggerConditionSpec `json:"conditionSpec,omitempty"`
 	// What resource probes should be matched

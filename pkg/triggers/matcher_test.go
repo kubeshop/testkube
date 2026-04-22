@@ -9,9 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
@@ -520,6 +522,75 @@ func TestService_noMatch(t *testing.T) {
 
 	err := s.match(context.Background(), e)
 	assert.NoError(t, err)
+}
+
+// TestService_match_v1WithFieldConditions verifies that a v1 TestTrigger with
+// spec.match[] filters firings through the shared WorkflowTrigger field-matcher
+// engine — equivalent-value change skips, actual change fires.
+func TestService_match_v1WithFieldConditions(t *testing.T) {
+	makeDeploy := func(replicas int32) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "api", Namespace: "default"},
+			Spec:       appsv1.DeploymentSpec{Replicas: int32Ptr(replicas)},
+		}
+	}
+
+	trigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "replicas-changed"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "api"},
+			Event:            "modified",
+			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
+				{Path: ".spec.replicas", Operator: workflowtriggersv1.FieldOperatorChanged},
+			},
+			Action:            "run",
+			Execution:         "testworkflow",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "smoke"},
+		},
+	}
+	key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	status := &triggerStatus{trigger: convertV1ToInternal(trigger)}
+
+	// Sanity: the conversion populated FieldConditions on the internal form.
+	require.Len(t, status.trigger.FieldConditions, 1)
+	assert.Equal(t, workflowtriggersv1.FieldOperatorChanged, status.trigger.FieldConditions[0].Operator)
+
+	cases := []struct {
+		name       string
+		oldObj     any
+		newObj     any
+		shouldFire bool
+	}{
+		{"replicas changed 3->5 fires", makeDeploy(3), makeDeploy(5), true},
+		{"replicas unchanged 5->5 skips", makeDeploy(5), makeDeploy(5), false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fired := false
+			s := &Service{
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, it *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				triggerStatus: map[statusKey]*triggerStatus{key: status},
+				logger:        log.DefaultLogger,
+				metrics:       metrics.NewMetrics(),
+			}
+			err := s.match(context.Background(), &watcherEvent{
+				resource:  "deployment",
+				name:      "api",
+				Namespace: "default",
+				eventType: "modified",
+				Object:    tc.newObj,
+				OldObject: tc.oldObj,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.shouldFire, fired)
+		})
+	}
 }
 
 func newDefaultTestTriggersService(t *testing.T, trigger *testtriggersv1.TestTrigger) *Service {
