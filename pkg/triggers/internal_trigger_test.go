@@ -30,6 +30,10 @@ func TestConvertV1ToInternal(t *testing.T) {
 				NameRegex: "api-.*",
 			},
 			Event: testtriggersv1.TestTriggerEventModified,
+			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
+				{Path: ".status.currentStepIndex", Operator: workflowtriggersv1.FieldOperatorChanged},
+				{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorEquals, Value: "Progressing"},
+			},
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Conditions: []testtriggersv1.TestTriggerCondition{
 					{Type_: "Available", Status: &condStatus, Reason: "MinimumReplicasAvailable"},
@@ -73,8 +77,12 @@ func TestConvertV1ToInternal(t *testing.T) {
 	// Event
 	assert.Equal(t, "modified", it.Event)
 
-	// No field conditions in v1
-	assert.Empty(t, it.FieldConditions)
+	// Field conditions (match) passthrough
+	require.Len(t, it.FieldConditions, 2)
+	assert.Equal(t, ".status.currentStepIndex", it.FieldConditions[0].Path)
+	assert.Equal(t, workflowtriggersv1.FieldOperatorChanged, it.FieldConditions[0].Operator)
+	assert.Equal(t, ".status.phase", it.FieldConditions[1].Path)
+	assert.Equal(t, "Progressing", it.FieldConditions[1].Value)
 
 	// Conditions
 	require.NotNil(t, it.Conditions)

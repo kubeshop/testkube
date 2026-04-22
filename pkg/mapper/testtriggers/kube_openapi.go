@@ -4,6 +4,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -59,6 +60,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:             string(crd.Spec.Event),
+		Match:             mapFieldConditionsFromCRD(crd.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
 		Action:            action,
@@ -98,6 +100,21 @@ func mapLabelSelectorFromCRD(labelSelector *v1.LabelSelector) *testkube.IoK8sApi
 		MatchExpressions: matchExpressions,
 		MatchLabels:      labelSelector.MatchLabels,
 	}
+}
+
+func mapFieldConditionsFromCRD(in []workflowtriggersv1.WorkflowTriggerFieldCondition) []testkube.TestTriggerFieldCondition {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]testkube.TestTriggerFieldCondition, 0, len(in))
+	for _, c := range in {
+		out = append(out, testkube.TestTriggerFieldCondition{
+			Path:     c.Path,
+			Operator: testkube.TestTriggerFieldOperator(c.Operator),
+			Value:    c.Value,
+		})
+	}
+	return out
 }
 
 func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *testkube.TestTriggerConditionSpec {
@@ -174,6 +191,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:             string(request.Spec.Event),
+		Match:             mapFieldConditionsFromCRD(request.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),
 		Action:            action,

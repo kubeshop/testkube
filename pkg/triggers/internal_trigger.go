@@ -109,6 +109,7 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		Source:             triggerSourceV1,
 		Event:              string(t.Spec.Event),
 		EventLabelSelector: t.Spec.Selector,
+		FieldConditions:    t.Spec.Match,
 		Execution:          string(t.Spec.Execution),
 		Disabled:           t.Spec.Disabled,
 	}
@@ -123,7 +124,7 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 		it.ResourceKind = string(t.Spec.Resource)
 	}
 
-	// If ResourceRef is set, use it directly (overrides Resource enum)
+	// ResourceRef overrides the Resource enum when set.
 	if t.Spec.ResourceRef != nil {
 		it.ResourceGroup = t.Spec.ResourceRef.Group
 		it.ResourceVersion = t.Spec.ResourceRef.Version

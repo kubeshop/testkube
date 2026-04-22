@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
@@ -42,6 +43,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
+			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
 			Action:            action,
@@ -105,6 +107,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
+			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
 			Action:            action,
@@ -198,6 +201,21 @@ func mapProbeSpecCRD(probeSpec *testkube.TestTriggerProbeSpec) *testsv1.TestTrig
 		Delay:   probeSpec.Delay,
 		Probes:  probes,
 	}
+}
+
+func mapFieldConditionsToCRD(in []testkube.TestTriggerFieldCondition) []workflowtriggersv1.WorkflowTriggerFieldCondition {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]workflowtriggersv1.WorkflowTriggerFieldCondition, 0, len(in))
+	for _, c := range in {
+		out = append(out, workflowtriggersv1.WorkflowTriggerFieldCondition{
+			Path:     c.Path,
+			Operator: workflowtriggersv1.WorkflowTriggerFieldOperator(c.Operator),
+			Value:    c.Value,
+		})
+	}
+	return out
 }
 
 func mapActionParametersCRD(actionParameters *testkube.TestTriggerActionParameters) *testsv1.TestTriggerActionParameters {

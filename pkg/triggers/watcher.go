@@ -365,6 +365,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			ResourceRef:       t.ResourceRef,
 			ResourceSelector:  t.ResourceSelector,
 			Event:             t.Event,
+			Match:             t.Match,
 			ConditionSpec:     t.ConditionSpec,
 			ProbeSpec:         t.ProbeSpec,
 			Action:            t.Action,
