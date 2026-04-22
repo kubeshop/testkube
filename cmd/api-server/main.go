@@ -55,6 +55,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/controller"
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
+	"github.com/kubeshop/testkube/pkg/clusterdiscovery"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/coordination/leader"
 	"github.com/kubeshop/testkube/pkg/cronjob"
@@ -771,6 +772,7 @@ func main() {
 		testWorkflowExecutor,
 		cfg.ExportArchiveMaxSize,
 	)
+	api.ClusterDiscoverer = clusterdiscovery.New(clientset)
 	api.Init(httpServer)
 
 	log.DefaultLogger.Info("starting agent service")
