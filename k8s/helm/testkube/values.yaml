@@ -535,6 +535,19 @@ testkube-api:
   # -- Toggle whether to deploy Testkube API RBAC
   rbac:
     create: true
+    # -- Extra resources the agent watchers role should cover. Required when
+    # TestTriggers or WorkflowTriggers use `resourceRef` to target a CRD that
+    # isn't in the default watchers role (e.g. cert-manager, Kafka, Strimzi).
+    # Applied to all three role variants (cluster-wide ClusterRole, the
+    # release-namespace Role in multinamespace mode, and the per-namespace
+    # Roles in additionalNamespaces). Verbs default to `[get, list, watch]`.
+    # Example:
+    #   extraWatchedResources:
+    #     - apiGroups: ["cert-manager.io"]
+    #       resources: ["certificates"]
+    #     - apiGroups: ["kafka.strimzi.io"]
+    #       resources: ["kafkatopics"]
+    extraWatchedResources: []
 
   # Multinamespace feature. Disabled by default
   multinamespace:

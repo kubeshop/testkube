@@ -75,6 +75,15 @@ listener:
   eventLabels: {}
   ## Additional namespaces to watch
   additionalNamespaces: []
+  ## Extra resources the listener watchers role should cover. Required when
+  ## TestTriggers or WorkflowTriggers use `resourceRef` to target a CRD that
+  ## isn't in the default watchers role (e.g. cert-manager, Kafka, Strimzi).
+  ## Verbs default to [get, list, watch].
+  ## Example:
+  ##   extraWatchedResources:
+  ##     - apiGroups: ["cert-manager.io"]
+  ##       resources: ["certificates"]
+  extraWatchedResources: []
 
 ## Webhooks capability configuration
 webhooks:

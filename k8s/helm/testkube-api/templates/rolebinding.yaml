@@ -307,6 +307,28 @@ subjects:
 
 ---
 
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: workflowtriggers-crb-{{ .Release.Name }}
+  labels: {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: workflowtriggers-role-{{ .Release.Name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "testkube-api.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+
 # RBAC for additional namespaces
 {{- if .Values.additionalNamespaces }}
 {{- range .Values.additionalNamespaces }}
