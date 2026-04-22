@@ -1,8 +1,8 @@
 # Trivy ignore policy for testkube container images.
 #
-# Format: <CVE-ID> [exp:YYYY-MM-DD]
+# Format: <VULN-ID> [exp:YYYY-MM-DD]
 # Each entry MUST include a justification block above it and an expiry date so
-# that ignored CVEs are re-evaluated periodically.
+# that ignored vulnerabilities are re-evaluated periodically.
 
 # ---------------------------------------------------------------------------
 # CVE-2026-34040 — Moby (github.com/docker/docker) AuthZ plugin bypass on
