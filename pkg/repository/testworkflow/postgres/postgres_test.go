@@ -69,6 +69,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsTot
 	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsTotalsRow), args.Error(1)
 }
 
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsTotalsByWorkflow(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsTotalsByWorkflowParams) ([]sqlc.GetTestWorkflowExecutionsTotalsByWorkflowRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsTotalsByWorkflowRow), args.Error(1)
+}
+
 func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutions(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsParams) ([]sqlc.GetTestWorkflowExecutionsRow, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsRow), args.Error(1)
@@ -77,6 +82,11 @@ func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutions(ct
 func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsSummary(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsSummaryParams) ([]sqlc.GetTestWorkflowExecutionsSummaryRow, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsSummaryRow), args.Error(1)
+}
+
+func (m *MockTestWorkflowExecutionQueriesInterface) GetTestWorkflowExecutionsSummaryByWorkflow(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsSummaryByWorkflowParams) ([]sqlc.GetTestWorkflowExecutionsSummaryByWorkflowRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsSummaryByWorkflowRow), args.Error(1)
 }
 
 func (m *MockTestWorkflowExecutionQueriesInterface) CountTestWorkflowExecutions(ctx context.Context, arg sqlc.CountTestWorkflowExecutionsParams) (int64, error) {
@@ -797,10 +807,12 @@ func TestPostgresRepository_GetRunning(t *testing.T) {
 }
 
 func TestPostgresRepository_GetExecutionsTotals(t *testing.T) {
-	mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
-	repo := &PostgresRepository{queries: mockQueries}
-
 	t.Run("Success", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{db: mockDB, queries: mockQueries}
+
 		ctx := context.Background()
 		filter := createTestFilter()
 
@@ -815,6 +827,7 @@ func TestPostgresRepository_GetExecutionsTotals(t *testing.T) {
 			},
 		}
 
+		expectForceCustomPlanTx(mockDB, mockTx, mockQueries, ctx)
 		mockQueries.On("GetTestWorkflowExecutionsTotals", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsTotalsParams")).Return(rows, nil)
 
 		result, err := repo.GetExecutionsTotals(ctx, filter)
@@ -824,6 +837,200 @@ func TestPostgresRepository_GetExecutionsTotals(t *testing.T) {
 		assert.Equal(t, int32(3), result.Failed)
 		assert.Equal(t, int32(8), result.Results)
 		mockQueries.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+		mockTx.AssertExpectations(t)
+	})
+}
+
+// expectForceCustomPlanTx wires a MockTx so that withForceCustomPlan can run
+// successfully: Begin -> Exec(SET LOCAL ...) -> WithTx -> Commit/Rollback.
+func expectForceCustomPlanTx(mockDB *MockDatabaseInterface, mockTx *MockTx, mockQueries *MockTestWorkflowExecutionQueriesInterface, ctx context.Context) {
+	mockDB.On("Begin", ctx).Return(mockTx, nil)
+	mockTx.On("Exec", ctx, "SET LOCAL plan_cache_mode = force_custom_plan", mock.Anything).
+		Return(pgconn.CommandTag{}, nil)
+	mockTx.On("Commit", ctx).Return(nil)
+	mockTx.On("Rollback", ctx).Return(nil)
+	mockQueries.On("WithTx", mockTx).Return(mockQueries)
+}
+
+func TestPostgresRepository_GetExecutionsTotals_NameOnlyFastPath(t *testing.T) {
+	t.Run("RoutesToByWorkflowQuery", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+		filter := testworkflow.NewExecutionsFilter().WithName("my-workflow")
+
+		expectedParams := sqlc.GetTestWorkflowExecutionsTotalsByWorkflowParams{
+			OrganizationID: "org-1",
+			EnvironmentID:  "env-1",
+			WorkflowName:   pgtype.Text{String: "my-workflow", Valid: true},
+		}
+		rows := []sqlc.GetTestWorkflowExecutionsTotalsByWorkflowRow{
+			{Status: pgtype.Text{String: string(testkube.PASSED_TestWorkflowStatus), Valid: true}, Count: 7},
+			{Status: pgtype.Text{String: string(testkube.FAILED_TestWorkflowStatus), Valid: true}, Count: 2},
+			{Status: pgtype.Text{String: string(testkube.RUNNING_TestWorkflowStatus), Valid: true}, Count: 1},
+			{Status: pgtype.Text{String: string(testkube.QUEUED_TestWorkflowStatus), Valid: true}, Count: 4},
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionsTotalsByWorkflow", ctx, expectedParams).Return(rows, nil)
+
+		result, err := repo.GetExecutionsTotals(ctx, filter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, int32(7), result.Passed)
+		assert.Equal(t, int32(2), result.Failed)
+		assert.Equal(t, int32(1), result.Running)
+		assert.Equal(t, int32(4), result.Queued)
+		assert.Equal(t, int32(14), result.Results)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetTestWorkflowExecutionsTotals")
+	})
+
+	t.Run("FallsBackWhenExtraFilterPresent", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:             mockDB,
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+		filter := testworkflow.NewExecutionsFilter().
+			WithName("my-workflow").
+			WithStatus(string(testkube.PASSED_TestWorkflowStatus))
+
+		expectForceCustomPlanTx(mockDB, mockTx, mockQueries, ctx)
+		mockQueries.On("GetTestWorkflowExecutionsTotals", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsTotalsParams")).
+			Return([]sqlc.GetTestWorkflowExecutionsTotalsRow{}, nil)
+
+		_, err := repo.GetExecutionsTotals(ctx, filter)
+
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetTestWorkflowExecutionsTotalsByWorkflow")
+	})
+
+	t.Run("FallsBackWhenNoFilter", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:             mockDB,
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+
+		expectForceCustomPlanTx(mockDB, mockTx, mockQueries, ctx)
+		mockQueries.On("GetTestWorkflowExecutionsTotals", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsTotalsParams")).
+			Return([]sqlc.GetTestWorkflowExecutionsTotalsRow{}, nil)
+
+		_, err := repo.GetExecutionsTotals(ctx)
+
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetTestWorkflowExecutionsTotalsByWorkflow")
+	})
+}
+
+func TestPostgresRepository_GetExecutionsSummary_NameOnlyFastPath(t *testing.T) {
+	t.Run("RoutesToByWorkflowQuery", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		repo := &PostgresRepository{
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+		filter := testworkflow.NewExecutionsFilter().WithName("my-workflow")
+		// NewExecutionsFilter defaults to PageSize = PageDefaultLimit (100), Page = 0.
+		expectedParams := sqlc.GetTestWorkflowExecutionsSummaryByWorkflowParams{
+			OrganizationID: "org-1",
+			EnvironmentID:  "env-1",
+			WorkflowName:   pgtype.Text{String: "my-workflow", Valid: true},
+			Fst:            int32(filter.Page() * filter.PageSize()),
+			Lmt:            int32(filter.PageSize()),
+		}
+		rows := []sqlc.GetTestWorkflowExecutionsSummaryByWorkflowRow{
+			sqlc.GetTestWorkflowExecutionsSummaryByWorkflowRow(createTestRow()),
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionsSummaryByWorkflow", ctx, expectedParams).Return(rows, nil)
+
+		result, err := repo.GetExecutionsSummary(ctx, filter)
+
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetTestWorkflowExecutionsSummary")
+	})
+
+	t.Run("FallsBackWhenExtraFilterPresent", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:             mockDB,
+			queries:        mockQueries,
+			organizationID: "org-1",
+			environmentID:  "env-1",
+		}
+		ctx := context.Background()
+		filter := createTestFilter() // NameDefined = false → falls back
+
+		expectForceCustomPlanTx(mockDB, mockTx, mockQueries, ctx)
+		mockQueries.On("GetTestWorkflowExecutionsSummary", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsSummaryParams")).
+			Return([]sqlc.GetTestWorkflowExecutionsSummaryRow{}, nil)
+
+		_, err := repo.GetExecutionsSummary(ctx, filter)
+
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockQueries.AssertNotCalled(t, "GetTestWorkflowExecutionsSummaryByWorkflow")
+	})
+}
+
+func TestIsNameOnlyFilter(t *testing.T) {
+	t.Run("TrueForNameOnly", func(t *testing.T) {
+		f := testworkflow.NewExecutionsFilter().WithName("my-workflow")
+		assert.True(t, isNameOnlyFilter(f))
+	})
+
+	t.Run("FalseForNil", func(t *testing.T) {
+		assert.False(t, isNameOnlyFilter(nil))
+	})
+
+	t.Run("FalseWhenNameNotSet", func(t *testing.T) {
+		f := testworkflow.NewExecutionsFilter()
+		assert.False(t, isNameOnlyFilter(f))
+	})
+
+	t.Run("FalseWhenStatusAlsoSet", func(t *testing.T) {
+		f := testworkflow.NewExecutionsFilter().
+			WithName("my-workflow").
+			WithStatus(string(testkube.PASSED_TestWorkflowStatus))
+		assert.False(t, isNameOnlyFilter(f))
+	})
+
+	t.Run("FalseWhenTextSearchAlsoSet", func(t *testing.T) {
+		f := testworkflow.NewExecutionsFilter().
+			WithName("my-workflow").
+			WithTextSearch("foo")
+		assert.False(t, isNameOnlyFilter(f))
+	})
+
+	t.Run("FalseWhenSelectorAlsoSet", func(t *testing.T) {
+		f := testworkflow.NewExecutionsFilter().
+			WithName("my-workflow").
+			WithSelector("env=prod")
+		assert.False(t, isNameOnlyFilter(f))
 	})
 }
 

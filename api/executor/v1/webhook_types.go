@@ -221,8 +221,3 @@ type WebhookTemplateList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []WebhookTemplate `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Webhook{}, &WebhookList{})
-	SchemeBuilder.Register(&WebhookTemplate{}, &WebhookTemplateList{})
-}
