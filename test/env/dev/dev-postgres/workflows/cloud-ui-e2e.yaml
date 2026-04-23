@@ -1,3 +1,4 @@
+# Make sure to update workflows for both dev (postgres) and dev-mongo environment
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:

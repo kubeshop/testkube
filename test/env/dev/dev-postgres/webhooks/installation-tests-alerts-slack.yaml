@@ -1,0 +1,16 @@
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: slack-installation-alerts
+  namespace: testkube-agent  
+spec:
+  events:
+  - end-testworkflow-failed
+  - end-testworkflow-aborted
+  uri: https://hooks.slack.com/services/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
+  selector: core-tests=installation
+  payloadTemplate: |-
+    {
+    	"text": ":alert: Testkube Installation test \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: https://app.testkube.dev/organization/{{ index .Envs "TESTKUBE_PRO_ORG_ID" }}/environment/{{ index .Envs "TESTKUBE_PRO_ENV_ID" }}/dashboard/test-workflows/{{ .TestWorkflowExecution.Workflow.Name }}/executions/{{ .TestWorkflowExecution.Id }}"
+    }
+
