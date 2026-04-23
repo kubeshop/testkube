@@ -108,7 +108,8 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 
 	for _, item := range items {
 		service, index := spawn.GetServiceByResourceId(item.Resource.Id)
-		if conditions != nil {
+
+		if len(conditions) > 0 {
 			if _, ok := conditions[service]; !ok {
 				instructions.PrintOutput(ref, "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Done: true})
 				continue
