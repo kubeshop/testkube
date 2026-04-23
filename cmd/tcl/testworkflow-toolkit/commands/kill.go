@@ -149,7 +149,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 		return fmt.Errorf("unhealthy services detected: %s", strings.Join(healthErrors, "; "))
 	}
 
-	if conditions != nil && len(conditions) > 0 && machine != nil {
+	if len(conditions) > 0 && machine != nil {
 		services := make(map[string]int64)
 		ids := make([]string, 0)
 		for _, item := range items {
