@@ -118,7 +118,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.id = @name OR e.name = @name) AND w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
+WHERE (e.id = @name OR e.name = @name) AND e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
 
 -- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
 SELECT
@@ -179,7 +179,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
 ORDER BY
     CASE
         WHEN @sort_by_number::boolean = true AND @sort_by_status::boolean = false THEN e.number
@@ -190,7 +190,7 @@ ORDER BY
 LIMIT 1;
 
 -- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many
-SELECT DISTINCT ON (w.name)
+SELECT DISTINCT ON (e.workflow_name)
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
@@ -248,8 +248,8 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE w.name = ANY(@workflow_names::text[]) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-ORDER BY w.name, e.status_at DESC;
+WHERE e.workflow_name = ANY(@workflow_names::text[]) AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+ORDER BY e.workflow_name, e.status_at DESC;
 
 -- name: GetRunningTestWorkflowExecutions :many
 SELECT
@@ -372,15 +372,15 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
     AND (e.silent_mode IS NULL OR (e.silent_mode->>'health')::boolean IS NOT TRUE)
-    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
-    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
     AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
-    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -389,8 +389,8 @@ WHERE r.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
-         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+         (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
               SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
@@ -551,6 +551,16 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     )
 GROUP BY e.status;
 
+-- name: GetTestWorkflowExecutionsTotalsByWorkflow :many
+SELECT
+    e.status,
+    COUNT(*) as count
+FROM test_workflow_executions e
+WHERE e.organization_id = @organization_id
+  AND e.environment_id = @environment_id
+  AND e.workflow_name = @workflow_name
+GROUP BY e.status;
+
 -- name: GetTestWorkflowExecutions :many
 SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
@@ -611,13 +621,13 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
-    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
     AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
-    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -626,8 +636,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
-         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+         (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
           EXISTS (
               SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
@@ -831,21 +841,17 @@ SET tags = @tags
 WHERE (id = @execution_id OR name = @execution_id) AND (organization_id = @organization_id AND environment_id = @environment_id);
 
 -- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
-DELETE FROM test_workflow_executions e
-USING test_workflows w
-WHERE e.id = w.execution_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-  AND w.workflow_type = 'workflow'
-  AND w.name = @workflow_name::text;
+DELETE FROM test_workflow_executions
+WHERE (organization_id = @organization_id AND environment_id = @environment_id)
+  AND workflow_name = @workflow_name::text;
 
 -- name: DeleteAllTestWorkflowExecutions :exec
 DELETE FROM test_workflow_executions WHERE organization_id = @organization_id AND environment_id = @environment_id;
 
 -- name: DeleteTestWorkflowExecutionsByTestWorkflows :exec
-DELETE FROM test_workflow_executions e
-USING test_workflows w
-WHERE e.id = w.execution_id AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-  AND w.workflow_type = 'workflow'
-  AND w.name = ANY(@workflow_names::text[]);
+DELETE FROM test_workflow_executions
+WHERE (organization_id = @organization_id AND environment_id = @environment_id)
+  AND workflow_name = ANY(@workflow_names::text[]);
 
 -- name: GetTestWorkflowMetrics :many
 SELECT
@@ -859,8 +865,7 @@ SELECT
     e.runner_id
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
-LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
     AND (@last_n_days::integer = 0 OR e.scheduled_at >= NOW() - (@last_n_days::integer || ' days')::interval)
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0);
@@ -869,8 +874,7 @@ LIMIT NULLIF(@lmt, 0);
 SELECT r.status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
-LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-WHERE w.name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
     AND r.finished_at < @date
     AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
 ORDER BY r.finished_at DESC
@@ -1091,13 +1095,13 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
-    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
     AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
-    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -1106,8 +1110,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
-         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+         (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
     AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
@@ -1176,6 +1180,76 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
 ORDER BY e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
+-- name: GetTestWorkflowExecutionsSummaryByWorkflow :many
+-- Fast-path summary query used when the only filter is a single workflow name
+-- (with paging). Avoids the COALESCE($n,'')='' OR col=$n branches in
+-- GetTestWorkflowExecutionsSummary, which under pgx's prepared-statement
+-- generic plan cause a pathological seq-scan.
+-- Backed by idx_twe_env_workflow_scheduled (organization_id, environment_id, workflow_name, scheduled_at DESC).
+SELECT
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace,
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.sig_order
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    )::json as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.out_order
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    )::json as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.rep_order
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    )::json as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE e.organization_id = @organization_id
+  AND e.environment_id = @environment_id
+  AND e.workflow_name = @workflow_name
+ORDER BY e.scheduled_at DESC
+LIMIT NULLIF(@lmt, 0) OFFSET @fst;
+
 -- name: CountTestWorkflowExecutions :one
 SELECT COUNT(*)
 FROM test_workflow_executions e
@@ -1184,13 +1258,13 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
-    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
     AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
     AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
     AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
-    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
     AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
     AND (COALESCE(@assigned, NULL) IS NULL OR
          (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
@@ -1199,8 +1273,8 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
     AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
     AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
     AND (COALESCE(@initialized, NULL) IS NULL OR
-         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+         (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
     AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
          EXISTS (
              SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
