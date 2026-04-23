@@ -6,7 +6,7 @@ metadata:
 spec:
   events:
   - end-testworkflow-failed
-  uri: https://hooks.slack.com/services/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
+  uri: '{{credential("webhook-slack-prod-healthcheck-alerts-url")}}'
   selector: environment=prod
   payloadTemplate: |-
     {

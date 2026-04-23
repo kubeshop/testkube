@@ -7,7 +7,7 @@ spec:
   events:
   - end-testworkflow-failed
   - end-testworkflow-aborted
-  uri: https://hooks.slack.com/services/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
+  uri: '{{credential("webhook-slack-installation-alerts-url")}}'
   selector: core-tests=installation
   payloadTemplate: |-
     {
