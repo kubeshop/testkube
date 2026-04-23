@@ -1116,8 +1116,8 @@ func TestProcessShellExplicitFsGroup(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Pod: &testworkflowsv1.PodConfig{
-					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: common.Ptr(explicitFsGroup),
+					SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+						FSGroup: testworkflowsv1.Int64ToWorkflowIntOrString(common.Ptr(explicitFsGroup)),
 					},
 				},
 			},
