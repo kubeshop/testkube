@@ -62,6 +62,33 @@ func (t *TestTrigger) QuoteTextFields() {
 		return
 	}
 
+	// Quote resource ref text fields
+	if t.ResourceRef != nil {
+		if t.ResourceRef.Group != "" {
+			t.ResourceRef.Group = fmt.Sprintf("%q", t.ResourceRef.Group)
+		}
+		if t.ResourceRef.Version != "" {
+			t.ResourceRef.Version = fmt.Sprintf("%q", t.ResourceRef.Version)
+		}
+		if t.ResourceRef.Kind != "" {
+			t.ResourceRef.Kind = fmt.Sprintf("%q", t.ResourceRef.Kind)
+		}
+	}
+
+	// Quote match field conditions — path/operator/value are user-supplied strings
+	// that may collide with YAML scalars (true, null, numbers, ':' etc.) on round-trip.
+	for i := range t.Match {
+		if t.Match[i].Path != "" {
+			t.Match[i].Path = fmt.Sprintf("%q", t.Match[i].Path)
+		}
+		if t.Match[i].Operator != "" {
+			t.Match[i].Operator = TestTriggerFieldOperator(fmt.Sprintf("%q", string(t.Match[i].Operator)))
+		}
+		if t.Match[i].Value != "" {
+			t.Match[i].Value = fmt.Sprintf("%q", t.Match[i].Value)
+		}
+	}
+
 	// Quote selector text fields
 	if t.ResourceSelector != nil {
 		if t.ResourceSelector.Name != "" {

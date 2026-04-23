@@ -30,6 +30,16 @@ spec:
   {{- if .Resource }}
   resource: {{ .Resource }}
   {{- end }}
+  {{- if .ResourceRef }}
+  resourceRef:
+    {{- if .ResourceRef.Group }}
+    group: {{ .ResourceRef.Group }}
+    {{- end }}
+    {{- if .ResourceRef.Version }}
+    version: {{ .ResourceRef.Version }}
+    {{- end }}
+    kind: {{ .ResourceRef.Kind }}
+  {{- end }}
   {{- if and .ResourceSelector (or .ResourceSelector.Name .ResourceSelector.NameRegex .ResourceSelector.Namespace (and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions))) }}
   resourceSelector:
     {{- if .ResourceSelector.Name }}
@@ -61,6 +71,16 @@ spec:
   {{- end }}
   {{- if .Event }}
   event: {{ .Event }}
+  {{- end }}
+  {{- if ne (len .Match) 0 }}
+  match:
+    {{- range $m := .Match }}
+    - path: {{ $m.Path }}
+      operator: {{ $m.Operator }}
+      {{- if $m.Value }}
+      value: {{ $m.Value }}
+      {{- end }}
+    {{- end }}
   {{- end }}
   {{- if .ConditionSpec }}
   conditionSpec:
