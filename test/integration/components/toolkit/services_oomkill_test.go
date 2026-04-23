@@ -49,7 +49,7 @@ func TestServiceOOMKilledAfterReadiness_Integration(t *testing.T) {
 						"touch /tmp/ready && echo 'ready' && sleep 2 && python3 -c \"a = ' ' * 10**9\"",
 					),
 				},
-				Pod: &testworkflowsv1.PodConfig{},
+				Pod:           &testworkflowsv1.PodConfig{},
 				RestartPolicy: testworkflowsv1.ServiceRestartPolicyNever,
 				ReadinessProbe: &corev1.Probe{
 					PeriodSeconds:    1,
@@ -100,7 +100,7 @@ func TestServiceOOMKilledDetectedAtStop_Integration(t *testing.T) {
 						"touch /tmp/ready && echo 'ready' && sleep 2 && python3 -c \"a = ' ' * 10**9\"",
 					),
 				},
-				Pod: &testworkflowsv1.PodConfig{},
+				Pod:           &testworkflowsv1.PodConfig{},
 				RestartPolicy: testworkflowsv1.ServiceRestartPolicyNever,
 				ReadinessProbe: &corev1.Probe{
 					PeriodSeconds:    1,
