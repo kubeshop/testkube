@@ -1749,7 +1749,7 @@ func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testW
 // GetExecutionTags returns execution tags
 func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error) {
 	rows, err := r.queries.GetTestWorkflowExecutionTags(ctx, sqlc.GetTestWorkflowExecutionTagsParams{
-		WorkflowName:   testWorkflowName,
+		WorkflowName:   toPgText(testWorkflowName),
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})

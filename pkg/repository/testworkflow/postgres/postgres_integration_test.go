@@ -573,3 +573,82 @@ func TestPostgresDenormalizedExecutionColumns_Integration(t *testing.T) {
 		assert.Equal(t, int32(3), resultB.Results, "wf-b should have 3 total")
 	})
 }
+
+func TestPostgresGetExecutionTags_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_execution_tags")
+	defer cleanup()
+
+	ctx := context.Background()
+
+	orgID := "tags-org"
+	envID := "tags-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	insertExec := func(t *testing.T, id, org, env, workflow, tags string) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
+			VALUES ($1, $2, $3, $4, 'default', 1, NOW(), NOW(), NOW(), $5::jsonb)
+		`, id, org, env, id, tags)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', $2, 'default', NOW(), NOW())
+		`, id, workflow)
+		require.NoError(t, err)
+	}
+
+	insertExec(t, "tag-1", orgID, envID, "wf-alpha", `{"env": "prod", "team": "backend"}`)
+	insertExec(t, "tag-2", orgID, envID, "wf-alpha", `{"env": "staging", "team": "backend"}`)
+
+	insertExec(t, "tag-3", orgID, envID, "wf-beta", `{"env": "dev", "owner": "alice"}`)
+
+	insertExec(t, "tag-4", orgID, envID, "wf-alpha", `{}`)     // empty object
+	insertExec(t, "tag-5", orgID, envID, "wf-alpha", `null`)   // jsonb NULL
+	insertExec(t, "tag-6", orgID, envID, "wf-alpha", `"text"`) // not an object
+
+	insertExec(t, "tag-other-org", "other-org", envID, "wf-alpha", `{"env": "leaked"}`)
+	insertExec(t, "tag-other-env", orgID, "other-env", "wf-alpha", `{"env": "leaked"}`)
+
+	var nullCount int
+	require.NoError(t, testDB.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM test_workflow_executions
+		WHERE organization_id = $1 AND environment_id = $2 AND workflow_name IS NULL
+	`, orgID, envID).Scan(&nullCount))
+	require.Equal(t, 0, nullCount, "trigger must populate workflow_name for all executions")
+
+	t.Run("empty workflow_name returns union of all tags in org/env", func(t *testing.T) {
+		tags, err := repo.GetExecutionTags(ctx, "")
+		require.NoError(t, err)
+
+		// Values are deduplicated and sorted by the query.
+		assert.Equal(t, map[string][]string{
+			"env":   {"dev", "prod", "staging"},
+			"team":  {"backend"},
+			"owner": {"alice"},
+		}, tags)
+	})
+
+	t.Run("non-empty workflow_name returns only that workflow's tags", func(t *testing.T) {
+		tags, err := repo.GetExecutionTags(ctx, "wf-alpha")
+		require.NoError(t, err)
+
+		assert.Equal(t, map[string][]string{
+			"env":  {"prod", "staging"},
+			"team": {"backend"},
+		}, tags)
+	})
+
+	t.Run("workflow_name with no executions returns empty result", func(t *testing.T) {
+		tags, err := repo.GetExecutionTags(ctx, "wf-does-not-exist")
+		require.NoError(t, err)
+		assert.Empty(t, tags)
+	})
+}
