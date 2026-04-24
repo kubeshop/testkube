@@ -166,6 +166,7 @@ jobs:
           REGISTRY_GAR=${{ env.GAR_LOCATION }}-docker.pkg.dev
 
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login ${REGISTRY} --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts --force-update
 
           # testkube chart
           helm dependency build k8s/helm/testkube
