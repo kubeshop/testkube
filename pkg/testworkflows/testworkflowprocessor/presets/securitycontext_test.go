@@ -423,6 +423,8 @@ func TestSecurityContextPropagation_Capabilities(t *testing.T) {
 		require.NotNilf(t, c.SecurityContext.Capabilities, "container %s: Capabilities should not be nil", c.Name)
 		assert.Containsf(t, c.SecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"), "container %s: should have NET_ADMIN", c.Name)
 		assert.Containsf(t, c.SecurityContext.Capabilities.Drop, corev1.Capability("ALL"), "container %s: should drop ALL", c.Name)
+		assert.Lenf(t, c.SecurityContext.Capabilities.Drop, 1, "container %s: should have exactly one Drop entry", c.Name)
+		assert.Lenf(t, c.SecurityContext.Capabilities.Add, 1, "container %s: should have exactly one Add entry", c.Name)
 	}
 }
 
@@ -530,9 +532,15 @@ func TestSecurityContextPropagation_PureRunStepCapabilitiesDrop(t *testing.T) {
 		require.NotNilf(t, c.SecurityContext.Capabilities, "container %s: Capabilities should not be nil", c.Name)
 		assert.Containsf(t, c.SecurityContext.Capabilities.Drop, corev1.Capability("ALL"),
 			"container %s: should have capabilities.drop=[ALL]", c.Name)
+		assert.Lenf(t, c.SecurityContext.Capabilities.Drop, 1,
+			"container %s: should have exactly one Drop entry (no duplicates)", c.Name)
 		assert.Equalf(t, common.Ptr(true), c.SecurityContext.RunAsNonRoot,
 			"container %s: RunAsNonRoot", c.Name)
 		assert.Equalf(t, common.Ptr(false), c.SecurityContext.AllowPrivilegeEscalation,
 			"container %s: AllowPrivilegeEscalation", c.Name)
+		require.NotNilf(t, c.SecurityContext.SeccompProfile,
+			"container %s: SeccompProfile should not be nil", c.Name)
+		assert.Equalf(t, corev1.SeccompProfileTypeRuntimeDefault, c.SecurityContext.SeccompProfile.Type,
+			"container %s: SeccompProfile.Type", c.Name)
 	}
 }

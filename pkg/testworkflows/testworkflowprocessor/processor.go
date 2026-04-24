@@ -308,8 +308,12 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			podConfig.SecurityContext = &corev1.PodSecurityContext{}
 		}
 		if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil && images[image] != nil {
-			sc.RunAsGroup = common.Ptr(images[image].Group)
-			otherContainers[0].Container().SetSecurityContext(sc)
+			otherContainers[0].Container().ApplyCR(&testworkflowsv1.ContainerConfig{
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(images[image].Group),
+				},
+			})
+			sc = otherContainers[0].Container().SecurityContext()
 		}
 		if !disableFsGroupDefaulting && podConfig.SecurityContext.FSGroup == nil {
 			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
