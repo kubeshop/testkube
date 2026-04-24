@@ -10709,8 +10709,14 @@ components:
     SecurityContext:
       type: object
       properties:
+        capabilities:
+          $ref: "#/components/schemas/Capabilities"
         privileged:
           $ref: "#/components/schemas/BoxedBoolean"
+        seLinuxOptions:
+          $ref: "#/components/schemas/SELinuxOptions"
+        windowsOptions:
+          $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
           $ref: "#/components/schemas/BoxedInteger"
         runAsGroup:
@@ -10721,6 +10727,24 @@ components:
           $ref: "#/components/schemas/BoxedBoolean"
         allowPrivilegeEscalation:
           $ref: "#/components/schemas/BoxedBoolean"
+        procMount:
+          $ref: "#/components/schemas/BoxedString"
+        seccompProfile:
+          $ref: "#/components/schemas/SeccompProfile"
+        appArmorProfile:
+          $ref: "#/components/schemas/AppArmorProfile"
+
+    Capabilities:
+      type: object
+      properties:
+        add:
+          type: array
+          items:
+            type: string
+        drop:
+          type: array
+          items:
+            type: string
 
     PodSecurityContext:
       type: object
