@@ -227,7 +227,3 @@ type WorkflowTriggerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []WorkflowTrigger `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&WorkflowTrigger{}, &WorkflowTriggerList{})
-}

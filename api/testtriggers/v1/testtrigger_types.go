@@ -270,7 +270,3 @@ type TestTriggerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TestTrigger `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&TestTrigger{}, &TestTriggerList{})
-}
