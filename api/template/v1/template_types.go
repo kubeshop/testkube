@@ -73,7 +73,3 @@ type TemplateList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Template `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Template{}, &TemplateList{})
-}

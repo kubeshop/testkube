@@ -325,7 +325,3 @@ type TestList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Test `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Test{}, &TestList{})
-}

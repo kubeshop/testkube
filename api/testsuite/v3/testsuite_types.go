@@ -190,10 +190,6 @@ type TestSuiteList struct {
 	Items           []TestSuite `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&TestSuite{}, &TestSuiteList{})
-}
-
 type ArgsModeType commonv1.ArgsModeType
 
 // TestSuiteStepExecutionRequest contains parameters to be used by the executions.

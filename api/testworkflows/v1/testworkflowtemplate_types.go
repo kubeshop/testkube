@@ -62,7 +62,3 @@ type TestWorkflowTemplateList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TestWorkflowTemplate `json:"items" expr:"include"`
 }
-
-func init() {
-	SchemeBuilder.Register(&TestWorkflowTemplate{}, &TestWorkflowTemplateList{})
-}
