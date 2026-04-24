@@ -1423,7 +1423,7 @@ testkube-operator:
         # -- Migrate container job image name
         repository: rancher/kubectl
         # -- Migrate container job image tag
-        version: v1.35.4
+        version: v1.36.0
         # -- Migrate container job image pull policy
         pullPolicy: IfNotPresent
         # -- Migrate container job k8s secret for private registries
