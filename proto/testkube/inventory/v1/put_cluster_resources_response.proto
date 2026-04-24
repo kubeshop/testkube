@@ -1,0 +1,7 @@
+edition = "2023";
+
+package testkube.inventory.v1;
+
+// PutClusterResourcesResponse acknowledges the agent's snapshot. Empty on
+// success; errors are surfaced via gRPC status codes.
+message PutClusterResourcesResponse {}
