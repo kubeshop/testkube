@@ -472,3 +472,67 @@ func TestSecurityContextPropagation_PodSecurityContextCombined(t *testing.T) {
 		assert.Equalf(t, common.Ptr(false), c.SecurityContext.AllowPrivilegeEscalation, "container %s: AllowPrivilegeEscalation", c.Name)
 	}
 }
+
+// TestSecurityContextPropagation_PureRunStepCapabilitiesDrop verifies that for a workflow
+// with spec.container.securityContext including capabilities.drop=["ALL"],
+// all containers (init and main) have this setting propagated — including
+// steps with pure: true and run.shell.
+func TestSecurityContextPropagation_PureRunStepCapabilitiesDrop(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: &testworkflowsv1.Content{
+					Git: &testworkflowsv1.ContentGit{
+						Uri:      "https://github.com/example/example",
+						Revision: "main",
+						Paths:    []string{"tests/"},
+					},
+				},
+				Container: &testworkflowsv1.ContainerConfig{
+					Image:      "microsoft/playwright:v1.44.0-jammy",
+					WorkingDir: common.Ptr("/data/repo"),
+					SecurityContext: &corev1.SecurityContext{
+						RunAsNonRoot:             common.Ptr(true),
+						AllowPrivilegeEscalation: common.Ptr(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepMeta: testworkflowsv1.StepMeta{
+						Name: "Install dependencies",
+						Pure: common.Ptr(true),
+					},
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							Shell: common.Ptr("npm ci"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+	require.NoError(t, err)
+
+	spec := res.Job.Spec.Template.Spec
+	allContainers := append(spec.InitContainers, spec.Containers...)
+
+	for _, c := range allContainers {
+		require.NotNilf(t, c.SecurityContext, "container %s: SecurityContext should not be nil", c.Name)
+		require.NotNilf(t, c.SecurityContext.Capabilities, "container %s: Capabilities should not be nil", c.Name)
+		assert.Containsf(t, c.SecurityContext.Capabilities.Drop, corev1.Capability("ALL"),
+			"container %s: should have capabilities.drop=[ALL]", c.Name)
+		assert.Equalf(t, common.Ptr(true), c.SecurityContext.RunAsNonRoot,
+			"container %s: RunAsNonRoot", c.Name)
+		assert.Equalf(t, common.Ptr(false), c.SecurityContext.AllowPrivilegeEscalation,
+			"container %s: AllowPrivilegeEscalation", c.Name)
+	}
+}
