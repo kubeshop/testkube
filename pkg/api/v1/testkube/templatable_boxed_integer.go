@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -102,4 +103,62 @@ func (b *TemplatableBoxedInteger) UnmarshalYAML(node *yaml.Node) error {
 	}
 	*b = TemplatableBoxedInteger(decoded)
 	return nil
+}
+
+func (b *TemplatableBoxedInteger) UnmarshalBSON(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	var payload templatableBoxedIntegerPayload
+	if err := bson.Unmarshal(data, &payload); err != nil {
+		return err
+	}
+
+	value, err := stringifyTemplatableBoxedInteger(payload.Value)
+	if err != nil {
+		return err
+	}
+
+	b.Value = value
+	return nil
+}
+
+func (b *TemplatableBoxedInteger) UnmarshalBSONValue(typ byte, data []byte) error {
+	raw := bson.RawValue{Type: bson.Type(typ), Value: data}
+
+	switch raw.Type {
+	case bson.TypeNull:
+		return nil
+	case bson.TypeEmbeddedDocument:
+		return b.UnmarshalBSON(data)
+	case bson.TypeString:
+		b.Value = raw.StringValue()
+		return nil
+	case bson.TypeInt32:
+		b.Value = strconv.FormatInt(int64(raw.Int32()), 10)
+		return nil
+	case bson.TypeInt64:
+		b.Value = strconv.FormatInt(raw.Int64(), 10)
+		return nil
+	case bson.TypeDouble:
+		value := raw.Double()
+		if float64(int64(value)) != value {
+			return fmt.Errorf("templatable boxed integer value must be a whole number")
+		}
+		b.Value = strconv.FormatInt(int64(value), 10)
+		return nil
+	default:
+		var value interface{}
+		if err := raw.Unmarshal(&value); err != nil {
+			return err
+		}
+
+		stringValue, err := stringifyTemplatableBoxedInteger(value)
+		if err != nil {
+			return err
+		}
+		b.Value = stringValue
+		return nil
+	}
 }

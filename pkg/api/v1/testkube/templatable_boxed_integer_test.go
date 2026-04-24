@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestTemplatableBoxedInteger_UnmarshalJSON(t *testing.T) {
@@ -35,5 +36,45 @@ func TestTemplatableBoxedInteger_UnmarshalJSON(t *testing.T) {
 		err := json.Unmarshal([]byte(`{"value":"{{ config.runAsUser }}"}`), &value)
 		require.NoError(t, err)
 		assert.Equal(t, "{{ config.runAsUser }}", value.Value)
+	})
+}
+
+func TestTemplatableBoxedInteger_UnmarshalBSON(t *testing.T) {
+	type oldBoxedInteger struct {
+		Value int32 `bson:"value"`
+	}
+
+	type oldSecurityContext struct {
+		RunAsUser *oldBoxedInteger `bson:"runAsUser"`
+	}
+
+	type newSecurityContext struct {
+		RunAsUser *TemplatableBoxedInteger `bson:"runAsUser"`
+	}
+
+	t.Run("legacy embedded document with integer value", func(t *testing.T) {
+		raw, err := bson.Marshal(oldSecurityContext{
+			RunAsUser: &oldBoxedInteger{Value: 65532},
+		})
+		require.NoError(t, err)
+
+		var decoded newSecurityContext
+		err = bson.Unmarshal(raw, &decoded)
+		require.NoError(t, err)
+		require.NotNil(t, decoded.RunAsUser)
+		assert.Equal(t, "65532", decoded.RunAsUser.Value)
+	})
+
+	t.Run("new embedded document with string value", func(t *testing.T) {
+		raw, err := bson.Marshal(newSecurityContext{
+			RunAsUser: &TemplatableBoxedInteger{Value: "{{ config.runAsUser }}"},
+		})
+		require.NoError(t, err)
+
+		var decoded newSecurityContext
+		err = bson.Unmarshal(raw, &decoded)
+		require.NoError(t, err)
+		require.NotNil(t, decoded.RunAsUser)
+		assert.Equal(t, "{{ config.runAsUser }}", decoded.RunAsUser.Value)
 	})
 }
