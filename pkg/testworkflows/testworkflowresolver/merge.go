@@ -291,6 +291,9 @@ func MergeSecurityContext(dst, include *corev1.SecurityContext) *corev1.Security
 	if include.SeccompProfile != nil {
 		dst.SeccompProfile = include.SeccompProfile
 	}
+	if include.AppArmorProfile != nil {
+		dst.AppArmorProfile = include.AppArmorProfile
+	}
 	return dst
 }
 
