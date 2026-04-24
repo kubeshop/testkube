@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
 	"github.com/kubeshop/testkube/pkg/utils/test"
@@ -733,4 +734,63 @@ func TestPostgresGetLatestByTestWorkflow_Integration(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, got)
 	})
+}
+
+func TestPostgresGetLatestTestWorkflowExecutionByTestWorkflow_AmbiguousFlags_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_latest_ambiguous")
+	defer cleanup()
+
+	ctx := context.Background()
+	orgID := "ambig-org"
+	envID := "ambig-env"
+
+	// Three executions where each sort key picks a different row.
+	insert := func(id, scheduledAt, statusAt string, number int32) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, status_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $1, 'default', $4, $5::timestamptz, $6::timestamptz, NOW(), NOW())
+		`, id, orgID, envID, number, scheduledAt, statusAt)
+		require.NoError(t, err)
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, 'passed', NOW(), NOW())
+		`, id)
+		require.NoError(t, err)
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', 'wf-target', 'default', NOW(), NOW())
+		`, id)
+		require.NoError(t, err)
+	}
+	insert("ambig-sched", "2026-04-24T12:00:00Z", "2026-04-22T00:00:00Z", 1)
+	insert("ambig-status", "2026-04-22T12:00:00Z", "2026-04-24T00:00:00Z", 2)
+	insert("ambig-number", "2026-04-20T12:00:00Z", "2026-04-20T00:00:00Z", 99)
+
+	queries := sqlc.New(testDB.Pool)
+
+	// (true, true) must fall back to scheduled_at, matching the original
+	// CASE...ELSE behavior.
+	row, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		OrganizationID: orgID,
+		EnvironmentID:  envID,
+		WorkflowName:   "wf-target",
+		SortByNumber:   true,
+		SortByStatus:   true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "ambig-sched", row.ID, "(sort_by_number=true, sort_by_status=true) must fall back to scheduled_at")
+
+	// (false, false) is the documented default and must also pick scheduled_at.
+	row, err = queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		OrganizationID: orgID,
+		EnvironmentID:  envID,
+		WorkflowName:   "wf-target",
+		SortByNumber:   false,
+		SortByStatus:   false,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "ambig-sched", row.ID, "(false, false) must use scheduled_at")
 }

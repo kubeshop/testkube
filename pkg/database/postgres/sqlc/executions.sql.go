@@ -797,8 +797,7 @@ WITH latest AS (
      WHERE e.organization_id = $1
        AND e.environment_id  = $2
        AND e.workflow_name   = $3::text
-       AND NOT $4::boolean
-       AND NOT $5::boolean
+       AND $4::boolean = $5::boolean
      ORDER BY e.organization_id, e.environment_id, e.workflow_name, e.scheduled_at DESC
      LIMIT 1)
     UNION ALL

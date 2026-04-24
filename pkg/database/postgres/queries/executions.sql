@@ -127,8 +127,7 @@ WITH latest AS (
      WHERE e.organization_id = @organization_id
        AND e.environment_id  = @environment_id
        AND e.workflow_name   = @workflow_name::text
-       AND NOT @sort_by_number::boolean
-       AND NOT @sort_by_status::boolean
+       AND @sort_by_number::boolean = @sort_by_status::boolean
      ORDER BY e.organization_id, e.environment_id, e.workflow_name, e.scheduled_at DESC
      LIMIT 1)
     UNION ALL
