@@ -32,7 +32,7 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    image: mcr.microsoft.com/playwright:v1.59.1-noble
     env:
     - name: CLOUD_BASE_URL
       value: '{{ config.CLOUD_BASE_URL }}'
@@ -89,7 +89,7 @@ spec:
     SHARDS: {type: integer, default: 10}
   container:
     workingDir: /data/repo/js/packages/e2e-tests
-    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    image: mcr.microsoft.com/playwright:v1.59.1-noble
     resources:
       requests:
         cpu: 256m
