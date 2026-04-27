@@ -2,7 +2,6 @@ apiVersion: executor.testkube.io/v1
 kind: Webhook
 metadata:
   name: slack-cloud-ui-e2e-alerts
-  namespace: testkube-agent
 spec:
   disabled: true # TODO: enable after TKC-5503 tests are fixed
   events:
