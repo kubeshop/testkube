@@ -120,13 +120,6 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 }
 
 func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, client apiclientv1.Client, execution testkube.TestWorkflowExecution, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
-	uris := common.NewMasterUris("", "", "", "", "", false)
-	if sharesAPIURL == "" {
-		sharesAPIURL = uris.Api
-	}
-	if viewerBaseURL == "" {
-		viewerBaseURL = uris.View
-	}
 
 	installationID := telemetry.GetMachineID()
 
