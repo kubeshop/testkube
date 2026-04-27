@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -286,7 +287,30 @@ func (s *Service) RegisterLeaderTask(task leader.Task) {
 	s.coordinator.Register(task)
 }
 
+// triggerTargetsThisAgent returns false when the trigger's listenerAgentIds
+// is non-empty and does not include this agent's own ID — i.e. another
+// listener is the intended target. Returns true when the slice is empty
+// (legacy broadcast: every listener fires) or when we cannot determine our
+// own ID (OSS / standalone mode with no proContext) so we fall back to
+// pre-pinning behavior rather than silently dropping triggers.
+func (s *Service) triggerTargetsThisAgent(listenerAgentIds []string) bool {
+	if len(listenerAgentIds) == 0 {
+		return true
+	}
+	if s.proContext == nil || s.proContext.Agent.ID == "" {
+		return true
+	}
+	return slices.Contains(listenerAgentIds, s.proContext.Agent.ID)
+}
+
 func (s *Service) addTrigger(ctx context.Context, t *testtriggersv1.TestTrigger) {
+	if !s.triggerTargetsThisAgent(t.Spec.ListenerAgentIds) {
+		s.logger.Debugf(
+			"trigger service: skipping testtrigger %s/%s — listenerAgentIds pins it to other agent(s)",
+			t.Namespace, t.Name,
+		)
+		return
+	}
 	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
@@ -303,30 +327,49 @@ func (s *Service) updateTrigger(ctx context.Context, target *testtriggersv1.Test
 	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
 	s.triggerStatusMu.Lock()
 	defer s.triggerStatusMu.Unlock()
-	if s.triggerStatus[key] != nil {
-		old := s.triggerStatus[key].trigger
-		newInternal := convertV1ToInternal(target)
 
-		// Only restart dynamic informer if the GVR actually changed
-		gvrChanged := old != nil && (old.ResourceGroup != newInternal.ResourceGroup ||
-			old.ResourceVersion != newInternal.ResourceVersion ||
-			old.ResourceKind != newInternal.ResourceKind)
-
-		if gvrChanged && old.ResourceKind != "" {
-			s.releaseDynamicInformerForTrigger(&testtriggersv1.TestTrigger{
-				Spec: testtriggersv1.TestTriggerSpec{ResourceRef: &testtriggersv1.TestTriggerResourceRef{
-					Group: old.ResourceGroup, Version: old.ResourceVersion, Kind: old.ResourceKind,
-				}},
-			}, key)
+	// Handle listenerAgentIds toggling on/off this agent across updates.
+	// If the trigger no longer targets us, drop it (releasing the informer
+	// only when we previously held one). If it newly targets us, register
+	// fresh. Otherwise fall through to the normal in-place update path.
+	registered := s.triggerStatus[key] != nil
+	targetsUs := s.triggerTargetsThisAgent(target.Spec.ListenerAgentIds)
+	if !targetsUs {
+		if registered {
+			s.releaseDynamicInformerForTrigger(target, key)
+			delete(s.triggerStatus, key)
+			s.logger.Debugf(
+				"trigger service: dropping testtrigger %s/%s — listenerAgentIds no longer includes this agent",
+				target.Namespace, target.Name,
+			)
 		}
-
-		s.triggerStatus[key].trigger = newInternal
-
-		if gvrChanged {
-			s.ensureDynamicInformerForTrigger(ctx, target, key)
-		}
-	} else {
+		return
+	}
+	if !registered {
 		s.triggerStatus[key] = newTriggerStatusFromV1(target)
+		s.ensureDynamicInformerForTrigger(ctx, target, key)
+		return
+	}
+
+	old := s.triggerStatus[key].trigger
+	newInternal := convertV1ToInternal(target)
+
+	// Only restart dynamic informer if the GVR actually changed
+	gvrChanged := old != nil && (old.ResourceGroup != newInternal.ResourceGroup ||
+		old.ResourceVersion != newInternal.ResourceVersion ||
+		old.ResourceKind != newInternal.ResourceKind)
+
+	if gvrChanged && old.ResourceKind != "" {
+		s.releaseDynamicInformerForTrigger(&testtriggersv1.TestTrigger{
+			Spec: testtriggersv1.TestTriggerSpec{ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+				Group: old.ResourceGroup, Version: old.ResourceVersion, Kind: old.ResourceKind,
+			}},
+		}, key)
+	}
+
+	s.triggerStatus[key].trigger = newInternal
+
+	if gvrChanged {
 		s.ensureDynamicInformerForTrigger(ctx, target, key)
 	}
 }
