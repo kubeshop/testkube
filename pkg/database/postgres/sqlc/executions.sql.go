@@ -791,6 +791,36 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 }
 
 const getLatestTestWorkflowExecutionByTestWorkflow = `-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
+WITH latest AS (
+    (SELECT e.id
+     FROM test_workflow_executions e
+     WHERE e.organization_id = $1
+       AND e.environment_id  = $2
+       AND e.workflow_name   = $3::text
+       AND $4::boolean = $5::boolean
+     ORDER BY e.organization_id, e.environment_id, e.workflow_name, e.scheduled_at DESC
+     LIMIT 1)
+    UNION ALL
+    (SELECT e.id
+     FROM test_workflow_executions e
+     WHERE e.organization_id = $1
+       AND e.environment_id  = $2
+       AND e.workflow_name   = $3::text
+       AND $4::boolean
+       AND NOT $5::boolean
+     ORDER BY e.number DESC
+     LIMIT 1)
+    UNION ALL
+    (SELECT e.id
+     FROM test_workflow_executions e
+     WHERE e.organization_id = $1
+       AND e.environment_id  = $2
+       AND e.workflow_name   = $3::text
+       AND $5::boolean
+       AND NOT $4::boolean
+     ORDER BY e.status_at DESC
+     LIMIT 1)
+)
 SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
@@ -849,21 +879,13 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE e.workflow_name = $1::text AND (e.organization_id = $2 AND e.environment_id = $3)
-ORDER BY
-    CASE
-        WHEN $4::boolean = true AND $5::boolean = false THEN e.number
-        WHEN $5::boolean = true AND $4::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
-    ELSE
-        EXTRACT(EPOCH FROM e.scheduled_at)::integer
-    END DESC
-LIMIT 1
+WHERE e.id = (SELECT id FROM latest LIMIT 1)
 `
 
 type GetLatestTestWorkflowExecutionByTestWorkflowParams struct {
-	WorkflowName   string `db:"workflow_name" json:"workflow_name"`
 	OrganizationID string `db:"organization_id" json:"organization_id"`
 	EnvironmentID  string `db:"environment_id" json:"environment_id"`
+	WorkflowName   string `db:"workflow_name" json:"workflow_name"`
 	SortByNumber   bool   `db:"sort_by_number" json:"sort_by_number"`
 	SortByStatus   bool   `db:"sort_by_status" json:"sort_by_status"`
 }
@@ -931,9 +953,9 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 
 func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, arg GetLatestTestWorkflowExecutionByTestWorkflowParams) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
 	row := q.db.QueryRow(ctx, getLatestTestWorkflowExecutionByTestWorkflow,
-		arg.WorkflowName,
 		arg.OrganizationID,
 		arg.EnvironmentID,
+		arg.WorkflowName,
 		arg.SortByNumber,
 		arg.SortByStatus,
 	)

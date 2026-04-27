@@ -121,6 +121,36 @@ LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.id = @name OR e.name = @name) AND e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id);
 
 -- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
+WITH latest AS (
+    (SELECT e.id
+     FROM test_workflow_executions e
+     WHERE e.organization_id = @organization_id
+       AND e.environment_id  = @environment_id
+       AND e.workflow_name   = @workflow_name::text
+       AND @sort_by_number::boolean = @sort_by_status::boolean
+     ORDER BY e.organization_id, e.environment_id, e.workflow_name, e.scheduled_at DESC
+     LIMIT 1)
+    UNION ALL
+    (SELECT e.id
+     FROM test_workflow_executions e
+     WHERE e.organization_id = @organization_id
+       AND e.environment_id  = @environment_id
+       AND e.workflow_name   = @workflow_name::text
+       AND @sort_by_number::boolean
+       AND NOT @sort_by_status::boolean
+     ORDER BY e.number DESC
+     LIMIT 1)
+    UNION ALL
+    (SELECT e.id
+     FROM test_workflow_executions e
+     WHERE e.organization_id = @organization_id
+       AND e.environment_id  = @environment_id
+       AND e.workflow_name   = @workflow_name::text
+       AND @sort_by_status::boolean
+       AND NOT @sort_by_number::boolean
+     ORDER BY e.status_at DESC
+     LIMIT 1)
+)
 SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.runtime, e.silent_mode, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
@@ -179,15 +209,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE e.workflow_name = @workflow_name::text AND (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-ORDER BY
-    CASE
-        WHEN @sort_by_number::boolean = true AND @sort_by_status::boolean = false THEN e.number
-        WHEN @sort_by_status::boolean = true AND @sort_by_number::boolean = false THEN EXTRACT(EPOCH FROM e.status_at)::integer
-    ELSE
-        EXTRACT(EPOCH FROM e.scheduled_at)::integer
-    END DESC
-LIMIT 1;
+WHERE e.id = (SELECT id FROM latest LIMIT 1);
 
 -- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many
 SELECT DISTINCT ON (e.workflow_name)

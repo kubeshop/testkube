@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
 	"github.com/kubeshop/testkube/pkg/utils/test"
@@ -651,4 +652,145 @@ func TestPostgresGetExecutionTags_Integration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, tags)
 	})
+}
+
+func TestPostgresGetLatestByTestWorkflow_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_latest_by_workflow")
+	defer cleanup()
+
+	ctx := context.Background()
+
+	orgID := "latest-org"
+	envID := "latest-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	type spec struct {
+		id          string
+		org, env    string
+		workflow    string
+		number      int32
+		scheduledAt string // ISO timestamp literal
+		statusAt    string
+		status      string
+	}
+	insertExec := func(t *testing.T, s spec) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, status_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $1, 'default', $4, $5::timestamptz, $6::timestamptz, NOW(), NOW())
+		`, s.id, s.org, s.env, s.number, s.scheduledAt, s.statusAt)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, $2, NOW(), NOW())
+		`, s.id, s.status)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', $2, 'default', NOW(), NOW())
+		`, s.id, s.workflow)
+		require.NoError(t, err)
+	}
+
+	insertExec(t, spec{id: "lat-sched-newest", org: orgID, env: envID, workflow: "wf-target", number: 1, scheduledAt: "2026-04-24T12:00:00Z", statusAt: "2026-04-22T00:00:00Z", status: "passed"})
+	insertExec(t, spec{id: "lat-status-newest", org: orgID, env: envID, workflow: "wf-target", number: 2, scheduledAt: "2026-04-22T12:00:00Z", statusAt: "2026-04-24T00:00:00Z", status: "failed"})
+	insertExec(t, spec{id: "lat-number-highest", org: orgID, env: envID, workflow: "wf-target", number: 99, scheduledAt: "2026-04-20T12:00:00Z", statusAt: "2026-04-20T00:00:00Z", status: "passed"})
+
+	insertExec(t, spec{id: "noise-other-workflow", org: orgID, env: envID, workflow: "wf-other", number: 1000, scheduledAt: "2026-04-25T00:00:00Z", statusAt: "2026-04-25T00:00:00Z", status: "passed"})
+	insertExec(t, spec{id: "noise-other-org", org: "other-org", env: envID, workflow: "wf-target", number: 1000, scheduledAt: "2026-04-25T00:00:00Z", statusAt: "2026-04-25T00:00:00Z", status: "passed"})
+	insertExec(t, spec{id: "noise-other-env", org: orgID, env: "other-env", workflow: "wf-target", number: 1000, scheduledAt: "2026-04-25T00:00:00Z", statusAt: "2026-04-25T00:00:00Z", status: "passed"})
+
+	t.Run("LatestSortByScheduledAt picks newest scheduled_at", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-target", testworkflow.LatestSortByScheduledAt)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "lat-sched-newest", got.Id)
+	})
+
+	t.Run("LatestSortByStatusAt picks newest status_at", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-target", testworkflow.LatestSortByStatusAt)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "lat-status-newest", got.Id)
+	})
+
+	t.Run("LatestSortByNumber picks highest number", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-target", testworkflow.LatestSortByNumber)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "lat-number-highest", got.Id)
+	})
+
+	t.Run("unknown workflow returns no rows", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-does-not-exist", testworkflow.LatestSortByScheduledAt)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+}
+
+func TestPostgresGetLatestTestWorkflowExecutionByTestWorkflow_AmbiguousFlags_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_latest_ambiguous")
+	defer cleanup()
+
+	ctx := context.Background()
+	orgID := "ambig-org"
+	envID := "ambig-env"
+
+	// Three executions where each sort key picks a different row.
+	insert := func(id, scheduledAt, statusAt string, number int32) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, status_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $1, 'default', $4, $5::timestamptz, $6::timestamptz, NOW(), NOW())
+		`, id, orgID, envID, number, scheduledAt, statusAt)
+		require.NoError(t, err)
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, 'passed', NOW(), NOW())
+		`, id)
+		require.NoError(t, err)
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', 'wf-target', 'default', NOW(), NOW())
+		`, id)
+		require.NoError(t, err)
+	}
+	insert("ambig-sched", "2026-04-24T12:00:00Z", "2026-04-22T00:00:00Z", 1)
+	insert("ambig-status", "2026-04-22T12:00:00Z", "2026-04-24T00:00:00Z", 2)
+	insert("ambig-number", "2026-04-20T12:00:00Z", "2026-04-20T00:00:00Z", 99)
+
+	queries := sqlc.New(testDB.Pool)
+
+	// (true, true) must fall back to scheduled_at, matching the original
+	// CASE...ELSE behavior.
+	row, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		OrganizationID: orgID,
+		EnvironmentID:  envID,
+		WorkflowName:   "wf-target",
+		SortByNumber:   true,
+		SortByStatus:   true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "ambig-sched", row.ID, "(sort_by_number=true, sort_by_status=true) must fall back to scheduled_at")
+
+	// (false, false) is the documented default and must also pick scheduled_at.
+	row, err = queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		OrganizationID: orgID,
+		EnvironmentID:  envID,
+		WorkflowName:   "wf-target",
+		SortByNumber:   false,
+		SortByStatus:   false,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "ambig-sched", row.ID, "(false, false) must use scheduled_at")
 }
