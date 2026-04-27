@@ -396,12 +396,18 @@ func MapSecurityContextKubeToAPI(v *corev1.SecurityContext) *testkube.SecurityCo
 		return nil
 	}
 	return &testkube.SecurityContext{
+		Capabilities:             MapCapabilitiesKubeToAPI(v.Capabilities),
 		Privileged:               MapBoolToBoxedBoolean(v.Privileged),
+		SeLinuxOptions:           common.MapPtr(v.SELinuxOptions, MapSELinuxOptionsKubeToAPI),
+		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsKubeToAPI),
 		RunAsUser:                MapInt64ToBoxedInteger(v.RunAsUser),
 		RunAsGroup:               MapInt64ToBoxedInteger(v.RunAsGroup),
 		RunAsNonRoot:             MapBoolToBoxedBoolean(v.RunAsNonRoot),
 		ReadOnlyRootFilesystem:   MapBoolToBoxedBoolean(v.ReadOnlyRootFilesystem),
 		AllowPrivilegeEscalation: MapBoolToBoxedBoolean(v.AllowPrivilegeEscalation),
+		ProcMount:                MapStringToBoxedString((*string)(v.ProcMount)),
+		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileKubeToAPI),
+		AppArmorProfile:          common.MapPtr(v.AppArmorProfile, MapAppArmorProfileKubeToAPI),
 	}
 }
 
@@ -661,6 +667,16 @@ func MapAppArmorProfileKubeToAPI(v corev1.AppArmorProfile) testkube.AppArmorProf
 	return testkube.AppArmorProfile{
 		Type_:            string(v.Type),
 		LocalhostProfile: MapStringToBoxedString(v.LocalhostProfile),
+	}
+}
+
+func MapCapabilitiesKubeToAPI(v *corev1.Capabilities) *testkube.Capabilities {
+	if v == nil {
+		return nil
+	}
+	return &testkube.Capabilities{
+		Add:  common.MapSlice(v.Add, common.MapEnumToString[corev1.Capability]),
+		Drop: common.MapSlice(v.Drop, common.MapEnumToString[corev1.Capability]),
 	}
 }
 

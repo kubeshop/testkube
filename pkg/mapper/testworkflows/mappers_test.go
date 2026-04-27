@@ -68,11 +68,18 @@ var (
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add:  []corev1.Capability{"NET_ADMIN"},
+				Drop: []corev1.Capability{"ALL"},
+			},
 			RunAsUser:                common.Ptr(int64(334)),
 			RunAsGroup:               common.Ptr(int64(11)),
 			RunAsNonRoot:             common.Ptr(true),
 			ReadOnlyRootFilesystem:   common.Ptr(false),
 			AllowPrivilegeEscalation: nil,
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: corev1.SeccompProfileTypeRuntimeDefault,
+			},
 		},
 	}
 	content = testworkflowsv1.Content{
@@ -425,4 +432,62 @@ func TestMapEmptyTestWorkflowTemplateBackAndForth(t *testing.T) {
 	}
 	got := MapTestWorkflowTemplateAPIToKube(MapTestWorkflowTemplateKubeToAPI(*want.DeepCopy()))
 	assert.Equal(t, want, got)
+}
+
+func TestMapSecurityContextRoundTrip(t *testing.T) {
+	// Full SecurityContext with all fields including Capabilities, SeccompProfile, etc.
+	sc := &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Add:  []corev1.Capability{"NET_ADMIN", "SYS_PTRACE"},
+			Drop: []corev1.Capability{"ALL"},
+		},
+		Privileged:               common.Ptr(false),
+		SELinuxOptions:           &corev1.SELinuxOptions{User: "system_u", Role: "system_r", Type: "spc_t", Level: "s0"},
+		RunAsUser:                common.Ptr(int64(1000)),
+		RunAsGroup:               common.Ptr(int64(3000)),
+		RunAsNonRoot:             common.Ptr(true),
+		ReadOnlyRootFilesystem:   common.Ptr(true),
+		AllowPrivilegeEscalation: common.Ptr(false),
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+
+	api := MapSecurityContextKubeToAPI(sc)
+	result := MapSecurityContextAPIToKube(api)
+
+	assert.Equal(t, sc, result)
+}
+
+func TestMapSecurityContextCapabilitiesOnly(t *testing.T) {
+	sc := &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+
+	api := MapSecurityContextKubeToAPI(sc)
+	result := MapSecurityContextAPIToKube(api)
+
+	assert.NotNil(t, result.Capabilities)
+	assert.Equal(t, []corev1.Capability{"ALL"}, result.Capabilities.Drop)
+}
+
+func TestMapSecurityContextSeccompOnly(t *testing.T) {
+	sc := &corev1.SecurityContext{
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+
+	api := MapSecurityContextKubeToAPI(sc)
+	result := MapSecurityContextAPIToKube(api)
+
+	assert.NotNil(t, result.SeccompProfile)
+	assert.Equal(t, corev1.SeccompProfileTypeRuntimeDefault, result.SeccompProfile.Type)
+}
+
+func TestMapSecurityContextNil(t *testing.T) {
+	assert.Nil(t, MapSecurityContextKubeToAPI(nil))
+	assert.Nil(t, MapSecurityContextAPIToKube(nil))
 }
