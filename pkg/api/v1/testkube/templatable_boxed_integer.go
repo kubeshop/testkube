@@ -72,6 +72,19 @@ func (b *TemplatableBoxedInteger) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (b TemplatableBoxedInteger) MarshalJSON() ([]byte, error) {
+	if value, err := strconv.ParseInt(b.Value, 10, 64); err == nil {
+		return []byte(`{"value":` + strconv.FormatInt(value, 10) + `}`), nil
+	}
+
+	valueJSON, err := json.Marshal(b.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return append([]byte(`{"value":`), append(valueJSON, '}')...), nil
+}
+
 func (b *TemplatableBoxedInteger) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind == yaml.ScalarNode {
 		var value interface{}

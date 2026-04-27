@@ -39,6 +39,35 @@ func TestTemplatableBoxedInteger_UnmarshalJSON(t *testing.T) {
 	})
 }
 
+func TestTemplatableBoxedInteger_MarshalJSON(t *testing.T) {
+	t.Run("integer value remains numeric", func(t *testing.T) {
+		value := TemplatableBoxedInteger{Value: "65532"}
+
+		raw, err := json.Marshal(value)
+
+		require.NoError(t, err)
+		assert.Equal(t, `{"value":65532}`, string(raw))
+	})
+
+	t.Run("large integer value remains numeric", func(t *testing.T) {
+		value := TemplatableBoxedInteger{Value: "9223372036854775807"}
+
+		raw, err := json.Marshal(value)
+
+		require.NoError(t, err)
+		assert.Equal(t, `{"value":9223372036854775807}`, string(raw))
+	})
+
+	t.Run("template value remains string", func(t *testing.T) {
+		value := TemplatableBoxedInteger{Value: "{{ config.runAsUser }}"}
+
+		raw, err := json.Marshal(value)
+
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"value":"{{ config.runAsUser }}"}`, string(raw))
+	})
+}
+
 func TestTemplatableBoxedInteger_UnmarshalBSON(t *testing.T) {
 	type oldBoxedInteger struct {
 		Value int32 `bson:"value"`
