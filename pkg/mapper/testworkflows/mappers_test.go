@@ -453,10 +453,11 @@ func TestMapSecurityContextRoundTrip(t *testing.T) {
 		},
 	}
 
-	api := MapSecurityContextKubeToAPI(sc)
+	workflowSC := testworkflowsv1.WorkflowSecurityContextFromKube(sc)
+	api := MapSecurityContextKubeToAPI(workflowSC)
 	result := MapSecurityContextAPIToKube(api)
 
-	assert.Equal(t, sc, result)
+	assert.Equal(t, workflowSC, result)
 }
 
 func TestMapSecurityContextCapabilitiesOnly(t *testing.T) {
@@ -466,7 +467,7 @@ func TestMapSecurityContextCapabilitiesOnly(t *testing.T) {
 		},
 	}
 
-	api := MapSecurityContextKubeToAPI(sc)
+	api := MapSecurityContextKubeToAPI(testworkflowsv1.WorkflowSecurityContextFromKube(sc))
 	result := MapSecurityContextAPIToKube(api)
 
 	assert.NotNil(t, result.Capabilities)
@@ -480,7 +481,7 @@ func TestMapSecurityContextSeccompOnly(t *testing.T) {
 		},
 	}
 
-	api := MapSecurityContextKubeToAPI(sc)
+	api := MapSecurityContextKubeToAPI(testworkflowsv1.WorkflowSecurityContextFromKube(sc))
 	result := MapSecurityContextAPIToKube(api)
 
 	assert.NotNil(t, result.SeccompProfile)

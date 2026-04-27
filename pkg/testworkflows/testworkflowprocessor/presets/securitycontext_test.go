@@ -20,12 +20,12 @@ func TestSecurityContextPropagation_SpecLevel(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot:             common.Ptr(true),
 						RunAsUser:                common.Ptr(int64(1000)),
 						ReadOnlyRootFilesystem:   common.Ptr(true),
 						AllowPrivilegeEscalation: common.Ptr(false),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -64,10 +64,10 @@ func TestSecurityContextPropagation_SpecLevelDefaultImage(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot: common.Ptr(true),
 						RunAsUser:    common.Ptr(int64(2000)),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -100,10 +100,10 @@ func TestSecurityContextPropagation_StepLevel(t *testing.T) {
 					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							Image: "custom:1.0",
-							SecurityContext: &corev1.SecurityContext{
+							SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 								RunAsNonRoot: common.Ptr(true),
 								RunAsUser:    common.Ptr(int64(3000)),
-							},
+							}),
 						},
 					},
 					StepOperations: testworkflowsv1.StepOperations{Shell: "step-with-sc"},
@@ -141,11 +141,11 @@ func TestSecurityContextPropagation_StepOverridesSpec(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot:           common.Ptr(true),
 						RunAsUser:              common.Ptr(int64(1000)),
 						ReadOnlyRootFilesystem: common.Ptr(true),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -153,10 +153,10 @@ func TestSecurityContextPropagation_StepOverridesSpec(t *testing.T) {
 					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							Image: "custom:override",
-							SecurityContext: &corev1.SecurityContext{
+							SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 								// Override RunAsUser, keep RunAsNonRoot and ReadOnlyRootFilesystem from spec
 								RunAsUser: common.Ptr(int64(2000)),
-							},
+							}),
 						},
 					},
 					StepOperations: testworkflowsv1.StepOperations{Shell: "step-override"},
@@ -196,10 +196,10 @@ func TestSecurityContextPropagation_NestedSteps(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot: common.Ptr(true),
 						RunAsUser:    common.Ptr(int64(1000)),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -244,10 +244,10 @@ func TestSecurityContextPropagation_RunStep(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot:             common.Ptr(true),
 						AllowPrivilegeEscalation: common.Ptr(false),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -293,10 +293,10 @@ func TestSecurityContextPropagation_RunStepOverridesSpec(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot:           common.Ptr(true),
 						ReadOnlyRootFilesystem: common.Ptr(true),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -306,10 +306,10 @@ func TestSecurityContextPropagation_RunStepOverridesSpec(t *testing.T) {
 							ContainerConfig: testworkflowsv1.ContainerConfig{
 								Image:   "runner:override",
 								Command: &[]string{"run-cmd"},
-								SecurityContext: &corev1.SecurityContext{
+								SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 									// Override ReadOnlyRootFilesystem, keep RunAsNonRoot from spec
 									ReadOnlyRootFilesystem: common.Ptr(false),
-								},
+								}),
 							},
 						},
 					},
@@ -349,10 +349,10 @@ func TestSecurityContextPropagation_InitContainersInherit(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot:             common.Ptr(true),
 						AllowPrivilegeEscalation: common.Ptr(false),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -395,12 +395,12 @@ func TestSecurityContextPropagation_Capabilities(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						Capabilities: &corev1.Capabilities{
 							Add:  []corev1.Capability{"NET_ADMIN"},
 							Drop: []corev1.Capability{"ALL"},
 						},
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -435,16 +435,16 @@ func TestSecurityContextPropagation_PodSecurityContextCombined(t *testing.T) {
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Pod: &testworkflowsv1.PodConfig{
-					SecurityContext: &corev1.PodSecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowPodSecurityContextFromKube(&corev1.PodSecurityContext{
 						RunAsNonRoot: common.Ptr(true),
 						FSGroup:      common.Ptr(int64(2000)),
-					},
+					}),
 				},
 				Container: &testworkflowsv1.ContainerConfig{
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsUser:                common.Ptr(int64(1000)),
 						AllowPrivilegeEscalation: common.Ptr(false),
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{
@@ -493,7 +493,7 @@ func TestSecurityContextPropagation_PureRunStepCapabilitiesDrop(t *testing.T) {
 				Container: &testworkflowsv1.ContainerConfig{
 					Image:      "microsoft/playwright:v1.44.0-jammy",
 					WorkingDir: common.Ptr("/data/repo"),
-					SecurityContext: &corev1.SecurityContext{
+					SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 						RunAsNonRoot:             common.Ptr(true),
 						AllowPrivilegeEscalation: common.Ptr(false),
 						Capabilities: &corev1.Capabilities{
@@ -502,7 +502,7 @@ func TestSecurityContextPropagation_PureRunStepCapabilitiesDrop(t *testing.T) {
 						SeccompProfile: &corev1.SeccompProfile{
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
-					},
+					}),
 				},
 			},
 			Steps: []testworkflowsv1.Step{

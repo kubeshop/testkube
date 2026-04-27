@@ -24,11 +24,11 @@ func TestApplyTemplates_SecurityContext(t *testing.T) {
 			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 					Container: &testworkflowsv1.ContainerConfig{
-						SecurityContext: &corev1.SecurityContext{
+						SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 							RunAsNonRoot:             common.Ptr(true),
 							ReadOnlyRootFilesystem:   common.Ptr(true),
 							AllowPrivilegeEscalation: common.Ptr(false),
-						},
+						}),
 					},
 				},
 			},
@@ -61,10 +61,10 @@ func TestApplyTemplates_SecurityContext(t *testing.T) {
 			Spec: testworkflowsv1.TestWorkflowSpec{
 				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 					Container: &testworkflowsv1.ContainerConfig{
-						SecurityContext: &corev1.SecurityContext{
+						SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 							ReadOnlyRootFilesystem: common.Ptr(false),
 							RunAsUser:              common.Ptr(int64(5000)),
-						},
+						}),
 					},
 				},
 				Use: []testworkflowsv1.TemplateRef{
@@ -86,7 +86,7 @@ func TestApplyTemplates_SecurityContext(t *testing.T) {
 		// Workflow value overrides template
 		assert.Equal(t, common.Ptr(false), wf.Spec.Container.SecurityContext.ReadOnlyRootFilesystem)
 		// Workflow adds new field
-		assert.Equal(t, common.Ptr(int64(5000)), wf.Spec.Container.SecurityContext.RunAsUser)
+		assert.Equal(t, testworkflowsv1.Int64ToWorkflowIntOrString(common.Ptr(int64(5000))), wf.Spec.Container.SecurityContext.RunAsUser)
 	})
 
 	t.Run("template securityContext applied to step", func(t *testing.T) {
@@ -122,9 +122,9 @@ func TestApplyTemplates_SecurityContext(t *testing.T) {
 						},
 						StepDefaults: testworkflowsv1.StepDefaults{
 							Container: &testworkflowsv1.ContainerConfig{
-								SecurityContext: &corev1.SecurityContext{
+								SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 									ReadOnlyRootFilesystem: common.Ptr(false),
-								},
+								}),
 							},
 						},
 						StepOperations: testworkflowsv1.StepOperations{Shell: "exit 0"},

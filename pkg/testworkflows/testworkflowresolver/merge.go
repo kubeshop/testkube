@@ -211,9 +211,22 @@ func MergeCapabilities(dst, include *corev1.Capabilities) *corev1.Capabilities {
 	} else if include == nil {
 		return dst
 	}
-	dst.Add = append(dst.Add, include.Add...)
-	dst.Drop = append(dst.Drop, include.Drop...)
+	dst.Add = mergeCapabilityList(dst.Add, include.Add)
+	dst.Drop = mergeCapabilityList(dst.Drop, include.Drop)
 	return dst
+}
+
+func mergeCapabilityList(dst, include []corev1.Capability) []corev1.Capability {
+	result := make([]corev1.Capability, 0, len(dst)+len(include))
+	seen := make(map[corev1.Capability]struct{}, len(dst)+len(include))
+	for _, item := range append(dst, include...) {
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		result = append(result, item)
+	}
+	return result
 }
 
 func MergeSELinuxOptions(dst, include *corev1.SELinuxOptions) *corev1.SELinuxOptions {
