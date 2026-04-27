@@ -27,13 +27,14 @@ type ImageInspectorConfig struct {
 }
 
 type Config struct {
-	Cluster                ClusterConfig
-	ImageInspector         ImageInspectorConfig
-	Connection             testworkflowconfig.WorkerConnectionConfig
-	FeatureFlags           map[string]string
-	RunnerId               string
-	CommonEnvVariables     []corev1.EnvVar
-	LogAbortedDetails      bool
-	AllowLowSecurityFields bool
-	DisableResourceMetrics bool
+	Cluster                                  ClusterConfig
+	ImageInspector                           ImageInspectorConfig
+	Connection                               testworkflowconfig.WorkerConnectionConfig
+	FeatureFlags                             map[string]string
+	RunnerId                                 string
+	CommonEnvVariables                       []corev1.EnvVar
+	LogAbortedDetails                        bool
+	AllowLowSecurityFields                   bool
+	WorkflowLogsInsecureSkipTLSVerifyBackend bool
+	DisableResourceMetrics                   bool
 }

@@ -55,11 +55,12 @@ func CreateExecutionWorker(
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
-		FeatureFlags:           featureFlags,
-		RunnerId:               runnerId,
-		CommonEnvVariables:     commonEnvVariables,
-		LogAbortedDetails:      logAbortedDetails,
-		AllowLowSecurityFields: cfg.AllowLowSecurityFields,
+		FeatureFlags:                             featureFlags,
+		RunnerId:                                 runnerId,
+		CommonEnvVariables:                       commonEnvVariables,
+		LogAbortedDetails:                        logAbortedDetails,
+		AllowLowSecurityFields:                   cfg.AllowLowSecurityFields,
+		WorkflowLogsInsecureSkipTLSVerifyBackend: cfg.WorkflowLogsInsecureSkipTLSVerifyBackend,
 		// Automatically disable resource metrics collection in standalone mode (no API key and no agent registration token configured),
 		// as the gRPC control plane connection from execution pods may not be available.
 		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
