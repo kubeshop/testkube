@@ -14,12 +14,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -106,40 +109,20 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 
 	var healthErrors []string
 
+	clientSet := env.Kubernetes()
+	fmt.Printf("checking health of %d services\n", len(items))
 	for _, item := range items {
 		service, index := spawn.GetServiceByResourceId(item.Resource.Id)
 
 		if len(conditions) > 0 {
 			if _, ok := conditions[service]; !ok {
 				instructions.PrintOutput(ref, "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Done: true})
-				continue
 			}
 		}
 
-		notifications := worker.Notifications(ctx, item.Resource.Id,
-			executionworkertypes.NotificationsOptions{NoFollow: true})
-		if notifications.Err() != nil {
-			continue
-		}
-
-		for l := range notifications.Channel() {
-			if l.Result == nil {
-				continue
-			}
-			if l.Result.IsFinished() && !l.Result.IsPassed() {
-				serviceLabel := commontcl.ServiceLabel(service)
-				reason := "failed"
-				if l.Result.Initialization != nil && l.Result.Initialization.ErrorMessage != "" {
-					reason = l.Result.Initialization.ErrorMessage
-				} else {
-					for _, step := range l.Result.Steps {
-						if step.ErrorMessage != "" {
-							reason = step.ErrorMessage
-						}
-					}
-				}
-				healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): %s", serviceLabel, index, reason))
-			}
+		restarts, reason := getServiceRestarts(ctx, clientSet, item.Namespace, item.Resource.Id)
+		if restarts > 0 {
+			healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): container restarted %d time(s)%s", commontcl.ServiceLabel(service), index, restarts, reason))
 		}
 	}
 
@@ -210,4 +193,32 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 	}
 
 	return nil
+}
+
+func getServiceRestarts(ctx context.Context, clientSet kubernetes.Interface, namespace, resourceId string) (int32, string) {
+	pods, err := clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "testkube.io/resource=" + resourceId,
+		Limit:         1,
+	})
+	if err != nil {
+		fmt.Printf("warning: could not list pods for service health check in namespace %s: %v\n", namespace, err)
+		return 0, ""
+	}
+	if len(pods.Items) == 0 {
+		fmt.Printf("warning: no pod found for service health check: namespace=%s resource=%s\n", namespace, resourceId)
+		return 0, ""
+	}
+
+	pod := &pods.Items[0]
+	var totalRestarts int32
+	var reason string
+	for _, cs := range pod.Status.ContainerStatuses {
+		totalRestarts += cs.RestartCount
+		if cs.RestartCount > 0 && reason == "" {
+			if cs.LastTerminationState.Terminated != nil {
+				reason = fmt.Sprintf(": %s", cs.LastTerminationState.Terminated.Reason)
+			}
+		}
+	}
+	return totalRestarts, reason
 }

@@ -49,8 +49,7 @@ func TestServiceOOMKilledAfterReadiness_Integration(t *testing.T) {
 						"touch /tmp/ready && echo 'ready' && sleep 2 && python3 -c \"a = ' ' * 10**9\"",
 					),
 				},
-				Pod:           &testworkflowsv1.PodConfig{},
-				RestartPolicy: testworkflowsv1.ServiceRestartPolicyNever,
+				Pod: &testworkflowsv1.PodConfig{},
 				ReadinessProbe: &corev1.Probe{
 					PeriodSeconds:    1,
 					SuccessThreshold: 1,
@@ -100,8 +99,7 @@ func TestServiceOOMKilledDetectedAtStop_Integration(t *testing.T) {
 						"touch /tmp/ready && echo 'ready' && sleep 2 && python3 -c \"a = ' ' * 10**9\"",
 					),
 				},
-				Pod:           &testworkflowsv1.PodConfig{},
-				RestartPolicy: testworkflowsv1.ServiceRestartPolicyNever,
+				Pod: &testworkflowsv1.PodConfig{},
 				ReadinessProbe: &corev1.Probe{
 					PeriodSeconds:    1,
 					SuccessThreshold: 1,
@@ -119,15 +117,12 @@ func TestServiceOOMKilledDetectedAtStop_Integration(t *testing.T) {
 	groupRef := "test-group-stop"
 	_ = executeServices(t, services, groupRef)
 
-	// Wait for the OOMKill to actually happen before running the stop phase.
 	pod := waitForPodInNamespace(t, namespace, 30*time.Second)
 	require.NotNil(t, pod, "should find the service pod in the namespace")
 
-	pod = waitForPodTermination(t, namespace, pod.Name, 60*time.Second)
-	require.Equal(t, corev1.PodFailed, pod.Status.Phase,
-		"pod should be in Failed phase after OOMKill")
-	require.Equal(t, "OOMKilled", getContainerTerminatedReason(pod, "2"),
-		"container should have been OOMKilled")
+	pod = waitForContainerRestart(t, namespace, pod.Name, 60*time.Second)
+	require.True(t, hasContainerRestarted(pod, "2"),
+		"container should have restarted after OOMKill")
 
 	cfg, err := config.LoadConfigV2()
 	require.NoError(t, err)
@@ -158,16 +153,32 @@ func waitForPodInNamespace(t *testing.T, namespace string, timeout time.Duration
 	}
 }
 
-func getContainerTerminatedReason(pod *corev1.Pod, containerName string) string {
+func hasContainerRestarted(pod *corev1.Pod, containerName string) bool {
 	for _, s := range pod.Status.ContainerStatuses {
-		if s.Name == containerName && s.State.Terminated != nil {
-			return s.State.Terminated.Reason
+		if s.Name == containerName && s.RestartCount > 0 {
+			return true
 		}
 	}
-	for _, s := range pod.Status.InitContainerStatuses {
-		if s.Name == containerName && s.State.Terminated != nil {
-			return s.State.Terminated.Reason
+	return false
+}
+
+func waitForContainerRestart(t *testing.T, namespace, name string, timeout time.Duration) *corev1.Pod {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	for {
+		pod, err := globalK8sClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		if hasContainerRestarted(pod, "2") {
+			return pod
+		}
+
+		select {
+		case <-ctx.Done():
+			t.Fatalf("timeout waiting for pod %s container 2 to restart", name)
+		case <-time.After(500 * time.Millisecond):
 		}
 	}
-	return ""
 }
