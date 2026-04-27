@@ -97,8 +97,12 @@ func testWorkflowExecutionExecutor(client client.Client, exec TestWorkflowExecut
 		}
 
 		// Update the status generation to prevent re-execution on operator restart.
-		twe.Status.Generation = twe.Generation
-		if err := client.Status().Update(ctx, &twe); err != nil {
+		var statusTWE testworkflowsv1.TestWorkflowExecution
+		if err := client.Get(ctx, req.NamespacedName, &statusTWE); err != nil {
+			return ctrl.Result{}, fmt.Errorf("getting fresh execution %q for status update: %w", twe.Name, err)
+		}
+		statusTWE.Status.Generation = statusTWE.Generation
+		if err := client.Status().Update(ctx, &statusTWE); err != nil {
 			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
 
