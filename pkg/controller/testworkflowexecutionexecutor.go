@@ -101,7 +101,7 @@ func testWorkflowExecutionExecutor(client client.Client, exec TestWorkflowExecut
 		if err := client.Get(ctx, req.NamespacedName, &statusTWE); err != nil {
 			return ctrl.Result{}, fmt.Errorf("getting fresh execution %q for status update: %w", twe.Name, err)
 		}
-		statusTWE.Status.Generation = statusTWE.Generation
+		statusTWE.Status.Generation = twe.Generation
 		if err := client.Status().Update(ctx, &statusTWE); err != nil {
 			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
