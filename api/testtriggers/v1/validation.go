@@ -2,13 +2,33 @@ package v1
 
 import (
 	"fmt"
+	"regexp"
 
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
+// MatchPathPattern is the canonical regex for match-condition paths. Exported
+// so cp-api and the UI can pin to the same shape. Accepts dot-separated
+// identifiers, with optional `[*]` or `[N]` suffixes per segment for forward
+// compatibility with array-aware backends.
+var MatchPathPattern = regexp.MustCompile(`^\.[A-Za-z0-9_-]+(\[\*\]|\[\d+\])?(\.[A-Za-z0-9_-]+(\[\*\]|\[\d+\])?)*$`)
+
+// MatchPathBracketPattern detects array-segment suffixes (`[*]` or `[N]`).
+// The matcher's expression engine can't tokenize either today, so paths with
+// bracket suffixes silently no-op at fire time. We reject them at save time
+// to surface the gap loudly. Lift this once pkg/expressions gains support.
+var MatchPathBracketPattern = regexp.MustCompile(`\[\*\]|\[\d+\]`)
+
 // Validate checks the TestTriggerSpec for logical errors that can't be caught
-// by CRD schema validation alone. Called from REST create/update handlers.
-// Currently scoped to the match[] field, mirroring WorkflowTriggerSpec.Validate.
+// by CRD schema validation alone. It is the single validation gate: the REST
+// create, update, and bulk-update handlers all round-trip the request through
+// the CRD mapper and call this, as does the admission webhook (when wired).
+//
+// Schema-aware match[] triggers require runner binding via
+// ActionParameters.Target.Match.id. Validation against the runner's CRD
+// schema is only sound when the runner that fires the trigger is known at
+// save time; broadcast dispatch would let the trigger land on a runner
+// whose schema or RBAC differs from the one validation ran against.
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
@@ -28,12 +48,22 @@ func (s *TestTriggerSpec) Validate() []error {
 	}
 	if isContentResource && len(s.Match) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
+	} else if len(s.Match) > 0 {
+		if s.ActionParameters == nil || s.ActionParameters.Target == nil || len(s.ActionParameters.Target.Match["id"]) == 0 {
+			errs = append(errs, fmt.Errorf("match conditions require actionParameters.target.match.id to pin the trigger to one or more runners"))
+		}
 	}
 
 	for i, cond := range s.Match {
 		if cond.Path == "" {
 			errs = append(errs, fmt.Errorf("match[%d].path is required", i))
 			continue
+		}
+		if !MatchPathPattern.MatchString(cond.Path) {
+			errs = append(errs, fmt.Errorf("match[%d].path %q is not a valid dot-path (e.g. .status.phase)", i, cond.Path))
+		}
+		if MatchPathBracketPattern.MatchString(cond.Path) {
+			errs = append(errs, fmt.Errorf("match[%d].path %q contains an array index/wildcard ([*] or [N]) — array-path matching is not supported yet; please match on a scalar field", i, cond.Path))
 		}
 
 		switch cond.Operator {
