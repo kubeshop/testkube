@@ -200,7 +200,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 
 			// After a successful execution, verify that Status.Generation was updated
 			// to match Generation so the deduplication guard prevents re-execution.
-			if test.expect != nil {
+			if exec.req != nil {
 				var twe testworkflowsv1.TestWorkflowExecution
 				if err := k8sClient.Get(context.Background(), test.request.NamespacedName, &twe); err != nil {
 					t.Fatalf("get TestWorkflowExecution: %v", err)
