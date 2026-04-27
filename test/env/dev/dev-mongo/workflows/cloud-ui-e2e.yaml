@@ -4,7 +4,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: cloud-ui-e2e
   labels:
-    core-tests: cloud-ui-e2e
+    core-tests: cloud-ui-e2e-mongo
     artifacts: "true"
 spec:
   content:
@@ -62,7 +62,7 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: cloud-ui-e2e-distributed
   labels:
-    core-tests: cloud-ui-e2e
+    core-tests: cloud-ui-e2e-mongo
     artifacts: "true"
     distributed: "true"
     junit: "true"

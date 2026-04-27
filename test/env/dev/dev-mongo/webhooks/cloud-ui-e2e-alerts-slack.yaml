@@ -8,7 +8,7 @@ spec:
   - end-testworkflow-failed
   - end-testworkflow-aborted
   uri: '{{credential("webhook-slack-cloud-ui-e2e-alerts-url")}}'
-  selector: core-tests=cloud-ui-e2e
+  selector: core-tests=cloud-ui-e2e-mongo
   payloadTemplate: |-
     {
     	"text": ":alert: Cloud UI E2E tests at .dev Mongo \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: https://app-mongo.testkube.dev/organization/{{ index .Envs "TESTKUBE_PRO_ORG_ID" }}/environment/{{ index .Envs "TESTKUBE_PRO_ENV_ID" }}/dashboard/test-workflows/{{ .TestWorkflowExecution.Workflow.Name }}/executions/{{ .TestWorkflowExecution.Id }}"
