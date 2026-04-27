@@ -56,7 +56,9 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 		clientSet: clientSet,
 		processor: processor,
 		config:    config,
-		registry:  registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50),
+		registry: registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50, controller.ControllerOptions{
+			WorkflowLogsInsecureSkipTLSVerifyBackend: config.WorkflowLogsInsecureSkipTLSVerifyBackend,
+		}),
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,

@@ -21,8 +21,9 @@ const (
 )
 
 type WatchInstrumentedPodOptions struct {
-	DisableFollow     bool
-	LogAbortedDetails bool
+	DisableFollow       bool
+	LogAbortedDetails   bool
+	ContainerLogOptions ContainerLogOptions
 }
 
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
@@ -188,7 +189,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			logsCh := WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint)
+			logsCh := WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint, opts.ContainerLogOptions)
 			containersReady = watcher.State().ContainersReady()
 		logs:
 			for {

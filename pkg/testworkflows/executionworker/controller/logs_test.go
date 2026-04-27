@@ -82,6 +82,34 @@ func Test_ReadTimestamp_NonUTC_Recurring(t *testing.T) {
 	assert.Equal(t, time.Date(2024, 6, 7, 12, 41, 49, 37275300, time.UTC), reader.ts)
 }
 
+func TestBuildPodLogOptionsDefaultsToVerifiedKubeletBackend(t *testing.T) {
+	t.Parallel()
+
+	opts := buildPodLogOptions("container", func() bool { return false }, nil, ContainerLogOptions{})
+
+	assert.Equal(t, "container", opts.Container)
+	assert.True(t, opts.Follow)
+	assert.True(t, opts.Timestamps)
+	assert.Nil(t, opts.SinceTime)
+	assert.False(t, opts.InsecureSkipTLSVerifyBackend)
+}
+
+func TestBuildPodLogOptionsCanSkipKubeletBackendTLSVerification(t *testing.T) {
+	t.Parallel()
+
+	since := time.Date(2026, 4, 27, 12, 30, 0, 0, time.UTC)
+	opts := buildPodLogOptions("container", func() bool { return true }, &since, ContainerLogOptions{
+		InsecureSkipTLSVerifyBackend: true,
+	})
+
+	assert.Equal(t, "container", opts.Container)
+	assert.False(t, opts.Follow)
+	assert.True(t, opts.Timestamps)
+	assert.NotNil(t, opts.SinceTime)
+	assert.True(t, since.Equal(opts.SinceTime.Time))
+	assert.True(t, opts.InsecureSkipTLSVerifyBackend)
+}
+
 type blockingReader struct {
 	ctx context.Context
 }
