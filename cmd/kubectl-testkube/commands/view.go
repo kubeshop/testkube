@@ -58,6 +58,48 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 				return
 			}
 
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			ui.Info("Fetching execution", args[0])
+			execution, err := client.GetTestWorkflowExecution(args[0])
+			if err != nil {
+				if isExecutionNotFoundError(err) {
+					ui.Failf("Execution %q was not found. Check the execution ID or name with `testkube get twe`.", args[0])
+				}
+				ui.ExitOnError("get test workflow execution failed", err)
+			}
+
+			if execution.Result == nil || !execution.Result.IsFinished() {
+				if !wait {
+					ui.Failf("Execution is still running. Use --wait (-w) to wait for it to finish before uploading.")
+					return
+				}
+				ui.Info("Waiting for execution to finish...")
+				execution, err = waitForExecution(client, execution.Id)
+				ui.ExitOnError("waiting for execution to finish", err)
+				ui.Info("Execution finished with status", string(*execution.Result.Status))
+			}
+
+			uris := common.NewMasterUris("", "", "", "", "", false)
+			if sharesAPIURL == "" {
+				sharesAPIURL = uris.Api
+			}
+			if viewerBaseURL == "" {
+				viewerBaseURL = uris.View
+			}
+
+			if existing, err := lookupExistingShare(sharesAPIURL, execution.Id); err != nil {
+				ui.Debug("could not check for existing share", err.Error())
+			} else if existing != nil {
+				viewerURL := fmt.Sprintf("%s/execution-views/%s", viewerBaseURL, existing.Token)
+				ui.Success("View already exists:", viewerURL)
+				if err := open.Run(viewerURL); err != nil {
+					ui.PrintOnError("opening browser", err)
+				}
+				return
+			}
+
 			if !force {
 				ui.Warn("This will make the execution data, logs, and artifacts fully public via a tokenized URL.")
 				if !ui.Confirm("Do you want to continue?") {
@@ -65,7 +107,7 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 				}
 			}
 
-			uploadAndViewExecution(cmd, cfg, args[0], sharesAPIURL, viewerBaseURL, skipArtifacts, wait)
+			uploadAndViewExecution(cmd, cfg, client, execution, sharesAPIURL, viewerBaseURL, skipArtifacts)
 		},
 	}
 
@@ -77,34 +119,9 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 	return cmd
 }
 
-func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, arg, sharesAPIURL, viewerBaseURL string, skipArtifacts, wait bool) {
-	uris := common.NewMasterUris("", "", "", "", "", false)
-	if sharesAPIURL == "" {
-		sharesAPIURL = uris.Api
-	}
-	if viewerBaseURL == "" {
-		viewerBaseURL = uris.View
-	}
-
-	client, _, err := common.GetClient(cmd)
-	ui.ExitOnError("getting client", err)
+func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, client apiclientv1.Client, execution testkube.TestWorkflowExecution, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
 
 	installationID := telemetry.GetMachineID()
-
-	ui.Info("Fetching execution", arg)
-	execution, err := client.GetTestWorkflowExecution(arg)
-	ui.ExitOnError("getting execution", err)
-
-	if execution.Result == nil || !execution.Result.IsFinished() {
-		if !wait {
-			ui.Failf("Execution is still running. Use --wait (-w) to wait for it to finish before uploading.")
-			return
-		}
-		ui.Info("Waiting for execution to finish...")
-		execution, err = waitForExecution(client, execution.Id)
-		ui.ExitOnError("waiting for execution to finish", err)
-		ui.Info("Execution finished with status", string(*execution.Result.Status))
-	}
 
 	fullJSON, err := json.Marshal(execution)
 	ui.ExitOnError("marshaling execution", err)
@@ -211,6 +228,14 @@ func waitForExecution(client apiclientv1.Client, executionID string) (testkube.T
 	}
 }
 
+func isExecutionNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "not found") || strings.Contains(msg, "notfound")
+}
+
 func viewPollDelay(iteration int) time.Duration {
 	if iteration < 5 {
 		return 500 * time.Millisecond
@@ -231,6 +256,40 @@ type viewResponse struct {
 type artifactUpload struct {
 	Path string
 	Name string
+}
+
+func lookupExistingShare(sharesAPIURL, executionID string) (*viewResponse, error) {
+	url := fmt.Sprintf("%s/public-executions/by-execution/%s", sharesAPIURL, executionID)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	resp, err := viewHTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("lookup request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return nil, nil
+	case http.StatusOK:
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("reading response: %w", err)
+		}
+		var result viewResponse
+		if err := json.Unmarshal(body, &result); err != nil {
+			return nil, fmt.Errorf("parsing response: %w", err)
+		}
+		if result.Token == "" {
+			return nil, nil
+		}
+		return &result, nil
+	default:
+		return nil, fmt.Errorf("lookup failed (HTTP %d)", resp.StatusCode)
+	}
 }
 
 func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifacts []artifactUpload) (string, error) {
