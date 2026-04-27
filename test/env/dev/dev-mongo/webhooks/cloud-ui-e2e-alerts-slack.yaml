@@ -1,0 +1,16 @@
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: slack-cloud-ui-e2e-alerts
+  namespace: testkube-agent
+spec:
+  disabled: true # TODO: enable after TKC-5503 tests are fixed
+  events:
+  - end-testworkflow-failed
+  - end-testworkflow-aborted
+  uri: '{{credential("webhook-slack-cloud-ui-e2e-alerts-url")}}'
+  selector: core-tests=cloud-ui-e2e
+  payloadTemplate: |-
+    {
+    	"text": ":alert: Cloud UI E2E tests at .dev Mongo \n *Name*: {{.TestWorkflowExecution.Name}} \n *Status*: {{ .Type_ }} \n *Logs*: https://app-mongo.testkube.dev/organization/{{ index .Envs "TESTKUBE_PRO_ORG_ID" }}/environment/{{ index .Envs "TESTKUBE_PRO_ENV_ID" }}/dashboard/test-workflows/{{ .TestWorkflowExecution.Workflow.Name }}/executions/{{ .TestWorkflowExecution.Id }}"
+    }

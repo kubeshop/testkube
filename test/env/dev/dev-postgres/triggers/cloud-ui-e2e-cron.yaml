@@ -17,4 +17,4 @@ spec:
       - name: cloud-ui-e2e
   events:
   - cronjob:
-      cron: "10 */4 * * *" # every 4 hours
+      cron: "10 0,8,16 * * *" # 3 times a day at 00:10, 08:10 and 16:10
