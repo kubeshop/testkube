@@ -452,13 +452,13 @@ func TestProcessTemplateIntegerSecurityContextConfig(t *testing.T) {
 					},
 					Container: &testworkflowsv1.ContainerConfig{
 						SecurityContext: &testworkflowsv1.WorkflowSecurityContext{
-							RunAsUser:  &intstr.IntOrString{Type: intstr.String, StrVal: "{{ config.runAsUser }}"},
-							RunAsGroup: &intstr.IntOrString{Type: intstr.String, StrVal: "{{ config.runAsGroup }}"},
+							RunAsUser:  testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsUser }}"),
+							RunAsGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
 						},
 					},
 					Pod: &testworkflowsv1.PodConfig{
 						SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
-							FSGroup: &intstr.IntOrString{Type: intstr.String, StrVal: "{{ config.runAsGroup }}"},
+							FSGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
 						},
 					},
 				},

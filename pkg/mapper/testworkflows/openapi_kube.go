@@ -34,11 +34,11 @@ func MapBoxedStringToIntOrString(v *testkube.BoxedString) *intstr.IntOrString {
 	return &intstr.IntOrString{Type: intstr.String, StrVal: v.Value}
 }
 
-func MapTemplatableBoxedIntegerToIntOrString(v *testkube.TemplatableBoxedInteger) *intstr.IntOrString {
+func MapTemplatableBoxedIntegerToWorkflowInt64OrString(v *testkube.TemplatableBoxedInteger) *testworkflowsv1.WorkflowInt64OrString {
 	if v == nil {
 		return nil
 	}
-	return common.Ptr(MapStringToIntOrString(v.Value))
+	return testworkflowsv1.NewWorkflowInt64OrString(v.Value)
 }
 
 func MapStringPtrToIntOrStringPtr(i *string) *intstr.IntOrString {
@@ -223,8 +223,8 @@ func MapSecurityContextAPIToKube(v *testkube.SecurityContext) *testworkflowsv1.W
 		Privileged:               MapBoxedBooleanToBool(v.Privileged),
 		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
-		RunAsUser:                MapTemplatableBoxedIntegerToIntOrString(v.RunAsUser),
-		RunAsGroup:               MapTemplatableBoxedIntegerToIntOrString(v.RunAsGroup),
+		RunAsUser:                MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsUser),
+		RunAsGroup:               MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsGroup),
 		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
 		ReadOnlyRootFilesystem:   MapBoxedBooleanToBool(v.ReadOnlyRootFilesystem),
 		AllowPrivilegeEscalation: MapBoxedBooleanToBool(v.AllowPrivilegeEscalation),
@@ -661,12 +661,12 @@ func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) testworkflows
 	return testworkflowsv1.WorkflowPodSecurityContext{
 		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
-		RunAsUser:                MapTemplatableBoxedIntegerToIntOrString(v.RunAsUser),
-		RunAsGroup:               MapTemplatableBoxedIntegerToIntOrString(v.RunAsGroup),
+		RunAsUser:                MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsUser),
+		RunAsGroup:               MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsGroup),
 		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
 		SupplementalGroups:       v.SupplementalGroups,
 		SupplementalGroupsPolicy: common.MapPtr(MapBoxedStringToString(v.SupplementalGroupsPolicy), common.MapStringToEnum[corev1.SupplementalGroupsPolicy]),
-		FSGroup:                  MapTemplatableBoxedIntegerToIntOrString(v.FsGroup),
+		FSGroup:                  MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.FsGroup),
 		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlAPIToKube),
 		FSGroupChangePolicy:      common.MapPtr(MapBoxedStringToString(v.FsGroupChangePolicy), common.MapStringToEnum[corev1.PodFSGroupChangePolicy]),
 		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileAPIToKube),

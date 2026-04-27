@@ -5,40 +5,44 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kubeshop/testkube/internal/common"
 )
 
 type WorkflowSecurityContext struct {
-	Capabilities             *corev1.Capabilities                  `json:"capabilities,omitempty" expr:"force"`
-	Privileged               *bool                                 `json:"privileged,omitempty" expr:"template"`
-	SELinuxOptions           *corev1.SELinuxOptions                `json:"seLinuxOptions,omitempty" expr:"force"`
-	WindowsOptions           *corev1.WindowsSecurityContextOptions `json:"windowsOptions,omitempty" expr:"force"`
-	RunAsUser                *intstr.IntOrString                   `json:"runAsUser,omitempty" expr:"template"`
-	RunAsGroup               *intstr.IntOrString                   `json:"runAsGroup,omitempty" expr:"template"`
-	RunAsNonRoot             *bool                                 `json:"runAsNonRoot,omitempty" expr:"template"`
-	ReadOnlyRootFilesystem   *bool                                 `json:"readOnlyRootFilesystem,omitempty" expr:"template"`
-	AllowPrivilegeEscalation *bool                                 `json:"allowPrivilegeEscalation,omitempty" expr:"template"`
-	ProcMount                *corev1.ProcMountType                 `json:"procMount,omitempty" expr:"template"`
-	SeccompProfile           *corev1.SeccompProfile                `json:"seccompProfile,omitempty" expr:"force"`
-	AppArmorProfile          *corev1.AppArmorProfile               `json:"appArmorProfile,omitempty" expr:"force"`
+	Capabilities   *corev1.Capabilities                  `json:"capabilities,omitempty" expr:"force"`
+	Privileged     *bool                                 `json:"privileged,omitempty" expr:"template"`
+	SELinuxOptions *corev1.SELinuxOptions                `json:"seLinuxOptions,omitempty" expr:"force"`
+	WindowsOptions *corev1.WindowsSecurityContextOptions `json:"windowsOptions,omitempty" expr:"force"`
+	// +kubebuilder:validation:XIntOrString
+	RunAsUser *WorkflowInt64OrString `json:"runAsUser,omitempty" expr:"template"`
+	// +kubebuilder:validation:XIntOrString
+	RunAsGroup               *WorkflowInt64OrString  `json:"runAsGroup,omitempty" expr:"template"`
+	RunAsNonRoot             *bool                   `json:"runAsNonRoot,omitempty" expr:"template"`
+	ReadOnlyRootFilesystem   *bool                   `json:"readOnlyRootFilesystem,omitempty" expr:"template"`
+	AllowPrivilegeEscalation *bool                   `json:"allowPrivilegeEscalation,omitempty" expr:"template"`
+	ProcMount                *corev1.ProcMountType   `json:"procMount,omitempty" expr:"template"`
+	SeccompProfile           *corev1.SeccompProfile  `json:"seccompProfile,omitempty" expr:"force"`
+	AppArmorProfile          *corev1.AppArmorProfile `json:"appArmorProfile,omitempty" expr:"force"`
 }
 
 type WorkflowPodSecurityContext struct {
-	SELinuxOptions           *corev1.SELinuxOptions                `json:"seLinuxOptions,omitempty" expr:"force"`
-	WindowsOptions           *corev1.WindowsSecurityContextOptions `json:"windowsOptions,omitempty" expr:"force"`
-	RunAsUser                *intstr.IntOrString                   `json:"runAsUser,omitempty" expr:"template"`
-	RunAsGroup               *intstr.IntOrString                   `json:"runAsGroup,omitempty" expr:"template"`
-	RunAsNonRoot             *bool                                 `json:"runAsNonRoot,omitempty" expr:"template"`
-	SupplementalGroups       []int64                               `json:"supplementalGroups,omitempty"`
-	SupplementalGroupsPolicy *corev1.SupplementalGroupsPolicy      `json:"supplementalGroupsPolicy,omitempty" expr:"template"`
-	FSGroup                  *intstr.IntOrString                   `json:"fsGroup,omitempty" expr:"template"`
-	Sysctls                  []corev1.Sysctl                       `json:"sysctls,omitempty" expr:"force"`
-	FSGroupChangePolicy      *corev1.PodFSGroupChangePolicy        `json:"fsGroupChangePolicy,omitempty" expr:"template"`
-	SeccompProfile           *corev1.SeccompProfile                `json:"seccompProfile,omitempty" expr:"force"`
-	AppArmorProfile          *corev1.AppArmorProfile               `json:"appArmorProfile,omitempty" expr:"force"`
-	SELinuxChangePolicy      *corev1.PodSELinuxChangePolicy        `json:"seLinuxChangePolicy,omitempty" expr:"template"`
+	SELinuxOptions *corev1.SELinuxOptions                `json:"seLinuxOptions,omitempty" expr:"force"`
+	WindowsOptions *corev1.WindowsSecurityContextOptions `json:"windowsOptions,omitempty" expr:"force"`
+	// +kubebuilder:validation:XIntOrString
+	RunAsUser *WorkflowInt64OrString `json:"runAsUser,omitempty" expr:"template"`
+	// +kubebuilder:validation:XIntOrString
+	RunAsGroup               *WorkflowInt64OrString           `json:"runAsGroup,omitempty" expr:"template"`
+	RunAsNonRoot             *bool                            `json:"runAsNonRoot,omitempty" expr:"template"`
+	SupplementalGroups       []int64                          `json:"supplementalGroups,omitempty"`
+	SupplementalGroupsPolicy *corev1.SupplementalGroupsPolicy `json:"supplementalGroupsPolicy,omitempty" expr:"template"`
+	// +kubebuilder:validation:XIntOrString
+	FSGroup             *WorkflowInt64OrString         `json:"fsGroup,omitempty" expr:"template"`
+	Sysctls             []corev1.Sysctl                `json:"sysctls,omitempty" expr:"force"`
+	FSGroupChangePolicy *corev1.PodFSGroupChangePolicy `json:"fsGroupChangePolicy,omitempty" expr:"template"`
+	SeccompProfile      *corev1.SeccompProfile         `json:"seccompProfile,omitempty" expr:"force"`
+	AppArmorProfile     *corev1.AppArmorProfile        `json:"appArmorProfile,omitempty" expr:"force"`
+	SELinuxChangePolicy *corev1.PodSELinuxChangePolicy `json:"seLinuxChangePolicy,omitempty" expr:"template"`
 }
 
 func CloneWorkflowSecurityContext(v *WorkflowSecurityContext) *WorkflowSecurityContext {
@@ -47,8 +51,8 @@ func CloneWorkflowSecurityContext(v *WorkflowSecurityContext) *WorkflowSecurityC
 	}
 	result := &WorkflowSecurityContext{
 		Privileged:               v.Privileged,
-		RunAsUser:                common.MapPtr(v.RunAsUser, func(i intstr.IntOrString) intstr.IntOrString { return i }),
-		RunAsGroup:               common.MapPtr(v.RunAsGroup, func(i intstr.IntOrString) intstr.IntOrString { return i }),
+		RunAsUser:                common.MapPtr(v.RunAsUser, func(i WorkflowInt64OrString) WorkflowInt64OrString { return i }),
+		RunAsGroup:               common.MapPtr(v.RunAsGroup, func(i WorkflowInt64OrString) WorkflowInt64OrString { return i }),
 		RunAsNonRoot:             v.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   v.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: v.AllowPrivilegeEscalation,
@@ -77,12 +81,12 @@ func CloneWorkflowPodSecurityContext(v *WorkflowPodSecurityContext) *WorkflowPod
 		return nil
 	}
 	result := &WorkflowPodSecurityContext{
-		RunAsUser:                common.MapPtr(v.RunAsUser, func(i intstr.IntOrString) intstr.IntOrString { return i }),
-		RunAsGroup:               common.MapPtr(v.RunAsGroup, func(i intstr.IntOrString) intstr.IntOrString { return i }),
+		RunAsUser:                common.MapPtr(v.RunAsUser, func(i WorkflowInt64OrString) WorkflowInt64OrString { return i }),
+		RunAsGroup:               common.MapPtr(v.RunAsGroup, func(i WorkflowInt64OrString) WorkflowInt64OrString { return i }),
 		RunAsNonRoot:             v.RunAsNonRoot,
 		SupplementalGroups:       append([]int64(nil), v.SupplementalGroups...),
 		SupplementalGroupsPolicy: v.SupplementalGroupsPolicy,
-		FSGroup:                  common.MapPtr(v.FSGroup, func(i intstr.IntOrString) intstr.IntOrString { return i }),
+		FSGroup:                  common.MapPtr(v.FSGroup, func(i WorkflowInt64OrString) WorkflowInt64OrString { return i }),
 		Sysctls:                  append([]corev1.Sysctl(nil), v.Sysctls...),
 		FSGroupChangePolicy:      v.FSGroupChangePolicy,
 		SELinuxChangePolicy:      v.SELinuxChangePolicy,
@@ -102,29 +106,22 @@ func CloneWorkflowPodSecurityContext(v *WorkflowPodSecurityContext) *WorkflowPod
 	return result
 }
 
-func ResolveWorkflowInt64(fieldPath string, value *intstr.IntOrString) (*int64, error) {
+func ResolveWorkflowInt64(fieldPath string, value *WorkflowInt64OrString) (*int64, error) {
 	if value == nil {
 		return nil, nil
 	}
-	if value.Type == intstr.Int {
-		return common.Ptr(int64(value.IntVal)), nil
-	}
-
-	parsed, err := strconv.ParseInt(value.StrVal, 10, 64)
+	parsed, err := strconv.ParseInt(value.String(), 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("%s must resolve to an integer: %w", fieldPath, err)
 	}
 	return &parsed, nil
 }
 
-func Int64ToWorkflowIntOrString(value *int64) *intstr.IntOrString {
+func Int64ToWorkflowIntOrString(value *int64) *WorkflowInt64OrString {
 	if value == nil {
 		return nil
 	}
-	if *value >= -2147483648 && *value <= 2147483647 {
-		return &intstr.IntOrString{Type: intstr.Int, IntVal: int32(*value)}
-	}
-	return &intstr.IntOrString{Type: intstr.String, StrVal: strconv.FormatInt(*value, 10)}
+	return NewWorkflowInt64OrString(strconv.FormatInt(*value, 10))
 }
 
 func WorkflowSecurityContextFromKube(v *corev1.SecurityContext) *WorkflowSecurityContext {

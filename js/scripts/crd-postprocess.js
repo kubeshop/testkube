@@ -36,8 +36,21 @@ function escapeHelmBraces(s) {
   return s.replace(/\{\{|\}\}/g, (m) => (m === '{{' ? '{{`{{`}}' : '{{`}}`}}'));
 }
 
+function normalizeIntOrStringSchema(s) {
+  return s.replace(
+    /\n([ \t]+)type: string\n\1x-kubernetes-int-or-string: true/g,
+    "\n$1anyOf:\n$1  - type: integer\n$1  - type: string\n$1x-kubernetes-int-or-string: true",
+  );
+}
+
 for (const file of sortedFiles) {
-  const content = escapeHelmBraces(fs.readFileSync(path.join(src, file), "utf8").trimEnd());
+  const srcPath = path.join(src, file);
+  const rawContent = fs.readFileSync(srcPath, "utf8");
+  const normalizedContent = normalizeIntOrStringSchema(rawContent);
+  if (normalizedContent !== rawContent) {
+    fs.writeFileSync(srcPath, normalizedContent);
+  }
+  const content = escapeHelmBraces(normalizedContent.trimEnd());
   sections.push(renderDefineBlock(file, content));
 }
 

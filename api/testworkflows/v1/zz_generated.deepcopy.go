@@ -2571,12 +2571,12 @@ func (in *WorkflowPodSecurityContext) DeepCopyInto(out *WorkflowPodSecurityConte
 	}
 	if in.RunAsUser != nil {
 		in, out := &in.RunAsUser, &out.RunAsUser
-		*out = new(intstr.IntOrString)
+		*out = new(WorkflowInt64OrString)
 		**out = **in
 	}
 	if in.RunAsGroup != nil {
 		in, out := &in.RunAsGroup, &out.RunAsGroup
-		*out = new(intstr.IntOrString)
+		*out = new(WorkflowInt64OrString)
 		**out = **in
 	}
 	if in.RunAsNonRoot != nil {
@@ -2596,7 +2596,7 @@ func (in *WorkflowPodSecurityContext) DeepCopyInto(out *WorkflowPodSecurityConte
 	}
 	if in.FSGroup != nil {
 		in, out := &in.FSGroup, &out.FSGroup
-		*out = new(intstr.IntOrString)
+		*out = new(WorkflowInt64OrString)
 		**out = **in
 	}
 	if in.Sysctls != nil {
@@ -2661,12 +2661,12 @@ func (in *WorkflowSecurityContext) DeepCopyInto(out *WorkflowSecurityContext) {
 	}
 	if in.RunAsUser != nil {
 		in, out := &in.RunAsUser, &out.RunAsUser
-		*out = new(intstr.IntOrString)
+		*out = new(WorkflowInt64OrString)
 		**out = **in
 	}
 	if in.RunAsGroup != nil {
 		in, out := &in.RunAsGroup, &out.RunAsGroup
-		*out = new(intstr.IntOrString)
+		*out = new(WorkflowInt64OrString)
 		**out = **in
 	}
 	if in.RunAsNonRoot != nil {

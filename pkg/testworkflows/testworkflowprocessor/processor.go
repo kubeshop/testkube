@@ -12,7 +12,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -313,7 +312,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			otherContainers[0].Container().SetSecurityContext(sc)
 		}
 		if !disableFsGroupDefaulting && podConfig.SecurityContext.FSGroup == nil {
-			podConfig.SecurityContext.FSGroup = common.MapPtr(sc.RunAsGroup, func(v intstr.IntOrString) intstr.IntOrString { return v })
+			podConfig.SecurityContext.FSGroup = common.MapPtr(sc.RunAsGroup, func(v testworkflowsv1.WorkflowInt64OrString) testworkflowsv1.WorkflowInt64OrString { return v })
 		}
 	}
 
