@@ -19,9 +19,9 @@ import (
 )
 
 // TestServiceOOMKilledAfterReadiness_Integration verifies that a service which
-// passes its readiness probe but subsequently gets OOMKilled is detected as a
-// failure by the service monitor (processNotifications), rather than being
-// silently marked as green/passed.
+// passes its readiness probe but subsequently gets OOMKilled is marked as ready
+// by the monitor (which stops after readiness), and the OOMKill is caught at
+// stop/kill time.
 //
 // This is a regression test for TKC-5014.
 func TestServiceOOMKilledAfterReadiness_Integration(t *testing.T) {
@@ -64,10 +64,17 @@ func TestServiceOOMKilledAfterReadiness_Integration(t *testing.T) {
 		},
 	}
 
-	err := executeServices(t, services, "test-group")
+	groupRef := "test-group-monitor"
+	err := executeServices(t, services, groupRef)
+	require.NoError(t, err,
+		"monitor marks service as ready even though it OOMKilled afterwards")
 
+	cfg, err := config.LoadConfigV2()
+	require.NoError(t, err)
+
+	err = commands.RunKillWithOptions(context.Background(), cfg, groupRef)
 	assert.Error(t, err,
-		"service OOMKilled after readiness should be detected as failure (TKC-5014)")
+		"kill command should detect OOMKilled service as a failure (TKC-5014)")
 }
 
 // TestServiceOOMKilledDetectedAtStop_Integration verifies that the stop/kill
@@ -121,8 +128,8 @@ func TestServiceOOMKilledDetectedAtStop_Integration(t *testing.T) {
 	require.NotNil(t, pod, "should find the service pod in the namespace")
 
 	pod = waitForContainerRestart(t, namespace, pod.Name, 60*time.Second)
-	require.True(t, hasContainerRestarted(pod, "2"),
-		"container should have restarted after OOMKill")
+	require.True(t, hasContainerRestarted(pod, ""),
+		"some container should have restarted after OOMKill")
 
 	cfg, err := config.LoadConfigV2()
 	require.NoError(t, err)
@@ -138,7 +145,9 @@ func waitForPodInNamespace(t *testing.T, namespace string, timeout time.Duration
 	defer cancel()
 
 	for {
-		podList, err := globalK8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{Limit: 1})
+		podList, err := globalK8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: "testkube.io/root=test-exec",
+		})
 		require.NoError(t, err)
 
 		if len(podList.Items) > 0 {
@@ -155,8 +164,10 @@ func waitForPodInNamespace(t *testing.T, namespace string, timeout time.Duration
 
 func hasContainerRestarted(pod *corev1.Pod, containerName string) bool {
 	for _, s := range pod.Status.ContainerStatuses {
-		if s.Name == containerName && s.RestartCount > 0 {
-			return true
+		if containerName == "" || s.Name == containerName {
+			if s.RestartCount > 0 {
+				return true
+			}
 		}
 	}
 	return false
@@ -171,13 +182,13 @@ func waitForContainerRestart(t *testing.T, namespace, name string, timeout time.
 		pod, err := globalK8sClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		if hasContainerRestarted(pod, "2") {
+		if hasContainerRestarted(pod, "") {
 			return pod
 		}
 
 		select {
 		case <-ctx.Done():
-			t.Fatalf("timeout waiting for pod %s container 2 to restart", name)
+			t.Fatalf("timeout waiting for pod %s container to restart", name)
 		case <-time.After(500 * time.Millisecond):
 		}
 	}

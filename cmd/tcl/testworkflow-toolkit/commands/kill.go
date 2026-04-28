@@ -71,13 +71,6 @@ func NewKillCmd() *cobra.Command {
 	return cmd
 }
 
-// KillDependencies holds the dependencies needed for the kill operation.
-type KillDependencies struct {
-	Worker    executionworkertypes.Worker
-	Namespace string
-	Ref       string
-}
-
 // RunKillWithOptions stops services in a group: checks health, fetches logs,
 // and destroys resources. Returns an error if any service has failed (e.g. OOMKilled).
 func RunKillWithOptions(ctx context.Context, cfg *config.ConfigV2, groupRef string) error {
@@ -157,7 +150,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 
 		storage, err := artifacts.InternalStorage()
 		if err != nil {
-			ui.Failf("could not create internal storage client: %v", err)
+			return fmt.Errorf("could not create internal storage client: %w", err)
 		}
 		for _, id := range ids {
 			service, index := spawn.GetServiceByResourceId(id)
@@ -167,7 +160,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 			}
 			log := spawn.CreateLogger(service, "", index, count)
 
-			logsFilePath, err := spawn.SaveLogs(context.Background(), storage, config.Namespace(), id, service+"/", index)
+			logsFilePath, err := spawn.SaveLogs(context.Background(), storage, namespace, id, service+"/", index)
 			if err == nil {
 				instructions.PrintOutput(ref, "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath), Done: true})
 				log("saved logs")
@@ -185,7 +178,7 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 	}
 
 	if len(healthErrors) > 0 {
-		ui.Failf("unhealthy services detected: %s", strings.Join(healthErrors, "; "))
+		return fmt.Errorf("unhealthy services detected: %s", strings.Join(healthErrors, "; "))
 	}
 
 	return nil
