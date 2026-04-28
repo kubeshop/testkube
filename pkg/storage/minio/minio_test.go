@@ -155,6 +155,14 @@ type rewritingTransport struct {
 func (t *rewritingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// Clone so we don't mutate the original.
 	r2 := r.Clone(r.Context())
+	// Preserve the original URL.Host as the explicit Host header so the test server
+	// receives the bucket-prefixed hostname (e.g. "my-bucket.127.0.0.1:PORT") that
+	// minio builds for virtual-hosted-style. Without this, Go's transport falls back
+	// to the rewritten URL.Host and the assertion on r.Host in the handler fails.
+	if r2.Host == "" {
+		r2.Host = r.URL.Host
+	}
+	// Redirect the actual TCP connection to the test server.
 	r2.URL.Host = t.target
 	resp, err := http.DefaultTransport.RoundTrip(r2)
 	if err != nil {
