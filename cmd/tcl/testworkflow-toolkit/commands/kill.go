@@ -108,7 +108,6 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 	}
 
 	var healthErrors []string
-
 	clientSet := env.Kubernetes()
 	fmt.Printf("checking health of %d services\n", len(items))
 	for _, item := range items {
@@ -124,13 +123,6 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 		if restarts > 0 {
 			healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): container restarted %d time(s)%s", commontcl.ServiceLabel(service), index, restarts, reason))
 		}
-	}
-
-	if len(healthErrors) > 0 {
-		_ = worker.DestroyGroup(ctx, groupRef, executionworkertypes.DestroyOptions{
-			Namespace: namespace,
-		})
-		return fmt.Errorf("unhealthy services detected: %s", strings.Join(healthErrors, "; "))
 	}
 
 	if len(conditions) > 0 && machine != nil {
@@ -190,6 +182,10 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 	})
 	if err != nil {
 		return fmt.Errorf("cleaning up resources: %w", err)
+	}
+
+	if len(healthErrors) > 0 {
+		ui.Failf("unhealthy services detected: %s", strings.Join(healthErrors, "; "))
 	}
 
 	return nil
