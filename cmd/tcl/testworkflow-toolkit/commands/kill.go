@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -112,9 +113,8 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 			}
 		}
 
-		restarts, reason := getServiceRestarts(ctx, clientSet, item.Namespace, item.Resource.Id)
-		if restarts > 0 {
-			healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): container restarted %d time(s)%s", commontcl.ServiceLabel(service), index, restarts, reason))
+		if issues := getServiceHealth(ctx, clientSet, item.Namespace, item.Resource.Id); len(issues) > 0 {
+			healthErrors = append(healthErrors, fmt.Sprintf("%s (index %d): %s", commontcl.ServiceLabel(service), index, strings.Join(issues, "; ")))
 		}
 	}
 
@@ -184,30 +184,41 @@ func RunKill(ctx context.Context, worker executionworkertypes.Worker, namespace 
 	return nil
 }
 
-func getServiceRestarts(ctx context.Context, clientSet kubernetes.Interface, namespace, resourceId string) (int32, string) {
+func getServiceHealth(ctx context.Context, clientSet kubernetes.Interface, namespace, resourceId string) []string {
 	pods, err := clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "testkube.io/resource=" + resourceId,
 		Limit:         1,
 	})
 	if err != nil {
 		fmt.Printf("warning: could not list pods for service health check in namespace %s: %v\n", namespace, err)
-		return 0, ""
+		return nil
 	}
 	if len(pods.Items) == 0 {
 		fmt.Printf("warning: no pod found for service health check: namespace=%s resource=%s\n", namespace, resourceId)
-		return 0, ""
+		return nil
 	}
 
 	pod := &pods.Items[0]
-	var totalRestarts int32
-	var reason string
+	var issues []string
 	for _, cs := range pod.Status.ContainerStatuses {
-		totalRestarts += cs.RestartCount
-		if cs.RestartCount > 0 && reason == "" {
-			if cs.LastTerminationState.Terminated != nil {
-				reason = fmt.Sprintf(": %s", cs.LastTerminationState.Terminated.Reason)
-			}
+		if term := cs.LastTerminationState.Terminated; term != nil && term.Reason != "Completed" && term.Reason != "" {
+			issues = append(issues, fmt.Sprintf("container %q previously terminated: %s", cs.Name, term.Reason))
+		}
+		if term := cs.State.Terminated; term != nil && term.Reason != "Completed" && term.Reason != "" {
+			issues = append(issues, fmt.Sprintf("container %q terminated: %s", cs.Name, term.Reason))
+		}
+		if waiting := cs.State.Waiting; waiting != nil && (waiting.Reason == "CrashLoopBackOff" || waiting.Reason == "Error") {
+			issues = append(issues, fmt.Sprintf("container %q in state: %s", cs.Name, waiting.Reason))
 		}
 	}
-	return totalRestarts, reason
+
+	if pod.Status.Phase == corev1.PodFailed {
+		reason := pod.Status.Reason
+		if reason == "" {
+			reason = "pod failed"
+		}
+		issues = append(issues, reason)
+	}
+
+	return issues
 }
