@@ -194,6 +194,11 @@ Telemetry collects usage analytics to help improve the product. It can be disabl
 - **Google Analytics** (`sender_ga4.go`) - Alternative analytics backend
 - **Testkube Analytics** (`sender_tka.go`) - Internal analytics
 
+**Heartbeat**: [`cmd/api-server/services/telemetry.go`](cmd/api-server/services/telemetry.go)
+
+- Sends a `testkube_api_start` event on startup and a `testkube_api_heartbeat` event every hour
+- Both events include the detected cluster type and agent capabilities
+
 ### 9. Kubernetes Custom Resource Definitions (CRDs)
 
 **Definition Location**: [`api/`](api/)
@@ -229,10 +234,12 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 - **`Webhook`** (`executor.testkube.io/v1`)
   - **Definition**: [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go)
   - **Purpose**: Defines webhooks triggered by TestWorkflow execution events
+  - **Targeting**: Supports a `target` field (`commonv1.Target`) to control which agents execute the webhook
 
 - **`WebhookTemplate`** (`executor.testkube.io/v1`)
   - **Definition**: [`api/executor/v1/webhook_types.go`](api/executor/v1/webhook_types.go)
   - **Purpose**: Reusable webhook templates with configurable payloads
+  - **Targeting**: Supports a `target` field (`commonv1.Target`) for agent-level targeting
 
 #### Other CRDs
 
@@ -304,5 +311,7 @@ The Testkube CLI (`kubectl-testkube`, typically invoked as `testkube`) is a kube
 
 ## Related Documentation
 
+- [`README.md`](README.md) - project overview and contributor entry points
+- [`DEVELOPMENT.md`](DEVELOPMENT.md) - local setup, Tilt workflow, and debugging
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines
 - [TestWorkflow Execution Architecture](https://docs.testkube.io/articles/test-workflows-high-level-architecture) - How TestWorkflows are executed.

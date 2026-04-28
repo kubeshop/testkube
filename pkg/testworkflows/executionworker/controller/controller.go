@@ -28,8 +28,9 @@ var (
 )
 
 type ControllerOptions struct {
-	Signature []stage.Signature
-	RunnerId  string
+	Signature                                []stage.Signature
+	RunnerId                                 string
+	WorkflowLogsInsecureSkipTLSVerifyBackend bool
 }
 
 type LightweightNotification struct {
@@ -63,12 +64,16 @@ type Controller interface {
 func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time, opts ...ControllerOptions) (Controller, error) {
 	var signature []stage.Signature
 	var expectedRunnerId string
+	var workflowLogsInsecureSkipTLSVerifyBackend bool
 	for _, opt := range opts {
 		if opt.Signature != nil {
 			signature = opt.Signature
 		}
 		if opt.RunnerId != "" {
 			expectedRunnerId = opt.RunnerId
+		}
+		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
+			workflowLogsInsecureSkipTLSVerifyBackend = true
 		}
 	}
 
@@ -115,26 +120,28 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 
 	// Build accessible controller
 	return &controller{
-		id:          id,
-		namespace:   namespace,
-		scheduledAt: scheduledAt,
-		signature:   sig,
-		clientSet:   clientSet,
-		ctx:         ctx,
-		ctxCancel:   ctxCancel,
-		watcher:     watcher,
+		id:                                       id,
+		namespace:                                namespace,
+		scheduledAt:                              scheduledAt,
+		signature:                                sig,
+		clientSet:                                clientSet,
+		ctx:                                      ctx,
+		ctxCancel:                                ctxCancel,
+		watcher:                                  watcher,
+		workflowLogsInsecureSkipTLSVerifyBackend: workflowLogsInsecureSkipTLSVerifyBackend,
 	}, nil
 }
 
 type controller struct {
-	id          string
-	namespace   string
-	scheduledAt time.Time
-	signature   []stage.Signature
-	clientSet   kubernetes.Interface
-	ctx         context.Context
-	ctxCancel   context.CancelFunc
-	watcher     watchers.ExecutionWatcher
+	id                                       string
+	namespace                                string
+	scheduledAt                              time.Time
+	signature                                []stage.Signature
+	clientSet                                kubernetes.Interface
+	ctx                                      context.Context
+	ctxCancel                                context.CancelFunc
+	watcher                                  watchers.ExecutionWatcher
+	workflowLogsInsecureSkipTLSVerifyBackend bool
 }
 
 func (c *controller) Signature() []stage.Signature {
@@ -232,6 +239,9 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbo
 	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
 		DisableFollow:     disableFollow,
 		LogAbortedDetails: logAbortedDetails,
+		ContainerLogOptions: ContainerLogOptions{
+			InsecureSkipTLSVerifyBackend: c.workflowLogsInsecureSkipTLSVerifyBackend,
+		},
 	})
 	if err != nil {
 		v := make(chan ChannelMessage[Notification], 1)
@@ -249,6 +259,9 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 		ref := ""
 		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
 			DisableFollow: !follow,
+			ContainerLogOptions: ContainerLogOptions{
+				InsecureSkipTLSVerifyBackend: c.workflowLogsInsecureSkipTLSVerifyBackend,
+			},
 		})
 		if err != nil {
 			return

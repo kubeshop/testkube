@@ -155,6 +155,24 @@ func (e *executionGroup) Kill() (err error) {
 	return errors.Wrap(err, "failed to kill")
 }
 
+// WaitAll waits for all tracked executions to finish.
+// Safe to call after Kill() even if Run() already waited on the process.
+func (e *executionGroup) WaitAll() {
+	e.executionsMu.Lock()
+	execs := make([]*execution, len(e.executions))
+	copy(execs, e.executions)
+	e.executionsMu.Unlock()
+
+	for _, ex := range execs {
+		ex.cmdMu.Lock()
+		cmd := ex.cmd
+		ex.cmdMu.Unlock()
+		if cmd != nil && cmd.Process != nil {
+			_ = cmd.Wait()
+		}
+	}
+}
+
 func (e *executionGroup) Abort() {
 	e.aborted.Store(true)
 	_ = e.Kill()

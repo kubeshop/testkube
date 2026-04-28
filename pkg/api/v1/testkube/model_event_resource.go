@@ -17,6 +17,7 @@ const (
 	TESTSUITE_EventResource             EventResource = "testsuite"
 	EXECUTOR_EventResource              EventResource = "executor"
 	TRIGGER_EventResource               EventResource = "trigger"
+	WORKFLOWTRIGGER_EventResource       EventResource = "workflowtrigger"
 	WEBHOOK_EventResource               EventResource = "webhook"
 	WEBHOOKTEMPLATE_EventResource       EventResource = "webhooktemplate"
 	TESTEXECUTION_EventResource         EventResource = "testexecution"

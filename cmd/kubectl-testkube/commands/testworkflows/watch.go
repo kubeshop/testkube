@@ -53,7 +53,7 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 			ui.ExitOnError("get execution failed", err)
 
 			render.PrintTestWorkflowExecutionURIs(&execution)
-			uiShellGetExecution(execution.Id)
+			common.UIShellGetExecution(execution.Id)
 			os.Exit(exitCode)
 		},
 	}

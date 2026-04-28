@@ -6,10 +6,12 @@ on:
       - opened
       - edited
       - synchronize
+      - ready_for_review
 
 jobs:
   prlint:
     name: Lint PR
+    if: github.event.pull_request.draft == false
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Lint PR

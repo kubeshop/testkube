@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -59,6 +60,10 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 		errPrefix = errPrefix + " " + testTrigger.Name
 
+		if errs := testTrigger.Spec.Validate(); len(errs) > 0 {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
+		}
+
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
 
 		// Convert CRD to API object for the new interface
@@ -106,6 +111,10 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			namespace = request.Namespace
 		}
 		errPrefix = errPrefix + " " + request.Name
+
+		if errs := validateUpsertMatchConditions(request.Match, request.Event); len(errs) > 0 {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
+		}
 
 		// we need to get resource first to validate it exists
 		existingTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
@@ -236,6 +245,10 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 				crdTestTrigger.Name = generateTestTriggerName(&crdTestTrigger)
 			}
 
+			if errs := crdTestTrigger.Spec.Validate(); len(errs) > 0 {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s %s: %w", errPrefix, crdTestTrigger.Name, errors.Join(errs...)))
+			}
+
 			// Convert CRD to API object for the new interface
 			apiTrigger := testtriggersmapper.MapCRDToAPI(&crdTestTrigger)
 
@@ -361,6 +374,45 @@ func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
 	}
+}
+
+// validateUpsertMatchConditions mirrors TestTriggerSpec.Validate for the REST upsert path,
+// where we only have the OpenAPI type (not the CRD) and building the CRD via the mapper
+// would require non-nil selectors we don't have.
+func validateUpsertMatchConditions(match []testkube.TestTriggerFieldCondition, event string) []error {
+	var errs []error
+	for i, cond := range match {
+		if cond.Path == "" {
+			errs = append(errs, fmt.Errorf("match[%d].path is required", i))
+			continue
+		}
+
+		op := testkube.TestTriggerFieldOperator(cond.Operator)
+		switch op {
+		case testkube.TestTriggerFieldOperatorEquals,
+			testkube.TestTriggerFieldOperatorNotEquals,
+			testkube.TestTriggerFieldOperatorChangedTo,
+			testkube.TestTriggerFieldOperatorChangedFrom:
+			if cond.Value == "" {
+				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires a value", i, op))
+			}
+		case testkube.TestTriggerFieldOperatorExists,
+			testkube.TestTriggerFieldOperatorNotExists,
+			testkube.TestTriggerFieldOperatorChanged:
+		default:
+			errs = append(errs, fmt.Errorf("match[%d]: unknown operator %q", i, cond.Operator))
+		}
+
+		switch op {
+		case testkube.TestTriggerFieldOperatorChanged,
+			testkube.TestTriggerFieldOperatorChangedTo,
+			testkube.TestTriggerFieldOperatorChangedFrom:
+			if event != "" && event != string(testtriggersv1.TestTriggerEventModified) {
+				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires event to be %q", i, op, testtriggersv1.TestTriggerEventModified))
+			}
+		}
+	}
+	return errs
 }
 
 // generateTestTriggerName function generates a trigger name from the TestTrigger spec

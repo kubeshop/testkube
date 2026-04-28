@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -31,6 +32,7 @@ import (
 	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -71,6 +73,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	cloudwebhookclient "github.com/kubeshop/testkube/pkg/newclients/webhookclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	observtracing "github.com/kubeshop/testkube/pkg/observability/tracing"
 	kubeclient "github.com/kubeshop/testkube/pkg/operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
@@ -149,6 +152,8 @@ func main() {
 	commons.ExitOnError("getting Kubernetes config", err)
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	commons.ExitOnError("creating k8s clientset", err)
+	dynamicClient, err := dynamic.NewForConfig(kubeConfig)
+	commons.ExitOnError("creating k8s dynamic client", err)
 
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
@@ -408,9 +413,18 @@ func main() {
 		testTriggersClient = testtriggerclient.NewKubernetesTestTriggerClient(legacyTestTriggersClientForAPI)
 	}
 
+	var workflowTriggersClient workflowtriggerclient.WorkflowTriggerClient
+	if useCloudTestTriggers {
+		// Cloud-connected mode: poll control plane for v2 triggers, same as TestTrigger.
+		workflowTriggersClient = workflowtriggerclient.NewCloudWorkflowTriggerClient(client)
+	} else {
+		workflowTriggersClient = workflowtriggerclient.NewKubernetesWorkflowTriggerClient(kubeClient, cfg.TestkubeNamespace)
+	}
+
 	if !useCloudTestTriggers && !cfg.DisableTestTriggers && shouldUseCloudTestTriggers(proContext) {
 		log.DefaultLogger.Infow("control plane is source of truth, using cloud test trigger client")
 		testTriggersClient = cloudTestTriggersClient
+		workflowTriggersClient = workflowtriggerclient.NewCloudWorkflowTriggerClient(client)
 		useCloudTestTriggers = true
 	}
 	useTestTriggerControlPlane := cfg.TestTriggerControlPlane || useCloudTestTriggers
@@ -473,6 +487,7 @@ func main() {
 		metrics,
 		proContext,
 		runnerOpts.StorageSkipVerify,
+		cfg.TestWorkflowLogArchiveRequired,
 		runnerOpts.GlobalTemplate,
 	)
 	runnerService := runner2.NewService(
@@ -531,7 +546,17 @@ func main() {
 	// Initialize event handlers
 	if !cfg.DisableWebhooks {
 		if (cfg.WebhookControlPlane || shouldUseCloudWebhooks(proContext)) && !cfg.EnableCloudWebhooks {
-			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, log.DefaultLogger)
+			agentLabels := make(map[string]string, len(proContext.Agent.Labels)+2)
+			for k, v := range proContext.Agent.Labels {
+				agentLabels[k] = v
+			}
+			if proContext.Agent.ID != "" {
+				agentLabels["id"] = proContext.Agent.ID
+			}
+			if proContext.Agent.Name != "" {
+				agentLabels["name"] = proContext.Agent.Name
+			}
+			webhooksLoaderClient = cloudwebhookclient.NewCloudWebhookClient(client, proContext.EnvID, cfg.TestkubeNamespace, agentLabels, log.DefaultLogger)
 			log.DefaultLogger.Infow("webhooks control plane sync enabled", "envID", proContext.EnvID)
 		}
 		log.DefaultLogger.Infow("registering webhook loader", "envID", proContext.EnvID, "orgID", proContext.OrgID)
@@ -596,6 +621,8 @@ func main() {
 		commons.ExitOnError("add TestWorkflows to kubernetes runtime scheme", err)
 		err = testtriggersv1.AddToScheme(scheme)
 		commons.ExitOnError("add TestTriggers to kubernetes runtime scheme", err)
+		err = workflowtriggersv1.AddToScheme(scheme)
+		commons.ExitOnError("add WorkflowTriggers to kubernetes runtime scheme", err)
 		err = executorv1.AddToScheme(scheme)
 		commons.ExitOnError("add Webhooks to kubernetes runtime scheme", err)
 
@@ -620,6 +647,8 @@ func main() {
 		if proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled {
 			err = synccontroller.NewTestTriggerSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestTrigger sync controller", err)
+			err = synccontroller.NewWorkflowTriggerSyncController(mgr, syncStore)
+			commons.ExitOnError("creating WorkflowTrigger sync controller", err)
 			err = synccontroller.NewTestWorkflowSyncController(mgr, syncStore)
 			commons.ExitOnError("creating TestWorkflow sync controller", err)
 			err = synccontroller.NewTestWorkflowTemplateSyncController(mgr, syncStore)
@@ -664,6 +693,7 @@ func main() {
 		webhooksClient,
 		webhookTemplatesClient,
 		testTriggersClient,
+		workflowTriggersClient,
 		testWorkflowsClient,
 		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
 		testWorkflowTemplatesClient,
@@ -680,6 +710,7 @@ func main() {
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
 		testWorkflowExecutor,
+		cfg.ExportArchiveMaxSize,
 	)
 	api.Init(httpServer)
 
@@ -767,7 +798,9 @@ func main() {
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),
+			triggers.WithWorkflowTriggersClient(workflowTriggersClient),
 			triggers.WithEventLabels(cfg.EventLabels),
+			triggers.WithDynamicClient(dynamicClient),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {
@@ -779,10 +812,11 @@ func main() {
 	}
 
 	// telemetry based functions
+	capabilities := services.AgentCapabilities(cfg)
 	leaderTasks = append(leaderTasks, leader.Task{
 		Name: "telemetry-heartbeat",
 		Start: func(taskCtx context.Context) error {
-			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig)
+			services.HandleTelemetryHeartbeat(taskCtx, clusterId, configMapConfig, capabilities)
 			return nil
 		},
 	})

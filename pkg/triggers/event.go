@@ -38,6 +38,7 @@ type watcherEvent struct {
 	resourceLabels   map[string]string
 	objectMeta       metav1.Object
 	Object           any `json:"object"`
+	OldObject        any `json:"oldObject,omitempty"`
 	eventType        testtrigger.EventType
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
@@ -53,6 +54,12 @@ type watcherAgent struct {
 }
 
 type watcherOpts func(*watcherEvent)
+
+func withOldObject(old any) watcherOpts {
+	return func(w *watcherEvent) {
+		w.OldObject = old
+	}
+}
 
 func withCauses(causes []testtrigger.Cause) watcherOpts {
 	return func(w *watcherEvent) {
@@ -90,7 +97,7 @@ const (
 	eventLabelKeyResourceVersion   string = "testkube.io/resource-version"
 )
 
-func (s Service) newWatcherEvent(
+func (s *Service) newWatcherEvent(
 	eventType testtrigger.EventType,
 	objectMeta metav1.Object,
 	object any,
@@ -115,9 +122,16 @@ func (s Service) newWatcherEvent(
 	w.EventLabels[eventLabelKeyResourceName] = utils.TruncateName(objectMeta.GetName())
 	w.EventLabels[eventLabelKeyResourceNamespace] = objectMeta.GetNamespace()
 
+	// Snapshot under informersMu to avoid racing with the runWatcher goroutine
+	// that nils s.informers on lease release. Without the lock a DeleteFunc
+	// firing during informer teardown could observe a half-torn-down pointer.
+	s.informersMu.RLock()
+	informers := s.informers
+	s.informersMu.RUnlock()
+
 	if runtimeObject, ok := object.(runtime.Object); ok &&
-		s.informers != nil && s.informers.scheme != nil {
-		gvks, _, err := s.informers.scheme.ObjectKinds(runtimeObject)
+		informers != nil && informers.scheme != nil {
+		gvks, _, err := informers.scheme.ObjectKinds(runtimeObject)
 		if err != nil {
 			s.logger.Warnf("error getting object kinds from scheme, skipped adding event label: %v", err)
 		} else if len(gvks) > 0 {

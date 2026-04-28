@@ -209,7 +209,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | postgresql.auth.database | string | `backend` | Name for a custom database to create in PostgreSQL |
 | postgresql.auth.password | string | `postgres5432` | Password for the custom user to create in PostgreSQL |
 | postgresql.auth.postgresPassword | string | `postgres1234` | Password for the "postgres" admin user in PostgreSQL |
-| postgresql.fullnameOverride | string | `"testkube-postgresql"` | PostgeSQL fullname override |
+| postgresql.fullnameOverride | string | `"testkube-postgresql"` | PostgreSQL fullname override |
 | postgresql.enabled | bool | `false` | Toggle whether to install PostgreSQL |
 | postgresql.global.security.allowInsecureImages | bool | `true` | Allows skipping image verification for PostgreSQL |
 | postgresql.image.pullSecrets | list | `[]` | PostgreSQL image pull Secret |
@@ -488,6 +488,8 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-operator.podSecurityContext | object | `{}` | Testkube Operator Pod Security Context |
 | testkube-api.postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` | PostgreSQL DSN |
 | testkube-api.postgresql.enabled | bool | `false` | use PostgreSQL |
+| testkube-api.postgresql.secretKey | string | `""` | Secret key for PostgreSQL DSN |
+| testkube-api.postgresql.secretName | string | `""` | Secret name with PostgreSQL DSN |
 | testkube-operator.preUpgrade.annotations | object | `{}` |  |
 | testkube-operator.preUpgrade.enabled | bool | `true` | Upgrade hook is enabled |
 | testkube-operator.preUpgrade.image | object | `{"pullPolicy":"IfNotPresent","pullSecrets":[],"registry":"docker.io","repository":"bitnami/kubectl","tag":"1.28.2"}` | Specify image |

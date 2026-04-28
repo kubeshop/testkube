@@ -6,10 +6,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/workflowtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -37,6 +39,8 @@ func NewDeleteCmd() *cobra.Command {
 
 	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
 	cmd.AddCommand(webhooktemplates.NewDeleteWebhookTemplateCmd())
+	cmd.AddCommand(workflowtriggers.NewDeleteWorkflowTriggerCmd())
+	cmd.AddCommand(testtriggers.NewDeleteTestTriggerCmd())
 	cmd.AddCommand(testworkflows.NewDeleteTestWorkflowCmd())
 	cmd.AddCommand(testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd())
 	cmd.AddCommand(agents.NewDeleteAgentCommand())

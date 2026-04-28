@@ -82,6 +82,7 @@ func ExecutionWorker() executionworkertypes.Worker {
 			CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
 			LogAbortedDetails:      config.Debug(),
 			AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
+			DisableResourceMetrics: cfg.Worker.DisableResourceMetrics,
 		})
 	}
 	return executionWorker
@@ -430,6 +431,7 @@ func ParallelExecutionWorker(cfg *config.ConfigV2) executionworkertypes.Worker {
 		CommonEnvVariables:     internalCfg.Worker.CommonEnvVariables,
 		LogAbortedDetails:      cfg.Debug(),
 		AllowLowSecurityFields: internalCfg.Worker.AllowLowSecurityFields,
+		DisableResourceMetrics: internalCfg.Worker.DisableResourceMetrics,
 	})
 
 	// Cache the worker

@@ -26,8 +26,31 @@ for (const file of sortedFiles) {
 }
 sections.push("{{- end }}\n");
 
+// Escape `{{`/`}}` that appear inside the CRD YAML so Helm doesn't try to
+// evaluate them as template actions. controller-gen copies Go struct comments
+// verbatim into description fields, and those comments may legitimately
+// contain Testkube expression-language examples like `{{resource.spec.xyz}}`.
+// Single-pass replacement: two sequential replaces would re-process braces
+// they just introduced, producing self-nested garbage.
+function escapeHelmBraces(s) {
+  return s.replace(/\{\{|\}\}/g, (m) => (m === '{{' ? '{{`{{`}}' : '{{`}}`}}'));
+}
+
+function normalizeIntOrStringSchema(s) {
+  return s.replace(
+    /\n([ \t]+)type: string\n\1x-kubernetes-int-or-string: true/g,
+    "\n$1anyOf:\n$1  - type: integer\n$1  - type: string\n$1x-kubernetes-int-or-string: true",
+  );
+}
+
 for (const file of sortedFiles) {
-  const content = fs.readFileSync(path.join(src, file), "utf8").trimEnd();
+  const srcPath = path.join(src, file);
+  const rawContent = fs.readFileSync(srcPath, "utf8");
+  const normalizedContent = normalizeIntOrStringSchema(rawContent);
+  if (normalizedContent !== rawContent) {
+    fs.writeFileSync(srcPath, normalizedContent);
+  }
+  const content = escapeHelmBraces(normalizedContent.trimEnd());
   sections.push(renderDefineBlock(file, content));
 }
 

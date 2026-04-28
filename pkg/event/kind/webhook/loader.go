@@ -267,6 +267,12 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		}
 	}
 
+	// Target is used by cloud-api for agent-level webhook sync/filtering,
+	// not consumed by NewWebhookListener in the OSS engine.
+	if dst.Spec.Target == nil && src.Spec.Target != nil {
+		dst.Spec.Target = src.Spec.Target.DeepCopy()
+	}
+
 	items := []struct {
 		d *string
 		s *string

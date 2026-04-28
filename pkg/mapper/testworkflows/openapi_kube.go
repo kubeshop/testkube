@@ -34,6 +34,13 @@ func MapBoxedStringToIntOrString(v *testkube.BoxedString) *intstr.IntOrString {
 	return &intstr.IntOrString{Type: intstr.String, StrVal: v.Value}
 }
 
+func MapTemplatableBoxedIntegerToWorkflowInt64OrString(v *testkube.TemplatableBoxedInteger) *testworkflowsv1.WorkflowInt64OrString {
+	if v == nil {
+		return nil
+	}
+	return testworkflowsv1.NewWorkflowInt64OrString(v.Value)
+}
+
 func MapStringPtrToIntOrStringPtr(i *string) *intstr.IntOrString {
 	if i == nil {
 		return nil
@@ -207,17 +214,23 @@ func MapEnvFromSourceAPIToKube(v testkube.EnvFromSource) corev1.EnvFromSource {
 	}
 }
 
-func MapSecurityContextAPIToKube(v *testkube.SecurityContext) *corev1.SecurityContext {
+func MapSecurityContextAPIToKube(v *testkube.SecurityContext) *testworkflowsv1.WorkflowSecurityContext {
 	if v == nil {
 		return nil
 	}
-	return &corev1.SecurityContext{
+	return &testworkflowsv1.WorkflowSecurityContext{
+		Capabilities:             MapCapabilitiesAPIToKube(v.Capabilities),
 		Privileged:               MapBoxedBooleanToBool(v.Privileged),
-		RunAsUser:                MapBoxedIntegerToInt64(v.RunAsUser),
-		RunAsGroup:               MapBoxedIntegerToInt64(v.RunAsGroup),
+		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
+		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
+		RunAsUser:                MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsUser),
+		RunAsGroup:               MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsGroup),
 		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
 		ReadOnlyRootFilesystem:   MapBoxedBooleanToBool(v.ReadOnlyRootFilesystem),
 		AllowPrivilegeEscalation: MapBoxedBooleanToBool(v.AllowPrivilegeEscalation),
+		ProcMount:                common.MapPtr(MapBoxedStringToString(v.ProcMount), common.MapStringToEnum[corev1.ProcMountType]),
+		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileAPIToKube),
+		AppArmorProfile:          common.MapPtr(v.AppArmorProfile, MapAppArmorProfileAPIToKube),
 	}
 }
 
@@ -644,16 +657,16 @@ func MapPodResourceClaimAPIToKube(v testkube.PodResourceClaim) corev1.PodResourc
 	}
 }
 
-func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) corev1.PodSecurityContext {
-	return corev1.PodSecurityContext{
+func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) testworkflowsv1.WorkflowPodSecurityContext {
+	return testworkflowsv1.WorkflowPodSecurityContext{
 		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
 		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
-		RunAsUser:                MapBoxedIntegerToInt64(v.RunAsUser),
-		RunAsGroup:               MapBoxedIntegerToInt64(v.RunAsGroup),
+		RunAsUser:                MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsUser),
+		RunAsGroup:               MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.RunAsGroup),
 		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
 		SupplementalGroups:       v.SupplementalGroups,
 		SupplementalGroupsPolicy: common.MapPtr(MapBoxedStringToString(v.SupplementalGroupsPolicy), common.MapStringToEnum[corev1.SupplementalGroupsPolicy]),
-		FSGroup:                  MapBoxedIntegerToInt64(v.FsGroup),
+		FSGroup:                  MapTemplatableBoxedIntegerToWorkflowInt64OrString(v.FsGroup),
 		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlAPIToKube),
 		FSGroupChangePolicy:      common.MapPtr(MapBoxedStringToString(v.FsGroupChangePolicy), common.MapStringToEnum[corev1.PodFSGroupChangePolicy]),
 		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileAPIToKube),
@@ -698,6 +711,16 @@ func MapAppArmorProfileAPIToKube(v testkube.AppArmorProfile) corev1.AppArmorProf
 	return corev1.AppArmorProfile{
 		Type:             corev1.AppArmorProfileType(v.Type_),
 		LocalhostProfile: MapBoxedStringToString(v.LocalhostProfile),
+	}
+}
+
+func MapCapabilitiesAPIToKube(v *testkube.Capabilities) *corev1.Capabilities {
+	if v == nil {
+		return nil
+	}
+	return &corev1.Capabilities{
+		Add:  common.MapSlice(v.Add, common.MapStringToEnum[corev1.Capability]),
+		Drop: common.MapSlice(v.Drop, common.MapStringToEnum[corev1.Capability]),
 	}
 }
 
@@ -816,6 +839,7 @@ func MapPodConfigAPIToKube(v testkube.TestWorkflowPodConfig) testworkflowsv1.Pod
 		DNSPolicy:                 corev1.DNSPolicy(v.DnsPolicy),
 		NodeName:                  v.NodeName,
 		SecurityContext:           common.MapPtr(v.SecurityContext, MapPodSecurityContextAPIToKube),
+		DisableFsGroupDefaulting:  MapBoxedBooleanToBool(v.DisableFsGroupDefaulting),
 		Hostname:                  v.Hostname,
 		Subdomain:                 v.Subdomain,
 		Affinity:                  common.MapPtr(v.Affinity, MapAffinityAPIToKube),
@@ -1287,6 +1311,7 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 	return testworkflowsv1.Step{
 		StepMeta: testworkflowsv1.StepMeta{
+			Id:        v.Id,
 			Name:      v.Name,
 			Condition: v.Condition,
 			Pure:      MapBoxedBooleanToBool(v.Pure),
@@ -1324,6 +1349,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testworkflowsv1.IndependentStep {
 	return testworkflowsv1.IndependentStep{
 		StepMeta: testworkflowsv1.StepMeta{
+			Id:        v.Id,
 			Name:      v.Name,
 			Condition: v.Condition,
 			Pure:      MapBoxedBooleanToBool(v.Pure),
@@ -1619,10 +1645,14 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 }
 
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowExecutionSchema) testworkflowsv1.TestWorkflowExecutionSchema {
+	var silent *bool
+	if v.Silent {
+		silent = common.Ptr(true)
+	}
 	return testworkflowsv1.TestWorkflowExecutionSchema{
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
-		Silent: v.Silent,
+		Silent: silent,
 	}
 }
 

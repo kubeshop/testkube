@@ -51,6 +51,27 @@ kubeVersion: ""
 ## create roles and rolebindings
 rbac:
   create: true
+  ## Additional resources the agent is allowed to watch.
+  ## Required when TestTriggers or WorkflowTriggers use `resourceRef` to
+  ## target a CRD that isn't covered by the default watchers role
+  ## (e.g. cert-manager.io/certificates, kafka.strimzi.io/kafkatopics).
+  ##
+  ## Applied to all three watcher role variants:
+  ##   - the cluster-wide ClusterRole (default, multinamespace.enabled=false)
+  ##   - the release-namespace Role (multinamespace.enabled=true)
+  ##   - the per-namespace Roles generated from additionalNamespaces
+  ##
+  ## Verbs default to [get, list, watch] (read-only; triggers do not mutate
+  ## the watched resource). Override per-entry if you need something else.
+  ##
+  ## Example:
+  ## extraWatchedResources:
+  ##   - apiGroups: ["cert-manager.io"]
+  ##     resources: ["certificates", "certificaterequests"]
+  ##   - apiGroups: ["kafka.strimzi.io"]
+  ##     resources: ["kafkatopics"]
+  ##     verbs: ["get", "list", "watch"]
+  extraWatchedResources: []
 
 ## Number of Testkube API Pod replicas
 replicaCount: 1
@@ -517,6 +538,9 @@ securityContext: {}
 ## Toggle to enable debug mode
 enableDebugMode: false
 
+## Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+exportArchiveMaxSize: 104857600
+
 ## Service parameters
 service:
   ## Adapter service type
@@ -573,11 +597,12 @@ mongodb:
 postgresql:
   ## Deploy PostgreSQL server to the cluster
   enabled: false
-  ## Define dsn connection string
+  ## Define PostgreSQL DSN connection string
   dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
-  ## or use dsn in secrets
-  # secretName: testkube-secrets
-  # secretKey: postgresql-dsn
+  ## Name of the Kubernetes secret containing the PostgreSQL DSN
+  secretName: ""
+  ## Key in the Kubernetes secret containing the PostgreSQL DSN
+  secretKey: ""
 
 ## NATS parameters
 ## ref: https://github.com/nats-io/nats-server

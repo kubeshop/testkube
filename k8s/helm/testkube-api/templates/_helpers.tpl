@@ -279,7 +279,7 @@ Define API environment in standalone mode
   valueFrom:
     secretKeyRef:
       name: {{ .Values.postgresql.secretName }}
-      key: {{ .Values.postgresql.secretKey }}
+      key: {{ required "postgresql.secretKey is required when postgresql.secretName is set" .Values.postgresql.secretKey }}
   {{- else }}
   value: "{{ .Values.postgresql.dsn }}"
   {{- end }}

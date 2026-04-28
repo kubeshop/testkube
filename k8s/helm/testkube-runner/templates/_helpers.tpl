@@ -15,6 +15,10 @@
 {{- end }}
 {{- end }}
 
+{{- define "testkube-runner.runnerName" -}}
+{{- default (include "testkube-runner.fullname" .) .Values.runner.name -}}
+{{- end }}
+
 {{- define "testkube-runner.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "testkube-runner.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
@@ -185,8 +189,18 @@ rules:
     resources:
       - testworkflows
       - testworkflowtemplates
+      - workflowtriggers
     verbs:
       - get
       - list
       - watch
+  {{- with .Values.listener.extraWatchedResources }}
+  # User-declared GVKs for TestTrigger / WorkflowTrigger `resourceRef` targets
+  # that aren't covered by the built-in resource list above.
+  {{- range . }}
+  - apiGroups: {{ toYaml .apiGroups | nindent 6 }}
+    resources: {{ toYaml .resources | nindent 6 }}
+    verbs: {{ .verbs | default (list "get" "list" "watch") | toYaml | nindent 6 }}
+  {{- end }}
+  {{- end }}
 {{- end }}

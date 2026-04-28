@@ -50,6 +50,7 @@ type Client interface {
 	TestWorkflowsClient
 	TestWorkflowTemplatesClient
 	TestTriggersClient
+	WorkflowTriggersClient
 	WebhooksClient
 }
 

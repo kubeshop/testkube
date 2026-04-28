@@ -441,36 +441,17 @@ func (l *WebhookListener) Group() string {
 // credentialPattern matches {{credential("name")}} or {{credential('name')}} patterns
 var credentialPattern = regexp.MustCompile(`\{\{credential\(["']([^"']+)["']\)\}\}`)
 
-// vaultPattern matches {{vault("path")}} or {{vault('path')}} patterns
-var vaultPattern = regexp.MustCompile(`\{\{vault\(["']([^"']+)["']\)\}\}`)
-
 func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {
 	log := l.Log.With(event.Log()...)
-
-	// Check for credential/vault patterns before pre-processing
-	credMatches := credentialPattern.FindAllStringSubmatch(body, -1)
-	vaultMatches := vaultPattern.FindAllStringSubmatch(body, -1)
-	hasCredentialPatterns := len(credMatches) > 0 || len(vaultMatches) > 0
 
 	// Pre-process template to convert function call syntax to Go template syntax
 	// Convert {{credential("name")}} to {{credential "name"}}
 	body = credentialPattern.ReplaceAllString(body, `{{credential "$1"}}`)
-	// Convert {{vault("path")}} to {{vault "path"}}
-	body = vaultPattern.ReplaceAllString(body, `{{vault "$1"}}`)
 
 	// Setup credential repository for template functions
 	var repo credentials.CredentialRepository
 	if l.grpcClient != nil {
-		// Create credential repository adapter that uses gRPC to resolve credentials from control plane
 		repo = newGRPCCredentialAdapter(l.grpcClient, l.envID, "", l.apiKey, l.orgID, l.agentID)
-	} else if hasCredentialPatterns {
-		// No credential resolution available but template needs it
-		log.Errorw("template contains credential patterns but no gRPC client configured",
-			"webhook_name", l.name,
-			"field", field,
-			"credential_patterns_found", len(credMatches),
-			"vault_patterns_found", len(vaultMatches))
-		return nil, fmt.Errorf("template contains %d credential patterns and %d vault patterns but gRPC client is not configured", len(credMatches), len(vaultMatches))
 	}
 
 	// Process with Go templates - credentials are resolved as template functions
@@ -481,6 +462,9 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
 		"testworkflowstatustostring":       testkube.TestWorkflowStatusString,
 		"credential": func(name string) (string, error) {
+			if repo == nil {
+				return "", fmt.Errorf("credential %q cannot be resolved: gRPC client is not configured", name)
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -494,23 +478,6 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 
 			log.Infow("resolved credential",
 				"credential_name", name)
-
-			return string(value), nil
-		},
-		"vault": func(path string) (string, error) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-
-			value, err := repo.GetWithSource(ctx, path, credentials.SourceVault)
-			if err != nil {
-				log.Errorw("failed to resolve vault secret",
-					"vault_path", path,
-					"error", err)
-				return "", err
-			}
-
-			log.Infow("resolved vault secret",
-				"vault_path", path)
 
 			return string(value), nil
 		},

@@ -98,6 +98,60 @@ func (s *state) getSubSteps(ref string, visited *map[*StepData]struct{}) {
 	}
 }
 
+func (s *state) GetStepByID(id string) *StepData {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+
+	for _, step := range s.Steps {
+		if step.Id == id {
+			return step
+		}
+	}
+	return nil
+}
+
+func stepOutputKey(stepId, name string) string {
+	return "step." + stepId + "." + name
+}
+
+func stepOutputPrefix(stepId string) string {
+	return "step." + stepId + "."
+}
+
+func (s *state) SetStepOutput(stepId, name, value string) {
+	stateMu.Lock()
+	defer stateMu.Unlock()
+
+	if s.Output == nil {
+		s.Output = make(map[string]string)
+	}
+	s.Output[stepOutputKey(stepId, name)] = value
+}
+
+func (s *state) ClearStepOutputs(stepId string) {
+	stateMu.Lock()
+	defer stateMu.Unlock()
+
+	prefix := stepOutputPrefix(stepId)
+	for k := range s.Output {
+		if strings.HasPrefix(k, prefix) {
+			delete(s.Output, k)
+		}
+	}
+}
+
+func (s *state) GetStepOutput(stepId, name string) (interface{}, bool, error) {
+	key := stepOutputKey(stepId, name)
+	stateMu.RLock()
+	v, ok := s.Output[key]
+	stateMu.RUnlock()
+
+	if !ok {
+		return nil, false, nil
+	}
+	return v, true, nil
+}
+
 func (s *state) GetSubSteps(ref string) []*StepData {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
@@ -161,9 +215,7 @@ func persistState(filePath string) error {
 	return nil
 }
 
-var (
-	prevTerminationLog []string
-)
+var prevTerminationLog []string
 
 func persistTerminationLog() {
 	// Read the state

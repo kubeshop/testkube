@@ -23,6 +23,7 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewProxyClient[testkube.TestWorkflowTemplate](client, config)),
 		TestTriggerClient:          NewTestTriggerClient(NewProxyClient[testkube.TestTrigger](client, config)),
+		WorkflowTriggerClient:      NewWorkflowTriggerClient(NewProxyClient[testkube.WorkflowTrigger](client, config)),
 		SharedClient: NewSharedClient(
 			NewProxyClient[map[string][]string](client, config),
 			NewProxyClient[testkube.ServerInfo](client, config),
@@ -46,6 +47,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewDirectClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 		TestTriggerClient:          NewTestTriggerClient(NewDirectClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
+		WorkflowTriggerClient:      NewWorkflowTriggerClient(NewDirectClient[testkube.WorkflowTrigger](httpClient, apiURI, apiPathPrefix)),
 		SharedClient: NewSharedClient(
 			NewDirectClient[map[string][]string](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.ServerInfo](httpClient, apiURI, apiPathPrefix),
@@ -69,6 +71,7 @@ func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, 
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 		TestTriggerClient:          NewTestTriggerClient(NewCloudClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
+		WorkflowTriggerClient:      NewWorkflowTriggerClient(NewCloudClient[testkube.WorkflowTrigger](httpClient, apiURI, apiPathPrefix)),
 		SharedClient: NewSharedClient(
 			NewCloudClient[map[string][]string](httpClient, apiURI, apiPathPrefix),
 			NewCloudClient[testkube.ServerInfo](httpClient, apiURI, apiPathPrefix),
@@ -85,6 +88,7 @@ type APIClient struct {
 	TestWorkflowClient
 	TestWorkflowTemplateClient
 	TestTriggerClient
+	WorkflowTriggerClient
 	SharedClient
 }
 

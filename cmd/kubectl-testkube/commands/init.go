@@ -77,6 +77,7 @@ func NewInitCmdStandalone() *cobra.Command {
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + standaloneInstallationName + ".")
 			ui.NL()
+			common.ShowOperatorDeprecationWarning("Testkube API Server", options.NoCRDs)
 
 			if !isContextApproved(options.NoConfirm, standaloneInstallationName) {
 				return

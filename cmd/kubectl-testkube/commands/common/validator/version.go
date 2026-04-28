@@ -45,10 +45,10 @@ func PersistentPreRunVersionCheck(cmd *cobra.Command, clientVersion string) {
 	if err != nil {
 		ui.Warn(err.Error())
 	} else if err == ErrOldClientVersion {
-		ui.Warn("Your Testkube API version is newer than your `kubectl testkube` plugin")
+		ui.Warn("Your Testkube API version is newer than your `testkube` CLI")
 		ui.Info("Testkube API version", info.Version)
-		ui.Info("Testkube kubectl plugin client", clientVersion)
-		ui.Info("It's recommended to upgrade client to version close to API server version")
+		ui.Info("Testkube CLI client", clientVersion)
+		ui.Hint("It's recommended to upgrade the client to a version close to the API server version")
 		ui.NL()
 	}
 }

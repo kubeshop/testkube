@@ -30,7 +30,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, parentC
 	}
 
 	actions = append(actions, actiontypes.Action{
-		Declare: &lite.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
+		Declare: &lite.ActionDeclare{Ref: stage.Ref(), Id: stage.Id(), Condition: condition, Parents: parents},
 	})
 
 	// Configure the container for action

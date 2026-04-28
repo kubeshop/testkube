@@ -2,7 +2,6 @@ package pro
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pterm/pterm"
 
@@ -15,7 +14,11 @@ import (
 
 func NewDisconnectCmd() *cobra.Command {
 
-	var opts common.HelmOptions
+	var (
+		minioReplicas    int
+		mongoReplicas    int
+		postgresReplicas int
+	)
 
 	cmd := &cobra.Command{
 		Use:     "disconnect",
@@ -34,18 +37,6 @@ func NewDisconnectCmd() *cobra.Command {
 				return
 			}
 
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
-
-			info, err := client.GetServerInfo()
-			firstInstall := err != nil && strings.Contains(err.Error(), "not found")
-			if err != nil && !firstInstall {
-				ui.Failf("Can't get Testkube cluster information: %s", err.Error())
-			}
-			var apiContext string
-			if actx, ok := contextDescription[info.Context]; ok {
-				apiContext = actx
-			}
 			var clusterContext string
 			var cliErr *common.CLIError
 			if cfg.ContextType == config.ContextTypeKubeconfig {
@@ -53,12 +44,11 @@ func NewDisconnectCmd() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 
-			// TODO: implement context info
 			ui.H1("Current status of your Testkube instance")
 
 			summary := [][]string{
 				{"Testkube mode"},
-				{"Context", apiContext},
+				{"Context", contextDescription["cloud"]},
 				{"Kubectl context", clusterContext},
 				{"Namespace", cfg.Namespace},
 				{ui.Separator, ""},
@@ -76,25 +66,86 @@ func NewDisconnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
-
-			if cliErr := common.HelmUpgradeOrInstallTestkube(opts); cliErr != nil {
-				spinner.Fail()
-				common.HandleCLIError(cliErr)
+			// uninstall the runner chart that was installed by "pro connect";
+			// failures are non-fatal so disconnect can still restore OSS mode
+			if cfg.CloudContext.AgentReleaseName != "" && cfg.CloudContext.AgentNamespace != "" {
+				spinner := ui.NewSpinner("Uninstalling agent runner")
+				if cliErr := common.HelmUninstall(cfg.CloudContext.AgentNamespace, cfg.CloudContext.AgentReleaseName); cliErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to uninstall runner release %s (continuing with disconnect): %s", cfg.CloudContext.AgentReleaseName, cliErr))
+				} else {
+					spinner.Success()
+				}
 			}
 
-			spinner.Success()
+			// Delete the agent record from the control plane that was created by "pro connect"
+			if cfg.CloudContext.AgentName != "" && cfg.CloudContext.ApiUri != "" && cfg.CloudContext.ApiKey != "" && cfg.CloudContext.OrganizationId != "" {
+				spinner := ui.NewSpinner("Deleting agent from control plane")
+				if err := common.DeleteAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.CloudContext.AgentName); err != nil {
+					spinner.Fail(fmt.Sprintf("Failed to delete agent %q from control plane (continuing with disconnect): %s", cfg.CloudContext.AgentName, err))
+				} else {
+					spinner.Success()
+				}
+			}
 
-			// let's scale down deployment of mongo
-			if opts.MongoReplicas > 0 {
-				spinner = ui.NewSpinner("Scaling up MongoDB")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
+			ns := cfg.Namespace
+
+			// Scale up the OSS API server that was scaled down by pro connect
+			spinner := ui.NewSpinner("Scaling up testkube-api-server")
+			if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-api-server", 1); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale up testkube-api-server: %s", scaleErr))
+			} else {
 				spinner.Success()
 			}
-			if opts.MinioReplicas > 0 {
+
+			// Restore support services that were scaled down by pro connect
+			if minioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
+				if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-minio-testkube", minioReplicas); scaleErr != nil {
+					spinner.Fail(fmt.Sprintf("Failed to scale up MinIO: %s", scaleErr))
+				} else {
+					spinner.Success()
+				}
+			}
+			spinner = ui.NewSpinner("Scaling up NATS")
+			if _, scaleErr := common.KubectlScaleStatefulSet(ns, "testkube-nats", 1); scaleErr != nil {
+				spinner.Fail(fmt.Sprintf("Failed to scale up NATS: %s", scaleErr))
+			} else {
 				spinner.Success()
+			}
+			dbType := cfg.CloudContext.DatabaseType
+			switch dbType {
+			case config.DatabaseTypeMongoDB:
+				if mongoReplicas > 0 {
+					spinner = ui.NewSpinner("Scaling up MongoDB")
+					if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-mongodb", mongoReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale up MongoDB: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
+				}
+			case config.DatabaseTypePostgreSQL:
+				if postgresReplicas > 0 {
+					spinner = ui.NewSpinner("Scaling up PostgreSQL")
+					if _, scaleErr := common.KubectlScaleStatefulSet(ns, "testkube-postgresql", postgresReplicas); scaleErr != nil {
+						spinner.Fail(fmt.Sprintf("Failed to scale up PostgreSQL: %s", scaleErr))
+					} else {
+						spinner.Success()
+					}
+				}
+			default:
+				// no database type recorded – fall back to attempting both so that clusters
+				// connected before this feature was introduced are handled gracefully;
+				// errors are silently ignored because only one DB is actually deployed
+				if mongoReplicas > 0 {
+					if _, scaleErr := common.KubectlScaleDeployment(ns, "testkube-mongodb", mongoReplicas); scaleErr == nil {
+						ui.Success("Scaled up MongoDB")
+					}
+				}
+				if postgresReplicas > 0 {
+					if _, scaleErr := common.KubectlScaleStatefulSet(ns, "testkube-postgresql", postgresReplicas); scaleErr == nil {
+						ui.Success("Scaled up PostgreSQL")
+					}
+				}
 			}
 
 			spinner = ui.NewSpinner("Resetting Testkube config.json")
@@ -113,9 +164,8 @@ func NewDisconnectCmd() *cobra.Command {
 		},
 	}
 
-	// populate options
-	common.PopulateHelmFlags(cmd, &opts)
-	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 1, "MinIO replicas")
-	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 1, "MongoDB replicas")
+	cmd.Flags().IntVar(&minioReplicas, "minio-replicas", 1, "MinIO replicas to restore on disconnect")
+	cmd.Flags().IntVar(&mongoReplicas, "mongo-replicas", 1, "MongoDB replicas to restore on disconnect")
+	cmd.Flags().IntVar(&postgresReplicas, "postgres-replicas", 1, "PostgreSQL replicas to restore on disconnect")
 	return cmd
 }

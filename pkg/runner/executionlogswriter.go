@@ -25,6 +25,7 @@ type ExecutionLogsWriter interface {
 	WriteStart(ref string) error
 	Save(ctx context.Context) error
 	Saved() bool
+	Enabled() bool
 	Cleanup()
 	Reset() error
 }
@@ -34,6 +35,7 @@ type executionLogsWriter struct {
 	environmentId string
 	id            string
 	workflowName  string
+	enabled       bool
 	skipVerify    bool
 
 	writer *io.PipeWriter
@@ -41,12 +43,13 @@ type executionLogsWriter struct {
 	mu     sync.Mutex
 }
 
-func NewExecutionLogsWriter(client controlplaneclient.Client, environmentId, id string, workflowName string, skipVerify bool) (ExecutionLogsWriter, error) {
+func NewExecutionLogsWriter(client controlplaneclient.Client, environmentId, id string, workflowName string, enabled, skipVerify bool) (ExecutionLogsWriter, error) {
 	e := &executionLogsWriter{
 		client:        client,
 		environmentId: environmentId,
 		id:            id,
 		workflowName:  workflowName,
+		enabled:       enabled,
 		skipVerify:    skipVerify,
 	}
 	err := e.Reset()
@@ -93,13 +96,13 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 	req.ContentLength = int64(contentLen)
 	httpClient := http.DefaultClient
 	if e.skipVerify {
-		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-		httpClient.Transport = transport
+		httpClient = &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
 	}
 	res, err := httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in the object storage")
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return errors.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
@@ -130,6 +133,10 @@ func (e *executionLogsWriter) Saved() bool {
 		return e.buffer == nil
 	}
 	return false
+}
+
+func (e *executionLogsWriter) Enabled() bool {
+	return e.enabled
 }
 
 func (e *executionLogsWriter) Reset() error {

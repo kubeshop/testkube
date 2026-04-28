@@ -1,3 +1,5 @@
+ARG BUSYBOX_IMAGE
+
 ###################################
 ## Build
 ###################################
@@ -5,8 +7,8 @@ FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
 
 ARG VERSION
@@ -46,8 +48,9 @@ ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multicl
 ###################################
 ## Live (Tilt live_update — needs shell for restart_process)
 ###################################
-FROM ${BUSYBOX_IMAGE:-busybox:1.37} AS live
+FROM ${BUSYBOX_IMAGE:-busybox:1.37.0} AS live
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/build/_local/agent-server /testkube/agent-server
 
 EXPOSE 8080 8088 8089

@@ -62,7 +62,10 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	}
 
 	// Build the CR base
-	cr, _ = defaultContainer.Detach().ToKubernetesTemplate()
+	cr, err = defaultContainer.Detach().ToKubernetesTemplate()
+	if err != nil {
+		return corev1.Container{}, nil, nil, err
+	}
 	cr.Image = ""
 	cr.Env = nil
 	cr.EnvFrom = nil

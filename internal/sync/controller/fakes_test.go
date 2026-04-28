@@ -10,6 +10,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
 var fakeNotFoundErr = errors.NewNotFound(schema.GroupResource{}, "test-error")
@@ -17,6 +18,7 @@ var fakeNotFoundErr = errors.NewNotFound(schema.GroupResource{}, "test-error")
 type fakeKubernetesClient struct {
 	Err                  error
 	TestTrigger          testtriggersv1.TestTrigger
+	WorkflowTrigger      workflowtriggersv1.WorkflowTrigger
 	TestWorkflow         testworkflowsv1.TestWorkflow
 	TestWorkflowTemplate testworkflowsv1.TestWorkflowTemplate
 	Webhook              executorv1.Webhook
@@ -27,6 +29,8 @@ func (t fakeKubernetesClient) Get(_ context.Context, _ client.ObjectKey, obj cli
 	switch v := obj.(type) {
 	case *testtriggersv1.TestTrigger:
 		t.TestTrigger.DeepCopyInto(v)
+	case *workflowtriggersv1.WorkflowTrigger:
+		t.WorkflowTrigger.DeepCopyInto(v)
 	case *testworkflowsv1.TestWorkflow:
 		t.TestWorkflow.DeepCopyInto(v)
 	case *testworkflowsv1.TestWorkflowTemplate:
@@ -45,6 +49,7 @@ func (t fakeKubernetesClient) List(_ context.Context, _ client.ObjectList, _ ...
 
 type fakeStore struct {
 	TestTrigger          testtriggersv1.TestTrigger
+	WorkflowTrigger      workflowtriggersv1.WorkflowTrigger
 	TestWorkflow         testworkflowsv1.TestWorkflow
 	TestWorkflowTemplate testworkflowsv1.TestWorkflowTemplate
 	Webhook              executorv1.Webhook
@@ -60,6 +65,17 @@ func (t *fakeStore) UpdateOrCreateTestTrigger(_ context.Context, trigger testtri
 }
 
 func (t *fakeStore) DeleteTestTrigger(_ context.Context, s string) error {
+	t.Deleted = s
+	return nil
+}
+
+func (t *fakeStore) UpdateOrCreateWorkflowTrigger(_ context.Context, trigger workflowtriggersv1.WorkflowTrigger) error {
+	t.UpdateCalls++
+	trigger.DeepCopyInto(&t.WorkflowTrigger)
+	return nil
+}
+
+func (t *fakeStore) DeleteWorkflowTrigger(_ context.Context, s string) error {
 	t.Deleted = s
 	return nil
 }

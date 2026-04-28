@@ -17,7 +17,7 @@ func GetBaseTestWorkflowMachine() expressions.Machine {
 	}
 	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
 	GetState() // load state
-	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
+	return expressions.CombinedMachines(EnvMachine, StepMachine, StateMachine, fileMachine)
 }
 
 func ExecutionMachine() expressions.Machine {

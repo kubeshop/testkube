@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 
 	templatesv1 "github.com/kubeshop/testkube/api/template/v1"
 )
@@ -55,12 +55,12 @@ func TestTemplates(t *testing.T) {
 		clientBuilder := fake.NewClientBuilder()
 
 		groupVersion := schema.GroupVersion{Group: "template.testkube.io", Version: "v1"}
-		schemaBuilder := scheme.Builder{GroupVersion: groupVersion}
-		schemaBuilder.Register(&templatesv1.TemplateList{})
-		schemaBuilder.Register(&templatesv1.Template{})
-
-		schema, err := schemaBuilder.Build()
-		assert.NoError(t, err)
+		schema := runtime.NewScheme()
+		schema.AddKnownTypes(groupVersion,
+			&templatesv1.TemplateList{},
+			&templatesv1.Template{},
+		)
+		v1.AddToGroupVersion(schema, groupVersion)
 		assert.NotEmpty(t, schema)
 		clientBuilder.WithScheme(schema)
 

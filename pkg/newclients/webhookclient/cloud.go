@@ -15,17 +15,20 @@ import (
 
 // CloudWebhookClient lists webhooks from the Control Plane on demand and exposes the same interface as the K8s client.
 type CloudWebhookClient struct {
-	client    controlplaneclient.WebhooksClient
-	envID     string
-	namespace string
-	log       *zap.SugaredLogger
+	client      controlplaneclient.WebhooksClient
+	envID       string
+	namespace   string
+	agentLabels map[string]string
+	log         *zap.SugaredLogger
 }
 
 // NewCloudWebhookClient builds a Webhook client backed by the Control Plane.
+// agentLabels are sent as a target selector so the CP only returns webhooks targeting this agent.
 func NewCloudWebhookClient(
 	client controlplaneclient.WebhooksClient,
 	envID string,
 	namespace string,
+	agentLabels map[string]string,
 	logger *zap.SugaredLogger,
 ) *CloudWebhookClient {
 	if logger == nil {
@@ -33,10 +36,11 @@ func NewCloudWebhookClient(
 	}
 
 	c := &CloudWebhookClient{
-		client:    client,
-		envID:     envID,
-		namespace: namespace,
-		log:       logger,
+		client:      client,
+		envID:       envID,
+		namespace:   namespace,
+		agentLabels: agentLabels,
+		log:         logger,
 	}
 
 	return c
@@ -49,7 +53,9 @@ func (c *CloudWebhookClient) List(selector string) (*executorv1.WebhookList, err
 		return nil, fmt.Errorf("invalid label selector: %w", err)
 	}
 
-	webhooksList, err := c.client.ListWebhooks(context.Background(), c.envID, controlplaneclient.ListWebhookOptions{}, c.namespace)
+	webhooksList, err := c.client.ListWebhooks(context.Background(), c.envID, controlplaneclient.ListWebhookOptions{
+		TargetSelector: c.agentLabels,
+	}, c.namespace)
 	if err != nil {
 		return nil, err
 	}

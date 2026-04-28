@@ -67,14 +67,15 @@ type Runner interface {
 }
 
 type runner struct {
-	worker            executionworkertypes.Worker
-	client            controlplaneclient.Client
-	configRepository  configRepo.Repository
-	emitter           event.Interface
-	metrics           metrics.Metrics
-	proContext        config.ProContext // TODO: Include Agent ID in pro context
-	storageSkipVerify bool
-	getGlobalTemplate GlobalTemplateFactory
+	worker             executionworkertypes.Worker
+	client             controlplaneclient.Client
+	configRepository   configRepo.Repository
+	emitter            event.Interface
+	metrics            metrics.Metrics
+	proContext         config.ProContext // TODO: Include Agent ID in pro context
+	storageSkipVerify  bool
+	logArchiveRequired bool
+	getGlobalTemplate  GlobalTemplateFactory
 
 	watching sync.Map
 	sf       singleflight.Group
@@ -88,17 +89,19 @@ func New(
 	metrics metrics.Metrics,
 	proContext config.ProContext,
 	storageSkipVerify bool,
+	logArchiveRequired bool,
 	getGlobalTemplate GlobalTemplateFactory,
 ) Runner {
 	return &runner{
-		worker:            worker,
-		configRepository:  configRepository,
-		client:            client,
-		emitter:           emitter,
-		metrics:           metrics,
-		proContext:        proContext,
-		storageSkipVerify: storageSkipVerify,
-		getGlobalTemplate: getGlobalTemplate,
+		worker:             worker,
+		configRepository:   configRepository,
+		client:             client,
+		emitter:            emitter,
+		metrics:            metrics,
+		proContext:         proContext,
+		storageSkipVerify:  storageSkipVerify,
+		logArchiveRequired: logArchiveRequired,
+		getGlobalTemplate:  getGlobalTemplate,
 	}
 }
 
@@ -122,7 +125,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
 	}
 
-	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.storageSkipVerify)
+	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.logArchiveRequired, r.storageSkipVerify)
 	if err != nil {
 		return err
 	}

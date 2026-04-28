@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 
 	executorsv1 "github.com/kubeshop/testkube/api/executor/v1"
 )
@@ -16,7 +16,7 @@ func TestWebhooks(t *testing.T) {
 	var wClient *WebhooksClient
 	testWebhooks := []*executorsv1.Webhook{
 		{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-webhook1",
 				Namespace: "test-ns",
 			},
@@ -26,7 +26,7 @@ func TestWebhooks(t *testing.T) {
 			Status: executorsv1.WebhookStatus{},
 		},
 		{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-webhook2",
 				Namespace: "test-ns",
 			},
@@ -36,7 +36,7 @@ func TestWebhooks(t *testing.T) {
 			Status: executorsv1.WebhookStatus{},
 		},
 		{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-webhook3",
 				Namespace: "test-ns",
 			},
@@ -51,14 +51,14 @@ func TestWebhooks(t *testing.T) {
 		clientBuilder := fake.NewClientBuilder()
 
 		groupVersion := schema.GroupVersion{Group: "executor.testkube.io", Version: "v1"}
-		schemaBuilder := scheme.Builder{GroupVersion: groupVersion}
-		schemaBuilder.Register(&executorsv1.WebhookList{})
-		schemaBuilder.Register(&executorsv1.Webhook{})
-
-		schema, err := schemaBuilder.Build()
-		assert.NoError(t, err)
-		assert.NotEmpty(t, schema)
-		clientBuilder.WithScheme(schema)
+		scheme := runtime.NewScheme()
+		scheme.AddKnownTypes(groupVersion,
+			&executorsv1.WebhookList{},
+			&executorsv1.Webhook{},
+		)
+		metav1.AddToGroupVersion(scheme, groupVersion)
+		assert.NotEmpty(t, scheme)
+		clientBuilder.WithScheme(scheme)
 
 		kClient := clientBuilder.Build()
 		testNamespace := "test-ns"
@@ -80,7 +80,7 @@ func TestWebhooks(t *testing.T) {
 		})
 		t.Run("Create should fail on webhook with wrong namespace", func(t *testing.T) {
 			wrongNsWebhook := executorsv1.Webhook{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-webhook",
 					Namespace: "wrong-ns",
 				},

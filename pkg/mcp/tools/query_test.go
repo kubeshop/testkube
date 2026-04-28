@@ -781,3 +781,98 @@ metadata:
 	err = json.Unmarshal([]byte(text), &parsed)
 	require.NoError(t, err, "result should be valid JSON")
 }
+
+func TestQueryWorkflows_AutoAggregate(t *testing.T) {
+	mock := &MockWorkflowDefinitionBulkGetter{
+		Definitions: map[string]string{
+			"wf-silent": `
+metadata:
+  name: wf-silent
+spec:
+  execution:
+    silent: true
+  steps:
+    - name: test
+`,
+			"wf-normal": `
+metadata:
+  name: wf-normal
+spec:
+  steps:
+    - name: test
+`,
+		},
+	}
+
+	t.Run("root-level filter auto-switches to aggregate", func(t *testing.T) {
+		_, handler := QueryWorkflows(mock)
+
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"expression": "$[?(@.spec.execution.silent==true)].metadata.name",
+		}
+
+		result, err := handler(context.Background(), request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.False(t, result.IsError)
+
+		text := getResultText(result)
+		assert.Contains(t, text, "wf-silent")
+		assert.NotContains(t, text, "wf-normal")
+
+		// Auto-aggregate should return array format, not per-item map
+		var parsed []any
+		err = json.Unmarshal([]byte(text), &parsed)
+		require.NoError(t, err, "auto-aggregate result should be a JSON array")
+	})
+
+	t.Run("non-filter expression stays in per-item mode", func(t *testing.T) {
+		_, handler := QueryWorkflows(mock)
+
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"expression": "$.spec.execution.silent",
+		}
+
+		result, err := handler(context.Background(), request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.False(t, result.IsError)
+
+		// Per-item mode returns a map keyed by workflow name
+		text := getResultText(result)
+		var parsed map[string]any
+		err = json.Unmarshal([]byte(text), &parsed)
+		require.NoError(t, err, "per-item mode should return a JSON object")
+		assert.Contains(t, parsed, "wf-silent")
+		assert.Contains(t, parsed, "wf-normal")
+	})
+}
+
+func TestQueryExecutions_AutoAggregate(t *testing.T) {
+	mock := &MockExecutionBulkGetter{
+		Executions: map[string]string{
+			"exec-1": `{"id": "exec-1", "result": {"status": "failed"}}`,
+			"exec-2": `{"id": "exec-2", "result": {"status": "passed"}}`,
+		},
+	}
+
+	t.Run("root-level filter auto-switches to aggregate", func(t *testing.T) {
+		_, handler := QueryExecutions(mock)
+
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = map[string]any{
+			"expression": "$[?(@.result.status=='failed')].id",
+		}
+
+		result, err := handler(context.Background(), request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.False(t, result.IsError)
+
+		text := getResultText(result)
+		assert.Contains(t, text, "exec-1")
+		assert.NotContains(t, text, "exec-2")
+	})
+}

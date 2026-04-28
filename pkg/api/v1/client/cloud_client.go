@@ -68,7 +68,7 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		return name, fmt.Errorf("error: %d", resp.StatusCode)
+		return name, &HTTPStatusError{StatusCode: resp.StatusCode}
 	}
 
 	var artifactURL ArtifactURL

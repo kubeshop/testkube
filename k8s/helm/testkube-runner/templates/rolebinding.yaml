@@ -127,6 +127,7 @@ roleRef:
 
 # Apply roles for execution workers (default namespace)
 {{- if .Values.execution.default.serviceAccount.autoCreate }}
+{{- $defaultExecutionNamespace := default .Release.Namespace .Values.execution.default.namespace }}
 ---
 
 # Apply execution in default namespace role
@@ -134,11 +135,7 @@ apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
 metadata:
   name: "exec-rb-{{ .Release.Name }}"
-  {{- if .Values.execution.default.namespace }}
-  namespace: "{{ .Values.execution.default.namespace }}"
-  {{- else }}
-  namespace: "{{ .Release.Namespace }}"
-  {{- end }}
+  namespace: "{{ $defaultExecutionNamespace }}"
   labels:
     {{- if .Values.global.labels }}
     {{- toYaml .Values.global.labels | nindent 4 }}
@@ -149,7 +146,7 @@ metadata:
     {{- end }}
 subjects:
 - kind: ServiceAccount
-  namespace: "{{ .Release.Namespace }}"
+  namespace: "{{ $defaultExecutionNamespace }}"
   {{- if .Values.execution.default.serviceAccount.name }}
   name: "{{ .Values.execution.default.serviceAccount.name }}"
   {{- else }}
@@ -239,7 +236,7 @@ roleRef:
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
 metadata:
-  name: "watchers-role-rb-{{ $ns }}"
+  name: "watchers-role-rb-{{ .Release.Name }}"
   namespace: {{ $ns }}
   labels:
     {{- if .Values.global.labels }}
@@ -260,7 +257,7 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: "watchers-role-{{ $ns }}"
+  name: "watchers-role-{{ .Release.Name }}"
 {{ end }}
 {{- end }}
 {{- end }}
