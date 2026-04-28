@@ -1,6 +1,9 @@
 package client
 
 import (
+	"context"
+	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -66,4 +69,12 @@ func TestStreamToTestWorkflowExecutionNotificationsChannel_HandlesSSEEventFields
 	assert.Equal(t, int32(8), received[1].SeqNo)
 	assert.Equal(t, "log", received[1].EventType)
 	assert.Equal(t, "hello", received[1].Log)
+}
+
+func TestIsExpectedStreamCloseError(t *testing.T) {
+	assert.True(t, isExpectedStreamCloseError(io.EOF))
+	assert.True(t, isExpectedStreamCloseError(context.Canceled))
+	assert.True(t, isExpectedStreamCloseError(context.DeadlineExceeded))
+	assert.True(t, isExpectedStreamCloseError(errors.Join(errors.New("read failed"), context.Canceled)))
+	assert.False(t, isExpectedStreamCloseError(errors.New("connection reset by peer")))
 }

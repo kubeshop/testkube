@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -23,6 +24,8 @@ import (
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
+
+const workflowNotificationHeartbeatInterval = 20 * time.Second
 
 func parseResumeAfterSeqNo(c *fiber.Ctx) (uint32, error) {
 	value := c.Query("resumeAfterSeqNo", "")
@@ -59,29 +62,69 @@ func workflowNotificationResumable(notification testkube.TestWorkflowExecutionNo
 }
 
 func streamableWorkflowNotifications(source <-chan *testkube.TestWorkflowExecutionNotification, resumeAfterSeqNo uint32) <-chan testkube.TestWorkflowExecutionNotification {
+	return streamableWorkflowNotificationsWithHeartbeat(nil, source, resumeAfterSeqNo, workflowNotificationHeartbeatInterval)
+}
+
+func streamableWorkflowNotificationsWithHeartbeat(done <-chan struct{}, source <-chan *testkube.TestWorkflowExecutionNotification, resumeAfterSeqNo uint32, heartbeatInterval time.Duration) <-chan testkube.TestWorkflowExecutionNotification {
 	notifications := make(chan testkube.TestWorkflowExecutionNotification)
 	go func() {
 		defer close(notifications)
 
 		var seqNo uint32
-		for notification := range source {
-			if notification == nil {
-				continue
+		var heartbeat <-chan time.Time
+		var heartbeatTicker *time.Ticker
+		if heartbeatInterval > 0 {
+			heartbeatTicker = time.NewTicker(heartbeatInterval)
+			heartbeat = heartbeatTicker.C
+			defer heartbeatTicker.Stop()
+		}
+		send := func(notification testkube.TestWorkflowExecutionNotification) bool {
+			select {
+			case notifications <- notification:
+				return true
+			case <-done:
+				return false
 			}
+		}
 
-			streamNotification := *notification
-			if streamNotification.EventType == "" {
-				streamNotification.EventType = workflowNotificationEventType(streamNotification)
-			}
-			if workflowNotificationResumable(streamNotification) {
-				seqNo++
-				streamNotification.SeqNo = int32(seqNo)
-				if seqNo <= resumeAfterSeqNo {
+		for {
+			select {
+			case <-done:
+				return
+			case notification, ok := <-source:
+				if !ok {
+					return
+				}
+				if notification == nil {
 					continue
 				}
-			}
 
-			notifications <- streamNotification
+				streamNotification := *notification
+				if streamNotification.EventType == "" {
+					streamNotification.EventType = workflowNotificationEventType(streamNotification)
+				}
+				if workflowNotificationResumable(streamNotification) {
+					seqNo++
+					streamNotification.SeqNo = int32(seqNo)
+					if seqNo <= resumeAfterSeqNo {
+						continue
+					}
+				}
+
+				if !send(streamNotification) {
+					return
+				}
+			case <-heartbeat:
+				heartbeatNotification := testkube.TestWorkflowExecutionNotification{
+					EventType: "heartbeat",
+				}
+				if seqNo > 0 {
+					heartbeatNotification.SeqNo = int32(seqNo)
+				}
+				if !send(heartbeatNotification) {
+					return
+				}
+			}
 		}
 	}()
 	return notifications
@@ -103,7 +146,7 @@ func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, n
 
 		enc := json.NewEncoder(w)
 
-		for n := range streamableWorkflowNotifications(notifications.Channel(), resumeAfterSeqNo) {
+		for n := range streamableWorkflowNotificationsWithHeartbeat(ctx.Done(), notifications.Channel(), resumeAfterSeqNo, workflowNotificationHeartbeatInterval) {
 			if n.SeqNo > 0 {
 				_, err = fmt.Fprintf(w, "id: %d\n", n.SeqNo)
 				if err != nil {
