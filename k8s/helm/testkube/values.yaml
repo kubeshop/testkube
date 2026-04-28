@@ -1063,7 +1063,7 @@ testkube-api:
 
   # Logs storage for Testkube API.
   logs:
-    # -- Log storage can either be "minio" or "mongo"
+    # -- Log storage can be "minio" or "none" (to disable log persistence)
     storage: "minio"
     # -- Bucket should be specified if storage is "minio"
     bucket: "testkube-logs"
