@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -46,11 +47,20 @@ type TestTriggerSpec struct {
 	// Selector is used to select events which trigger an action
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 	// For which Resource do we monitor Event which triggers an Action on certain conditions
-	Resource TestTriggerResource `json:"resource"`
+	// +optional
+	Resource TestTriggerResource `json:"resource,omitempty"`
+	// ResourceRef specifies a resource to watch by Group/Version/Kind.
+	// Works for any K8s resource including CRDs. Mutually exclusive with Resource.
+	ResourceRef *TestTriggerResourceRef `json:"resourceRef,omitempty"`
 	// ResourceSelector identifies which Kubernetes Objects should be watched
-	ResourceSelector TestTriggerSelector `json:"resourceSelector"`
+	// +optional
+	ResourceSelector TestTriggerSelector `json:"resourceSelector,omitempty"`
 	// On which Event for a Resource should an Action be triggered
 	Event TestTriggerEvent `json:"event"`
+	// Match filters which object changes fire the trigger.
+	// Each entry evaluates a dot-path on the watched object (e.g. ".status.currentStepIndex",
+	// ".spec.template.spec.containers.0.image") with an operator. All entries must pass (AND logic).
+	Match []workflowtriggersv1.WorkflowTriggerFieldCondition `json:"match,omitempty"`
 	// What resource conditions should be matched
 	ConditionSpec *TestTriggerConditionSpec `json:"conditionSpec,omitempty"`
 	// What resource probes should be matched
@@ -87,6 +97,16 @@ const (
 	TestTriggerResourceEvent       TestTriggerResource = "event"
 	TestTriggerResourceConfigMap   TestTriggerResource = "configmap"
 )
+
+// TestTriggerResourceRef identifies a K8s resource by GVK.
+type TestTriggerResourceRef struct {
+	// Group is the API group (empty for core resources like Pod, Service).
+	Group string `json:"group,omitempty"`
+	// Version is the API version.
+	Version string `json:"version,omitempty"`
+	// Kind is the resource kind (e.g. Deployment, KafkaTopic).
+	Kind string `json:"kind"`
+}
 
 // TestTriggerEvent defines event for test triggers
 // +kubebuilder:validation:Enum=created;modified;deleted;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
@@ -249,8 +269,4 @@ type TestTriggerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TestTrigger `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&TestTrigger{}, &TestTriggerList{})
 }

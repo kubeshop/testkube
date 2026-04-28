@@ -31,7 +31,7 @@ func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkf
 	return nil
 }
 
-func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecutor) reconcile.Reconciler {
+func testWorkflowExecutionExecutor(client client.Client, exec TestWorkflowExecutor) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		// Get and validate the TestWorkflowExecution.
 		var twe testworkflowsv1.TestWorkflowExecution
@@ -94,6 +94,16 @@ func testWorkflowExecutionExecutor(client client.Reader, exec TestWorkflowExecut
 
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, err)
+		}
+
+		// Update the status generation to prevent re-execution on operator restart.
+		var statusTWE testworkflowsv1.TestWorkflowExecution
+		if err := client.Get(ctx, req.NamespacedName, &statusTWE); err != nil {
+			return ctrl.Result{}, fmt.Errorf("getting fresh execution %q for status update: %w", twe.Name, err)
+		}
+		statusTWE.Status.Generation = twe.Generation
+		if err := client.Status().Update(ctx, &statusTWE); err != nil {
+			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
 
 		log := ctrl.LoggerFrom(ctx)

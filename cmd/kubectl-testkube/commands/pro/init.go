@@ -50,6 +50,7 @@ func NewInitCmd() *cobra.Command {
 			ui.NL()
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
+			common.ShowOperatorDeprecationWarning("Testkube Agent", options.NoCRDs)
 
 			sendAttemptTelemetry(cmd, cfg)
 
@@ -104,15 +105,21 @@ func NewInitCmd() *cobra.Command {
 
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
+			// Preserve the existing session's token type; fall back to OIDC
+			// for brand-new contexts with nothing stored yet.
+			tokenType := cfg.CloudContext.TokenType
+			if tokenType == "" {
+				tokenType = config.TokenTypeOIDC
+			}
 			if !common.IsUserLoggedIn(cfg, options) {
 				ui.NL()
 				ui.H2("Launching web browser...")
 				ui.NL()
-				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth, options.Master.CallbackPort)
+				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, "", options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, tokenType, token, refreshToken, "", options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)
@@ -128,7 +135,7 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
-	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
+	cmd.Flags().BoolVar(&options.NoCRDs, "no-crds", false, "Skip installing CRDs, useful when you have them already installed in the cluster")
 	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
 	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
 
@@ -138,7 +145,7 @@ func NewInitCmd() *cobra.Command {
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
 	var errorStackTrace = fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
@@ -150,7 +157,7 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string,
 
 func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version)
 		if ui.Verbose && err != nil {
 			ui.Err(err)

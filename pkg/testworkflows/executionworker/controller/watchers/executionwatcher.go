@@ -210,8 +210,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	}()
 
 	// Create helper to read the latest data
-	podEventsCh := podEvents.Channel()
-	jobEventsCh := jobEvents.Channel()
+	podEventsCh := podEvents.Channel(ctx)
+	jobEventsCh := jobEvents.Channel(ctx)
 	readLatestData := func() {
 		time.Sleep(ReadLatestBufferingTimeframe)
 

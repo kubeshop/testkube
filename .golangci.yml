@@ -8,6 +8,7 @@ linters:
     - staticcheck
     - unused
     - ineffassign
+    - noctx
   exclusions:
     generated: lax
     paths:

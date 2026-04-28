@@ -1,0 +1,19 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: junit-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: junit
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: junit5-workflow-smoke

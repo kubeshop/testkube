@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,22 +11,20 @@ import (
 )
 
 func TestService_addTrigger(t *testing.T) {
-	t.Parallel()
 
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
 	testTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-1", Namespace: "testkube"},
 	}
-	s.addTrigger(&testTrigger)
+	s.addTrigger(context.Background(), &testTrigger)
 
 	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-1")
+	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.NotNil(t, s.triggerStatus[key])
 }
 
 func TestService_removeTrigger(t *testing.T) {
-	t.Parallel()
 
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
@@ -35,22 +34,21 @@ func TestService_removeTrigger(t *testing.T) {
 	testTrigger2 := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-2", Namespace: "testkube"},
 	}
-	s.addTrigger(&testTrigger1)
-	s.addTrigger(&testTrigger2)
+	s.addTrigger(context.Background(), &testTrigger1)
+	s.addTrigger(context.Background(), &testTrigger2)
 
 	assert.Len(t, s.triggerStatus, 2)
 
 	s.removeTrigger(&testTrigger1)
 
 	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-2")
+	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-2")
 	assert.NotNil(t, s.triggerStatus[key])
-	deletedKey := newStatusKey("testkube", "test-trigger-1")
+	deletedKey := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.Nil(t, s.triggerStatus[deletedKey])
 }
 
 func TestService_updateTrigger(t *testing.T) {
-	t.Parallel()
 
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
@@ -58,16 +56,16 @@ func TestService_updateTrigger(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
 	}
-	s.addTrigger(&oldTestTrigger)
+	s.addTrigger(context.Background(), &oldTestTrigger)
 
 	newTestTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec:       testtriggersv1.TestTriggerSpec{Event: "modified"},
 	}
 
-	s.updateTrigger(&newTestTrigger)
+	s.updateTrigger(context.Background(), &newTestTrigger)
 
 	assert.Len(t, s.triggerStatus, 1)
-	key := newStatusKey("testkube", "test-trigger-1")
+	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.NotNil(t, s.triggerStatus[key])
 }

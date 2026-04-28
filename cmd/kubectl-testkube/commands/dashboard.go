@@ -119,7 +119,8 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 }
 
 func localPortCheck(port int) error {
-	ln, err := net.Listen("tcp", ":"+fmt.Sprint(port))
+	var lc net.ListenConfig
+	ln, err := lc.Listen(context.Background(), "tcp", ":"+fmt.Sprint(port))
 	if err != nil {
 		return err
 	}

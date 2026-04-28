@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
+	testworkflowutils "github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -354,6 +355,14 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 		logger.Debugw("Received runtime configuration from control plane",
 			"executionId", executionId,
 			"variableCount", len(runtime.EnvVars))
+	}
+
+	// Check if workflow is silent and ensure SilentMode is activated
+	if testworkflowutils.IsWorkflowSilent(execution.ResolvedWorkflow) {
+		// This overrides any SilentMode settings from the request (CLI flags)
+		execution.SilentMode = testworkflowutils.NewSilenceAllSilentMode()
+		logger.Debugw("Workflow is silent, activated SilentMode for execution",
+			"executionId", executionId)
 	}
 
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{

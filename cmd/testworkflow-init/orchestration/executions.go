@@ -49,7 +49,7 @@ func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup
 func (e *executionGroup) Create(cmd string, args []string) *execution {
 	// Instantiate the execution
 	ex := &execution{group: e}
-	ex.cmd = exec.Command(cmd, args...)
+	ex.cmd = exec.CommandContext(context.Background(), cmd, args...)
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 
@@ -153,6 +153,24 @@ func (e *executionGroup) Kill() (err error) {
 	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Kill()
 	return errors.Wrap(err, "failed to kill")
+}
+
+// WaitAll waits for all tracked executions to finish.
+// Safe to call after Kill() even if Run() already waited on the process.
+func (e *executionGroup) WaitAll() {
+	e.executionsMu.Lock()
+	execs := make([]*execution, len(e.executions))
+	copy(execs, e.executions)
+	e.executionsMu.Unlock()
+
+	for _, ex := range execs {
+		ex.cmdMu.Lock()
+		cmd := ex.cmd
+		ex.cmdMu.Unlock()
+		if cmd != nil && cmd.Process != nil {
+			_ = cmd.Wait()
+		}
+	}
 }
 
 func (e *executionGroup) Abort() {

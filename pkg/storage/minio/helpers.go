@@ -6,7 +6,10 @@ func GetTLSOptions(ssl, skipVerify bool, certFile, keyFile, caFile string) []Opt
 		if skipVerify {
 			opts = append(opts, Insecure())
 		} else {
-			opts = append(opts, ClientCert(certFile, keyFile))
+			// Only load client certificates if both certFile and keyFile are provided
+			if certFile != "" && keyFile != "" {
+				opts = append(opts, ClientCert(certFile, keyFile))
+			}
 			if caFile != "" {
 				opts = append(opts, RootCAs(caFile))
 			}

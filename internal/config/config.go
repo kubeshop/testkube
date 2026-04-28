@@ -143,12 +143,6 @@ type DeprecatedControlPlaneConfig struct {
 	TestkubeCloudMigrate string `envconfig:"TESTKUBE_CLOUD_MIGRATE" default:"false"`
 }
 
-type SlackIntegrationConfig struct {
-	SlackToken    string `envconfig:"SLACK_TOKEN" default:""`
-	SlackConfig   string `envconfig:"SLACK_CONFIG" default:""`
-	SlackTemplate string `envconfig:"SLACK_TEMPLATE" default:""`
-}
-
 type SecretManagementConfig struct {
 	EnableSecretsEndpoint   bool   `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	EnableListingAllSecrets bool   `envconfig:"ENABLE_LISTING_ALL_SECRETS" default:"false"`
@@ -157,6 +151,9 @@ type SecretManagementConfig struct {
 
 type ImageInspectorConfig struct {
 	TestkubeRegistry string `envconfig:"TESTKUBE_REGISTRY" default:""`
+	// InsecureRegistries is a comma-separated list of registry hostnames (host:port) that should
+	// be accessed over plain HTTP instead of HTTPS. Useful for local development with k3d/kind registries.
+	InsecureRegistries string `envconfig:"TESTKUBE_IMAGE_INSPECTOR_INSECURE_REGISTRIES" default:""`
 	// TestkubeImageCredentialsCacheTTL is the duration for which the image pull credentials should be cached provided as a Go duration string.
 	// If set to 0, the cache is disabled.
 	TestkubeImageCredentialsCacheTTL time.Duration `envconfig:"TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL" default:"30m"`
@@ -187,6 +184,7 @@ type CronJobConfig struct {
 type WebhookConfig struct {
 	DisableWebhooks     bool `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 	EnableCloudWebhooks bool `envconfig:"ENABLE_CLOUD_WEBHOOKS" default:"false"`
+	WebhookControlPlane bool `envconfig:"WEBHOOK_CONTROL_PLANE" default:"false"`
 }
 
 type Config struct {
@@ -197,7 +195,6 @@ type Config struct {
 	KubernetesEventListenerConfig
 	LogServerConfig
 	ControlPlaneConfig
-	SlackIntegrationConfig
 	SecretManagementConfig
 	RunnerConfig
 	ImageInspectorConfig
@@ -237,9 +234,14 @@ type Config struct {
 	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
+	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 
-	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
-	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	ExportArchiveMaxSize                     int  `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
+	FeatureCloudStorage                      bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+	TestWorkflowLogArchiveRequired           bool `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
+	WorkflowLogsInsecureSkipTLSVerifyBackend bool `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
+	TestTriggerControlPlane                  bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	ForceSuperAgentMode                      bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
 type DeprecatedConfig struct {

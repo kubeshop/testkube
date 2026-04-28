@@ -8,7 +8,6 @@ import (
 )
 
 func TestPorts(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:

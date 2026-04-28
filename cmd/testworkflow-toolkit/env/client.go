@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -127,7 +128,7 @@ func ImageInspector() imageinspector.Inspector {
 	}
 	return imageinspector.NewInspector(
 		config2.Config().Worker.DefaultRegistry,
-		imageinspector.NewCraneFetcher(),
+		imageinspector.NewCraneFetcher(config2.Config().Worker.InsecureRegistries...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(config2.Config().Worker.ImageInspectorPersistenceCacheTTL)),
 		inspectorStorages...,
 	)
@@ -147,7 +148,7 @@ func Testkube() client.Client {
 	}
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
-	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", host, port), "")
+	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s", net.JoinHostPort(host, strconv.Itoa(port))), "")
 }
 
 func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {

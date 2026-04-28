@@ -243,6 +243,7 @@ func (l *WebhookListener) Match(event testkube.Event) bool {
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var statusCode int
 	var err error
+	var skippedBecomeEvent bool
 
 	log := l.Log.With(event.Log()...)
 
@@ -273,7 +274,10 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		if result.Error() != "" {
 			res = "error"
 		}
-		l.metrics.IncWebhookEventCount(l.name, eventType, res)
+		// Only increment metrics if webhook actually executed
+		if !skippedBecomeEvent {
+			l.metrics.IncWebhookEventCount(l.name, eventType, res)
+		}
 
 		// Log webhook execution result
 		if result.Error() != "" {
@@ -282,6 +286,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 				"event_type", eventType,
 				"status_code", statusCode,
 				"error", result.Error())
+		} else if skippedBecomeEvent {
+			// Webhook was skipped because become event didn't match criteria
+			log.Debugw("webhook execution skipped",
+				"webhook_name", l.name,
+				"event_type", eventType,
+				"reason", result.Result)
 		} else {
 			log.Infow("webhook execution succeeded",
 				"webhook_name", l.name,
@@ -297,17 +307,29 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		if err != nil {
 			errorMessage = err.Error()
 		}
-		if err = l.webhookResultsRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
-			log.Errorw("webhook collecting execution result error", "error", err)
+		// Only collect telemetry if webhook actually executed
+		if !skippedBecomeEvent {
+			if err = l.webhookResultsRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
+				log.Errorw("webhook collecting execution result error", "error", err)
+			}
 		}
 	}()
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
+		// Verify execution is actually finished before checking become state
+		finished := (event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Result != nil &&
+			event.TestWorkflowExecution.Result.Status != nil && event.TestWorkflowExecution.Result.Status.Finished())
+		if !finished {
+			skippedBecomeEvent = true
+			return testkube.NewSuccessEventResult(event.Id, "test workflow execution is not in finished state")
+		}
+
 		became, err := l.hasBecomeState(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)
 		}
 		if !became {
+			skippedBecomeEvent = true
 			return testkube.NewSuccessEventResult(event.Id, "webhook is set to become state only; state has not become")
 		}
 	}
@@ -351,7 +373,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	request, err := http.NewRequest(http.MethodPost, string(uri), body)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, string(uri), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -419,36 +441,17 @@ func (l *WebhookListener) Group() string {
 // credentialPattern matches {{credential("name")}} or {{credential('name')}} patterns
 var credentialPattern = regexp.MustCompile(`\{\{credential\(["']([^"']+)["']\)\}\}`)
 
-// vaultPattern matches {{vault("path")}} or {{vault('path')}} patterns
-var vaultPattern = regexp.MustCompile(`\{\{vault\(["']([^"']+)["']\)\}\}`)
-
 func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {
 	log := l.Log.With(event.Log()...)
-
-	// Check for credential/vault patterns before pre-processing
-	credMatches := credentialPattern.FindAllStringSubmatch(body, -1)
-	vaultMatches := vaultPattern.FindAllStringSubmatch(body, -1)
-	hasCredentialPatterns := len(credMatches) > 0 || len(vaultMatches) > 0
 
 	// Pre-process template to convert function call syntax to Go template syntax
 	// Convert {{credential("name")}} to {{credential "name"}}
 	body = credentialPattern.ReplaceAllString(body, `{{credential "$1"}}`)
-	// Convert {{vault("path")}} to {{vault "path"}}
-	body = vaultPattern.ReplaceAllString(body, `{{vault "$1"}}`)
 
 	// Setup credential repository for template functions
 	var repo credentials.CredentialRepository
 	if l.grpcClient != nil {
-		// Create credential repository adapter that uses gRPC to resolve credentials from control plane
 		repo = newGRPCCredentialAdapter(l.grpcClient, l.envID, "", l.apiKey, l.orgID, l.agentID)
-	} else if hasCredentialPatterns {
-		// No credential resolution available but template needs it
-		log.Errorw("template contains credential patterns but no gRPC client configured",
-			"webhook_name", l.name,
-			"field", field,
-			"credential_patterns_found", len(credMatches),
-			"vault_patterns_found", len(vaultMatches))
-		return nil, fmt.Errorf("template contains %d credential patterns and %d vault patterns but gRPC client is not configured", len(credMatches), len(vaultMatches))
 	}
 
 	// Process with Go templates - credentials are resolved as template functions
@@ -459,6 +462,9 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
 		"testworkflowstatustostring":       testkube.TestWorkflowStatusString,
 		"credential": func(name string) (string, error) {
+			if repo == nil {
+				return "", fmt.Errorf("credential %q cannot be resolved: gRPC client is not configured", name)
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -472,23 +478,6 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 
 			log.Infow("resolved credential",
 				"credential_name", name)
-
-			return string(value), nil
-		},
-		"vault": func(path string) (string, error) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-
-			value, err := repo.GetWithSource(ctx, path, credentials.SourceVault)
-			if err != nil {
-				log.Errorw("failed to resolve vault secret",
-					"vault_path", path,
-					"error", err)
-				return "", err
-			}
-
-			log.Infow("resolved vault secret",
-				"vault_path", path)
 
 			return string(value), nil
 		},

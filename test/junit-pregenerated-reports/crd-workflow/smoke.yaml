@@ -16,6 +16,10 @@ spec:
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Step
     shell: echo "Step"
@@ -41,6 +45,10 @@ spec:
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Step
     shell: echo "Step"
@@ -66,6 +74,10 @@ spec:
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
   steps:
   - name: Step
     shell: echo "Step"

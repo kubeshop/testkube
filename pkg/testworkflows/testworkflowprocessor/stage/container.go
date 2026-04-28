@@ -45,7 +45,7 @@ type ContainerAccessors interface {
 	ToKubernetesTemplate() (corev1.Container, error)
 
 	Resources() testworkflowsv1.Resources
-	SecurityContext() *corev1.SecurityContext
+	SecurityContext() *testworkflowsv1.WorkflowSecurityContext
 
 	HasVolumeAt(path string) bool
 	ToContainerConfig() testworkflowsv1.ContainerConfig
@@ -64,7 +64,7 @@ type ContainerMutations[T any] interface {
 	SetArgs(args ...string) T
 	SetWorkingDir(workingDir string) T // "" = default to the image
 	SetResources(resources testworkflowsv1.Resources) T
-	SetSecurityContext(sc *corev1.SecurityContext) T
+	SetSecurityContext(sc *testworkflowsv1.WorkflowSecurityContext) T
 
 	ApplyCR(cr *testworkflowsv1.ContainerConfig) T
 	ApplyImageData(image *imageinspector.Info, resolvedImageName string) error
@@ -205,14 +205,17 @@ func (c *container) Resources() (r testworkflowsv1.Resources) {
 	return
 }
 
-func (c *container) SecurityContext() *corev1.SecurityContext {
+func (c *container) SecurityContext() *testworkflowsv1.WorkflowSecurityContext {
 	if c.parent == nil || c.parent.SecurityContext() == nil {
-		return c.Cr.SecurityContext
+		return testworkflowsv1.CloneWorkflowSecurityContext(c.Cr.SecurityContext)
 	}
 	if c.Cr.SecurityContext == nil {
-		return c.parent.SecurityContext()
+		return testworkflowsv1.CloneWorkflowSecurityContext(c.parent.SecurityContext())
 	}
-	return testworkflowresolver.MergeSecurityContext(c.parent.SecurityContext().DeepCopy(), c.Cr.SecurityContext)
+	return testworkflowresolver.MergeSecurityContext(
+		testworkflowsv1.CloneWorkflowSecurityContext(c.parent.SecurityContext()),
+		testworkflowsv1.CloneWorkflowSecurityContext(c.Cr.SecurityContext),
+	)
 }
 
 func (c *container) HasVolumeAt(path string) bool {
@@ -297,7 +300,7 @@ func (c *container) SetResources(resources testworkflowsv1.Resources) Container 
 	return c
 }
 
-func (c *container) SetSecurityContext(sc *corev1.SecurityContext) Container {
+func (c *container) SetSecurityContext(sc *testworkflowsv1.WorkflowSecurityContext) Container {
 	c.Cr.SecurityContext = sc
 	return c
 }
@@ -348,7 +351,7 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 		Command:         command,
 		Args:            args,
 		Resources:       resources,
-		SecurityContext: c.SecurityContext().DeepCopy(),
+		SecurityContext: testworkflowsv1.CloneWorkflowSecurityContext(c.SecurityContext()),
 		VolumeMounts:    volumeMounts,
 	}
 }
@@ -378,6 +381,10 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 	if resourcesErr != nil {
 		return corev1.Container{}, resourcesErr
 	}
+	securityContext, securityContextErr := cr.SecurityContext.ToKube()
+	if securityContextErr != nil {
+		return corev1.Container{}, securityContextErr
+	}
 	return corev1.Container{
 		Image:           cr.Image,
 		ImagePullPolicy: cr.ImagePullPolicy,
@@ -390,7 +397,7 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 		VolumeMounts:    cr.VolumeMounts,
 		Resources:       resources,
 		WorkingDir:      workingDir,
-		SecurityContext: cr.SecurityContext,
+		SecurityContext: securityContext,
 	}, nil
 }
 

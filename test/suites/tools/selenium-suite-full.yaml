@@ -1,0 +1,24 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: selenium-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: selenium
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: selenium-java-workflow-smoke
+      - name: selenium-java-hub-and-nodes-workflow-smoke
+      - name: selenium-python-workflow-smoke
+      - name: selenium-python-hub-and-nodes-workflow-smoke
+      - name: selenium-js-mocha-workflow-smoke
+      - name: selenium-js-cucumber-workflow-smoke

@@ -10,7 +10,6 @@ import (
 )
 
 func TestConfigDisable(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:
@@ -34,7 +33,6 @@ config:
 }
 
 func TestConfigJetStreamCluster(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:
@@ -129,7 +127,6 @@ config:
 }
 
 func TestConfigOptions(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:
@@ -275,7 +272,6 @@ config:
 }
 
 func TestConfigMergePatch(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:
@@ -543,7 +539,6 @@ config:
 }
 
 func TestConfigInclude(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:
@@ -620,7 +615,6 @@ max_outstanding_catchup: 64MB
 }
 
 func TestExtraResources(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 extraResources:

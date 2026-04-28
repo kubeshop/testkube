@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/kubeshop/testkube/pkg/controlplane/scheduling"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
@@ -62,18 +62,15 @@ func (f *MongoDBFactory) NewTestWorkflowRepository() testworkflow.Repository {
 }
 
 func (f *MongoDBFactory) NewScheduler() scheduling.Scheduler {
-	executionsCollection := f.db.Collection(testworkflowmongo.CollectionName)
-	return scheduling.NewMongoScheduler(executionsCollection)
+	return scheduling.NewMongoScheduler(f.db.Collection(testworkflowmongo.CollectionName))
 }
 
 func (f *MongoDBFactory) NewExecutionController() scheduling.Controller {
-	executionsCollection := f.db.Collection(testworkflowmongo.CollectionName)
-	return scheduling.NewMongoExecutionController(executionsCollection)
+	return scheduling.NewMongoExecutionController(f.db.Collection(testworkflowmongo.CollectionName))
 }
 
 func (f *MongoDBFactory) NewExecutionQuerier() scheduling.ExecutionQuerier {
-	executionsCollection := f.db.Collection(testworkflowmongo.CollectionName)
-	return scheduling.NewMongoExecutionQuerier(executionsCollection)
+	return scheduling.NewMongoExecutionQuerier(f.db.Collection(testworkflowmongo.CollectionName))
 }
 
 func (f *MongoDBFactory) NewSequenceRepository() sequence.Repository {

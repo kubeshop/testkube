@@ -260,7 +260,9 @@ func (s *Server) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) e
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
 	executions, err := s.enqueuer.Execute(srv.Context(), req)
 	if err != nil {
-		return status.Error(codes.Internal, "cannot enqueue execution")
+		errMsg := "cannot enqueue execution"
+		log.Errorw(errMsg, "error", err)
+		return status.Error(codes.Internal, errMsg)
 	}
 
 	for _, execution := range executions {

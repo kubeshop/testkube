@@ -10,9 +10,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
@@ -372,20 +374,40 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 		})
 	}
 
+	// Download files concurrently with controlled parallelism
+	var mu sync.Mutex
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(storage.MaxConcurrentDownloads)
+
 	for i := range files {
-		reader, err := c.minioClient.GetObject(ctx, bucket, files[i].Name, minio.GetObjectOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive GetObject error: %w", err)
-		}
+		idx := i
+		g.Go(func() error {
+			reader, err := c.minioClient.GetObject(ctx, bucket, files[idx].Name, minio.GetObjectOptions{})
+			if err != nil {
+				return fmt.Errorf("minio DownloadArchive GetObject error: %w", err)
+			}
+			defer reader.Close()
 
-		if _, err = reader.Stat(); err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive Stat error: %w", err)
-		}
+			if _, err = reader.Stat(); err != nil {
+				return fmt.Errorf("minio DownloadArchive Stat error: %w", err)
+			}
 
-		files[i].Data = &bytes.Buffer{}
-		if _, err = files[i].Data.ReadFrom(reader); err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive Read error: %w", err)
-		}
+			buf := &bytes.Buffer{}
+			if _, err = buf.ReadFrom(reader); err != nil {
+				return fmt.Errorf("minio DownloadArchive Read error: %w", err)
+			}
+
+			mu.Lock()
+			files[idx].Data = buf
+			mu.Unlock()
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	service := archive.NewTarballService()

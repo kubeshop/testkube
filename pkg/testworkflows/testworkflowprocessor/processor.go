@@ -65,6 +65,7 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	// Build an initial group for the inner items
 	self := stage.NewGroupStage(ref, false)
 	self.SetPure(step.Pure)
+	self.SetId(step.Id)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition == "" {
@@ -115,7 +116,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath)).
-		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath)).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTestkubePath))
 
 	orgSlug := options.Config.Execution.OrganizationSlug
 	if orgSlug == "" {
@@ -143,7 +145,19 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.New("could not resolve resource.root")
 	}
 
-	// Process steps
+	err = expressions.Simplify(&workflow, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
+	}
+
+	// Resolve and validate step IDs after expression simplification,
+	// so auto-derivation works on resolved names rather than raw templates.
+	if err := ResolveAndValidateStepIds(&workflow.Spec); err != nil {
+		return nil, errors.Wrap(err, "step id validation")
+	}
+
+	// Process steps - must be after ResolveAndValidateStepIds so rootStep
+	// picks up the resolved IDs from the spec.
 	rootStep := testworkflowsv1.Step{
 		StepSource: testworkflowsv1.StepSource{
 			Content: workflow.Spec.Content,
@@ -155,10 +169,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
 
-	err = expressions.Simplify(&workflow, machines...)
-	if err != nil {
-		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
-	}
 	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, constants.RootOperationName)
 	if err != nil {
 		return nil, errors.Wrap(err, "processing error")
@@ -246,6 +256,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing pod config")
 	}
+	disableFsGroupDefaulting := podConfig.DisableFsGroupDefaulting != nil && *podConfig.DisableFsGroupDefaulting
 
 	// Build signature
 	sig := root.Signature().Children()
@@ -291,24 +302,30 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		image := otherContainers[0].Container().Image()
 		sc := otherContainers[0].Container().SecurityContext()
 		if sc == nil {
-			sc = &corev1.SecurityContext{}
+			sc = &testworkflowsv1.WorkflowSecurityContext{}
 		}
 		if podConfig.SecurityContext == nil {
-			podConfig.SecurityContext = &corev1.PodSecurityContext{}
+			podConfig.SecurityContext = &testworkflowsv1.WorkflowPodSecurityContext{}
 		}
 		if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil && images[image] != nil {
-			sc.RunAsGroup = common.Ptr(images[image].Group)
+			sc.RunAsGroup = testworkflowsv1.Int64ToWorkflowIntOrString(common.Ptr(images[image].Group))
 			otherContainers[0].Container().SetSecurityContext(sc)
 		}
-		if podConfig.SecurityContext.FSGroup == nil {
-			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
+		if !disableFsGroupDefaulting && podConfig.SecurityContext.FSGroup == nil {
+			podConfig.SecurityContext.FSGroup = common.MapPtr(sc.RunAsGroup, func(v testworkflowsv1.WorkflowInt64OrString) testworkflowsv1.WorkflowInt64OrString { return v })
 		}
 	}
 
 	// Determine FS Group for the containers
-	fsGroup := common.Ptr(constants.DefaultFsGroup)
+	var fsGroup *int64
+	if !disableFsGroupDefaulting {
+		fsGroup = common.Ptr(constants.DefaultFsGroup)
+	}
 	if podConfig.SecurityContext != nil && podConfig.SecurityContext.FSGroup != nil {
-		fsGroup = podConfig.SecurityContext.FSGroup
+		fsGroup, err = testworkflowsv1.ResolveWorkflowInt64("pod.securityContext.fsGroup", podConfig.SecurityContext.FSGroup)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Build list of the containers
@@ -395,10 +412,14 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build pod template
 	if podConfig.SecurityContext == nil {
-		podConfig.SecurityContext = &corev1.PodSecurityContext{}
+		podConfig.SecurityContext = &testworkflowsv1.WorkflowPodSecurityContext{}
 	}
-	if podConfig.SecurityContext.FSGroup == nil {
-		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
+	if !disableFsGroupDefaulting && podConfig.SecurityContext.FSGroup == nil {
+		podConfig.SecurityContext.FSGroup = testworkflowsv1.Int64ToWorkflowIntOrString(common.Ptr(constants.DefaultFsGroup))
+	}
+	podSecurityContext, err := podConfig.SecurityContext.ToKube()
+	if err != nil {
+		return nil, err
 	}
 	hostPID := false
 	if podConfig.HostPID != nil {
@@ -424,7 +445,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ActiveDeadlineSeconds:     podConfig.ActiveDeadlineSeconds,
 			DNSPolicy:                 podConfig.DNSPolicy,
 			NodeName:                  podConfig.NodeName,
-			SecurityContext:           podConfig.SecurityContext,
+			SecurityContext:           podSecurityContext,
 			Hostname:                  podConfig.Hostname,
 			Subdomain:                 podConfig.Subdomain,
 			Affinity:                  podConfig.Affinity,

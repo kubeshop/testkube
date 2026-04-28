@@ -1,8 +1,25 @@
 package client
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+// ExportArchiveFileName is the default file name for execution export archives.
+const ExportArchiveFileName = "testkube-export.tar.gz"
+
+// HTTPStatusError represents an HTTP error response with a status code.
+// It is returned by Transport.GetFile (and similar methods) so callers can
+// programmatically inspect the server status code via errors.As.
+type HTTPStatusError struct {
+	StatusCode int
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("HTTP status %d", e.StatusCode)
+}
 
 // Client is the Testkube API client abstraction
 type Client interface {
@@ -14,6 +31,7 @@ type Client interface {
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
 	TestTriggerAPI
+	WorkflowTriggerAPI
 	SharedAPI
 }
 
@@ -41,10 +59,21 @@ type WebhookTemplateAPI interface {
 type TestTriggerAPI interface {
 	CreateTestTrigger(options CreateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
 	UpdateTestTrigger(options UpdateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
+	UpdateTestTriggerWithReplaceMode(options UpdateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
 	GetTestTrigger(name string) (testTrigger testkube.TestTrigger, err error)
 	ListTestTriggers(selector string) (testTriggers []testkube.TestTrigger, err error)
 	DeleteTestTrigger(name string) (err error)
 	DeleteTestTriggers(selector string) (err error)
+}
+
+// WorkflowTriggerAPI describes workflow trigger (v2) api methods
+type WorkflowTriggerAPI interface {
+	CreateWorkflowTrigger(trigger testkube.WorkflowTrigger) (testkube.WorkflowTrigger, error)
+	UpdateWorkflowTrigger(trigger testkube.WorkflowTrigger) (testkube.WorkflowTrigger, error)
+	GetWorkflowTrigger(name string) (testkube.WorkflowTrigger, error)
+	ListWorkflowTriggers(selector string) ([]testkube.WorkflowTrigger, error)
+	DeleteWorkflowTrigger(name string) error
+	DeleteWorkflowTriggers(selector string) error
 }
 
 // ConfigAPI describes config api methods
@@ -77,9 +106,12 @@ type TestWorkflowAPI interface {
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
 	ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionNotificationsWithOptions(id string, options TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
 	GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName string, serviceIndex int, options TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref string, workerIndex int, options TestWorkflowExecutionNotificationsOptions) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods
@@ -94,7 +126,9 @@ type TestWorkflowExecutionAPI interface {
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
 	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext) (testkube.TestWorkflowExecution, error)
+	UpdateTestWorkflowExecutionTags(executionID string, tags map[string]string) error
 	ValidateTestWorkflow(body []byte) error
+	ExportExecutions(destination string, since string) (fileName string, err error)
 }
 
 // TestWorkflowTemplateAPI describes test workflow api methods
@@ -139,7 +173,7 @@ type FilterTestWorkflowExecutionOptions struct {
 type Gettable interface {
 	testkube.Webhook | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
-		testkube.TestTrigger | testkube.WebhookTemplate | map[string][]string
+		testkube.TestTrigger | testkube.WorkflowTrigger | testkube.WebhookTemplate | map[string][]string
 }
 
 // Executable is an interface of executable objects
@@ -159,8 +193,21 @@ type Transport[A All] interface {
 	Delete(uri, selector string, isContentExpected bool) error
 	ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
-	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
+	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 	GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error)
 	Validate(method, uri string, body []byte, params map[string]string) error
+}
+
+type TestWorkflowExecutionNotificationsOptions struct {
+	Context          context.Context
+	ResumeAfterSeqNo uint32
+	StreamID         string
+}
+
+func (o TestWorkflowExecutionNotificationsOptions) RequestContext() context.Context {
+	if o.Context != nil {
+		return o.Context
+	}
+	return context.Background()
 }

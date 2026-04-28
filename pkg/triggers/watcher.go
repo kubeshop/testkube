@@ -9,9 +9,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -27,6 +32,9 @@ import (
 
 	testsuitev3 "github.com/kubeshop/testkube/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	workflowtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/workflowtriggers"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	"github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/operator/informers/externalversions"
 	testkubeexecutorinformerv1 "github.com/kubeshop/testkube/pkg/operator/informers/externalversions/executor/v1"
@@ -95,12 +103,26 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 
 func (s *Service) runWatcher(ctx context.Context) {
 	s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
-	s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	informers := newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	s.informersMu.Lock()
+	s.informers = informers
+	s.informersMu.Unlock()
+
+	if s.dynamicClient != nil {
+		mapper := newCachedRESTMapper(s.clientset.Discovery())
+		s.dynamicManager = newDynamicInformerManager(s.dynamicClient, mapper, s.watcherNamespaces, s.logger)
+	}
 
 	stopChan := make(chan struct{})
 	defer func() {
 		close(stopChan)
+		if s.dynamicManager != nil {
+			s.dynamicManager.stopAll()
+			s.dynamicManager = nil
+		}
+		s.informersMu.Lock()
 		s.informers = nil
+		s.informersMu.Unlock()
 		s.logger.Infof("trigger service: instance %s in cluster %s released lease", s.identifier, s.clusterID)
 	}()
 
@@ -114,6 +136,8 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.logger.Errorf("trigger service: error running k8s informers: informers are nil")
 		return
 	}
+
+	watchWebhookResources := s.canWatchWebhookResources()
 
 	for i := range s.informers.podInformers {
 		s.informers.podInformers[i].Informer().AddEventHandler(s.podEventHandler(ctx))
@@ -150,10 +174,24 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	if s.testTriggerControlPlane {
 		s.startCloudTestTriggerWatch(ctx, stop)
 	} else {
-		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler(ctx))
 	}
-	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
-	s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
+
+	// WorkflowTrigger v2: when on control plane, poll via the cloud client.
+	// Otherwise watch the CRD directly via a dynamic informer scoped to the
+	// Testkube namespace (no generated clientset yet for this CRD).
+	if s.testTriggerControlPlane && s.workflowTriggersClient != nil {
+		s.startCloudWorkflowTriggerWatch(ctx, stop)
+	} else if s.dynamicClient != nil {
+		wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, s.testkubeNamespace, nil)
+		wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
+		wtInformer.AddEventHandler(s.workflowTriggerEventHandler(ctx))
+		go wtInformer.Run(stop)
+	}
+	if watchWebhookResources {
+		s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
+		s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
+	}
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -199,10 +237,116 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.logger.Debugf("trigger service: starting test trigger informer")
 		go s.informers.testTriggerInformer.Informer().Run(stop)
 	}
-	s.logger.Debugf("trigger service: starting webhook informer")
-	go s.informers.webhookInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting webhook template informer")
-	go s.informers.webhookTemplateInformer.Informer().Run(stop)
+	if watchWebhookResources {
+		s.logger.Debugf("trigger service: starting webhook informer")
+		go s.informers.webhookInformer.Informer().Run(stop)
+		s.logger.Debugf("trigger service: starting webhook template informer")
+		go s.informers.webhookTemplateInformer.Informer().Run(stop)
+	}
+}
+
+func (s *Service) canWatchWebhookResources() bool {
+	const groupVersion = "executor.testkube.io/v1"
+
+	if s.testKubeClientset == nil {
+		s.logger.Warnf("trigger service: testkube clientset is nil, skipping webhook informers")
+		return false
+	}
+
+	resources, err := s.testKubeClientset.Discovery().ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		// Handle common errors when CRDs are not installed.
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || discovery.IsGroupDiscoveryFailedError(err) {
+			s.logger.Infof(
+				"trigger service: executor CRDs not detected, skipping webhook informers (groupVersion=%s): %v",
+				groupVersion, err,
+			)
+			return false
+		}
+
+		s.logger.Warnf(
+			"trigger service: failed to discover executor resources, skipping webhook informers (groupVersion=%s): %v",
+			groupVersion, err,
+		)
+		return false
+	}
+
+	var hasWebhooks, hasWebhookTemplates bool
+	for _, resource := range resources.APIResources {
+		switch resource.Name {
+		case "webhooks":
+			hasWebhooks = true
+		case "webhooktemplates":
+			hasWebhookTemplates = true
+		}
+	}
+
+	if hasWebhooks && hasWebhookTemplates {
+		return true
+	}
+
+	s.logger.Infof(
+		"trigger service: executor CRDs are incomplete, skipping webhook informers (webhooks=%t webhooktemplates=%t)",
+		hasWebhooks, hasWebhookTemplates,
+	)
+	return false
+}
+
+// startCloudWorkflowTriggerWatch mirrors startCloudTestTriggerWatch for v2: it
+// periodically lists WorkflowTriggers from the control plane, diffs against the
+// previous snapshot, and calls the same add/update/remove methods used by the
+// local dynamic informer so the agent's triggerStatus map stays authoritative
+// regardless of source.
+func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-chan struct{}) {
+	ticker := time.NewTicker(s.scraperInterval)
+
+	prev := map[string]testkube.WorkflowTrigger{}
+
+	syncOnce := func() {
+		list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, s.testkubeNamespace)
+		if err != nil {
+			s.logger.Errorf("trigger service: error listing cloud workflow triggers: %v", err)
+			return
+		}
+
+		curr := map[string]testkube.WorkflowTrigger{}
+		for _, t := range list {
+			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+			curr[key] = t
+
+			crd := workflowtriggersmapper.MapAPIToCRD(t)
+			if old, ok := prev[key]; !ok {
+				s.addWorkflowTrigger(ctx, &crd)
+				s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWorkflowTrigger, t.Name))
+			} else if !cmp.Equal(old, t) {
+				s.updateWorkflowTrigger(ctx, &crd)
+				s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+			}
+		}
+
+		for key, t := range prev {
+			if _, ok := curr[key]; !ok {
+				crd := workflowtriggersmapper.MapAPIToCRD(t)
+				s.removeWorkflowTrigger(&crd)
+				s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceWorkflowTrigger, t.Name))
+			}
+		}
+
+		prev = curr
+	}
+
+	go func() {
+		defer ticker.Stop()
+		syncOnce()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				syncOnce()
+			}
+		}
+	}()
 }
 
 // startCloudTestTriggerWatch periodically lists triggers and mirrors changes into local handlers
@@ -218,8 +362,10 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			Labels:            t.Labels,
 			Selector:          t.Selector,
 			Resource:          t.Resource,
+			ResourceRef:       t.ResourceRef,
 			ResourceSelector:  t.ResourceSelector,
 			Event:             t.Event,
+			Match:             t.Match,
 			ConditionSpec:     t.ConditionSpec,
 			ProbeSpec:         t.ProbeSpec,
 			Action:            t.Action,
@@ -245,17 +391,17 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 
 			if old, ok := prev[key]; !ok {
 				crd := toCRD(t)
-				s.testTriggerEventHandler().AddFunc(&crd)
+				s.testTriggerEventHandler(ctx).AddFunc(&crd)
 			} else if !cmp.Equal(old, t) {
 				crd := toCRD(t)
-				s.testTriggerEventHandler().UpdateFunc(nil, &crd)
+				s.testTriggerEventHandler(ctx).UpdateFunc(nil, &crd)
 			}
 		}
 
 		for key, t := range prev {
 			if _, ok := curr[key]; !ok {
 				crd := toCRD(t)
-				s.testTriggerEventHandler().DeleteFunc(&crd)
+				s.testTriggerEventHandler(ctx).DeleteFunc(&crd)
 			}
 		}
 
@@ -376,7 +522,7 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 				newDeployment.Namespace, newDeployment.Name,
 			)
 			causes := diffDeployments(oldDeployment, newDeployment)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newDeployment.ObjectMeta, newDeployment, testtrigger.ResourceDeployment, withCauses(causes), withConditionsGetter(getConditions(newDeployment)))
+			event := s.newWatcherEvent(testtrigger.EventModified, &newDeployment.ObjectMeta, newDeployment, testtrigger.ResourceDeployment, withCauses(causes), withConditionsGetter(getConditions(newDeployment)), withOldObject(oldDeployment))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update deployment event: %v", err)
 			}
@@ -447,7 +593,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 				"trigger service: watcher component: emiting event: statefulset %s/%s updated",
 				newStatefulSet.Namespace, newStatefulSet.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newStatefulSet.ObjectMeta, newStatefulSet, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(newStatefulSet)))
+			event := s.newWatcherEvent(testtrigger.EventModified, &newStatefulSet.ObjectMeta, newStatefulSet, testtrigger.ResourceStatefulSet, withConditionsGetter(getConditions(newStatefulSet)), withOldObject(oldStatefulSet))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update statefulset event: %v", err)
 			}
@@ -518,7 +664,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 				"trigger service: watcher component: emiting event: daemonset %s/%s updated",
 				newDaemonSet.Namespace, newDaemonSet.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newDaemonSet.ObjectMeta, newDaemonSet, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(newDaemonSet)))
+			event := s.newWatcherEvent(testtrigger.EventModified, &newDaemonSet.ObjectMeta, newDaemonSet, testtrigger.ResourceDaemonSet, withConditionsGetter(getConditions(newDaemonSet)), withOldObject(oldDaemonSet))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update daemonset event: %v", err)
 			}
@@ -596,7 +742,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 				newService.Namespace, newService.Name,
 			)
 			event := s.newWatcherEvent(testtrigger.EventModified, &newService.ObjectMeta, newService, testtrigger.ResourceService,
-				withConditionsGetter(getConditions(newService)), withAddressGetter(getAddrress(newService)))
+				withConditionsGetter(getConditions(newService)), withAddressGetter(getAddrress(newService)), withOldObject(oldService))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update service event: %v", err)
 			}
@@ -663,7 +809,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 				"trigger service: watcher component: emiting event: ingress %s/%s updated",
 				oldIngress.Namespace, newIngress.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newIngress.ObjectMeta, newIngress, testtrigger.ResourceIngress)
+			event := s.newWatcherEvent(testtrigger.EventModified, &newIngress.ObjectMeta, newIngress, testtrigger.ResourceIngress, withOldObject(oldIngress))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update ingress event: %v", err)
 			}
@@ -708,7 +854,7 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 	}
 }
 
-func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
+func (s *Service) testTriggerEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			t, ok := obj.(*testtriggersv1.TestTrigger)
@@ -720,7 +866,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				"trigger service: watcher component: adding testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
-			s.addTrigger(t)
+			s.addTrigger(ctx, t)
 
 			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for created testtrigger %s/%s for resource %s on event %s",
@@ -741,7 +887,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				"trigger service: watcher component: updating testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
-			s.updateTrigger(t)
+			s.updateTrigger(ctx, t)
 
 			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updated testtrigger %s/%s for resource %s on event %s",
@@ -768,6 +914,62 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTrigger, t.Name))
 		},
 	}
+}
+
+// workflowTriggerEventHandler handles add/update/delete events on the
+// WorkflowTrigger v2 CRD (testworkflows.testkube.io/v1), converting the
+// unstructured payload to the typed CRD and forwarding to the service's
+// add/update/remove methods which keep status + dynamic-informer state in sync.
+func (s *Service) workflowTriggerEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			t, err := unstructuredToWorkflowTrigger(obj)
+			if err != nil {
+				s.logger.Errorf("failed to process create WorkflowTrigger event: %v", err)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: adding WorkflowTrigger %s/%s", t.Namespace, t.Name)
+			s.addWorkflowTrigger(ctx, t)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWorkflowTrigger, t.Name))
+		},
+		UpdateFunc: func(_, newObj any) {
+			t, err := unstructuredToWorkflowTrigger(newObj)
+			if err != nil {
+				s.logger.Errorf("failed to process update WorkflowTrigger event: %v", err)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: updating WorkflowTrigger %s/%s", t.Namespace, t.Name)
+			s.updateWorkflowTrigger(ctx, t)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+		},
+		DeleteFunc: func(obj any) {
+			t, err := unstructuredToWorkflowTrigger(obj)
+			if err != nil {
+				if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+					t, err = unstructuredToWorkflowTrigger(tombstone.Obj)
+				}
+				if err != nil {
+					s.logger.Errorf("failed to process delete WorkflowTrigger event: %v", err)
+					return
+				}
+			}
+			s.logger.Debugf("trigger service: watcher component: deleting WorkflowTrigger %s/%s", t.Namespace, t.Name)
+			s.removeWorkflowTrigger(t)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceWorkflowTrigger, t.Name))
+		},
+	}
+}
+
+func unstructuredToWorkflowTrigger(obj any) (*workflowtriggersv1.WorkflowTrigger, error) {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type %T", obj)
+	}
+	var t workflowtriggersv1.WorkflowTrigger
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &t); err != nil {
+		return nil, fmt.Errorf("convert unstructured to WorkflowTrigger: %w", err)
+	}
+	return &t, nil
 }
 
 func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
@@ -900,7 +1102,7 @@ func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEvent
 				"trigger service: watcher component: emiting event: config map %s/%s updated",
 				oldConfigMap.Namespace, newConfigMap.Name,
 			)
-			event := s.newWatcherEvent(testtrigger.EventModified, &newConfigMap.ObjectMeta, newConfigMap, testtrigger.ResourceConfigMap)
+			event := s.newWatcherEvent(testtrigger.EventModified, &newConfigMap.ObjectMeta, newConfigMap, testtrigger.ResourceConfigMap, withOldObject(oldConfigMap))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update config map event: %v", err)
 			}

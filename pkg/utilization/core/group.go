@@ -98,6 +98,10 @@ func groupDataPoints(metrics []*Metric) fieldsByMeasurement {
 		if metric == nil {
 			continue
 		}
+		// Skip metrics without a timestamp
+		if metric.Timestamp == nil {
+			continue
+		}
 		for _, field := range metric.Fields {
 			if _, ok := fieldsMap[metric.Measurement]; !ok {
 				fieldsMap[metric.Measurement] = make(valuesByField, len(metric.Fields))

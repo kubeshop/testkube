@@ -25,15 +25,15 @@
     "ts-check": "turbo run ts-check"
   },
   "devDependencies": {
-    "@changesets/cli": "2.29.7",
-    "turbo": "2.5.8",
-    "typescript": "5.9.2"
+    "@changesets/cli": "2.31.0",
+    "turbo": "2.9.6",
+    "typescript": "6.0.3"
   },
   "optionalDependencies": {
-    "@esbuild/linux-x64": "0.24.2",
-    "@rollup/rollup-linux-x64-gnu": "4.32.1"
+    "@esbuild/linux-x64": "0.28.0",
+    "@rollup/rollup-linux-x64-gnu": "4.60.2"
   },
-  "packageManager": "npm@10.9.2",
+  "packageManager": "npm@11.13.0",
   "engines": {
     "node": "^20.0.0 || ^22.0.0 || ^24.0.0",
     "npm": ">=10.0.0"

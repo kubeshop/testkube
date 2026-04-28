@@ -6,14 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	cdevents "github.com/cdevents/sdk-go/pkg/api"
+	cdeventsapi "github.com/cdevents/sdk-go/pkg/api"
+	cdevents "github.com/cdevents/sdk-go/pkg/api/v04"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/mapper"
 )
 
 // MapTestkubeEventToCDEvent maps OpenAPI spec Event to CDEvent CDEventReader
-func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	if tkEvent.Type_ == nil {
 		return nil, errors.New("empty event type")
 	}
@@ -80,7 +81,7 @@ func MapMimeTypeToCDEventOutputType(mimeType string) string {
 }
 
 // MapTestkubeEventQueuedTestWorkflowTestToCDEvent maps OpenAPI spec Queued Test Workflow Test Event to CDEvent CDEventReader
-func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunQueuedEvent()
 	if err != nil {
@@ -110,7 +111,7 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 			namespace = defaultNamespace
 		}
 
-		ev.SetSubjectEnvironment(&cdevents.Reference{
+		ev.SetSubjectEnvironment(&cdeventsapi.Reference{
 			Id:     namespace,
 			Source: clusterID,
 		})
@@ -128,7 +129,7 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 }
 
 // MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent maps OpenAPI spec Queued Test Workflow Test Suite Event to CDEvent CDEventReader
-func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestSuiteRunQueuedEvent()
 	if err != nil {
@@ -157,7 +158,7 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 			namespace = defaultNamespace
 		}
 
-		ev.SetSubjectEnvironment(&cdevents.Reference{
+		ev.SetSubjectEnvironment(&cdeventsapi.Reference{
 			Id:     namespace,
 			Source: clusterID,
 		})
@@ -175,7 +176,7 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 }
 
 // MapTestkubeEventStartTestWorkflowTestToCDEvent maps OpenAPI spec Start Test Workflow Test Event to CDEvent CDEventReader
-func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunStartedEvent()
 	if err != nil {
@@ -205,7 +206,7 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 			namespace = defaultNamespace
 		}
 
-		ev.SetSubjectEnvironment(&cdevents.Reference{
+		ev.SetSubjectEnvironment(&cdeventsapi.Reference{
 			Id:     namespace,
 			Source: clusterID,
 		})
@@ -223,7 +224,7 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 }
 
 // MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent maps OpenAPI spec Start Test Workflow Test Suite Event to CDEvent CDEventReader
-func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestSuiteRunStartedEvent()
 	if err != nil {
@@ -252,7 +253,7 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 			namespace = defaultNamespace
 		}
 
-		ev.SetSubjectEnvironment(&cdevents.Reference{
+		ev.SetSubjectEnvironment(&cdeventsapi.Reference{
 			Id:     namespace,
 			Source: clusterID,
 		})
@@ -270,7 +271,7 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 }
 
 // MapTestkubeEventFinishTestWorkflowTestToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Workflow Test Event to CDEvent CDEventReader
-func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunFinishedEvent()
 	if err != nil {
@@ -300,7 +301,7 @@ func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clust
 			namespace = defaultNamespace
 		}
 
-		ev.SetSubjectEnvironment(&cdevents.Reference{
+		ev.SetSubjectEnvironment(&cdeventsapi.Reference{
 			Id:     namespace,
 			Source: clusterID,
 		})
@@ -338,7 +339,7 @@ func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clust
 }
 
 // MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Workflow Test Event to CDEvent CDEventReader
-func MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestSuiteRunFinishedEvent()
 	if err != nil {
@@ -367,7 +368,7 @@ func MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 			namespace = defaultNamespace
 		}
 
-		ev.SetSubjectEnvironment(&cdevents.Reference{
+		ev.SetSubjectEnvironment(&cdeventsapi.Reference{
 			Id:     namespace,
 			Source: clusterID,
 		})
@@ -405,7 +406,7 @@ func MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 }
 
 // MapTestkubeTestWorkflowLogToCDEvent maps OpenAPI spec Test WWorkflow log to CDEvent CDEventReader
-func MapTestkubeTestWorkflowLogToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
+func MapTestkubeTestWorkflowLogToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestOutputPublishedEvent()
 	if err != nil {
@@ -420,7 +421,7 @@ func MapTestkubeTestWorkflowLogToCDEvent(event testkube.Event, clusterID, dashbo
 	ev.SetSource(clusterID)
 
 	if event.TestWorkflowExecution != nil {
-		ev.SetSubjectTestCaseRun(&cdevents.Reference{
+		ev.SetSubjectTestCaseRun(&cdeventsapi.Reference{
 			Id:     event.TestWorkflowExecution.Id,
 			Source: clusterID,
 		})
@@ -482,7 +483,7 @@ type CDEventsArtifactParameters struct {
 }
 
 // MapTestkubeGTestWorkflowArtifactToCDEvent maps OpenAPI spec Test Artifact to CDEvent CDEventReader
-func MapTestkubeTestWorkflowArtifactToCDEvent(parameters CDEventsArtifactParameters, path, format string) (cdevents.CDEventReader, error) {
+func MapTestkubeTestWorkflowArtifactToCDEvent(parameters CDEventsArtifactParameters, path, format string) (cdeventsapi.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestOutputPublishedEvent()
 	if err != nil {
@@ -492,7 +493,7 @@ func MapTestkubeTestWorkflowArtifactToCDEvent(parameters CDEventsArtifactParamet
 	ev.SetSubjectId(filepath.Join(parameters.Name, path))
 	ev.SetSubjectSource(parameters.ClusterID)
 	ev.SetSource(parameters.ClusterID)
-	ev.SetSubjectTestCaseRun(&cdevents.Reference{
+	ev.SetSubjectTestCaseRun(&cdeventsapi.Reference{
 		Id:     parameters.Id,
 		Source: parameters.ClusterID,
 	})

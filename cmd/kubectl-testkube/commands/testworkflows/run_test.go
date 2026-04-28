@@ -1,6 +1,7 @@
 package testworkflows
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -8,7 +9,48 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
+
+type stubWorkflowExecutionGetter struct {
+	getTestWorkflowExecution func(executionID string) (testkube.TestWorkflowExecution, error)
+}
+
+func (s stubWorkflowExecutionGetter) GetTestWorkflowExecution(executionID string) (testkube.TestWorkflowExecution, error) {
+	return s.getTestWorkflowExecution(executionID)
+}
+
+func newWorkflowResult(status testkube.TestWorkflowStatus, finished bool) *testkube.TestWorkflowResult {
+	result := &testkube.TestWorkflowResult{
+		Status: &status,
+	}
+	if finished {
+		result.FinishedAt = time.Now()
+	}
+	return result
+}
+
+func newWorkflowExecution(result *testkube.TestWorkflowResult) testkube.TestWorkflowExecution {
+	return testkube.TestWorkflowExecution{Result: result}
+}
+
+func withWorkflowLogSleepStub(t *testing.T, sleepFn func(time.Duration)) {
+	t.Helper()
+	previous := watchWorkflowLogsSleep
+	watchWorkflowLogsSleep = sleepFn
+	t.Cleanup(func() {
+		watchWorkflowLogsSleep = previous
+	})
+}
+
+func withWorkflowLogIdleTimeoutStub(t *testing.T, timeout time.Duration) {
+	t.Helper()
+	previous := workflowLogsIdleTimeout
+	workflowLogsIdleTimeout = timeout
+	t.Cleanup(func() {
+		workflowLogsIdleTimeout = previous
+	})
+}
 
 func TestGetIterationDelay(t *testing.T) {
 	tests := []struct {
@@ -40,7 +82,672 @@ func TestGetIterationDelay(t *testing.T) {
 		})
 	}
 }
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected map[string]string
+		wantErr  bool
+		errMsg   string
+	}{
+		{
+			name:     "simple string value",
+			input:    []string{"env=production"},
+			expected: map[string]string{"env": "production"},
+			wantErr:  false,
+		},
+		{
+			name:     "simple integer value",
+			input:    []string{"workers=2"},
+			expected: map[string]string{"workers": "2"},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON object value",
+			input:    []string{`customAgency={"agency":{"url":"https://test.com"}}`},
+			expected: map[string]string{"customAgency": `{"agency":{"url":"https://test.com"}}`},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON object with escaped quotes",
+			input:    []string{`data={\"key\":\"value\"}`},
+			expected: map[string]string{"data": `{\"key\":\"value\"}`},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON array value",
+			input:    []string{`tags=["tag1","tag2","tag3"]`},
+			expected: map[string]string{"tags": `["tag1","tag2","tag3"]`},
+			wantErr:  false,
+		},
+		{
+			name:     "mixed simple and JSON",
+			input:    []string{"env=prod", `config={"key":"value"}`},
+			expected: map[string]string{"env": "prod", "config": `{"key":"value"}`},
+			wantErr:  false,
+		},
+		{
+			name:     "value with colon (URL)",
+			input:    []string{"url=http://example.com:8080"},
+			expected: map[string]string{"url": "http://example.com:8080"},
+			wantErr:  false,
+		},
+		{
+			name:     "value with equals sign",
+			input:    []string{"query=param1=value1&param2=value2"},
+			expected: map[string]string{"query": "param1=value1&param2=value2"},
+			wantErr:  false,
+		},
+		{
+			name:     "complex JSON with nested objects and arrays",
+			input:    []string{`settings={"server":{"host":"localhost","port":8080},"features":["auth","logging"]}`},
+			expected: map[string]string{"settings": `{"server":{"host":"localhost","port":8080},"features":["auth","logging"]}`},
+			wantErr:  false,
+		},
+		{
+			name:     "empty value",
+			input:    []string{"key="},
+			expected: map[string]string{"key": ""},
+			wantErr:  false,
+		},
+		{
+			name:     "multiple configs",
+			input:    []string{"env=dev", "region=us-west", "workers=5"},
+			expected: map[string]string{"env": "dev", "region": "us-west", "workers": "5"},
+			wantErr:  false,
+		},
+		{
+			name:    "invalid format no equals",
+			input:   []string{"invalid"},
+			wantErr: true,
+			errMsg:  "invalid config format",
+		},
+		{
+			name:    "empty key",
+			input:   []string{"=value"},
+			wantErr: true,
+			errMsg:  "empty config key",
+		},
+		{
+			name:    "only equals sign",
+			input:   []string{"="},
+			wantErr: true,
+			errMsg:  "empty config key",
+		},
+		{
+			name:     "value that looks like invalid JSON (should still work as string)",
+			input:    []string{`key={invalid`},
+			expected: map[string]string{"key": "{invalid"},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON with spaces",
+			input:    []string{`data={"key": "value with spaces"}`},
+			expected: map[string]string{"data": `{"key": "value with spaces"}`},
+			wantErr:  false,
+		},
+		{
+			name:     "backward compatibility - simple key value pairs",
+			input:    []string{"version=1.0.0", "timeout=30s", "retries=3"},
+			expected: map[string]string{"version": "1.0.0", "timeout": "30s", "retries": "3"},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON with base64 secret containing + and =",
+			input:    []string{`config={"apiClient":{"clientId":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","secret":"aGVsbG8rd29ybGQ+c2VjcmV0PQ=="}}`},
+			expected: map[string]string{"config": `{"apiClient":{"clientId":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","secret":"aGVsbG8rd29ybGQ+c2VjcmV0PQ=="}}`},
+			wantErr:  false,
+		},
+		{
+			name:     "JSON with empty string values",
+			input:    []string{`user={"id":"","username":"","password":""}`},
+			expected: map[string]string{"user": `{"id":"","username":"","password":""}`},
+			wantErr:  false,
+		},
+		{
+			name:     "complex JSON with special chars, empty values, and nested objects",
+			input:    []string{`customAgency={"agency":{"url":"https://test.com","id":"ABC"},"apiClient":{"clientId":"123","secret":"key+val="},"user":{"id":"","username":""}}`},
+			expected: map[string]string{"customAgency": `{"agency":{"url":"https://test.com","id":"ABC"},"apiClient":{"clientId":"123","secret":"key+val="},"user":{"id":"","username":""}}`},
+			wantErr:  false,
+		},
+		{
+			name:     "real user scenario - exact structure from bug report with escaped quotes",
+			input:    []string{`customAgency={\"agency\":{\"url\":\"https://api.example.com\",\"id\":\"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE\"},\"apiClient\":{\"clientId\":\"FFFFFFFF-GGGG-HHHH-IIII-JJJJJJJJJJJJ\",\"secret\":\"aGVsbG8rd29ybGQ+c2VjcmV0PQ==\"},\"user\":{\"id\":\"\",\"username\":\"\",\"password\":\"\"},\"device\":{\"serial\":\"\"}}`},
+			expected: map[string]string{"customAgency": `{\"agency\":{\"url\":\"https://api.example.com\",\"id\":\"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE\"},\"apiClient\":{\"clientId\":\"FFFFFFFF-GGGG-HHHH-IIII-JJJJJJJJJJJJ\",\"secret\":\"aGVsbG8rd29ybGQ+c2VjcmV0PQ==\"},\"user\":{\"id\":\"\",\"username\":\"\",\"password\":\"\"},\"device\":{\"serial\":\"\"}}`},
+			wantErr:  false,
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseConfig(tt.input)
+
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestWatchWorkflowLogsCommonReturnsFinishedExecutionAfterPrintError(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	result, err := watchWorkflowLogsCommon("exec-1", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+		notifications <- testkube.TestWorkflowExecutionNotification{Log: registry.ErrResourceNotFound.Error()}
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+}
+
+func TestWatchWorkflowLogsCommonReturnsRefreshErrorAfterInterruptedStream(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	expectedErr := errors.New("refresh failed")
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			return testkube.TestWorkflowExecution{}, expectedErr
+		},
+	}
+
+	result, err := watchWorkflowLogsCommon("exec-2", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		notifications := make(chan testkube.TestWorkflowExecutionNotification)
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestWatchWorkflowLogsCommonUsesRetryDelayAfterNotificationError(t *testing.T) {
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(duration time.Duration) {
+		sleeps = append(sleeps, duration)
+	})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshCalls := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshCalls++
+			if refreshCalls == 1 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-3", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		attempts++
+		return nil, errors.New("stream unavailable")
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, 2, attempts)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
+}
+
+func TestWatchWorkflowLogsCommonReconnectsOpenButSilentStream(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(duration time.Duration) {
+		sleeps = append(sleeps, duration)
+	})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshCalls := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshCalls++
+			if refreshCalls == 1 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	attempts := 0
+	var firstAttemptDone <-chan struct{}
+	result, err := watchWorkflowLogsCommon("exec-silent", "", "Waiting for workflow logs", nil, executionGetter, func(ctx context.Context, _ uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		attempts++
+		if attempts == 1 {
+			firstAttemptDone = ctx.Done()
+			notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				EventType: "heartbeat",
+			}
+			return notifications, nil
+		}
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			SeqNo:  1,
+			Result: finishedResult,
+		}
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, 2, attempts)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
+	select {
+	case <-firstAttemptDone:
+	default:
+		t.Fatal("first silent stream context was not canceled before reconnect")
+	}
+}
+
+func TestPrintTestWorkflowLogsDoesNotTimeOutBeforeFirstPlainNotification(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 50*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			Result: finishedResult,
+		}
+		close(notifications)
+	}()
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(0), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsAcceptsProtocolHeartbeatBeforeApplicationLog(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 20*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:     0,
+		EventType: "heartbeat",
+	}
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  1,
+		Result: finishedResult,
+	}
+	close(notifications)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(1), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsContinuesAfterResumeUnavailable(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 20*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:     3,
+		EventType: "resume_unavailable",
+	}
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  1,
+		Result: finishedResult,
+	}
+	close(notifications)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 3)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(1), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsTimesOutAfterPlainNotificationSilence(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+	go func() {
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			Log: "still quiet\n",
+		}
+	}()
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.ErrorIs(t, err, errWorkflowLogsIdle)
+	assert.Nil(t, result)
+	assert.Equal(t, uint32(0), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsTimesOutWithoutAnyNotifications(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	notifications := make(chan testkube.TestWorkflowExecutionNotification)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.ErrorIs(t, err, errWorkflowLogsIdle)
+	assert.Nil(t, result)
+	assert.Equal(t, uint32(0), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsStaysAliveWithHeartbeatTraffic(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 4)
+	stopHeartbeats := make(chan struct{})
+	defer close(stopHeartbeats)
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Millisecond)
+		defer ticker.Stop()
+		for i := 0; i < 3; i++ {
+			<-ticker.C
+			notifications <- testkube.TestWorkflowExecutionNotification{EventType: "heartbeat"}
+		}
+		notifications <- testkube.TestWorkflowExecutionNotification{
+			SeqNo:  1,
+			Result: finishedResult,
+		}
+		close(notifications)
+	}()
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 0)
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, uint32(1), nextSeqNo)
+}
+
+func TestPrintTestWorkflowLogsSuppressesDuplicateSeqNo(t *testing.T) {
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  3,
+		Result: runningResult,
+	}
+	notifications <- testkube.TestWorkflowExecutionNotification{
+		SeqNo:  3,
+		Result: finishedResult,
+	}
+	close(notifications)
+
+	result, nextSeqNo, err := printTestWorkflowLogs(nil, notifications, "", 2)
+
+	assert.NoError(t, err)
+	assert.Same(t, runningResult, result)
+	assert.Equal(t, uint32(3), nextSeqNo)
+}
+
+func TestWatchWorkflowLogsCommonRetriesAfterIdleStream(t *testing.T) {
+	withWorkflowLogIdleTimeoutStub(t, 10*time.Millisecond)
+
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(d time.Duration) {
+		sleeps = append(sleeps, d)
+	})
+
+	attempts := 0
+	refreshes := 0
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	unfinishedResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			if refreshes == 1 {
+				return newWorkflowExecution(unfinishedResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	result, err := watchWorkflowLogsCommon("exec-idle", "", "Waiting for workflow logs", nil, executionGetter, func(context.Context, uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		attempts++
+		if attempts == 1 {
+			notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				EventType: "heartbeat",
+			}
+			return notifications, nil
+		}
+		return nil, errors.New("stream unavailable")
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, 2, attempts)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
+}
+
+func TestWatchWorkflowLogsCommonResumesWithLastSeqNoAfterInterruptedStream(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshes := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			if refreshes == 1 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	var resumeCursors []uint32
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-resume", "", "Waiting for workflow logs", nil, executionGetter, func(_ context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		resumeCursors = append(resumeCursors, resumeAfterSeqNo)
+		attempts++
+		if attempts == 1 {
+			notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  3,
+				Result: runningResult,
+			}
+			close(notifications)
+			return notifications, nil
+		}
+		return nil, errors.New("stream unavailable")
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, []uint32{0, 3}, resumeCursors)
+}
+
+func TestWatchWorkflowLogsCommonRetriesTransientRefreshErrorAfterInterruptedStream(t *testing.T) {
+	var sleeps []time.Duration
+	withWorkflowLogSleepStub(t, func(d time.Duration) {
+		sleeps = append(sleeps, d)
+	})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshes := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			switch refreshes {
+			case 1:
+				return testkube.TestWorkflowExecution{}, errors.New("Get \"https://api.example.test/execution\": EOF")
+			case 2:
+				return newWorkflowExecution(runningResult), nil
+			default:
+				return newWorkflowExecution(finishedResult), nil
+			}
+		},
+	}
+
+	var resumeCursors []uint32
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-refresh-retry", "", "Waiting for workflow logs", nil, executionGetter, func(_ context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		resumeCursors = append(resumeCursors, resumeAfterSeqNo)
+		attempts++
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 1)
+		switch attempts {
+		case 1:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  3,
+				Result: runningResult,
+			}
+			close(notifications)
+		case 2:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  4,
+				Result: finishedResult,
+			}
+			close(notifications)
+		}
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, []uint32{0, 3}, resumeCursors)
+	assert.Equal(t, []time.Duration{logsRetryDelay}, sleeps)
+}
+
+func TestWatchWorkflowLogsCommonKeepsReplacementStreamAfterResumeUnavailable(t *testing.T) {
+	withWorkflowLogSleepStub(t, func(time.Duration) {})
+
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+	refreshes := 0
+	executionGetter := stubWorkflowExecutionGetter{
+		getTestWorkflowExecution: func(executionID string) (testkube.TestWorkflowExecution, error) {
+			refreshes++
+			if refreshes < 2 {
+				return newWorkflowExecution(runningResult), nil
+			}
+			return newWorkflowExecution(finishedResult), nil
+		},
+	}
+
+	var resumeCursors []uint32
+	attempts := 0
+	result, err := watchWorkflowLogsCommon("exec-resume-gap", "", "Waiting for workflow logs", nil, executionGetter, func(_ context.Context, resumeAfterSeqNo uint32) (chan testkube.TestWorkflowExecutionNotification, error) {
+		resumeCursors = append(resumeCursors, resumeAfterSeqNo)
+		attempts++
+		notifications := make(chan testkube.TestWorkflowExecutionNotification, 2)
+		switch attempts {
+		case 1:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  3,
+				Result: runningResult,
+			}
+		case 2:
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:     3,
+				EventType: "resume_unavailable",
+			}
+			notifications <- testkube.TestWorkflowExecutionNotification{
+				SeqNo:  1,
+				Result: finishedResult,
+			}
+		}
+		close(notifications)
+		return notifications, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Same(t, finishedResult, result)
+	assert.Equal(t, []uint32{0, 3}, resumeCursors)
+}
+
+// TestParseConfig_Integration tests the full flow from CLI parsing to backend processing
+func TestParseConfig_Integration(t *testing.T) {
+	tests := []struct {
+		name           string
+		cliInput       []string
+		expectedConfig map[string]string
+		description    string
+	}{
+		{
+			name:           "bug report scenario - JSON object with URL containing colons",
+			cliInput:       []string{`customAgency={\"agency\":{\"url\":\"https://test.com\"}}`},
+			expectedConfig: map[string]string{"customAgency": `{\"agency\":{\"url\":\"https://test.com\"}}`},
+			description:    "Verifies the exact scenario from the bug report where JSON values with colons were being split incorrectly",
+		},
+		{
+			name:           "mixed config types",
+			cliInput:       []string{"env=production", `api={"url":"https://api.example.com:8080"}`, "workers=5"},
+			expectedConfig: map[string]string{"env": "production", "api": `{"url":"https://api.example.com:8080"}`, "workers": "5"},
+			description:    "Verifies that simple values and JSON values can coexist without issues",
+		},
+		{
+			name:           "complex nested JSON with multiple colons",
+			cliInput:       []string{`config={"database":{"host":"db.test.com:5432","url":"postgresql://user:pass@db.test.com:5432/dbname"},"api":{"endpoint":"https://api.test.com:8443/v1"}}`},
+			expectedConfig: map[string]string{"config": `{"database":{"host":"db.test.com:5432","url":"postgresql://user:pass@db.test.com:5432/dbname"},"api":{"endpoint":"https://api.test.com:8443/v1"}}`},
+			description:    "Verifies complex JSON structures with multiple nested objects and colons are preserved",
+		},
+		{
+			name:           "JSON array with objects containing URLs",
+			cliInput:       []string{`services=[{"name":"api","url":"https://api.test.com:8080"},{"name":"auth","url":"https://auth.test.com:443"}]`},
+			expectedConfig: map[string]string{"services": `[{"name":"api","url":"https://api.test.com:8080"},{"name":"auth","url":"https://auth.test.com:443"}]`},
+			description:    "Verifies JSON arrays containing objects with URLs are handled correctly",
+		},
+		{
+			name:           "URL without JSON wrapper",
+			cliInput:       []string{"apiUrl=https://test.com:8080/api/v1"},
+			expectedConfig: map[string]string{"apiUrl": "https://test.com:8080/api/v1"},
+			description:    "Verifies plain URL values with colons still work (backward compatibility)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Step 1: Parse CLI input (simulates what happens when user runs the command)
+			parsedConfig, err := parseConfig(tt.cliInput)
+			assert.Nil(t, err, "CLI parsing should not fail")
+			assert.Equal(t, tt.expectedConfig, parsedConfig, "CLI parsing should produce expected config map")
+
+			// Step 2: Verify no colons were incorrectly split
+			for key, value := range parsedConfig {
+				// If the original input had JSON with colons, verify they're still there
+				for _, input := range tt.cliInput {
+					if len(input) > len(key) && input[:len(key)] == key && input[len(key)] == '=' {
+						expectedValue := input[len(key)+1:]
+						assert.Equal(t, expectedValue, value, "Value should match original input after first equals sign")
+
+						// Specifically check that colons in URLs are not split
+						if value[0] == '{' || value[0] == '[' {
+							// For JSON values, ensure colons are preserved
+							assert.Contains(t, value, ":", "JSON values should contain colons")
+							// Should NOT be split into separate parts like "agency:url:https"
+							assert.NotContains(t, value, "agency:url", "Should not have incorrectly split JSON structure")
+						}
+					}
+				}
+			}
+		})
+	}
+}
 func TestParseTargetMap(t *testing.T) {
 	tests := []struct {
 		name     string

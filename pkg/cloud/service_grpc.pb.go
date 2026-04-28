@@ -39,6 +39,7 @@ type TestKubeCloudAPIClient interface {
 	ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error)
 	// Runner
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	UpdateAgentCapabilitiesOnStartup(ctx context.Context, in *UpdateAgentCapabilitiesOnStartupRequest, opts ...grpc.CallOption) (*UpdateAgentCapabilitiesOnStartupResponse, error)
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	// Deprecated: Do not use.
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
@@ -84,11 +85,20 @@ type TestKubeCloudAPIClient interface {
 	DeleteTestTriggersByLabels(ctx context.Context, in *DeleteTestTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestTriggersByLabelsResponse, error)
 	// Deprecated: Do not use.
 	WatchTestTriggerUpdates(ctx context.Context, in *WatchTestTriggerUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestTriggerUpdatesClient, error)
+	// -- Workflow Triggers (v2)
+	GetWorkflowTrigger(ctx context.Context, in *GetWorkflowTriggerRequest, opts ...grpc.CallOption) (*GetWorkflowTriggerResponse, error)
+	ListWorkflowTriggers(ctx context.Context, in *ListWorkflowTriggersRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWorkflowTriggersClient, error)
+	CreateWorkflowTrigger(ctx context.Context, in *CreateWorkflowTriggerRequest, opts ...grpc.CallOption) (*CreateWorkflowTriggerResponse, error)
+	UpdateWorkflowTrigger(ctx context.Context, in *UpdateWorkflowTriggerRequest, opts ...grpc.CallOption) (*UpdateWorkflowTriggerResponse, error)
+	DeleteWorkflowTrigger(ctx context.Context, in *DeleteWorkflowTriggerRequest, opts ...grpc.CallOption) (*DeleteWorkflowTriggerResponse, error)
+	DeleteAllWorkflowTriggers(ctx context.Context, in *DeleteAllWorkflowTriggersRequest, opts ...grpc.CallOption) (*DeleteAllWorkflowTriggersResponse, error)
+	DeleteWorkflowTriggersByLabels(ctx context.Context, in *DeleteWorkflowTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteWorkflowTriggersByLabelsResponse, error)
 	// Deprecated: Do not use.
 	// -- Webhook
 	GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error)
 	// Deprecated: Do not use.
 	ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error)
+	ListWebhooksV2(ctx context.Context, in *ListWebhooksV2Request, opts ...grpc.CallOption) (*ListWebhooksResponse, error)
 	// Deprecated: Do not use.
 	ListWebhookLabels(ctx context.Context, in *ListWebhookLabelsRequest, opts ...grpc.CallOption) (*ListWebhookLabelsResponse, error)
 	// Deprecated: Do not use.
@@ -103,6 +113,13 @@ type TestKubeCloudAPIClient interface {
 	DeleteWebhooksByLabels(ctx context.Context, in *DeleteWebhooksByLabelsRequest, opts ...grpc.CallOption) (*DeleteWebhooksByLabelsResponse, error)
 	// Deprecated: Do not use.
 	WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error)
+	// Deprecated: Do not use.
+	// MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+	// to indicate to a server that it has succesfully performed all pre-migration operations
+	// and should now be considered to be a regular agent with capabilities.
+	// This RPC is defined as part of the legacy Service as it will be removed after "Super"
+	// Agents are no longer an applicable Agent type.
+	MigrateSuperAgent(ctx context.Context, in *MigrateSuperAgentRequest, opts ...grpc.CallOption) (*MigrateSuperAgentResponse, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -427,6 +444,15 @@ func (x *testKubeCloudAPIScheduleExecutionClient) Recv() (*ScheduleResponse, err
 func (c *testKubeCloudAPIClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
 	out := new(RegisterResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/Register", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateAgentCapabilitiesOnStartup(ctx context.Context, in *UpdateAgentCapabilitiesOnStartupRequest, opts ...grpc.CallOption) (*UpdateAgentCapabilitiesOnStartupResponse, error) {
+	out := new(UpdateAgentCapabilitiesOnStartupResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateAgentCapabilitiesOnStartup", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -944,6 +970,92 @@ func (x *testKubeCloudAPIWatchTestTriggerUpdatesClient) Recv() (*TestTriggerUpda
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetWorkflowTrigger(ctx context.Context, in *GetWorkflowTriggerRequest, opts ...grpc.CallOption) (*GetWorkflowTriggerResponse, error) {
+	out := new(GetWorkflowTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetWorkflowTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) ListWorkflowTriggers(ctx context.Context, in *ListWorkflowTriggersRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWorkflowTriggersClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[17], "/cloud.TestKubeCloudAPI/ListWorkflowTriggers", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIListWorkflowTriggersClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ListWorkflowTriggersClient interface {
+	Recv() (*WorkflowTriggerListItem, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIListWorkflowTriggersClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIListWorkflowTriggersClient) Recv() (*WorkflowTriggerListItem, error) {
+	m := new(WorkflowTriggerListItem)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) CreateWorkflowTrigger(ctx context.Context, in *CreateWorkflowTriggerRequest, opts ...grpc.CallOption) (*CreateWorkflowTriggerResponse, error) {
+	out := new(CreateWorkflowTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CreateWorkflowTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateWorkflowTrigger(ctx context.Context, in *UpdateWorkflowTriggerRequest, opts ...grpc.CallOption) (*UpdateWorkflowTriggerResponse, error) {
+	out := new(UpdateWorkflowTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateWorkflowTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteWorkflowTrigger(ctx context.Context, in *DeleteWorkflowTriggerRequest, opts ...grpc.CallOption) (*DeleteWorkflowTriggerResponse, error) {
+	out := new(DeleteWorkflowTriggerResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteWorkflowTrigger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteAllWorkflowTriggers(ctx context.Context, in *DeleteAllWorkflowTriggersRequest, opts ...grpc.CallOption) (*DeleteAllWorkflowTriggersResponse, error) {
+	out := new(DeleteAllWorkflowTriggersResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteAllWorkflowTriggers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteWorkflowTriggersByLabels(ctx context.Context, in *DeleteWorkflowTriggersByLabelsRequest, opts ...grpc.CallOption) (*DeleteWorkflowTriggersByLabelsResponse, error) {
+	out := new(DeleteWorkflowTriggersByLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteWorkflowTriggersByLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) GetWebhook(ctx context.Context, in *GetWebhookRequest, opts ...grpc.CallOption) (*GetWebhookResponse, error) {
 	out := new(GetWebhookResponse)
@@ -956,7 +1068,7 @@ func (c *testKubeCloudAPIClient) GetWebhook(ctx context.Context, in *GetWebhookR
 
 // Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) ListWebhooks(ctx context.Context, in *ListWebhooksRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListWebhooksClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[17], "/cloud.TestKubeCloudAPI/ListWebhooks", opts...)
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[18], "/cloud.TestKubeCloudAPI/ListWebhooks", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -985,6 +1097,15 @@ func (x *testKubeCloudAPIListWebhooksClient) Recv() (*WebhookListItem, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ListWebhooksV2(ctx context.Context, in *ListWebhooksV2Request, opts ...grpc.CallOption) (*ListWebhooksResponse, error) {
+	out := new(ListWebhooksResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListWebhooksV2", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // Deprecated: Do not use.
@@ -1049,7 +1170,7 @@ func (c *testKubeCloudAPIClient) DeleteWebhooksByLabels(ctx context.Context, in 
 
 // Deprecated: Do not use.
 func (c *testKubeCloudAPIClient) WatchWebhookUpdates(ctx context.Context, in *WatchWebhookUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchWebhookUpdatesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[18], "/cloud.TestKubeCloudAPI/WatchWebhookUpdates", opts...)
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[19], "/cloud.TestKubeCloudAPI/WatchWebhookUpdates", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1080,6 +1201,16 @@ func (x *testKubeCloudAPIWatchWebhookUpdatesClient) Recv() (*WebhookUpdate, erro
 	return m, nil
 }
 
+// Deprecated: Do not use.
+func (c *testKubeCloudAPIClient) MigrateSuperAgent(ctx context.Context, in *MigrateSuperAgentRequest, opts ...grpc.CallOption) (*MigrateSuperAgentResponse, error) {
+	out := new(MigrateSuperAgentResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/MigrateSuperAgent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -1100,6 +1231,7 @@ type TestKubeCloudAPIServer interface {
 	ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error
 	// Runner
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	UpdateAgentCapabilitiesOnStartup(context.Context, *UpdateAgentCapabilitiesOnStartupRequest) (*UpdateAgentCapabilitiesOnStartupResponse, error)
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	// Deprecated: Do not use.
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
@@ -1145,11 +1277,20 @@ type TestKubeCloudAPIServer interface {
 	DeleteTestTriggersByLabels(context.Context, *DeleteTestTriggersByLabelsRequest) (*DeleteTestTriggersByLabelsResponse, error)
 	// Deprecated: Do not use.
 	WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error
+	// -- Workflow Triggers (v2)
+	GetWorkflowTrigger(context.Context, *GetWorkflowTriggerRequest) (*GetWorkflowTriggerResponse, error)
+	ListWorkflowTriggers(*ListWorkflowTriggersRequest, TestKubeCloudAPI_ListWorkflowTriggersServer) error
+	CreateWorkflowTrigger(context.Context, *CreateWorkflowTriggerRequest) (*CreateWorkflowTriggerResponse, error)
+	UpdateWorkflowTrigger(context.Context, *UpdateWorkflowTriggerRequest) (*UpdateWorkflowTriggerResponse, error)
+	DeleteWorkflowTrigger(context.Context, *DeleteWorkflowTriggerRequest) (*DeleteWorkflowTriggerResponse, error)
+	DeleteAllWorkflowTriggers(context.Context, *DeleteAllWorkflowTriggersRequest) (*DeleteAllWorkflowTriggersResponse, error)
+	DeleteWorkflowTriggersByLabels(context.Context, *DeleteWorkflowTriggersByLabelsRequest) (*DeleteWorkflowTriggersByLabelsResponse, error)
 	// Deprecated: Do not use.
 	// -- Webhook
 	GetWebhook(context.Context, *GetWebhookRequest) (*GetWebhookResponse, error)
 	// Deprecated: Do not use.
 	ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error
+	ListWebhooksV2(context.Context, *ListWebhooksV2Request) (*ListWebhooksResponse, error)
 	// Deprecated: Do not use.
 	ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error)
 	// Deprecated: Do not use.
@@ -1164,6 +1305,13 @@ type TestKubeCloudAPIServer interface {
 	DeleteWebhooksByLabels(context.Context, *DeleteWebhooksByLabelsRequest) (*DeleteWebhooksByLabelsResponse, error)
 	// Deprecated: Do not use.
 	WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error
+	// Deprecated: Do not use.
+	// MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+	// to indicate to a server that it has succesfully performed all pre-migration operations
+	// and should now be considered to be a regular agent with capabilities.
+	// This RPC is defined as part of the legacy Service as it will be removed after "Super"
+	// Agents are no longer an applicable Agent type.
+	MigrateSuperAgent(context.Context, *MigrateSuperAgentRequest) (*MigrateSuperAgentResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -1209,6 +1357,9 @@ func (UnimplementedTestKubeCloudAPIServer) ScheduleExecution(*ScheduleRequest, T
 }
 func (UnimplementedTestKubeCloudAPIServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateAgentCapabilitiesOnStartup(context.Context, *UpdateAgentCapabilitiesOnStartupRequest) (*UpdateAgentCapabilitiesOnStartupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAgentCapabilitiesOnStartup not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetUnfinishedExecutions not implemented")
@@ -1318,11 +1469,35 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteTestTriggersByLabels(context.Co
 func (UnimplementedTestKubeCloudAPIServer) WatchTestTriggerUpdates(*WatchTestTriggerUpdatesRequest, TestKubeCloudAPI_WatchTestTriggerUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method WatchTestTriggerUpdates not implemented")
 }
+func (UnimplementedTestKubeCloudAPIServer) GetWorkflowTrigger(context.Context, *GetWorkflowTriggerRequest) (*GetWorkflowTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflowTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListWorkflowTriggers(*ListWorkflowTriggersRequest, TestKubeCloudAPI_ListWorkflowTriggersServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListWorkflowTriggers not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) CreateWorkflowTrigger(context.Context, *CreateWorkflowTriggerRequest) (*CreateWorkflowTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWorkflowTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateWorkflowTrigger(context.Context, *UpdateWorkflowTriggerRequest) (*UpdateWorkflowTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkflowTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteWorkflowTrigger(context.Context, *DeleteWorkflowTriggerRequest) (*DeleteWorkflowTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorkflowTrigger not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteAllWorkflowTriggers(context.Context, *DeleteAllWorkflowTriggersRequest) (*DeleteAllWorkflowTriggersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllWorkflowTriggers not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteWorkflowTriggersByLabels(context.Context, *DeleteWorkflowTriggersByLabelsRequest) (*DeleteWorkflowTriggersByLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorkflowTriggersByLabels not implemented")
+}
 func (UnimplementedTestKubeCloudAPIServer) GetWebhook(context.Context, *GetWebhookRequest) (*GetWebhookResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetWebhook not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) ListWebhooks(*ListWebhooksRequest, TestKubeCloudAPI_ListWebhooksServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListWebhooks not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListWebhooksV2(context.Context, *ListWebhooksV2Request) (*ListWebhooksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWebhooksV2 not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) ListWebhookLabels(context.Context, *ListWebhookLabelsRequest) (*ListWebhookLabelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListWebhookLabels not implemented")
@@ -1344,6 +1519,9 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteWebhooksByLabels(context.Contex
 }
 func (UnimplementedTestKubeCloudAPIServer) WatchWebhookUpdates(*WatchWebhookUpdatesRequest, TestKubeCloudAPI_WatchWebhookUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method WatchWebhookUpdates not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) MigrateSuperAgent(context.Context, *MigrateSuperAgentRequest) (*MigrateSuperAgentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MigrateSuperAgent not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -1650,6 +1828,24 @@ func _TestKubeCloudAPI_Register_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestKubeCloudAPIServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateAgentCapabilitiesOnStartup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAgentCapabilitiesOnStartupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateAgentCapabilitiesOnStartup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateAgentCapabilitiesOnStartup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateAgentCapabilitiesOnStartup(ctx, req.(*UpdateAgentCapabilitiesOnStartupRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2331,6 +2527,135 @@ func (x *testKubeCloudAPIWatchTestTriggerUpdatesServer) Send(m *TestTriggerUpdat
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_GetWorkflowTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetWorkflowTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetWorkflowTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetWorkflowTrigger(ctx, req.(*GetWorkflowTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_ListWorkflowTriggers_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListWorkflowTriggersRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ListWorkflowTriggers(m, &testKubeCloudAPIListWorkflowTriggersServer{stream})
+}
+
+type TestKubeCloudAPI_ListWorkflowTriggersServer interface {
+	Send(*WorkflowTriggerListItem) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIListWorkflowTriggersServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIListWorkflowTriggersServer) Send(m *WorkflowTriggerListItem) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_CreateWorkflowTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkflowTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).CreateWorkflowTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/CreateWorkflowTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).CreateWorkflowTrigger(ctx, req.(*CreateWorkflowTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateWorkflowTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorkflowTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateWorkflowTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateWorkflowTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateWorkflowTrigger(ctx, req.(*UpdateWorkflowTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteWorkflowTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWorkflowTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteWorkflowTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteWorkflowTrigger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteWorkflowTrigger(ctx, req.(*DeleteWorkflowTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteAllWorkflowTriggers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAllWorkflowTriggersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteAllWorkflowTriggers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteAllWorkflowTriggers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteAllWorkflowTriggers(ctx, req.(*DeleteAllWorkflowTriggersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteWorkflowTriggersByLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWorkflowTriggersByLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteWorkflowTriggersByLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteWorkflowTriggersByLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteWorkflowTriggersByLabels(ctx, req.(*DeleteWorkflowTriggersByLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_GetWebhook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetWebhookRequest)
 	if err := dec(in); err != nil {
@@ -2368,6 +2693,24 @@ type testKubeCloudAPIListWebhooksServer struct {
 
 func (x *testKubeCloudAPIListWebhooksServer) Send(m *WebhookListItem) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_ListWebhooksV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWebhooksV2Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ListWebhooksV2(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ListWebhooksV2",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ListWebhooksV2(ctx, req.(*ListWebhooksV2Request))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _TestKubeCloudAPI_ListWebhookLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -2499,6 +2842,24 @@ func (x *testKubeCloudAPIWatchWebhookUpdatesServer) Send(m *WebhookUpdate) error
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_MigrateSuperAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MigrateSuperAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).MigrateSuperAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/MigrateSuperAgent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).MigrateSuperAgent(ctx, req.(*MigrateSuperAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2521,6 +2882,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _TestKubeCloudAPI_Register_Handler,
+		},
+		{
+			MethodName: "UpdateAgentCapabilitiesOnStartup",
+			Handler:    _TestKubeCloudAPI_UpdateAgentCapabilitiesOnStartup_Handler,
 		},
 		{
 			MethodName: "InitExecution",
@@ -2635,8 +3000,36 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _TestKubeCloudAPI_DeleteTestTriggersByLabels_Handler,
 		},
 		{
+			MethodName: "GetWorkflowTrigger",
+			Handler:    _TestKubeCloudAPI_GetWorkflowTrigger_Handler,
+		},
+		{
+			MethodName: "CreateWorkflowTrigger",
+			Handler:    _TestKubeCloudAPI_CreateWorkflowTrigger_Handler,
+		},
+		{
+			MethodName: "UpdateWorkflowTrigger",
+			Handler:    _TestKubeCloudAPI_UpdateWorkflowTrigger_Handler,
+		},
+		{
+			MethodName: "DeleteWorkflowTrigger",
+			Handler:    _TestKubeCloudAPI_DeleteWorkflowTrigger_Handler,
+		},
+		{
+			MethodName: "DeleteAllWorkflowTriggers",
+			Handler:    _TestKubeCloudAPI_DeleteAllWorkflowTriggers_Handler,
+		},
+		{
+			MethodName: "DeleteWorkflowTriggersByLabels",
+			Handler:    _TestKubeCloudAPI_DeleteWorkflowTriggersByLabels_Handler,
+		},
+		{
 			MethodName: "GetWebhook",
 			Handler:    _TestKubeCloudAPI_GetWebhook_Handler,
+		},
+		{
+			MethodName: "ListWebhooksV2",
+			Handler:    _TestKubeCloudAPI_ListWebhooksV2_Handler,
 		},
 		{
 			MethodName: "ListWebhookLabels",
@@ -2661,6 +3054,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteWebhooksByLabels",
 			Handler:    _TestKubeCloudAPI_DeleteWebhooksByLabels_Handler,
+		},
+		{
+			MethodName: "MigrateSuperAgent",
+			Handler:    _TestKubeCloudAPI_MigrateSuperAgent_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -2754,6 +3151,11 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "WatchTestTriggerUpdates",
 			Handler:       _TestKubeCloudAPI_WatchTestTriggerUpdates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListWorkflowTriggers",
+			Handler:       _TestKubeCloudAPI_ListWorkflowTriggers_Handler,
 			ServerStreams: true,
 		},
 		{

@@ -85,6 +85,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				printRawLogLines(logs, sigs, execution)
 				if !logsOnly {
 					render.PrintTestWorkflowExecutionURIs(&execution)
+					common.UIShellViewExecution(execution.Id)
 				}
 			}
 		},

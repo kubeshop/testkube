@@ -26,10 +26,17 @@ import (
 )
 
 type craneFetcher struct {
+	insecureRegistries map[string]struct{}
 }
 
-func NewCraneFetcher() InfoFetcher {
-	return &craneFetcher{}
+func NewCraneFetcher(insecureRegistries ...string) InfoFetcher {
+	ir := make(map[string]struct{}, len(insecureRegistries))
+	for _, r := range insecureRegistries {
+		if r != "" {
+			ir[r] = struct{}{}
+		}
+	}
+	return &craneFetcher{insecureRegistries: ir}
 }
 
 func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSecrets []corev1.Secret) (*Info, error) {
@@ -66,6 +73,9 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	craneOptions := []crane.Option{crane.WithContext(ctx), crane.WithAuthFromKeychain(keychain)}
 	if len(authConfigs) > 0 {
 		craneOptions = append(craneOptions, crane.WithAuth(authn.FromConfig(authConfigs[0])))
+	}
+	if _, ok := c.insecureRegistries[registry]; ok {
+		craneOptions = append(craneOptions, crane.Insecure)
 	}
 
 	// Fetch the image configuration

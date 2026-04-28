@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -82,7 +83,7 @@ func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, par
 		buffer = bytes.NewBuffer(body)
 	}
 
-	req, err := http.NewRequest(method, uri, buffer)
+	req, err := http.NewRequestWithContext(context.Background(), method, uri, buffer)
 	if err != nil {
 		return resp, err
 	}
@@ -166,10 +167,21 @@ func (t DirectClient[A]) GetURI(pathTemplate string, params ...interface{}) stri
 }
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
-func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
+func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error {
+	req, err := http.NewRequestWithContext(options.RequestContext(), http.MethodGet, uri, nil)
 	if err != nil {
 		return err
+	}
+
+	if options.ResumeAfterSeqNo > 0 {
+		q := req.URL.Query()
+		q.Set("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
+		req.URL.RawQuery = q.Encode()
+	}
+	if options.StreamID != "" {
+		q := req.URL.Query()
+		q.Set("streamId", options.StreamID)
+		req.URL.RawQuery = q.Encode()
 	}
 
 	req.Header.Set("Accept", "text/event-stream")
@@ -190,7 +202,7 @@ func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notif
 
 // GetFile returns file artifact
 func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, uri, nil)
 	if err != nil {
 		return "", err
 	}
@@ -212,7 +224,7 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[s
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		return name, fmt.Errorf("error: %d", resp.StatusCode)
+		return name, &HTTPStatusError{StatusCode: resp.StatusCode}
 	}
 
 	target := filepath.Join(destination, fileName)

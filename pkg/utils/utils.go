@@ -15,7 +15,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/jackc/pgx/v5"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func IsNotFound(err error) bool {
@@ -168,4 +168,13 @@ func GetEnvVarWithDeprecation(key, deprecatedKey, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+// TruncateName truncates name to k8s name length
+func TruncateName(value string) string {
+	if len(value) > 63 {
+		return value[:63]
+	}
+
+	return value
 }

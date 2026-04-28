@@ -70,6 +70,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template *test
 	spec.Services = MergeMap(common.MapMap(template.Spec.Services, ConvertIndependentServiceToService), spec.Services)
 	spec.Container = MergeContainerConfig(template.Spec.Container, spec.Container)
 	spec.System = MergeSystem(template.Spec.System, spec.System)
+	spec.Timeouts = MergeTimeouts(template.Spec.Timeouts, spec.Timeouts)
 
 	// Include the steps from the template
 	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)

@@ -61,7 +61,7 @@ func (f *InfluxDBLineProtocolFormatter) Format(metric string, tags []KeyValue, f
 		sb.WriteString(" ")
 	}
 	// Timestamp
-	sb.WriteString(fmt.Sprintf("%d", f.now().UnixNano()))
+	fmt.Fprintf(&sb, "%d", f.now().UnixNano())
 
 	return sb.String()
 }
@@ -72,7 +72,7 @@ func (f *InfluxDBLineProtocolFormatter) formatKeyValue(kv []KeyValue) string {
 		if i > 0 {
 			sb.WriteString(",")
 		}
-		sb.WriteString(fmt.Sprintf("%s=%s", v.Key, v.Value))
+		fmt.Fprintf(&sb, "%s=%s", v.Key, v.Value)
 	}
 	return sb.String()
 }

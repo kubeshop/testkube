@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +28,7 @@ type CloudConfig struct {
 func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
 	var email string
+	var emailLink string
 
 	cmd := &cobra.Command{
 		Use:     "login [apiUrl]",
@@ -48,26 +50,34 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("invalid instance url", err)
 
 				// Call the Control Plane
-				req, err := http.Get(u.String())
+				httpReq, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
+				ui.ExitOnError("creating request", reqErr)
+				req, err := http.DefaultClient.Do(httpReq)
 				if err != nil && strings.Contains(err.Error(), "response to HTTPS client") {
 					// Automatically handle http/https discovery
 					u.Scheme = "http"
-					req, err = http.Get(u.String())
+					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
+					ui.ExitOnError("creating request", reqErr)
+					req, err = http.DefaultClient.Do(httpReq)
 				}
 				ui.ExitOnError("requesting control plane info", err)
 
 				v, err := io.ReadAll(req.Body)
 				ui.ExitOnError("reading control plane info", err)
+				_ = req.Body.Close()
 				var result CloudConfig
 				err = json.Unmarshal(v, &result)
 
 				// Try with "api." prefix if direct failed
 				if err != nil {
 					u.Host = fmt.Sprintf("api.%s", u.Host)
-					req, err = http.Get(u.String())
+					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
+					ui.ExitOnError("creating request", reqErr)
+					req, err = http.DefaultClient.Do(httpReq)
 					ui.ExitOnError("requesting control plane info", err)
 					v, err = io.ReadAll(req.Body)
 					ui.ExitOnError("reading control plane info", err)
+					_ = req.Body.Close()
 					err = json.Unmarshal(v, &result)
 				}
 				ui.ExitOnError("reading control plane info", err)
@@ -128,13 +138,19 @@ func NewLoginCmd() *cobra.Command {
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
 			var token, refreshToken string
+			tokenType := config.TokenTypeOIDC
 
-			if email != "" {
+			switch {
+			case emailLink != "":
+				// Email magic-link flow (via --email-link flag)
+				token, refreshToken, err = common.LoginUserEmailLink(opts.Master.URIs.Api, emailLink, opts.Master.CallbackPort)
+				tokenType = config.TokenTypeEmailLink
+			case email != "":
 				// SSO authentication flow
 				token, refreshToken, err = common.LoginUserSSO(opts.Master.URIs.Api, opts.Master.URIs.Auth, email, opts.Master.CallbackPort)
-			} else {
-				// Traditional OAuth flow (GitHub/GitLab)
-				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
+			default:
+				// Interactive selector: GitHub / GitLab / Google / Email magic-link
+				tokenType, token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.URIs.Api, opts.Master.CustomAuth, opts.Master.CallbackPort)
 			}
 			ui.ExitOnError("getting token", err)
 
@@ -150,7 +166,7 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("getting environment", err)
 			}
 
-			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, "", opts, cfg)
+			err = common.PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, "", opts, cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")
@@ -161,6 +177,8 @@ func NewLoginCmd() *cobra.Command {
 
 	common.PopulateMasterFlags(cmd, &opts, false)
 	cmd.Flags().StringVar(&email, "email", "", "email address for SSO authentication")
+	cmd.Flags().StringVar(&emailLink, "email-link", "", "email address for magic-link authentication")
+	cmd.MarkFlagsMutuallyExclusive("email", "email-link")
 
 	return cmd
 }

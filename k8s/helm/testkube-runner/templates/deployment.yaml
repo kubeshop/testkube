@@ -178,6 +178,7 @@ spec:
               value: "true"
             {{- end }}
             {{- if .Values.runner.secretRef.name }}
+            {{- if not ( or .Values.runner.register.token .Values.runner.register.tokenSecret.name ) }}
             - name: "TESTKUBE_PRO_AGENT_ID"
               valueFrom:
                 secretKeyRef:
@@ -187,12 +188,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
-                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
+                  key: "{{ .Values.runner.secretRef.secretKey }}"
+            {{- end }}
             - name: "TESTKUBE_PRO_ORG_ID"
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.runner.secretRef.name }}"
-                  key: "{{ .Values.runner.secretRef.secretKey }}"
+                  key: "{{ .Values.runner.secretRef.orgIdKey }}"
             - name: "TESTKUBE_PRO_ENV_ID"
               valueFrom:
                 secretKeyRef:
@@ -216,7 +218,7 @@ spec:
             - name: "TESTKUBE_PRO_TLS_INSECURE"
               value: "true"
             {{- end }}
-            - name: "TESTKUBE_PRO_TLS_SKIP_VERIFY"
+            - name: "TESTKUBE_PRO_SKIP_VERIFY"
               value: "{{ .Values.cloud.tls.skipVerify }}"
 
             # Server
@@ -265,13 +267,25 @@ spec:
             {{- end }}
 
             # Global template
-            {{- if and .Values.globalTemplate.enabled .Values.globalTemplate.spec }}
+            {{- $globalTemplate := .Values.globalTemplate }}
+            {{- if $globalTemplate.enabled }}
+            {{- if $globalTemplate.inline }}
+            {{- if $globalTemplate.spec }}
             - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE"
-              {{- if kindIs "map" .Values.globalTemplate.spec }}
-              value: {{ toJson .Values.globalTemplate.spec | quote }}
+              {{- if kindIs "map" $globalTemplate.spec }}
+              value: {{ toJson $globalTemplate.spec | quote }}
               {{- else }}
-              value: {{ toJson (fromYaml .Values.globalTemplate.spec) | quote }}
+              value: {{ toJson (fromYaml $globalTemplate.spec) | quote }}
               {{- end }}
+            {{- else }}
+            {{- fail "globalTemplate.spec is required when globalTemplate.inline is true and globalTemplate.enabled is true" }}
+            {{- end }}
+            {{- else if $globalTemplate.name }}
+            - name: "TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME"
+              value: "{{ $globalTemplate.name }}"
+            {{- else }}
+            {{- fail "globalTemplate.name is required when globalTemplate.inline is false and globalTemplate.enabled is true" }}
+            {{- end }}
             {{- end }}
 
             # Certificates
@@ -305,20 +319,18 @@ spec:
             {{- end }}
 
             # Constants
-            - name: "SLACK_CONFIG"
-              value: "[]"
             - name: "ENABLE_K8S_EVENTS"
               value: "false"
             - name: "DISABLE_TEST_TRIGGERS"
               value: "{{ if .Values.listener.enabled }}false{{ else }}true{{ end }}"
             - name: "DISABLE_WEBHOOKS"
-              value: "true"
+              value: "{{ if .Values.webhooks.enabled }}false{{ else }}true{{ end }}"
             - name: "DISABLE_DEPRECATED_TESTS"
               value: "true"
             - name: "DISABLE_DEFAULT_AGENT"
               value: "true"
             - name: "GITOPS_KUBERNETES_TO_CLOUD_ENABLED"
-              value: "false"
+              value: "{{ if .Values.gitops.enabled }}true{{ else }}false{{ end }}"
             - name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED"
               value: "false"
             - name: "ENABLE_CRON_JOBS"
@@ -362,7 +374,7 @@ spec:
                   key: {{ .Values.runner.register.tokenSecret.key | default "token" }}
               {{- end }}
             - name: RUNNER_NAME
-              value: "{{ include "testkube-runner.fullname" . }}"
+              value: "{{ include "testkube-runner.runnerName" . }}"
             - name: ENABLE_SECRETS_ENDPOINT
               value: "true"
             - name: SELF_REGISTRATION_SECRET

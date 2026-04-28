@@ -73,14 +73,14 @@ func (s *call) SafeResolve(m ...Machine) (v Expression, changed bool, err error)
 	result, ok, err := StdLibMachine.Call(s.name, s.args)
 	if ok {
 		if err != nil {
-			return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
+			return nil, true, fmt.Errorf("error while calling %s: %w", s.String(), err)
 		}
 		return result, true, nil
 	}
 	for i := range m {
 		result, ok, err = m[i].Call(s.name, s.args)
 		if err != nil {
-			return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
+			return nil, true, fmt.Errorf("error while calling %s: %w", s.String(), err)
 		}
 		if ok {
 			return result, true, nil

@@ -20,40 +20,43 @@ import (
 )
 
 type Agent struct {
-	pod                  *PodObject
-	cloud                *CloudObject
-	agentImage           string
-	initProcessImage     string
-	toolkitImage         string
-	disableCloudStorage  bool
-	enableCronjobs       bool
-	enableTestTriggers   bool
-	enableK8sControllers bool
-	executionNamespace   string
+	pod                          *PodObject
+	cloud                        *CloudObject
+	agentImage                   string
+	initProcessImage             string
+	toolkitImage                 string
+	enableCronjobs               bool
+	enableTestTriggers           bool
+	enableK8sControllers         bool
+	enableWebhooks               bool
+	enableSourceOfTruthMigration bool
+	executionNamespace           string
+	env                          *client.Environment // Store environment for pod recreation
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers bool, executionNamespace string) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, enableCronjobs, enableTestTriggers, enableK8sControllers, enableWebhooks, enableSourceOfTruthMigration bool, executionNamespace string) *Agent {
 	return &Agent{
-		pod:                  pod,
-		cloud:                cloud,
-		agentImage:           agentImage,
-		initProcessImage:     initProcessImage,
-		toolkitImage:         toolkitImage,
-		disableCloudStorage:  disableCloudStorage,
-		enableCronjobs:       enableCronjobs,
-		enableTestTriggers:   enableTestTriggers,
-		enableK8sControllers: enableK8sControllers,
-		executionNamespace:   executionNamespace,
+		pod:                          pod,
+		cloud:                        cloud,
+		agentImage:                   agentImage,
+		initProcessImage:             initProcessImage,
+		toolkitImage:                 toolkitImage,
+		enableCronjobs:               enableCronjobs,
+		enableTestTriggers:           enableTestTriggers,
+		enableK8sControllers:         enableK8sControllers,
+		enableWebhooks:               enableWebhooks,
+		enableSourceOfTruthMigration: enableSourceOfTruthMigration,
+		executionNamespace:           executionNamespace,
 	}
 }
 
-func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
+func (r *Agent) generatePodSpec(env *client.Environment) *corev1.Pod {
 	envVariables := []corev1.EnvVar{
 		{Name: "NATS_EMBEDDED", Value: "true"},
 		{Name: "APISERVER_PORT", Value: "8088"},
 		{Name: "GRPC_PORT", Value: "8089"},
 		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
-		{Name: "DISABLE_WEBHOOKS", Value: "true"},
+		{Name: "DISABLE_WEBHOOKS", Value: fmt.Sprintf("%v", !r.enableWebhooks)},
 		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
 		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
@@ -63,7 +66,7 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
-		{Name: "FEATURE_CLOUD_STORAGE", Value: fmt.Sprintf("%v", !r.disableCloudStorage)},
+		{Name: "FEATURE_CLOUD_STORAGE", Value: "false"},
 	}
 	if !r.enableTestTriggers {
 		envVariables = append(envVariables, corev1.EnvVar{Name: "DISABLE_TEST_TRIGGERS", Value: "true"})
@@ -73,6 +76,9 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 	}
 	if r.enableK8sControllers {
 		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_K8S_CONTROLLERS", Value: "true"})
+	}
+	if r.enableSourceOfTruthMigration {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "WARNING_UNSAFE_FORCE_SUPERAGENT_MODE", Value: "false"})
 	}
 	if env != nil {
 		tlsInsecure := "false"
@@ -85,7 +91,7 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 			{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},
 			{Name: "TESTKUBE_PRO_URL", Value: r.cloud.AgentURI()},
 			{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: tlsInsecure},
-			{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
+			{Name: "TESTKUBE_PRO_SKIP_VERIFY", Value: "true"},
 		}...)
 	} else {
 		envVariables = append(envVariables, []corev1.EnvVar{
@@ -98,7 +104,7 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 			{Name: "LOGS_BUCKET", Value: "testkube-logs"},
 		}...)
 	}
-	err := r.pod.Create(ctx, &corev1.Pod{
+	return &corev1.Pod{
 		Spec: corev1.PodSpec{
 			TerminationGracePeriodSeconds: common.Ptr(int64(1)),
 			Volumes: []corev1.Volume{
@@ -136,6 +142,15 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 				},
 			},
 		},
+	}
+}
+
+func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
+	r.env = env
+	podSpec := r.generatePodSpec(env)
+
+	err := r.pod.CreateWithFunc(ctx, podSpec, func() (*corev1.Pod, error) {
+		return r.generatePodSpec(r.env), nil
 	})
 	if err != nil {
 		return err

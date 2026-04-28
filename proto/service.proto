@@ -24,6 +24,7 @@ service TestKubeCloudAPI {
 
     // Runner
     rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc UpdateAgentCapabilitiesOnStartup(UpdateAgentCapabilitiesOnStartupRequest) returns (UpdateAgentCapabilitiesOnStartupResponse);
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest) {
       // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.GetExecutionUpdates instead.
@@ -77,6 +78,14 @@ service TestKubeCloudAPI {
     rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate) {
       option deprecated = true;
     };
+    // -- Workflow Triggers (v2)
+    rpc GetWorkflowTrigger(GetWorkflowTriggerRequest) returns (GetWorkflowTriggerResponse);
+    rpc ListWorkflowTriggers(ListWorkflowTriggersRequest) returns (stream WorkflowTriggerListItem);
+    rpc CreateWorkflowTrigger(CreateWorkflowTriggerRequest) returns (CreateWorkflowTriggerResponse);
+    rpc UpdateWorkflowTrigger(UpdateWorkflowTriggerRequest) returns (UpdateWorkflowTriggerResponse);
+    rpc DeleteWorkflowTrigger(DeleteWorkflowTriggerRequest) returns (DeleteWorkflowTriggerResponse);
+    rpc DeleteAllWorkflowTriggers(DeleteAllWorkflowTriggersRequest) returns (DeleteAllWorkflowTriggersResponse);
+    rpc DeleteWorkflowTriggersByLabels(DeleteWorkflowTriggersByLabelsRequest) returns (DeleteWorkflowTriggersByLabelsResponse);
     // -- Webhook
     rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse) {
       option deprecated = true;
@@ -84,6 +93,7 @@ service TestKubeCloudAPI {
     rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem) {
       option deprecated = true;
     };
+    rpc ListWebhooksV2(ListWebhooksV2Request) returns (ListWebhooksResponse);
     rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse) {
       option deprecated = true;
     };
@@ -105,6 +115,15 @@ service TestKubeCloudAPI {
     rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate) {
       option deprecated = true;
     };
+
+    // MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+    // to indicate to a server that it has succesfully performed all pre-migration operations
+    // and should now be considered to be a regular agent with capabilities.
+    // This RPC is defined as part of the legacy Service as it will be removed after "Super"
+    // Agents are no longer an applicable Agent type.
+    rpc MigrateSuperAgent(MigrateSuperAgentRequest) returns (MigrateSuperAgentResponse) {
+      option deprecated = true;
+    };
 }
 
 enum LogsStreamRequestType {
@@ -122,6 +141,9 @@ enum TestWorkflowNotificationType {
   WORKFLOW_STREAM_LOG = 1;
   WORKFLOW_STREAM_RESULT = 2;
   WORKFLOW_STREAM_OUTPUT = 3;
+  WORKFLOW_STREAM_READY = 4;
+  WORKFLOW_STREAM_HEARTBEAT = 5;
+  WORKFLOW_STREAM_RESUME_UNAVAILABLE = 6;
 }
 
 message LogsStreamRequest {
@@ -159,6 +181,7 @@ message TestWorkflowNotificationsRequest {
   string execution_id = 2;
   string environment_id = 4;
   TestWorkflowNotificationsRequestType request_type = 3;
+  uint32 resume_after_seq_no = 5;
 }
 
 message TestWorkflowNotificationsResponse {
@@ -201,6 +224,7 @@ message ProContextAgent {
   bool disabled = 4;
   map<string, string> labels = 5;
   repeated ProContextEnvironment environments = 6;
+  bool is_super_agent = 7;
 }
 
 message ProContextResponse {
@@ -261,6 +285,8 @@ message TestWorkflowServiceNotificationsRequest {
   string service_name = 3;
   int32 service_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
+  string runner_id = 7;
+  uint32 resume_after_seq_no = 8;
 }
 
 message TestWorkflowServiceNotificationsResponse {
@@ -279,6 +305,8 @@ message TestWorkflowParallelStepNotificationsRequest {
   string ref = 3;
   int32  worker_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
+  string runner_id = 7;
+  uint32 resume_after_seq_no = 8;
 }
 
 message TestWorkflowParallelStepNotificationsResponse {
@@ -430,6 +458,14 @@ message RegisterResponse {
   string runner_key = 2;
   string organization_id = 3;
   string runner_name = 4;
+}
+
+message UpdateAgentCapabilitiesOnStartupRequest {
+  repeated AgentCapability capabilities = 1;
+}
+
+message UpdateAgentCapabilitiesOnStartupResponse {
+  repeated AgentCapability capabilities = 1;
 }
 
 enum RunnerRequestType {
@@ -805,6 +841,70 @@ message TestTriggerUpdate {
   bytes resource = 4; // TestTrigger
 }
 
+// CRD Synchronisation -- Workflow Triggers (v2)
+
+message GetWorkflowTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger (flat REST shape, JSON-encoded)
+}
+
+message ListWorkflowTriggersRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message WorkflowTriggerListItem {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message CreateWorkflowTriggerRequest {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message CreateWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message UpdateWorkflowTriggerRequest {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message UpdateWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message DeleteWorkflowTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteWorkflowTriggerResponse {}
+
+message DeleteAllWorkflowTriggersRequest {
+  string namespace = 1;
+}
+
+message DeleteAllWorkflowTriggersResponse {
+  uint32 count = 1;
+}
+
+message DeleteWorkflowTriggersByLabelsRequest {
+  string selector = 1;
+  string namespace = 2;
+}
+
+message DeleteWorkflowTriggersByLabelsResponse {
+  uint32 count = 1;
+}
+
 // CRD Synchronisation -- Webhooks
 
 message GetWebhookRequest {
@@ -828,9 +928,24 @@ message ListWebhooksRequest {
   string namespace = 6;
 }
 
+message ListWebhooksV2Request {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+  map<string, string> targetSelector = 7;
+}
+
 message WebhookListItem {
   option deprecated = true;
   bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksResponse {
+  repeated WebhookListItem items = 1;
+  uint32 total = 2;
 }
 
 message ListWebhookLabelsRequest {
@@ -906,3 +1021,9 @@ message WebhookUpdate {
   UpdateType type = 3;
   bytes resource = 4; // Webhook
 }
+
+message MigrateSuperAgentRequest {
+  bool rollback = 1;
+}
+
+message MigrateSuperAgentResponse {}

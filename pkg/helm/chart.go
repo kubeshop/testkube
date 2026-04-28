@@ -6,11 +6,91 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
-// HelmChart data structure based on map slice
-type HelmChart yaml.MapSlice
+// MapItem is a key-value pair in an ordered YAML mapping.
+type MapItem struct {
+	Key, Value interface{}
+}
+
+// HelmChart is an ordered list of key-value pairs that represents a YAML mapping,
+// preserving the original key order when marshaling/unmarshaling.
+type HelmChart []MapItem
+
+// MarshalYAML implements yaml.Marshaler for HelmChart so that it is serialized
+// as a YAML mapping node (block style) with keys in their original order.
+func (hc HelmChart) MarshalYAML() (interface{}, error) {
+	node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	for _, item := range hc {
+		keyNode := new(yaml.Node)
+		if err := keyNode.Encode(item.Key); err != nil {
+			return nil, err
+		}
+		if keyNode.Kind == yaml.DocumentNode && len(keyNode.Content) > 0 {
+			keyNode = keyNode.Content[0]
+		}
+		valNode := new(yaml.Node)
+		if err := valNode.Encode(item.Value); err != nil {
+			return nil, err
+		}
+		if valNode.Kind == yaml.DocumentNode && len(valNode.Content) > 0 {
+			valNode = valNode.Content[0]
+		}
+		node.Content = append(node.Content, keyNode, valNode)
+	}
+	return node, nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler for HelmChart so that nested YAML
+// mappings are also decoded as HelmChart (preserving key order).
+func (hc *HelmChart) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("helm chart: expected a YAML mapping, got node kind %v", value.Kind)
+	}
+	*hc = make(HelmChart, 0, len(value.Content)/2)
+	for i := 0; i+1 < len(value.Content); i += 2 {
+		var key interface{}
+		if err := value.Content[i].Decode(&key); err != nil {
+			return err
+		}
+		val, err := decodeHelmChartValue(value.Content[i+1])
+		if err != nil {
+			return err
+		}
+		*hc = append(*hc, MapItem{Key: key, Value: val})
+	}
+	return nil
+}
+
+// decodeHelmChartValue recursively decodes a yaml.Node so that nested mappings
+// become HelmChart values (preserving key order) and sequences become []interface{}.
+func decodeHelmChartValue(node *yaml.Node) (interface{}, error) {
+	switch node.Kind {
+	case yaml.MappingNode:
+		hc := HelmChart{}
+		if err := hc.UnmarshalYAML(node); err != nil {
+			return nil, err
+		}
+		return hc, nil
+	case yaml.SequenceNode:
+		result := make([]interface{}, 0, len(node.Content))
+		for _, child := range node.Content {
+			v, err := decodeHelmChartValue(child)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, v)
+		}
+		return result, nil
+	default:
+		var val interface{}
+		if err := node.Decode(&val); err != nil {
+			return nil, err
+		}
+		return val, nil
+	}
+}
 
 // Read reads helm chart based on path
 func Read(filePath string) (helmChart HelmChart, err error) {

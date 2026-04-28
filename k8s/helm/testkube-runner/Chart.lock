@@ -2,5 +2,8 @@ dependencies:
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:2e0df24bdd46a4718a503abd61cc896bac91bb62a5d11d77a2e2dea41153b3e6
-generated: "2025-10-08T17:26:24.230328+02:00"
+- name: testkube-crds
+  repository: file://../testkube-crds
+  version: 0.1.0
+digest: sha256:6138dc03ce9e02b9da129b6b7ad4c9b0a1266a125a5131eceaac4eabdc047e31
+generated: "2026-03-16T23:58:05.226531-03:00"

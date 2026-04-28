@@ -107,6 +107,9 @@ Define Operator image
     {{- $tag = .Values.image.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag -}}
     {{- else -}}

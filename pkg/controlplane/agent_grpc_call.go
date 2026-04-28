@@ -15,7 +15,6 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
@@ -34,7 +33,7 @@ func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*clou
 	return nil, CommandNotImplementedError(request.Command)
 }
 
-func CreateCommands(storageBucket string, storageClient domainstorage.Client, testWorkflowOutputRepository *miniorepo.MinioRepository, testWorkflowResultsRepository testworkflow.Repository, artifactStorage *minio.ArtifactClient) []CommandHandlers {
+func CreateCommands(storageBucket string, storageClient domainstorage.Client, testWorkflowOutputRepository testworkflow.OutputRepository, testWorkflowResultsRepository testworkflow.Repository, artifactStorage *minio.ArtifactClient) []CommandHandlers {
 	// Set up "Config" commands
 	configCommands := CommandHandlers{
 		cloudconfig.CmdConfigGetOrganizationPlan: Handler(func(ctx context.Context, data checktcl.GetOrganizationPlanRequest) (r checktcl.GetOrganizationPlanResponse, err error) {
@@ -123,6 +122,9 @@ func CreateCommands(storageBucket string, storageClient domainstorage.Client, te
 		cloudtestworkflow.CmdTestWorkflowExecutionGetExecutionTags: Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionGetExecutionTagsRequest) (r cloudtestworkflow.ExecutionGetExecutionTagsResponse, err error) {
 			r.Tags, err = testWorkflowResultsRepository.GetExecutionTags(ctx, data.TestWorkflowName)
 			return
+		}),
+		cloudtestworkflow.CmdTestWorkflowExecutionUpdateTags: Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionUpdateTagsRequest) (r interface{}, err error) {
+			return r, testWorkflowResultsRepository.UpdateTags(ctx, data.ID, data.Tags)
 		}),
 	}
 

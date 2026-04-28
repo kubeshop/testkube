@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,6 @@ import (
 )
 
 func TestInitProcessCore_Integration(t *testing.T) {
-	t.Skip()
 	test.IntegrationTest(t)
 
 	testDir := t.TempDir()
@@ -132,9 +130,6 @@ fi
 }
 
 func TestInitProcessStateSharing_Integration(t *testing.T) {
-	// TODO(dejan): investigate failing test
-	t.Skip("Test is flaky and failing with exit code 137 (SIGKILL) - needs investigation")
-
 	test.IntegrationTest(t)
 
 	testDir := t.TempDir()
@@ -192,9 +187,6 @@ func TestInitProcessStateSharing_Integration(t *testing.T) {
 		assert.Equal(t, 0, exitCode0)
 	})
 
-	// Allow processes to fully cleanup between groups
-	time.Sleep(300 * time.Millisecond)
-
 	t.Run("Group1_Step1", func(t *testing.T) {
 		initializeOrchestration(t)
 		t.Cleanup(func() { cleanupOrchestration(t) })
@@ -215,9 +207,6 @@ func TestInitProcessStateSharing_Integration(t *testing.T) {
 		step1 := state1.Steps["step1"].(map[string]interface{})
 		assert.Equal(t, "passed", step1["s"], "step1 should have passed status")
 	})
-
-	// Allow processes to fully cleanup between groups
-	time.Sleep(300 * time.Millisecond)
 
 	t.Run("Group2_Step2", func(t *testing.T) {
 		initializeOrchestration(t)
@@ -243,7 +232,6 @@ func TestInitProcessStateSharing_Integration(t *testing.T) {
 }
 
 func TestInitProcessMetricsCapture_Integration(t *testing.T) {
-	t.Skip("Test is flaky and failing with exit code 137 (SIGKILL) - needs investigation")
 	test.IntegrationTest(t)
 
 	testDir := t.TempDir()
@@ -372,7 +360,10 @@ func initializeOrchestration(t *testing.T) {
 
 func cleanupOrchestration(t *testing.T) {
 	t.Helper()
-	// Clear singleton state after each test
+	if err := orchestration.Executions.Kill(); err != nil {
+		t.Logf("warn: kill during cleanup: %v", err)
+	}
+	orchestration.Executions.WaitAll()
 	data.ClearState()
 	orchestration.Setup = nil
 	orchestration.Executions.ClearAbortedStatus()

@@ -37,7 +37,7 @@ export async function editHelmChartOfRunner(appVersion, releaseStrategy) {
     const chartPath = `./k8s/helm/testkube-runner/Chart.yaml`;
     const valuesPath = `./k8s/helm/testkube-runner/values.yaml`;
     await bumpChartVersion(chartPath, releaseStrategy);
-    await bumpChartAppVersion(valuesPath, appVersion);
+    await bumpChartAppVersion(chartPath, appVersion);
 
     info("helm dependency updating for testkube-runner…");
     await $({ cwd: "./k8s/helm/testkube-runner" })`helm dependency update`;

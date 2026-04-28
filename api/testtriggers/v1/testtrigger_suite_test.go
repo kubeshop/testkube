@@ -27,7 +27,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -52,9 +52,7 @@ func TestAPIs(t *testing.T) {
 	t.Skip("Need to define etcd and rest for Github runners")
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Webhook Suite",
-		nil)
+	RunSpecs(t, "Webhook Suite")
 }
 
 var _ = BeforeSuite(func() {

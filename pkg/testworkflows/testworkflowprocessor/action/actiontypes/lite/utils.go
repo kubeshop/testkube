@@ -10,8 +10,8 @@ func (a LiteActionList) Setup(copyInit, copyToolkit, copyBinaries bool) LiteActi
 	return append(a, LiteAction{Setup: &ActionSetup{CopyInit: copyInit, CopyToolkit: copyToolkit, CopyBinaries: copyBinaries}})
 }
 
-func (a LiteActionList) Declare(ref string, condition string, parents ...string) LiteActionList {
-	return append(a, LiteAction{Declare: &ActionDeclare{Ref: ref, Condition: condition, Parents: parents}})
+func (a LiteActionList) Declare(ref string, id string, condition string, parents ...string) LiteActionList {
+	return append(a, LiteAction{Declare: &ActionDeclare{Ref: ref, Id: id, Condition: condition, Parents: parents}})
 }
 
 func (a LiteActionList) Start(ref string) LiteActionList {

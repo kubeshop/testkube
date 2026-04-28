@@ -19,7 +19,5 @@ import (
 
 // SetupWebhookWithManager sets up webhook with manager
 func (t *TestSuite) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(t).
-		Complete()
+	return ctrl.NewWebhookManagedBy(mgr, t).Complete()
 }

@@ -32,8 +32,8 @@ spec:
         periodSeconds: 1
       resources:
         requests:
-          cpu: "500m"
-          memory: "512Mi"
+          cpu: 2
+          memory: 4Gi
   steps:
   - container:
       env:

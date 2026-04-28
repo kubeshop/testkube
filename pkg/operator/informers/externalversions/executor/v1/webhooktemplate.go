@@ -61,7 +61,7 @@ func NewFilteredWebhookTemplateInformer(
 	tweakListOptions internalinterfaces.TweakListOptionsFunc,
 ) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -74,7 +74,7 @@ func NewFilteredWebhookTemplateInformer(
 				}
 				return client.ExecutorV1().WebhookTemplate(namespace).Watch(context.TODO(), options)
 			},
-		},
+		}, client),
 		&executorv1.WebhookTemplate{},
 		resyncPeriod,
 		indexers,

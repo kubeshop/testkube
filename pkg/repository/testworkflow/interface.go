@@ -139,6 +139,8 @@ type Repository interface {
 	UpdateOutput(ctx context.Context, id string, output []testkube.TestWorkflowOutput) (err error)
 	// UpdateResourceAggregations updates the summary of resource metrics
 	UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) (err error)
+	// UpdateTags replaces execution tags with the provided set
+	UpdateTags(ctx context.Context, id string, tags map[string]string) (err error)
 	// DeleteByTestWorkflow deletes execution results by workflow
 	DeleteByTestWorkflow(ctx context.Context, workflowName string) error
 	// DeleteAll deletes all execution results

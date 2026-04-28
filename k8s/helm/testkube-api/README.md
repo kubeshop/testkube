@@ -67,9 +67,7 @@ A Helm chart for Testkube api
 | dockerImageVersion | string | `""` |  |
 | enableK8sEvents | bool | `true` |  |
 | enableSecretsEndpoint | bool | `false` |  |
-| enabledExecutors | string | `nil` |  |
 | executionNamespaces | string | `nil` |  |
-| executors | string | `""` |  |
 | extraEnvVars | list | `[]` |  |
 | fullnameOverride | string | `""` |  |
 | global.affinity | object | `{}` |  |
@@ -115,7 +113,7 @@ A Helm chart for Testkube api
 | kubeVersion | string | `""` |  |
 | livenessProbe.initialDelaySeconds | int | `30` |  |
 | logs.bucket | string | `"testkube-logs"` |  |
-| logs.storage | string | `"minio"` |  |
+| logs.storage | string | `"minio"` | Log storage can be "minio" or "none" (to disable log persistence) |
 | logsServiceAccount.annotations | object | `{}` |  |
 | logsServiceAccount.create | bool | `true` |  |
 | logsServiceAccount.name | string | `""` |  |
@@ -178,6 +176,8 @@ A Helm chart for Testkube api
 | podStartTimeout | string | `"30m"` | Testkube timeout for pod start |
 | postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` |  |
 | postgresql.enabled | bool | `false` |  |
+| postgresql.secretKey | string | `""` |  |
+| postgresql.secretName | string | `""` |  |
 | priorityClassName | string | `""` |  |
 | prometheus.enabled | bool | `false` |  |
 | prometheus.interval | string | `"15s"` |  |
@@ -195,9 +195,6 @@ A Helm chart for Testkube api
 | serviceAccount.annotations | object | `{}` |  |
 | serviceAccount.create | bool | `true` |  |
 | serviceAccount.name | string | `""` |  |
-| slackConfig | string | `""` |  |
-| slackSecret | string | `""` |  |
-| slackToken | string | `""` |  |
 | storage.SSL | bool | `false` |  |
 | storage.accessKey | string | `""` |  |
 | storage.accessKeyId | string | `""` |  |

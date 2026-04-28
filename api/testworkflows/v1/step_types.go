@@ -20,6 +20,11 @@ type RetryPolicy struct {
 }
 
 type StepMeta struct {
+	// stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+	// if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+	// must contain only lowercase alphanumeric characters and underscores
+	Id string `json:"id,omitempty"`
+
 	// readable name for the step
 	Name string `json:"name,omitempty" expr:"template"`
 
@@ -226,6 +231,9 @@ type StepParallel struct {
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 
+	// abort remaining parallel workers on first failure
+	FailFast bool `json:"failFast,omitempty"`
+
 	StepExecuteStrategy `json:",inline" expr:"include"`
 
 	// worker description to display
@@ -295,7 +303,12 @@ type StepParallel struct {
 	// values to be used for test workflow execution
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
-	Execution *TestWorkflowTagSchema `json:"execution,omitempty" expr:"include"`
+	Execution *TestWorkflowExecutionSchema `json:"execution,omitempty" expr:"include"`
+
+	// per-workflow timeout configuration
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Timeouts *TestWorkflowTimeouts `json:"timeouts,omitempty" expr:"include"`
 
 	// list of accompanying services to start
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -336,6 +349,7 @@ func (sp StepParallel) NewTestWorkflowSpec() *TestWorkflowSpec {
 			Pod:           sp.Pod,
 			Notifications: sp.Notifications,
 			Execution:     sp.Execution,
+			Timeouts:      sp.Timeouts,
 		},
 		Services: sp.Services,
 		Setup:    sp.Setup,
@@ -348,6 +362,9 @@ func (sp StepParallel) NewTestWorkflowSpec() *TestWorkflowSpec {
 type IndependentStepParallel struct {
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
+
+	// abort remaining parallel workers on first failure
+	FailFast bool `json:"failFast,omitempty"`
 
 	StepExecuteStrategy `json:",inline" expr:"include"`
 

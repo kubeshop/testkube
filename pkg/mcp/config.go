@@ -47,6 +47,10 @@ type MCPServerConfig struct {
 	// Source identifies how MCP is being accessed (e.g., "cli", "http-endpoint")
 	Source string
 
+	// SkipEndpointChecks skips backwards-compatibility endpoint checks and registers all tools.
+	// Used by the MCP bridge when spawned for metadata-only listing with dummy credentials.
+	SkipEndpointChecks bool
+
 	// SHTTP-specific configuration
 	SHTTPConfig SHTTPConfig
 }
@@ -102,17 +106,18 @@ func LoadConfigFromEnv() MCPServerConfig {
 	}
 
 	return MCPServerConfig{
-		Version:          "1.0.0",
-		Transport:        transport,
-		ControlPlaneUrl:  controlPlaneUrl,
-		DashboardUrl:     dashboardUrl,
-		AccessToken:      os.Getenv("TK_ACCESS_TOKEN"),
-		OrgId:            os.Getenv("TK_ORG_ID"),
-		EnvId:            os.Getenv("TK_ENV_ID"),
-		Debug:            os.Getenv("TK_DEBUG") == "true",
-		TelemetryEnabled: os.Getenv("TK_TELEMETRY_ENABLED") != "false", // Default to true unless explicitly disabled
-		Source:           "unknown",                                    // Source should be set by caller, not from env
-		SHTTPConfig:      shttpConfig,
+		Version:            "1.0.0",
+		Transport:          transport,
+		ControlPlaneUrl:    controlPlaneUrl,
+		DashboardUrl:       dashboardUrl,
+		AccessToken:        os.Getenv("TK_ACCESS_TOKEN"),
+		OrgId:              os.Getenv("TK_ORG_ID"),
+		EnvId:              os.Getenv("TK_ENV_ID"),
+		Debug:              os.Getenv("TK_DEBUG") == "true",
+		TelemetryEnabled:   os.Getenv("TK_TELEMETRY_ENABLED") != "false", // Default to true unless explicitly disabled
+		SkipEndpointChecks: os.Getenv("TK_SKIP_ENDPOINT_CHECKS") == "true",
+		Source:             "unknown", // Source should be set by caller, not from env
+		SHTTPConfig:        shttpConfig,
 	}
 }
 

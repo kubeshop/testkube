@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -76,6 +77,7 @@ func NewInitCmdStandalone() *cobra.Command {
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + standaloneInstallationName + ".")
 			ui.NL()
+			common.ShowOperatorDeprecationWarning("Testkube API Server", options.NoCRDs)
 
 			if !isContextApproved(options.NoConfirm, standaloneInstallationName) {
 				return
@@ -121,7 +123,9 @@ func NewInitCmdDemo() *cobra.Command {
 		Aliases: []string{"on-premise-demo", "on-prem-demo", "enterprise-demo"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
-				valuesResp, err := http.Get(demoValuesUrl)
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, demoValuesUrl, nil)
+				ui.ExitOnError("cannot create values request", err)
+				valuesResp, err := http.DefaultClient.Do(req)
 				ui.ExitOnError("cannot fetch values", err)
 				defer valuesResp.Body.Close()
 				valuesBytes, err := io.ReadAll(valuesResp.Body)

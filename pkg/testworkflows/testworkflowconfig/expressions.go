@@ -117,6 +117,7 @@ func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 			"cloud.api.url":         cfg.Connection.Url,
 
 			"images.defaultRegistry":     cfg.DefaultRegistry,
+			"images.insecureRegistries":  cfg.InsecureRegistries,
 			"images.init":                cfg.InitImage,
 			"images.toolkit":             cfg.ToolkitImage,
 			"images.persistence.enabled": cfg.ImageInspectorPersistenceEnabled,

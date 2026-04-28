@@ -214,7 +214,7 @@ func RunParallelWithOptions(ctx context.Context, specContent string, cfg *config
 		return nil
 	}
 
-	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, cfg, opts.Storage, stateMachine, credentialMachine)
+	result, err := executeWorkersWithStorage(ctx, workers, params, parallelism, parallel.FailFast, cfg, opts.Storage, stateMachine, credentialMachine)
 	if err != nil {
 		return err
 	}
@@ -459,7 +459,7 @@ func NewWorkerExecutor(storage artifacts.InternalArtifactStorage, registry Worke
 // 5. Handles cleanup (logs, resources)
 // Returns true if worker passed, false if failed, and error for execution issues.
 // Uses non-blocking channel operations to prevent deadlocks.
-func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, paramsSpec *commontcl.ParamsSpec) (bool, error) {
+func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, paramsSpec *commontcl.ParamsSpec, onResult ...func(passed bool)) (bool, error) {
 	log := spawn.ParallelCreateLogger("worker", worker.Description, worker.Index, paramsSpec.Count)
 
 	cfg := *e.cfg.Internal()
@@ -511,7 +511,7 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 		return false, err
 	}
 
-	return e.monitorWorkerExecution(ctx, worker, *result, cfg, machine, paramsSpec, log)
+	return e.monitorWorkerExecution(ctx, worker, *result, cfg, machine, paramsSpec, log, onResult...)
 }
 
 // monitorWorkerExecution monitors a worker's execution and handles status updates.
@@ -519,7 +519,7 @@ func (e *WorkerExecutor) ExecuteWorker(ctx context.Context, worker WorkerSpec, p
 // Sends non-blocking updates to prevent channel congestion.
 // Ensures cleanup happens via defer even if monitoring fails.
 // Returns true if worker passed, false otherwise.
-func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker WorkerSpec, result executionworkertypes.ExecuteResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string)) (bool, error) {
+func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker WorkerSpec, result executionworkertypes.ExecuteResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string), onResult ...func(passed bool)) (bool, error) {
 	var lastResult testkube.TestWorkflowResult
 
 	defer func() {
@@ -546,7 +546,13 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 
 	log("created")
 
-	return e.processWorkerNotifications(notifications, worker, result.Signature, log, &lastResult)
+	passed, err := e.processWorkerNotifications(ctx, notifications, worker, result.Signature, log, &lastResult)
+	// Notify caller of pass/fail BEFORE cleanup runs (which may take 25+ seconds).
+	// This allows failFast to cancel other workers promptly.
+	for _, cb := range onResult {
+		cb(passed)
+	}
+	return passed, err
 }
 
 // processWorkerNotifications processes status updates from a worker.
@@ -554,54 +560,84 @@ func (e *WorkerExecutor) monitorWorkerExecution(ctx context.Context, worker Work
 // Uses non-blocking channel sends to avoid deadlocks during status updates.
 // Handles abnormal termination by setting ABORTED status.
 // Returns worker success status and any notification errors.
-func (e *WorkerExecutor) processWorkerNotifications(notifications executionworkertypes.StatusNotificationsWatcher, worker WorkerSpec, signature []testkube.TestWorkflowSignature, log func(...string), lastResult *testkube.TestWorkflowResult) (bool, error) {
+func (e *WorkerExecutor) processWorkerNotifications(ctx context.Context, notifications executionworkertypes.StatusNotificationsWatcher, worker WorkerSpec, signature []testkube.TestWorkflowSignature, log func(...string), lastResult *testkube.TestWorkflowResult) (bool, error) {
 	prevStatus := testkube.QUEUED_TestWorkflowStatus
 	prevStep := ""
 	scheduled := false
 	ipAssigned := false
 
-	for v := range notifications.Channel() {
-		if !scheduled && v.NodeName != "" {
-			scheduled = true
-			log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
-		}
-
-		if !ipAssigned && v.PodIp != "" {
-			ipAssigned = true
-			e.registry.SetAddress(worker.Index, v.PodIp)
-		}
-
-		if v.Result != nil {
-			*lastResult = *v.Result
-			status := testkube.QUEUED_TestWorkflowStatus
-			if lastResult.Status != nil {
-				status = *lastResult.Status
+	for {
+		select {
+		case <-ctx.Done():
+			// Context cancelled (e.g. fail-fast triggered) — mark worker as aborted
+			// so the UI shows the correct status instead of the last intermediate state
+			lastResult.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+			if lastResult.FinishedAt.IsZero() {
+				lastResult.FinishedAt = time.Now().UTC()
 			}
-			// Get current step reference from the workflow signature
-			step := lastResult.Current(signature)
+			instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: testkube.ABORTED_TestWorkflowStatus, Result: lastResult})
+			select {
+			case e.updates <- Update{index: worker.Index, result: lastResult.Clone()}:
+			default:
+			}
+			return false, ctx.Err()
+		case v, ok := <-notifications.Channel():
+			if !ok {
+				// Channel closed — fall through to error/abnormal handling below
+				goto done
+			}
+			if !scheduled && v.NodeName != "" {
+				scheduled = true
+				log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
+			}
 
-			if status != prevStatus || step != prevStep {
-				if status != prevStatus {
-					log(string(status))
-				}
-				// Try to send update, but don't block if channel is full
-				// This prevents deadlock if orchestrator is slow to process
-				select {
-				case e.updates <- Update{index: worker.Index, result: v.Result}:
-				default:
-					log("warning", "skipping status update due to full channel")
-				}
-				prevStep = step
-				prevStatus = status
+			if !ipAssigned && v.PodIp != "" {
+				ipAssigned = true
+				e.registry.SetAddress(worker.Index, v.PodIp)
+			}
 
-				if lastResult.IsFinished() {
-					instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Result: v.Result})
-					return v.Result.IsPassed(), nil
+			if v.Result != nil {
+				*lastResult = *v.Result
+				status := testkube.QUEUED_TestWorkflowStatus
+				if lastResult.Status != nil {
+					status = *lastResult.Status
 				}
-				instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Current: step})
+				// Get current step reference from the workflow signature
+				step := lastResult.Current(signature)
+
+				if status != prevStatus || step != prevStep {
+					if status != prevStatus {
+						log(string(status))
+					}
+					// Try to send update, but don't block if channel is full
+					// This prevents deadlock if orchestrator is slow to process
+					select {
+					case e.updates <- Update{index: worker.Index, result: v.Result}:
+					default:
+						log("warning", "skipping status update due to full channel")
+					}
+					prevStep = step
+					prevStatus = status
+
+					if lastResult.IsFinished() {
+						// If context was cancelled (fail-fast) and the worker hadn't
+						// already finished on its own, override status to aborted.
+						// Workers that genuinely completed (passed/failed) before
+						// cancellation keep their real status.
+						if ctx.Err() != nil && status != testkube.FAILED_TestWorkflowStatus && lastResult.FinishedAt.IsZero() {
+							status = testkube.ABORTED_TestWorkflowStatus
+							lastResult.Status = common.Ptr(status)
+							v.Result = lastResult.Clone()
+						}
+						instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Result: v.Result})
+						return v.Result.IsPassed(), nil
+					}
+					instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Status: status, Current: step})
+				}
 			}
 		}
 	}
+done:
 
 	if notifications.Err() != nil {
 		log("error", notifications.Err().Error())
@@ -629,10 +665,18 @@ func (e *WorkerExecutor) processWorkerNotifications(notifications executionworke
 // handleWorkerCleanup performs cleanup operations for a completed worker.
 // Evaluates log condition to determine if logs should be saved.
 // Saves logs to artifact storage if condition is met.
-// Destroys Kubernetes resources (pods, jobs) for the worker.
-// Uses non-blocking operations to prevent hanging during cleanup.
+// If the execution context was cancelled (e.g. fail-fast), aborts the worker
+// (patches termination annotations + destroys K8s resources) instead of just destroying.
+// Uses a separate cleanup context so cleanup always runs even when execution is cancelled.
 // Always executes via defer to ensure cleanup even on failures.
 func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerSpec, lastResult testkube.TestWorkflowResult, cfg testworkflowconfig.InternalConfig, machine expressions.Machine, paramsSpec *commontcl.ParamsSpec, log func(...string)) {
+	// Use a separate context for cleanup - the execution context may be cancelled
+	// by fail-fast but we still need to save logs and clean up K8s resources
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cleanupCancel()
+
+	cancelled := ctx.Err() != nil
+
 	// Default behavior: save logs when no condition specified
 	// Otherwise evaluate the condition expression (e.g., "failed", "always", "never")
 	shouldSaveLogs := worker.LogCondition == nil
@@ -645,27 +689,29 @@ func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerS
 	}
 
 	if shouldSaveLogs {
-		select {
-		case <-ctx.Done():
-			log("warning", "context cancelled, skipping log save")
-		default:
-			logsFilePath, err := spawn.ParallelSaveLogs(e.cfg, ctx, e.storage, worker.Namespace, cfg.Resource.Id, "", worker.Index)
-			if err == nil {
-				instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Logs: e.storage.FullPath(logsFilePath)})
-				log("saved logs")
-			} else {
-				log("warning", "problem saving the logs", err.Error())
-			}
+		logsFilePath, err := spawn.ParallelSaveLogs(e.cfg, cleanupCtx, e.storage, worker.Namespace, cfg.Resource.Id, "", worker.Index)
+		if err == nil {
+			instructions.PrintOutput(e.cfg.Ref(), "parallel", ParallelStatus{Index: int(worker.Index), Logs: e.storage.FullPath(logsFilePath)})
+			log("saved logs")
+		} else {
+			log("warning", "problem saving the logs", err.Error())
 		}
 	}
 
+	// If cancelled by fail-fast, abort the worker (patches termination annotations + destroys)
+	// Otherwise just destroy resources normally
 	var err error
-	select {
-	case <-ctx.Done():
-		log("warning", "context cancelled, skipping resource cleanup")
-		err = ctx.Err()
-	default:
-		err = spawn.ParallelExecutionWorker(e.cfg).Destroy(ctx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
+	if cancelled {
+		err = spawn.ParallelExecutionWorker(e.cfg).Abort(cleanupCtx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
+			Namespace: worker.Namespace,
+		})
+		if err == nil {
+			log("aborted")
+		} else {
+			log("warning", "problem aborting worker", err.Error())
+		}
+	} else {
+		err = spawn.ParallelExecutionWorker(e.cfg).Destroy(cleanupCtx, cfg.Resource.Id, executionworkertypes.DestroyOptions{
 			Namespace: worker.Namespace,
 		})
 		if err == nil {
@@ -676,7 +722,6 @@ func (e *WorkerExecutor) handleWorkerCleanup(ctx context.Context, worker WorkerS
 	}
 
 	select {
-	case <-ctx.Done():
 	case e.updates <- Update{index: worker.Index, done: true, err: err}:
 	default:
 		log("warning", "could not send final update for worker", fmt.Sprintf("index=%d", worker.Index))
@@ -773,7 +818,7 @@ func (o *ResumeOrchestrator) resumeAllWorkers(ctx context.Context) {
 }
 
 // executeWorkersWithStorage is like executeWorkers but accepts storage as parameter
-func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
+func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params *commontcl.ParamsSpec, parallelism int64, failFast bool, cfg *config.ConfigV2, storage artifacts.InternalArtifactStorage, stateMachine expressions.Machine, credentialMachine expressions.Machine) (*ParallelExecutionResult, error) {
 	for _, worker := range workers {
 		instructions.PrintOutput(cfg.Ref(), "parallel", ParallelStatus{
 			Index:       int(worker.Index),
@@ -812,7 +857,13 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 			}
 		}
 
-		passed, err := executor.ExecuteWorker(execCtx, worker, params)
+		passed, err := executor.ExecuteWorker(execCtx, worker, params, func(workerPassed bool) {
+			// failFast callback: cancel context immediately when a worker fails,
+			// BEFORE cleanup runs, so other workers see the cancellation promptly
+			if !workerPassed && failFast {
+				cancel()
+			}
+		})
 		if err != nil {
 			fmt.Printf("%d: error: %v\n", index, err)
 		}
@@ -829,7 +880,7 @@ func executeWorkersWithStorage(ctx context.Context, workers []WorkerSpec, params
 	}
 
 	// Execute workers with parallelism limit - blocks until all complete
-	failed := spawn.ExecuteParallel(run, specs, workerNamespaces, parallelism)
+	failed := spawn.ExecuteParallel(execCtx, run, specs, workerNamespaces, parallelism)
 
 	// Signal orchestrator to exit by closing updates channel
 	close(updates)

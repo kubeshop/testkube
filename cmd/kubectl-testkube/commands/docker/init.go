@@ -120,12 +120,18 @@ func NewInitCmd() *cobra.Command {
 
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
+			// Preserve the existing session's token type; fall back to OIDC
+			// for brand-new contexts with nothing stored yet.
+			tokenType := cfg.CloudContext.TokenType
+			if tokenType == "" {
+				tokenType = config.TokenTypeOIDC
+			}
 			if !common.IsUserLoggedIn(cfg, options) {
-				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth, options.Master.CallbackPort)
+				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, dockerContainerName, options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, tokenType, token, refreshToken, dockerContainerName, options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)
@@ -147,7 +153,7 @@ func NewInitCmd() *cobra.Command {
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
 	var errorStackTrace = fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
@@ -159,7 +165,7 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string,
 
 func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `testkube disable telemetry`")
 		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version)
 		if ui.Verbose && err != nil {
 			ui.Err(err)

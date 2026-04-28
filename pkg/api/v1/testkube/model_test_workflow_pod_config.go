@@ -26,6 +26,7 @@ type TestWorkflowPodConfig struct {
 	DnsPolicy                 string                     `json:"dnsPolicy,omitempty"`
 	NodeName                  string                     `json:"nodeName,omitempty"`
 	SecurityContext           *PodSecurityContext        `json:"securityContext,omitempty"`
+	DisableFsGroupDefaulting  *BoxedBoolean              `json:"disableFsGroupDefaulting,omitempty"`
 	Hostname                  string                     `json:"hostname,omitempty"`
 	Subdomain                 string                     `json:"subdomain,omitempty"`
 	Affinity                  *Affinity                  `json:"affinity,omitempty"`

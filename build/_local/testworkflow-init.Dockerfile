@@ -1,34 +1,14 @@
-ARG BUSYBOX_IMAGE="busybox:1.36.1-musl"
+ARG BUSYBOX_IMAGE="busybox:1.37.0-musl"
 
 ###################################
 ## Build testworkflow init
 ###################################
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
-ARG SKAFFOLD_GO_GCFLAGS
-
-WORKDIR /app
-COPY . .
-RUN --mount=type=cache,target="$GOMODCACHE" \
-    --mount=type=cache,target="$GOCACHE" \
-    GOOS=$TARGETOS \
-    GOARCH=$TARGETARCH \
-    CGO_ENABLED=0 \
-    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o build/_local/workflow-init cmd/testworkflow-init/main.go
-
-###################################
-## Build testworkflow toolkit
-###################################
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
-
-ARG TARGETOS
-ARG TARGETARCH
-ARG GOMODCACHE="/root/.cache/go-build"
-ARG GOCACHE="/go/pkg"
+ARG GOCACHE="/root/.cache/go-build"
+ARG GOMODCACHE="/go/pkg/mod"
 ARG SKAFFOLD_GO_GCFLAGS
 
 WORKDIR /app
@@ -43,10 +23,11 @@ RUN --mount=type=cache,target="$GOMODCACHE" \
 ###################################
 ## Debug
 ###################################
-FROM golang:1.25.0-alpine AS debug
+FROM golang:1.26.2-alpine AS debug
 
 ENV GOTRACEBACK=all
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.26.0
+RUN apk --no-cache add ca-certificates
 RUN cp -rf /bin /.tktw-bin
 COPY --from=builder /app/build/_local/workflow-init /init
 
@@ -60,4 +41,3 @@ RUN cp -rf /bin /.tktw-bin
 COPY --from=builder /app/build/_local/workflow-init /init
 USER 1001
 ENTRYPOINT ["/init"]
-

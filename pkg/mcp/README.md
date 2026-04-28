@@ -24,7 +24,7 @@ The MCP tools follow a consistent, interface-based design:
 // Small focused interface, include strictly methods called by the tool handler
 type ExecutionLogger interface {
   // Client receive the context and any number of additional parameters methods, must return (string, error)
-	GetExecutionLogs(ctx context.Context, executionId string) (string, error)
+	GetExecutionLogs(ctx context.Context, executionId string, params ExecutionLogParams) (string, error)
 }
 
 func FetchExecutionLogs(client ExecutionLogger) (tool mcp.Tool, handler server.ToolHandlerFunc)

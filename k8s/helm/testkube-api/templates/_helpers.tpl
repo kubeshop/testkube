@@ -84,6 +84,9 @@ Define API image
     {{- $tag = .Values.image.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -272,7 +275,14 @@ Define API environment in standalone mode
 {{- end }}
 {{- if .Values.postgresql.enabled }}
 - name: API_POSTGRES_DSN
+  {{- if .Values.postgresql.secretName }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgresql.secretName }}
+      key: {{ required "postgresql.secretKey is required when postgresql.secretName is set" .Values.postgresql.secretKey }}
+  {{- else }}
   value: "{{ .Values.postgresql.dsn }}"
+  {{- end }}
 {{- end }}
 - name: "NATS_EMBEDDED"
   value: "{{ .Values.nats.embedded }}"
@@ -377,6 +387,9 @@ Define Test Workflows Toolkit Image
     {{- $tag = .Values.imageTwToolkit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -402,6 +415,9 @@ Define Test Workflows Init Image
     {{- $tag = .Values.imageTwInit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}

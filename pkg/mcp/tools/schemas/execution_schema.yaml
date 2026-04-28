@@ -1,0 +1,179 @@
+# TestWorkflowExecution schema - Structure of execution data returned by Testkube API
+# Use this schema to understand which JSONPath expressions to use when querying executions
+
+# String. Unique execution identifier (MongoDB ObjectID format, e.g., '67d2cdbc351aecb2720afdf2')
+id: ""
+# String. Identifier for group of correlated executions. Used for parallel or related test runs.
+groupId: ""
+# String. Identifier of the runner where the execution was processed.
+runnerId: ""
+# Object. Target specification for where the execution should run.
+runnerTarget:
+  # Object. Matching criteria for runner selection.
+  match: {}
+  # Object. Exclusion criteria for runner selection.
+  not: {}
+# String. Execution name (follows pattern: workflow-name-number, e.g., 'my-workflow-123')
+name: ""
+# String. Kubernetes namespace where the execution runs.
+namespace: ""
+# Integer. Sequence number for the execution within the workflow.
+number: 0
+# String (ISO 8601). When the execution was scheduled to run.
+scheduledAt: ""
+# String (ISO 8601). When the execution was assigned to a runner.
+assignedAt: ""
+# String (ISO 8601). When the execution result's status last changed.
+statusAt: ""
+# Array. Structured tree of steps representing the execution signature.
+signature:
+  # Object. Item in the array representing a step in the signature.
+  - # String. Step reference identifier.
+    ref: ""
+    # String. Step name.
+    name: ""
+    # String. Step category, used as name fallback.
+    category: ""
+    # Boolean. Whether the step is optional.
+    optional: false
+    # Boolean. Whether the step is negative (expected to fail).
+    negative: false
+    # Array. Child steps (recursive structure).
+    children: []
+# Object. Execution result containing status, timing, and step results.
+result:
+  # String. Overall execution status. Values: 'queued', 'assigned', 'starting', 'scheduling', 'running', 'pausing', 'paused', 'resuming', 'passed', 'failed', 'stopping', 'aborted', 'canceled'
+  status: ""
+  # String. Predicted final status based on current progress.
+  predictedStatus: ""
+  # String (ISO 8601). When the pod was created.
+  queuedAt: ""
+  # String (ISO 8601). When the pod was successfully assigned.
+  startedAt: ""
+  # String (ISO 8601). When the pod completed.
+  finishedAt: ""
+  # String. Human-readable duration (e.g., '1m30s').
+  duration: ""
+  # String. Human-readable total duration including pauses.
+  totalDuration: ""
+  # Integer. Duration in milliseconds.
+  durationMs: 0
+  # Integer. Pause duration in milliseconds.
+  pausedMs: 0
+  # Integer. Total duration in milliseconds including pauses.
+  totalDurationMs: 0
+  # Array. List of pause events during execution.
+  pauses:
+    # Object. Item in the array representing a pause event.
+    - # String. Reference to the step that caused the pause.
+      ref: ""
+      # String (ISO 8601). When the pause started.
+      pausedAt: ""
+      # String (ISO 8601). When the pause ended.
+      resumedAt: ""
+  # Object. Initialization step result.
+  initialization:
+    # String. Error message if initialization failed.
+    errorMessage: ""
+    # String. Step status. Values: 'queued', 'running', 'paused', 'passed', 'failed', 'timeout', 'skipped', 'aborted', 'canceled'
+    status: ""
+    # Number. Exit code from the container.
+    exitCode: 0
+    # String (ISO 8601). When the container was created.
+    queuedAt: ""
+    # String (ISO 8601). When the container started.
+    startedAt: ""
+    # String (ISO 8601). When the container finished.
+    finishedAt: ""
+  # Object. Map of step reference to step result. Keys are step refs from the signature.
+  steps:
+    # Object. Example step result (key is the step ref).
+    "step-ref":
+      # String. Error message if step failed.
+      errorMessage: ""
+      # String. Step status. Values: 'queued', 'running', 'paused', 'passed', 'failed', 'timeout', 'skipped', 'aborted', 'canceled'
+      status: ""
+      # Number. Exit code from the container.
+      exitCode: 0
+      # String (ISO 8601). When the container was created.
+      queuedAt: ""
+      # String (ISO 8601). When the container started.
+      startedAt: ""
+      # String (ISO 8601). When the container finished.
+      finishedAt: ""
+# Array. Additional output information from steps, like referenced executed tests or artifacts.
+output:
+  # Object. Item in the array representing step output.
+  - # String. Reference to the step that produced this output.
+    ref: ""
+    # String. Name of the output.
+    name: ""
+    # String. Value of the output.
+    value: ""
+# Array. Generated reports from the steps, like JUnit XML.
+reports:
+  # Object. Item in the array representing a report.
+  - # String. Reference to the step that generated this report.
+    ref: ""
+    # String. Type of report (e.g., 'junit').
+    kind: ""
+    # String. Path to the report file in artifacts.
+    file: ""
+# Object. Resource consumption aggregations for the execution.
+resourceAggregations:
+  # Object. CPU usage statistics.
+  cpu:
+    # Number. Minimum CPU usage.
+    min: 0
+    # Number. Maximum CPU usage.
+    max: 0
+    # Number. Average CPU usage.
+    avg: 0
+  # Object. Memory usage statistics.
+  memory:
+    # Number. Minimum memory usage in bytes.
+    min: 0
+    # Number. Maximum memory usage in bytes.
+    max: 0
+    # Number. Average memory usage in bytes.
+    avg: 0
+# Object. The workflow definition that was executed. Follows the workflow_schema.yaml structure.
+workflow:
+  # Object. Workflow metadata.
+  metadata:
+    # String. Workflow name.
+    name: ""
+    # Object. Workflow labels.
+    labels: {}
+  # Object. Workflow specification.
+  spec: {}
+# Object. The resolved workflow after template expansion and variable substitution.
+resolvedWorkflow: {}
+# String. Name of parent execution if this was triggered by another workflow.
+testWorkflowExecutionName: ""
+# Boolean. Whether webhooks are disabled for this execution.
+disableWebhooks: false
+# Object. Silent mode configuration.
+silentMode: {}
+# Object. Tags associated with this execution. Key-value pairs for filtering and organization.
+tags: {}
+# Object. Context about how the execution was triggered.
+runningContext:
+  # String. Type of trigger (e.g., 'user', 'scheduler', 'webhook').
+  type: ""
+  # String. Additional context information.
+  context: ""
+# Object. Configuration parameters passed to the execution. Keys are parameter names, values contain the parameter value.
+configParams:
+  # Object. Example config parameter (key is param name).
+  "param-name":
+    # String. The parameter value.
+    value: ""
+    # String. Type of the parameter.
+    type: ""
+# Object. Runtime information about the execution environment.
+runtime:
+  # String. Kubernetes pod name.
+  podName: ""
+  # String. Kubernetes namespace.
+  namespace: ""

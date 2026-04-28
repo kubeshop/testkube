@@ -31,8 +31,7 @@ func TestMapParams(t *testing.T) {
 					Status:          "failed",
 					TestSource:      "main",
 					TestSuiteSteps:  5,
-					ClusterType:     "local",
-				},
+					ClusterType:     "local", Source: "cli-direct"},
 			},
 		},
 	}
@@ -56,6 +55,7 @@ func TestMapParams(t *testing.T) {
 	assert.Equal(t, "main", track.Properties["testSource"])
 	assert.Equal(t, int32(5), track.Properties["testSuiteSteps"])
 	assert.Equal(t, "local", track.Properties["clusterType"])
+	assert.Equal(t, "cli-direct", track.Properties["source"])
 }
 
 func TestSegmentioSender(t *testing.T) {

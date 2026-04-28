@@ -8,7 +8,6 @@ import (
 )
 
 func TestConfigTls(t *testing.T) {
-	t.Parallel()
 	test := DefaultTest()
 	test.Values = `
 config:
@@ -243,7 +242,6 @@ config:
 }
 
 func TestTlsCA(t *testing.T) {
-	t.Parallel()
 	for _, tt := range []struct {
 		name   string
 		key    string

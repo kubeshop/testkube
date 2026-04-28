@@ -14,7 +14,6 @@ import (
 )
 
 func TestGetBucketName(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		name         string
@@ -46,7 +45,6 @@ func TestGetBucketName(t *testing.T) {
 	for i := range tests {
 		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			actualName := c.GetValidBucketName(tt.parentType, tt.parentName)
 			assert.Equal(t, tt.expectedName, actualName)
 			assert.LessOrEqual(t, len(actualName), 63)

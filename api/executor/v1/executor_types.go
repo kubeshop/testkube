@@ -141,7 +141,3 @@ type ExecutorList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Executor `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Executor{}, &ExecutorList{})
-}

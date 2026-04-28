@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/pkg/grpcutils"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -87,10 +88,10 @@ func NewGRPCConnectionWithTracing(
 	// Build dial options
 	opts := append(dialOpts,
 		grpc.WithChainStreamInterceptor(
-			grpczap.StreamClientInterceptor(logger.Desugar()),
+			logging.StreamClientInterceptor(grpcutils.ZapGRPCLogger(logger.Desugar())),
 		),
 		grpc.WithChainUnaryInterceptor(
-			grpczap.UnaryClientInterceptor(logger.Desugar()),
+			logging.UnaryClientInterceptor(grpcutils.ZapGRPCLogger(logger.Desugar())),
 		),
 	)
 
@@ -231,10 +232,10 @@ func NewVeryInsecureGRPCClientDoNotUseThisClientUnlessYouAreReallySureYouKnowWha
 	// Build dial options
 	opts := append(dialOpts,
 		grpc.WithChainStreamInterceptor(
-			grpczap.StreamClientInterceptor(logger.Desugar()),
+			logging.StreamClientInterceptor(grpcutils.ZapGRPCLogger(logger.Desugar())),
 		),
 		grpc.WithChainUnaryInterceptor(
-			grpczap.UnaryClientInterceptor(logger.Desugar()),
+			logging.UnaryClientInterceptor(grpcutils.ZapGRPCLogger(logger.Desugar())),
 		),
 	)
 

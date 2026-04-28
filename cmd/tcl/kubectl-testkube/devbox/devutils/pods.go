@@ -37,7 +37,8 @@ type PodObject struct {
 	clientSet  *kubernetes.Clientset
 	restConfig *rest.Config
 
-	mu *sync.Mutex
+	createFunc func() (*corev1.Pod, error) // Pod creation callback for recreation
+	mu         *sync.Mutex
 }
 
 func NewPod(kubeClient *kubernetes.Clientset, kubeRestConfig *rest.Config, namespace, name string) *PodObject {
@@ -85,11 +86,21 @@ func (p *PodObject) RESTConfig() *rest.Config {
 }
 
 func (p *PodObject) Create(ctx context.Context, request *corev1.Pod) error {
+	return p.CreateWithFunc(ctx, request, nil)
+}
+
+func (p *PodObject) CreateWithFunc(ctx context.Context, request *corev1.Pod, createFunc func() (*corev1.Pod, error)) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
 	if p.pod != nil {
 		return nil
 	}
+
+	if createFunc != nil {
+		p.createFunc = createFunc
+	}
+
 	return p.create(ctx, request)
 }
 
@@ -104,22 +115,75 @@ func (p *PodObject) create(ctx context.Context, request *corev1.Pod) error {
 	request.Labels["testkube.io/devbox"] = p.name
 	request.Labels["testkube.io/devbox-type"] = p.kind
 
-	pod, err := p.clientSet.CoreV1().Pods(p.namespace).Create(ctx, request, metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
-		err = p.clientSet.CoreV1().Pods(p.namespace).Delete(ctx, request.Name, metav1.DeleteOptions{
-			GracePeriodSeconds: common.Ptr(int64(0)),
-			PropagationPolicy:  common.Ptr(metav1.DeletePropagationForeground),
-		})
-		if err != nil && !errors.IsNotFound(err) {
-			return errors2.Wrap(err, "failed to delete existing pod")
+	maxRetries := 10
+	var pod *corev1.Pod
+	var err error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
-		pod, err = p.clientSet.CoreV1().Pods(p.namespace).Create(context.Background(), request, metav1.CreateOptions{})
-	}
-	if err != nil {
+
+		if attempt > 0 {
+			backoff := time.Duration(100*(1<<uint(attempt-1))) * time.Millisecond
+			if backoff > 5*time.Second {
+				backoff = 5 * time.Second
+			}
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+
+		pod, err = p.clientSet.CoreV1().Pods(p.namespace).Create(ctx, request, metav1.CreateOptions{})
+		if err == nil {
+			p.pod = pod
+			return nil
+		}
+
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		if errors.IsAlreadyExists(err) {
+			existingPod, getErr := p.clientSet.CoreV1().Pods(p.namespace).Get(ctx, request.Name, metav1.GetOptions{})
+
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			if getErr == nil && existingPod.DeletionTimestamp != nil {
+				continue
+			}
+
+			deleteErr := p.clientSet.CoreV1().Pods(p.namespace).Delete(ctx, request.Name, metav1.DeleteOptions{
+				GracePeriodSeconds: common.Ptr(int64(0)),
+				PropagationPolicy:  common.Ptr(metav1.DeletePropagationForeground),
+			})
+
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			if deleteErr != nil && !errors.IsNotFound(deleteErr) {
+				return errors2.Wrap(deleteErr, "failed to delete existing pod")
+			}
+			continue
+		}
+
+		if errors.IsConflict(err) ||
+			errors.IsServerTimeout(err) ||
+			errors.IsTimeout(err) ||
+			errors.IsServiceUnavailable(err) {
+			continue
+		}
+
 		return errors2.Wrap(err, "failed to create pod")
 	}
-	p.pod = pod
-	return nil
+
+	return errors2.Wrapf(err, "failed to create pod after %d attempts", maxRetries)
 }
 
 func (p *PodObject) Pod() *corev1.Pod {
@@ -129,7 +193,10 @@ func (p *PodObject) Pod() *corev1.Pod {
 func (p *PodObject) RefreshData(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	return p.refreshData(ctx)
+}
 
+func (p *PodObject) refreshData(ctx context.Context) error {
 	pods, err := p.clientSet.CoreV1().Pods(p.namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("testkube.io/devbox=%s", p.name),
 	})
@@ -152,40 +219,93 @@ func (p *PodObject) Restart(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	pod := p.pod
-	if pod == nil {
-		return ErrPodNotFound
+	podSpec, err := p.getPodSpecForRestart(ctx)
+	if err != nil {
+		return err
 	}
+
 	p.pod = nil
-	_ = p.clientSet.CoreV1().Pods(p.namespace).Delete(context.Background(), p.name, metav1.DeleteOptions{
+	err = p.clientSet.CoreV1().Pods(p.namespace).Delete(ctx, p.name, metav1.DeleteOptions{
 		GracePeriodSeconds: common.Ptr(int64(0)),
 		PropagationPolicy:  common.Ptr(metav1.DeletePropagationForeground),
 	})
-	return p.create(context.Background(), pod)
+	if err != nil && !errors.IsNotFound(err) {
+		return errors2.Wrap(err, "failed to delete pod during restart")
+	}
+
+	return p.create(ctx, podSpec)
+}
+
+func (p *PodObject) getPodSpecForRestart(ctx context.Context) (*corev1.Pod, error) {
+	if p.pod != nil {
+		return p.pod.DeepCopy(), nil
+	}
+
+	p.mu.Unlock()
+	pods, refreshErr := p.clientSet.CoreV1().Pods(p.namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("testkube.io/devbox=%s", p.name),
+	})
+	p.mu.Lock()
+
+	if p.pod != nil {
+		return p.pod.DeepCopy(), nil
+	}
+
+	if refreshErr == nil && len(pods.Items) > 0 {
+		return pods.Items[0].DeepCopy(), nil
+	}
+
+	if p.createFunc == nil {
+		return nil, errors2.Wrap(ErrPodNotFound, "pod not found and no create function available")
+	}
+
+	return p.createFunc()
 }
 
 func (p *PodObject) WaitForReady(ctx context.Context) error {
+	ticker := time.NewTicker(300 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		if p.pod != nil && len(p.pod.Status.ContainerStatuses) > 0 && p.pod.Status.ContainerStatuses[0].Ready {
 			return nil
 		}
-		time.Sleep(300 * time.Millisecond)
-		err := p.RefreshData(ctx)
-		if err != nil {
-			return err
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			err := p.RefreshData(ctx)
+			if err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				return err
+			}
 		}
 	}
 }
 
-func (p *PodObject) WaitForContainerStarted(ctx context.Context) (err error) {
+func (p *PodObject) WaitForContainerStarted(ctx context.Context) error {
+	ticker := time.NewTicker(300 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		if p.pod != nil && len(p.pod.Status.ContainerStatuses) > 0 && p.pod.Status.ContainerStatuses[0].Started != nil && *p.pod.Status.ContainerStatuses[0].Started {
 			return nil
 		}
-		time.Sleep(300 * time.Millisecond)
-		err := p.RefreshData(ctx)
-		if err != nil {
-			return err
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			err := p.RefreshData(ctx)
+			if err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				return err
+			}
 		}
 	}
 }

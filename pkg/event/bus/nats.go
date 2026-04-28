@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/nats-io/nats.go"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -85,14 +85,13 @@ func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.
 func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, error) {
 	opts = append(opts, optsFromConfig(cfg)...)
 
-	nc, err := retry.DoWithData(
-		func() (*nats.Conn, error) {
-			return nats.Connect(cfg.NatsURI, opts...)
-		},
+	nc, err := retry.NewWithData[*nats.Conn](
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(utils.DefaultRetryDelay),
 		retry.Attempts(NATS_RETRY_ATTEMPTS),
-	)
+	).Do(func() (*nats.Conn, error) {
+		return nats.Connect(cfg.NatsURI, opts...)
+	})
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
