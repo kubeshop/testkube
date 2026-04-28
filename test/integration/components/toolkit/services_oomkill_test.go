@@ -69,6 +69,13 @@ func TestServiceOOMKilledAfterReadiness_Integration(t *testing.T) {
 	require.NoError(t, err,
 		"monitor marks service as ready even though it OOMKilled afterwards")
 
+	pod := waitForPodInNamespace(t, namespace, 30*time.Second)
+	require.NotNil(t, pod, "should find the service pod in the namespace")
+
+	pod = waitForContainerRestart(t, namespace, pod.Name, 60*time.Second)
+	require.True(t, hasContainerRestarted(pod, ""),
+		"some container should have restarted after OOMKill")
+
 	cfg, err := config.LoadConfigV2()
 	require.NoError(t, err)
 
