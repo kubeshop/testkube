@@ -1,29 +1,36 @@
 package common
 
 import (
+	"os"
+
+	"github.com/mattn/go-isatty"
+
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-// UIShellGetExecution prints the testkube command to get test workflow execution details.
+// Gate hints on a TTY so non-interactive stdout (e.g. `-o json | jq`) stays parseable.
+// Var (not func) so tests can override.
+var hintsEnabled = func() bool {
+	fd := os.Stdout.Fd()
+	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
+}
+
+func shellHint(hint, cmd string) {
+	if !hintsEnabled() {
+		return
+	}
+	ui.Hint(hint)
+	ui.ShellCommand(cmd)
+}
+
 func UIShellGetExecution(id string) {
-	ui.Hint("Get the TestWorkflow execution details:")
-	ui.ShellCommand(
-		"testkube get twe " + id,
-	)
+	shellHint("Get the TestWorkflow execution details:", "testkube get twe "+id)
 }
 
-// UIShellViewExecution prints the testkube command to view a test workflow execution in the browser.
 func UIShellViewExecution(id string) {
-	ui.Hint("View the TestWorkflow execution details in your browser:")
-	ui.ShellCommand(
-		"testkube view " + id,
-	)
+	shellHint("View the TestWorkflow execution details in your browser:", "testkube view "+id)
 }
 
-// UIShellWatchExecution prints the testkube command to watch a test workflow execution until complete.
 func UIShellWatchExecution(id string) {
-	ui.Hint("Watch the TestWorkflow execution until complete:")
-	ui.ShellCommand(
-		"testkube watch twe " + id,
-	)
+	shellHint("Watch the TestWorkflow execution until complete:", "testkube watch twe "+id)
 }
