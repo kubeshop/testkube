@@ -83,6 +83,12 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 		return err
 	}
 
+	// Empty URL means the server has no log storage configured; skip the upload.
+	if url == "" {
+		e.cleanup()
+		return nil
+	}
+
 	contentLen := e.buffer.Len()
 	body := e.buffer.(io.Reader)
 	if contentLen == 0 {
