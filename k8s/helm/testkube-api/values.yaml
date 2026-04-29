@@ -468,6 +468,11 @@ storage:
   SSL: false
   ## Skip Verify is used to configure storage client not to verify SSL certificates
   skipVerify: false
+  ## Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+  ## Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+  ## When true, set endpoint to the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+  ## the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+  useVirtualHostedStyle: false
   ## If enabled, will also require a CA certificate to be provided
   mountCACertificate: false
   certSecret:

@@ -495,6 +495,11 @@ testkube-logs:
     SSL: false
     # -- Toggle whether to verify TLS certificates
     skipVerify: false
+    # -- Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+    # Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+    # When true, the endpoint should be the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+    # the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+    useVirtualHostedStyle: false
     # -- If enabled, will also require a CA certificate to be provided
     mountCACertificate: false
     certSecret:
@@ -1041,6 +1046,11 @@ testkube-api:
     SSL: false
     # -- Toggle whether to verify TLS certificates
     skipVerify: false
+    # -- Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+    # Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+    # When true, the endpoint should be the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+    # the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+    useVirtualHostedStyle: false
     # -- If enabled, will also require a CA certificate to be provided
     mountCACertificate: false
     certSecret:
