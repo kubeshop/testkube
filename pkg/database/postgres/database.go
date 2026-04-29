@@ -30,7 +30,7 @@ func CreateDatabaseIfNotExists(ctx context.Context, connectionString string) err
 	}
 
 	dbName := connConfig.Database
-	connConfig.Database = ""
+	connConfig.Database = "postgres"
 
 	conn, err := pgx.ConnectConfig(ctx, connConfig)
 	if err != nil {
