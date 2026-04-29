@@ -71,6 +71,12 @@ func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, execution
 	if err != nil {
 		return err
 	}
+
+	// Empty URL means the server has no log storage configured; skip the upload.
+	if url == "" {
+		return nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return err

@@ -21,7 +21,7 @@ spec:
       - name: cypress-workflow-smoke-matrix-junit
       - name: distributed-playwright-workflow-smoke
       - name: junit5-workflow-smoke
-      - name: nunit-workflow-smoke-junit-report
+      - name: nunit-workflow-smoke
       - name: playwright-workflow-smoke
       - name: postman-workflow-smoke-junit
       - name: pytest-workflow-smoke-junit-mixed-failures

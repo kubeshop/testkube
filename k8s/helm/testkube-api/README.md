@@ -113,7 +113,7 @@ A Helm chart for Testkube api
 | kubeVersion | string | `""` |  |
 | livenessProbe.initialDelaySeconds | int | `30` |  |
 | logs.bucket | string | `"testkube-logs"` |  |
-| logs.storage | string | `"minio"` |  |
+| logs.storage | string | `"minio"` | Log storage can be "minio" or "none" (to disable log persistence) |
 | logsServiceAccount.annotations | object | `{}` |  |
 | logsServiceAccount.create | bool | `true` |  |
 | logsServiceAccount.name | string | `""` |  |
@@ -176,6 +176,8 @@ A Helm chart for Testkube api
 | podStartTimeout | string | `"30m"` | Testkube timeout for pod start |
 | postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` |  |
 | postgresql.enabled | bool | `false` |  |
+| postgresql.secretKey | string | `""` |  |
+| postgresql.secretName | string | `""` |  |
 | priorityClassName | string | `""` |  |
 | prometheus.enabled | bool | `false` |  |
 | prometheus.interval | string | `"15s"` |  |

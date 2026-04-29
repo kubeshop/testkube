@@ -96,6 +96,7 @@ type WorkerConfig struct {
 	FeatureFlags           map[string]string      `json:"f,omitempty"`
 	CommonEnvVariables     []corev1.EnvVar        `json:"e,omitempty"`
 	AllowLowSecurityFields bool                   `json:"a,omitempty"`
+	DisableResourceMetrics bool                   `json:"m,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

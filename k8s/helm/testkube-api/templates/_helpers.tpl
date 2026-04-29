@@ -279,7 +279,7 @@ Define API environment in standalone mode
   valueFrom:
     secretKeyRef:
       name: {{ .Values.postgresql.secretName }}
-      key: {{ .Values.postgresql.secretKey }}
+      key: {{ required "postgresql.secretKey is required when postgresql.secretName is set" .Values.postgresql.secretKey }}
   {{- else }}
   value: "{{ .Values.postgresql.dsn }}"
   {{- end }}
@@ -357,6 +357,8 @@ Define API environment in standalone mode
   value: "{{ .Values.storage.certSecret.baseMountPath }}/{{ .Values.storage.certSecret.caFile }}"
 {{- end }}
 {{- end }}
+- name: "STORAGE_USE_VIRTUAL_HOSTED_STYLE"
+  value: "{{ .Values.storage.useVirtualHostedStyle }}"
 - name: "SCRAPPERENABLED"
   value:  "{{ .Values.storage.scrapperEnabled }}"
 - name: "COMPRESSARTIFACTS"

@@ -9,6 +9,7 @@ var (
 	EventResourceTestsuite             = EventResourcePtr(TESTSUITE_EventResource)
 	EventResourceExecutor              = EventResourcePtr(EXECUTOR_EventResource)
 	EventResourceTrigger               = EventResourcePtr(TRIGGER_EventResource)
+	EventResourceWorkflowTrigger       = EventResourcePtr(WORKFLOWTRIGGER_EventResource)
 	EventResourceWebhook               = EventResourcePtr(WEBHOOK_EventResource)
 	EventResourceWebhookTemplate       = EventResourcePtr(WEBHOOKTEMPLATE_EventResource)
 	EventResourceTestexecution         = EventResourcePtr(TESTEXECUTION_EventResource)

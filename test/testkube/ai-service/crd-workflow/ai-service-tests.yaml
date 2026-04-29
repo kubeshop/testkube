@@ -77,7 +77,7 @@ spec:
               value: "9090"
             - name: CONTROL_PLANE_ENDPOINT
               value: "http://{{ services.cpstub.0.ip }}:8090"
-            - name: POSTGRES_URI
+            - name: API_POSTGRES_URL
               value: "postgresql://copilot:copilot@{{ services.postgres.0.ip }}:5432/copilot?sslmode=disable"
             - name: LLM_API_KEY
               valueFrom:

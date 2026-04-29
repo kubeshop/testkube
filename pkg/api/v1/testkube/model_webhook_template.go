@@ -34,4 +34,5 @@ type WebhookTemplate struct {
 	Config     map[string]WebhookConfigValue `json:"config,omitempty"`
 	Parameters []WebhookParameterSchema      `json:"parameters,omitempty"`
 	Sync       *Syncable                     `json:"sync,omitempty"`
+	Target     *ExecutionTarget              `json:"target,omitempty"`
 }

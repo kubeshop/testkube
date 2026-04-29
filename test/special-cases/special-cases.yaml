@@ -228,7 +228,7 @@ spec:
           exit 1
         fi
   job:
-    activeDeadlineSeconds: 30
+    activeDeadlineSeconds: 60
   steps:
   - name: Step
     run:

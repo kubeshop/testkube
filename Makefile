@@ -129,12 +129,14 @@ GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
 GOLANGCI_LINT_VERSION := v2.5.0
 SQLC_VERSION := v1.30.0
+BUF_VERSION := v1.68.1
 
 # Tool binaries
 GOTESTSUM = go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 GORELEASER = go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
 GOLANGCI_LINT = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+BUF = $(LOCALBIN)/tooling/buf
 
 # ==================== Environment Configuration ====================
 DASHBOARD_URI ?= https://demo.testkube.io
@@ -392,10 +394,20 @@ lint-fix: ## Run golangci-lint with automatic fixes
 .PHONY: generate
 generate: generate-protobuf generate-openapi generate-mocks generate-sqlc generate-crds ## Generate all code
 
+.PHONY: buf
+buf: $(BUF) ## Install buf binary for protobuf generation
+$(BUF):
+	@mkdir -p $(dir $(BUF))
+	@echo "Downloading buf $(BUF_VERSION)..."
+	@curl --fail -sSL "https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(shell uname -s)-$(shell uname -m)" -o $(BUF)
+	@chmod +x $(BUF)
+	@echo "buf $(BUF_VERSION) installed to $(BUF)"
+
 .PHONY: generate-protobuf
-generate-protobuf: ## Generate protobuf code
+generate-protobuf: $(BUF) ## Generate protobuf code
 	@echo "Generating protobuf code..."
-	@go generate ./proto
+	@cd proto && $(abspath $(BUF)) generate --exclude-path service.proto --exclude-path logs.proto
+	@cd proto && $(abspath $(BUF)) generate --template buf.gen.old.yaml
 
 .PHONY: generate-openapi
 generate-openapi: ## Generate OpenAPI models (requires Docker)
@@ -438,6 +450,10 @@ sync-helm-libraries: ## Sync shared Helm library charts into consumer chart depe
 .PHONY: verify-helm-libraries-synced
 verify-helm-libraries-synced: ## Verify vendored Helm library charts match the canonical sources.
 	bash scripts/check-helm-libraries.sh
+
+.PHONY: verify-protobuf-generated
+verify-protobuf-generated: generate-protobuf ## Verify generated protobuf code is up to date.
+	git diff --exit-code -- pkg/proto/ pkg/cloud/ pkg/logs/pb/
 
 .PHONY: verify-crds-generated
 verify-crds-generated: generate-crds verify-helm-libraries-synced ## Verify generated CRD artifacts are up to date.

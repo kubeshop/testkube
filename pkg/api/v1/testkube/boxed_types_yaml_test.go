@@ -121,6 +121,54 @@ func TestBoxedInteger_UnmarshalYAML(t *testing.T) {
 	})
 }
 
+func TestTemplatableBoxedInteger_UnmarshalYAML(t *testing.T) {
+	t.Run("shorthand integer form", func(t *testing.T) {
+		input := `value: 65532`
+		var result struct {
+			Value *TemplatableBoxedInteger `yaml:"value"`
+		}
+		err := yaml.Unmarshal([]byte(input), &result)
+		require.NoError(t, err)
+		require.NotNil(t, result.Value)
+		assert.Equal(t, "65532", result.Value.Value)
+	})
+
+	t.Run("shorthand template string form", func(t *testing.T) {
+		input := "value: '{{ config.runAsUser }}'"
+		var result struct {
+			Value *TemplatableBoxedInteger `yaml:"value"`
+		}
+		err := yaml.Unmarshal([]byte(input), &result)
+		require.NoError(t, err)
+		require.NotNil(t, result.Value)
+		assert.Equal(t, "{{ config.runAsUser }}", result.Value.Value)
+	})
+
+	t.Run("object form with integer value", func(t *testing.T) {
+		input := `value:
+  value: 65532`
+		var result struct {
+			Value *TemplatableBoxedInteger `yaml:"value"`
+		}
+		err := yaml.Unmarshal([]byte(input), &result)
+		require.NoError(t, err)
+		require.NotNil(t, result.Value)
+		assert.Equal(t, "65532", result.Value.Value)
+	})
+
+	t.Run("object form with template value", func(t *testing.T) {
+		input := `value:
+  value: "{{ config.runAsUser }}"`
+		var result struct {
+			Value *TemplatableBoxedInteger `yaml:"value"`
+		}
+		err := yaml.Unmarshal([]byte(input), &result)
+		require.NoError(t, err)
+		require.NotNil(t, result.Value)
+		assert.Equal(t, "{{ config.runAsUser }}", result.Value.Value)
+	})
+}
+
 func TestBoxedStringList_UnmarshalYAML(t *testing.T) {
 	t.Run("shorthand array form", func(t *testing.T) {
 		input := `value:

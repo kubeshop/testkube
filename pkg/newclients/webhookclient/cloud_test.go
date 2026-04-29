@@ -52,7 +52,7 @@ func TestCloudWebhookClientFiltersBySelector(t *testing.T) {
 		},
 	}
 
-	client := NewCloudWebhookClient(stub, "env1", "ns", log.DefaultLogger)
+	client := NewCloudWebhookClient(stub, "env1", "ns", nil, log.DefaultLogger)
 
 	list, err := client.List("team=dev")
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestCloudWebhookClientReportsSelectorError(t *testing.T) {
 		},
 	}
 
-	client := NewCloudWebhookClient(stub, "env1", "ns", log.DefaultLogger)
+	client := NewCloudWebhookClient(stub, "env1", "ns", nil, log.DefaultLogger)
 
 	list, err := client.List("!!!")
 	assert.Nil(t, list)
@@ -88,7 +88,7 @@ func TestCloudWebhookClientReturnsLatestOnEachCall(t *testing.T) {
 		},
 	}
 
-	client := NewCloudWebhookClient(stub, "env1", "ns", log.DefaultLogger)
+	client := NewCloudWebhookClient(stub, "env1", "ns", nil, log.DefaultLogger)
 
 	firstList, err := client.List("")
 	require.NoError(t, err)
@@ -111,4 +111,18 @@ func TestCloudWebhookClientReturnsLatestOnEachCall(t *testing.T) {
 	assert.Contains(t, names, "second")
 	assert.Contains(t, names, "third")
 	assert.GreaterOrEqual(t, stub.calls.Load(), int32(2))
+}
+
+func TestCloudWebhookClientPassesTargetSelector(t *testing.T) {
+	stub := &stubWebhooksClient{}
+
+	labels := map[string]string{"region": "us-east", "id": "agent-1"}
+	client := NewCloudWebhookClient(stub, "env1", "ns", labels, log.DefaultLogger)
+
+	_, err := client.List("")
+	require.NoError(t, err)
+
+	stub.mu.Lock()
+	defer stub.mu.Unlock()
+	assert.Equal(t, labels, stub.last.TargetSelector)
 }

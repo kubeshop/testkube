@@ -187,7 +187,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 			if err := testworkflowsv1.AddToScheme(scheme); err != nil {
 				t.Fatalf("failed to add testworkflowsv1 to scheme: %v", err)
 			}
-			k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(test.objs...).Build()
+			k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(test.objs...).WithStatusSubresource(&testworkflowsv1.TestWorkflowExecution{}).Build()
 			reconciler := testWorkflowExecutionExecutor(k8sClient, exec)
 
 			_, err := reconciler.Reconcile(context.Background(), test.request)
@@ -196,6 +196,18 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 			}
 			if !cmp.Equal(test.expect, exec.req, scheduleCmpOpts...) {
 				t.Errorf("Incorrect execution request, diff: %s", cmp.Diff(test.expect, exec.req, scheduleCmpOpts...))
+			}
+
+			// After a successful execution, verify that Status.Generation was updated
+			// to match Generation so the deduplication guard prevents re-execution.
+			if exec.req != nil {
+				var twe testworkflowsv1.TestWorkflowExecution
+				if err := k8sClient.Get(context.Background(), test.request.NamespacedName, &twe); err != nil {
+					t.Fatalf("get TestWorkflowExecution: %v", err)
+				}
+				if twe.Status.Generation != twe.Generation {
+					t.Errorf("Status.Generation = %d, want %d", twe.Status.Generation, twe.Generation)
+				}
 			}
 		})
 	}

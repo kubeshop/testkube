@@ -8,11 +8,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
 
 func TestService_matchConditionsRetry(t *testing.T) {
@@ -79,12 +83,12 @@ func TestService_matchConditionsRetry(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -157,12 +161,12 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -231,12 +235,12 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		},
 	}
 
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -299,12 +303,12 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		},
 	}
 
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -403,14 +407,14 @@ func TestService_match(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -455,14 +459,14 @@ func TestService_matchRegex(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -503,9 +507,9 @@ func TestService_noMatch(t *testing.T) {
 			Disabled:          false,
 		},
 	}
-	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
-	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
-	testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	statusKey1 := newStatusKey(triggerSourceV1, testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{trigger: convertV1ToInternal(testTrigger1)}
+	testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		assert.Fail(t, "should not match event")
 		return nil
 	}
@@ -520,15 +524,84 @@ func TestService_noMatch(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestService_match_v1WithFieldConditions verifies that a v1 TestTrigger with
+// spec.match[] filters firings through the shared WorkflowTrigger field-matcher
+// engine — equivalent-value change skips, actual change fires.
+func TestService_match_v1WithFieldConditions(t *testing.T) {
+	makeDeploy := func(replicas int32) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "api", Namespace: "default"},
+			Spec:       appsv1.DeploymentSpec{Replicas: int32Ptr(replicas)},
+		}
+	}
+
+	trigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "replicas-changed"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "api"},
+			Event:            "modified",
+			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
+				{Path: ".spec.replicas", Operator: workflowtriggersv1.FieldOperatorChanged},
+			},
+			Action:            "run",
+			Execution:         "testworkflow",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "smoke"},
+		},
+	}
+	key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	status := &triggerStatus{trigger: convertV1ToInternal(trigger)}
+
+	// Sanity: the conversion populated FieldConditions on the internal form.
+	require.Len(t, status.trigger.FieldConditions, 1)
+	assert.Equal(t, workflowtriggersv1.FieldOperatorChanged, status.trigger.FieldConditions[0].Operator)
+
+	cases := []struct {
+		name       string
+		oldObj     any
+		newObj     any
+		shouldFire bool
+	}{
+		{"replicas changed 3->5 fires", makeDeploy(3), makeDeploy(5), true},
+		{"replicas unchanged 5->5 skips", makeDeploy(5), makeDeploy(5), false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fired := false
+			s := &Service{
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, it *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				triggerStatus: map[statusKey]*triggerStatus{key: status},
+				logger:        log.DefaultLogger,
+				metrics:       metrics.NewMetrics(),
+			}
+			err := s.match(context.Background(), &watcherEvent{
+				resource:  "deployment",
+				name:      "api",
+				Namespace: "default",
+				eventType: "modified",
+				Object:    tc.newObj,
+				OldObject: tc.oldObj,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.shouldFire, fired)
+		})
+	}
+}
+
 func newDefaultTestTriggersService(t *testing.T, trigger *testtriggersv1.TestTrigger) *Service {
-	key := newStatusKey(trigger.Namespace, trigger.Name)
-	status := &triggerStatus{testTrigger: trigger}
+	key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	status := &triggerStatus{trigger: convertV1ToInternal(trigger)}
 	return &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 			t.Log("default test trigger executor")
 			return nil
 		},
@@ -562,7 +635,7 @@ func TestService_matchResourceSelector_matchLabels(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -596,7 +669,7 @@ func TestService_matchResourceSelector_matchLabels_noMatch(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not trigger")
 		return nil
 	}
@@ -632,7 +705,7 @@ func TestService_matchResourceSelector_matchExpression(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -669,7 +742,7 @@ func TestService_matchResourceSelector_matchExpression_noMatch(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not trigger executor")
 		return nil
 	}
@@ -698,7 +771,7 @@ func TestService_matchSelector_nilSelector(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not match")
 		return nil
 	}
@@ -727,7 +800,7 @@ func TestService_matchSelector_emptySelector(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not match")
 		return nil
 	}
@@ -763,7 +836,7 @@ func TestService_matchSelector_matchLabels(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -811,7 +884,7 @@ func TestService_matchSelector_matchLabels_resourceKindCaseInsensitive(t *testin
 
 			s := newDefaultTestTriggersService(t, testTrigger)
 			triggerCount := 0
-			s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+			s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 				triggerCount++
 				assert.Equal(t, "testkube", trigger.Namespace)
 				assert.Equal(t, "test-trigger", trigger.Name)
@@ -855,7 +928,7 @@ func TestService_matchSelector_matchExpression(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -893,7 +966,7 @@ func TestService_matchSelector_noMatch(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not trigger")
 		return nil
 	}
@@ -935,7 +1008,7 @@ func TestService_matchSelector_matchResourceSelector(t *testing.T) {
 
 	s := newDefaultTestTriggersService(t, testTrigger)
 	triggerCount := 0
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		triggerCount++
 		assert.Equal(t, "testkube", trigger.Namespace)
 		assert.Equal(t, "test-trigger", trigger.Name)
@@ -978,11 +1051,561 @@ func TestService_matchSelector_noMatchResourceSelector(t *testing.T) {
 	}
 
 	s := newDefaultTestTriggersService(t, testTrigger)
-	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
+	s.triggerExecutor = func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
 		t.Error("should not match")
 		return nil
 	}
 
 	err := s.match(context.Background(), e)
 	assert.NoError(t, err)
+}
+
+// TestService_match_v1Scenarios is a table-driven guard that exercises the
+// end-to-end Service.match() path against representative v1 TestTrigger
+// CRDs — both the ResourceSelector and the legacy Spec.Selector
+// (EventLabelSelector) paths. These scenarios complement the unit-level
+// TestService_matchSelector_* / TestService_matchResourceSelector_* tests
+// by verifying the full match pipeline after the internalTrigger refactor.
+func TestService_match_v1Scenarios(t *testing.T) {
+	tests := map[string]struct {
+		trigger    *testtriggersv1.TestTrigger
+		event      *watcherEvent
+		shouldFire bool
+	}{
+		"deployment modified matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t1", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     testtriggersv1.TestTriggerEventModified,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+			},
+			shouldFire: true,
+		},
+		"deployment created matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t2", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "testkube",
+					},
+					Event:     testtriggersv1.TestTriggerEventCreated,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "testkube",
+				eventType: "created",
+			},
+			shouldFire: true,
+		},
+		"wrong resource type does not match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t3", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     testtriggersv1.TestTriggerEventModified,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "pod",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+			},
+			shouldFire: false,
+		},
+		"wrong name does not match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t4", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     testtriggersv1.TestTriggerEventModified,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "other-service",
+				Namespace: "production",
+				eventType: "modified",
+			},
+			shouldFire: false,
+		},
+		"wrong namespace does not match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t5", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     testtriggersv1.TestTriggerEventModified,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "staging",
+				eventType: "modified",
+			},
+			shouldFire: false,
+		},
+		"wrong event does not match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t6", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     testtriggersv1.TestTriggerEventCreated,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "deleted",
+			},
+			shouldFire: false,
+		},
+		"disabled trigger does not match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t7", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     testtriggersv1.TestTriggerEventModified,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+					Disabled: true,
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+			},
+			shouldFire: false,
+		},
+		"deployment-specific cause matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t8", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:     "deployment-image-update",
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+				causes:    []testtrigger.Cause{"deployment-image-update"},
+			},
+			shouldFire: true,
+		},
+		"pod created matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t9", Namespace: "production"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourcePod,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name: "my-pod",
+					},
+					Event:     testtriggersv1.TestTriggerEventCreated,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "smoke-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "pod",
+				name:      "my-pod",
+				Namespace: "production",
+				eventType: "created",
+			},
+			shouldFire: true,
+		},
+		"custom resource via resourceRef matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-ref", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+						Group:   "kafka.strimzi.io",
+						Version: "v1beta2",
+						Kind:    "KafkaTopic",
+					},
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "my-topic",
+						Namespace: "kafka",
+					},
+					Event:     testtriggersv1.TestTriggerEventCreated,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "kafka-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "kafkatopic",
+				name:      "my-topic",
+				Namespace: "kafka",
+				eventType: "created",
+			},
+			shouldFire: true,
+		},
+		"configmap matches": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t10", Namespace: "default"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource: testtriggersv1.TestTriggerResourceConfigMap,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name: "feature-flags",
+					},
+					Event:     testtriggersv1.TestTriggerEventModified,
+					Execution: testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{
+						Name: "e2e-test",
+					},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "configmap",
+				name:      "feature-flags",
+				Namespace: "default",
+				eventType: "modified",
+			},
+			shouldFire: true,
+		},
+		// Spec.Selector (v1 legacy EventLabelSelector) path — matches against
+		// the merged event + resource labels map, with normalizeResourceKindSelector
+		// lowercasing the magic testkube.io/resource-kind key on both sides.
+		"spec.Selector matches by resource-kind event label": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-sel-1", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{eventLabelKeyResourceKind: "Deployment"},
+					},
+					Event:        testtriggersv1.TestTriggerEventModified,
+					Execution:    testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "deployment",
+				name:      "api-server",
+				Namespace: "production",
+				eventType: "modified",
+				EventLabels: map[string]string{
+					eventLabelKeyResourceKind: "Deployment",
+				},
+			},
+			shouldFire: true,
+		},
+		"spec.Selector does not match when resource-kind differs": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-sel-2", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{eventLabelKeyResourceKind: "Deployment"},
+					},
+					Event:        testtriggersv1.TestTriggerEventModified,
+					Execution:    testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			},
+			event: &watcherEvent{
+				resource:  "pod",
+				name:      "some-pod",
+				Namespace: "production",
+				eventType: "modified",
+				EventLabels: map[string]string{
+					eventLabelKeyResourceKind: "Pod",
+				},
+			},
+			shouldFire: false,
+		},
+		"spec.Selector matches against resource label": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-sel-3", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"team": "platform"},
+					},
+					Event:        testtriggersv1.TestTriggerEventModified,
+					Execution:    testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			},
+			event: &watcherEvent{
+				resource:       "deployment",
+				name:           "api-server",
+				Namespace:      "production",
+				eventType:      "modified",
+				resourceLabels: map[string]string{"team": "platform"},
+				EventLabels:    map[string]string{eventLabelKeyResourceKind: "Deployment"},
+			},
+			shouldFire: true,
+		},
+		"spec.Selector does not match when resource label value differs": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-sel-4", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"team": "platform"},
+					},
+					Event:        testtriggersv1.TestTriggerEventModified,
+					Execution:    testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			},
+			event: &watcherEvent{
+				resource:       "deployment",
+				name:           "api-server",
+				Namespace:      "production",
+				eventType:      "modified",
+				resourceLabels: map[string]string{"team": "storage"},
+				EventLabels:    map[string]string{eventLabelKeyResourceKind: "Deployment"},
+			},
+			shouldFire: false,
+		},
+		// When both Spec.Selector AND ResourceSelector.Name are set, both must
+		// match — guards against a refactor that accidentally ORs the two paths.
+		"spec.Selector AND ResourceSelector.Name — both match": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-sel-5", Namespace: "production"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"team": "platform"},
+					},
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:        testtriggersv1.TestTriggerEventModified,
+					Execution:    testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			},
+			event: &watcherEvent{
+				resource:       "deployment",
+				name:           "api-server",
+				Namespace:      "production",
+				eventType:      "modified",
+				resourceLabels: map[string]string{"team": "platform"},
+				EventLabels:    map[string]string{eventLabelKeyResourceKind: "Deployment"},
+			},
+			shouldFire: true,
+		},
+		"spec.Selector AND ResourceSelector.Name — label matches but name does not": {
+			trigger: &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t-sel-6", Namespace: "production"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"team": "platform"},
+					},
+					ResourceSelector: testtriggersv1.TestTriggerSelector{
+						Name:      "api-server",
+						Namespace: "production",
+					},
+					Event:        testtriggersv1.TestTriggerEventModified,
+					Execution:    testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector: testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			},
+			event: &watcherEvent{
+				resource:       "deployment",
+				name:           "other-service",
+				Namespace:      "production",
+				eventType:      "modified",
+				resourceLabels: map[string]string{"team": "platform"},
+				EventLabels:    map[string]string{eventLabelKeyResourceKind: "Deployment"},
+			},
+			shouldFire: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			fired := false
+			key := newStatusKey(triggerSourceV1, tc.trigger.Namespace, tc.trigger.Name)
+			s := &Service{
+				triggerStatus: map[statusKey]*triggerStatus{
+					key: {trigger: convertV1ToInternal(tc.trigger)},
+				},
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				logger:  log.DefaultLogger,
+				metrics: metrics.NewMetrics(),
+			}
+
+			err := s.match(context.Background(), tc.event)
+			require.NoError(t, err)
+			if tc.shouldFire {
+				assert.True(t, fired, "trigger should have fired")
+			} else {
+				assert.False(t, fired, "trigger should not have fired")
+			}
+		})
+	}
+}
+
+// TestService_match_V1_ExecutionFilter guards the pre-refactor behavior that
+// v1 TestTriggers with Execution set to "test" or "testsuite" must be skipped
+// by the matcher — we only run TestWorkflow executions. The filter was briefly
+// dropped during the internalTrigger refactor; this table documents the
+// expected contract so a future refactor can't silently re-break it.
+func TestService_match_V1_ExecutionFilter(t *testing.T) {
+	tests := map[string]struct {
+		execution  testtriggersv1.TestTriggerExecution
+		shouldFire bool
+	}{
+		"testworkflow fires":       {execution: testtriggersv1.TestTriggerExecutionTestWorkflow, shouldFire: true},
+		"empty defaults to fire":   {execution: "", shouldFire: true},
+		"legacy test is skipped":   {execution: testtriggersv1.TestTriggerExecutionTest, shouldFire: false},
+		"legacy testsuite skipped": {execution: testtriggersv1.TestTriggerExecutionTestsuite, shouldFire: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			trigger := &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource:         testtriggersv1.TestTriggerResourceDeployment,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "api-server", Namespace: "production"},
+					Event:            testtriggersv1.TestTriggerEventModified,
+					Execution:        tc.execution,
+					TestSelector:     testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			}
+			event := &watcherEvent{resource: "deployment", name: "api-server", Namespace: "production", eventType: "modified"}
+			key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+			fired := false
+			s := &Service{
+				triggerStatus: map[statusKey]*triggerStatus{key: {trigger: convertV1ToInternal(trigger)}},
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				logger:  log.DefaultLogger,
+				metrics: metrics.NewMetrics(),
+			}
+			require.NoError(t, s.match(context.Background(), event))
+			assert.Equal(t, tc.shouldFire, fired)
+		})
+	}
+}
+
+// TestService_match_V1_AllBuiltinResources_CaseFolded guards the case-folded
+// comparison in matchInternalResource that lets v1 TestTriggers keep firing
+// after the internalTrigger refactor. convertV1ToInternal stores the canonical
+// PascalCase Kind (e.g. "Pod") in internalTrigger; the v1 watcher dispatches
+// events with the lowercase enum value (e.g. "pod"). strings.EqualFold bridges
+// the two. If EqualFold is replaced with == by a future refactor, all 8
+// subtests here must fail.
+func TestService_match_V1_AllBuiltinResources_CaseFolded(t *testing.T) {
+	resources := []testtriggersv1.TestTriggerResource{
+		testtriggersv1.TestTriggerResourcePod,
+		testtriggersv1.TestTriggerResourceDeployment,
+		testtriggersv1.TestTriggerResourceStatefulSet,
+		testtriggersv1.TestTriggerResourceDaemonSet,
+		testtriggersv1.TestTriggerResourceService,
+		testtriggersv1.TestTriggerResourceIngress,
+		testtriggersv1.TestTriggerResourceEvent,
+		testtriggersv1.TestTriggerResourceConfigMap,
+	}
+	for _, r := range resources {
+		t.Run(string(r), func(t *testing.T) {
+			trigger := &testtriggersv1.TestTrigger{
+				ObjectMeta: metav1.ObjectMeta{Name: "t", Namespace: "testkube"},
+				Spec: testtriggersv1.TestTriggerSpec{
+					Resource:         r,
+					ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "target", Namespace: "ns"},
+					Event:            testtriggersv1.TestTriggerEventModified,
+					Execution:        testtriggersv1.TestTriggerExecutionTestWorkflow,
+					TestSelector:     testtriggersv1.TestTriggerSelector{Name: "smoke-test"},
+				},
+			}
+			event := &watcherEvent{resource: testtrigger.ResourceType(r), name: "target", Namespace: "ns", eventType: "modified"}
+			key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+			fired := false
+			s := &Service{
+				triggerStatus: map[statusKey]*triggerStatus{key: {trigger: convertV1ToInternal(trigger)}},
+				triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *internalTrigger) error {
+					fired = true
+					return nil
+				},
+				logger:  log.DefaultLogger,
+				metrics: metrics.NewMetrics(),
+			}
+			require.NoError(t, s.match(context.Background(), event))
+			assert.True(t, fired, "v1 %q trigger must match an event with resource=%q (case-folded)", r, r)
+		})
+	}
 }

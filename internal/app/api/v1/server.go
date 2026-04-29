@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	executorsclientv1 "github.com/kubeshop/testkube/pkg/operator/client/executors/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/pkg/operator/client/testworkflows/v1"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
@@ -35,6 +36,7 @@ func NewTestkubeAPI(
 	webhookClient executorsclientv1.WebhooksInterface,
 	webhookTemplateClient executorsclientv1.WebhookTemplatesInterface,
 	testTriggersClient testtriggerclient.TestTriggerClient,
+	workflowTriggersClient workflowtriggerclient.WorkflowTriggerClient,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowsK8SClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -51,6 +53,7 @@ func NewTestkubeAPI(
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	exportArchiveMaxSize int,
 ) TestkubeAPI {
 
 	return TestkubeAPI{
@@ -62,6 +65,7 @@ func NewTestkubeAPI(
 		TestWorkflowOutput:             testWorkflowOutput,
 		SecretManager:                  secretManager,
 		TestTriggersClient:             testTriggersClient,
+		WorkflowTriggersClient:         workflowTriggersClient,
 		TestWorkflowsClient:            testWorkflowsClient,
 		TestWorkflowTemplatesClient:    testWorkflowTemplatesClient,
 		TestWorkflowsK8SClient:         testWorkflowsK8SClient,
@@ -81,6 +85,7 @@ func NewTestkubeAPI(
 		dockerImageVersion:             dockerImageVersion,
 		proContext:                     proContext,
 		testWorkflowExecutor:           testWorkflowExecutor,
+		exportArchiveMaxSize:           exportArchiveMaxSize,
 	}
 }
 
@@ -94,6 +99,7 @@ type TestkubeAPI struct {
 	WebhooksClient                 executorsclientv1.WebhooksInterface
 	WebhookTemplatesClient         executorsclientv1.WebhookTemplatesInterface
 	TestTriggersClient             testtriggerclient.TestTriggerClient
+	WorkflowTriggersClient         workflowtriggerclient.WorkflowTriggerClient
 	TestWorkflowsClient            testworkflowclient.TestWorkflowClient
 	TestWorkflowTemplatesClient    testworkflowtemplateclient.TestWorkflowTemplateClient
 	TestWorkflowsK8SClient         testworkflowsv1.Interface
@@ -122,6 +128,8 @@ type TestkubeAPI struct {
 	// note: the execution scheduling's behaviour is special; as this will _not_ keep the old behaviour.
 	// It now always schedules executions on the control plane instead of being able to incorrectly bypass it.
 	isStandalone bool
+
+	exportArchiveMaxSize int
 
 	executionController scheduling.Controller
 }
@@ -218,6 +226,14 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testTriggers.Patch("/:id", s.UpdateTestTriggerHandler())
 	testTriggers.Delete("/:id", s.DeleteTestTriggerHandler())
 
+	workflowTriggers := root.Group("/workflow-triggers")
+	workflowTriggers.Get("/", s.ListWorkflowTriggersHandler())
+	workflowTriggers.Post("/", s.CreateWorkflowTriggerHandler())
+	workflowTriggers.Delete("/", s.DeleteWorkflowTriggersHandler())
+	workflowTriggers.Get("/:id", s.GetWorkflowTriggerHandler())
+	workflowTriggers.Patch("/:id", s.UpdateWorkflowTriggerHandler())
+	workflowTriggers.Delete("/:id", s.DeleteWorkflowTriggerHandler())
+
 	keymap := root.Group("/keymap")
 	keymap.Get("/triggers", s.GetTestTriggerKeyMapHandler())
 
@@ -247,4 +263,6 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
+
+	root.Get("/export", s.ExportExecutionsHandler())
 }

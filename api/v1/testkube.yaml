@@ -3205,6 +3205,64 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /export:
+    get:
+      tags:
+        - api
+      summary: "Export execution data"
+      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive. The archive size is limited by the server (configured via the EXPORT_ARCHIVE_MAX_SIZE env var); use the 'since' parameter to narrow the date range if the limit is exceeded."
+      operationId: exportExecutions
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: "Export only executions created after this date. Accepts ISO 8601 date (YYYY-MM-DD) or RFC 3339 timestamp (e.g. 2025-01-01T00:00:00Z)."
+          schema:
+            type: string
+          examples:
+            date:
+              value: "2025-01-01"
+            datetime:
+              value: "2025-01-01T00:00:00Z"
+      responses:
+        200:
+          description: "successful operation"
+          headers:
+            Content-Disposition:
+              description: "Content disposition with the archive filename"
+              schema:
+                type: string
+                example: 'attachment; filename="testkube-export.tar.gz"'
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        400:
+          description: "invalid 'since' parameter value"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        413:
+          description: "export archive exceeds the server-configured size limit"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with exporting execution data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-sources:
     get:
       tags:
@@ -7792,12 +7850,7 @@ components:
         sync:
           $ref: "#/components/schemas/Syncable"
         target:
-          type: object
-          description: "Label selector for targeting webhook agent(s). Webhook is sent to agents whose labels match all specified key=value pairs. Empty means broadcast to all agents."
-          additionalProperties:
-            type: string
-          example:
-            region: "eu"
+          $ref: "#/components/schemas/ExecutionTarget"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7868,6 +7921,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         sync:
           $ref: "#/components/schemas/Syncable"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     Event:
       description: Event data
@@ -7920,6 +7975,7 @@ components:
         - testsuite
         - executor
         - trigger
+        - workflowtrigger
         - webhook
         - webhooktemplate
         - testexecution
@@ -8959,6 +9015,13 @@ components:
           type: string
           format: date-time
           description: timestamp for the notification if available
+        seqNo:
+          type: integer
+          format: int32
+          description: monotonic application-event cursor for resumable log streams
+        eventType:
+          type: string
+          description: stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
         result:
           $ref: "#/components/schemas/TestWorkflowResult"
         ref:
@@ -10191,6 +10254,8 @@ components:
           type: string
         securityContext:
           $ref: "#/components/schemas/PodSecurityContext"
+        disableFsGroupDefaulting:
+          $ref: "#/components/schemas/BoxedBoolean"
         hostname:
           type: string
         subdomain:
@@ -10580,6 +10645,14 @@ components:
       required:
         - value
 
+    TemplatableBoxedInteger:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+
     BoxedBoolean:
       type: object
       properties:
@@ -10644,18 +10717,42 @@ components:
     SecurityContext:
       type: object
       properties:
+        capabilities:
+          $ref: "#/components/schemas/Capabilities"
         privileged:
           $ref: "#/components/schemas/BoxedBoolean"
+        seLinuxOptions:
+          $ref: "#/components/schemas/SELinuxOptions"
+        windowsOptions:
+          $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
         readOnlyRootFilesystem:
           $ref: "#/components/schemas/BoxedBoolean"
         allowPrivilegeEscalation:
           $ref: "#/components/schemas/BoxedBoolean"
+        procMount:
+          $ref: "#/components/schemas/BoxedString"
+        seccompProfile:
+          $ref: "#/components/schemas/SeccompProfile"
+        appArmorProfile:
+          $ref: "#/components/schemas/AppArmorProfile"
+
+    Capabilities:
+      type: object
+      properties:
+        add:
+          type: array
+          items:
+            type: string
+        drop:
+          type: array
+          items:
+            type: string
 
     PodSecurityContext:
       type: object
@@ -10665,9 +10762,9 @@ components:
         windowsOptions:
           $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
         supplementalGroups:
@@ -10678,7 +10775,7 @@ components:
         supplementalGroupsPolicy:
           $ref: "#/components/schemas/BoxedString"
         fsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         sysctls:
           type: array
           items:

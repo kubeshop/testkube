@@ -249,3 +249,46 @@ func TestApplyConfigTestWorkflowTemplate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
+
+func TestApplyConfigTestWorkflowTemplateIntegerSecurityContext(t *testing.T) {
+	got, err := ApplyWorkflowTemplateConfig(&testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Config: map[string]testworkflowsv1.ParameterSchema{
+					"runAsUser": {
+						Type:    testworkflowsv1.ParameterTypeInteger,
+						Default: &intstr.IntOrString{Type: intstr.Int, IntVal: 65532},
+					},
+					"runAsGroup": {
+						Type:    testworkflowsv1.ParameterTypeInteger,
+						Default: &intstr.IntOrString{Type: intstr.Int, IntVal: 65532},
+					},
+				},
+				Container: &testworkflowsv1.ContainerConfig{
+					SecurityContext: &testworkflowsv1.WorkflowSecurityContext{
+						RunAsUser:  testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsUser }}"),
+						RunAsGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
+					},
+				},
+				Pod: &testworkflowsv1.PodConfig{
+					SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+						FSGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
+					},
+				},
+			},
+		},
+	}, nil, nil)
+
+	assert.NoError(t, err)
+	runAsUser, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsUser", got.Spec.Container.SecurityContext.RunAsUser)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsUser)
+
+	runAsGroup, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsGroup", got.Spec.Container.SecurityContext.RunAsGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsGroup)
+
+	fsGroup, err := testworkflowsv1.ResolveWorkflowInt64("pod.securityContext.fsGroup", got.Spec.Pod.SecurityContext.FSGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *fsGroup)
+}

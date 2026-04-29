@@ -33,7 +33,7 @@ spec:
     - name: Wait for Testkube core components to be ready
       optional: true
       shell: |
-        for dep in testkube-api-server testkube-mongodb testkube-minio-testkube testkube-operator-controller-manager; do
+        for dep in testkube-api-server testkube-mongodb testkube-minio-testkube; do
           echo "⏳ Waiting for $dep..."
           kubectl rollout status deployment/$dep -n testkube --timeout=300s || exit 1
         done

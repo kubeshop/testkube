@@ -36,4 +36,11 @@ public class ExampleTests
         string value = null;
         Assert.Null(value);
     }
+
+    [Fact(Skip = "Work in progress")]
+    public async Task Test6_Skipped()
+    {
+        await Task.Delay(1000);
+        Assert.True(false);
+    }
 }

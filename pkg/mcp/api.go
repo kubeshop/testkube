@@ -225,18 +225,16 @@ func (c *APIClient) ListArtifacts(ctx context.Context, executionID string) (stri
 	})
 }
 
-func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename string) (string, error) {
-	// First, get the artifact (could be direct content or a URL)
-	// URL encode the filename to handle special characters like forward slashes
-	encodedFilename := url.QueryEscape(filename)
-
+func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename string, params tools.ArtifactReadParams) (string, error) {
 	response, err := c.makeRequest(ctx, APIRequest{
-		Method: "GET",
-		Path:   "/agent/test-workflow-executions/{executionId}/artifacts/{filename}",
+		Method: "POST",
+		Path:   "/test-workflow-executions/{executionId}/artifacts",
 		Scope:  ApiScopeOrgEnv,
 		PathParams: map[string]string{
 			"executionId": executionID,
-			"filename":    encodedFilename,
+		},
+		Body: map[string]string{
+			"artifactID": filename,
 		},
 	})
 	if err != nil {
@@ -289,14 +287,33 @@ func (c *APIClient) ReadArtifact(ctx context.Context, executionID, filename stri
 	return response, nil
 }
 
-func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string) (string, error) {
+func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string, params tools.ExecutionLogParams) (string, error) {
+	queryParams := make(map[string]string)
+	if params.Tail > 0 {
+		queryParams["tail"] = strconv.Itoa(params.Tail)
+	}
+	if params.StartLine > 0 {
+		queryParams["startLine"] = strconv.Itoa(params.StartLine)
+	}
+	if params.EndLine > 0 {
+		queryParams["endLine"] = strconv.Itoa(params.EndLine)
+	}
+	if params.Grep != "" {
+		queryParams["grep"] = params.Grep
+	}
+	if params.Step != "" {
+		queryParams["step"] = params.Step
+	}
+	if params.WorkerRef != "" {
+		queryParams["workerRef"] = params.WorkerRef
+		queryParams["workerIndex"] = strconv.Itoa(params.WorkerIndex)
+	}
 	return c.makeRequest(ctx, APIRequest{
-		Method: "GET",
-		Path:   "/agent/test-workflow-executions/{executionId}/logs",
-		Scope:  ApiScopeOrgEnv,
-		PathParams: map[string]string{
-			"executionId": executionID,
-		},
+		Method:      "GET",
+		Path:        "/agent/test-workflow-executions/{executionId}/logs",
+		Scope:       ApiScopeOrgEnv,
+		PathParams:  map[string]string{"executionId": executionID},
+		QueryParams: queryParams,
 	})
 }
 
@@ -317,6 +334,9 @@ func (c *APIClient) ListExecutions(ctx context.Context, params tools.ListExecuti
 
 	if params.Selector != "" {
 		queryParams["selector"] = params.Selector
+	}
+	if params.TagSelector != "" {
+		queryParams["tagSelector"] = params.TagSelector
 	}
 	if params.TextSearch != "" {
 		queryParams["textSearch"] = params.TextSearch
@@ -864,6 +884,9 @@ func (c *APIClient) GetWorkflowDefinitions(ctx context.Context, params tools.Lis
 	} else {
 		queryParams["pageSize"] = "50" // Default limit
 	}
+	if params.FetchAll {
+		queryParams["fetchAll"] = "true"
+	}
 
 	result, err := c.makeRequest(ctx, APIRequest{
 		Method:      http.MethodGet,
@@ -897,10 +920,28 @@ func (c *APIClient) GetExecutions(ctx context.Context, params tools.ListExecutio
 	if params.TextSearch != "" {
 		queryParams["textSearch"] = params.TextSearch
 	}
+	if params.Selector != "" {
+		queryParams["selector"] = params.Selector
+	}
+	if params.TagSelector != "" {
+		queryParams["tagSelector"] = params.TagSelector
+	}
+	if params.Since != "" {
+		queryParams["since"] = params.Since
+	}
+	if params.StartDate != "" {
+		queryParams["startDate"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		queryParams["endDate"] = params.EndDate
+	}
 	if params.PageSize > 0 {
 		queryParams["pageSize"] = strconv.Itoa(params.PageSize)
 	} else {
 		queryParams["pageSize"] = "50" // Default limit
+	}
+	if params.FetchAll {
+		queryParams["fetchAll"] = "true"
 	}
 
 	result, err := c.makeRequest(ctx, APIRequest{

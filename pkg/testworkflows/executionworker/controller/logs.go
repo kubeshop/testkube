@@ -67,28 +67,36 @@ func (c *ContainerLog) Type() ContainerLogType {
 	return ContainerLogTypeLog
 }
 
-// getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
-// EOF may happen not only on the actual container end, but also in case of the log rotation.
-// @see {@link https://stackoverflow.com/a/68673451}
-func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time) (io.Reader, error) {
-	// Fail immediately if the context is finished
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
+type ContainerLogOptions struct {
+	InsecureSkipTLSVerifyBackend bool
+}
 
-	// Build Kubernetes structure for time
+func buildPodLogOptions(containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) *corev1.PodLogOptions {
 	var sinceTime *metav1.Time
 	if since != nil {
 		sinceTime = &metav1.Time{Time: *since}
 	}
 
+	return &corev1.PodLogOptions{
+		Container:                    containerName,
+		Follow:                       !isDone(),
+		Timestamps:                   true,
+		SinceTime:                    sinceTime,
+		InsecureSkipTLSVerifyBackend: opts.InsecureSkipTLSVerifyBackend,
+	}
+}
+
+// getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
+// EOF may happen not only on the actual container end, but also in case of the log rotation.
+// @see {@link https://stackoverflow.com/a/68673451}
+func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) (io.Reader, error) {
+	// Fail immediately if the context is finished
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	// Create logs stream request
-	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
-		Container:  containerName,
-		Follow:     !isDone(),
-		Timestamps: true,
-		SinceTime:  sinceTime,
-	})
+	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, buildPodLogOptions(containerName, isDone, since, opts))
 	var err error
 	var stream io.ReadCloser
 	retries := 0
@@ -114,7 +122,14 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 				return nil, err
 			}
 			delay = LogRetryOnConnectionLostDelay
-			log.DefaultLogger.Errorw("cluster's TLS error (likely CSR signing delay) while loading container logs, retrying", "pod", podName, "attempt", retries, "error", err)
+			log.DefaultLogger.Errorw(
+				"kubelet TLS error while loading container logs, retrying",
+				"pod", podName,
+				"container", containerName,
+				"attempt", retries,
+				"insecureSkipTLSVerifyBackend", opts.InsecureSkipTLSVerifyBackend,
+				"error", err,
+			)
 		case strings.Contains(errMsg, "proxy error"):
 			retries++
 			if retries > LogRetryMaxAttempts {
@@ -144,8 +159,21 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 
 type logStreamOpener func(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time) (io.Reader, error)
 
-func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog] {
-	return watchContainerLogsWithStream(parentCtx, getContainerLogsStream, clientSet, namespace, podName, containerName, bufferSize, isDone, isLastHint, LogStreamIdleTimeout)
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool, opts ContainerLogOptions) <-chan ChannelMessage[ContainerLog] {
+	return watchContainerLogsWithStream(
+		parentCtx,
+		func(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time) (io.Reader, error) {
+			return getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since, opts)
+		},
+		clientSet,
+		namespace,
+		podName,
+		containerName,
+		bufferSize,
+		isDone,
+		isLastHint,
+		LogStreamIdleTimeout,
+	)
 }
 
 func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpener, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool, idleTimeout time.Duration) <-chan ChannelMessage[ContainerLog] {
@@ -153,9 +181,26 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
 	var mu sync.Mutex
 	var lastActivity int64
+	var terminalDrainReady atomic.Bool
+	var streamCancelMu sync.Mutex
+	streamCancel := func() {}
 	atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
 	touch := func() {
 		atomic.StoreInt64(&lastActivity, time.Now().UnixNano())
+	}
+	cancelStream := func() {
+		streamCancelMu.Lock()
+		defer streamCancelMu.Unlock()
+		streamCancel()
+	}
+	openStream := func(since *time.Time) (io.Reader, error) {
+		streamCancelMu.Lock()
+		streamCancel()
+		streamCtx, streamCtxCancel := context.WithCancel(ctx)
+		streamCancel = streamCtxCancel
+		streamCancelMu.Unlock()
+
+		return opener(streamCtx, clientSet, namespace, podName, containerName, isDone, since)
 	}
 
 	sendError := func(err error) {
@@ -192,13 +237,12 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					if !isDone() {
+					if !isDone() && !terminalDrainReady.Load() {
 						continue
 					}
 					last := time.Unix(0, atomic.LoadInt64(&lastActivity))
 					if time.Since(last) >= idleTimeout {
-						ctxCancel()
-						return
+						cancelStream()
 					}
 				}
 			}
@@ -206,13 +250,16 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 	}
 
 	go func() {
-		defer ctxCancel()
+		defer func() {
+			cancelStream()
+			ctxCancel()
+		}()
 		var err error
 
 		var since *time.Time
 
 		// Create logs stream request
-		stream, err := opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
+		stream, err := openStream(since)
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -321,6 +368,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 		tsReader := newTimestampReader()
 		lastTs := time.Now()
 		completed := false
+		reopenedTerminalDrain := false
 
 		hasNewLine := false
 
@@ -335,7 +383,23 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 
 			// Handle context canceled
 			if errors.Is(err, context.Canceled) {
-				return
+				if ctx.Err() != nil || reopenedTerminalDrain {
+					return
+				}
+				reopenedTerminalDrain = true
+				since = common.Ptr(lastTs.Add(1))
+				stream, err = openStream(since)
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					sendError(err)
+					return
+				}
+				reader.Reset(stream)
+				readerAnyContent = false
+				touch()
+				continue
 			}
 
 			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
@@ -369,7 +433,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 			// Similarly for GOAWAY, that may be caused by too long connection.
 			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
 				since = common.Ptr(lastTs.Add(1))
-				stream, err = opener(ctx, clientSet, namespace, podName, containerName, isDone, since)
+				stream, err = openStream(since)
 				if err != nil {
 					return
 				}
@@ -436,6 +500,7 @@ func watchContainerLogsWithStream(parentCtx context.Context, opener logStreamOpe
 					item.Hint = instruction
 					if !completed && isLastHint(instruction) {
 						completed = true
+						terminalDrainReady.Store(true)
 					}
 				} else {
 					item.Output = instruction

@@ -37,7 +37,7 @@ jobs:
       - name: Lint Protocol Buffers
         uses: bufbuild/buf-action@v1
         with:
-          version: 1.56.0
+          version: 1.68.1
           # Prevent buf from attempting to create a PR comment.
           pr_comment: false
           # buf config files are in the ./proto directory.

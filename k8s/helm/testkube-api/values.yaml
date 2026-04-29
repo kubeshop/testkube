@@ -51,6 +51,27 @@ kubeVersion: ""
 ## create roles and rolebindings
 rbac:
   create: true
+  ## Additional resources the agent is allowed to watch.
+  ## Required when TestTriggers or WorkflowTriggers use `resourceRef` to
+  ## target a CRD that isn't covered by the default watchers role
+  ## (e.g. cert-manager.io/certificates, kafka.strimzi.io/kafkatopics).
+  ##
+  ## Applied to all three watcher role variants:
+  ##   - the cluster-wide ClusterRole (default, multinamespace.enabled=false)
+  ##   - the release-namespace Role (multinamespace.enabled=true)
+  ##   - the per-namespace Roles generated from additionalNamespaces
+  ##
+  ## Verbs default to [get, list, watch] (read-only; triggers do not mutate
+  ## the watched resource). Override per-entry if you need something else.
+  ##
+  ## Example:
+  ## extraWatchedResources:
+  ##   - apiGroups: ["cert-manager.io"]
+  ##     resources: ["certificates", "certificaterequests"]
+  ##   - apiGroups: ["kafka.strimzi.io"]
+  ##     resources: ["kafkatopics"]
+  ##     verbs: ["get", "list", "watch"]
+  extraWatchedResources: []
 
 ## Number of Testkube API Pod replicas
 replicaCount: 1
@@ -447,6 +468,11 @@ storage:
   SSL: false
   ## Skip Verify is used to configure storage client not to verify SSL certificates
   skipVerify: false
+  ## Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+  ## Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+  ## When true, set endpoint to the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+  ## the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+  useVirtualHostedStyle: false
   ## If enabled, will also require a CA certificate to be provided
   mountCACertificate: false
   certSecret:
@@ -469,7 +495,8 @@ storage:
 
 ## Logs storage for Testkube API.
 logs:
-  ## where the logs should be stored there are 2 possible valuse : minio|mongo
+  ## where the logs should be stored there are 2 possible values: minio|none
+  ## Use "none" to disable log persistence entirely (logs will not be written to any backend)
   storage: "minio"
   ## if storage is set to minio then the bucket must be specified, if minio with s3 is used make sure to use a unique name
   bucket: "testkube-logs"
@@ -515,6 +542,9 @@ securityContext: {}
 
 ## Toggle to enable debug mode
 enableDebugMode: false
+
+## Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+exportArchiveMaxSize: 104857600
 
 ## Service parameters
 service:
@@ -572,11 +602,12 @@ mongodb:
 postgresql:
   ## Deploy PostgreSQL server to the cluster
   enabled: false
-  ## Define dsn connection string
+  ## Define PostgreSQL DSN connection string
   dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
-  ## or use dsn in secrets
-  # secretName: testkube-secrets
-  # secretKey: postgresql-dsn
+  ## Name of the Kubernetes secret containing the PostgreSQL DSN
+  secretName: ""
+  ## Key in the Kubernetes secret containing the PostgreSQL DSN
+  secretKey: ""
 
 ## NATS parameters
 ## ref: https://github.com/nats-io/nats-server

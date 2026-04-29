@@ -494,7 +494,3 @@ type TestSuiteExecutionList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TestSuiteExecution `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&TestSuiteExecution{}, &TestSuiteExecutionList{})
-}

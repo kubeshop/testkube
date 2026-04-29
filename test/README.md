@@ -1,6 +1,10 @@
 # Test directory overview
 
-This directory contains 250+ structured TestWorkflows, serving a dual purpose: assuring the quality of Testkube and its features, and providing a set of real-life examples. It consists of several dozen directories for popular testing tools with example projects, and various TestWorkflows covering different approaches, use cases, and Testkube functionalities. In addition to that, it includes synthetic workflows validating edge cases and failure scenarios. There are also Testkube-specific workflows used internally, such as E2E tests, installation tests, Wizard example validation, and more.
+This directory contains 250+ structured TestWorkflows, serving a dual purpose: assuring the quality of Testkube and its features, and providing a set of real-life examples.
+
+It consists of several dozen directories for popular testing tools with example projects, and various TestWorkflows covering different approaches, use cases, and Testkube functionalities. In addition to that, it includes synthetic workflows validating edge cases and failure scenarios. There are also Testkube-specific workflows used internally, such as E2E tests, installation tests, Wizard example validation, and more.
+
+> **New here?** Open the [interactive TestWorkflows showcase](testworkflows-showcase.html) — a step-by-step visual walkthrough of how TestWorkflows are built.
 
 ## Directory structure
 
@@ -92,7 +96,7 @@ suites
     ├── playwright-suite-small.yaml
     ├── postman-suite-full.yaml
     ├── postman-suite-small.yaml
-    ... 
+    ...
     └── xunit-suite-full.yaml
 ```
 
@@ -119,7 +123,6 @@ env
     └── workflows
 ```
 
-
 ## Labels
 
 All of the workflows are labeled to simplify filtering them.
@@ -129,6 +132,7 @@ Tool-specific workflows also have the `tool` label - for example: `tool: postman
 There are additional labels for `artifacts` (`artifacts: "true"`) for the ones using artifacts, and `junit: "true"` for the ones generating JUnit reports.
 
 Additional labels:
+
 - `core-tests: special-cases` - Special cases
 - `core-tests: expected-fail` - Expected-fail scenarios
 - `core-tests: installation` - Installation tests

@@ -137,9 +137,6 @@ func (w *Webhook) ConvertDots(fn func(string) string) *Webhook {
 	if w.Config != nil {
 		w.Config = convertDotsInMap(w.Config, fn)
 	}
-	if w.Target != nil {
-		w.Target = convertDotsInMap(w.Target, fn)
-	}
 
 	return w
 }

@@ -55,6 +55,20 @@ func TestCloneWithRevision_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 
+	// Resolve the current HEAD commit of the requested branch so we can test
+	// checking out by commit hash (not just branch name).
+	commitHash := func(t *testing.T) string {
+		t.Helper()
+
+		cmd := exec.CommandContext(context.Background(), "git", "ls-remote", testRepoURL, "refs/heads/"+testBranch)
+		output, err := cmd.Output()
+		require.NoError(t, err)
+
+		parts := strings.Fields(string(output))
+		require.Greater(t, len(parts), 0, "expected ls-remote output to contain a commit hash")
+		return parts[0]
+	}(t)
+
 	testCases := []struct {
 		name          string
 		revision      string
@@ -71,6 +85,18 @@ func TestCloneWithRevision_Integration(t *testing.T) {
 				require.NoError(t, err)
 				branch := strings.TrimSpace(string(output))
 				assert.Equal(t, testBranch, branch)
+			},
+		},
+		{
+			name:     "clone by commit hash",
+			revision: commitHash,
+			verify: func(t *testing.T, outputDir string) {
+				// Check the actual commit HEAD.
+				cmd := exec.CommandContext(context.Background(), "git", "-C", outputDir, "rev-parse", "HEAD")
+				output, err := cmd.Output()
+				require.NoError(t, err)
+				head := strings.TrimSpace(string(output))
+				assert.Equal(t, commitHash, head)
 			},
 		},
 	}

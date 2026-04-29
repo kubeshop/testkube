@@ -41,4 +41,5 @@ type WebhookUpdateRequest struct {
 	Parameters         *[]WebhookParameterSchema      `json:"parameters,omitempty"`
 	WebhookTemplateRef **WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
 	Sync               *Syncable                      `json:"sync,omitempty"`
+	Target             *ExecutionTarget               `json:"target,omitempty"`
 }

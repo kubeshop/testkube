@@ -635,6 +635,18 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 
 // GetExecutionsTotals returns execution totals with filter
 func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (testkube.ExecutionsTotals, error) {
+	if len(filter) > 0 && isNameOnlyFilter(filter[0]) {
+		rows, err := r.queries.GetTestWorkflowExecutionsTotalsByWorkflow(ctx, sqlc.GetTestWorkflowExecutionsTotalsByWorkflowParams{
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+			WorkflowName:   toPgText(filter[0].Name()),
+		})
+		if err != nil {
+			return testkube.ExecutionsTotals{}, err
+		}
+		return totalsFromRowsByWorkflow(rows), nil
+	}
+
 	var params sqlc.GetTestWorkflowExecutionsTotalsParams
 	var err error
 	if len(filter) > 0 {
@@ -644,36 +656,99 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 		}
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsTotals(ctx, params)
+	var rows []sqlc.GetTestWorkflowExecutionsTotalsRow
+	err = r.withForceCustomPlan(ctx, func(qtx sqlc.TestWorkflowExecutionQueriesInterface) error {
+		var qerr error
+		rows, qerr = qtx.GetTestWorkflowExecutionsTotals(ctx, params)
+		return qerr
+	})
 	if err != nil {
 		return testkube.ExecutionsTotals{}, err
 	}
 
+	return totalsFromRows(rows), nil
+}
+
+func isNameOnlyFilter(f testworkflow.Filter) bool {
+	if f == nil || !f.NameDefined() {
+		return false
+	}
+	return !f.NamesDefined() &&
+		!f.TextSearchDefined() &&
+		!f.StartDateDefined() &&
+		!f.EndDateDefined() &&
+		!f.LastNDaysDefined() &&
+		!f.StatusesDefined() &&
+		!f.RunnerIDDefined() &&
+		!f.AssignedDefined() &&
+		!f.ActorNameDefined() &&
+		!f.ActorTypeDefined() &&
+		!f.GroupIDDefined() &&
+		!f.InitializedDefined() &&
+		!f.HealthRangesDefined() &&
+		f.Selector() == "" &&
+		f.LabelSelector() == nil &&
+		f.TagSelector() == ""
+}
+
+func totalsFromRows(rows []sqlc.GetTestWorkflowExecutionsTotalsRow) testkube.ExecutionsTotals {
 	totals := testkube.ExecutionsTotals{}
 	var sum int32
 
 	for _, row := range rows {
 		count := int32(row.Count)
+		accumulateTotal(&totals, row.Status, count)
 		sum += count
-
-		if !row.Status.Valid {
-			continue
-		}
-
-		switch testkube.TestWorkflowStatus(row.Status.String) {
-		case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
-			totals.Queued = count
-		case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
-			totals.Running = count
-		case testkube.PASSED_TestWorkflowStatus:
-			totals.Passed = count
-		case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus, testkube.CANCELED_TestWorkflowStatus:
-			totals.Failed = count
-		}
 	}
 	totals.Results = sum
+	return totals
+}
 
-	return totals, nil
+func totalsFromRowsByWorkflow(rows []sqlc.GetTestWorkflowExecutionsTotalsByWorkflowRow) testkube.ExecutionsTotals {
+	totals := testkube.ExecutionsTotals{}
+	var sum int32
+
+	for _, row := range rows {
+		count := int32(row.Count)
+		accumulateTotal(&totals, row.Status, count)
+		sum += count
+	}
+	totals.Results = sum
+	return totals
+}
+
+func accumulateTotal(totals *testkube.ExecutionsTotals, status pgtype.Text, count int32) {
+	if !status.Valid {
+		return
+	}
+	switch testkube.TestWorkflowStatus(status.String) {
+	case testkube.QUEUED_TestWorkflowStatus, testkube.ASSIGNED_TestWorkflowStatus, testkube.STARTING_TestWorkflowStatus, testkube.SCHEDULING_TestWorkflowStatus:
+		totals.Queued = count
+	case testkube.RUNNING_TestWorkflowStatus, testkube.PAUSING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus, testkube.RESUMING_TestWorkflowStatus, testkube.STOPPING_TestWorkflowStatus:
+		totals.Running = count
+	case testkube.PASSED_TestWorkflowStatus:
+		totals.Passed = count
+	case testkube.FAILED_TestWorkflowStatus, testkube.ABORTED_TestWorkflowStatus, testkube.CANCELED_TestWorkflowStatus:
+		totals.Failed = count
+	}
+}
+
+func (r *PostgresRepository) withForceCustomPlan(ctx context.Context, fn func(qtx sqlc.TestWorkflowExecutionQueriesInterface) error) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, "SET LOCAL plan_cache_mode = force_custom_plan"); err != nil {
+		return err
+	}
+
+	if err := fn(r.queries.WithTx(tx)); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // GetExecutions returns executions with filter
@@ -703,12 +778,41 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 
 // GetExecutionsSummary method
 func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecutionSummary, error) {
+	if isNameOnlyFilter(filter) {
+		rows, err := r.queries.GetTestWorkflowExecutionsSummaryByWorkflow(ctx, sqlc.GetTestWorkflowExecutionsSummaryByWorkflowParams{
+			OrganizationID: r.organizationID,
+			EnvironmentID:  r.environmentID,
+			WorkflowName:   toPgText(filter.Name()),
+			Fst:            int32(filter.Page() * filter.PageSize()),
+			Lmt:            int32(filter.PageSize()),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		result := make([]testkube.TestWorkflowExecutionSummary, len(rows))
+		for i, row := range rows {
+			execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
+			if err != nil {
+				return nil, err
+			}
+			result[i] = r.executionToSummary(*execution)
+		}
+		return result, nil
+	}
+
 	params, err := r.buildTestWorkflowExecutionParams(filter)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
+	// See GetExecutionsTotals for rationale on force_custom_plan.
+	var rows []sqlc.GetTestWorkflowExecutionsSummaryRow
+	err = r.withForceCustomPlan(ctx, func(qtx sqlc.TestWorkflowExecutionQueriesInterface) error {
+		var qerr error
+		rows, qerr = qtx.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
+		return qerr
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -774,7 +878,7 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1003,6 +1107,13 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 }
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
+	if len(reports) == 0 {
+		return nil
+	}
+	maxOrder, err := qtx.GetMaxReportOrder(ctx, executionId)
+	if err != nil {
+		return err
+	}
 	for i, report := range reports {
 		summary, err := toJSONB(report.Summary)
 		if err != nil {
@@ -1015,7 +1126,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 			Kind:        toPgText(report.Kind),
 			File:        toPgText(report.File),
 			Summary:     summary,
-			RepOrder:    int32(i + 1),
+			RepOrder:    maxOrder + int32(i) + 1,
 		})
 		if err != nil {
 			return err
@@ -1024,7 +1135,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 	return nil
 }
 
-func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+func (r *PostgresRepository) upsertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	global, err := toJSONB(agg.Global)
 	if err != nil {
 		return err
@@ -1035,7 +1146,7 @@ func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx
 		return err
 	}
 
-	return qtx.InsertTestWorkflowResourceAggregations(ctx, sqlc.InsertTestWorkflowResourceAggregationsParams{
+	return qtx.UpsertTestWorkflowResourceAggregations(ctx, sqlc.UpsertTestWorkflowResourceAggregationsParams{
 		ExecutionID: executionId,
 		Global:      global,
 		Step:        step,
@@ -1159,7 +1270,7 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 	}
 
 	if execution.ResourceAggregations != nil {
-		if err = r.insertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
+		if err = r.upsertResourceAggregations(ctx, qtx, execution.Id, execution.ResourceAggregations); err != nil {
 			return err
 		}
 	}
@@ -1302,7 +1413,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Prepare parameters
-	params := sqlc.UpdateTestWorkflowExecutionResultStrictParams{
+	params := sqlc.FinishTestWorkflowExecutionResultStrictParams{
 		ExecutionID:     id,
 		RunnerID:        toPgText(runnerId),
 		Status:          toPgText(string(*result.Status)),
@@ -1346,7 +1457,7 @@ func (r *PostgresRepository) FinishResultStrict(ctx context.Context, id, runnerI
 	}
 
 	// Update the result
-	updatedID, err := qtx.UpdateTestWorkflowExecutionResultStrict(ctx, params)
+	updatedID, err := qtx.FinishTestWorkflowExecutionResultStrict(ctx, params)
 	if err != nil {
 		return false, err
 	}
@@ -1441,15 +1552,7 @@ func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report
 
 	qtx := r.queries.WithTx(tx)
 
-	// Delete existing reports
-	err = qtx.DeleteTestWorkflowReports(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Insert new reports
-	err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report})
-	if err != nil {
+	if err = r.insertReports(ctx, qtx, id, []testkube.TestWorkflowReport{*report}); err != nil {
 		return err
 	}
 
@@ -1488,31 +1591,24 @@ func (r *PostgresRepository) UpdateTags(ctx context.Context, id string, tags map
 		return err
 	}
 
-	return r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
+	rowsAffected, err := r.queries.UpdateTestWorkflowExecutionTags(ctx, sqlc.UpdateTestWorkflowExecutionTagsParams{
 		Tags:           tagsJSON,
 		ExecutionID:    id,
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
 // UpdateResourceAggregations updates resource aggregations
 func (r *PostgresRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
-	global, err := toJSONB(resourceAggregations.Global)
-	if err != nil {
-		return err
-	}
-
-	step, err := toJSONB(resourceAggregations.Step)
-	if err != nil {
-		return err
-	}
-
-	return r.queries.UpdateTestWorkflowExecutionResourceAggregations(ctx, sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams{
-		ExecutionID: id,
-		Global:      global,
-		Step:        step,
-	})
+	return r.upsertResourceAggregations(ctx, r.queries, id, resourceAggregations)
 }
 
 // DeleteByTestWorkflow deletes executions by workflow name
@@ -1653,7 +1749,7 @@ func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testW
 // GetExecutionTags returns execution tags
 func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error) {
 	rows, err := r.queries.GetTestWorkflowExecutionTags(ctx, sqlc.GetTestWorkflowExecutionTagsParams{
-		WorkflowName:   testWorkflowName,
+		WorkflowName:   toPgText(testWorkflowName),
 		OrganizationID: r.organizationID,
 		EnvironmentID:  r.environmentID,
 	})

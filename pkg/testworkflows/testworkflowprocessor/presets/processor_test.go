@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
@@ -24,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 const (
@@ -126,6 +128,10 @@ func getSpec(actions actiontypes.ActionGroups) string {
 		panic(err)
 	}
 	return string(v)
+}
+
+func workflowInt(v int32) *intstr.IntOrString {
+	return &intstr.IntOrString{Type: intstr.Int, IntVal: v}
 }
 
 func TestProcessEmpty(t *testing.T) {
@@ -396,6 +402,101 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
 	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
+}
+
+func TestProcessShellWithNonStandardImageDisableFsGroupDefaulting(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepDefaults:   testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{Image: "custom:1.2.3"}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && assert.NotNil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext) {
+		assert.Equal(t, common.Ptr(int64(dummyGroupId)), res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.InitContainers, 1) && res.Job.Spec.Template.Spec.InitContainers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.InitContainers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessTemplateIntegerSecurityContextConfig(t *testing.T) {
+	templates := map[string]*testworkflowsv1.TestWorkflowTemplate{
+		"repro-integer-config": {
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Config: map[string]testworkflowsv1.ParameterSchema{
+						"runAsUser": {
+							Type:    testworkflowsv1.ParameterTypeInteger,
+							Default: workflowInt(65532),
+						},
+						"runAsGroup": {
+							Type:    testworkflowsv1.ParameterTypeInteger,
+							Default: workflowInt(65532),
+						},
+					},
+					Container: &testworkflowsv1.ContainerConfig{
+						SecurityContext: &testworkflowsv1.WorkflowSecurityContext{
+							RunAsUser:  testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsUser }}"),
+							RunAsGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
+						},
+					},
+					Pod: &testworkflowsv1.PodConfig{
+						SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+							FSGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
+						},
+					},
+				},
+			},
+		},
+	}
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Use: []testworkflowsv1.TemplateRef{{Name: "repro-integer-config"}},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+			},
+		},
+	}
+
+	err := testworkflowresolver.ApplyTemplates(wf, templates, nil)
+	assert.NoError(t, err)
+	runAsUser, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsUser", wf.Spec.Container.SecurityContext.RunAsUser)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsUser)
+
+	runAsGroup, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsGroup", wf.Spec.Container.SecurityContext.RunAsGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsGroup)
+
+	fsGroup, err := testworkflowsv1.ResolveWorkflowInt64("pod.securityContext.fsGroup", wf.Spec.Pod.SecurityContext.FSGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *fsGroup)
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+	assert.NoError(t, err)
+
+	assert.Len(t, res.Job.Spec.Template.Spec.InitContainers, 0)
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) {
+		assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser)
+		assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+	assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
 }
 
 func TestProcessBasicEnvReference(t *testing.T) {
@@ -1007,6 +1108,111 @@ func TestProcessShell(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcessShellExplicitFsGroup(t *testing.T) {
+	explicitFsGroup := int64(2222)
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+						FSGroup: testworkflowsv1.Int64ToWorkflowIntOrString(common.Ptr(explicitFsGroup)),
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Equal(t, common.Ptr(explicitFsGroup), res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && assert.NotNil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext) {
+		assert.Equal(t, common.Ptr(explicitFsGroup), res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessShellDisableFsGroupDefaulting(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessParallelWorkerDisableFsGroupDefaulting(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{{
+				Parallel: &testworkflowsv1.StepParallel{
+					Steps: []testworkflowsv1.Step{
+						{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+					},
+				},
+			}},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessParallelWorkerDisableFsGroupDefaultingOverride(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: *(&testworkflowsv1.StepParallel{
+			Pod: &testworkflowsv1.PodConfig{
+				DisableFsGroupDefaulting: common.Ptr(true),
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		}).NewTestWorkflowSpec(),
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
 }
 
 func TestProcessConsecutiveAlways(t *testing.T) {

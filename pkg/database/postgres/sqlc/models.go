@@ -67,6 +67,8 @@ type TestWorkflowExecution struct {
 	EnvironmentID             string             `db:"environment_id" json:"environment_id"`
 	Runtime                   []byte             `db:"runtime" json:"runtime"`
 	SilentMode                []byte             `db:"silent_mode" json:"silent_mode"`
+	WorkflowName              pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	Status                    pgtype.Text        `db:"status" json:"status"`
 }
 
 type TestWorkflowOutput struct {

@@ -70,6 +70,12 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return err
 	}
+
+	// Empty URL means the server has no log storage configured; skip the upload.
+	if url == "" {
+		return nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return err
@@ -94,6 +100,12 @@ func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return nil, err
 	}
+
+	// Empty URL means the server has no log storage configured; return an empty stream.
+	if url == "" {
+		return io.NopCloser(http.NoBody), nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

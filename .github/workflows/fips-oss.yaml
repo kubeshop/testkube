@@ -52,7 +52,7 @@ jobs:
 
       - name: Trigger FIPS OSS build in testkube-fips-enable-images
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           VERSION: ${{ steps.version.outputs.version }}
           OSS_REF: ${{ steps.version.outputs.oss_ref }}

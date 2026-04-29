@@ -24,6 +24,7 @@ type controllersRegistry struct {
 	namespaces             NamespacesRegistry
 	runnerId               string
 	ips                    PodIpsRegistry
+	controllerOptions      controller.ControllerOptions
 	controllers            map[string]controller.Controller
 	controllerReservations map[string]int
 	mu                     sync.RWMutex
@@ -39,11 +40,18 @@ type ControllersRegistry interface {
 	RegisterPodIP(id, podIp string)
 }
 
-func NewControllersRegistry(clientSet kubernetes.Interface, namespaces NamespacesRegistry, runnerId string, podIpCacheSize int) ControllersRegistry {
+func NewControllersRegistry(clientSet kubernetes.Interface, namespaces NamespacesRegistry, runnerId string, podIpCacheSize int, opts ...controller.ControllerOptions) ControllersRegistry {
+	var controllerOptions controller.ControllerOptions
+	for _, opt := range opts {
+		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
+			controllerOptions.WorkflowLogsInsecureSkipTLSVerifyBackend = true
+		}
+	}
 	r := &controllersRegistry{
 		clientSet:              clientSet,
 		namespaces:             namespaces,
 		runnerId:               runnerId,
+		controllerOptions:      controllerOptions,
 		controllers:            make(map[string]controller.Controller),
 		controllerReservations: make(map[string]int),
 	}
@@ -125,8 +133,9 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints exec
 				}
 				scheduledAt := common.ResolvePtr(hints.ScheduledAt, time.Time{}) // TODO: consider caching or making it optional
 				nextCtrl, err := controller.New(ctx, r.clientSet, namespace, id, scheduledAt, controller.ControllerOptions{
-					Signature: signature,
-					RunnerId:  r.runnerId,
+					Signature:                                signature,
+					RunnerId:                                 r.runnerId,
+					WorkflowLogsInsecureSkipTLSVerifyBackend: r.controllerOptions.WorkflowLogsInsecureSkipTLSVerifyBackend,
 				})
 				if err != nil {
 					return nil, err

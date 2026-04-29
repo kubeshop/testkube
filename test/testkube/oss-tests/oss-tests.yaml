@@ -21,8 +21,8 @@ spec:
   steps:
     - name: Install Testkube CLI and jq
       shell: |
-        wget -qO - https://repo.testkube.io/key.pub | apt-key add -
-        echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+        wget -qO- https://repo.testkube.io/key.pub | gpg --dearmor | tee /etc/apt/keyrings/testkube.gpg > /dev/null
+        echo "deb [signed-by=/etc/apt/keyrings/testkube.gpg] https://repo.testkube.io/linux linux main" | tee /etc/apt/sources.list.d/testkube.list
         apt-get update && apt-get install -y testkube jq
         testkube disable telemetry
     - name: gcloud auth

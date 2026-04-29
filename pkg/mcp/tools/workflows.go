@@ -43,6 +43,7 @@ type ListWorkflowsParams struct {
 	Page          int
 	Status        string
 	GroupID       string
+	FetchAll      bool
 }
 
 type WorkflowLister interface {

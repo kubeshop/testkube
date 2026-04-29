@@ -22,11 +22,12 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 			return
 		case <-ticker.C:
 			s.logger.Debugf("trigger service: execution scraper component: starting new ticker iteration")
-			for triggerName, status := range s.triggerStatus {
+			for _, entry := range s.snapshotStatuses() {
+				status := entry.status
 				if status.hasActiveTests() {
 					s.checkForRunningTestWorkflowExecutions(ctx, status)
 					if !status.hasActiveTests() {
-						s.logger.Debugf("marking status as finished for testtrigger %s", triggerName)
+						s.logger.Debugf("marking status as finished for testtrigger %s", entry.key)
 						status.done()
 					}
 				}

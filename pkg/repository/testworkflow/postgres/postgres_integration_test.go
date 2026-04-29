@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
 	"github.com/kubeshop/testkube/pkg/utils/test"
@@ -383,4 +384,413 @@ func TestPostgresRepositoryCountExecutions_Integration(t *testing.T) {
 // StringPtr is a helper function to create string pointers
 func StringPtr(s string) *string {
 	return &s
+}
+
+func TestPostgresDenormalizedExecutionColumns_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_denorm_status_name")
+	t.Cleanup(cleanup)
+
+	ctx := context.Background()
+
+	orgID := "test-org"
+	envID := "test-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	insertExecution := func(t *testing.T, id string, num int32) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+		`, id, orgID, envID, id, "default", num)
+		require.NoError(t, err)
+	}
+
+	readDenormalized := func(t *testing.T, id string) (workflowName, status *string) {
+		t.Helper()
+		err := testDB.Pool.QueryRow(ctx,
+			`SELECT workflow_name, status FROM test_workflow_executions WHERE id = $1`,
+			id,
+		).Scan(&workflowName, &status)
+		require.NoError(t, err)
+		return
+	}
+
+	t.Run("status trigger populates on insert into test_workflow_results", func(t *testing.T) {
+		insertExecution(t, "exec-status-insert", 1)
+
+		// Before any result exists, status is NULL.
+		_, status := readDenormalized(t, "exec-status-insert")
+		assert.Nil(t, status, "status should be NULL before any test_workflow_results row exists")
+
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, $2, NOW(), NOW())
+		`, "exec-status-insert", "queued")
+		require.NoError(t, err)
+
+		_, status = readDenormalized(t, "exec-status-insert")
+		require.NotNil(t, status)
+		assert.Equal(t, "queued", *status)
+	})
+
+	t.Run("status trigger updates on test_workflow_results.status change", func(t *testing.T) {
+		insertExecution(t, "exec-status-update", 2)
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, $2, NOW(), NOW())
+		`, "exec-status-update", "running")
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx,
+			`UPDATE test_workflow_results SET status = $1 WHERE execution_id = $2`,
+			"passed", "exec-status-update",
+		)
+		require.NoError(t, err)
+
+		_, status := readDenormalized(t, "exec-status-update")
+		require.NotNil(t, status)
+		assert.Equal(t, "passed", *status)
+	})
+
+	t.Run("workflow_name trigger populates on insert with workflow_type='workflow'", func(t *testing.T) {
+		insertExecution(t, "exec-name-insert", 3)
+
+		name, _ := readDenormalized(t, "exec-name-insert")
+		assert.Nil(t, name, "workflow_name should be NULL before any test_workflows row exists")
+
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-insert", "workflow", "my-workflow", "default")
+		require.NoError(t, err)
+
+		name, _ = readDenormalized(t, "exec-name-insert")
+		require.NotNil(t, name)
+		assert.Equal(t, "my-workflow", *name)
+	})
+
+	t.Run("workflow_name trigger ignores workflow_type='resolved_workflow'", func(t *testing.T) {
+		insertExecution(t, "exec-name-resolved", 4)
+
+		// Insert only the resolved_workflow row — should not populate workflow_name.
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-resolved", "resolved_workflow", "resolved-name", "default")
+		require.NoError(t, err)
+
+		name, _ := readDenormalized(t, "exec-name-resolved")
+		assert.Nil(t, name, "workflow_name must not be populated by resolved_workflow rows")
+
+		// Now insert the canonical 'workflow' row — workflow_name should appear.
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-resolved", "workflow", "canonical-name", "default")
+		require.NoError(t, err)
+
+		name, _ = readDenormalized(t, "exec-name-resolved")
+		require.NotNil(t, name)
+		assert.Equal(t, "canonical-name", *name)
+	})
+
+	t.Run("workflow_name trigger updates when canonical row's name changes", func(t *testing.T) {
+		insertExecution(t, "exec-name-update", 5)
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, $2, $3, $4, NOW(), NOW())
+		`, "exec-name-update", "workflow", "old-name", "default")
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx,
+			`UPDATE test_workflows SET name = $1 WHERE execution_id = $2 AND workflow_type = 'workflow'`,
+			"new-name", "exec-name-update",
+		)
+		require.NoError(t, err)
+
+		name, _ := readDenormalized(t, "exec-name-update")
+		require.NotNil(t, name)
+		assert.Equal(t, "new-name", *name)
+	})
+
+	t.Run("GetExecutionsTotals reads denormalized columns and filters by workflow_name", func(t *testing.T) {
+		// Set up two distinct workflows with mixed statuses.
+		// wf-a: 2 passed, 1 failed
+		// wf-b: 1 passed, 2 failed
+		cases := []struct {
+			id       string
+			num      int32
+			workflow string
+			status   string
+		}{
+			{"tot-a-1", 100, "wf-a", "passed"},
+			{"tot-a-2", 101, "wf-a", "passed"},
+			{"tot-a-3", 102, "wf-a", "failed"},
+			{"tot-b-1", 103, "wf-b", "passed"},
+			{"tot-b-2", 104, "wf-b", "failed"},
+			{"tot-b-3", 105, "wf-b", "failed"},
+		}
+		for _, c := range cases {
+			insertExecution(t, c.id, c.num)
+			_, err := testDB.Pool.Exec(ctx, `
+				INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+				VALUES ($1, $2, NOW(), NOW())
+			`, c.id, c.status)
+			require.NoError(t, err)
+			_, err = testDB.Pool.Exec(ctx, `
+				INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+				VALUES ($1, $2, $3, $4, NOW(), NOW())
+			`, c.id, "workflow", c.workflow, "default")
+			require.NoError(t, err)
+		}
+
+		// Sanity: triggers populated all rows.
+		var nullCount int
+		require.NoError(t, testDB.Pool.QueryRow(ctx, `
+			SELECT COUNT(*) FROM test_workflow_executions
+			WHERE id LIKE 'tot-%' AND (status IS NULL OR workflow_name IS NULL)
+		`).Scan(&nullCount))
+		assert.Equal(t, 0, nullCount, "all denormalized columns should be populated by triggers")
+
+		// Filter by workflow_name — must match what the trigger wrote into e.workflow_name.
+		filterA := testworkflow.NewExecutionsFilter().WithName("wf-a")
+		resultA, err := repo.GetExecutionsTotals(ctx, *filterA)
+		require.NoError(t, err)
+		assert.Equal(t, int32(2), resultA.Passed, "wf-a should have 2 passed")
+		assert.Equal(t, int32(1), resultA.Failed, "wf-a should have 1 failed")
+		assert.Equal(t, int32(3), resultA.Results, "wf-a should have 3 total")
+
+		filterB := testworkflow.NewExecutionsFilter().WithName("wf-b")
+		resultB, err := repo.GetExecutionsTotals(ctx, *filterB)
+		require.NoError(t, err)
+		assert.Equal(t, int32(1), resultB.Passed, "wf-b should have 1 passed")
+		assert.Equal(t, int32(2), resultB.Failed, "wf-b should have 2 failed")
+		assert.Equal(t, int32(3), resultB.Results, "wf-b should have 3 total")
+	})
+}
+
+func TestPostgresGetExecutionTags_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_execution_tags")
+	defer cleanup()
+
+	ctx := context.Background()
+
+	orgID := "tags-org"
+	envID := "tags-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	insertExec := func(t *testing.T, id, org, env, workflow, tags string) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, created_at, updated_at, tags)
+			VALUES ($1, $2, $3, $4, 'default', 1, NOW(), NOW(), NOW(), $5::jsonb)
+		`, id, org, env, id, tags)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', $2, 'default', NOW(), NOW())
+		`, id, workflow)
+		require.NoError(t, err)
+	}
+
+	insertExec(t, "tag-1", orgID, envID, "wf-alpha", `{"env": "prod", "team": "backend"}`)
+	insertExec(t, "tag-2", orgID, envID, "wf-alpha", `{"env": "staging", "team": "backend"}`)
+
+	insertExec(t, "tag-3", orgID, envID, "wf-beta", `{"env": "dev", "owner": "alice"}`)
+
+	insertExec(t, "tag-4", orgID, envID, "wf-alpha", `{}`)     // empty object
+	insertExec(t, "tag-5", orgID, envID, "wf-alpha", `null`)   // jsonb NULL
+	insertExec(t, "tag-6", orgID, envID, "wf-alpha", `"text"`) // not an object
+
+	insertExec(t, "tag-other-org", "other-org", envID, "wf-alpha", `{"env": "leaked"}`)
+	insertExec(t, "tag-other-env", orgID, "other-env", "wf-alpha", `{"env": "leaked"}`)
+
+	var nullCount int
+	require.NoError(t, testDB.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM test_workflow_executions
+		WHERE organization_id = $1 AND environment_id = $2 AND workflow_name IS NULL
+	`, orgID, envID).Scan(&nullCount))
+	require.Equal(t, 0, nullCount, "trigger must populate workflow_name for all executions")
+
+	t.Run("empty workflow_name returns union of all tags in org/env", func(t *testing.T) {
+		tags, err := repo.GetExecutionTags(ctx, "")
+		require.NoError(t, err)
+
+		// Values are deduplicated and sorted by the query.
+		assert.Equal(t, map[string][]string{
+			"env":   {"dev", "prod", "staging"},
+			"team":  {"backend"},
+			"owner": {"alice"},
+		}, tags)
+	})
+
+	t.Run("non-empty workflow_name returns only that workflow's tags", func(t *testing.T) {
+		tags, err := repo.GetExecutionTags(ctx, "wf-alpha")
+		require.NoError(t, err)
+
+		assert.Equal(t, map[string][]string{
+			"env":  {"prod", "staging"},
+			"team": {"backend"},
+		}, tags)
+	})
+
+	t.Run("workflow_name with no executions returns empty result", func(t *testing.T) {
+		tags, err := repo.GetExecutionTags(ctx, "wf-does-not-exist")
+		require.NoError(t, err)
+		assert.Empty(t, tags)
+	})
+}
+
+func TestPostgresGetLatestByTestWorkflow_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_latest_by_workflow")
+	defer cleanup()
+
+	ctx := context.Background()
+
+	orgID := "latest-org"
+	envID := "latest-env"
+	repo := NewPostgresRepository(
+		testDB.Pool,
+		WithOrganizationID(orgID),
+		WithEnvironmentID(envID),
+	)
+
+	type spec struct {
+		id          string
+		org, env    string
+		workflow    string
+		number      int32
+		scheduledAt string // ISO timestamp literal
+		statusAt    string
+		status      string
+	}
+	insertExec := func(t *testing.T, s spec) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, status_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $1, 'default', $4, $5::timestamptz, $6::timestamptz, NOW(), NOW())
+		`, s.id, s.org, s.env, s.number, s.scheduledAt, s.statusAt)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, $2, NOW(), NOW())
+		`, s.id, s.status)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', $2, 'default', NOW(), NOW())
+		`, s.id, s.workflow)
+		require.NoError(t, err)
+	}
+
+	insertExec(t, spec{id: "lat-sched-newest", org: orgID, env: envID, workflow: "wf-target", number: 1, scheduledAt: "2026-04-24T12:00:00Z", statusAt: "2026-04-22T00:00:00Z", status: "passed"})
+	insertExec(t, spec{id: "lat-status-newest", org: orgID, env: envID, workflow: "wf-target", number: 2, scheduledAt: "2026-04-22T12:00:00Z", statusAt: "2026-04-24T00:00:00Z", status: "failed"})
+	insertExec(t, spec{id: "lat-number-highest", org: orgID, env: envID, workflow: "wf-target", number: 99, scheduledAt: "2026-04-20T12:00:00Z", statusAt: "2026-04-20T00:00:00Z", status: "passed"})
+
+	insertExec(t, spec{id: "noise-other-workflow", org: orgID, env: envID, workflow: "wf-other", number: 1000, scheduledAt: "2026-04-25T00:00:00Z", statusAt: "2026-04-25T00:00:00Z", status: "passed"})
+	insertExec(t, spec{id: "noise-other-org", org: "other-org", env: envID, workflow: "wf-target", number: 1000, scheduledAt: "2026-04-25T00:00:00Z", statusAt: "2026-04-25T00:00:00Z", status: "passed"})
+	insertExec(t, spec{id: "noise-other-env", org: orgID, env: "other-env", workflow: "wf-target", number: 1000, scheduledAt: "2026-04-25T00:00:00Z", statusAt: "2026-04-25T00:00:00Z", status: "passed"})
+
+	t.Run("LatestSortByScheduledAt picks newest scheduled_at", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-target", testworkflow.LatestSortByScheduledAt)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "lat-sched-newest", got.Id)
+	})
+
+	t.Run("LatestSortByStatusAt picks newest status_at", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-target", testworkflow.LatestSortByStatusAt)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "lat-status-newest", got.Id)
+	})
+
+	t.Run("LatestSortByNumber picks highest number", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-target", testworkflow.LatestSortByNumber)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "lat-number-highest", got.Id)
+	})
+
+	t.Run("unknown workflow returns no rows", func(t *testing.T) {
+		got, err := repo.GetLatestByTestWorkflow(ctx, "wf-does-not-exist", testworkflow.LatestSortByScheduledAt)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+}
+
+func TestPostgresGetLatestTestWorkflowExecutionByTestWorkflow_AmbiguousFlags_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, cleanup := testpostgres.PreparePostgresTestDatabase(t, "repo_get_latest_ambiguous")
+	defer cleanup()
+
+	ctx := context.Background()
+	orgID := "ambig-org"
+	envID := "ambig-env"
+
+	// Three executions where each sort key picks a different row.
+	insert := func(id, scheduledAt, statusAt string, number int32) {
+		t.Helper()
+		_, err := testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_executions
+			(id, organization_id, environment_id, name, namespace, number, scheduled_at, status_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $1, 'default', $4, $5::timestamptz, $6::timestamptz, NOW(), NOW())
+		`, id, orgID, envID, number, scheduledAt, statusAt)
+		require.NoError(t, err)
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflow_results (execution_id, status, created_at, updated_at)
+			VALUES ($1, 'passed', NOW(), NOW())
+		`, id)
+		require.NoError(t, err)
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO test_workflows (execution_id, workflow_type, name, namespace, created, updated)
+			VALUES ($1, 'workflow', 'wf-target', 'default', NOW(), NOW())
+		`, id)
+		require.NoError(t, err)
+	}
+	insert("ambig-sched", "2026-04-24T12:00:00Z", "2026-04-22T00:00:00Z", 1)
+	insert("ambig-status", "2026-04-22T12:00:00Z", "2026-04-24T00:00:00Z", 2)
+	insert("ambig-number", "2026-04-20T12:00:00Z", "2026-04-20T00:00:00Z", 99)
+
+	queries := sqlc.New(testDB.Pool)
+
+	// (true, true) must fall back to scheduled_at, matching the original
+	// CASE...ELSE behavior.
+	row, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		OrganizationID: orgID,
+		EnvironmentID:  envID,
+		WorkflowName:   "wf-target",
+		SortByNumber:   true,
+		SortByStatus:   true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "ambig-sched", row.ID, "(sort_by_number=true, sort_by_status=true) must fall back to scheduled_at")
+
+	// (false, false) is the documented default and must also pick scheduled_at.
+	row, err = queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, sqlc.GetLatestTestWorkflowExecutionByTestWorkflowParams{
+		OrganizationID: orgID,
+		EnvironmentID:  envID,
+		WorkflowName:   "wf-target",
+		SortByNumber:   false,
+		SortByStatus:   false,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "ambig-sched", row.ID, "(false, false) must use scheduled_at")
 }

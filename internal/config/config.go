@@ -35,18 +35,19 @@ type OSSControlPlaneConfig struct {
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
-	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket          string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
-	StorageExpiration      int    `envconfig:"STORAGE_EXPIRATION"`
-	StorageAccessKeyID     string `envconfig:"STORAGE_ACCESSKEYID" default:""`
-	StorageSecretAccessKey string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
-	StorageRegion          string `envconfig:"STORAGE_REGION" default:""`
-	StorageToken           string `envconfig:"STORAGE_TOKEN" default:""`
-	StorageSSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
-	StorageSkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
-	StorageCertFile        string `envconfig:"STORAGE_CERT_FILE" default:""`
-	StorageKeyFile         string `envconfig:"STORAGE_KEY_FILE" default:""`
-	StorageCAFile          string `envconfig:"STORAGE_CA_FILE" default:""`
+	StorageEndpoint              string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket                string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration            int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageAccessKeyID           string `envconfig:"STORAGE_ACCESSKEYID" default:""`
+	StorageSecretAccessKey       string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
+	StorageRegion                string `envconfig:"STORAGE_REGION" default:""`
+	StorageToken                 string `envconfig:"STORAGE_TOKEN" default:""`
+	StorageSSL                   bool   `envconfig:"STORAGE_SSL" default:"false"`
+	StorageSkipVerify            bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
+	StorageCertFile              string `envconfig:"STORAGE_CERT_FILE" default:""`
+	StorageKeyFile               string `envconfig:"STORAGE_KEY_FILE" default:""`
+	StorageCAFile                string `envconfig:"STORAGE_CA_FILE" default:""`
+	StorageUseVirtualHostedStyle bool   `envconfig:"STORAGE_USE_VIRTUAL_HOSTED_STYLE" default:"false"`
 
 	LogsBucket  string `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage string `envconfig:"LOGS_STORAGE" default:""`
@@ -235,9 +236,12 @@ type Config struct {
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
 	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 
-	FeatureCloudStorage     bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
-	TestTriggerControlPlane bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
-	ForceSuperAgentMode     bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
+	ExportArchiveMaxSize                     int  `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
+	FeatureCloudStorage                      bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+	TestWorkflowLogArchiveRequired           bool `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
+	WorkflowLogsInsecureSkipTLSVerifyBackend bool `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
+	TestTriggerControlPlane                  bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	ForceSuperAgentMode                      bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
 type DeprecatedConfig struct {

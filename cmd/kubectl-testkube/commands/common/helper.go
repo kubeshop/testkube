@@ -28,10 +28,10 @@ import (
 )
 
 type HelmOptions struct {
-	Name, Namespace, Chart, Values string
-	NoMinio, NoMongo, NoConfirm    bool
-	MinioReplicas, MongoReplicas   int
-	SetOptions, ArgOptions         map[string]string
+	Name, Namespace, Chart, Values                 string
+	NoMinio, NoMongo, NoPostgres, NoConfirm        bool
+	MinioReplicas, MongoReplicas, PostgresReplicas int
+	SetOptions, ArgOptions                         map[string]string
 
 	// On-prem
 	LicenseKey    string
@@ -62,6 +62,8 @@ type HelmGenericOptions struct {
 const (
 	github                = "GitHub"
 	gitlab                = "GitLab"
+	google                = "Google"
+	emailLink             = "Email (magic link)"
 	dockerDaemonPrefixLen = 8
 	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
@@ -125,9 +127,10 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 		return cliErr
 	}
 
-	// disable mongo and minio for cloud
+	// disable mongo, minio, and postgres for cloud
 	options.NoMinio = true
 	options.NoMongo = true
+	options.NoPostgres = true
 
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
@@ -357,9 +360,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
 	settings["testkube-api.cloud.key"] = options.Master.AgentToken
-	settings["testkube-api.cloud.uiURL"] = options.Master.URIs.Ui
-	settings["testkube-logs.pro.url"] = options.Master.URIs.Logs
-	settings["testkube-logs.pro.key"] = options.Master.AgentToken
+	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
 
 	if isMigration {
 		settings["testkube-api.cloud.migrate"] = "true"
@@ -367,12 +368,10 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 	if options.Master.EnvId != "" {
 		settings["testkube-api.cloud.envId"] = options.Master.EnvId
-		settings["testkube-logs.pro.envId"] = options.Master.EnvId
 	}
 
 	if options.Master.OrgId != "" {
 		settings["testkube-api.cloud.orgId"] = options.Master.OrgId
-		settings["testkube-logs.pro.orgId"] = options.Master.OrgId
 	}
 
 	return appendHelmArgs(args, options, settings)
@@ -381,13 +380,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
 	args, settings := prepareCommonHelmArgs(options)
-
-	if options.NoMinio {
-		settings["testkube-api.logs.storage"] = "mongo"
-	} else {
-		settings["testkube-api.logs.storage"] = "minio"
-	}
-
+	settings["testkube-api.logs.storage"] = "minio"
 	return appendHelmArgs(args, options, settings)
 }
 
@@ -401,10 +394,21 @@ func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	settings := map[string]string{
 		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
 		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
-		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
 		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
 		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
-		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
+		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+	}
+
+	if options.MinioReplicas > 0 {
+		settings["testkube-api.minio.replicas"] = fmt.Sprintf("%d", options.MinioReplicas)
+	}
+
+	if options.MongoReplicas > 0 {
+		settings["mongodb.replicas"] = fmt.Sprintf("%d", options.MongoReplicas)
+	}
+
+	if options.PostgresReplicas > 0 {
+		settings["postgresql.primary.replicaCount"] = fmt.Sprintf("%d", options.PostgresReplicas)
 	}
 
 	if options.Values != "" {
@@ -429,12 +433,13 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
+	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", true, "don't install PostgreSQL")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
@@ -456,7 +461,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
-	cfg.CloudContext.TokenType = config.TokenTypeOIDC
+	cfg.CloudContext.TokenType = tokenType
 	if token != "" {
 		cfg.CloudContext.ApiKey = token
 	}
@@ -482,8 +487,8 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 		updated = true
 	}
-	if options.Master.URIs.Api != "" {
-		cfg.CloudContext.AgentUri = options.Master.URIs.Api
+	if options.Master.URIs.Agent != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Agent
 		updated = true
 	}
 	if options.Master.URIs.Ui != "" {
@@ -492,6 +497,9 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		if options.Master.URIs.Agent == "" {
+			cfg.CloudContext.AgentUri = options.Master.URIs.Api
+		}
 		updated = true
 	}
 	if options.Master.URIs.Auth != "" {
@@ -536,7 +544,7 @@ func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
 	return false
 }
 
-func UpdateTokens(cfg config.Data, token, refreshToken string) error {
+func UpdateTokens(cfg config.Data, tokenType, token, refreshToken string) error {
 	var updated bool
 	if token != cfg.CloudContext.ApiKey {
 		cfg.CloudContext.ApiKey = token
@@ -544,6 +552,10 @@ func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 	}
 	if refreshToken != cfg.CloudContext.RefreshToken {
 		cfg.CloudContext.RefreshToken = refreshToken
+		updated = true
+	}
+	if tokenType != "" && tokenType != cfg.CloudContext.TokenType {
+		cfg.CloudContext.TokenType = tokenType
 		updated = true
 	}
 
@@ -600,19 +612,32 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	return cfg
 }
 
-func LoginUser(authUri string, customConnector bool, port int) (string, string, error) {
+// LoginUser runs the interactive login method selector and returns the chosen
+// tokenType together with the tokens. Picking "Email (magic link)" delegates to
+// the email-link flow; everything else uses the Dex OIDC flow.
+func LoginUser(authUri, apiUri string, customConnector bool, port int) (tokenType, idToken, refreshToken string, err error) {
 	ui.H1("Login")
 	connectorID := ""
 	if !customConnector {
-		connectorID = ui.Select("Choose your login method", []string{github, gitlab})
+		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
 	}
 
-	// Handle the common case where th Demo instance is running on reserved port
+	if connectorID == emailLink {
+		emailAddr := ui.TextInput("Enter your email", "")
+		if emailAddr == "" {
+			return "", "", "", fmt.Errorf("email is required for magic-link login")
+		}
+		idToken, refreshToken, err = LoginUserEmailLink(apiUri, emailAddr, port)
+		if err != nil {
+			return "", "", "", err
+		}
+		return config.TokenTypeEmailLink, idToken, refreshToken, nil
+	}
 
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
 	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port)
 	if err != nil {
-		return "", "", fmt.Errorf("cloud login: %w", err)
+		return "", "", "", fmt.Errorf("cloud login: %w", err)
 	}
 
 	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
@@ -621,18 +646,17 @@ func LoginUser(authUri string, customConnector bool, port int) (string, string, 
 	ui.Paragraph("")
 
 	if ok := ui.Confirm("Continue"); !ok {
-		return "", "", fmt.Errorf("login cancelled")
+		return "", "", "", fmt.Errorf("login cancelled")
 	}
 
 	ui.Debug("Opening login page in browser to get a token", authUrl)
-	// open browser with login page and redirect to localhost
 	open.Run(authUrl)
 
-	idToken, refreshToken, err := uiGetToken(tokenChan)
+	idToken, refreshToken, err = uiGetToken(tokenChan)
 	if err != nil {
-		return "", "", fmt.Errorf("getting token")
+		return "", "", "", fmt.Errorf("getting token: %w", err)
 	}
-	return idToken, refreshToken, nil
+	return config.TokenTypeOIDC, idToken, refreshToken, nil
 }
 
 // extractAndCleanDomain extracts domain from email and removes dots and hyphens for connector ID
@@ -722,6 +746,34 @@ func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, erro
 	return idToken, refreshToken, nil
 }
 
+func LoginUserEmailLink(apiUrl, email string, port int) (string, string, error) {
+	ui.Debug("Requesting email-link for", email)
+
+	// Bound the callback server's lifetime to the same 5-minute budget as
+	// uiGetToken so a user walking away doesn't leak the loopback listener.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	tokenChan, err := cloudlogin.CloudLoginEmailLink(ctx, apiUrl, email, port)
+	if err != nil {
+		return "", "", fmt.Errorf("email link login: %w", err)
+	}
+
+	ui.Paragraph(fmt.Sprintf("We've sent a sign-in link to %s.", email))
+	ui.Paragraph("Open the email on this machine and click the link to complete login.")
+	ui.Paragraph("(the CLI will continue automatically once the link is clicked)")
+	ui.Paragraph("")
+
+	idToken, refreshToken, err := uiGetToken(tokenChan)
+	if err != nil {
+		return "", "", fmt.Errorf("getting token: %w", err)
+	}
+	if idToken == "" || refreshToken == "" {
+		return "", "", fmt.Errorf("email-link login did not return tokens")
+	}
+	return idToken, refreshToken, nil
+}
+
 func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
 	// wait for token received to browser
 	s := ui.NewSpinner("waiting for auth token")
@@ -766,6 +818,63 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 	}
 
 	return strings.TrimSpace(string(out)), nil
+}
+
+func KubectlScaleStatefulSet(namespace, statefulset string, replicas int) (string, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+
+	// kubectl patch --namespace=$n statefulset $1 -p "{\"spec\":{\"replicas\": $2}}"
+	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "statefulset", statefulset, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+// KubectlResourceExists checks whether a Kubernetes resource of the given type and name exists
+// in the specified namespace. It returns true when the resource is found.
+func KubectlResourceExists(namespace, resourceType, name string) (bool, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return false, cliErr
+	}
+
+	out, err := process.Execute(kubectl, "get", resourceType, name, "--namespace", namespace, "--ignore-not-found")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(string(out)) != "", nil
+}
+
+// DetectDatabaseType inspects the given namespace and returns which database is deployed:
+// config.DatabaseTypeMongoDB, config.DatabaseTypePostgreSQL, or "" if neither is found.
+func DetectDatabaseType(namespace string) (string, *CLIError) {
+	if exists, err := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking deployment: MongoDB",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	} else if exists {
+		return config.DatabaseTypeMongoDB, nil
+	}
+	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql"); err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking statefulset: PostgreSQL",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	} else if exists {
+		return config.DatabaseTypePostgreSQL, nil
+	}
+	return "", nil
 }
 
 func KubectlLogs(namespace string, labels map[string]string) error {
