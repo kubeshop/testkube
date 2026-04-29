@@ -52,7 +52,7 @@ require (
 	github.com/ohler55/ojg v1.28.1
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/onsi/ginkgo/v2 v2.28.2
-	github.com/onsi/gomega v1.39.1
+	github.com/onsi/gomega v1.40.0
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.0.1
 	github.com/pkg/errors v0.9.1
