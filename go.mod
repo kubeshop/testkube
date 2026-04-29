@@ -51,8 +51,8 @@ require (
 	github.com/nats-io/nats.go v1.51.0
 	github.com/ohler55/ojg v1.28.1
 	github.com/olekukonko/tablewriter v1.1.4
-	github.com/onsi/ginkgo/v2 v2.28.2
-	github.com/onsi/gomega v1.39.1
+	github.com/onsi/ginkgo/v2 v2.28.3
+	github.com/onsi/gomega v1.40.0
 	github.com/otiai10/copy v1.14.1
 	github.com/pashagolub/pgxmock/v5 v5.0.1
 	github.com/pkg/errors v0.9.1
@@ -195,7 +195,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
-	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
+	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
