@@ -10561,6 +10561,9 @@ components:
           type: integer
           format: int64
           description: test workflow execution generation
+        error:
+          type: string
+          description: error message if the execution failed
 
     TestWorkflowTagValue:
       type: object
