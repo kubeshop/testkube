@@ -45,10 +45,10 @@ spec:
     - name: K6_WEB_DASHBOARD_EXPORT
       value: /data/artifacts/k6-test-report.html
   steps:
+  - name: create /data/artifacts
+    shell: mkdir -p /data/artifacts
   - name: Run k6 load test
-    shell: |
-      mkdir -p /data/artifacts
-      k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} load-test.js --log-output=file=/data/artifacts/fails.log
+    shell: k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} load-test.js --log-output=file=/data/artifacts/fails.log
     artifacts:
       paths:
       - /data/artifacts/**
