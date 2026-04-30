@@ -40,10 +40,15 @@ spec:
         secretKeyRef:
           name: testkube-agent-secrets
           key: dev-load-tests-testTokenLoadTests-key
+    - name: K6_WEB_DASHBOARD
+      value: "true"
+    - name: K6_WEB_DASHBOARD_EXPORT
+      value: /data/artifacts/k6-test-report.html
   steps:
   - name: Run k6 load test
     shell: |
-      k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} load-test.js --log-output=file=logs/fails.log
+      mkdir -p /data/artifacts
+      k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} -e JUNIT_REPORT_FILE=/data/artifacts/junit.xml load-test.js --log-output=file=/data/artifacts/fails.log
     artifacts:
       paths:
-      - logs/**
+      - /data/artifacts/**
