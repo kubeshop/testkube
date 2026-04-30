@@ -273,7 +273,7 @@ func getProcessStatus(err error) (bool, string, int) {
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
 			details := e.String()
-			return details == "signal: killed", details, e.ExitCode()
+			return details == "signal: killed" || details == "signal: terminated", details, e.ExitCode()
 		}
 		return false, "", 1
 	}
