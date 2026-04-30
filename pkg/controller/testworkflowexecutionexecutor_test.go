@@ -224,6 +224,45 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 			wantError: "dial tcp: lookup testkube-api-server on 192.168.0.1:53: no such host",
 			wantEvent: "Warning ExecutionFailed dial tcp: lookup testkube-api-server on 192.168.0.1:53: no such host",
 		},
+		// Should clear a previous error on successful execution.
+		"success clears previous error": {
+			objs: []client.Object{
+				&testworkflowsv1.TestWorkflowExecution{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TestWorkflowExecution",
+						APIVersion: "testworkflows.testkube.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-workflow-execution",
+						Namespace:  "test-namespace",
+						Generation: 2,
+					},
+					Spec: testworkflowsv1.TestWorkflowExecutionSpec{
+						TestWorkflow: &v1.LocalObjectReference{Name: "test-workflow"},
+					},
+					Status: testworkflowsv1.TestWorkflowExecutionStatus{
+						Generation: 1,
+						Error:      "previous error from failed attempt",
+					},
+				},
+			},
+			request: reconcile.Request{
+				NamespacedName: client.ObjectKey{
+					Name:      "test-workflow-execution",
+					Namespace: "test-namespace",
+				},
+			},
+			expect: &cloud.ScheduleRequest{
+				Executions: []*cloud.ScheduleExecution{{
+					Selector: &cloud.ScheduleResourceSelector{Name: "test-workflow"},
+				}},
+				RunningContext: &cloud.RunningContext{
+					Name: "test-workflow-execution",
+					Type: cloud.RunningContextType_KUBERNETESOBJECT,
+				},
+			},
+			wantEvent: "Normal ExecutionStarted Started test workflow \"test-workflow\"",
+		},
 	}
 
 	for name, test := range tests {
@@ -246,14 +285,18 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 			}
 
 			// After a successful execution, verify that Status.Generation was updated
-			// to match Generation so the deduplication guard prevents re-execution.
-			if exec.req != nil {
+			// to match Generation so the deduplication guard prevents re-execution,
+			// and that any previous error has been cleared.
+			if exec.req != nil && test.wantError == "" {
 				var twe testworkflowsv1.TestWorkflowExecution
 				if err := k8sClient.Get(context.Background(), test.request.NamespacedName, &twe); err != nil {
 					t.Fatalf("get TestWorkflowExecution: %v", err)
 				}
 				if twe.Status.Generation != twe.Generation {
 					t.Errorf("Status.Generation = %d, want %d", twe.Status.Generation, twe.Generation)
+				}
+				if twe.Status.Error != "" {
+					t.Errorf("Status.Error = %q, want empty", twe.Status.Error)
 				}
 			}
 

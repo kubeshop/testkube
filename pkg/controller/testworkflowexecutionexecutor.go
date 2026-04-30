@@ -115,6 +115,7 @@ func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRe
 			return ctrl.Result{}, fmt.Errorf("getting fresh execution %q for status update: %w", twe.Name, err)
 		}
 		statusTWE.Status.Generation = twe.Generation
+		statusTWE.Status.Error = ""
 		if err := client.Status().Update(ctx, &statusTWE); err != nil {
 			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
