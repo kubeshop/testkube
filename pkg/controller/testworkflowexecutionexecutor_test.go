@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -321,7 +322,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 					if got != test.wantEvent {
 						t.Errorf("event = %q, want %q", got, test.wantEvent)
 					}
-				default:
+				case <-time.After(time.Second):
 					t.Error("expected an event to be recorded, but none was")
 				}
 			}
