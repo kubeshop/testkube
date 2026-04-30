@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"k8s.io/client-go/tools/record"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	testkubev1 "github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -105,7 +106,7 @@ func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRe
 			if updateErr := client.Status().Update(ctx, &statusTWE); updateErr != nil {
 				return ctrl.Result{}, fmt.Errorf("updating error status for execution %q: %w (original error: %w)", twe.Name, updateErr, execErr)
 			}
-			recorder.Event(&statusTWE, "Warning", "ExecutionFailed", err.Error())
+			recorder.Event(&statusTWE, corev1.EventTypeWarning, "ExecutionFailed", err.Error())
 			return ctrl.Result{}, nil
 		}
 
@@ -120,7 +121,7 @@ func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRe
 			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
 
-		recorder.Event(&statusTWE, "Normal", "ExecutionStarted", fmt.Sprintf("Started test workflow %q", twe.Spec.TestWorkflow.Name))
+		recorder.Event(&statusTWE, corev1.EventTypeNormal, "ExecutionStarted", fmt.Sprintf("Started test workflow %q", twe.Spec.TestWorkflow.Name))
 
 		log := ctrl.LoggerFrom(ctx)
 		log.Info("executed test workflow", "name", twe.Spec.TestWorkflow.Name)
