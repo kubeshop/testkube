@@ -5,7 +5,11 @@ metadata:
   name: cloud-ui-e2e
   labels:
     core-tests: cloud-ui-e2e
+    tool: playwright
     artifacts: "true"
+    junit: "true"
+    playwright-traces: "on"
+    category: e2e-ui-testing
 spec:
   content:
     git:
@@ -63,9 +67,12 @@ metadata:
   name: cloud-ui-e2e-distributed
   labels:
     core-tests: cloud-ui-e2e
+    tool: playwright
     artifacts: "true"
-    distributed: "true"
     junit: "true"
+    playwright-traces: "on"
+    category: e2e-ui-testing
+    distributed: "true"
 spec:
   content:
     git:

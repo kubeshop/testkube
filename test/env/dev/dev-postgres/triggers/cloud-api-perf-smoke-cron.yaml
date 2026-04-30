@@ -1,0 +1,20 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: cloud-api-perf-smoke-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: workflow-trigger
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      workflows:
+      - name: cloud-api-perf-smoke
+  events:
+  - cronjob:
+      cron: "45 1 * * *" # once a day at 01:45
