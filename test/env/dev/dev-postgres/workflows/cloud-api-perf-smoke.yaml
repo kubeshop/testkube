@@ -48,7 +48,7 @@ spec:
   - name: Run k6 load test
     shell: |
       mkdir -p /data/artifacts
-      k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} -e JUNIT_REPORT_FILE=/data/artifacts/junit.xml load-test.js --log-output=file=/data/artifacts/fails.log
+      k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} load-test.js --log-output=file=/data/artifacts/fails.log
     artifacts:
       paths:
       - /data/artifacts/**
