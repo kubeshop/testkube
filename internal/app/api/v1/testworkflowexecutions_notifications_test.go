@@ -36,6 +36,59 @@ func TestStreamableWorkflowNotificationsAppliesResumeCursorAndSequencing(t *test
 	require.NotNil(t, notifications[1].Result)
 }
 
+func TestStreamableWorkflowNotificationsSendsHeartbeatWhileQuiet(t *testing.T) {
+	done := make(chan struct{})
+	defer close(done)
+	source := make(chan *testkube.TestWorkflowExecutionNotification)
+
+	notifications := streamableWorkflowNotificationsWithHeartbeat(done, source, 0, 5*time.Millisecond)
+
+	select {
+	case notification := <-notifications:
+		assert.Equal(t, "heartbeat", notification.EventType)
+		assert.Zero(t, notification.SeqNo)
+		assert.Empty(t, notification.Log)
+		assert.Nil(t, notification.Output)
+		assert.Nil(t, notification.Result)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected heartbeat while workflow notification stream is quiet")
+	}
+}
+
+func TestStreamableWorkflowNotificationsHeartbeatDoesNotAdvanceSeqNo(t *testing.T) {
+	done := make(chan struct{})
+	defer close(done)
+	source := make(chan *testkube.TestWorkflowExecutionNotification, 1)
+
+	notifications := streamableWorkflowNotificationsWithHeartbeat(done, source, 0, 5*time.Millisecond)
+
+	select {
+	case notification := <-notifications:
+		require.Equal(t, "heartbeat", notification.EventType)
+		assert.Zero(t, notification.SeqNo)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected initial heartbeat")
+	}
+
+	source <- &testkube.TestWorkflowExecutionNotification{Log: "after quiet period"}
+
+	timeout := time.After(100 * time.Millisecond)
+	for {
+		select {
+		case notification := <-notifications:
+			if notification.EventType == "heartbeat" {
+				continue
+			}
+			assert.Equal(t, "log", notification.EventType)
+			assert.Equal(t, int32(1), notification.SeqNo)
+			assert.Equal(t, "after quiet period", notification.Log)
+			return
+		case <-timeout:
+			t.Fatal("expected durable log notification after heartbeat")
+		}
+	}
+}
+
 func TestWorkflowNotificationEventType(t *testing.T) {
 	assert.Equal(t, "log", workflowNotificationEventType(testkube.TestWorkflowExecutionNotification{Log: "hello"}))
 	assert.Equal(t, "result", workflowNotificationEventType(testkube.TestWorkflowExecutionNotification{Result: &testkube.TestWorkflowResult{}}))
