@@ -30,8 +30,8 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
-        memory: 2Gi
+        cpu: 512m
+        memory: 256Mi
     workingDir: /data/repo/js/packages/k6-load-tests
     image: grafana/k6:1.7.1
     env:
