@@ -7098,6 +7098,9 @@ spec:
             status:
               description: TestWorkflowExecutionStatus specification
               properties:
+                error:
+                  description: error message if the execution failed
+                  type: string
                 generation:
                   description: test workflow execution generation
                   format: int64
