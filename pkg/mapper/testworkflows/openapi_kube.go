@@ -1613,10 +1613,11 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 	}
 }
 
-func MapTestWorkflowExecutionStatusAPIToKube(v *testkube.TestWorkflowExecution, generation int64) testworkflowsv1.TestWorkflowExecutionStatus {
+func MapTestWorkflowExecutionStatusAPIToKube(v *testkube.TestWorkflowExecution, generation int64, errMessage string) testworkflowsv1.TestWorkflowExecutionStatus {
 	return testworkflowsv1.TestWorkflowExecutionStatus{
 		LatestExecution: MapTestWorkflowExecutionAPIToKube(v),
 		Generation:      generation,
+		Error:           errMessage,
 	}
 }
 
