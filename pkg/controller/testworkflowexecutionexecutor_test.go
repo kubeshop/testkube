@@ -86,7 +86,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 					Type: cloud.RunningContextType_KUBERNETESOBJECT,
 				},
 			},
-			wantEvent: "Normal ExecutionStarted Started test workflow \"test-workflow\"",
+			wantEvent: "Normal ExecutionScheduled Scheduled test workflow \"test-workflow\"",
 		},
 		// Should pass through a basic test workflow execution with target selectors.
 		"target": {
@@ -144,7 +144,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 					Type: cloud.RunningContextType_KUBERNETESOBJECT,
 				},
 			},
-			wantEvent: "Normal ExecutionStarted Started test workflow \"test-workflow\"",
+			wantEvent: "Normal ExecutionScheduled Scheduled test workflow \"test-workflow\"",
 		},
 		// Should not execute if the generation has not changed.
 		"ignore generation": {
@@ -223,7 +223,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 			},
 			execErr:   fmt.Errorf("dial tcp: lookup testkube-api-server on 192.168.0.1:53: no such host"),
 			wantError: "dial tcp: lookup testkube-api-server on 192.168.0.1:53: no such host",
-			wantEvent: "Warning ExecutionFailed dial tcp: lookup testkube-api-server on 192.168.0.1:53: no such host",
+			wantEvent: "Warning ExecutionNotScheduled dial tcp: lookup testkube-api-server on 192.168.0.1:53: no such host",
 		},
 		// Should clear a previous error on successful execution.
 		"success clears previous error": {
@@ -262,7 +262,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 					Type: cloud.RunningContextType_KUBERNETESOBJECT,
 				},
 			},
-			wantEvent: "Normal ExecutionStarted Started test workflow \"test-workflow\"",
+			wantEvent: "Normal ExecutionScheduled Scheduled test workflow \"test-workflow\"",
 		},
 	}
 
