@@ -140,6 +140,11 @@ func (s *groupStage) Flatten() []Stage {
 
 	// Flatten when it is completely virtual stage
 	if s.virtual {
+		if s.condition != "" {
+			for _, ch := range s.children {
+				ch.AppendConditions(s.condition)
+			}
+		}
 		return s.children
 	}
 
