@@ -1667,3 +1667,88 @@ func TestProcess_MergingActions(t *testing.T) {
 	assert.Equal(t, wantActions, res.LiteActions())
 	assert.Equal(t, res.Job.Spec.Template.Spec.Containers[0].Image, "custom-image:1.2.3")
 }
+
+func TestProcess_ConditionWithArtifacts(t *testing.T) {
+	// Regression test: when a step has a condition (env.TEST) and artifacts,
+	// the group must not evaluate the condition before the Container transition
+	// that loads scoped env vars. The group should have condition "true" and
+	// children should carry the actual condition.
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Container: &testworkflowsv1.ContainerConfig{
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "TEST", Value: "true"}},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepMeta: testworkflowsv1.StepMeta{Condition: "env.TEST"},
+					StepOperations: testworkflowsv1.StepOperations{
+						Shell: `echo "test"`,
+						Artifacts: &testworkflowsv1.StepArtifacts{
+							Paths: []string{"*.xml"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	assert.NoError(t, err)
+
+	// Find the Declare actions to verify conditions
+	actions := res.LiteActions()
+	var declares []lite.ActionDeclare
+	for _, group := range actions {
+		for _, a := range group {
+			if a.Declare != nil {
+				declares = append(declares, *a.Declare)
+			}
+		}
+	}
+
+	// There should be 4 declares: root, group, shell, artifacts
+	assert.Len(t, declares, 4)
+
+	// Root condition should be "true"
+	assert.Equal(t, "true", declares[0].Condition, "root should have condition 'true'")
+	assert.Equal(t, constants.RootOperationName, declares[0].Ref)
+
+	// Group condition should be "true" (not "env.TEST") so it starts
+	// before Container transition loads env vars
+	groupRef := declares[1].Ref
+	assert.Equal(t, "true", declares[1].Condition, "group should have condition 'true', not the step condition")
+
+	// Shell condition should contain "env.TEST" (evaluated after Container transition)
+	assert.Contains(t, declares[2].Condition, "env.TEST", "shell should have env.TEST condition")
+	assert.Contains(t, declares[2].Parents, groupRef, "shell should be child of group")
+
+	// Artifacts condition should also contain "env.TEST"
+	assert.Contains(t, declares[3].Condition, "env.TEST", "artifacts should have env.TEST condition")
+	assert.Contains(t, declares[3].Parents, groupRef, "artifacts should be child of group")
+
+	// Verify the ordering: group Start must come before Container transitions,
+	// and Container transitions must come before child Starts
+	var foundGroupStart, foundContainer, foundChildStart bool
+	for _, group := range actions {
+		for _, a := range group {
+			if a.Start != nil && *a.Start == groupRef {
+				foundGroupStart = true
+				assert.False(t, foundContainer, "group Start should come before any Container transition")
+			}
+			if a.Container != nil && foundGroupStart && !foundChildStart {
+				foundContainer = true
+			}
+			if a.Start != nil && *a.Start == declares[2].Ref {
+				foundChildStart = true
+				assert.True(t, foundContainer, "child Start should come after Container transition")
+			}
+		}
+	}
+	assert.True(t, foundGroupStart, "should find group Start")
+	assert.True(t, foundContainer, "should find Container transition")
+	assert.True(t, foundChildStart, "should find child Start")
+}
