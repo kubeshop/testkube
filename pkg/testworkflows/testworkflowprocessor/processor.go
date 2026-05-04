@@ -71,7 +71,11 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	if step.Condition == "" {
 		self.SetCondition("passed")
 	} else {
-		self.SetCondition(step.Condition)
+		// Use a literal "true" for the group so it always starts.
+		// The actual step condition is pushed down to each child operation,
+		// where it will be evaluated after the Container transition that
+		// loads scoped environment variables.
+		self.SetCondition("true")
 	}
 
 	// Run operations
@@ -82,7 +86,7 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 		}
 		if stage != nil {
 			if step.Condition != "" {
-				stage.SetCondition(step.Condition)
+				stage.AppendConditions(step.Condition)
 			}
 			self.Add(stage)
 		}
