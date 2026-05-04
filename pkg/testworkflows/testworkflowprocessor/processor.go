@@ -74,7 +74,12 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 		// Use a literal "true" for the group so it always starts.
 		// The actual step condition is pushed down to each child operation,
 		// where it will be evaluated after the Container transition that
-		// loads scoped environment variables.
+		// loads scoped environment variables. This matters when the group
+		// is not flattenable (e.g., step has both shell and artifacts),
+		// because the group's Start is processed before any Container
+		// transition that activates scoped env vars like env.TEST.
+		// For single-child groups, flattening merges this "true" into
+		// the child's condition via AppendConditions.
 		self.SetCondition("true")
 	}
 
