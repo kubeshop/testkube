@@ -84,7 +84,7 @@ func (l *testWorkflowExecutionListener) update(execution *testkube.TestWorkflowE
 		log.DefaultLogger.Errorw("failed to get TestWorkflowExecution resource", "id", execution.Id, "error", err)
 		return
 	}
-	obj.Status = testworkflows.MapTestWorkflowExecutionStatusAPIToKube(execution, obj.Generation)
+	obj.Status = testworkflows.MapTestWorkflowExecutionStatusAPIToKube(execution, obj.Generation, "")
 	err = l.kubeClient.Status().Update(l.ctx, obj)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to update TestWorkflowExecution resource", "id", execution.Id, "error", err)

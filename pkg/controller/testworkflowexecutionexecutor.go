@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -25,13 +27,13 @@ func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkf
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowExecution{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), exec)); err != nil {
+		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), mgr.GetEventRecorderFor("testworkflowexecution-controller"), exec)); err != nil {
 		return fmt.Errorf("create new controller for TestWorkflowExecution: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowExecutionExecutor(client client.Client, exec TestWorkflowExecutor) reconcile.Reconciler {
+func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRecorder, exec TestWorkflowExecutor) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		// Get and validate the TestWorkflowExecution.
 		var twe testworkflowsv1.TestWorkflowExecution
@@ -93,7 +95,19 @@ func testWorkflowExecutionExecutor(client client.Client, exec TestWorkflowExecut
 		})
 
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, err)
+			execErr := fmt.Errorf("executing test workflow from execution %q: %w", twe.Name, err)
+			// Update the status with the error and set Generation to prevent infinite retries.
+			var statusTWE testworkflowsv1.TestWorkflowExecution
+			if getErr := client.Get(ctx, req.NamespacedName, &statusTWE); getErr != nil {
+				return ctrl.Result{}, fmt.Errorf("getting fresh execution %q for error status update: %w (original error: %w)", twe.Name, getErr, execErr)
+			}
+			statusTWE.Status.Generation = twe.Generation
+			statusTWE.Status.Error = err.Error()
+			if updateErr := client.Status().Update(ctx, &statusTWE); updateErr != nil {
+				return ctrl.Result{}, fmt.Errorf("updating error status for execution %q: %w (original error: %w)", twe.Name, updateErr, execErr)
+			}
+			recorder.Event(&statusTWE, corev1.EventTypeWarning, "ExecutionNotScheduled", err.Error())
+			return ctrl.Result{}, nil
 		}
 
 		// Update the status generation to prevent re-execution on operator restart.
@@ -102,9 +116,12 @@ func testWorkflowExecutionExecutor(client client.Client, exec TestWorkflowExecut
 			return ctrl.Result{}, fmt.Errorf("getting fresh execution %q for status update: %w", twe.Name, err)
 		}
 		statusTWE.Status.Generation = twe.Generation
+		statusTWE.Status.Error = ""
 		if err := client.Status().Update(ctx, &statusTWE); err != nil {
 			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
+
+		recorder.Event(&statusTWE, corev1.EventTypeNormal, "ExecutionScheduled", fmt.Sprintf("Scheduled test workflow %q", twe.Spec.TestWorkflow.Name))
 
 		log := ctrl.LoggerFrom(ctx)
 		log.Info("executed test workflow", "name", twe.Spec.TestWorkflow.Name)
