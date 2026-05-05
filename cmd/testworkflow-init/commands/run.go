@@ -38,13 +38,33 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	}
 
 	// Resolve the command to run
+	expandedCommand := make([]string, 0, len(command))
 	for i := range command {
+		// Check if this argument is a pure template expression that may resolve to an array
+		if innerExpr, isPure := expressions.ExtractPureTemplateExpression(command[i]); isPure {
+			expr, err := expressions.CompileAndResolve(innerExpr, machine, expressions.FinalizerFail)
+			if err != nil {
+				output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
+			}
+			if expr.Static() != nil {
+				if items, sliceErr := expr.Static().SliceValue(); sliceErr == nil {
+					for _, item := range items {
+						sv := expressions.NewValue(item)
+						s, _ := sv.StringValue()
+						expandedCommand = append(expandedCommand, s)
+					}
+					continue
+				}
+			}
+		}
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
 			output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 		}
-		command[i], _ = value.Static().StringValue()
+		s, _ := value.Static().StringValue()
+		expandedCommand = append(expandedCommand, s)
 	}
+	command = expandedCommand
 
 	// Run the operation with context
 	execution := orchestration.Executions.CreateWithContext(ctx, command[0], command[1:])

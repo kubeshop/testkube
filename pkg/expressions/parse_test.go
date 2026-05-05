@@ -122,6 +122,34 @@ func TestCompileTemplate(t *testing.T) {
 	assert.Equal(t, `abc50def`, must(MustCompileTemplate(`abc{{ 5 + 45 }}def`).Static().StringValue()))
 }
 
+func TestExtractPureTemplateExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantExpr string
+		wantOk   bool
+	}{
+		{`{{ ['1','2','3'] }}`, `['1','2','3']`, true},
+		{`{{ list('a','b') }}`, `list('a','b')`, true},
+		{`{{ split('x,y') }}`, `split('x,y')`, true},
+		{`{{ 5 + 3 }}`, `5 + 3`, true},
+		{`prefix{{ expr }}`, ``, false},
+		{`{{ expr }}suffix`, ``, false},
+		{`no expression`, ``, false},
+		{`{{ }}`, ``, false},
+		{`{{expr}}`, `expr`, true},
+		{`  {{ expr }}  `, `expr`, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			gotExpr, gotOk := ExtractPureTemplateExpression(tc.input)
+			assert.Equal(t, tc.wantOk, gotOk)
+			if tc.wantOk {
+				assert.Equal(t, tc.wantExpr, gotExpr)
+			}
+		})
+	}
+}
+
 func TestCompilePartialResolution(t *testing.T) {
 	vm := NewMachine().
 		Register("someint", 555).

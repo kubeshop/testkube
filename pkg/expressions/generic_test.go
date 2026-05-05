@@ -62,6 +62,10 @@ type testObjInterfaced struct {
 	Value map[string][]interface{} `expr:"force"`
 }
 
+type testObjWithSliceTemplate struct {
+	Args *[]string `expr:"template"`
+}
+
 var testMachine = NewMachine().
 	Register("dummy", "test").
 	Register("ten", 10)
@@ -304,6 +308,72 @@ func TestGenericSimplifyNestedWithInterfaces(t *testing.T) {
 			"dummy": {"125"},
 		},
 	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyArrayExpansionInStringSlice(t *testing.T) {
+	args := []string{"{{ list('1','2','3') }}"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"1", "2", "3"}, obj.Args)
+}
+
+func TestGenericSimplifyArrayExpansionWithList(t *testing.T) {
+	args := []string{"{{ list('a','b','c') }}"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"a", "b", "c"}, obj.Args)
+}
+
+func TestGenericSimplifyArrayExpansionWithSplit(t *testing.T) {
+	args := []string{"{{ split('x,y,z') }}"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"x", "y", "z"}, obj.Args)
+}
+
+func TestGenericSimplifyArrayExpansionMixed(t *testing.T) {
+	args := []string{"first", "{{ list('a','b') }}", "last"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"first", "a", "b", "last"}, obj.Args)
+}
+
+func TestGenericSimplifyArrayExpansionNonArray(t *testing.T) {
+	// When expression doesn't resolve to an array, it should be stringified as before
+	args := []string{"{{ 'hello' }}"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"hello"}, obj.Args)
+}
+
+func TestGenericSimplifyArrayExpansionNonPureTemplate(t *testing.T) {
+	// When template has surrounding text, it should be stringified as before
+	args := []string{"prefix{{ list('1','2') }}suffix"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"prefix1,2suffix"}, obj.Args)
+}
+
+func TestGenericSimplifyForceArrayExpansionInterface(t *testing.T) {
+	got := []interface{}{"{{ list('x','y','z') }}"}
+	err := SimplifyForce(&got)
+
+	want := []interface{}{"x", "y", "z"}
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
