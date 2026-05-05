@@ -137,8 +137,10 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 		}
 		// Handle potential array expansion for template strings in slices.
 		// When a slice element is a pure template expression like "{{ expr }}"
-		// and the expression resolves to an array, expand the array into the
-		// parent slice instead of stringifying it.
+		// and the expression resolves to an array, expand the array elements
+		// into the parent slice individually. When the template has surrounding
+		// literal text (e.g., "prefix{{ expr }}suffix") or the expression resolves
+		// to a non-array value, the existing stringification behavior is preserved.
 		if t.value == "template" || force {
 			newItems := make([]reflect.Value, 0, v.Len())
 			anyExpanded := false
