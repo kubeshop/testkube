@@ -47,6 +47,7 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 				output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 			}
 			if expr.Static() != nil {
+				// Array result: expand into individual arguments
 				if items, sliceErr := expr.Static().SliceValue(); sliceErr == nil {
 					for _, item := range items {
 						sv := expressions.NewValue(item)
@@ -55,6 +56,10 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 					}
 					continue
 				}
+				// Non-array result: reuse the already-resolved value
+				s, _ := expr.Static().StringValue()
+				expandedCommand = append(expandedCommand, s)
+				continue
 			}
 		}
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)

@@ -155,6 +155,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 								expr, compileErr = expr.Resolve(FinalizerFail)
 							}
 							if compileErr == nil && expr.Static() != nil {
+								// Array result: expand into parent slice
 								if items, sliceErr := expr.Static().SliceValue(); sliceErr == nil {
 									for _, item := range items {
 										sv := NewValue(item)
@@ -164,6 +165,12 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 									anyExpanded = true
 									continue
 								}
+								// Non-array result: reuse the already-resolved value
+								// to avoid re-compiling the same expression as a template.
+								s, _ := expr.Static().StringValue()
+								changed = s != str
+								newItems = append(newItems, reflect.ValueOf(s).Convert(v.Type().Elem()))
+								continue
 							}
 						}
 					}
@@ -185,7 +192,11 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				for i, item := range newItems {
 					newSlice.Index(i).Set(item)
 				}
-				v.Set(newSlice)
+				if v.CanSet() {
+					v.Set(newSlice)
+				} else if ptr.Kind() == reflect.Interface {
+					ptr.Set(newSlice)
+				}
 			} else if changed {
 				for i, item := range newItems {
 					v.Index(i).Set(item)
