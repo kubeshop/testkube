@@ -251,8 +251,16 @@ func (n *NATSBus) reconnect() error {
 
 	// Hold the write lock only for the pointer swap.
 	n.connMu.Lock()
+	oldNC := n.nc
 	n.nc = conn
 	n.connMu.Unlock()
+
+	// Explicitly close the old connection after releasing the write lock.
+	// If the connection is already in CLOSED state this is a no-op; the
+	// explicit call makes the intent clear and guards the edge case where
+	// the connection reached a non-CLOSED terminal state without triggering
+	// the closed handler.
+	oldNC.Close()
 	return nil
 }
 
