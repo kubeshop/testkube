@@ -359,7 +359,10 @@ func (n *NATSBus) TraceEvents() {
 	}
 
 	// Store with empty queue so reconnect() re-registers it via plain Subscribe.
-	n.subscriptions.Store("trace:"+topic, &subscriptionEntry{
+	// Uses "trace:" prefix to separate from regular subscriptions (which use
+	// queueName format). TraceEvents is intended to be permanent; no Unsubscribe.
+	key := "trace:" + topic
+	n.subscriptions.Store(key, &subscriptionEntry{
 		topic:   topic,
 		queue:   "",
 		handler: handler,
