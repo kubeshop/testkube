@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/internal/app/api/apiutils"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -29,7 +29,7 @@ func NewDeleteWebhookCmd() *cobra.Command {
 			if len(args) > 0 {
 				name = args[0]
 				err := client.DeleteWebhook(name)
-				if ignoreNotFound && apiutils.IsNotFound(err) {
+				if ignoreNotFound && apiclient.IsNotFound(err) {
 					ui.Info("Webhook '" + name + "' not found, but ignoring since --ignore-not-found was passed")
 					ui.SuccessAndExit("Operation completed")
 				}
@@ -40,7 +40,7 @@ func NewDeleteWebhookCmd() *cobra.Command {
 			if len(selectors) != 0 {
 				selector := strings.Join(selectors, ",")
 				err := client.DeleteWebhooks(selector)
-				if ignoreNotFound && apiutils.IsNotFound(err) {
+				if ignoreNotFound && apiclient.IsNotFound(err) {
 					ui.Info("Webhook not found for matching selector '" + selector + "', but ignoring since --ignore-not-found was passed")
 					ui.SuccessAndExit("Operation completed")
 				}

@@ -300,7 +300,7 @@ func (t DirectClient[A]) responseError(resp *http.Response) error {
 			return fmt.Errorf("can't get problem from api response: %w, output: %s", err, string(bytes))
 		}
 
-		return fmt.Errorf("problem: %+v", pr.Detail)
+		return fmt.Errorf("problem: %+v: %w", pr.Detail, &HTTPStatusError{StatusCode: resp.StatusCode})
 	}
 
 	return nil
