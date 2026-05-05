@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/avast/retry-go/v5"
@@ -135,13 +136,14 @@ func NewNATSBus(nc *nats.EncodedConn, cfg ConnectionConfig) *NATSBus {
 
 // onConnectionClosed is the nats.ClosedHandler installed on every connection
 // managed by this bus (initial and those created by reconnect()).
-// It logs the event and, when a URI is configured, triggers a background
-// reconnect so a permanent close during a quiet period does not leave the bus
-// in a stuck state until the next publish/subscribe attempt.
+// It logs the event and, when a URI is configured and the bus has not been
+// intentionally shut down, triggers a background reconnect so a permanent
+// close during a quiet period does not leave the bus in a stuck state until
+// the next publish/subscribe attempt.
 func (n *NATSBus) onConnectionClosed(_ *nats.Conn) {
 	log.DefaultLogger.Errorw("nats connection permanently closed",
 		"error_type", "nats_connection_closed")
-	if n.cfg.NatsURI == "" {
+	if n.cfg.NatsURI == "" || n.shutdown.Load() {
 		return
 	}
 	go func() {
@@ -168,6 +170,7 @@ type NATSBus struct {
 	connMu        sync.RWMutex
 	reconnectMu   sync.Mutex // serialises reconnect attempts; never held while connMu is held
 	subscriptions sync.Map   // map[string]*subscriptionEntry
+	shutdown      atomic.Bool
 }
 
 // getNC returns the current encoded connection under a read lock.
@@ -397,6 +400,9 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 }
 
 func (n *NATSBus) Close() error {
+	// Signal that this is an intentional shutdown so the ClosedHandler does
+	// not spawn a background reconnect goroutine.
+	n.shutdown.Store(true)
 	n.getNC().Close()
 	return nil
 }

@@ -166,3 +166,22 @@ func TestNATSBus_SubscribeTopic_EmptyQueueUsesPlainSubscribe(t *testing.T) {
 	require.NotNil(t, entry, "subscription entry not found in map")
 	assert.Empty(t, entry.queue, "entry.queue should be empty for plain Subscribe")
 }
+
+// TestNATSBus_Close_DoesNotReconnect verifies that calling Close() sets the
+// shutdown flag so the ClosedHandler does not spawn a background reconnect,
+// leaving the bus permanently closed as the caller intended.
+func TestNATSBus_Close_DoesNotReconnect(t *testing.T) {
+	b, _ := makeTestBus(t)
+
+	require.False(t, b.shutdown.Load(), "shutdown flag should be false before Close()")
+	require.NoError(t, b.Close())
+
+	assert.True(t, b.shutdown.Load(), "shutdown flag should be true after Close()")
+	assert.True(t, b.getNC().Conn.IsClosed(), "underlying connection should be closed")
+
+	// Give the ClosedHandler goroutine time to fire (if it incorrectly did).
+	time.Sleep(50 * time.Millisecond)
+
+	// The connection should remain closed — no reconnect was triggered.
+	assert.True(t, b.getNC().Conn.IsClosed(), "bus should remain closed after Close(); unexpected reconnect detected")
+}
