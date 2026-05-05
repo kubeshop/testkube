@@ -94,7 +94,7 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 	opts = append(opts,
 		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
 			log.DefaultLogger.Warnw("nats disconnected",
-				"error_type", "nats_connection_closed",
+				"error_type", "nats_disconnected",
 				"error", err)
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
