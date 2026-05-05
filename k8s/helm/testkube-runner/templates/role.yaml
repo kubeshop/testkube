@@ -193,7 +193,7 @@ rules:
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: ClusterRole
 metadata:
-  name: "watchers-role-{{ .Release.Name }}"
+  name: "watchers-role-{{ .Release.Namespace }}-{{ .Release.Name }}"
   labels:
     {{- if .Values.global.labels }}
     {{- toYaml .Values.global.labels | nindent 4 }}
