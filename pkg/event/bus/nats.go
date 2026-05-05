@@ -333,8 +333,17 @@ func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	// async subscribe on queue
-	s, err := n.getNC().QueueSubscribe(topic, queue, handler)
+	// Use plain Subscribe when queue is empty (consistent with reconnect()).
+	// QueueSubscribe with an empty queue name is invalid and would be rejected
+	// by the NATS server with a protocol error.
+	doSubscribe := func(nc *nats.EncodedConn) (*nats.Subscription, error) {
+		if queue == "" {
+			return nc.Subscribe(topic, handler)
+		}
+		return nc.QueueSubscribe(topic, queue, handler)
+	}
+
+	s, err := doSubscribe(n.getNC())
 	if err != nil && !errors.Is(err, nats.ErrConnectionClosed) {
 		return err
 	}
@@ -345,7 +354,7 @@ func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error
 		if rerr := n.reconnect(); rerr != nil {
 			return fmt.Errorf("nats subscribe failed, reconnect error: %w", rerr)
 		}
-		s, err = n.getNC().QueueSubscribe(topic, queue, handler)
+		s, err = doSubscribe(n.getNC())
 		if err != nil {
 			return err
 		}
