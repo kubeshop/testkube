@@ -212,6 +212,16 @@ func (n *NATSBus) reconnect() error {
 	n.reconnectMu.Lock()
 	defer n.reconnectMu.Unlock()
 
+	// Re-check the shutdown flag now that we hold reconnectMu.  There is a
+	// TOCTOU window between onConnectionClosed's pre-goroutine check and here:
+	// Close() could have run concurrently, setting the flag and closing the
+	// connection.  Without this check the IsClosed() guard below would be true
+	// (Close() just closed the connection) and we would establish a live
+	// connection after intentional shutdown.
+	if n.shutdown.Load() {
+		return nil
+	}
+
 	// Re-check now that we hold reconnectMu: a previous waiter may have
 	// already swapped in a healthy connection.
 	if !n.getNC().Conn.IsClosed() {
