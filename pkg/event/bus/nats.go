@@ -351,8 +351,11 @@ func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error
 		}
 	}
 
-	// store topic, queue, and handler so reconnect() can re-register them
-	key := n.queueName(SubscriptionName, queue)
+	// store topic, queue, and handler so reconnect() can re-register them.
+	// Key includes the actual topic so that the same queue name used with
+	// different topics produces distinct entries and does not silently
+	// overwrite a previous subscription.
+	key := n.queueName(topic, queue)
 	n.subscriptions.Store(key, &subscriptionEntry{
 		topic:   topic,
 		queue:   queue,
@@ -366,11 +369,22 @@ func (n *NATSBus) Unsubscribe(queueName string) error {
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	key := n.queueName(SubscriptionName, queue)
-	if v, ok := n.subscriptions.LoadAndDelete(key); ok {
-		return v.(*subscriptionEntry).sub.Drain()
-	}
-	return nil
+	// Scan all entries matching this queue name, since subscriptions may have
+	// been created via SubscribeTopic with varying topics (and therefore
+	// different map keys).  Drain each matching subscription and remove it.
+	var firstErr error
+	n.subscriptions.Range(func(key, value any) bool {
+		entry := value.(*subscriptionEntry)
+		if entry.queue != queue {
+			return true
+		}
+		n.subscriptions.Delete(key)
+		if err := entry.sub.Drain(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+		return true
+	})
+	return firstErr
 }
 
 func (n *NATSBus) Close() error {
