@@ -122,10 +122,34 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 }
 
 func NewNATSBus(nc *nats.EncodedConn, cfg ConnectionConfig) *NATSBus {
-	return &NATSBus{
+	b := &NATSBus{
 		nc:  nc,
 		cfg: cfg,
 	}
+	// Override the default logging-only ClosedHandler set by NewNATSConnection
+	// so that a permanent connection close triggers a background reconnect
+	// even during quiet periods with no in-flight publishes or subscribes.
+	nc.Conn.SetClosedHandler(b.onConnectionClosed)
+	return b
+}
+
+// onConnectionClosed is the nats.ClosedHandler installed on every connection
+// managed by this bus (initial and those created by reconnect()).
+// It logs the event and, when a URI is configured, triggers a background
+// reconnect so a permanent close during a quiet period does not leave the bus
+// in a stuck state until the next publish/subscribe attempt.
+func (n *NATSBus) onConnectionClosed(_ *nats.Conn) {
+	log.DefaultLogger.Errorw("nats connection permanently closed",
+		"error_type", "nats_connection_closed")
+	if n.cfg.NatsURI == "" {
+		return
+	}
+	go func() {
+		if err := n.reconnect(); err != nil {
+			log.DefaultLogger.Errorw("nats background reconnect after connection closed failed",
+				"error", err)
+		}
+	}()
 }
 
 // subscriptionEntry holds everything needed to re-register a subscription on a
@@ -203,6 +227,11 @@ func (n *NATSBus) reconnect() error {
 	if err != nil {
 		return fmt.Errorf("nats reconnect failed: %w", err)
 	}
+
+	// Register our closed handler on the new connection so that if it is
+	// itself permanently closed during a quiet period, another background
+	// reconnect is triggered automatically.
+	conn.Conn.SetClosedHandler(n.onConnectionClosed)
 
 	// Re-register subscriptions on the new connection BEFORE exposing it via
 	// n.nc.  This closes the window where messages could arrive on a topic that
