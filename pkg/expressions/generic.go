@@ -168,7 +168,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 								// Non-array result: reuse the already-resolved value
 								// to avoid re-compiling the same expression as a template.
 								s, _ := expr.Static().StringValue()
-								changed = s != str
+								changed = changed || s != str
 								newItems = append(newItems, reflect.ValueOf(s).Convert(v.Type().Elem()))
 								continue
 							}

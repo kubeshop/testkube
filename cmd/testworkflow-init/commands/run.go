@@ -71,6 +71,11 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	}
 	command = expandedCommand
 
+	// Ensure the command is not empty after expansion
+	if len(command) == 0 {
+		output.ExitErrorf(constants.CodeInputError, "command is required")
+	}
+
 	// Run the operation with context
 	execution := orchestration.Executions.CreateWithContext(ctx, command[0], command[1:])
 	result, err := execution.Run()
