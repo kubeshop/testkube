@@ -17,29 +17,49 @@ type DB struct {
 	*sqlc.Queries
 }
 
-// CreateDatabaseIfNotExists attempts to create the database specified in the
-// connection string. It is a no-op when the database already exists. If the
-// connected user lacks CREATE DATABASE privileges but the target database
-// already exists, the error is ignored so that restricted users can still
-// start the API successfully.
+// CreateDatabaseIfNotExists ensures the database specified in the connection
+// string exists. It first attempts a direct connection to the target database;
+// if that succeeds the database already exists and no further action is taken.
+// Only when the target database is unreachable does it fall back to connecting
+// to the "postgres" system database and issuing CREATE DATABASE. This ordering
+// avoids failures in managed/cloud environments where restricted users cannot
+// connect to the "postgres" database at all.
 func CreateDatabaseIfNotExists(ctx context.Context, connectionString string) error {
 	connConfig, err := pgx.ParseConfig(connectionString)
 	if err != nil {
 		return err
 	}
-	log.DefaultLogger.Infof("Attempting to create database %q on host %s", connConfig.Database, connConfig.Host)
 
 	if connConfig.Database == "" {
-		log.DefaultLogger.Info("No database in connection string")
+		log.DefaultLogger.Info("No database in connection string, skipping creation check")
 		return nil
 	}
 
 	dbName := connConfig.Database
-	connConfig.Database = "postgres"
+	log.DefaultLogger.Infof("Checking if database %q exists on host %s", dbName, connConfig.Host)
 
+	// Fast path: try to connect directly to the target database.
+	// If successful the database already exists — nothing to do.
+	directConn, err := pgx.ConnectConfig(ctx, connConfig)
+	if err == nil {
+		directConn.Close(ctx)
+		log.DefaultLogger.Infof("Database %s already exists", dbName)
+		return nil
+	}
+
+	// The direct connection failed. Attempt to create the database by
+	// connecting to the "postgres" system database.
+	log.DefaultLogger.Infof("Cannot connect to database %s directly (%v), attempting to create it", dbName, err)
+
+	connConfig.Database = "postgres"
 	conn, err := pgx.ConnectConfig(ctx, connConfig)
 	if err != nil {
-		return err
+		// Cannot reach the system database either. The target database may
+		// actually exist but we simply cannot verify it from here. Return nil
+		// and let the normal pool connection (which uses the original DSN)
+		// surface a clear error if the database truly does not exist.
+		log.DefaultLogger.Warnf("Cannot connect to system database to create %s: %v; will attempt direct connection later", dbName, err)
+		return nil
 	}
 	defer conn.Close(ctx)
 
