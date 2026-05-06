@@ -2,9 +2,12 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -60,5 +63,73 @@ func TestDirectClientGetTestWorkflowExecutionNotificationsUsesResumeQueryAndCont
 		assert.False(t, ok)
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for notifications channel to close")
+	}
+}
+
+func TestDirectClientResponseError_WrapsHTTPStatusError(t *testing.T) {
+	tests := []struct {
+		name           string
+		statusCode     int
+		body           string
+		wantHTTPErr    bool
+		wantStatusCode int
+		wantIsNotFound bool
+	}{
+		{
+			name:           "404 surfaces HTTPStatusError and IsNotFound",
+			statusCode:     http.StatusNotFound,
+			body:           `{"title":"Not Found","detail":"resource not found","status":404}`,
+			wantHTTPErr:    true,
+			wantStatusCode: http.StatusNotFound,
+			wantIsNotFound: true,
+		},
+		{
+			name:           "400 surfaces HTTPStatusError but not IsNotFound",
+			statusCode:     http.StatusBadRequest,
+			body:           `{"title":"Bad Request","detail":"invalid input","status":400}`,
+			wantHTTPErr:    true,
+			wantStatusCode: http.StatusBadRequest,
+			wantIsNotFound: false,
+		},
+		{
+			name:           "500 surfaces HTTPStatusError but not IsNotFound",
+			statusCode:     http.StatusInternalServerError,
+			body:           `{"title":"Internal Server Error","detail":"server failure","status":500}`,
+			wantHTTPErr:    true,
+			wantStatusCode: http.StatusInternalServerError,
+			wantIsNotFound: false,
+		},
+		{
+			name:           "200 returns nil",
+			statusCode:     http.StatusOK,
+			body:           `{}`,
+			wantHTTPErr:    false,
+			wantIsNotFound: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewDirectClient[testkube.TestWorkflow](http.DefaultClient, "http://localhost", "")
+
+			resp := &http.Response{
+				StatusCode: tt.statusCode,
+				Body:       io.NopCloser(strings.NewReader(tt.body)),
+			}
+
+			err := c.responseError(resp)
+
+			if !tt.wantHTTPErr {
+				assert.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+
+			var httpErr *HTTPStatusError
+			require.True(t, errors.As(err, &httpErr), "expected HTTPStatusError in error chain, got: %v", err)
+			assert.Equal(t, tt.wantStatusCode, httpErr.StatusCode)
+			assert.Equal(t, tt.wantIsNotFound, IsNotFound(err))
+		})
 	}
 }

@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -19,6 +21,18 @@ type HTTPStatusError struct {
 
 func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("HTTP status %d", e.StatusCode)
+}
+
+// IsNotFound returns true if the error represents an HTTP 404 Not Found response
+// from the Testkube API server. This is intended for use in CLI commands that
+// support --ignore-not-found, since the CLI clients wrap HTTP errors as plain
+// fmt.Errorf messages that server-side utilities (like apiutils.IsNotFound) cannot match.
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	var httpErr *HTTPStatusError
+	return errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusNotFound
 }
 
 // Client is the Testkube API client abstraction

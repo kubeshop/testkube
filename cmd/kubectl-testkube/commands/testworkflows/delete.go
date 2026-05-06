@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	apiclient "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -18,8 +19,9 @@ func NewDeleteTestWorkflowCmd() *cobra.Command {
 		Aliases: []string{"testworkflows", "tw"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Delete test workflows",
-
 		Run: func(cmd *cobra.Command, args []string) {
+			ignoreNotFound, err := cmd.Flags().GetBool("ignore-not-found")
+			ui.ExitOnError("reading flag ignore-not-found", err)
 			namespace := cmd.Flag("namespace").Value.String()
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
@@ -28,6 +30,10 @@ func NewDeleteTestWorkflowCmd() *cobra.Command {
 				if len(selectors) > 0 {
 					selector := strings.Join(selectors, ",")
 					err = client.DeleteTestWorkflows(selector)
+					if ignoreNotFound && apiclient.IsNotFound(err) {
+						ui.Info("Testworkflow not found for matching selector '" + selector + "', but ignoring since --ignore-not-found was passed")
+						ui.SuccessAndExit("Operation completed")
+					}
 					ui.ExitOnError("deleting test workflows by labels: "+selector, err)
 					ui.SuccessAndExit("Successfully deleted test workflows by labels", selector)
 				} else if deleteAll {
@@ -42,6 +48,10 @@ func NewDeleteTestWorkflowCmd() *cobra.Command {
 
 			name := args[0]
 			err = client.DeleteTestWorkflow(name)
+			if ignoreNotFound && apiclient.IsNotFound(err) {
+				ui.Info("Testworkflow '" + name + "' not found, but ignoring since --ignore-not-found was passed")
+				ui.SuccessAndExit("Operation completed")
+			}
 			ui.ExitOnError("delete test workflow "+name+" from namespace "+namespace, err)
 			ui.SuccessAndExit("Successfully deleted test workflow", name)
 		},
