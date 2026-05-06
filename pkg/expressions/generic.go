@@ -198,8 +198,19 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 					ptr.Set(newSlice)
 				}
 			} else if changed {
+				newSlice := reflect.MakeSlice(v.Type(), len(newItems), len(newItems))
 				for i, item := range newItems {
-					v.Index(i).Set(item)
+					newSlice.Index(i).Set(item)
+				}
+				if v.CanSet() {
+					v.Set(newSlice)
+				} else if ptr.Kind() == reflect.Interface {
+					ptr.Set(newSlice)
+				} else {
+					// Fallback: write resolved elements in-place (always safe for slice elements)
+					for i, item := range newItems {
+						v.Index(i).Set(item)
+					}
 				}
 			}
 			return
