@@ -63,6 +63,21 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
+// getElementString extracts a string value from a reflect.Value,
+// unwrapping pointers and interfaces as needed.
+func getElementString(v reflect.Value) (string, bool) {
+	for v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return "", false
+		}
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.String {
+		return v.String(), true
+	}
+	return "", false
+}
+
 func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool) (changed bool, err error) {
 	if t.value == "force" {
 		force = true
@@ -119,6 +134,86 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 	case reflect.Slice:
 		if t.value == "" && !force {
 			return changed, nil
+		}
+		// Handle potential array expansion for template strings in slices.
+		// When a slice element is a pure template expression like "{{ expr }}"
+		// and the expression resolves to an array, expand the array elements
+		// into the parent slice individually. When the template has surrounding
+		// literal text (e.g., "prefix{{ expr }}suffix") or the expression resolves
+		// to a non-array value, the existing stringification behavior is preserved.
+		if t.value == "template" || force {
+			newItems := make([]reflect.Value, 0, v.Len())
+			anyExpanded := false
+			for i := 0; i < v.Len(); i++ {
+				elem := v.Index(i)
+				str, isStr := getElementString(elem)
+				if isStr && !IsTemplateStringWithoutExpressions(str) {
+					if innerExpr, isPure := ExtractPureTemplateExpression(str); isPure {
+						expr, compileErr := CompileAndResolve(innerExpr, m...)
+						if compileErr == nil {
+							if finalize && expr.Static() == nil {
+								expr, compileErr = expr.Resolve(FinalizerFail)
+							}
+							if compileErr == nil && expr.Static() != nil {
+								// Array result: expand into parent slice
+								if items, sliceErr := expr.Static().SliceValue(); sliceErr == nil {
+									for _, item := range items {
+										sv := NewValue(item)
+										s, _ := sv.StringValue()
+										newItems = append(newItems, reflect.ValueOf(s).Convert(v.Type().Elem()))
+									}
+									anyExpanded = true
+									continue
+								}
+								// Non-array result: reuse the already-resolved value
+								// to avoid re-compiling the same expression as a template.
+								s, _ := expr.Static().StringValue()
+								changed = changed || s != str
+								newItems = append(newItems, reflect.ValueOf(s).Convert(v.Type().Elem()))
+								continue
+							}
+						}
+					}
+				}
+				// Normal resolution for this element
+				elemCopy := clone(elem)
+				ch, err := resolve(elemCopy, t, m, force, finalize)
+				if ch {
+					changed = true
+				}
+				if err != nil {
+					return changed, errors.Wrap(err, fmt.Sprintf("%d", i))
+				}
+				newItems = append(newItems, elemCopy)
+			}
+			if anyExpanded {
+				changed = true
+				newSlice := reflect.MakeSlice(v.Type(), len(newItems), len(newItems))
+				for i, item := range newItems {
+					newSlice.Index(i).Set(item)
+				}
+				if v.CanSet() {
+					v.Set(newSlice)
+				} else if ptr.Kind() == reflect.Interface {
+					ptr.Set(newSlice)
+				}
+			} else if changed {
+				newSlice := reflect.MakeSlice(v.Type(), len(newItems), len(newItems))
+				for i, item := range newItems {
+					newSlice.Index(i).Set(item)
+				}
+				if v.CanSet() {
+					v.Set(newSlice)
+				} else if ptr.Kind() == reflect.Interface {
+					ptr.Set(newSlice)
+				} else {
+					// Fallback: write resolved elements in-place (always safe for slice elements)
+					for i, item := range newItems {
+						v.Index(i).Set(item)
+					}
+				}
+			}
+			return
 		}
 		for i := 0; i < v.Len(); i++ {
 			ch, err := resolve(v.Index(i), t, m, force, finalize)
