@@ -8,6 +8,10 @@ import (
 )
 
 func TestCreateDatabaseIfNotExists_EmptyDatabase(t *testing.T) {
+	// Ensure no environment variable can inject a database name into the
+	// parsed config, making this test hermetic.
+	t.Setenv("PGDATABASE", "")
+
 	// When no database name is in the connection string, it should be a no-op.
 	err := CreateDatabaseIfNotExists(context.Background(), "postgres://user:pass@localhost:5432/")
 	assert.NoError(t, err)
