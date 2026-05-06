@@ -369,6 +369,28 @@ func TestGenericSimplifyArrayExpansionNonPureTemplate(t *testing.T) {
 	assert.Equal(t, &[]string{"prefix1,2suffix"}, obj.Args)
 }
 
+func TestGenericSimplifyArrayExpansionWithArrayLiteral(t *testing.T) {
+	// Mirrors: content.git.paths: ["{{ list(\"test/k6/k6-smoke-test.js\",\"test/k6/k6-smoke-test-negative.js\") }}"]
+	// Note: single quotes inside array literals (e.g. ['a','b']) are not supported by the tokenizer;
+	// use list() or JSON-style double-quoted arrays instead.
+	args := []string{`{{ list("test/k6/k6-smoke-test.js","test/k6/k6-smoke-test-negative.js") }}`}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"test/k6/k6-smoke-test.js", "test/k6/k6-smoke-test-negative.js"}, obj.Args)
+}
+
+func TestGenericSimplifyArrayExpansionWithJSONArrayLiteral(t *testing.T) {
+	// JSON-style double-quoted array literal
+	args := []string{`{{ ["test/k6/k6-smoke-test.js","test/k6/k6-smoke-test-negative.js"] }}`}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, testMachine)
+
+	assert.NoError(t, err)
+	assert.Equal(t, &[]string{"test/k6/k6-smoke-test.js", "test/k6/k6-smoke-test-negative.js"}, obj.Args)
+}
+
 func TestGenericSimplifyForceArrayExpansionInterface(t *testing.T) {
 	got := []interface{}{"{{ list('x','y','z') }}"}
 	err := SimplifyForce(&got)
