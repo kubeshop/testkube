@@ -213,7 +213,6 @@ func ProcessServicesStop(_ testworkflowprocessor.InternalProcessor, layer testwo
 
 	stage := stage.NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCondition("always") // TODO: actually, it's enough to do it when "Start services" is not skipped
-	stage.SetOptional(true)
 	stage.SetCategory("Stop services")
 
 	// Allow to combine it within other containers

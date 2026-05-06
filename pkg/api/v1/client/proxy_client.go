@@ -289,6 +289,12 @@ func (t ProxyClient[A]) responseError(resp rest.Result) error {
 			return fmt.Errorf("api server response: '%s'\nerror: %w", content, resp.Error())
 		}
 
+		var statusCode int
+		resp.StatusCode(&statusCode)
+		if statusCode >= 100 {
+			return fmt.Errorf("api server problem: %s: %w", pr.Detail, &HTTPStatusError{StatusCode: statusCode})
+		}
+
 		return fmt.Errorf("api server problem: %s", pr.Detail)
 	}
 

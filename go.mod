@@ -42,7 +42,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/keygen-sh/jsonapi-go v1.2.1
 	github.com/keygen-sh/keygen-go/v3 v3.3.0
-	github.com/mark3labs/mcp-go v0.51.0
+	github.com/mark3labs/mcp-go v0.52.0
 	github.com/mattn/go-isatty v0.0.22
 	github.com/minio/minio-go/v7 v7.1.0
 	github.com/montanaflynn/stats v0.9.0
@@ -88,7 +88,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.36.0
 	k8s.io/apimachinery v0.36.0
 	k8s.io/client-go v0.36.0
-	k8s.io/kube-openapi v0.0.0-20260504175024-7bfe71ffdc10
+	k8s.io/kube-openapi v0.0.0-20260505163821-33341827b392
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
 	sigs.k8s.io/controller-runtime v0.24.0
 	sigs.k8s.io/yaml v1.6.0
