@@ -30,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	postgresdb "github.com/kubeshop/testkube/pkg/database/postgres"
 	postgresmigrations "github.com/kubeshop/testkube/pkg/database/postgres/migrations"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -204,6 +205,11 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 }
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
+	if migrate {
+		err := postgresdb.CreateDatabaseIfNotExists(ctx, cfg.APIPostgresDSN)
+		ExitOnError("Creating Postgres database if needed", err)
+	}
+
 	// Connect to PostgreSQL
 	pool, err := pgxpool.New(ctx, cfg.APIPostgresDSN)
 	ExitOnError("Getting Postgres database", err)
