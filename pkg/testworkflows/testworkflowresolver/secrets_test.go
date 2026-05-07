@@ -481,7 +481,7 @@ func TestExtract_ContentClientCertAndKey(t *testing.T) {
 	expected := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitCerts(nil, testSecret("some-secret-1", GitClientCertKey), testSecret("some-secret-2", GitClientKeyKey)),
+				Content: testGitCerts(nil, testSecret("some-secret-1", GitClientCertKey), testSecret("some-secret-2", GitClientKey)),
 			},
 		},
 	}
@@ -494,7 +494,7 @@ func TestExtract_ContentClientCertAndKey(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, [][]string{{GitClientCertKey, "some-client-cert"}, {GitClientKeyKey, "some-client-key"}}, calls)
+	assert.Equal(t, [][]string{{GitClientCertKey, "some-client-cert"}, {GitClientKey, "some-client-key"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
@@ -512,7 +512,7 @@ func TestExtract_ContentAllCerts(t *testing.T) {
 				Content: testGitCerts(
 					testSecret("some-secret-1", GitCaCertKey),
 					testSecret("some-secret-2", GitClientCertKey),
-					testSecret("some-secret-3", GitClientKeyKey),
+					testSecret("some-secret-3", GitClientKey),
 				),
 			},
 		},
@@ -529,7 +529,7 @@ func TestExtract_ContentAllCerts(t *testing.T) {
 	assert.Equal(t, [][]string{
 		{GitCaCertKey, "some-ca-cert"},
 		{GitClientCertKey, "some-client-cert"},
-		{GitClientKeyKey, "some-client-key"},
+		{GitClientKey, "some-client-key"},
 	}, calls)
 	assert.Equal(t, expected, wf)
 }
@@ -548,7 +548,7 @@ func TestExtractTemplate_ContentAllCerts(t *testing.T) {
 				Content: testGitCerts(
 					testSecret("some-secret-1", GitCaCertKey),
 					testSecret("some-secret-2", GitClientCertKey),
-					testSecret("some-secret-3", GitClientKeyKey),
+					testSecret("some-secret-3", GitClientKey),
 				),
 			},
 		},
@@ -565,7 +565,7 @@ func TestExtractTemplate_ContentAllCerts(t *testing.T) {
 	assert.Equal(t, [][]string{
 		{GitCaCertKey, "some-ca-cert"},
 		{GitClientCertKey, "some-client-cert"},
-		{GitClientKeyKey, "some-client-key"},
+		{GitClientKey, "some-client-key"},
 	}, calls)
 	assert.Equal(t, expected, wf)
 }
