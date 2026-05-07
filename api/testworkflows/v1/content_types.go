@@ -26,7 +26,7 @@ type ContentGit struct {
 	// authorization type for the credentials
 	AuthType testsv3.GitAuthType `json:"authType,omitempty" expr:"template"`
 	// plain text CA certificate to verify repository TLS connection
-	CaCert string `json:"caCert,omitempty"`
+	CaCert string `json:"caCert,omitempty" expr:"template"`
 	// external CA certificate to verify repository TLS connection
 	CaCertFrom *corev1.EnvVarSource `json:"caCertFrom,omitempty" expr:"force"`
 	// plain text client certificate to verify client (testkube) TLS connection
