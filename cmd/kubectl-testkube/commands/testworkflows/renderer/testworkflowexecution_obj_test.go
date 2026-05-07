@@ -29,7 +29,7 @@ func TestPrintPrettyOutput_NilWorkflow(t *testing.T) {
 	output := buf.String()
 	assert.Contains(t, output, "incomplete execution data received from API")
 	assert.Contains(t, output, "missing Workflow field")
-	assert.Contains(t, output, "Hint:")
+	assert.Contains(t, output, "check your API endpoint configuration")
 	assert.Contains(t, output, "test-id")
 	assert.Contains(t, output, "test-name")
 }
