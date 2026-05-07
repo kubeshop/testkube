@@ -109,7 +109,7 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 
 	certAuthArgs, cleanupFuncs, err := setupCertAuth(opts)
 	if err != nil {
-		return fmt.Errorf("setting up Certificate Auth: %w", err)
+		return fmt.Errorf("setting up certificate auth: %w", err)
 	}
 
 	authArgs = append(authArgs, certAuthArgs...)
