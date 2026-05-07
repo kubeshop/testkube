@@ -148,7 +148,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				elem := v.Index(i)
 				str, isStr := getElementString(elem)
 				if isStr && !IsTemplateStringWithoutExpressions(str) {
-					if innerExpr, isPure := ExtractPureTemplateExpression(str); isPure && !ContainsWildcardAccessor(innerExpr) {
+					if innerExpr, isPure := ExtractPureTemplateExpression(str); isPure && !IsWildcardAccessorOnly(innerExpr) {
 						expr, compileErr := CompileAndResolve(innerExpr, m...)
 						if compileErr == nil {
 							if finalize && expr.Static() == nil {

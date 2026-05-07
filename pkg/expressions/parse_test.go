@@ -150,7 +150,7 @@ func TestExtractPureTemplateExpression(t *testing.T) {
 	}
 }
 
-func TestContainsWildcardAccessor(t *testing.T) {
+func TestIsWildcardAccessorOnly(t *testing.T) {
 	tests := []struct {
 		expr string
 		want bool
@@ -170,10 +170,14 @@ func TestContainsWildcardAccessor(t *testing.T) {
 		// Spaced wildcard accessors should still be detected
 		{"services.slave . * . ip", true},
 		{"a . *", true},
+		// Wildcard accessor inside explicit array-producing constructs should NOT
+		// be treated as a pure wildcard accessor (expansion should still happen).
+		{"list(services.slave.*.ip...)", false},
+		{"join(services.slave.*.ip, ',')", false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.expr, func(t *testing.T) {
-			assert.Equal(t, tc.want, ContainsWildcardAccessor(tc.expr))
+			assert.Equal(t, tc.want, IsWildcardAccessorOnly(tc.expr))
 		})
 	}
 }

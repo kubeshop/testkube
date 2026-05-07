@@ -277,17 +277,33 @@ func ExtractPureTemplateExpression(tpl string) (string, bool) {
 	return inner, true
 }
 
-// ContainsWildcardAccessor checks whether an expression string uses the
-// wildcard accessor syntax (e.g., "services.slave.*.ip"). Expressions that
-// use wildcards resolve to arrays implicitly through the map() transform,
+// IsWildcardAccessorOnly checks whether an expression is purely a wildcard
+// accessor chain (e.g., "services.slave.*.ip") with no additional operators,
+// function calls, or array/object constructors.
+//
+// Such expressions resolve to arrays implicitly through the map() transform,
 // but in template contexts they should be stringified (comma-joined) rather
 // than expanded as separate slice elements.
 //
-// The check tokenizes the expression and inspects accessor tokens only,
-// so ".*" inside string literals (e.g., split('192.168.*', '.')) is not
-// treated as a wildcard accessor.
-func ContainsWildcardAccessor(expr string) bool {
+// When a wildcard accessor is used inside an explicit array-producing construct
+// (e.g., "list(services.slave.*.ip...)"), this function returns false so that
+// expansion still works as expected.
+func IsWildcardAccessorOnly(expr string) bool {
 	tokens, _, _ := tokenize(expr, 0)
+	if len(tokens) == 0 {
+		return false
+	}
+	// The expression must consist of exactly one tokenTypeAccessor optionally
+	// followed by one or more tokenTypePropertyAccessor tokens — nothing else.
+	if tokens[0].Type != tokenTypeAccessor {
+		return false
+	}
+	for _, tok := range tokens[1:] {
+		if tok.Type != tokenTypePropertyAccessor {
+			return false
+		}
+	}
+	// Now verify that the accessor chain actually contains a wildcard segment.
 	for _, tok := range tokens {
 		switch tok.Type {
 		case tokenTypeAccessor:
