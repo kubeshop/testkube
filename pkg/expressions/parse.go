@@ -282,6 +282,23 @@ func ExtractPureTemplateExpression(tpl string) (string, bool) {
 // use wildcards resolve to arrays implicitly through the map() transform,
 // but in template contexts they should be stringified (comma-joined) rather
 // than expanded as separate slice elements.
+//
+// The check tokenizes the expression and inspects accessor tokens only,
+// so ".*" inside string literals (e.g., split('192.168.*', '.')) is not
+// treated as a wildcard accessor.
 func ContainsWildcardAccessor(expr string) bool {
-	return strings.Contains(expr, ".*")
+	tokens, _, _ := tokenize(expr, 0)
+	for _, tok := range tokens {
+		switch tok.Type {
+		case tokenTypeAccessor:
+			if name, ok := tok.Value.(string); ok && strings.Contains(name, ".*") {
+				return true
+			}
+		case tokenTypePropertyAccessor:
+			if name, ok := tok.Value.(string); ok && name == "*" {
+				return true
+			}
+		}
+	}
+	return false
 }

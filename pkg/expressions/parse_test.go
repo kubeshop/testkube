@@ -163,6 +163,10 @@ func TestContainsWildcardAccessor(t *testing.T) {
 		{"split('x,y,z')", false},
 		{`["a","b"]`, false},
 		{"env.MY_VAR", false},
+		// Ensure .* inside string literals is not treated as a wildcard accessor
+		{`split('192.168.*', '.')`, false},
+		{`map(items, 'v =~ ".*foo"')`, false},
+		{`"some.*value"`, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.expr, func(t *testing.T) {
