@@ -2,8 +2,8 @@ package control
 
 import (
 	"context"
-	"fmt"
 	"net"
+	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -17,7 +17,7 @@ type client struct {
 
 func NewClient(ctx context.Context, address string, port int) (*client, error) {
 	dialCtx, cancel := context.WithCancel(ctx)
-	conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", fmt.Sprintf("%s:%d", address, port))
+	conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", net.JoinHostPort(address, strconv.Itoa(port)))
 	if err != nil {
 		cancel()
 		return nil, err

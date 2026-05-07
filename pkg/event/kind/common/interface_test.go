@@ -9,10 +9,7 @@ import (
 )
 
 func TestCompareListeners(t *testing.T) {
-	t.Parallel()
-
 	t.Run("both nil metada", func(t *testing.T) {
-		t.Parallel()
 		l1 := &NilListener{}
 		l2 := &NilListener{}
 
@@ -22,7 +19,6 @@ func TestCompareListeners(t *testing.T) {
 	})
 
 	t.Run("one nil metada and one not nil metada", func(t *testing.T) {
-		t.Parallel()
 		l1 := &NilListener{}
 		l2 := &FakeListener{}
 
@@ -32,7 +28,6 @@ func TestCompareListeners(t *testing.T) {
 	})
 
 	t.Run("equal metada", func(t *testing.T) {
-		t.Parallel()
 		l1 := &FakeListener{field1: "1", field2: "2"}
 		l2 := &FakeListener{field1: "1", field2: "2"}
 
@@ -42,7 +37,6 @@ func TestCompareListeners(t *testing.T) {
 	})
 
 	t.Run("not equal metada", func(t *testing.T) {
-		t.Parallel()
 		l1 := &FakeListener{field1: "2", field2: "1"}
 		l2 := &FakeListener{field1: "1", field2: "2"}
 
@@ -50,13 +44,11 @@ func TestCompareListeners(t *testing.T) {
 
 		assert.Equal(t, false, result)
 	})
-
 }
 
 var _ Listener = (*NilListener)(nil)
 
-type NilListener struct {
-}
+type NilListener struct{}
 
 func (l *NilListener) Match(event testkube.Event) bool {
 	return true

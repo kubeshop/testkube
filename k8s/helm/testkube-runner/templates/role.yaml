@@ -185,7 +185,8 @@ rules:
 ---
 
 # Allow Agent to watch resources for triggers functionality
-{{- if and .Values.pod.serviceAccount.autoCreate .Values.listener.enabled }}
+{{- $watchersEnabled := or .Values.listener.enabled .Values.gitops.enabled }}
+{{- if and .Values.pod.serviceAccount.autoCreate $watchersEnabled }}
 {{- $watchAll := .Values.listener.watchAllNamespaces }}
 {{- $additional := default (list) .Values.listener.additionalNamespaces }}
 {{- if $watchAll }}
@@ -213,7 +214,7 @@ metadata:
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
-  name: "watchers-role-{{ $ns }}"
+  name: "watchers-role-{{ .Release.Name }}"
   namespace: {{ $ns }}
   labels:
     {{- if .Values.global.labels }}

@@ -12,12 +12,12 @@ package testkube
 type PodSecurityContext struct {
 	SeLinuxOptions           *SeLinuxOptions                `json:"seLinuxOptions,omitempty"`
 	WindowsOptions           *WindowsSecurityContextOptions `json:"windowsOptions,omitempty"`
-	RunAsUser                *BoxedInteger                  `json:"runAsUser,omitempty"`
-	RunAsGroup               *BoxedInteger                  `json:"runAsGroup,omitempty"`
+	RunAsUser                *TemplatableBoxedInteger       `json:"runAsUser,omitempty"`
+	RunAsGroup               *TemplatableBoxedInteger       `json:"runAsGroup,omitempty"`
 	RunAsNonRoot             *BoxedBoolean                  `json:"runAsNonRoot,omitempty"`
 	SupplementalGroups       []int64                        `json:"supplementalGroups,omitempty"`
 	SupplementalGroupsPolicy *BoxedString                   `json:"supplementalGroupsPolicy,omitempty"`
-	FsGroup                  *BoxedInteger                  `json:"fsGroup,omitempty"`
+	FsGroup                  *TemplatableBoxedInteger       `json:"fsGroup,omitempty"`
 	Sysctls                  []Sysctl                       `json:"sysctls,omitempty"`
 	FsGroupChangePolicy      *BoxedString                   `json:"fsGroupChangePolicy,omitempty"`
 	SeccompProfile           *SeccompProfile                `json:"seccompProfile,omitempty"`

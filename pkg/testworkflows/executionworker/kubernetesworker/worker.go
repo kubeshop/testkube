@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/strings/slices"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -56,10 +56,13 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 		clientSet: clientSet,
 		processor: processor,
 		config:    config,
-		registry:  registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50),
+		registry: registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50, controller.ControllerOptions{
+			WorkflowLogsInsecureSkipTLSVerifyBackend: config.WorkflowLogsInsecureSkipTLSVerifyBackend,
+		}),
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,
+			InsecureRegistries:                config.Cluster.InsecureRegistries,
 			DefaultServiceAccount:             config.Cluster.Namespaces[config.Cluster.DefaultNamespace].DefaultServiceAccountName,
 			ClusterID:                         config.Cluster.Id,
 			RunnerID:                          config.RunnerId,
@@ -72,6 +75,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			FeatureFlags:                      config.FeatureFlags,
 			CommonEnvVariables:                config.CommonEnvVariables,
 			AllowLowSecurityFields:            config.AllowLowSecurityFields,
+			DisableResourceMetrics:            config.DisableResourceMetrics,
 		},
 	}
 }
@@ -171,7 +175,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
-	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
@@ -246,7 +250,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
-	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	err = bundle.Deploy(ctx, w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
@@ -484,8 +488,8 @@ func (w *worker) Finished(ctx context.Context, id string, options executionworke
 func (w *worker) List(ctx context.Context, options executionworkertypes.ListOptions) ([]executionworkertypes.ListResultItem, error) {
 	namespaces := maps.Keys(w.config.Cluster.Namespaces)
 	if len(options.Namespaces) > 0 {
-		namespaces = slices.Filter(nil, namespaces, func(ns string) bool {
-			return slices.Contains(options.Namespaces, ns)
+		namespaces = slices.DeleteFunc(namespaces, func(ns string) bool {
+			return !slices.Contains(options.Namespaces, ns)
 		})
 	}
 
@@ -675,7 +679,7 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options execution
 			cond.L.Lock()
 			defer cond.L.Unlock()
 
-			client, err := control.NewClient(context.Background(), address, initconstants.ControlServerPort)
+			client, err := control.NewClient(ctx, address, initconstants.ControlServerPort)
 			ready()
 			defer func() {
 				if client != nil {

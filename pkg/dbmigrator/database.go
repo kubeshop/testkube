@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 //go:generate go tool mockgen -destination=./mock_database.go -package=dbmigrator "github.com/kubeshop/testkube/pkg/dbmigrator" Database
@@ -54,7 +54,7 @@ func (d *database) DeleteMigrationState(ctx context.Context, migration *DbMigrat
 }
 
 func (d *database) GetAppliedMigrations(ctx context.Context) (results []DbMigration, err error) {
-	cursor, err := d.migrationsColl.Find(ctx, bson.M{}, &options.FindOptions{Sort: bson.M{"name": 1}})
+	cursor, err := d.migrationsColl.Find(ctx, bson.M{}, options.Find().SetSort(bson.M{"name": 1}))
 	if err != nil {
 		return nil, err
 	}

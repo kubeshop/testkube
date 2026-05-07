@@ -210,6 +210,11 @@ type ExecutionGetExecutionTagsResponse struct {
 	Tags map[string][]string `json:"tags"`
 }
 
+type ExecutionUpdateTagsRequest struct {
+	ID   string            `json:"id"`
+	Tags map[string]string `json:"tags"`
+}
+
 type TestWorkflowListRequest struct {
 	Selector string `json:"selector"`
 }

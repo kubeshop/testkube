@@ -24,34 +24,57 @@ func NewCreateAgentCommand() *cobra.Command {
 			// Check for deprecated --type flag usage
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
-				ui.Info("Please use --runner and/or --listener flags instead:")
+				ui.Info("Please use capability flags instead:")
 				ui.Info("  --runner    : Enable runner capability")
 				ui.Info("  --listener  : Enable listener capability")
-				ui.Info("  (both flags): Enable both capabilities")
+				ui.Info("  --gitops    : Enable GitOps capability")
+				ui.Info("  --webhooks  : Enable webhooks capability")
 				ui.NL()
 				return
 			}
 
 			runnerChanged := cmd.Flags().Changed("runner")
 			listenerChanged := cmd.Flags().Changed("listener")
-			anyChanged := runnerChanged || listenerChanged
+			gitopsChanged := cmd.Flags().Changed("gitops")
+			webhooksChanged := cmd.Flags().Changed("webhooks")
+			anyChanged := runnerChanged || listenerChanged || gitopsChanged || webhooksChanged
 			enableRunner, _ := cmd.Flags().GetBool("runner")
 			enableListener, _ := cmd.Flags().GetBool("listener")
+			enableGitops, _ := cmd.Flags().GetBool("gitops")
+			enableWebhooks, _ := cmd.Flags().GetBool("webhooks")
 			// we default to both capabilities if none flags are set
 			if !anyChanged {
 				enableRunner = true
 				enableListener = true
 			}
 
-			agent := UiCreateAgent(cmd, args[0], labelPairs, environmentIds, global, group, floating, enableRunner, enableListener)
+			agent := UiCreateAgent(
+				cmd,
+				args[0],
+				labelPairs,
+				environmentIds,
+				global,
+				group,
+				floating,
+				enableRunner,
+				enableListener,
+				enableGitops,
+				enableWebhooks,
+			)
 			ui.NL()
-			ui.Info("Install the agent with command:")
-			installCmd := fmt.Sprintf("kubectl testkube install agent %s --secret %s", agent.Name, agent.SecretKey)
+			ui.Hint("Install the agent with command:")
+			installCmd := fmt.Sprintf("testkube install agent %s --secret %s", agent.Name, agent.SecretKey)
 			if enableRunner {
 				installCmd += " --runner"
 			}
 			if enableListener {
 				installCmd += " --listener"
+			}
+			if enableGitops {
+				installCmd += " --gitops"
+			}
+			if enableWebhooks {
+				installCmd += " --webhooks"
 			}
 			ui.ShellCommand(installCmd)
 		},
@@ -66,10 +89,12 @@ func NewCreateAgentCommand() *cobra.Command {
 	// Components selection
 	cmd.Flags().Bool("runner", false, "enable runner capability (default: enabled when no component flags are set)")
 	cmd.Flags().Bool("listener", false, "enable listener capability (default: enabled when no component flags are set)")
+	cmd.Flags().Bool("gitops", false, "enable gitops capability")
+	cmd.Flags().Bool("webhooks", false, "enable webhooks capability")
 
 	// Deprecated flag
-	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use --runner and/or --listener instead")
-	cmd.Flags().MarkDeprecated("type", "use --runner and/or --listener flags instead")
+	cmd.Flags().StringVarP(&agentType, "type", "t", "", "[DEPRECATED] agent type - use capability flags instead")
+	cmd.Flags().MarkDeprecated("type", "use --runner, --listener, --gitops, and/or --webhooks instead")
 
 	return cmd
 }
@@ -93,16 +118,18 @@ func NewCreateRunnerCommand() *cobra.Command {
 			if cmd.Flags().Changed("type") {
 				ui.Warn("⚠️  The --type/-t flag is deprecated.")
 				ui.Info("This command creates a runner-only agent by default.")
-				ui.Info("For more flexibility, use 'kubectl testkube create agent' with:")
+				ui.Hint("For more flexibility, use 'testkube create agent' with:")
 				ui.Info("  --runner    : Enable runner capability")
 				ui.Info("  --listener  : Enable listener capability")
+				ui.Info("  --gitops    : Enable GitOps capability")
+				ui.Info("  --webhooks  : Enable webhooks capability")
 				ui.NL()
 			}
 
-			agent := UiCreateAgent(cmd, args[0], labelPairs, environmentIds, global, group, floating, true, false)
+			agent := UiCreateAgent(cmd, args[0], labelPairs, environmentIds, global, group, floating, true, false, false, false)
 			ui.NL()
-			ui.Info("Install the agent with command:")
-			installCmd := fmt.Sprintf("kubectl testkube install agent %s --secret %s --runner", agent.Name, agent.SecretKey)
+			ui.Hint("Install the agent with command:")
+			installCmd := fmt.Sprintf("testkube install agent %s --secret %s --runner", agent.Name, agent.SecretKey)
 			ui.ShellCommand(installCmd)
 		},
 	}

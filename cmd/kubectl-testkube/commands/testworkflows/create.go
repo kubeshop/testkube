@@ -6,10 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	common2 "github.com/kubeshop/testkube/internal/crdcommon"
-	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/marketplace"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -17,6 +14,7 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 	var (
 		name     string
 		filePath string
+		url      string
 		update   bool
 		dryRun   bool
 	)
@@ -28,72 +26,43 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 		Short:   "Create test workflow",
 
 		Run: func(cmd *cobra.Command, _ []string) {
-			namespace := cmd.Flag("namespace").Value.String()
+			if filePath != "" && url != "" {
+				ui.Failf("--file and --url are mutually exclusive")
+			}
 
-			var input io.Reader
-			if filePath == "" {
+			var raw []byte
+			switch {
+			case url != "":
+				client := marketplace.NewClient()
+				body, err := client.FetchURL(cmd.Context(), url)
+				ui.ExitOnError("fetching test workflow from "+url, err)
+				raw = body
+			case filePath != "":
+				file, err := os.Open(filePath)
+				ui.ExitOnError("reading "+filePath+" file", err)
+				defer file.Close()
+				body, err := io.ReadAll(file)
+				ui.ExitOnError("reading input", err)
+				raw = body
+			default:
 				fi, err := os.Stdin.Stat()
 				ui.ExitOnError("reading stdin", err)
 				if fi.Mode()&os.ModeDevice != 0 {
-					ui.Failf("you need to pass stdin or --file argument with file path")
+					ui.Failf("you need to pass stdin, --file, or --url argument")
 				}
-				input = cmd.InOrStdin()
-			} else {
-				file, err := os.Open(filePath)
-				ui.ExitOnError("reading "+filePath+" file", err)
-				input = file
+				body, err := io.ReadAll(cmd.InOrStdin())
+				ui.ExitOnError("reading input", err)
+				raw = body
 			}
 
-			bytes, err := io.ReadAll(input)
-			ui.ExitOnError("reading input", err)
-
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
-
-			err = client.ValidateTestWorkflow(bytes)
-			ui.ExitOnError("error validating test workflow against crd schema", err)
-			if dryRun {
-				ui.SuccessAndExit("TestWorkflow specification is valid")
-			}
-
-			obj := new(testworkflowsv1.TestWorkflow)
-			err = common2.DeserializeCRD(obj, bytes)
-			ui.ExitOnError("deserializing input", err)
-
-			common2.AppendTypeMeta("TestWorkflow", testworkflowsv1.GroupVersion, obj)
-			obj.Namespace = namespace
-			if name != "" {
-				obj.Name = name
-			}
-
-			workflow, err := client.GetTestWorkflow(obj.Name)
-			if err != nil {
-				if update {
-					// allow to `create --update` if test workflow does not exist
-					ui.WarnOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
-				} else {
-					ui.Debug("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err.Error())
-				}
-			}
-
-			if workflow.Name != "" {
-				if !update {
-					ui.Failf("Test workflow with name '%s' already exists in namespace %s, use --update flag for upsert", obj.Name, namespace)
-				}
-				_, err = client.UpdateTestWorkflow(testworkflows.MapTestWorkflowKubeToAPI(*obj))
-				ui.ExitOnError("updating test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
-				ui.Success("Test workflow updated", namespace, "/", obj.Name)
-			} else {
-				_, err = client.CreateTestWorkflow(testworkflows.MapTestWorkflowKubeToAPI(*obj))
-				ui.ExitOnError("creating test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
-				ui.Success("Test workflow created", namespace, "/", obj.Name)
-			}
+			CreateOrUpdateFromBytes(cmd, raw, name, update, dryRun)
 		},
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "test workflow name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow already exists")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow specification")
+	cmd.Flags().StringVarP(&url, "url", "u", "", "URL to fetch the test workflow specification from (mutually exclusive with --file)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate test workflow specification yaml")
 	cmd.Flags().MarkDeprecated("disable-webhooks", "disable-webhooks is deprecated")
 

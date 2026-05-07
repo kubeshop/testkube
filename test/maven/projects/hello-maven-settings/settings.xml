@@ -1,0 +1,16 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <profiles>
+    <profile>
+      <id>testkube</id>
+      <properties>
+        <java-version>11</java-version>
+        <junit-jupiter-version>5.7.2</junit-jupiter-version>
+        <source-encoding>UTF-8</source-encoding>
+      </properties>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>testkube</activeProfile>
+  </activeProfiles>
+</settings>

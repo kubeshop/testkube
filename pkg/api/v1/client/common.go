@@ -3,7 +3,9 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -23,7 +25,7 @@ func StreamToTestWorkflowExecutionNotificationsChannel(resp io.Reader, notificat
 	for {
 		b, err := utils.ReadLongLine(reader)
 		if err != nil {
-			if err != io.EOF {
+			if !isExpectedStreamCloseError(err) {
 				fmt.Printf("Read long line error: %+v' \n", err)
 			}
 
@@ -45,6 +47,10 @@ func StreamToTestWorkflowExecutionNotificationsChannel(resp io.Reader, notificat
 
 		notifications <- out
 	}
+}
+
+func isExpectedStreamCloseError(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // trimDataChunk remove data: and newlines from incoming SSE data line

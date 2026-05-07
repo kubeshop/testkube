@@ -263,6 +263,19 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
+        - name: mode
+          in: query
+          description: |
+            Update mode for the trigger. When set to "replace", the entire trigger 
+            is replaced with the request body (full replacement semantics). When not 
+            set or set to any other value, merge semantics are used where only 
+            non-null fields from the request are applied to the existing trigger.
+            This is used by cloud-api to signal that the original request was YAML.
+          required: false
+          schema:
+            type: string
+            enum:
+              - replace
       tags:
         - test-triggers
         - api
@@ -3185,6 +3198,64 @@ paths:
                   $ref: "#/components/schemas/Problem"
         502:
           description: "problem with getting debug information from the Kuberenetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /export:
+    get:
+      tags:
+        - api
+      summary: "Export execution data"
+      description: "Exports all execution metadata, logs and workflow sequence numbers as a gzipped tar archive. The archive size is limited by the server (configured via the EXPORT_ARCHIVE_MAX_SIZE env var); use the 'since' parameter to narrow the date range if the limit is exceeded."
+      operationId: exportExecutions
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: "Export only executions created after this date. Accepts ISO 8601 date (YYYY-MM-DD) or RFC 3339 timestamp (e.g. 2025-01-01T00:00:00Z)."
+          schema:
+            type: string
+          examples:
+            date:
+              value: "2025-01-01"
+            datetime:
+              value: "2025-01-01T00:00:00Z"
+      responses:
+        200:
+          description: "successful operation"
+          headers:
+            Content-Disposition:
+              description: "Content disposition with the archive filename"
+              schema:
+                type: string
+                example: 'attachment; filename="testkube-export.tar.gz"'
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        400:
+          description: "invalid 'since' parameter value"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        413:
+          description: "export archive exceeds the server-configured size limit"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with exporting execution data"
           content:
             application/problem+json:
               schema:
@@ -6660,8 +6731,6 @@ components:
           deprecated: true
         secret:
           $ref: "#/components/schemas/SecretConfig"
-        features:
-          $ref: "#/components/schemas/Features"
         executionNamespaces:
           type: array
           description: execution namespaces
@@ -7340,8 +7409,6 @@ components:
       description: test trigger create or update request body
       type: object
       required:
-        - resource
-        - resourceSelector
         - event
         - action
         - execution
@@ -7782,6 +7849,8 @@ components:
           $ref: "#/components/schemas/WebhookTemplateRef"
         sync:
           $ref: "#/components/schemas/Syncable"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7852,6 +7921,8 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         sync:
           $ref: "#/components/schemas/Syncable"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     Event:
       description: Event data
@@ -7904,6 +7975,7 @@ components:
         - testsuite
         - executor
         - trigger
+        - workflowtrigger
         - webhook
         - webhooktemplate
         - testexecution
@@ -7915,26 +7987,6 @@ components:
     EventType:
       type: string
       enum:
-        - start-test
-        - end-test-success
-        - end-test-failed
-        - end-test-aborted
-        - end-test-timeout
-        - become-test-up
-        - become-test-down
-        - become-test-failed
-        - become-test-aborted
-        - become-test-timeout
-        - start-testsuite
-        - end-testsuite-success
-        - end-testsuite-failed
-        - end-testsuite-aborted
-        - end-testsuite-timeout
-        - become-testsuite-up
-        - become-testsuite-down
-        - become-testsuite-failed
-        - become-testsuite-aborted
-        - become-testsuite-timeout
         - queue-testworkflow
         - start-testworkflow
         - end-testworkflow-success
@@ -8051,15 +8103,6 @@ components:
           items:
             type: string
           example: ["logline1", "logline2", "logline3"]
-
-    Features:
-      type: object
-      required:
-        - logsV2
-      properties:
-        logsV2:
-          type: boolean
-          description: Log processing version 2
 
     TestTrigger:
       type: object
@@ -8972,6 +9015,13 @@ components:
           type: string
           format: date-time
           description: timestamp for the notification if available
+        seqNo:
+          type: integer
+          format: int32
+          description: monotonic application-event cursor for resumable log streams
+        eventType:
+          type: string
+          description: stream event type, such as log, output, result, ready, heartbeat, or resume_unavailable
         result:
           $ref: "#/components/schemas/TestWorkflowResult"
         ref:
@@ -9233,6 +9283,9 @@ components:
         ref:
           type: string
           description: step reference
+        id:
+          type: string
+          description: stable step identifier for expressions
         name:
           type: string
           description: step name
@@ -9329,6 +9382,9 @@ components:
           parallelism:
             type: integer
             description: how many resources could be scheduled in parallel
+          failFast:
+            type: boolean
+            description: abort remaining parallel workers on first failure
           description:
             type: string
             description: worker description to display
@@ -9358,6 +9414,9 @@ components:
           parallelism:
             type: integer
             description: how many resources could be scheduled in parallel
+          failFast:
+            type: boolean
+            description: abort remaining parallel workers on first failure
           description:
             type: string
             description: worker description to display
@@ -9483,6 +9542,17 @@ components:
         isolatedContainers:
           $ref: "#/components/schemas/BoxedBoolean"
 
+    TestWorkflowTimeouts:
+      type: object
+      description: configures timeout behavior for a workflow (queue, initialization)
+      properties:
+        queue:
+          type: string
+          description: maximum time the execution may spend in queue before starting (e.g. 30s, 5m)
+        initialization:
+          type: string
+          description: maximum time for initialization/transitioning before steps run (e.g. 60s, 2m)
+
     TestWorkflowSpec:
       type: object
       properties:
@@ -9525,7 +9595,9 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
-          $ref: "#/components/schemas/TestWorkflowTagSchema"
+          $ref: "#/components/schemas/TestWorkflowExecutionSchema"
+        timeouts:
+          $ref: "#/components/schemas/TestWorkflowTimeouts"
         pvcs:
           type: object
           additionalProperties:
@@ -9569,7 +9641,9 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
-          $ref: "#/components/schemas/TestWorkflowTagSchema"
+          $ref: "#/components/schemas/TestWorkflowExecutionSchema"
+        timeouts:
+          $ref: "#/components/schemas/TestWorkflowTimeouts"
         pvcs:
           type: object
           additionalProperties:
@@ -9613,6 +9687,9 @@ components:
     TestWorkflowIndependentStep:
       type: object
       properties:
+        id:
+          type: string
+          description: stable identifier for referencing this step in expressions
         name:
           type: string
           description: readable name for the step
@@ -9674,6 +9751,9 @@ components:
     TestWorkflowStep:
       type: object
       properties:
+        id:
+          type: string
+          description: stable identifier for referencing this step in expressions
         name:
           type: string
           description: readable name for the step
@@ -10189,6 +10269,8 @@ components:
           type: string
         securityContext:
           $ref: "#/components/schemas/PodSecurityContext"
+        disableFsGroupDefaulting:
+          $ref: "#/components/schemas/BoxedBoolean"
         hostname:
           type: string
         subdomain:
@@ -10494,6 +10576,9 @@ components:
           type: integer
           format: int64
           description: test workflow execution generation
+        error:
+          type: string
+          description: error message if the execution failed
 
     TestWorkflowTagValue:
       type: object
@@ -10526,14 +10611,18 @@ components:
           description: disable CDEvents for this execution
           default: false
 
-    TestWorkflowTagSchema:
+    TestWorkflowExecutionSchema:
       type: object
-      description: test workflow execution tag definition
+      description: test workflow execution configuration
       properties:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
           $ref: "#/components/schemas/ExecutionTarget"
+        silent:
+          type: boolean
+          description: indicates that all executions should be silent by default. When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+          default: false
 
     TestWorkflowExecutionTags:
       type: object
@@ -10571,6 +10660,14 @@ components:
       properties:
         value:
           type: integer
+      required:
+        - value
+
+    TemplatableBoxedInteger:
+      type: object
+      properties:
+        value:
+          type: string
       required:
         - value
 
@@ -10638,18 +10735,42 @@ components:
     SecurityContext:
       type: object
       properties:
+        capabilities:
+          $ref: "#/components/schemas/Capabilities"
         privileged:
           $ref: "#/components/schemas/BoxedBoolean"
+        seLinuxOptions:
+          $ref: "#/components/schemas/SELinuxOptions"
+        windowsOptions:
+          $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
         readOnlyRootFilesystem:
           $ref: "#/components/schemas/BoxedBoolean"
         allowPrivilegeEscalation:
           $ref: "#/components/schemas/BoxedBoolean"
+        procMount:
+          $ref: "#/components/schemas/BoxedString"
+        seccompProfile:
+          $ref: "#/components/schemas/SeccompProfile"
+        appArmorProfile:
+          $ref: "#/components/schemas/AppArmorProfile"
+
+    Capabilities:
+      type: object
+      properties:
+        add:
+          type: array
+          items:
+            type: string
+        drop:
+          type: array
+          items:
+            type: string
 
     PodSecurityContext:
       type: object
@@ -10659,9 +10780,9 @@ components:
         windowsOptions:
           $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
         supplementalGroups:
@@ -10672,7 +10793,7 @@ components:
         supplementalGroupsPolicy:
           $ref: "#/components/schemas/BoxedString"
         fsGroup:
-          $ref: "#/components/schemas/BoxedInteger"
+          $ref: "#/components/schemas/TemplatableBoxedInteger"
         sysctls:
           type: array
           items:
@@ -12108,4 +12229,3 @@ components:
               filePath:
                 type: string
                 example: folder/file.txt
-

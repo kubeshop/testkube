@@ -18,7 +18,7 @@ type List[T any] interface {
 	Exists() bool
 	Get(index int) *T
 	Latest() []*T
-	Channel() <-chan *T
+	Channel(ctx context.Context) <-chan *T
 	Count() int
 	Next() <-chan struct{}
 
@@ -80,7 +80,7 @@ func (v *list[T]) Next() <-chan struct{} {
 	return v.update.Next()
 }
 
-func (v *list[T]) Channel() <-chan *T {
+func (v *list[T]) Channel(ctx context.Context) <-chan *T {
 	ch := make(chan *T)
 	go func() {
 		defer close(ch)
@@ -88,17 +88,30 @@ func (v *list[T]) Channel() <-chan *T {
 		for {
 			// Read all immediate values
 			for i < v.Count() {
-				ch <- v.Get(i)
-				i++
+				select {
+				case ch <- v.Get(i):
+					i++
+				case <-v.ctx.Done():
+					return
+				case <-ctx.Done():
+					return
+				}
 			}
 
 			// End if the context is closed
-			if v.ctx.Err() != nil {
+			if v.ctx.Err() != nil || ctx.Err() != nil {
 				return
 			}
 
 			// Wait for updates
-			<-v.update.Next()
+			select {
+			case <-v.update.Next():
+			case <-v.ctx.Done():
+				return
+			case <-ctx.Done():
+				return
+			}
+
 		}
 	}()
 	return ch

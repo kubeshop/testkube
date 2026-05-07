@@ -6,6 +6,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
 // NoOpStore provides a fallback store implementation for when a concrete store
@@ -18,6 +19,14 @@ func (s NoOpStore) UpdateOrCreateTestTrigger(_ context.Context, _ testtriggersv1
 }
 
 func (s NoOpStore) DeleteTestTrigger(_ context.Context, _ string) error {
+	return nil
+}
+
+func (s NoOpStore) UpdateOrCreateWorkflowTrigger(_ context.Context, _ workflowtriggersv1.WorkflowTrigger) error {
+	return nil
+}
+
+func (s NoOpStore) DeleteWorkflowTrigger(_ context.Context, _ string) error {
 	return nil
 }
 

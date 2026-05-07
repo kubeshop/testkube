@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -18,7 +19,7 @@ func NewWebsocketListener() *WebsocketListener {
 	return &WebsocketListener{
 		Log:        log.DefaultLogger,
 		selector:   "",
-		Websockets: []Websocket{},
+		Websockets: []*Websocket{},
 		events:     testkube.AllEventTypes,
 	}
 }
@@ -26,8 +27,9 @@ func NewWebsocketListener() *WebsocketListener {
 type WebsocketListener struct {
 	Log        *zap.SugaredLogger
 	events     []testkube.EventType
-	Websockets []Websocket
+	Websockets []*Websocket
 	selector   string
+	mu         sync.RWMutex
 }
 
 func (l *WebsocketListener) Name() string {
@@ -43,8 +45,9 @@ func (l *WebsocketListener) Events() []testkube.EventType {
 }
 
 func (l *WebsocketListener) Metadata() map[string]string {
+	websockets := l.SnapshotWebsockets()
 	ids := "["
-	for _, w := range l.Websockets {
+	for _, w := range websockets {
 		ids += w.Id + " "
 	}
 	ids += "]"
@@ -64,9 +67,10 @@ func (l *WebsocketListener) Match(event testkube.Event) bool {
 func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var success, failed []string
 
-	for _, w := range l.Websockets {
+	websockets := l.SnapshotWebsockets()
+	for _, w := range websockets {
 		l.Log.Debugw("notifying websocket", "id", w.Id, "event", event.Type(), "resourceId", event.ResourceId)
-		err := w.Conn.WriteJSON(event)
+		err := w.SendJSON(event)
 		if err != nil {
 			failed = append(failed, w.Id)
 		} else {
@@ -76,11 +80,14 @@ func (l *WebsocketListener) Notify(event testkube.Event) (result testkube.EventR
 
 	if len(failed) > 0 {
 		return testkube.NewFailedEventResult(event.Id, errors.New("message sent to not all clients, failed: "+strings.Join(failed, ", ")))
-	} else if len(success) > 0 {
-		return testkube.NewSuccessEventResult(event.Id, "message sent to websocket clients")
-	} else {
-		return testkube.NewFailedEventResult(event.Id, errors.New("message not sent"))
 	}
+	if len(success) > 0 {
+		return testkube.NewSuccessEventResult(event.Id, "message sent to websocket clients")
+	}
+	if len(websockets) == 0 {
+		return testkube.NewSuccessEventResult(event.Id, "no websocket clients connected")
+	}
+	return testkube.NewFailedEventResult(event.Id, errors.New("message not sent"))
 
 }
 
@@ -90,4 +97,30 @@ func (l *WebsocketListener) Kind() string {
 
 func (l *WebsocketListener) Group() string {
 	return ""
+}
+
+func (l *WebsocketListener) AddWebsocket(ws *Websocket) {
+	l.mu.Lock()
+	l.Websockets = append(l.Websockets, ws)
+	l.mu.Unlock()
+}
+
+func (l *WebsocketListener) RemoveWebsocket(id string) {
+	l.mu.Lock()
+	for i, ws := range l.Websockets {
+		if ws.Id == id {
+			l.Websockets = append(l.Websockets[:i], l.Websockets[i+1:]...)
+			break
+		}
+	}
+	l.mu.Unlock()
+}
+
+func (l *WebsocketListener) SnapshotWebsockets() []*Websocket {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	websockets := make([]*Websocket, len(l.Websockets))
+	copy(websockets, l.Websockets)
+	return websockets
 }

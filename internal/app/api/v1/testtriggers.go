@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -59,6 +60,10 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 		errPrefix = errPrefix + " " + testTrigger.Name
 
+		if errs := testTrigger.Spec.Validate(); len(errs) > 0 {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
+		}
+
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
 
 		// Convert CRD to API object for the new interface
@@ -82,7 +87,10 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test trigger"
 		var request testkube.TestTriggerUpsertRequest
-		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+		isYAML := string(c.Request().Header.ContentType()) == mediaTypeYAML
+		// Check for replace mode query parameter (used by cloud-api for YAML updates)
+		isReplaceMode := c.Query("mode") == "replace"
+		if isYAML {
 			var testTrigger testtriggersv1.TestTrigger
 			testTriggerSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testTriggerSpec), len(testTriggerSpec))
@@ -104,57 +112,89 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + request.Name
 
-		// we need to get resource first
-		apiTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
+		if errs := validateUpsertMatchConditions(request.Match, request.Event); len(errs) > 0 {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
+		}
+
+		// we need to get resource first to validate it exists
+		existingTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), request.Name, namespace)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
-		// Update the trigger with new values from request
-		apiTrigger.Name = request.Name
-		apiTrigger.Namespace = namespace
-		if request.Labels != nil {
-			apiTrigger.Labels = request.Labels
-		}
-		if request.Annotations != nil {
-			apiTrigger.Annotations = request.Annotations
-		}
+		var apiTrigger *testkube.TestTrigger
 
-		// Update individual fields from the request
-		if request.Selector != nil {
-			apiTrigger.Selector = request.Selector
+		// YAML requests or replace mode do full replacement (Definition tab sends complete YAML)
+		// JSON requests without replace mode do merge (form-based updates send partial JSON)
+		if isYAML || isReplaceMode {
+			apiTrigger = &testkube.TestTrigger{
+				Name:              request.Name,
+				Namespace:         namespace,
+				Labels:            request.Labels,
+				Annotations:       request.Annotations,
+				Selector:          request.Selector,
+				Resource:          request.Resource,
+				ResourceSelector:  request.ResourceSelector,
+				Event:             request.Event,
+				ConditionSpec:     request.ConditionSpec,
+				ProbeSpec:         request.ProbeSpec,
+				Action:            request.Action,
+				ActionParameters:  request.ActionParameters,
+				Execution:         request.Execution,
+				TestSelector:      request.TestSelector,
+				ConcurrencyPolicy: request.ConcurrencyPolicy,
+				Disabled:          request.Disabled,
+				Sync:              request.Sync,
+			}
+		} else {
+			// JSON merge: only update fields that are present in the request
+			apiTrigger = existingTrigger
+			apiTrigger.Name = request.Name
+			apiTrigger.Namespace = namespace
+			if request.Labels != nil {
+				apiTrigger.Labels = request.Labels
+			}
+			if request.Annotations != nil {
+				apiTrigger.Annotations = request.Annotations
+			}
+			if request.Selector != nil {
+				apiTrigger.Selector = request.Selector
+			}
+			if request.Resource != nil {
+				apiTrigger.Resource = request.Resource
+			}
+			if request.ResourceSelector != nil {
+				apiTrigger.ResourceSelector = request.ResourceSelector
+			}
+			if request.Event != "" {
+				apiTrigger.Event = request.Event
+			}
+			if request.ConditionSpec != nil {
+				apiTrigger.ConditionSpec = request.ConditionSpec
+			}
+			if request.ProbeSpec != nil {
+				apiTrigger.ProbeSpec = request.ProbeSpec
+			}
+			if request.Action != nil {
+				apiTrigger.Action = request.Action
+			}
+			if request.ActionParameters != nil {
+				apiTrigger.ActionParameters = request.ActionParameters
+			}
+			if request.Execution != nil {
+				apiTrigger.Execution = request.Execution
+			}
+			if request.TestSelector != nil {
+				apiTrigger.TestSelector = request.TestSelector
+			}
+			if request.ConcurrencyPolicy != nil {
+				apiTrigger.ConcurrencyPolicy = request.ConcurrencyPolicy
+			}
+			if request.Sync != nil {
+				apiTrigger.Sync = request.Sync
+			}
+			apiTrigger.Disabled = request.Disabled
 		}
-		if request.Resource != nil {
-			apiTrigger.Resource = request.Resource
-		}
-		if request.ResourceSelector != nil {
-			apiTrigger.ResourceSelector = request.ResourceSelector
-		}
-		if request.Event != "" {
-			apiTrigger.Event = request.Event
-		}
-		if request.ConditionSpec != nil {
-			apiTrigger.ConditionSpec = request.ConditionSpec
-		}
-		if request.ProbeSpec != nil {
-			apiTrigger.ProbeSpec = request.ProbeSpec
-		}
-		if request.Action != nil {
-			apiTrigger.Action = request.Action
-		}
-		if request.ActionParameters != nil {
-			apiTrigger.ActionParameters = request.ActionParameters
-		}
-		if request.Execution != nil {
-			apiTrigger.Execution = request.Execution
-		}
-		if request.TestSelector != nil {
-			apiTrigger.TestSelector = request.TestSelector
-		}
-		if request.ConcurrencyPolicy != nil {
-			apiTrigger.ConcurrencyPolicy = request.ConcurrencyPolicy
-		}
-		apiTrigger.Disabled = request.Disabled
 
 		err = s.TestTriggersClient.Update(c.Context(), s.getEnvironmentId(), *apiTrigger)
 		s.Metrics.IncUpdateTestTrigger(err)
@@ -203,6 +243,10 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			// default trigger name if not defined in upsert request
 			if crdTestTrigger.Name == "" {
 				crdTestTrigger.Name = generateTestTriggerName(&crdTestTrigger)
+			}
+
+			if errs := crdTestTrigger.Spec.Validate(); len(errs) > 0 {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s %s: %w", errPrefix, crdTestTrigger.Name, errors.Join(errs...)))
 			}
 
 			// Convert CRD to API object for the new interface
@@ -330,6 +374,45 @@ func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
 	}
+}
+
+// validateUpsertMatchConditions mirrors TestTriggerSpec.Validate for the REST upsert path,
+// where we only have the OpenAPI type (not the CRD) and building the CRD via the mapper
+// would require non-nil selectors we don't have.
+func validateUpsertMatchConditions(match []testkube.TestTriggerFieldCondition, event string) []error {
+	var errs []error
+	for i, cond := range match {
+		if cond.Path == "" {
+			errs = append(errs, fmt.Errorf("match[%d].path is required", i))
+			continue
+		}
+
+		op := testkube.TestTriggerFieldOperator(cond.Operator)
+		switch op {
+		case testkube.TestTriggerFieldOperatorEquals,
+			testkube.TestTriggerFieldOperatorNotEquals,
+			testkube.TestTriggerFieldOperatorChangedTo,
+			testkube.TestTriggerFieldOperatorChangedFrom:
+			if cond.Value == "" {
+				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires a value", i, op))
+			}
+		case testkube.TestTriggerFieldOperatorExists,
+			testkube.TestTriggerFieldOperatorNotExists,
+			testkube.TestTriggerFieldOperatorChanged:
+		default:
+			errs = append(errs, fmt.Errorf("match[%d]: unknown operator %q", i, cond.Operator))
+		}
+
+		switch op {
+		case testkube.TestTriggerFieldOperatorChanged,
+			testkube.TestTriggerFieldOperatorChangedTo,
+			testkube.TestTriggerFieldOperatorChangedFrom:
+			if event != "" && event != string(testtriggersv1.TestTriggerEventModified) {
+				errs = append(errs, fmt.Errorf("match[%d]: operator %q requires event to be %q", i, op, testtriggersv1.TestTriggerEventModified))
+			}
+		}
+	}
+	return errs
 }
 
 // generateTestTriggerName function generates a trigger name from the TestTrigger spec

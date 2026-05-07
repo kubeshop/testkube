@@ -84,6 +84,9 @@ Define API image
     {{- $tag = .Values.image.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -99,21 +102,17 @@ Define API environment in agent mode
 */}}
 {{- define "testkube-api.env-agent-mode" -}}
 {{- if .Values.cloud.key -}}
-- name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+- name: TESTKUBE_PRO_API_KEY
   value:  "{{ .Values.cloud.key }}"
 - name: TESTKUBE_PRO_AGENT_ID
   value: "{{ .Values.cloud.agentId }}"
 {{- else if .Values.cloud.existingSecret.key -}}
-- name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+- name: TESTKUBE_PRO_API_KEY
   valueFrom:
     secretKeyRef:
       key: {{ .Values.cloud.existingSecret.key }}
       name: {{ .Values.cloud.existingSecret.name }}
 {{- end }}
-- name: SELF_REGISTRATION_SECRET
-  value: "self-registration"
-- name: SECRET_CREATION_PREFIX
-  value: "{{ include "testkube-api.fullname" . }}-"
 - name: RUNNER_IS_GLOBAL
   value: "true"
 {{- if .Values.cloud.url }}
@@ -276,7 +275,14 @@ Define API environment in standalone mode
 {{- end }}
 {{- if .Values.postgresql.enabled }}
 - name: API_POSTGRES_DSN
+  {{- if .Values.postgresql.secretName }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgresql.secretName }}
+      key: {{ required "postgresql.secretKey is required when postgresql.secretName is set" .Values.postgresql.secretKey }}
+  {{- else }}
   value: "{{ .Values.postgresql.dsn }}"
+  {{- end }}
 {{- end }}
 - name: "NATS_EMBEDDED"
   value: "{{ .Values.nats.embedded }}"
@@ -351,6 +357,8 @@ Define API environment in standalone mode
   value: "{{ .Values.storage.certSecret.baseMountPath }}/{{ .Values.storage.certSecret.caFile }}"
 {{- end }}
 {{- end }}
+- name: "STORAGE_USE_VIRTUAL_HOSTED_STYLE"
+  value: "{{ .Values.storage.useVirtualHostedStyle }}"
 - name: "SCRAPPERENABLED"
   value:  "{{ .Values.storage.scrapperEnabled }}"
 - name: "COMPRESSARTIFACTS"
@@ -379,6 +387,9 @@ Define Test Workflows Toolkit Image
     {{- $tag = .Values.imageTwToolkit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -404,6 +415,9 @@ Define Test Workflows Init Image
     {{- $tag = .Values.imageTwInit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}

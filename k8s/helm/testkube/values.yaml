@@ -108,13 +108,55 @@ mongodb:
   # Currently Bitnami doesn't support ARM: https://github.com/bitnami/charts/issues/7305
   image:
     # -- MongoDB image registry
-    registry: us-east1-docker.pkg.dev
+    registry: docker.io
     # -- MongoDB image repository
-    repository: testkube-cloud-372110/testkube/mongodb
+    repository: kubeshop/bitnami-mongodb
     # -- MongoDB image tag
-    tag: 8.0.15
+    tag: 8.2.7
     # -- MongoDB image pull Secret
     pullSecrets: []
+  # -- Target MongoDB Feature Compatibility Version used by the FCV hook jobs.
+  # -- Leave empty for the default behavior: enabling `mongodb.preUpgradeFCVJob.enabled` is enough and the jobs will derive the target FCV from `mongodb.image.tag`.
+  # -- Set this only when you need to override the automatically derived target version manually.
+  featureCompatibilityVersion: ""
+  # -- Helm hook job configuration for MongoDB Feature Compatibility Version reconciliation before and after upgrades.
+  # -- The prepare job runs before upgrade to move FCV to a compatible version before the MongoDB binary changes.
+  # -- The apply job runs after upgrade to set the final FCV once the new MongoDB binary is reachable.
+  preUpgradeFCVJob:
+    # -- Enable the MongoDB FCV hook jobs.
+    # -- With this enabled, no extra version settings are required for the default path.
+    enabled: false
+    # -- Number of retries before considering either FCV Job as failed.
+    backoffLimit: 2
+    # -- Number of seconds to keep finished FCV Jobs before Kubernetes garbage-collects them.
+    ttlSecondsAfterFinished: 300
+    # -- Use Argo CD hook annotations instead of Helm hook annotations for the FCV jobs.
+    useArgoHooks: false
+    # -- Extra annotations added to both FCV Job resources.
+    annotations: {}
+    # -- Extra annotations added to Pods created by the FCV Jobs.
+    podAnnotations: {}
+    # -- Image pull secrets for the FCV Jobs. `global.imagePullSecrets` takes precedence, then `mongodb.preUpgradeFCVJob.imagePullSecrets`, then `mongodb.image.pullSecrets`.
+    imagePullSecrets: []
+    # -- MongoDB port used by the FCV Jobs. Defaults to `mongodb.service.port` when empty.
+    port: ""
+    # -- Pod security context for the FCV Jobs. Falls back to `global.podSecurityContext`
+    podSecurityContext: {}
+    # -- Container security context for the FCV Jobs. Falls back to `global.containerSecurityContext`
+    securityContext: {}
+    # -- Node selector for the FCV Jobs. Takes precedence over `global.nodeSelector`.
+    nodeSelector: {}
+    # -- Affinity for the FCV Jobs. Takes precedence over `global.affinity`.
+    affinity: {}
+    # -- Tolerations for the FCV Jobs. Takes precedence over `global.tolerations`, then fall back to `mongodb.tolerations`.
+    tolerations: []
+    # -- Service account used by the FCV Jobs. Defaults to `default` when empty.
+    serviceAccountName: ""
+    # -- Additional environment variables added to both FCV Job containers.
+    extraEnv: []
+    # -- Override the FCV used by the pre-upgrade Job.
+    # -- Leave empty for the default behavior: the Job starts from `mongodb.featureCompatibilityVersion` (or `mongodb.image.tag`) and limits it to the current MongoDB server version if needed.
+    preUpgradeTargetVersion: ""
   # ref: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
   # -- Uncomment to schedule a multi-arch image to any available architecture type in a GGP Standard k8s cluster.
   #  tolerations:
@@ -149,6 +191,24 @@ mongodb:
     timeoutSeconds: 10
     failureThreshold: 6
     successThreshold: 1
+  # MongoDB uses ReadWriteOnce access mode for PV. It means that the volume can be accessed by pods that reside on the same node.
+  # Keep the default RollingUpdate behavior unless the underlying MongoDB chart/template is updated to support Recreate without rendering a `rollingUpdate` block.
+  # Setting `type: Recreate` against the current chart rendering produces an invalid Deployment because Kubernetes forbids `rollingUpdate` when strategy type is `Recreate`.
+  updateStrategy:
+    # -- Update Strategy type. Keep `RollingUpdate` with the current chart rendering.
+    type: RollingUpdate
+  # -- MongoDB metrics sidecar image configuration.
+  # Overrides the subchart default to prevent the tag from being embedded in the repository field,
+  # which would cause an invalid duplicated-tag image reference (e.g. registry/repo:tag:tag).
+  # Note: update this tag when upgrading the MongoDB metrics exporter image version.
+  metrics:
+    image:
+      # -- MongoDB metrics image registry
+      registry: docker.io
+      # -- MongoDB metrics image repository
+      repository: bitnami/mongodb-exporter
+      # -- MongoDB metrics image tag
+      tag: "latest"
 
 # PostgreSQL parameters
 # For more configuration parameters of PostgreSQL chart please look here: https://github.com/bitnami/charts/tree/main/bitnami/postgresql#parameters
@@ -253,17 +313,75 @@ postgresql:
   # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
   image:
     # -- PostgreSQL image registry
-    registry: us-east1-docker.pkg.dev
+    registry: docker.io
     # -- PostgreSQL image repository
-    repository: testkube-cloud-372110/testkube/postgresql
+    repository: kubeshop/testkube-postgres
     # -- PostgreSQL image tag
-    tag: 18-debian-12
+    tag: 18.3
     # -- PostgreSQL image pull Secret
     pullSecrets: []
 
+# CloudNativePG operator configuration.
+cloudnative-pg:
+  # -- Toggle whether to install the CloudNativePG operator in this environment.
+  # -- Disable this when a shared operator is already installed in the cluster and this env should only create a CNPG Cluster resource.
+  enabled: false
+  crds:
+    # -- Specifies whether the CloudNativePG CRDs should be created.
+    # -- Disable this when CRDs are installed separately by the cluster/platform team.
+    create: true
+  rbac:
+    # -- Specifies whether ClusterRole and ClusterRoleBinding should be created for the operator.
+    # -- Keep this enabled unless the required RBAC is managed outside this chart. The operator still needs permissions even when `config.clusterWide` is false.
+    create: true
+  webhook:
+    mutating:
+      # -- Specifies whether the mutating webhook configuration should be created.
+      create: true
+    validating:
+      # -- Specifies whether the validating webhook configuration should be created.
+      create: true
+  config:
+    # -- When true, the operator watches CNPG resources cluster-wide. When false, it is limited to its namespace/watch scope, but still requires RBAC to read its config and manage resources there.
+    clusterWide: true
+
+# CloudNativePG PostgreSQL Cluster configuration.
+# This section is passed directly to the official CNPG `cluster` chart.
+postgresqlOperatorCluster:
+  # -- Toggle whether to create a CloudNativePG Cluster resource for this environment.
+  # -- Keep this enabled when you want to use a shared cluster-wide operator and only disable `cloudnative-pg.enabled`.
+  enabled: false
+  fullnameOverride: "testkube-postgresql"
+  type: postgresql
+  mode: standalone
+  version:
+    # -- PostgreSQL major version to use
+    postgresql: "18"
+  cluster:
+    instances: 1
+    imageName: "kubeshop/testkube-postgres:18.3"
+    postgresUID: 999
+    postgresGID: 999
+    imagePullSecrets: []
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: "1"
+    enablePDB: false
+    storage:
+      size: 5Gi
+      storageClass: ""
+    postgresql:
+      parameters:
+        max_connections: "300"
+        shared_buffers: "256MB"
+    initdb:
+      database: "backend"
+      owner: "testkube"
 ## NATS chart parameter
-## Tolerations to schedule a workload to nodes with any architecture type. Required for deployment to GKE cluster.
-## More info: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#node-affinity-multi-arch-arm
 nats:
   # -- Uncomment to pass a global registry name to all NATS images
   # global:
@@ -276,12 +394,15 @@ nats:
   #     tag: 2.11.6-alpine
   #     pullPolicy:
   #     registry:
+  # Example of setting nodeSelector and tolerations
+  #  nodeSelector:
+  #    workload-type: infra
+  #  tolerations:
+  #  - effect: NoSchedule
+  #    key: workload-type
+  #    operator: Equal
+  #    value: infra
   # NATS Box container settings
-  # TODO remove this container after tests on dev and stage
-  # nats-box is A lightweight container with NATS utilities. It's not needed for nats server
-  # change it to
-  # natsBox:
-  #   enabled: false
   natsBox:
     enabled: false
     # -- Uncomment to override the NATS Box image options
@@ -374,6 +495,11 @@ testkube-logs:
     SSL: false
     # -- Toggle whether to verify TLS certificates
     skipVerify: false
+    # -- Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+    # Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+    # When true, the endpoint should be the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+    # the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+    useVirtualHostedStyle: false
     # -- If enabled, will also require a CA certificate to be provided
     mountCACertificate: false
     certSecret:
@@ -414,12 +540,28 @@ testkube-api:
   # -- Toggle whether to deploy Testkube API RBAC
   rbac:
     create: true
+    # -- Extra resources the agent watchers role should cover. Required when
+    # TestTriggers or WorkflowTriggers use `resourceRef` to target a CRD that
+    # isn't in the default watchers role (e.g. cert-manager, Kafka, Strimzi).
+    # Applied to all three role variants (cluster-wide ClusterRole, the
+    # release-namespace Role in multinamespace mode, and the per-namespace
+    # Roles in additionalNamespaces). Verbs default to `[get, list, watch]`.
+    # Example:
+    #   extraWatchedResources:
+    #     - apiGroups: ["cert-manager.io"]
+    #       resources: ["certificates"]
+    #     - apiGroups: ["kafka.strimzi.io"]
+    #       resources: ["kafkatopics"]
+    extraWatchedResources: []
 
   # Multinamespace feature. Disabled by default
   multinamespace:
     enabled: false
   # Toggle to enable debug mode
   enableDebugMode: false
+
+  # Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+  exportArchiveMaxSize: "104857600"
 
   # jobPodAnnotations adds annotations to the pods spawned to execute tests using
   # prebuilt and container executors.
@@ -499,9 +641,6 @@ testkube-api:
     digest: ""
     # -- Testkube API k8s secret for private registries
     pullSecrets: []
-
-  ## Sets a specific tag for the executors to the last built version
-  executorsTag: 2.1.123
 
   # Test Workflows toolkit image parameters
   imageTwToolkit:
@@ -666,7 +805,7 @@ testkube-api:
       ## Should it copy data from Control Plane to Kubernetes
       syncCloudToKubernetes: false
       ## Should it copy data from Kubernetes to Control Plane
-      syncKubernetesToCloud: false
+      syncKubernetesToCloud: true
       ## Define the naming patterns for resources in different sources
       namePatterns:
         ## Name pattern for resources in the Control Plane
@@ -907,6 +1046,11 @@ testkube-api:
     SSL: false
     # -- Toggle whether to verify TLS certificates
     skipVerify: false
+    # -- Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+    # Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+    # When true, the endpoint should be the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+    # the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+    useVirtualHostedStyle: false
     # -- If enabled, will also require a CA certificate to be provided
     mountCACertificate: false
     certSecret:
@@ -929,7 +1073,7 @@ testkube-api:
 
   # Logs storage for Testkube API.
   logs:
-    # -- Log storage can either be "minio" or "mongo"
+    # -- Log storage can be "minio" or "none" (to disable log persistence)
     storage: "minio"
     # -- Bucket should be specified if storage is "minio"
     bucket: "testkube-logs"
@@ -942,6 +1086,8 @@ testkube-api:
 
   # MongoDB parameters
   mongodb:
+    # -- Enable MongoDB
+    enabled: true
     # -- MongoDB DSN
     dsn: "mongodb://testkube-mongodb:27017"
     # secretName: testkube-secrets
@@ -974,6 +1120,29 @@ testkube-api:
     # -- Key for SSL Cert Secret k8s Secret
     # sslCertSecretSecretKey: sslCertSecretSecretKey
 
+  postgresql:
+    enabled: false
+    # -- PostgreSQL DSN
+    dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+    # -- Secret name with PostgreSQL DSN
+    secretName: ""
+    # -- Secret key for PostgreSQL DSN
+    secretKey: ""
+  # -- Testkube API Startup probe parameters
+  startupProbe:
+    # -- Whether startup probe is enabled
+    enabled: true
+    # -- Initial delay for startup probe
+    initialDelaySeconds: 3
+    # -- Period between probe checks
+    periodSeconds: 3
+    # -- Probe timeout for startup probe
+    timeoutSeconds: 10
+    # -- Success threshold for startup probe
+    successThreshold: 1
+    # -- Failure threshold for startup probe
+    failureThreshold: 200
+
   # -- Testkube API Liveness probe parameters
   livenessProbe:
     # -- Initial delay for liveness probe
@@ -984,17 +1153,6 @@ testkube-api:
 
   # -- Testkube timeout for pod start
   podStartTimeout: "30m"
-
-  # Integration with Slack.
-  # ref: https://kubeshop.github.io/testkube/integrations/slack-integration/
-  # -- Slack token from the testkube authentication endpoint
-  slackToken: ""
-  # -- Slack secret to store slackToken, the key name should be SLACK_TOKEN
-  slackSecret: ""
-  # -- Slack config for the events, tests, testsuites, testworkflows and channels
-  slackConfig:
-  # -- default executors as base64-encoded string
-  executors: ""
   # -- SA that is used by a job. Can be annotated with the IAM Role Arn to access S3 service in AWS Cloud.
   jobServiceAccountName: ""
   # -- target for cdevents emission via http(s)
@@ -1007,12 +1165,6 @@ testkube-api:
   enableSecretsEndpoint: false
   # -- disable secret creation for tests and test sources
   disableSecretCreation: false
-  # -- enable only specified executors with enabled flag
-  enabledExecutors:
-  #  postman-executor:
-  #    enabled: true
-  #  cypress-executor:
-  #    enabled: true
   # -- Execution namespaces for Testkube API to only run tests
   # In this case, a Role and a RoleBinding will be created for each specified namespace.
   executionNamespaces: []
@@ -1148,7 +1300,7 @@ testkube-operator:
       # -- Testkube Operator rbac-proxy image repository
       repository: brancz/kube-rbac-proxy
       # -- Testkube Operator rbac-proxy image tag
-      tag: "v0.18.1"
+      tag: "v0.22.0"
       # -- Testkube Operator rbac-proxy k8s secret for private registries
       pullSecrets: []
     # -- Testkube Operator rbac-proxy resource settings
@@ -1281,7 +1433,7 @@ testkube-operator:
         # -- Migrate container job image name
         repository: rancher/kubectl
         # -- Migrate container job image tag
-        version: v1.23.7
+        version: v1.36.0
         # -- Migrate container job image pull policy
         pullPolicy: IfNotPresent
         # -- Migrate container job k8s secret for private registries
@@ -1308,7 +1460,7 @@ testkube-operator:
         # -- patch job image name
         repository: kubeshop/kube-webhook-certgen
         # -- patch job image tag
-        tag: 0.0.7
+        tag: 1.0.11
         # -- patch job image pull policy
         pullPolicy: Always
         # -- patch job k8s secret for private registries

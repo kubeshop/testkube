@@ -44,6 +44,7 @@ type ProContext struct {
 	DashboardURI                        string
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
+	HasSourceOfTruthCapability          bool
 	Agent                               ProContextAgent
 }
 
@@ -68,8 +69,8 @@ type ProContextAgentEnvironment struct {
 type ProContextAgent struct {
 	ID           string
 	Name         string
-	Type         string
 	Disabled     bool
 	Labels       map[string]string
+	IsSuperAgent bool
 	Environments []ProContextAgentEnvironment
 }

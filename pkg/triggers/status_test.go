@@ -9,9 +9,8 @@ import (
 )
 
 func TestTriggerStatusForTestWorkflows(t *testing.T) {
-	t.Parallel()
 
-	status := newTriggerStatus(&v1.TestTrigger{})
+	status := newTriggerStatusFromV1(&v1.TestTrigger{})
 
 	status.testWorkflowExecutionIDs = []string{"test-workflow-execution-1"}
 	status.start()

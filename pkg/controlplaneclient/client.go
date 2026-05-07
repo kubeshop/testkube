@@ -50,6 +50,8 @@ type Client interface {
 	TestWorkflowsClient
 	TestWorkflowTemplatesClient
 	TestTriggersClient
+	WorkflowTriggersClient
+	WebhooksClient
 }
 
 func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, opts ClientOptions, logger *zap.SugaredLogger) Client {

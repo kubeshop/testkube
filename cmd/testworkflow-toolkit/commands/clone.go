@@ -96,6 +96,10 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 		return fmt.Errorf("setting up authentication: %w", err)
 	}
 
+	// Setup credential store for reliable auth across redirects (best-effort)
+	cleanupCreds := setupCredentialStore(uri)
+	defer cleanupCreds()
+
 	// Setup SSH if provided
 	cleanupSSH, err := setupSSHKey(opts.SSHKey)
 	if err != nil {
@@ -176,7 +180,7 @@ func setupAuthentication(ctx context.Context, uri *url.URL, opts *CloneOptions) 
 	case "header":
 		ui.Debug("auth type: header")
 		if opts.Token != "" {
-			authArgs = append(authArgs, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", opts.Token))
+			authArgs = append(authArgs, "-c", fmt.Sprintf("http.extraHeader=Authorization: Bearer %s", opts.Token))
 		}
 		if opts.Username != "" {
 			uri.User = url.User(opts.Username)
@@ -237,63 +241,66 @@ func setupSSHKey(sshKey string) (func(), error) {
 	return func() { _ = os.Remove(sshKeyPath) }, nil
 }
 
-// setupCertAuth configures certificate authentication if provided and returns a cleanup function
-func setupCertAuth(opts *CloneOptions) ([]string, []func(), error) {
-	if opts.CaCert == "" && opts.ClientCert == "" && opts.ClientKey == "" {
-		return nil, []func(){}, nil
-	}
-	cleanupFuncs := make([]func(), 0)
-	certAuthArgs := make([]string, 0)
-	if opts.CaCert != "" {
-		cleanupCaCertFile, caCertFilePath, err := CreateTempFile(opts.CaCert, "ca-cert-*")
-		if err != nil {
-			return nil, cleanupFuncs, fmt.Errorf("creating temp file for CA Certificate: %w", err)
-		}
-		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslCAInfo=%s", caCertFilePath))
-		cleanupFuncs = append(cleanupFuncs, cleanupCaCertFile)
-	}
-	if opts.ClientCert != "" && opts.ClientKey != "" {
-		cleanupclientCertFile, clientCertFilePath, err := CreateTempFile(opts.ClientCert, "client-cert-*")
-		if err != nil {
-			return nil, cleanupFuncs, fmt.Errorf("creating temp file for Client Certificate: %w", err)
-		}
-		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslCert=%s", clientCertFilePath))
-		cleanupFuncs = append(cleanupFuncs, cleanupclientCertFile)
+// setupCredentialStore configures a git credential store file so that credentials
+// are available even when Git strips them from the URL (e.g., after HTTP redirects).
+// This is best-effort: if anything fails, it logs a warning and returns a no-op
+// cleanup, allowing the clone to proceed with URL-embedded credentials.
+func setupCredentialStore(uri *url.URL) func() {
+	noop := func() {}
 
-		cleanupclientKeyFile, clientKeyFilePath, err := CreateTempFile(opts.ClientKey, "client-key-*")
-		if err != nil {
-			return nil, cleanupFuncs, fmt.Errorf("creating temp file for Client Key: %w", err)
-		}
-		certAuthArgs = append(certAuthArgs, "-c", fmt.Sprintf("http.sslKey=%s", clientKeyFilePath))
-		cleanupFuncs = append(cleanupFuncs, cleanupclientKeyFile)
+	if uri.Scheme != "https" && uri.Scheme != "http" {
+		return noop
 	}
 
-	return certAuthArgs, cleanupFuncs, nil
-}
-
-func RunCleanupFuncs(cleanupFuncs []func()) {
-	for _, cleanup := range cleanupFuncs {
-		cleanup()
+	// Use credentials from the URI (already set by setupAuthentication).
+	// Skip credential-store setup when the URI only has a username and no
+	// password/token, because that does not provide usable credentials and can
+	// still alter global git authentication behavior.
+	if uri.User == nil {
+		return noop
 	}
-}
+	if _, hasPassword := uri.User.Password(); !hasPassword {
+		return noop
+	}
 
-func CreateTempFile(key string, fileName string) (func(), string, error) {
-	key = strings.TrimRight(key, "\n") + "\n"
+	// Build the credential URL: scheme://user:token@host
+	credURL := &url.URL{
+		Scheme: uri.Scheme,
+		Host:   uri.Host,
+		User:   uri.User,
+	}
 
-	// Create temp file for the key
-	tmpFile, err := os.CreateTemp(constants.DefaultTmpDirPath, fileName)
+	credContent := credURL.String() + "\n"
+
+	// Write the credentials file
+	credFile, err := os.CreateTemp(constants.DefaultTmpDirPath, "git-credentials-*")
 	if err != nil {
-		return func() {}, "", fmt.Errorf("creating temp file for key %s: %w", fileName, err)
+		fmt.Printf("warn: could not create credential store file: %s\n", err)
+		return noop
 	}
-	keyPath := tmpFile.Name()
-	tmpFile.Close() // Close it so we can write to it with proper permissions
+	credPath := credFile.Name()
+	credFile.Close()
 
-	if err := os.WriteFile(keyPath, []byte(key), 0400); err != nil {
-		_ = os.Remove(keyPath)
-		return func() {}, "", fmt.Errorf("writing SSH key: %w", err)
+	if err := os.WriteFile(credPath, []byte(credContent), 0400); err != nil {
+		fmt.Printf("warn: could not write credential store: %s\n", err)
+		_ = os.Remove(credPath)
+		return noop
 	}
 
-	return func() { _ = os.Remove(keyPath) }, keyPath, nil
+	// Configure git to use the credential store
+	if err := Run("git", "config", "--global", "credential.helper", shellquote.Join("store", "--file", credPath)); err != nil {
+		fmt.Printf("warn: could not configure credential helper: %s\n", err)
+		_ = os.Remove(credPath)
+		return noop
+	}
+
+	return func() {
+		if err := Run("git", "config", "--global", "--unset", "credential.helper"); err != nil {
+			fmt.Printf("warn: could not unset credential helper: %s\n", err)
+		}
+
+		_ = os.Remove(credPath)
+	}
 }
 
 // cleanPaths prepares paths for sparse checkout
@@ -327,13 +334,19 @@ func performFullClone(uri, outputPath string, configArgs, authArgs []string, rev
 	ui.Debug("performing full checkout")
 
 	args := []interface{}{"clone"}
-	args = append(args, configArgs, authArgs, "--depth", "1", "--verbose")
-	if revision != "" {
-		args = append(args, "--branch", revision)
-	}
-	args = append(args, uri, outputPath)
+	// Always clone without checkout so we can resolve `revision` (branch, tag, or commit)
+	// using the same fetch+checkout logic as the sparse path.
+	args = append(args, configArgs, authArgs, "--depth", "1", "--no-checkout", "--verbose", uri, outputPath)
 
-	return RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", args...)
+	if err := RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", args...); err != nil {
+		return err
+	}
+
+	if err := checkoutRevision(outputPath, configArgs, authArgs, revision); err != nil {
+		return fmt.Errorf("checking out revision: %w", err)
+	}
+
+	return nil
 }
 
 // performSparseClone performs a sparse repository clone

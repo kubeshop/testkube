@@ -209,7 +209,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | postgresql.auth.database | string | `backend` | Name for a custom database to create in PostgreSQL |
 | postgresql.auth.password | string | `postgres5432` | Password for the custom user to create in PostgreSQL |
 | postgresql.auth.postgresPassword | string | `postgres1234` | Password for the "postgres" admin user in PostgreSQL |
-| postgresql.fullnameOverride | string | `"testkube-postgresql"` | PostgeSQL fullname override |
+| postgresql.fullnameOverride | string | `"testkube-postgresql"` | PostgreSQL fullname override |
 | postgresql.enabled | bool | `false` | Toggle whether to install PostgreSQL |
 | postgresql.global.security.allowInsecureImages | bool | `true` | Allows skipping image verification for PostgreSQL |
 | postgresql.image.pullSecrets | list | `[]` | PostgreSQL image pull Secret |
@@ -291,9 +291,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.dockerImageVersion | string | "" | dockerImageVersion of Testkube Agent |
 | testkube-api.enableK8sEvents | bool | `true` | enable k8s events for testkube events |
 | testkube-api.enableSecretsEndpoint | bool | `false` | enable endpoint to list testkube namespace secrets |
-| testkube-api.enabledExecutors | string | `nil` | enable only specified executors with enabled flag |
 | testkube-api.executionNamespaces | list | `[]` | Execution namespaces for Testkube API to only run tests In this case, a Role and a RoleBinding will be created for each specified namespace. |
-| testkube-api.executors | string | `""` | default executors as base64-encoded string |
 | testkube-api.extraEnvVars | list | `[]` | Extra environment variables to be set on deployment |
 | testkube-api.fullnameOverride | string | `"testkube-api-server"` | Testkube API full name override |
 | testkube-api.hostNetwork | string | `""` | Specify hostNetwork for Testkube API Deployment |
@@ -319,7 +317,7 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.livenessProbe | object | `{"initialDelaySeconds":15}` | Testkube API Liveness probe parameters |
 | testkube-api.livenessProbe.initialDelaySeconds | int | `15` | Initial delay for liveness probe |
 | testkube-api.logs.bucket | string | `"testkube-logs"` | Bucket should be specified if storage is "minio" |
-| testkube-api.logs.storage | string | `"minio"` | Log storage can either be "minio" or "mongo" |
+| testkube-api.logs.storage | string | `"minio"` | Log storage can be "minio" or "none" (to disable log persistence) |
 | testkube-api.logsV2ContainerResources | object | `{}` |  |
 | testkube-api.minio.accessModes | list | `["ReadWriteOnce"]` | PVC Access Modes for Minio. The volume is mounted as read-write by a single node. |
 | testkube-api.minio.affinity | object | `{}` | Affinity for pod assignment. |
@@ -382,9 +380,6 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-api.serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | testkube-api.serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | testkube-api.serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template. |
-| testkube-api.slackConfig | string | `nil` | Slack config for the events, tests, testsuites, testworkflows and channels |
-| testkube-api.slackSecret | string | `""` | Slack secret to store slackToken, the key name should be SLACK_TOKEN |
-| testkube-api.slackToken | string | `""` | Slack token from the testkube authentication endpoint |
 | testkube-api.storage.SSL | bool | `false` | MinIO Use SSL |
 | testkube-api.storage.accessKey | string | `"minio123"` | MinIO Secret Access Key |
 | testkube-api.storage.accessKeyId | string | `"minio"` | MinIO Access Key ID |
@@ -493,6 +488,8 @@ kubectl label --overwrite crds scripts.tests.testkube.io app.kubernetes.io/manag
 | testkube-operator.podSecurityContext | object | `{}` | Testkube Operator Pod Security Context |
 | testkube-api.postgresql.dsn | string | `"postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"` | PostgreSQL DSN |
 | testkube-api.postgresql.enabled | bool | `false` | use PostgreSQL |
+| testkube-api.postgresql.secretKey | string | `""` | Secret key for PostgreSQL DSN |
+| testkube-api.postgresql.secretName | string | `""` | Secret name with PostgreSQL DSN |
 | testkube-operator.preUpgrade.annotations | object | `{}` |  |
 | testkube-operator.preUpgrade.enabled | bool | `true` | Upgrade hook is enabled |
 | testkube-operator.preUpgrade.image | object | `{"pullPolicy":"IfNotPresent","pullSecrets":[],"registry":"docker.io","repository":"bitnami/kubectl","tag":"1.28.2"}` | Specify image |

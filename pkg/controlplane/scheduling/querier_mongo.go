@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -51,6 +51,23 @@ func (a MongoExecutionQuerier) Cancelling(ctx context.Context) func(yield func(t
 		bson.M{"result.status": testkube.STOPPING_TestWorkflowStatus},
 		bson.M{"result.predictedstatus": testkube.CANCELED_TestWorkflowStatus},
 	}})
+}
+
+// Assigned yields an iterator returning all executions assigned to the runner indicated
+// by the passed runner, that should be started by the runner.
+func (a MongoExecutionQuerier) Assigned(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+	return a.executionIterator(ctx, bson.M{"result.status": testkube.ASSIGNED_TestWorkflowStatus})
+}
+
+// Starting yields an iterator returning all executions assigned to the runner indicated
+// by the passed runner, that should be started by the runner.
+func (a MongoExecutionQuerier) Starting(ctx context.Context) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+	return a.executionIterator(ctx, bson.M{"result.status": testkube.STARTING_TestWorkflowStatus})
+}
+
+// ByStatus yields an iterator returning all executions that match one of the given statuses.
+func (a MongoExecutionQuerier) ByStatus(ctx context.Context, statuses []testkube.TestWorkflowStatus) func(yield func(testkube.TestWorkflowExecution, error) bool) {
+	return a.executionIterator(ctx, bson.M{"result.status": bson.M{"$in": statuses}})
 }
 
 func (a MongoExecutionQuerier) executionIterator(ctx context.Context, filter any) func(yield func(testkube.TestWorkflowExecution, error) bool) {

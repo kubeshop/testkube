@@ -15,6 +15,10 @@
 {{- end }}
 {{- end }}
 
+{{- define "testkube-runner.runnerName" -}}
+{{- default (include "testkube-runner.fullname" .) .Values.runner.name -}}
+{{- end }}
+
 {{- define "testkube-runner.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "testkube-runner.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
@@ -31,6 +35,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- $tag = .Values.images.agent.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -52,6 +59,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- $tag = .Values.images.toolkit.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -73,6 +83,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- $tag = .Values.images.init.digest | toString -}}
 {{- end -}}
 {{- if .Values.global }}
+    {{- if .Values.global.testkubeVersion -}}
+        {{- $tag = .Values.global.testkubeVersion | toString -}}
+    {{- end -}}
     {{- if .Values.global.imageRegistry }}
         {{- printf "%s/%s%s%s%s" .Values.global.imageRegistry $repositoryName $separator $tag $tagSuffix -}}
     {{- else -}}
@@ -175,8 +188,19 @@ rules:
       - "testworkflows.testkube.io"
     resources:
       - testworkflows
+      - testworkflowtemplates
+      - workflowtriggers
     verbs:
       - get
       - list
       - watch
+  {{- with .Values.listener.extraWatchedResources }}
+  # User-declared GVKs for TestTrigger / WorkflowTrigger `resourceRef` targets
+  # that aren't covered by the built-in resource list above.
+  {{- range . }}
+  - apiGroups: {{ toYaml .apiGroups | nindent 6 }}
+    resources: {{ toYaml .resources | nindent 6 }}
+    verbs: {{ .verbs | default (list "get" "list" "watch") | toYaml | nindent 6 }}
+  {{- end }}
+  {{- end }}
 {{- end }}

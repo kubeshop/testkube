@@ -115,6 +115,7 @@ func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool)
 		}
 		if kubernetesAgent == nil {
 			ui.Failf("kubernetes agent not found: namespaces: %s", strings.Join(nses, ", "))
+			return
 		}
 
 		spinner := ui.NewSpinner("Running Helm command...")

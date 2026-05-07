@@ -8,25 +8,27 @@ description: "Enterprise installation test - DinD+kind"
 spec:
   system:
     pureByDefault: true
+  job:
+    activeDeadlineSeconds: 900
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-        - test/k6/crd-workflow/smoke.yaml
+        - test/postman/crd-workflow/smoke.yaml
         - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
   container:
     resources:
       requests:
-        cpu: "500m"
-        memory: "256Mi"
+        cpu: 500m
+        memory: 256Mi
   use:
     - name: setup-dind-kind-cluster-template
   steps:
   - name: Install Testkube CLI (and Expect)
     shell: |
-      wget -qO - https://repo.testkube.io/key.pub | apt-key add -
-      echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+      wget -qO- https://repo.testkube.io/key.pub | gpg --dearmor | tee /etc/apt/keyrings/testkube.gpg > /dev/null
+      echo "deb [signed-by=/etc/apt/keyrings/testkube.gpg] https://repo.testkube.io/linux linux main" | tee /etc/apt/sources.list.d/testkube.list
       apt-get update && apt-get install -y testkube expect
       testkube disable telemetry
   - name: Install Testkube Enterprise Demo
@@ -39,13 +41,14 @@ spec:
             name: testkube-agent-secrets
             key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
       - name: TESTKUBE_INIT_COMMAND
-        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m"
+        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m --helm-set testkube-cloud-api.additionalEnv.FEATURE_SOURCE_OF_TRUTH_ON_ENV_CREATE=false --verbose"
       shell: |
         helm version
         helm list -n testkube-enterprise-installation-test
         echo $TESTKUBE_INIT_COMMAND
         chmod +x enterprise-installation-expect-file.exp
         expect enterprise-installation-expect-file.exp
+    timeout: 720s
   - name: Wait for Testkube core components to be ready
     optional: true
     shell: |
@@ -64,12 +67,45 @@ spec:
 
       echo "✅ Testkube core components and API service are ready."
   - name: Apply TestWorkflow
-    workingDir: /data/repo/test/k6/crd-workflow
+    workingDir: /data/repo/test/postman/crd-workflow
     shell: |
       kubectl apply -f smoke.yaml -n testkube
-      kubectl get testworkflow k6-workflow-smoke -n testkube && echo "found" || kubectl get all -n testkube
+      kubectl get testworkflow postman-workflow-smoke-junit -n testkube && echo "found" || kubectl get all -n testkube
   - name: Run TestWorkflow
-    shell: testkube run tw k6-workflow-smoke --watch && echo "executed correctly"
+    timeout: 180s
+    shell: testkube run tw postman-workflow-smoke-junit --watch && echo "executed correctly"
+  - name: Dump pod logs and describe
+    condition: always
+    shell: |
+      set +e
+
+      NS=testkube
+      OUT=/data/artifacts/pod-logs
+      mkdir -p "$OUT"
+
+      echo "=== Pods in namespace $NS ==="
+      kubectl -n "$NS" get pods -o wide > "$OUT/pods.txt" 2>&1 || true
+
+      echo "=== Events in namespace $NS ==="
+      kubectl -n "$NS" get events --sort-by=.lastTimestamp > "$OUT/events.txt" 2>&1 || true
+
+      kubectl -n "$NS" get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' |
+      while read -r POD; do
+        echo "=== Dumping $POD ==="
+
+        kubectl -n "$NS" describe pod "$POD" \
+          > "$OUT/$POD.describe.txt" 2>&1 || true
+
+        kubectl -n "$NS" logs "$POD" --all-containers --timestamps \
+          > "$OUT/$POD.log" 2>&1 || true
+
+        kubectl -n "$NS" logs "$POD" --all-containers --previous --timestamps \
+          > "$OUT/$POD.previous.log" 2>&1 || true
+      done
+    artifacts:
+      workingDir: /data/artifacts/
+      paths:
+      - '**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -97,6 +133,10 @@ spec:
       paths:
       - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
   container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
     workingDir: /data/repo/test/testkube/installation-tests
   job:
@@ -109,8 +149,8 @@ spec:
       helm version
   - name: Install Testkube CLI (and Expect)
     shell: |
-      wget -qO - https://repo.testkube.io/key.pub | apt-key add -
-      echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+      wget -qO- https://repo.testkube.io/key.pub | gpg --dearmor | tee /etc/apt/keyrings/testkube.gpg > /dev/null
+      echo "deb [signed-by=/etc/apt/keyrings/testkube.gpg] https://repo.testkube.io/linux linux main" | tee /etc/apt/sources.list.d/testkube.list
       apt-get update && apt-get install -y testkube expect
       testkube disable telemetry
   - name: gcloud auth

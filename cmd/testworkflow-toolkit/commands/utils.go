@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -26,7 +27,7 @@ func concat(args ...interface{}) []string {
 }
 
 func Comm(cmd string, args ...interface{}) *exec.Cmd {
-	return exec.Command(cmd, concat(args...)...)
+	return exec.CommandContext(context.Background(), cmd, concat(args...)...)
 }
 
 func Run(c string, args ...interface{}) error {

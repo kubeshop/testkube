@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: testworkflows.testworkflows.testkube.io
 spec:
   group: testworkflows.testkube.io
@@ -255,13 +255,17 @@ spec:
                               readOnlyRootFilesystem:
                                 type: boolean
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxOptions:
                                 properties:
                                   level:
@@ -1349,6 +1353,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -1841,6 +1851,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -2084,13 +2097,17 @@ spec:
                                   readOnlyRootFilesystem:
                                     type: boolean
                                   runAsGroup:
-                                    format: int64
-                                    type: integer
+                                    anyOf:
+                                      - type: integer
+                                      - type: string
+                                    x-kubernetes-int-or-string: true
                                   runAsNonRoot:
                                     type: boolean
                                   runAsUser:
-                                    format: int64
-                                    type: integer
+                                    anyOf:
+                                      - type: integer
+                                      - type: string
+                                    x-kubernetes-int-or-string: true
                                   seLinuxOptions:
                                     properties:
                                       level:
@@ -2191,6 +2208,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -2405,13 +2425,17 @@ spec:
                               readOnlyRootFilesystem:
                                 type: boolean
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxOptions:
                                 properties:
                                   level:
@@ -3236,6 +3260,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -3347,18 +3374,24 @@ spec:
                                         - type
                                       type: object
                                     fsGroup:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     fsGroupChangePolicy:
                                       type: string
                                     runAsGroup:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     runAsNonRoot:
                                       type: boolean
                                     runAsUser:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     seLinuxChangePolicy:
                                       type: string
                                     seLinuxOptions:
@@ -3386,7 +3419,6 @@ spec:
                                         format: int64
                                         type: integer
                                       type: array
-                                      x-kubernetes-list-type: atomic
                                     supplementalGroupsPolicy:
                                       type: string
                                     sysctls:
@@ -3401,7 +3433,6 @@ spec:
                                           - value
                                         type: object
                                       type: array
-                                      x-kubernetes-list-type: atomic
                                     windowsOptions:
                                       properties:
                                         gmsaCredentialSpec:
@@ -3668,13 +3699,17 @@ spec:
                                 readOnlyRootFilesystem:
                                   type: boolean
                                 runAsGroup:
-                                  format: int64
-                                  type: integer
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
                                 runAsNonRoot:
                                   type: boolean
                                 runAsUser:
-                                  format: int64
-                                  type: integer
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -4100,13 +4135,17 @@ spec:
                         readOnlyRootFilesystem:
                           type: boolean
                         runAsGroup:
-                          format: int64
-                          type: integer
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
                         runAsNonRoot:
                           type: boolean
                         runAsUser:
-                          format: int64
-                          type: integer
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
                         seLinuxOptions:
                           properties:
                             level:
@@ -4822,6 +4861,9 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    silent:
+                      description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+                      type: boolean
                     tags:
                       additionalProperties:
                         type: string
@@ -4891,6 +4933,9 @@ spec:
                         type: string
                       description: annotations added to the scheduled pod
                       type: object
+                    disableFsGroupDefaulting:
+                      description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                      type: boolean
                     dnsConfig:
                       properties:
                         nameservers:
@@ -5002,18 +5047,24 @@ spec:
                             - type
                           type: object
                         fsGroup:
-                          format: int64
-                          type: integer
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
                         fsGroupChangePolicy:
                           type: string
                         runAsGroup:
-                          format: int64
-                          type: integer
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
                         runAsNonRoot:
                           type: boolean
                         runAsUser:
-                          format: int64
-                          type: integer
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
                         seLinuxChangePolicy:
                           type: string
                         seLinuxOptions:
@@ -5041,7 +5092,6 @@ spec:
                             format: int64
                             type: integer
                           type: array
-                          x-kubernetes-list-type: atomic
                         supplementalGroupsPolicy:
                           type: string
                         sysctls:
@@ -5056,7 +5106,6 @@ spec:
                               - value
                             type: object
                           type: array
-                          x-kubernetes-list-type: atomic
                         windowsOptions:
                           properties:
                             gmsaCredentialSpec:
@@ -5949,6 +5998,9 @@ spec:
                               type: string
                             description: annotations added to the scheduled pod
                             type: object
+                          disableFsGroupDefaulting:
+                            description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                            type: boolean
                           dnsConfig:
                             properties:
                               nameservers:
@@ -6060,18 +6112,24 @@ spec:
                                   - type
                                 type: object
                               fsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               fsGroupChangePolicy:
                                 type: string
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxChangePolicy:
                                 type: string
                               seLinuxOptions:
@@ -6099,7 +6157,6 @@ spec:
                                   format: int64
                                   type: integer
                                 type: array
-                                x-kubernetes-list-type: atomic
                               supplementalGroupsPolicy:
                                 type: string
                               sysctls:
@@ -6114,7 +6171,6 @@ spec:
                                     - value
                                   type: object
                                 type: array
-                                x-kubernetes-list-type: atomic
                               windowsOptions:
                                 properties:
                                   gmsaCredentialSpec:
@@ -6381,13 +6437,17 @@ spec:
                           readOnlyRootFilesystem:
                             type: boolean
                           runAsGroup:
-                            format: int64
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           runAsNonRoot:
                             type: boolean
                           runAsUser:
-                            format: int64
-                            type: integer
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
                           seLinuxOptions:
                             properties:
                               level:
@@ -6699,13 +6759,17 @@ spec:
                               readOnlyRootFilesystem:
                                 type: boolean
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxOptions:
                                 properties:
                                   level:
@@ -7793,6 +7857,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -8285,6 +8355,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -8528,13 +8601,17 @@ spec:
                                   readOnlyRootFilesystem:
                                     type: boolean
                                   runAsGroup:
-                                    format: int64
-                                    type: integer
+                                    anyOf:
+                                      - type: integer
+                                      - type: string
+                                    x-kubernetes-int-or-string: true
                                   runAsNonRoot:
                                     type: boolean
                                   runAsUser:
-                                    format: int64
-                                    type: integer
+                                    anyOf:
+                                      - type: integer
+                                      - type: string
+                                    x-kubernetes-int-or-string: true
                                   seLinuxOptions:
                                     properties:
                                       level:
@@ -8635,6 +8712,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -8849,13 +8929,17 @@ spec:
                               readOnlyRootFilesystem:
                                 type: boolean
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxOptions:
                                 properties:
                                   level:
@@ -9680,6 +9764,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -9791,18 +9878,24 @@ spec:
                                         - type
                                       type: object
                                     fsGroup:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     fsGroupChangePolicy:
                                       type: string
                                     runAsGroup:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     runAsNonRoot:
                                       type: boolean
                                     runAsUser:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     seLinuxChangePolicy:
                                       type: string
                                     seLinuxOptions:
@@ -9830,7 +9923,6 @@ spec:
                                         format: int64
                                         type: integer
                                       type: array
-                                      x-kubernetes-list-type: atomic
                                     supplementalGroupsPolicy:
                                       type: string
                                     sysctls:
@@ -9845,7 +9937,6 @@ spec:
                                           - value
                                         type: object
                                       type: array
-                                      x-kubernetes-list-type: atomic
                                     windowsOptions:
                                       properties:
                                         gmsaCredentialSpec:
@@ -10112,13 +10203,17 @@ spec:
                                 readOnlyRootFilesystem:
                                   type: boolean
                                 runAsGroup:
-                                  format: int64
-                                  type: integer
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
                                 runAsNonRoot:
                                   type: boolean
                                 runAsUser:
-                                  format: int64
-                                  type: integer
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -10484,13 +10579,17 @@ spec:
                               readOnlyRootFilesystem:
                                 type: boolean
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxOptions:
                                 properties:
                                   level:
@@ -11578,6 +11677,12 @@ spec:
                               type: object
                             type: array
                         type: object
+                      id:
+                        description: |-
+                          stable identifier for referencing this step in expressions (e.g., step.<id>.outputs)
+                          if not provided, auto-derived from name by lowercasing and replacing non-alphanumeric characters with underscores
+                          must contain only lowercase alphanumeric characters and underscores
+                        type: string
                       name:
                         description: readable name for the step
                         type: string
@@ -12070,6 +12175,9 @@ spec:
                           execution:
                             description: values to be used for test workflow execution
                             x-kubernetes-preserve-unknown-fields: true
+                          failFast:
+                            description: abort remaining parallel workers on first failure
+                            type: boolean
                           fetch:
                             description: instructions for fetching files back
                             items:
@@ -12313,13 +12421,17 @@ spec:
                                   readOnlyRootFilesystem:
                                     type: boolean
                                   runAsGroup:
-                                    format: int64
-                                    type: integer
+                                    anyOf:
+                                      - type: integer
+                                      - type: string
+                                    x-kubernetes-int-or-string: true
                                   runAsNonRoot:
                                     type: boolean
                                   runAsUser:
-                                    format: int64
-                                    type: integer
+                                    anyOf:
+                                      - type: integer
+                                      - type: string
+                                    x-kubernetes-int-or-string: true
                                   seLinuxOptions:
                                     properties:
                                       level:
@@ -12420,6 +12532,9 @@ spec:
                           timeout:
                             description: maximum time this step may take
                             type: string
+                          timeouts:
+                            description: per-workflow timeout configuration
+                            x-kubernetes-preserve-unknown-fields: true
                           transfer:
                             description: instructions for transferring files
                             items:
@@ -12634,13 +12749,17 @@ spec:
                               readOnlyRootFilesystem:
                                 type: boolean
                               runAsGroup:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               runAsNonRoot:
                                 type: boolean
                               runAsUser:
-                                format: int64
-                                type: integer
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                x-kubernetes-int-or-string: true
                               seLinuxOptions:
                                 properties:
                                   level:
@@ -13465,6 +13584,9 @@ spec:
                                     type: string
                                   description: annotations added to the scheduled pod
                                   type: object
+                                disableFsGroupDefaulting:
+                                  description: disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+                                  type: boolean
                                 dnsConfig:
                                   properties:
                                     nameservers:
@@ -13576,18 +13698,24 @@ spec:
                                         - type
                                       type: object
                                     fsGroup:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     fsGroupChangePolicy:
                                       type: string
                                     runAsGroup:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     runAsNonRoot:
                                       type: boolean
                                     runAsUser:
-                                      format: int64
-                                      type: integer
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
                                     seLinuxChangePolicy:
                                       type: string
                                     seLinuxOptions:
@@ -13615,7 +13743,6 @@ spec:
                                         format: int64
                                         type: integer
                                       type: array
-                                      x-kubernetes-list-type: atomic
                                     supplementalGroupsPolicy:
                                       type: string
                                     sysctls:
@@ -13630,7 +13757,6 @@ spec:
                                           - value
                                         type: object
                                       type: array
-                                      x-kubernetes-list-type: atomic
                                     windowsOptions:
                                       properties:
                                         gmsaCredentialSpec:
@@ -13897,13 +14023,17 @@ spec:
                                 readOnlyRootFilesystem:
                                   type: boolean
                                 runAsGroup:
-                                  format: int64
-                                  type: integer
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
                                 runAsNonRoot:
                                   type: boolean
                                 runAsUser:
-                                  format: int64
-                                  type: integer
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -14065,6 +14195,16 @@ spec:
                     pureByDefault:
                       description: assume all the steps are pure by default
                       type: boolean
+                  type: object
+                timeouts:
+                  description: per-workflow timeout configuration
+                  properties:
+                    initialization:
+                      description: maximum time for initialization/transitioning before steps run
+                      type: string
+                    queue:
+                      description: maximum time the execution may spend in queue before starting
+                      type: string
                   type: object
                 use:
                   description: templates to include at a top-level of workflow

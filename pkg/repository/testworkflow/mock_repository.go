@@ -486,3 +486,17 @@ func (mr *MockRepositoryMockRecorder) UpdateResultStrict(ctx, id, runnerId, resu
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResultStrict", reflect.TypeOf((*MockRepository)(nil).UpdateResultStrict), ctx, id, runnerId, result)
 }
+
+// UpdateTags mocks base method.
+func (m *MockRepository) UpdateTags(ctx context.Context, id string, tags map[string]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTags", ctx, id, tags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTags indicates an expected call of UpdateTags.
+func (mr *MockRepositoryMockRecorder) UpdateTags(ctx, id, tags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTags", reflect.TypeOf((*MockRepository)(nil).UpdateTags), ctx, id, tags)
+}

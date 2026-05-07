@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	bson "go.mongodb.org/mongo-driver/bson"
+	bson "go.mongodb.org/mongo-driver/v2/bson"
 	gomock "go.uber.org/mock/gomock"
 )
 

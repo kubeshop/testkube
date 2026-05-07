@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,7 +50,7 @@ func (v GithubValidator) Validate(accessToken string) error {
 	}
 
 	parsedURI.User = url.UserPassword(v.clientID, v.clientSecret)
-	req, err := http.NewRequest(http.MethodPost, parsedURI.String(), bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, parsedURI.String(), bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}

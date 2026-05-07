@@ -146,11 +146,18 @@ func (t ProxyClient[A]) GetURI(pathTemplate string, params ...interface{}) strin
 // GetLogsV2 returns logs version 2 stream from log server, based on job pods logs
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
-func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
-	resp, err := t.getProxy(http.MethodGet).
+func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error {
+	req := t.getProxy(http.MethodGet).
 		Suffix(uri).
-		SetHeader("Accept", "text/event-stream").
-		Stream(context.Background())
+		SetHeader("Accept", "text/event-stream")
+	if options.ResumeAfterSeqNo > 0 {
+		req.Param("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
+	}
+	if options.StreamID != "" {
+		req.Param("streamId", options.StreamID)
+	}
+
+	resp, err := req.Stream(options.RequestContext())
 	if err != nil {
 		return err
 	}
@@ -280,6 +287,12 @@ func (t ProxyClient[A]) responseError(resp rest.Result) error {
 		if err != nil {
 			content, _ := resp.Raw()
 			return fmt.Errorf("api server response: '%s'\nerror: %w", content, resp.Error())
+		}
+
+		var statusCode int
+		resp.StatusCode(&statusCode)
+		if statusCode >= 100 {
+			return fmt.Errorf("api server problem: %s: %w", pr.Detail, &HTTPStatusError{StatusCode: statusCode})
 		}
 
 		return fmt.Errorf("api server problem: %s", pr.Detail)

@@ -1,0 +1,54 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: cloud-api-perf-smoke
+  labels:
+    core-tests: cloud-api-perf-smoke
+    artifacts: "true"
+    tool: k6
+    category: performance-testing
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: main
+      paths:
+      - js/packages/k6-load-tests
+      usernameFrom:
+        secretKeyRef:
+          name: 'testkube-agent-secrets'
+          key: 'CLOUD_UI_E2E_GITHUB_USERNAME'
+      tokenFrom:
+        secretKeyRef:
+          name: 'testkube-agent-secrets'
+          key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
+  job:
+    activeDeadlineSeconds: 1200
+  config:
+    VUS: {type: integer, default: 5}
+    DURATION: {type: string, default: '10m'}
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
+    workingDir: /data/repo/js/packages/k6-load-tests
+    image: grafana/k6:1.7.1
+    env:
+    - name: USER_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: testkube-agent-secrets
+          key: dev-load-tests-testTokenLoadTests-key
+    - name: K6_WEB_DASHBOARD
+      value: "true"
+    - name: K6_WEB_DASHBOARD_EXPORT
+      value: /data/artifacts/k6-test-report.html
+  steps:
+  - name: create /data/artifacts
+    shell: mkdir -p /data/artifacts
+  - name: Run k6 load test
+    shell: k6 run -e TOKEN_BASIC_USER=$USER_TOKEN -e VUS={{ config.VUS }} -e DURATION={{ config.DURATION }} load-test.js --log-output=file=/data/artifacts/fails.log
+    artifacts:
+      paths:
+      - /data/artifacts/**

@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -59,7 +59,7 @@ func GetMongoDatabase(dsn, name, dbType string, allowTLS bool, certConfig *Mongo
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().SetTLSConfig(mongoOptions).ApplyURI(dsn))
+	client, err := mongo.Connect(options.Client().SetTLSConfig(mongoOptions).ApplyURI(dsn))
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,11 @@ func getDocDBTLSConfig() (*tls.Config, error) {
 // Due to size limitations we cannot use Kubernetes secrets like we use for MongoDB TLS configs
 func GetDocDBcaFile() (string, error) {
 	// Get the data
-	resp, err := http.Get(DocDBcaFileURI)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, DocDBcaFileURI, nil)
+	if err != nil {
+		return "", fmt.Errorf("could not create request for %s: %w", DocDBcaFileURI, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("could not fetch file from %s: %w", DocDBcaFileURI, err)
 	}

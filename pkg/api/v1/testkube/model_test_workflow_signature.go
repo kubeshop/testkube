@@ -12,6 +12,8 @@ package testkube
 type TestWorkflowSignature struct {
 	// step reference
 	Ref string `json:"ref,omitempty"`
+	// stable step identifier for expressions
+	Id string `json:"id,omitempty"`
 	// step name
 	Name string `json:"name,omitempty"`
 	// step category, that may be used as name fallback

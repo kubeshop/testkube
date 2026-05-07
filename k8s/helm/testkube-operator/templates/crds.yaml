@@ -1,0 +1,3 @@
+{{- if .Values.installCRD }}
+{{ include "testkube-crds.render" . }}
+{{- end }}

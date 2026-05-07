@@ -1,0 +1,21 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tools-preview-images-suite-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: suite-trigger
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      workflows:
+      - name: tools-preview-images-suite
+  events:
+  - cronjob:
+      cron: "30 14 * * *" # every day
+

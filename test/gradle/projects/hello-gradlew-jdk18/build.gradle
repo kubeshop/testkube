@@ -1,0 +1,32 @@
+
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = "18"
+    targetCompatibility = "18"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+
+test {
+    reports {
+        html.required = false
+        junitXml{
+            required = true
+            outputPerTestCase = false
+        }
+    }
+}

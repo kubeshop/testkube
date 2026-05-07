@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/minio/minio-go/v7"
@@ -71,18 +72,31 @@ func ClientCert(certFile, keyFile string) Option {
 	}
 }
 
+// VirtualHostedStyle is an Option to enable virtual-hosted-style URLs for S3-compatible storage.
+// When enabled, the bucket name is part of the hostname (e.g., bucket.endpoint.com)
+// instead of being in the path (e.g., endpoint.com/bucket).
+func VirtualHostedStyle() Option {
+	return func(o *Connecter) error {
+		o.UseVirtualHostedStyle = true
+		return nil
+	}
+}
+
 type Connecter struct {
-	Endpoint        string
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Token           string
-	Bucket          string
-	Ssl             bool
-	TlsConfig       *tls.Config
-	Opts            []Option
-	Log             *zap.SugaredLogger
-	client          *minio.Client
+	Endpoint              string
+	AccessKeyID           string
+	SecretAccessKey       string
+	Region                string
+	Token                 string
+	Bucket                string
+	Ssl                   bool
+	UseVirtualHostedStyle bool
+	TlsConfig             *tls.Config
+	Opts                  []Option
+	Log                   *zap.SugaredLogger
+	client                *minio.Client
+	// customTransport overrides the default transport when set. Intended for testing only.
+	customTransport http.RoundTripper
 }
 
 // NewConnecter creates a new Connecter
@@ -118,7 +132,8 @@ func (c *Connecter) GetClient() (*minio.Client, error) {
 		"region", c.Region,
 		"token", c.Token,
 		"bucket", c.Bucket,
-		"ssl", c.Ssl)
+		"ssl", c.Ssl,
+		"useVirtualHostedStyle", c.UseVirtualHostedStyle)
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.AccessKeyID, c.SecretAccessKey, c.Token)
 	}
@@ -128,13 +143,22 @@ func (c *Connecter) GetClient() (*minio.Client, error) {
 		return nil, err
 	}
 	transport.TLSClientConfig = c.TlsConfig
+	var roundTripper http.RoundTripper = transport
+	if c.customTransport != nil {
+		roundTripper = c.customTransport
+	}
 	opts := &minio.Options{
 		Creds:     creds,
 		Secure:    c.Ssl,
-		Transport: transport,
+		Transport: roundTripper,
 	}
 	if c.Region != "" {
 		opts.Region = c.Region
+	}
+	// When UseVirtualHostedStyle is enabled, force DNS (virtual-hosted-style) bucket lookup.
+	// Otherwise, leave BucketLookup unset so that minio-go can use its default/auto behavior.
+	if c.UseVirtualHostedStyle {
+		opts.BucketLookup = minio.BucketLookupDNS
 	}
 	mclient, err := minio.New(c.Endpoint, opts)
 	if err != nil {

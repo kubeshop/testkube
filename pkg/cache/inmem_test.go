@@ -10,8 +10,6 @@ import (
 )
 
 func TestInMemoryCache_Get(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 
 	tests := []struct {
@@ -72,8 +70,6 @@ func TestInMemoryCache_Get(t *testing.T) {
 }
 
 func TestInMemoryCache_Set(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	staticTimeGetter := func() time.Time {
 		return time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -154,8 +150,6 @@ func TestInMemoryCache_Set(t *testing.T) {
 }
 
 func TestInMemoryCache(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 
 	tests := []struct {

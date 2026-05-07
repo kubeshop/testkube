@@ -41,6 +41,9 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 		dst.NodeName = include.NodeName
 	}
 	dst.SecurityContext = MergePodSecurityContext(dst.SecurityContext, include.SecurityContext)
+	if include.DisableFsGroupDefaulting != nil {
+		dst.DisableFsGroupDefaulting = include.DisableFsGroupDefaulting
+	}
 	if include.Hostname != "" {
 		dst.Hostname = include.Hostname
 	}
@@ -98,7 +101,7 @@ func MergePodDNSConfig(dst, include *corev1.PodDNSConfig) *corev1.PodDNSConfig {
 	return dst
 }
 
-func MergePodSecurityContext(dst, include *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+func MergePodSecurityContext(dst, include *testworkflowsv1.WorkflowPodSecurityContext) *testworkflowsv1.WorkflowPodSecurityContext {
 	if dst == nil {
 		return include
 	} else if include == nil {
@@ -208,9 +211,22 @@ func MergeCapabilities(dst, include *corev1.Capabilities) *corev1.Capabilities {
 	} else if include == nil {
 		return dst
 	}
-	dst.Add = append(dst.Add, include.Add...)
-	dst.Drop = append(dst.Drop, include.Drop...)
+	dst.Add = mergeCapabilityList(dst.Add, include.Add)
+	dst.Drop = mergeCapabilityList(dst.Drop, include.Drop)
 	return dst
+}
+
+func mergeCapabilityList(dst, include []corev1.Capability) []corev1.Capability {
+	result := make([]corev1.Capability, 0, len(dst)+len(include))
+	seen := make(map[corev1.Capability]struct{}, len(dst)+len(include))
+	for _, item := range append(dst, include...) {
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		result = append(result, item)
+	}
+	return result
 }
 
 func MergeSELinuxOptions(dst, include *corev1.SELinuxOptions) *corev1.SELinuxOptions {
@@ -255,7 +271,7 @@ func MergeWindowsSecurityContextOptions(dst, include *corev1.WindowsSecurityCont
 	return dst
 }
 
-func MergeSecurityContext(dst, include *corev1.SecurityContext) *corev1.SecurityContext {
+func MergeSecurityContext(dst, include *testworkflowsv1.WorkflowSecurityContext) *testworkflowsv1.WorkflowSecurityContext {
 	if dst == nil {
 		return include
 	} else if include == nil {
@@ -287,6 +303,9 @@ func MergeSecurityContext(dst, include *corev1.SecurityContext) *corev1.Security
 	}
 	if include.SeccompProfile != nil {
 		dst.SeccompProfile = include.SeccompProfile
+	}
+	if include.AppArmorProfile != nil {
+		dst.AppArmorProfile = include.AppArmorProfile
 	}
 	return dst
 }
@@ -376,6 +395,7 @@ func ConvertIndependentServiceToService(svc testworkflowsv1.IndependentServiceSp
 func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.IndependentStepParallel) testworkflowsv1.StepParallel {
 	return testworkflowsv1.StepParallel{
 		Parallelism:         step.Parallelism,
+		FailFast:            step.FailFast,
 		StepExecuteStrategy: step.StepExecuteStrategy,
 		Description:         step.Description,
 		Logs:                step.Logs,
@@ -412,7 +432,7 @@ func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res tes
 	return res
 }
 
-func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testworkflowsv1.TestWorkflowTagSchema {
+func MergeExecution(dst, include *testworkflowsv1.TestWorkflowExecutionSchema) *testworkflowsv1.TestWorkflowExecutionSchema {
 	if dst == nil {
 		return include
 	} else if include == nil {
@@ -420,6 +440,9 @@ func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testwo
 	}
 
 	dst.Tags = MergeTags(dst.Tags, include.Tags)
+	if include.Silent != nil {
+		dst.Silent = include.Silent
+	}
 	return dst
 }
 
@@ -446,4 +469,21 @@ func MergeConcurrency(dst, src *testworkflowsv1.ConcurrencyPolicy) *testworkflow
 	dst.Group = src.Group
 	dst.CancelInProgress = src.CancelInProgress
 	return dst
+}
+
+func MergeTimeouts(dst, include *testworkflowsv1.TestWorkflowTimeouts) *testworkflowsv1.TestWorkflowTimeouts {
+	if dst == nil {
+		return include
+	}
+	if include == nil {
+		return dst
+	}
+	out := *dst
+	if include.Queue != "" {
+		out.Queue = include.Queue
+	}
+	if include.Initialization != "" {
+		out.Initialization = include.Initialization
+	}
+	return &out
 }

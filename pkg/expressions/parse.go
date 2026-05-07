@@ -255,3 +255,24 @@ func CompileAndResolveTemplate(tpl string, m ...Machine) (Expression, error) {
 func IsTemplateStringWithoutExpressions(tpl string) bool {
 	return !strings.Contains(tpl, "{{")
 }
+
+// ExtractPureTemplateExpression checks if a template string consists of only
+// a single expression (i.e., "{{ expr }}") with no surrounding literal text.
+// If so, it returns the inner expression string.
+// This is used to detect cases where an expression may return a non-string
+// value (like an array) that should be preserved rather than stringified.
+func ExtractPureTemplateExpression(tpl string) (string, bool) {
+	s := strings.TrimSpace(tpl)
+	if !strings.HasPrefix(s, "{{") || !strings.HasSuffix(s, "}}") {
+		return "", false
+	}
+	inner := s[2 : len(s)-2]
+	if strings.Contains(inner, "{{") || strings.Contains(inner, "}}") {
+		return "", false
+	}
+	inner = strings.TrimSpace(inner)
+	if inner == "" {
+		return "", false
+	}
+	return inner, true
+}

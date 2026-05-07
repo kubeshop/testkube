@@ -35,7 +35,7 @@ type ContainerConfig struct {
 	Resources *Resources `json:"resources,omitempty" expr:"include"`
 
 	// security context for the container
-	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty" expr:"force"`
+	SecurityContext *WorkflowSecurityContext `json:"securityContext,omitempty" expr:"include"`
 
 	// volume mounts to append to the container
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty" expr:"force"`
@@ -100,7 +100,10 @@ type PodConfig struct {
 	NodeName string `json:"nodeName,omitempty" expr:"template"`
 
 	// SecurityContext holds pod-level security attributes and common container settings.
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty" expr:"force"`
+	SecurityContext *WorkflowPodSecurityContext `json:"securityContext,omitempty" expr:"include"`
+
+	// disable automatic pod fsGroup inference/defaulting; explicit securityContext.fsGroup still applies
+	DisableFsGroupDefaulting *bool `json:"disableFsGroupDefaulting,omitempty" expr:"template"`
 
 	// Specifies the hostname of the Pod
 	Hostname string `json:"hostname,omitempty" expr:"template"`
@@ -239,10 +242,13 @@ type CronJobConfig struct {
 	Timezone *string `json:"timezone,omitempty" expr:"template"`
 }
 
-type TestWorkflowTagSchema struct {
+type TestWorkflowExecutionSchema struct {
 	// test workflow execution tags
 	Tags map[string]string `json:"tags,omitempty" expr:"template,template"`
 
 	// Targets helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
+
+	// When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
+	Silent *bool `json:"silent,omitempty" expr:"template"`
 }

@@ -51,6 +51,27 @@ kubeVersion: ""
 ## create roles and rolebindings
 rbac:
   create: true
+  ## Additional resources the agent is allowed to watch.
+  ## Required when TestTriggers or WorkflowTriggers use `resourceRef` to
+  ## target a CRD that isn't covered by the default watchers role
+  ## (e.g. cert-manager.io/certificates, kafka.strimzi.io/kafkatopics).
+  ##
+  ## Applied to all three watcher role variants:
+  ##   - the cluster-wide ClusterRole (default, multinamespace.enabled=false)
+  ##   - the release-namespace Role (multinamespace.enabled=true)
+  ##   - the per-namespace Roles generated from additionalNamespaces
+  ##
+  ## Verbs default to [get, list, watch] (read-only; triggers do not mutate
+  ## the watched resource). Override per-entry if you need something else.
+  ##
+  ## Example:
+  ## extraWatchedResources:
+  ##   - apiGroups: ["cert-manager.io"]
+  ##     resources: ["certificates", "certificaterequests"]
+  ##   - apiGroups: ["kafka.strimzi.io"]
+  ##     resources: ["kafkatopics"]
+  ##     verbs: ["get", "list", "watch"]
+  extraWatchedResources: []
 
 ## Number of Testkube API Pod replicas
 replicaCount: 1
@@ -81,9 +102,6 @@ image:
   tagSuffix: ""
   digest: ""
   pullSecrets: []
-
-## Sets a specific tag for the executors to the last built version
-executorsTag: 2.1.123
 
 imageTwToolkit:
   registry: docker.io
@@ -175,7 +193,7 @@ next:
   # - tkcsync_*** - GitOps Agent
   gitops:
     ## Should it copy data from Kubernetes to Control Plane
-    syncKubernetesToCloud: false
+    syncKubernetesToCloud: true
 
   # Configure the legacy Tests and Test Suites execution
   # - tkcagnt_*** - Super Agent
@@ -210,7 +228,7 @@ cloud:
   uiUrl: ""
   ## Public Agent ID
   agentId: ""
-  ## Legacy Agent Token / Secret Key value now used as registration token
+  ## Agent Token / Secret Key
   key: ""
   ## Organization ID
   orgId: ""
@@ -242,7 +260,7 @@ cloud:
   existingSecret:
     ## Name of the secret. If set, this will be used instead of the above values
     name: ""
-    ## Key for the legacy Agent Token / Secret Key value now used as registration token
+    ## Key for the License Key
     key: ""
     ## Key for the Organization ID
     orgId: ""
@@ -274,17 +292,6 @@ analyticsEnabled: true
 # -- Testkube timeout for pod start
 podStartTimeout: "30m"
 
-## Integration with Slack.
-##ref: https://kubeshop.github.io/testkube/integrations/slack-integration/
-## Slack token from the testkube authentication endpoint
-slackToken: ""
-
-## Slack secret to store slackToken, the key name should be SLACK_TOKEN
-slackSecret: ""
-
-## Slack config for the events, tests, testsuites and channels
-slackConfig: ""
-
 templates:
   ## Base64 encoded Job template
   job: ""
@@ -296,9 +303,6 @@ templates:
   pvcContainer: ""
   ## Base64 encoded Slave Pod template
   slavePod: ""
-
-## base64 encoded executors.json alike data
-executors: ""
 
 ## target for cdevents emission via http(s)
 cdeventsTarget: ""
@@ -320,9 +324,6 @@ disablePostgresMigrations: false
 
 ## disable secret creation for tests and test sources
 disableSecretCreation: false
-
-## enable only specified executors with enabled flag
-enabledExecutors:
 
 ## Execution namespaces for Testkube API to only run tests
 ## Execution namespaces. In this case, a Role and a RoleBinding will be created for each specified namespace.
@@ -467,6 +468,11 @@ storage:
   SSL: false
   ## Skip Verify is used to configure storage client not to verify SSL certificates
   skipVerify: false
+  ## Use virtual-hosted-style URLs for S3-compatible storage (bucket name in hostname, not in path).
+  ## Set to true for providers that do not support path-style URLs (e.g. Tencent Cloud COS CDC).
+  ## When true, set endpoint to the base S3 endpoint (e.g. cos.ap-hongkong.myqcloud.com);
+  ## the bucket name is automatically prepended by the client (e.g. bucket.cos.ap-hongkong.myqcloud.com).
+  useVirtualHostedStyle: false
   ## If enabled, will also require a CA certificate to be provided
   mountCACertificate: false
   certSecret:
@@ -489,7 +495,8 @@ storage:
 
 ## Logs storage for Testkube API.
 logs:
-  ## where the logs should be stored there are 2 possible valuse : minio|mongo
+  ## where the logs should be stored there are 2 possible values: minio|none
+  ## Use "none" to disable log persistence entirely (logs will not be written to any backend)
   storage: "minio"
   ## if storage is set to minio then the bucket must be specified, if minio with s3 is used make sure to use a unique name
   bucket: "testkube-logs"
@@ -535,6 +542,9 @@ securityContext: {}
 
 ## Toggle to enable debug mode
 enableDebugMode: false
+
+## Maximum export archive size in bytes (default 100 MB). Set to 0 to use the compiled-in default.
+exportArchiveMaxSize: 104857600
 
 ## Service parameters
 service:
@@ -592,8 +602,12 @@ mongodb:
 postgresql:
   ## Deploy PostgreSQL server to the cluster
   enabled: false
-  ## Define dsn connection string
+  ## Define PostgreSQL DSN connection string
   dsn: "postgres://testkube:postgres5432@testkube-postgresql:5432/backend?sslmode=disable"
+  ## Name of the Kubernetes secret containing the PostgreSQL DSN
+  secretName: ""
+  ## Key in the Kubernetes secret containing the PostgreSQL DSN
+  secretKey: ""
 
 ## NATS parameters
 ## ref: https://github.com/nats-io/nats-server
@@ -773,6 +787,15 @@ testConnection:
   affinity: {}
   tolerations: []
   nodeSelector: {}
+
+## Testkube API Startup probe
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 3
+  periodSeconds: 3
+  timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 200
 
 ## Testkube API Liveness probe
 livenessProbe:

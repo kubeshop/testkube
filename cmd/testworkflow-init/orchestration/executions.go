@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -49,7 +51,7 @@ func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup
 func (e *executionGroup) Create(cmd string, args []string) *execution {
 	// Instantiate the execution
 	ex := &execution{group: e}
-	ex.cmd = exec.Command(cmd, args...)
+	ex.cmd = exec.CommandContext(context.Background(), cmd, args...)
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 
@@ -65,6 +67,10 @@ func (e *executionGroup) CreateWithContext(ctx context.Context, cmd string, args
 	// Instantiate the execution
 	ex := &execution{group: e}
 	ex.cmd = exec.CommandContext(ctx, cmd, args...)
+	ex.cmd.Cancel = func() error {
+		return ex.cmd.Process.Signal(syscall.SIGTERM)
+	}
+	ex.cmd.WaitDelay = 10 * time.Second
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 
@@ -153,6 +159,24 @@ func (e *executionGroup) Kill() (err error) {
 	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Kill()
 	return errors.Wrap(err, "failed to kill")
+}
+
+// WaitAll waits for all tracked executions to finish.
+// Safe to call after Kill() even if Run() already waited on the process.
+func (e *executionGroup) WaitAll() {
+	e.executionsMu.Lock()
+	execs := make([]*execution, len(e.executions))
+	copy(execs, e.executions)
+	e.executionsMu.Unlock()
+
+	for _, ex := range execs {
+		ex.cmdMu.Lock()
+		cmd := ex.cmd
+		ex.cmdMu.Unlock()
+		if cmd != nil && cmd.Process != nil {
+			_ = cmd.Wait()
+		}
+	}
 }
 
 func (e *executionGroup) Abort() {
@@ -249,7 +273,7 @@ func getProcessStatus(err error) (bool, string, int) {
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
 			details := e.String()
-			return details == "signal: killed", details, e.ExitCode()
+			return details == "signal: killed" || details == "signal: terminated", details, e.ExitCode()
 		}
 		return false, "", 1
 	}

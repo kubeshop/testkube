@@ -9,9 +9,22 @@ global:
   podDisruptionBudget:
     enabled: false
 
+## Global TestWorkflowTemplate that will be automatically included for all executions
+globalTemplate:
+  ## Is global template enabled
+  enabled: false
+  ## Specification for the global template
+  spec: {}
+  # spec:
+  #   pod:
+  #     imagePullSecrets:
+  #     - name: regcred
+
 runner:
   ## Enable or disable the runner
   enabled: true
+  ## Runner name used during self-registration. Defaults to chart fullname when empty.
+  name: ""
   ## Agent ID
   id: ""
   ## Organization ID
@@ -36,6 +49,10 @@ runner:
   register:
     ## Control Plane API token
     token: ""
+    ## Control Plane API token provided via k8s secret
+    tokenSecret:
+      name: ""
+      key: token
     ## Whether to register as a Floating runner
     floating: false
     ## Whether to register with mode Global
@@ -48,17 +65,6 @@ runner:
     # labels:
     #   env: testing
 
-## Global TestWorkflowTemplate that will be automatically included for all executions
-globalTemplate:
-  ## Is global template enabled
-  enabled: false
-  ## Specification for the global template
-  spec: {}
-  # spec:
-  #   pod:
-  #     imagePullSecrets:
-  #     - name: regcred
-
 ## Listener configuration for triggers
 listener:
   ## Enable listener functionality
@@ -69,6 +75,27 @@ listener:
   eventLabels: {}
   ## Additional namespaces to watch
   additionalNamespaces: []
+  ## Extra resources the listener watchers role should cover. Required when
+  ## TestTriggers or WorkflowTriggers use `resourceRef` to target a CRD that
+  ## isn't in the default watchers role (e.g. cert-manager, Kafka, Strimzi).
+  ## Verbs default to [get, list, watch].
+  ## Example:
+  ##   extraWatchedResources:
+  ##     - apiGroups: ["cert-manager.io"]
+  ##       resources: ["certificates"]
+  extraWatchedResources: []
+
+## Webhooks capability configuration
+webhooks:
+  ## Enable webhooks functionality
+  enabled: false
+
+## GitOps capability configuration
+gitops:
+  ## Enable Kubernetes to Control Plane sync
+  enabled: false
+  ## Install the shared Testkube CRDs required by GitOps watchers
+  installCRD: true
 
 execution:
   default:
@@ -79,12 +106,15 @@ execution:
       autoCreate: true
       ## Use an external service account for executions
       name: ""
+      ## Extra annotations for the auto-created execution service account
+      annotations: {}
   ## Allow run in other namespaces
   additionalNamespaces:
   # another:
   #   serviceAccount:
   #     autoCreate: true
   #     name: ""
+  #     annotations: {}
 
 cloud:
   ## URL of the Cloud Saas Control Plane
@@ -161,6 +191,8 @@ pod:
     autoCreate: true
     ## Use an external service account
     name: ""
+    ## Extra annotations for the auto-created runner service account
+    annotations: {}
   ## Extra labels for Testkube Agent pod
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   labels: {}

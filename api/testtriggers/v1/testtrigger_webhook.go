@@ -21,9 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func (in *TestTrigger) SetupWebhookWithManager(mgr ctrl.Manager, validator admission.CustomValidator) error {
-	return ctrl.NewWebhookManagedBy(mgr).
+func (in *TestTrigger) SetupWebhookWithManager(mgr ctrl.Manager, validator admission.Validator[*TestTrigger]) error {
+	return ctrl.NewWebhookManagedBy(mgr, in).
 		WithValidator(validator).
-		For(in).
 		Complete()
 }

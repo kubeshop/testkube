@@ -7,6 +7,8 @@ on:
   pull_request:
     paths-ignore: ["docs/**"]
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
 
 permissions:
   contents: read
@@ -16,23 +18,23 @@ permissions:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: depot-ubuntu-22.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
 
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
+      - name: Cache Go modules
+        uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
-            ~/.cache/go-build
             bin/tooling
           key: ${{ runner.os }}-go-unit-${{ hashFiles('go.sum') }}
           restore-keys: |
@@ -58,13 +60,13 @@ jobs:
 
       - name: Annotate Unit Tests
         if: always()
-        uses: guyarb/golang-test-annotations@v0.8.0
+        uses: guyarb/golang-test-annotations@v0.9.0
         with:
           test-results: unit-tests.json
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-coverage
           path: coverage.out
@@ -73,11 +75,12 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    runs-on: depot-ubuntu-22.04
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
 
     services:
       mongo:
-        image: bitnamilegacy/mongodb:7.0
+        image: bitnamilegacy/mongodb:8.0
         ports:
           - 27017:27017
       nats:
@@ -94,22 +97,34 @@ jobs:
         env:
           MINIO_ROOT_USER: minio99
           MINIO_ROOT_PASSWORD: minio123
+      postgres:
+        image: postgres:16.13
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testkube_users_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
 
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
+      - name: Cache Go modules
+        uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
-            ~/.cache/go-build
             bin/tooling
           key: ${{ runner.os }}-go-integration-${{ hashFiles('go.sum') }}
           restore-keys: |
@@ -140,15 +155,74 @@ jobs:
 
       - name: Annotate Integration Tests
         if: always()
-        uses: guyarb/golang-test-annotations@v0.8.0
+        uses: guyarb/golang-test-annotations@v0.9.0
         with:
           test-results: integration-tests.json
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-coverage
           path: integration-coverage.out
           if-no-files-found: error
           retention-days: 1
+
+  verify-generated-protobuf:
+    name: Verify generated protobuf
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+            bin/tooling
+          key: ${{ runner.os }}-go-verify-proto-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-verify-proto-
+
+      - name: Verify generated protobuf
+        run: make verify-protobuf-generated
+
+  verify-generated-crds:
+    name: Verify generated CRDs
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]'
+    runs-on: depot-ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+            bin/tooling
+          key: ${{ runner.os }}-go-verify-crds-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-verify-crds-
+
+      - name: Show Go environment
+        run: |
+          go env GOCACHE
+          go env GOMODCACHE
+          echo "Test tool location:"
+          ls -la bin/tooling/ || echo "No tools cached yet"
+
+      - name: Verify generated CRDs
+        run: make verify-crds-generated

@@ -302,3 +302,36 @@ Define containerSecurityContext
 {{- toYaml .Values.containerSecurityContext }}
 {{- end }}
 {{- end }}
+
+{{/*
+Define tolerations
+*/}}
+{{- define "nats.tolerations" -}}
+{{- if .Values.global.tolerations }}
+{{ toYaml .Values.global.tolerations }}
+{{- else }}
+{{ toYaml .Values.tolerations }}
+{{- end }}
+{{- end }}
+
+{{/*
+Define affinity
+*/}}
+{{- define "nats.affinity" -}}
+{{- if .Values.global.affinity }}
+{{ toYaml .Values.global.affinity }}
+{{- else }}
+{{ toYaml .Values.affinity }}
+{{- end }}
+{{- end }}
+
+{{/*
+Define nodeSelector
+*/}}
+{{- define "nats.nodeSelector" -}}
+{{- if .Values.global.nodeSelector }}
+{{ toYaml .Values.global.nodeSelector }}
+{{- else }}
+{{ toYaml .Values.nodeSelector }}
+{{- end }}
+{{- end }}

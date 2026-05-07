@@ -83,7 +83,7 @@ func (c *ConfigMapConfig) load(ctx context.Context, defaultTelemetryEnabled bool
 	}
 
 	// Create new configuration if it doesn't exist
-	if c.data.ClusterId != "" {
+	if c.data.ClusterId == "" {
 		c.data.ClusterId = c.getDefaultClusterId()
 		c.data.EnableTelemetry = defaultTelemetryEnabled
 		_, err := c.upsert(ctx, *c.data)

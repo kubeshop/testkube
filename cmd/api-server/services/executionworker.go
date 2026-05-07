@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -30,12 +31,14 @@ func CreateExecutionWorker(
 	for n, s := range serviceAccountNames {
 		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
 	}
+	insecureRegistries := commons.TrimAndFilterRegistries(cfg.InsecureRegistries)
 	return executionworker.NewKubernetes(clientSet, processor, kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
-			Id:               clusterId,
-			DefaultNamespace: defaultNamespace,
-			DefaultRegistry:  cfg.TestkubeRegistry,
-			Namespaces:       namespacesConfig,
+			Id:                 clusterId,
+			DefaultNamespace:   defaultNamespace,
+			DefaultRegistry:    cfg.TestkubeRegistry,
+			InsecureRegistries: insecureRegistries,
+			Namespaces:         namespacesConfig,
 		},
 		ImageInspector: kubernetesworker.ImageInspectorConfig{
 			CacheEnabled: cfg.EnableImageDataPersistentCache,
@@ -52,10 +55,14 @@ func CreateExecutionWorker(
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
-		FeatureFlags:           featureFlags,
-		RunnerId:               runnerId,
-		CommonEnvVariables:     commonEnvVariables,
-		LogAbortedDetails:      logAbortedDetails,
-		AllowLowSecurityFields: cfg.AllowLowSecurityFields,
+		FeatureFlags:                             featureFlags,
+		RunnerId:                                 runnerId,
+		CommonEnvVariables:                       commonEnvVariables,
+		LogAbortedDetails:                        logAbortedDetails,
+		AllowLowSecurityFields:                   cfg.AllowLowSecurityFields,
+		WorkflowLogsInsecureSkipTLSVerifyBackend: cfg.WorkflowLogsInsecureSkipTLSVerifyBackend,
+		// Automatically disable resource metrics collection in standalone mode (no API key and no agent registration token configured),
+		// as the gRPC control plane connection from execution pods may not be available.
+		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
 	})
 }

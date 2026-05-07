@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v4"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/avast/retry-go/v5"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -18,15 +18,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 type Enqueuer struct {
-	logger              *zap.SugaredLogger
-	workflowRepository  testworkflowclient.TestWorkflowClient
-	templateRepository  testworkflowtemplateclient.TestWorkflowTemplateClient
-	executionRepository testworkflow.Repository
-	emitter             *event.Emitter
+	logger                   *zap.SugaredLogger
+	workflowRepository       testworkflowclient.TestWorkflowClient
+	templateRepository       testworkflowtemplateclient.TestWorkflowTemplateClient
+	executionRepository      testworkflow.Repository
+	emitter                  *event.Emitter
+	envID                    string
+	globalTemplateName       string
+	hasInlinedGlobalTemplate bool
 }
 
 func NewEnqueuer(
@@ -35,13 +39,19 @@ func NewEnqueuer(
 	templateRepository testworkflowtemplateclient.TestWorkflowTemplateClient,
 	executionRepository testworkflow.Repository,
 	emitter *event.Emitter,
+	envID string,
+	globalTemplateName string,
+	hasInlinedGlobalTemplate bool,
 ) Enqueuer {
 	return Enqueuer{
-		logger:              logger,
-		workflowRepository:  workflowRepository,
-		templateRepository:  templateRepository,
-		executionRepository: executionRepository,
-		emitter:             emitter,
+		logger:                   logger,
+		workflowRepository:       workflowRepository,
+		templateRepository:       templateRepository,
+		executionRepository:      executionRepository,
+		emitter:                  emitter,
+		envID:                    envID,
+		globalTemplateName:       globalTemplateName,
+		hasInlinedGlobalTemplate: hasInlinedGlobalTemplate,
 	}
 }
 
@@ -124,6 +134,16 @@ func (e *Enqueuer) Execute(ctx context.Context, req *cloud.ScheduleRequest) ([]t
 	}
 	// END POST-COMMIT VALIDATION
 
+	// The OSS scheduler differs in behaviour compared to the PRO scheduler.
+	// It can immediately assign executions because there is only one possible
+	// runner which is known in advance. The benefit is that there is no limitation
+	// of a maximum of 60 executions per minute (due to JIT assignment during polling
+	// being limited to max 1 per second). Some customers were running into this limitation.
+	err = e.assignExecutions(commitContext, intermediateExecutions)
+	if err != nil {
+		return nil, err
+	}
+
 	executions, err := e.persistExecution(commitContext, intermediateExecutions, logger)
 	if err != nil {
 		return nil, err
@@ -181,12 +201,22 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 
 	now := time.Now().UTC()
 	executionBase := testworkflowexecutor.NewIntermediateExecution().
-		SetGroupID(primitive.NewObjectIDFromTimestamp(now).Hex()).
+		SetGroupID(bson.NewObjectIDFromTimestamp(now).Hex()).
 		SetScheduledAt(now).
 		AppendTags(req.Tags).
 		SetDisabledWebhooks(req.DisableWebhooks).
 		SetKubernetesObjectName(req.KubernetesObjectName).
 		SetRunningContext(testworkflowexecutor.GetLegacyRunningContext(req))
+
+	if req.SilentMode != nil {
+		executionBase.SetSilentMode(&testkube.SilentMode{
+			Webhooks: req.SilentMode.Webhooks,
+			Insights: req.SilentMode.Insights,
+			Health:   req.SilentMode.Health,
+			Metrics:  req.SilentMode.Metrics,
+			Cdevents: req.SilentMode.Cdevents,
+		})
+	}
 
 	hasResolvedWorkflow := len(req.ResolvedWorkflow) != 0
 	if hasResolvedWorkflow {
@@ -195,6 +225,12 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 			return nil, err
 		}
 		executionBase.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
+	} else {
+		if e.hasInlinedGlobalTemplate {
+			executionBase.PrependTemplate(testworkflowtemplateclient.InlinedGlobalTemplateName)
+		} else if e.globalTemplateName != "" {
+			executionBase.PrependTemplate(e.globalTemplateName)
+		}
 	}
 
 	for _, exec := range executions {
@@ -248,6 +284,11 @@ func (e *Enqueuer) prepareExecutions(ctx context.Context, req *cloud.ScheduleReq
 				current.SetError("Cannot inline Test Workflow Templates", err)
 				continue
 			}
+		}
+
+		// Apply silent flag from workflow spec to SilentMode
+		if current.IsSilent() {
+			current.SetSilentMode(testworkflows.NewSilenceAllSilentMode())
 		}
 	}
 
@@ -308,6 +349,14 @@ func (e *Enqueuer) finaliseExecution(ctx context.Context, executions []*testwork
 	return nil
 }
 
+func (e *Enqueuer) assignExecutions(_ context.Context, executions []*testworkflowexecutor.IntermediateExecution) error {
+	for i := range executions {
+		exec := executions[i]
+		exec.Assign(time.Now(), common.StandaloneRunner)
+	}
+	return nil
+}
+
 // persistExecution will persist the execution to the database.
 //
 // Note: persistExecution should not fail. All passed executions MUST be handled,
@@ -322,7 +371,11 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 		exec := executions[i]
 
 		// Insert the execution
-		err := retry.Do(
+		err := retry.New(
+			retry.DelayType(retry.FixedDelay),
+			retry.Delay(300*time.Millisecond),
+			retry.Attempts(5),
+		).Do(
 			func() error {
 				err := e.executionRepository.Insert(ctx, *exec.Execution())
 				if err != nil {
@@ -330,9 +383,6 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 				}
 				return err
 			},
-			retry.DelayType(retry.FixedDelay),
-			retry.Delay(300*time.Millisecond),
-			retry.Attempts(5),
 		)
 		if err != nil {
 			logger.Errorw("failed to update the TestWorkflow exec in database", "recoverable", false, "executionId", exec.Execution().Id, "error", err)
@@ -347,22 +397,7 @@ func (e *Enqueuer) persistExecution(ctx context.Context, executions []*testworkf
 // dispatchExecutionEvents dispatches events related to queueing.
 func (e *Enqueuer) dispatchExecutionEvents(executions []testkube.TestWorkflowExecution) {
 	for _, execution := range executions {
-		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-
-		switch {
-		case execution.Result.IsPassed():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution, ""))
-		case execution.Result.IsAborted():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution, ""))
-		case execution.Result.IsCanceled():
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution, ""))
-		default:
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution, ""))
-		}
-
-		if execution.Result.IsNotPassed() {
-			e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution, ""))
-		}
+		e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution, e.envID))
 	}
 }
 

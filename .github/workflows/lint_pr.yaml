@@ -6,13 +6,15 @@ on:
       - opened
       - edited
       - synchronize
+      - ready_for_review
 
 jobs:
   prlint:
     name: Lint PR
+    if: github.event.pull_request.draft == false
     runs-on: depot-ubuntu-22.04
     steps:
       - name: Lint PR
-        uses: amannn/action-semantic-pull-request@v5
+        uses: amannn/action-semantic-pull-request@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

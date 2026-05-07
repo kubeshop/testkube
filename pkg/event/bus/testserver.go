@@ -2,13 +2,16 @@ package bus
 
 import (
 	"os"
+	"testing"
 
 	"github.com/nats-io/nats-server/v2/server"
 	natsserver "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
-func TestServerWithConnection() (*server.Server, *nats.Conn) {
+func TestServerWithConnection(t *testing.T) (*server.Server, *nats.Conn) {
+	t.Helper()
+
 	opts := &natsserver.DefaultTestOptions
 	opts.JetStream = true
 	opts.Port = -1
@@ -18,6 +21,9 @@ func TestServerWithConnection() (*server.Server, *nats.Conn) {
 	if err != nil {
 		panic(err)
 	}
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
 	opts.StoreDir = dir
 
 	ns := natsserver.RunServer(opts)

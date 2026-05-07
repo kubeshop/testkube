@@ -14,10 +14,8 @@ import (
 )
 
 func TestService_runExecutionScraper(t *testing.T) {
-	t.Parallel()
 
 	t.Run("completed jobs", func(t *testing.T) {
-		t.Parallel()
 
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
@@ -30,7 +28,7 @@ func TestService_runExecutionScraper(t *testing.T) {
 		mockTestWorkflowExecution := testkube.TestWorkflowExecution{Id: "test-workflow-execution-1", Result: &testkube.TestWorkflowResult{Status: &testWorkflowStatus}}
 		mockTestWorkflowResultsRepository.EXPECT().Get(gomock.Any(), "test-workflow-execution-1").Return(mockTestWorkflowExecution, nil)
 
-		statusKey3 := newStatusKey("testkube", "test-trigger-3")
+		statusKey3 := newStatusKey(triggerSourceV1, "testkube", "test-trigger-3")
 		triggerStatus3 := &triggerStatus{testWorkflowExecutionIDs: []string{"test-workflow-execution-1"}}
 		triggerStatusMap := map[statusKey]*triggerStatus{
 			statusKey3: triggerStatus3,
@@ -50,7 +48,6 @@ func TestService_runExecutionScraper(t *testing.T) {
 	})
 
 	t.Run("active jobs", func(t *testing.T) {
-		t.Parallel()
 
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
@@ -63,7 +60,7 @@ func TestService_runExecutionScraper(t *testing.T) {
 		mockTestWorkflowResultsRepository := testworkflow.NewMockRepository(mockCtrl)
 		mockTestWorkflowResultsRepository.EXPECT().Get(gomock.Any(), "test-workflow-execution-1").Return(mockTestWorkflowExecution, nil).Times(3)
 
-		statusKey2 := newStatusKey("testkube", "test-trigger-2")
+		statusKey2 := newStatusKey(triggerSourceV1, "testkube", "test-trigger-2")
 		triggerStatus2 := &triggerStatus{testWorkflowExecutionIDs: []string{"test-workflow-execution-1"}}
 		triggerStatusMap := map[statusKey]*triggerStatus{
 			statusKey2: triggerStatus2,

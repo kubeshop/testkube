@@ -17,7 +17,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
@@ -26,16 +26,15 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	postgresdb "github.com/kubeshop/testkube/pkg/database/postgres"
 	postgresmigrations "github.com/kubeshop/testkube/pkg/database/postgres/migrations"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -93,7 +92,7 @@ func MustGetConfig() *config.Config {
 }
 
 func MustFreePort(port int) {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", fmt.Sprintf(":%d", port))
 	ExitOnError(fmt.Sprintf("checking if port %d is free", port), err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
@@ -116,6 +115,9 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 
 func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	if cfg.StorageUseVirtualHostedStyle {
+		opts = append(opts, minio.VirtualHostedStyle())
+	}
 	minioClient := minio.NewClient(
 		cfg.StorageEndpoint,
 		cfg.StorageAccessKeyID,
@@ -203,8 +205,13 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 }
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
+	if migrate {
+		err := postgresdb.CreateDatabaseIfNotExists(ctx, cfg.APIPostgresDSN)
+		ExitOnError("Creating Postgres database if needed", err)
+	}
+
 	// Connect to PostgreSQL
-	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	pool, err := pgxpool.New(ctx, cfg.APIPostgresDSN)
 	ExitOnError("Getting Postgres database", err)
 
 	if migrate {
@@ -218,9 +225,9 @@ func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bo
 }
 
 func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, postgresmigrations.Fs)
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, postgresmigrations.Fs, goose.WithAllowOutofOrder(true))
 	if err != nil {
-		return errors.Wrap(err, "failed to plan Postgres migrations")
+		return errors.Wrap(err, "failed to initialize Postgres migrations provider")
 	}
 
 	results, err := provider.Up(ctx)
@@ -309,9 +316,9 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
 		proContext.Agent.ID = foundProContext.Agent.Id
 		proContext.Agent.Name = foundProContext.Agent.Name
-		proContext.Agent.Type = foundProContext.Agent.Type
 		proContext.Agent.Labels = foundProContext.Agent.Labels
 		proContext.Agent.Disabled = foundProContext.Agent.Disabled
+		proContext.Agent.IsSuperAgent = foundProContext.Agent.IsSuperAgent
 		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
 			return config.ProContextAgentEnvironment{
 				ID:   env.Id,
@@ -335,26 +342,18 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		}
 	}
 
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilitySourceOfTruth) {
+		proContext.HasSourceOfTruthCapability = true
+	}
+
 	return proContext, nil
 }
 
-func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
-	slackTemplate, err := parser.LoadConfigFromStringOrFile(
-		cfg.SlackTemplate,
-		cfg.TestkubeConfigDir,
-		"slack-template.json",
-		"slack template",
-	)
-	ExitOnError("Creating slack loader", err)
-
-	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
-	ExitOnError("Creating slack loader", err)
-
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
-		testkube.AllEventTypes, envs)
-}
-
-func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:staticcheck
+// MustCreateNATSConnection returns both the encoded connection and the
+// ConnectionConfig it was built from, so callers can pass the config on to
+// NATSBus without constructing it a second time (which risks drift when new
+// fields are added to ConnectionConfig).
+func MustCreateNATSConnection(cfg *config.Config) (*nats.EncodedConn, bus.ConnectionConfig) { //nolint:staticcheck
 	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
@@ -364,10 +363,11 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 
 		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 		ExitOnError("creating NATS connection", err)
-		return conn
+		// Embedded connections have no external URI; return empty config.
+		return conn, bus.ConnectionConfig{}
 	}
 
-	conn, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
+	natsCfg := bus.ConnectionConfig{
 		NatsURI:            cfg.NatsURI,
 		NatsSecure:         cfg.NatsSecure,
 		NatsSkipVerify:     cfg.NatsSkipVerify,
@@ -375,12 +375,23 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn { //nolint:s
 		NatsKeyFile:        cfg.NatsKeyFile,
 		NatsCAFile:         cfg.NatsCAFile,
 		NatsConnectTimeout: cfg.NatsConnectTimeout,
-	})
+	}
+	conn, err := bus.NewNATSEncodedConnection(natsCfg)
 	ExitOnError("creating NATS connection", err)
-	return conn
+	return conn, natsCfg
 }
 
 // Components
+
+func TrimAndFilterRegistries(csv string) []string {
+	var result []string
+	for _, r := range strings.Split(csv, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			result = append(result, r)
+		}
+	}
+	return result
+}
 
 func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
@@ -391,7 +402,7 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 	}
 	return imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(),
+		imageinspector.NewCraneFetcher(TrimAndFilterRegistries(cfg.InsecureRegistries)...),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)

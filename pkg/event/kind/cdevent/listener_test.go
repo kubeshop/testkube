@@ -14,11 +14,7 @@ import (
 var testEventTypes = []testkube.EventType{*testkube.EventStartTestWorkflow}
 
 func TestCDEventListener_Notify(t *testing.T) {
-	t.Parallel()
-
 	t.Run("send event success response", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := cloudevents.NewEventFromHTTPRequest(r)
@@ -44,8 +40,6 @@ func TestCDEventListener_Notify(t *testing.T) {
 	})
 
 	t.Run("send event failed response", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadGateway)
@@ -67,11 +61,9 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// then
 		assert.NotEqual(t, "", r.Error())
-
 	})
 
 	t.Run("send event bad uri", func(t *testing.T) {
-		t.Parallel()
 		// given
 
 		client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget("abcdef"))
@@ -88,7 +80,6 @@ func TestCDEventListener_Notify(t *testing.T) {
 		// then
 		assert.NotEqual(t, "", r.Error())
 	})
-
 }
 
 func exampleExecution() *testkube.TestWorkflowExecution {

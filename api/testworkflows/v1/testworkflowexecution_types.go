@@ -54,6 +54,8 @@ type TestWorkflowExecutionStatus struct {
 	LatestExecution *TestWorkflowExecutionDetails `json:"latestExecution,omitempty"`
 	// test workflow execution generation
 	Generation int64 `json:"generation,omitempty"`
+	// error message if the execution failed
+	Error string `json:"error,omitempty"`
 }
 
 // TestWorkflowExecutionDetails contains the details of TestWorkflowExecution
@@ -327,8 +329,4 @@ type TestWorkflowExecutionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TestWorkflowExecution `json:"items" expr:"include"`
-}
-
-func init() {
-	SchemeBuilder.Register(&TestWorkflowExecution{}, &TestWorkflowExecutionList{})
 }

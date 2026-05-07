@@ -20,6 +20,7 @@ type testSrv struct {
 	syncv1.UnimplementedSyncServiceServer
 
 	TestTrigger          *syncv1.TestTrigger
+	WorkflowTrigger      *syncv1.WorkflowTrigger
 	TestWorkflow         *testworkflowv1.TestWorkflow
 	TestWorkflowTemplate *syncv1.TestWorkflowTemplate
 	Webhook              *syncv1.Webhook
@@ -30,6 +31,8 @@ func (t *testSrv) UpdateOrCreate(_ context.Context, req *syncv1.UpdateOrCreateRe
 	switch v := req.Payload.(type) {
 	case *syncv1.UpdateOrCreateRequest_TestTrigger:
 		t.TestTrigger = v.TestTrigger
+	case *syncv1.UpdateOrCreateRequest_WorkflowTrigger:
+		t.WorkflowTrigger = v.WorkflowTrigger
 	case *syncv1.UpdateOrCreateRequest_TestWorkflow:
 		t.TestWorkflow = v.TestWorkflow
 	case *syncv1.UpdateOrCreateRequest_TestWorkflowTemplate:
@@ -58,7 +61,8 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		os.Remove(socketAddr)
 	})
 
-	listener, err := net.Listen("unix", socketAddr)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "unix", socketAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,5 +84,5 @@ func startGRPCTestConnection(t *testing.T, ts *testSrv) syncgrpc.Client {
 		t.Fatal(err)
 	}
 
-	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar")
+	return syncgrpc.NewClient(conn, zap.NewExample().Sugar(), "foo", "bar", true)
 }

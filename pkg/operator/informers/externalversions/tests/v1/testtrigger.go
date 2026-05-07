@@ -61,7 +61,7 @@ func NewFilteredTestTriggerInformer(
 	tweakListOptions internalinterfaces.TweakListOptionsFunc,
 ) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -74,7 +74,7 @@ func NewFilteredTestTriggerInformer(
 				}
 				return client.TestsV1().TestTriggers(namespace).Watch(context.TODO(), options)
 			},
-		},
+		}, client),
 		&testtriggersv1.TestTrigger{},
 		resyncPeriod,
 		indexers,
