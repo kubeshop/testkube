@@ -400,3 +400,23 @@ func TestGenericSimplifyForceArrayExpansionInterface(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
+
+func TestGenericSimplifyWildcardAccessorNotSplit(t *testing.T) {
+	// When a template uses a wildcard accessor like "services.slave.*.ip",
+	// it should be treated as a comma-separated string, NOT expanded as an array.
+	machine := NewMachine().
+		Register("services", map[string]interface{}{
+			"slave": []interface{}{
+				map[string]interface{}{"ip": "10.0.0.1"},
+				map[string]interface{}{"ip": "10.0.0.2"},
+			},
+		})
+
+	args := []string{"{{services.slave.*.ip}}"}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, machine)
+
+	assert.NoError(t, err)
+	// Should remain as a single comma-separated string, not split into separate elements
+	assert.Equal(t, &[]string{"10.0.0.1,10.0.0.2"}, obj.Args)
+}

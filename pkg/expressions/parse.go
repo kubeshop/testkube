@@ -276,3 +276,12 @@ func ExtractPureTemplateExpression(tpl string) (string, bool) {
 	}
 	return inner, true
 }
+
+// ContainsWildcardAccessor checks whether an expression string uses the
+// wildcard accessor syntax (e.g., "services.slave.*.ip"). Expressions that
+// use wildcards resolve to arrays implicitly through the map() transform,
+// but in template contexts they should be stringified (comma-joined) rather
+// than expanded as separate slice elements.
+func ContainsWildcardAccessor(expr string) bool {
+	return strings.Contains(expr, ".*")
+}

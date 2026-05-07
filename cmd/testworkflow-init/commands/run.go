@@ -41,7 +41,7 @@ func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionC
 	expandedCommand := make([]string, 0, len(command))
 	for i := range command {
 		// Check if this argument is a pure template expression that may resolve to an array
-		if innerExpr, isPure := expressions.ExtractPureTemplateExpression(command[i]); isPure {
+		if innerExpr, isPure := expressions.ExtractPureTemplateExpression(command[i]); isPure && !expressions.ContainsWildcardAccessor(innerExpr) {
 			expr, err := expressions.CompileAndResolve(innerExpr, machine, expressions.FinalizerFail)
 			if err != nil {
 				output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())

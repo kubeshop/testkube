@@ -150,6 +150,27 @@ func TestExtractPureTemplateExpression(t *testing.T) {
 	}
 }
 
+func TestContainsWildcardAccessor(t *testing.T) {
+	tests := []struct {
+		expr string
+		want bool
+	}{
+		{"services.slave.*.ip", true},
+		{"a.b.c.*.d.e", true},
+		{"a.b.c.*.*.d.e", true},
+		{"services.slave.0.ip", false},
+		{"list('a','b','c')", false},
+		{"split('x,y,z')", false},
+		{`["a","b"]`, false},
+		{"env.MY_VAR", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.expr, func(t *testing.T) {
+			assert.Equal(t, tc.want, ContainsWildcardAccessor(tc.expr))
+		})
+	}
+}
+
 func TestCompilePartialResolution(t *testing.T) {
 	vm := NewMachine().
 		Register("someint", 555).
