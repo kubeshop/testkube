@@ -506,10 +506,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientCert:
-                                description: plain text client certificate to verify client (testkube) TLS connection
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientCertFrom:
-                                description: external client certificate to verify client (testkube) TLS connection
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -582,10 +582,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientKey:
-                                description: plain text client key to verify client (testkube) TLS connection
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientKeyFrom:
-                                description: external client key to verify client (testkube) TLS connection
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -2692,10 +2692,10 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     clientCert:
-                                      description: plain text client certificate to verify client (testkube) TLS connection
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                       type: string
                                     clientCertFrom:
-                                      description: external client certificate to verify client (testkube) TLS connection
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
                                       properties:
                                         configMapKeyRef:
                                           properties:
@@ -2768,10 +2768,10 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     clientKey:
-                                      description: plain text client key to verify client (testkube) TLS connection
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                       type: string
                                     clientKeyFrom:
-                                      description: external client key to verify client (testkube) TLS connection
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                       properties:
                                         configMapKeyRef:
                                           properties:
@@ -4386,10 +4386,10 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         clientCert:
-                          description: plain text client certificate to verify client (testkube) TLS connection
+                          description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                           type: string
                         clientCertFrom:
-                          description: external client certificate to verify client (testkube) TLS connection
+                          description: external client certificate to authenticate the client to the Git server for mutual TLS
                           properties:
                             configMapKeyRef:
                               properties:
@@ -4462,10 +4462,10 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         clientKey:
-                          description: plain text client key to verify client (testkube) TLS connection
+                          description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                           type: string
                         clientKeyFrom:
-                          description: external client key to verify client (testkube) TLS connection
+                          description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                           properties:
                             configMapKeyRef:
                               properties:
@@ -5430,10 +5430,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientCert:
-                                description: plain text client certificate to verify client (testkube) TLS connection
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientCertFrom:
-                                description: external client certificate to verify client (testkube) TLS connection
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -5506,10 +5506,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientKey:
-                                description: plain text client key to verify client (testkube) TLS connection
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientKeyFrom:
-                                description: external client key to verify client (testkube) TLS connection
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -7010,10 +7010,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientCert:
-                                description: plain text client certificate to verify client (testkube) TLS connection
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientCertFrom:
-                                description: external client certificate to verify client (testkube) TLS connection
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -7086,10 +7086,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientKey:
-                                description: plain text client key to verify client (testkube) TLS connection
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientKeyFrom:
-                                description: external client key to verify client (testkube) TLS connection
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -9196,10 +9196,10 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     clientCert:
-                                      description: plain text client certificate to verify client (testkube) TLS connection
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                       type: string
                                     clientCertFrom:
-                                      description: external client certificate to verify client (testkube) TLS connection
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
                                       properties:
                                         configMapKeyRef:
                                           properties:
@@ -9272,10 +9272,10 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     clientKey:
-                                      description: plain text client key to verify client (testkube) TLS connection
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                       type: string
                                     clientKeyFrom:
-                                      description: external client key to verify client (testkube) TLS connection
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                       properties:
                                         configMapKeyRef:
                                           properties:
@@ -10830,10 +10830,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientCert:
-                                description: plain text client certificate to verify client (testkube) TLS connection
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientCertFrom:
-                                description: external client certificate to verify client (testkube) TLS connection
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -10906,10 +10906,10 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                               clientKey:
-                                description: plain text client key to verify client (testkube) TLS connection
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 type: string
                               clientKeyFrom:
-                                description: external client key to verify client (testkube) TLS connection
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                 properties:
                                   configMapKeyRef:
                                     properties:
@@ -13016,10 +13016,10 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     clientCert:
-                                      description: plain text client certificate to verify client (testkube) TLS connection
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
                                       type: string
                                     clientCertFrom:
-                                      description: external client certificate to verify client (testkube) TLS connection
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
                                       properties:
                                         configMapKeyRef:
                                           properties:
@@ -13092,10 +13092,10 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     clientKey:
-                                      description: plain text client key to verify client (testkube) TLS connection
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                       type: string
                                     clientKeyFrom:
-                                      description: external client key to verify client (testkube) TLS connection
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
                                       properties:
                                         configMapKeyRef:
                                           properties:

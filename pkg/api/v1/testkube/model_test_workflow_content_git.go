@@ -27,10 +27,10 @@ type TestWorkflowContentGit struct {
 	// plain text CA certificate to verify repository TLS connection
 	CaCert     string        `json:"caCert,omitempty"`
 	CaCertFrom *EnvVarSource `json:"caCertFrom,omitempty"`
-	// plain text client certificate to authenticate client (testkube) to the repository TLS connection
+	// plain text client certificate to authenticate the client to the Git server for mutual TLS
 	ClientCert     string        `json:"clientCert,omitempty"`
 	ClientCertFrom *EnvVarSource `json:"clientCertFrom,omitempty"`
-	// plain text client key used with the client certificate to authenticate client (testkube) to the repository TLS connection
+	// plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
 	ClientKey     string        `json:"clientKey,omitempty"`
 	ClientKeyFrom *EnvVarSource `json:"clientKeyFrom,omitempty"`
 	// where to mount the fetched repository contents (defaults to \"repo\" directory in the data volume)

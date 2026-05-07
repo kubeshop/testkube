@@ -29,13 +29,13 @@ type ContentGit struct {
 	CaCert string `json:"caCert,omitempty" expr:"template"`
 	// external CA certificate to verify repository TLS connection
 	CaCertFrom *corev1.EnvVarSource `json:"caCertFrom,omitempty" expr:"force"`
-	// plain text client certificate to verify client (testkube) TLS connection
+	// plain text client certificate to authenticate the client to the Git server for mutual TLS
 	ClientCert string `json:"clientCert,omitempty" expr:"template"`
-	// external client certificate to verify client (testkube) TLS connection
+	// external client certificate to authenticate the client to the Git server for mutual TLS
 	ClientCertFrom *corev1.EnvVarSource `json:"clientCertFrom,omitempty" expr:"force"`
-	// plain text client key to verify client (testkube) TLS connection
+	// plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
 	ClientKey string `json:"clientKey,omitempty" expr:"template"`
-	// external client key to verify client (testkube) TLS connection
+	// external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
 	ClientKeyFrom *corev1.EnvVarSource `json:"clientKeyFrom,omitempty" expr:"force"`
 	// where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
 	MountPath string `json:"mountPath,omitempty" expr:"template"`
