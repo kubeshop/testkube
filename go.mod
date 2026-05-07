@@ -48,7 +48,7 @@ require (
 	github.com/montanaflynn/stats v0.9.0
 	github.com/moogar0880/problems v1.0.1
 	github.com/nats-io/nats-server/v2 v2.14.0
-	github.com/nats-io/nats.go v1.51.0
+	github.com/nats-io/nats.go v1.52.0
 	github.com/ohler55/ojg v1.28.1
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/onsi/ginkgo/v2 v2.28.3
