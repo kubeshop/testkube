@@ -167,6 +167,9 @@ func TestContainsWildcardAccessor(t *testing.T) {
 		{`split('192.168.*', '.')`, false},
 		{`map(items, 'v =~ ".*foo"')`, false},
 		{`"some.*value"`, false},
+		// Spaced wildcard accessors should still be detected
+		{"services.slave . * . ip", true},
+		{"a . *", true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.expr, func(t *testing.T) {
