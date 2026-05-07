@@ -60,7 +60,10 @@ func writeTempCertFile(content, pattern string) (string, func(), error) {
 		_ = os.Remove(path)
 		return "", nil, fmt.Errorf("writing temp file: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", nil, fmt.Errorf("closing temp file: %w", err)
+	}
 
 	if err := os.Chmod(path, 0400); err != nil {
 		_ = os.Remove(path)
