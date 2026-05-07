@@ -16,6 +16,9 @@ const (
 	GitUsernameKey  = "git-username"
 	GitTokenKey     = "git-token"
 	GitSshKey       = "git-ssh-key"
+	GitCaCert       = "git-ca-cert"
+	GitClientCert   = "git-client-cert"
+	GitClientKey    = "git-client-key"
 	FileKey         = "file"
 	EnvVarKey       = "env"
 )
@@ -51,6 +54,27 @@ func extractCredentialsInContent(content *testworkflowsv1.Content, externalize f
 			return errors.Wrap(err, "failed creating secret for Git credentials")
 		}
 		content.Git.TokenFrom = source
+	}
+	if isComputed(content.Git.CaCertFrom) {
+		source, err := externalize(GitCaCert, content.Git.CaCertFrom.SecretKeyRef.Key)
+		if err != nil {
+			return errors.Wrap(err, "failed creating secret for Git CA certificate")
+		}
+		content.Git.CaCertFrom = source
+	}
+	if isComputed(content.Git.ClientCertFrom) {
+		source, err := externalize(GitClientCert, content.Git.ClientCertFrom.SecretKeyRef.Key)
+		if err != nil {
+			return errors.Wrap(err, "failed creating secret for Git client certificate")
+		}
+		content.Git.ClientCertFrom = source
+	}
+	if isComputed(content.Git.ClientKeyFrom) {
+		source, err := externalize(GitClientKey, content.Git.ClientKeyFrom.SecretKeyRef.Key)
+		if err != nil {
+			return errors.Wrap(err, "failed creating secret for Git client key")
+		}
+		content.Git.ClientKeyFrom = source
 	}
 
 	// TODO: Ensure there is no expression inside

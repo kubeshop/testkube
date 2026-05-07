@@ -295,18 +295,24 @@ func MapTemplateRefAPIToKube(v testkube.TestWorkflowTemplateRef) testworkflowsv1
 
 func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.ContentGit {
 	return testworkflowsv1.ContentGit{
-		Uri:          v.Uri,
-		Revision:     v.Revision,
-		Username:     v.Username,
-		UsernameFrom: common.MapPtr(v.UsernameFrom, MapEnvVarSourceAPIToKube),
-		Token:        v.Token,
-		TokenFrom:    common.MapPtr(v.TokenFrom, MapEnvVarSourceAPIToKube),
-		SshKey:       v.SshKey,
-		SshKeyFrom:   common.MapPtr(v.SshKeyFrom, MapEnvVarSourceAPIToKube),
-		AuthType:     MapGitAuthTypeAPIToKube(v.AuthType),
-		MountPath:    v.MountPath,
-		Cone:         v.Cone,
-		Paths:        v.Paths,
+		Uri:            v.Uri,
+		Revision:       v.Revision,
+		Username:       v.Username,
+		UsernameFrom:   common.MapPtr(v.UsernameFrom, MapEnvVarSourceAPIToKube),
+		Token:          v.Token,
+		TokenFrom:      common.MapPtr(v.TokenFrom, MapEnvVarSourceAPIToKube),
+		SshKey:         v.SshKey,
+		SshKeyFrom:     common.MapPtr(v.SshKeyFrom, MapEnvVarSourceAPIToKube),
+		CaCert:         v.CaCert,
+		CaCertFrom:     common.MapPtr(v.CaCertFrom, MapEnvVarSourceAPIToKube),
+		ClientCert:     v.ClientCert,
+		ClientCertFrom: common.MapPtr(v.ClientCertFrom, MapEnvVarSourceAPIToKube),
+		ClientKey:      v.ClientKey,
+		ClientKeyFrom:  common.MapPtr(v.ClientKeyFrom, MapEnvVarSourceAPIToKube),
+		AuthType:       MapGitAuthTypeAPIToKube(v.AuthType),
+		MountPath:      v.MountPath,
+		Cone:           v.Cone,
+		Paths:          v.Paths,
 	}
 }
 
