@@ -20,6 +20,7 @@ func TestSetupCertAuth(t *testing.T) {
 	})
 
 	t.Run("CA cert writes temp file and sets sslCAInfo", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		opts := &CloneOptions{CaCert: "ca-cert-content"}
 		args, cleanups, err := setupCertAuth(opts)
 		require.NoError(t, err)
@@ -37,6 +38,7 @@ func TestSetupCertAuth(t *testing.T) {
 	})
 
 	t.Run("client cert writes temp file and sets sslCert", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		opts := &CloneOptions{ClientCert: "client-cert-content"}
 		args, cleanups, err := setupCertAuth(opts)
 		require.NoError(t, err)
@@ -54,6 +56,7 @@ func TestSetupCertAuth(t *testing.T) {
 	})
 
 	t.Run("client key writes temp file and sets sslKey", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		opts := &CloneOptions{ClientKey: "client-key-content"}
 		args, cleanups, err := setupCertAuth(opts)
 		require.NoError(t, err)
@@ -71,6 +74,7 @@ func TestSetupCertAuth(t *testing.T) {
 	})
 
 	t.Run("all certs set returns all git config args", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		opts := &CloneOptions{
 			CaCert:     "ca-content",
 			ClientCert: "cert-content",
@@ -92,6 +96,7 @@ func TestSetupCertAuth(t *testing.T) {
 	})
 
 	t.Run("temp files are removed by cleanup", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		opts := &CloneOptions{
 			CaCert:     "ca-content",
 			ClientCert: "cert-content",
@@ -126,6 +131,7 @@ func TestSetupCertAuth(t *testing.T) {
 	})
 
 	t.Run("temp files have read-only permissions", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		opts := &CloneOptions{CaCert: "ca-content"}
 		args, cleanups, err := setupCertAuth(opts)
 		require.NoError(t, err)
@@ -140,6 +146,7 @@ func TestSetupCertAuth(t *testing.T) {
 
 func TestWriteTempCertFile(t *testing.T) {
 	t.Run("creates file with correct content", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		path, cleanup, err := writeTempCertFile("test-cert-content", "test-cert-*")
 		require.NoError(t, err)
 		defer cleanup()
@@ -150,6 +157,7 @@ func TestWriteTempCertFile(t *testing.T) {
 	})
 
 	t.Run("file has restricted permissions", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		path, cleanup, err := writeTempCertFile("test-content", "test-perm-*")
 		require.NoError(t, err)
 		defer cleanup()
@@ -160,15 +168,19 @@ func TestWriteTempCertFile(t *testing.T) {
 	})
 
 	t.Run("file is in tmp directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		t.Setenv("TMPDIR", tmpDir)
 		path, cleanup, err := writeTempCertFile("content", "test-location-*")
 		require.NoError(t, err)
 		defer cleanup()
 
 		assert.True(t, strings.HasPrefix(filepath.Base(path), "test-location-"),
 			"file should match pattern prefix")
+		assert.Equal(t, tmpDir, filepath.Dir(path), "file should be in the OS temp dir")
 	})
 
 	t.Run("cleanup removes file", func(t *testing.T) {
+		t.Setenv("TMPDIR", t.TempDir())
 		path, cleanup, err := writeTempCertFile("content", "test-cleanup-*")
 		require.NoError(t, err)
 

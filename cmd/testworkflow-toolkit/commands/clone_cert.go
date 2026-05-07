@@ -3,8 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 // setupCertAuth sets up TLS certificate-based authentication for git by writing
@@ -49,7 +47,7 @@ func setupCertAuth(opts *CloneOptions) (args []string, cleanups []func(), err er
 // writeTempCertFile writes content to a temporary file with restricted permissions
 // and returns the file path and a cleanup function to remove it.
 func writeTempCertFile(content, pattern string) (string, func(), error) {
-	tmpFile, err := os.CreateTemp(constants.DefaultTmpDirPath, pattern)
+	tmpFile, err := os.CreateTemp("", pattern)
 	if err != nil {
 		return "", nil, fmt.Errorf("creating temp file: %w", err)
 	}
