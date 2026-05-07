@@ -46,6 +46,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorToCRD(request.ContentSelector),
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
@@ -110,6 +111,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorToCRD(request.ContentSelector),
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
@@ -227,5 +229,25 @@ func mapActionParametersCRD(actionParameters *testkube.TestTriggerActionParamete
 		Config: actionParameters.Config,
 		Tags:   actionParameters.Tags,
 		Target: common.MapPtr(actionParameters.Target, commonmapper.MapTargetApiToKube),
+	}
+}
+
+func mapContentSelectorToCRD(selector *testkube.TestTriggerContentSelector) *testsv1.TestTriggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentSelector{
+		Git: mapContentGitToCRD(selector.Git),
+	}
+}
+
+func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTriggerContentGitSpec {
+	if git == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentGitSpec{
+		Uri:      git.Uri,
+		Revision: git.Revision,
+		Paths:    git.Paths,
 	}
 }

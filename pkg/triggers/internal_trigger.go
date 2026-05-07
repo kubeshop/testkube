@@ -62,6 +62,9 @@ type internalTrigger struct {
 	// testworkflow or empty — v1 non-testworkflow paths are no longer supported.
 	Execution string
 
+	// ContentSelector is for git-based triggers
+	ContentSelector *testtriggersv1.TestTriggerContentSelector
+
 	Disabled bool
 }
 
@@ -142,6 +145,9 @@ func convertV1ToInternal(t *testtriggersv1.TestTrigger) *internalTrigger {
 			LabelSelector:  sel.LabelSelector,
 		}
 	}
+
+	// Content selector for git-based triggers
+	it.ContentSelector = t.Spec.ContentSelector
 
 	// Wait conditions
 	if t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) > 0 {

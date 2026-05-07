@@ -65,6 +65,8 @@ type TestTriggerSpec struct {
 	ConditionSpec *TestTriggerConditionSpec `json:"conditionSpec,omitempty"`
 	// What resource probes should be matched
 	ProbeSpec *TestTriggerProbeSpec `json:"probeSpec,omitempty"`
+	// ContentSelector identifies which content should be watched for changes
+	ContentSelector *TestTriggerContentSelector `json:"contentSelector,omitempty"`
 	// Action represents what needs to be executed for selected Execution
 	Action           TestTriggerAction            `json:"action"`
 	ActionParameters *TestTriggerActionParameters `json:"actionParameters,omitempty"`
@@ -83,7 +85,7 @@ type TestTriggerSpec struct {
 }
 
 // TestTriggerResource defines resource for test triggers
-// +kubebuilder:validation:Enum=pod;deployment;statefulset;daemonset;service;ingress;event;configmap
+// +kubebuilder:validation:Enum=pod;deployment;statefulset;daemonset;service;ingress;event;configmap;content
 type TestTriggerResource string
 
 // List of TestTriggerResources
@@ -96,6 +98,7 @@ const (
 	TestTriggerResourceIngress     TestTriggerResource = "ingress"
 	TestTriggerResourceEvent       TestTriggerResource = "event"
 	TestTriggerResourceConfigMap   TestTriggerResource = "configmap"
+	TestTriggerResourceContent     TestTriggerResource = "content"
 )
 
 // TestTriggerResourceRef identifies a K8s resource by GVK.
@@ -260,6 +263,23 @@ type TestTriggerActionParameters struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// Target helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
+}
+
+// TestTriggerContentSelector defines what content to watch for trigger events
+type TestTriggerContentSelector struct {
+	// Git specifies a git repository to watch for changes
+	Git *TestTriggerContentGitSpec `json:"git,omitempty"`
+}
+
+// TestTriggerContentGitSpec defines git repository configuration for content triggers
+type TestTriggerContentGitSpec struct {
+	// URI of the git repository
+	Uri string `json:"uri"`
+	// Revision (branch name, tag, or commit SHA) to watch
+	Revision string `json:"revision,omitempty"`
+	// Paths is a list of file/directory paths to watch for changes.
+	// If empty, all paths are watched.
+	Paths []string `json:"paths,omitempty"`
 }
 
 //+kubebuilder:object:root=true

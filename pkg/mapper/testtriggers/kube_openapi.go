@@ -63,6 +63,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		Match:             mapFieldConditionsFromCRD(crd.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
+		ContentSelector:   mapContentSelectorFromCRD(crd.Spec.ContentSelector),
 		Action:            action,
 		ActionParameters:  mapActionParametersFromCRD(crd.Spec.ActionParameters),
 		Execution:         execution,
@@ -194,6 +195,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		Match:             mapFieldConditionsFromCRD(request.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),
+		ContentSelector:   mapContentSelectorFromCRD(request.Spec.ContentSelector),
 		Action:            action,
 		ActionParameters:  mapActionParametersFromCRD(request.Spec.ActionParameters),
 		Execution:         execution,
@@ -231,5 +233,25 @@ func mapProbeSpecFromCRD(probeSpec *testsv1.TestTriggerProbeSpec) *testkube.Test
 		Timeout: probeSpec.Timeout,
 		Delay:   probeSpec.Delay,
 		Probes:  probes,
+	}
+}
+
+func mapContentSelectorFromCRD(selector *testsv1.TestTriggerContentSelector) *testkube.TestTriggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentSelector{
+		Git: mapContentGitFromCRD(selector.Git),
+	}
+}
+
+func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.TestTriggerContentGit {
+	if git == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentGit{
+		Uri:      git.Uri,
+		Revision: git.Revision,
+		Paths:    git.Paths,
 	}
 }

@@ -93,6 +93,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
+
+	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 )
 
 func init() {
@@ -759,6 +761,7 @@ func main() {
 		})
 	}
 
+	var triggerService *triggers.Service
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		commons.ExitOnError("getting k8s client config", err)
@@ -780,7 +783,7 @@ func main() {
 			)
 		}
 
-		triggerService := triggers.NewService(
+		triggerService = triggers.NewService(
 			cfg.RunnerName,
 			clientset,
 			testkubeClientset,
@@ -807,6 +810,14 @@ func main() {
 			triggerService.Run(ctx)
 			return nil
 		})
+
+		// Start git content informer if control plane is used
+		if useTestTriggerControlPlane && proContext.EnvID != "" {
+			g.Go(func() error {
+				gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID).Reconcile(ctx)
+				return nil
+			})
+		}
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
 	}
