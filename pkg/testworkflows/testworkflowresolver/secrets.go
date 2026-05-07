@@ -16,11 +16,17 @@ const (
 	GitUsernameKey  = "git-username"
 	GitTokenKey     = "git-token"
 	GitSshKey       = "git-ssh-key"
-	GitCaCert       = "git-ca-cert"
-	GitClientCert   = "git-client-cert"
-	GitClientKey    = "git-client-key"
-	FileKey         = "file"
-	EnvVarKey       = "env"
+	GitCaCertKey    = "git-ca-cert"
+	GitClientCertKey = "git-client-cert"
+	GitClientKeyKey = "git-client-key"
+
+	// Backward-compatible aliases for the previous mixed naming.
+	GitCaCert     = GitCaCertKey
+	GitClientCert = GitClientCertKey
+	GitClientKey  = GitClientKeyKey
+
+	FileKey   = "file"
+	EnvVarKey = "env"
 )
 
 func isComputed(source *corev1.EnvVarSource) bool {
