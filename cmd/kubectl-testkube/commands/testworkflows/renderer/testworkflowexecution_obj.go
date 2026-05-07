@@ -56,7 +56,7 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 	} else {
 		ui.NL()
 		ui.Err(errors.New("incomplete execution data received from API: missing Workflow field"))
-		ui.Warn("Hint: check your API endpoint configuration (HTTP vs HTTPS) and API server accessibility")
+		ui.Hint("check your API endpoint configuration (HTTP vs HTTPS) and API server accessibility")
 	}
 
 	if execution.Id != "" {
