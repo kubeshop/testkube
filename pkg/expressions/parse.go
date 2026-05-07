@@ -293,7 +293,7 @@ func ContainsWildcardAccessor(expr string) bool {
 		case tokenTypeAccessor:
 			if name, ok := tok.Value.(string); ok {
 				// Strip all whitespace so spaced accessors like
-				// "services.slave . * . ip" are normalised to
+				// "services.slave . * . ip" are normalized to
 				// "services.slave.*.ip" before the check.
 				normalized := strings.Join(strings.Fields(name), "")
 				if strings.Contains(normalized, ".*") {
