@@ -8308,7 +8308,11 @@ components:
         sshKeyFrom:
           $ref: "#/components/schemas/EnvVarSource"
         authType:
-          $ref: "#/components/schemas/ContentGitAuthType"
+          type: string
+          enum:
+            - basic
+            - header
+            - github
         mountPath:
           type: string
           description: where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
