@@ -276,3 +276,51 @@ func ExtractPureTemplateExpression(tpl string) (string, bool) {
 	}
 	return inner, true
 }
+
+// IsWildcardAccessorOnly checks whether an expression is purely a wildcard
+// accessor chain (e.g., "services.slave.*.ip") with no additional operators,
+// function calls, or array/object constructors.
+//
+// Such expressions resolve to arrays implicitly through the map() transform,
+// but in template contexts they should be stringified (comma-joined) rather
+// than expanded as separate slice elements.
+//
+// When a wildcard accessor is used inside an explicit array-producing construct
+// (e.g., "list(services.slave.*.ip...)"), this function returns false so that
+// expansion still works as expected.
+func IsWildcardAccessorOnly(expr string) bool {
+	tokens, _, _ := tokenize(expr, 0)
+	if len(tokens) == 0 {
+		return false
+	}
+	// The expression must consist of exactly one tokenTypeAccessor optionally
+	// followed by one or more tokenTypePropertyAccessor tokens — nothing else.
+	if tokens[0].Type != tokenTypeAccessor {
+		return false
+	}
+	for _, tok := range tokens[1:] {
+		if tok.Type != tokenTypePropertyAccessor {
+			return false
+		}
+	}
+	// Now verify that the accessor chain actually contains a wildcard segment.
+	for _, tok := range tokens {
+		switch tok.Type {
+		case tokenTypeAccessor:
+			if name, ok := tok.Value.(string); ok {
+				// Strip all whitespace so spaced accessors like
+				// "services.slave . * . ip" are normalized to
+				// "services.slave.*.ip" before the check.
+				normalized := strings.Join(strings.Fields(name), "")
+				if strings.Contains(normalized, ".*") {
+					return true
+				}
+			}
+		case tokenTypePropertyAccessor:
+			if name, ok := tok.Value.(string); ok && strings.TrimSpace(name) == "*" {
+				return true
+			}
+		}
+	}
+	return false
+}
