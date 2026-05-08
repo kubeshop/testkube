@@ -145,6 +145,31 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              contentSelector:
+                description: ContentSelector identifies which content should be watched
+                  for changes
+                properties:
+                  git:
+                    description: Git specifies a git repository to watch for changes
+                    properties:
+                      paths:
+                        description: |-
+                          Paths is a list of file/directory paths to watch for changes.
+                          If empty, all paths are watched.
+                        items:
+                          type: string
+                        type: array
+                      revision:
+                        description: Revision (branch name, tag, or commit SHA) to
+                          watch
+                        type: string
+                      uri:
+                        description: URI of the git repository
+                        type: string
+                    required:
+                    - uri
+                    type: object
+                type: object
               delay:
                 description: Delay is a duration string which specifies how long should
                   the test be delayed after a trigger is matched
@@ -283,6 +308,7 @@ spec:
                 - ingress
                 - event
                 - configmap
+                - content
                 type: string
               resourceRef:
                 description: |-
