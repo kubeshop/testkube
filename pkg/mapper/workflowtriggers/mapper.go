@@ -4,13 +4,13 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapCRDToAPI converts the Kubernetes CRD shape (spec-wrapped) into the flat
@@ -110,118 +110,12 @@ func mapGitAPIToCRD(git *testkube.TestTriggerContentGit) *workflowtriggersv1.Wor
 	return out
 }
 
-func mapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVarSourceConfigMapKeyRef {
-	if v == nil {
-		return nil
-	}
-	return &testkube.EnvVarSourceConfigMapKeyRef{Name: v.Name, Key: v.Key, Optional: v.Optional}
-}
-
-func mapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourceSecretKeyRef {
-	if v == nil {
-		return nil
-	}
-	return &testkube.EnvVarSourceSecretKeyRef{Name: v.Name, Key: v.Key, Optional: v.Optional}
-}
-
 func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
-	if v == nil {
-		return nil
-	}
-	return &testkube.EnvVarSource{
-		FieldRef:         mapFieldRefKubeToAPI(v.FieldRef),
-		ResourceFieldRef: mapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
-		ConfigMapKeyRef:  mapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
-		SecretKeyRef:     mapSecretKeyRefKubeToAPI(v.SecretKeyRef),
-	}
-}
-
-func mapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
-	if v == nil {
-		return nil
-	}
-	return &testkube.FieldRef{
-		ApiVersion: v.APIVersion,
-		FieldPath:  v.FieldPath,
-	}
-}
-
-func mapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
-	if v == nil {
-		return nil
-	}
-	divisor := ""
-	if !v.Divisor.IsZero() {
-		divisor = v.Divisor.String()
-	}
-	return &testkube.ResourceFieldRef{
-		ContainerName: v.ContainerName,
-		Resource:      v.Resource,
-		Divisor:       divisor,
-	}
-}
-
-func mapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev1.ConfigMapKeySelector {
-	if v == nil {
-		return nil
-	}
-	return &corev1.ConfigMapKeySelector{
-		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Key:                  v.Key,
-		Optional:             v.Optional,
-	}
-}
-
-func mapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.SecretKeySelector {
-	if v == nil {
-		return nil
-	}
-	return &corev1.SecretKeySelector{
-		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Key:                  v.Key,
-		Optional:             v.Optional,
-	}
+	return commonmapper.MapEnvVarSourceKubeToAPI(v)
 }
 
 func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
-	if v == nil {
-		return nil
-	}
-	return &corev1.EnvVarSource{
-		FieldRef:         mapFieldRefAPIToKube(v.FieldRef),
-		ResourceFieldRef: mapResourceFieldRefAPIToKube(v.ResourceFieldRef),
-		ConfigMapKeyRef:  mapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
-		SecretKeyRef:     mapSecretKeyRefAPIToKube(v.SecretKeyRef),
-	}
-}
-
-func mapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
-	if v == nil {
-		return nil
-	}
-	return &corev1.ObjectFieldSelector{
-		APIVersion: v.ApiVersion,
-		FieldPath:  v.FieldPath,
-	}
-}
-
-func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
-	if v == nil {
-		return nil
-	}
-	divisor := resource.Quantity{}
-	if v.Divisor != "" {
-		if parsedDivisor, err := resource.ParseQuantity(v.Divisor); err == nil {
-			divisor = parsedDivisor
-		} else {
-			divisor = resource.MustParse("1")
-		}
-	}
-	return &corev1.ResourceFieldSelector{
-		ContainerName: v.ContainerName,
-		Resource:      v.Resource,
-		Divisor:       divisor,
-	}
+	return commonmapper.MapEnvVarSourceAPIToKube(v)
 }
 
 // MapListCRDToAPI maps a CRD list into a flat API slice.

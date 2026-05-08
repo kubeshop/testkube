@@ -2,7 +2,6 @@ package testtriggers
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -265,66 +264,23 @@ func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrigge
 }
 
 func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
-	if v == nil {
-		return nil
-	}
-	return &corev1.EnvVarSource{
-		FieldRef:         mapFieldRefAPIToKube(v.FieldRef),
-		ResourceFieldRef: mapResourceFieldRefAPIToKube(v.ResourceFieldRef),
-		ConfigMapKeyRef:  mapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
-		SecretKeyRef:     mapSecretKeyRefAPIToKube(v.SecretKeyRef),
-	}
+	return commonmapper.MapEnvVarSourceAPIToKube(v)
 }
 
 func mapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
-	if v == nil {
-		return nil
-	}
-	return &corev1.ObjectFieldSelector{
-		APIVersion: v.ApiVersion,
-		FieldPath:  v.FieldPath,
-	}
+	return commonmapper.MapFieldRefAPIToKube(v)
 }
 
 func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
-	if v == nil {
-		return nil
-	}
-	divisor := resource.Quantity{}
-	if v.Divisor != "" {
-		if parsedDivisor, err := resource.ParseQuantity(v.Divisor); err == nil {
-			divisor = parsedDivisor
-		} else {
-			divisor = resource.MustParse("1")
-		}
-	}
-	return &corev1.ResourceFieldSelector{
-		ContainerName: v.ContainerName,
-		Resource:      v.Resource,
-		Divisor:       divisor,
-	}
+	return commonmapper.MapResourceFieldRefAPIToKube(v)
 }
 
 func mapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev1.ConfigMapKeySelector {
-	if v == nil {
-		return nil
-	}
-	return &corev1.ConfigMapKeySelector{
-		Key:                  v.Key,
-		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Optional:             v.Optional,
-	}
+	return commonmapper.MapConfigMapKeyRefAPIToKube(v)
 }
 
 func mapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.SecretKeySelector {
-	if v == nil {
-		return nil
-	}
-	return &corev1.SecretKeySelector{
-		Key:                  v.Key,
-		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Optional:             v.Optional,
-	}
+	return commonmapper.MapSecretKeyRefAPIToKube(v)
 }
 
 func mapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType {
