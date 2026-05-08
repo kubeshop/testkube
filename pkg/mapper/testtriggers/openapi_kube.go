@@ -290,10 +290,16 @@ func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.Resource
 	if v == nil {
 		return nil
 	}
+	divisor := resource.Quantity{}
+	if v.Divisor != "" {
+		if parsedDivisor, err := resource.ParseQuantity(v.Divisor); err == nil {
+			divisor = parsedDivisor
+		}
+	}
 	return &corev1.ResourceFieldSelector{
 		ContainerName: v.ContainerName,
 		Resource:      v.Resource,
-		Divisor:       func() resource.Quantity { q, _ := resource.ParseQuantity(v.Divisor); return q }(),
+		Divisor:       divisor,
 	}
 }
 
