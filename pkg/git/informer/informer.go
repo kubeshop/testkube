@@ -201,6 +201,7 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 	if err != nil {
 		return false, err
 	}
+	defer iter.Close()
 
 	foundPrev := false
 	matched := false
