@@ -811,8 +811,8 @@ func main() {
 			return nil
 		})
 
-		// Start git content informer if control plane is used
-		if useTestTriggerControlPlane && proContext.EnvID != "" {
+		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
+		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
 			g.Go(func() error {
 				gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
 					RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
@@ -823,6 +823,8 @@ func main() {
 				}).Reconcile(ctx)
 				return nil
 			})
+		} else if useTestTriggerControlPlane && useCloudTestTriggers {
+			log.DefaultLogger.Warn("git informer: skipping start because cloud test trigger client requires non-empty environment ID")
 		}
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")

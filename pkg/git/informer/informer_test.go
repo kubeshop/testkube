@@ -167,6 +167,28 @@ func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {
 	assert.Equal(t, 77, pullOpts.Depth)
 }
 
+func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: "main",
+	}
+	opts := Options{
+		RepoDepth:          50,
+		ListTimeoutSeconds: 30,
+	}
+
+	cloneOpts, err := cloneOptions(gitConfig, opts)
+	require.NoError(t, err)
+	assert.Equal(t, "https://github.com/kubeshop/testkube.git", cloneOpts.URL)
+	assert.Equal(t, 50, cloneOpts.Depth)
+	assert.Equal(t, "refs/heads/main", cloneOpts.ReferenceName.String())
+
+	pullOpts, err := pullOptions(gitConfig, opts)
+	require.NoError(t, err)
+	assert.Equal(t, 50, pullOpts.Depth)
+	assert.Equal(t, "refs/heads/main", pullOpts.ReferenceName.String())
+}
+
 func TestIsGitContentTrigger(t *testing.T) {
 	resource := testkube.CONTENT_TestTriggerResources
 
