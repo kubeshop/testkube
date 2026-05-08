@@ -122,6 +122,13 @@ func TestMapAPIToCRD_wrapsSpecAndParsesDelay(t *testing.T) {
 				Uri:      "https://github.com/kubeshop/testkube.git",
 				Revision: "main",
 				AuthType: ptr(testkube.HEADER_ContentGitAuthType),
+				TokenFrom: &testkube.EnvVarSource{
+					ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{
+						Name:     "git-creds",
+						Key:      "token",
+						Optional: ptr(true),
+					},
+				},
 				UsernameFrom: &testkube.EnvVarSource{
 					FieldRef: &testkube.FieldRef{
 						ApiVersion: "v1",
@@ -153,6 +160,10 @@ func TestMapAPIToCRD_wrapsSpecAndParsesDelay(t *testing.T) {
 	assert.Equal(t, "https://github.com/kubeshop/testkube.git", crd.Spec.When.Git.Uri)
 	assert.Equal(t, "main", crd.Spec.When.Git.Revision)
 	assert.Equal(t, testsv3.GitAuthTypeHeader, crd.Spec.When.Git.AuthType)
+	require.NotNil(t, crd.Spec.When.Git.TokenFrom)
+	require.NotNil(t, crd.Spec.When.Git.TokenFrom.ConfigMapKeyRef)
+	assert.NotNil(t, crd.Spec.When.Git.TokenFrom.ConfigMapKeyRef.Optional)
+	assert.True(t, *crd.Spec.When.Git.TokenFrom.ConfigMapKeyRef.Optional)
 	require.NotNil(t, crd.Spec.When.Git.UsernameFrom)
 	require.NotNil(t, crd.Spec.When.Git.UsernameFrom.FieldRef)
 	assert.Equal(t, "v1", crd.Spec.When.Git.UsernameFrom.FieldRef.APIVersion)
@@ -181,6 +192,30 @@ func TestMapAPIToCRD_invalidDelay_dropsField(t *testing.T) {
 	crd := MapAPIToCRD(api)
 
 	assert.Nil(t, crd.Spec.Run.Delay, "invalid delay should be dropped rather than panic")
+}
+
+func TestMapEnvVarSourceAPIToKube_preservesOptional(t *testing.T) {
+	env := &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{
+			Name:     "cfg",
+			Key:      "token",
+			Optional: ptr(true),
+		},
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
+			Name:     "sec",
+			Key:      "password",
+			Optional: ptr(false),
+		},
+	}
+
+	mapped := mapEnvVarSourceAPIToKube(env)
+	require.NotNil(t, mapped)
+	require.NotNil(t, mapped.ConfigMapKeyRef)
+	require.NotNil(t, mapped.ConfigMapKeyRef.Optional)
+	assert.True(t, *mapped.ConfigMapKeyRef.Optional)
+	require.NotNil(t, mapped.SecretKeyRef)
+	require.NotNil(t, mapped.SecretKeyRef.Optional)
+	assert.False(t, *mapped.SecretKeyRef.Optional)
 }
 
 func TestMapListCRDToAPI_handlesEmptyAndMulti(t *testing.T) {
