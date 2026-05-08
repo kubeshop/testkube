@@ -422,6 +422,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "valid git content trigger",
 			trigger: testkube.TestTrigger{
+				Event:    "modified",
 				Resource: &resource,
 				ContentSelector: &testkube.TestTriggerContentSelector{
 					Git: &testkube.TestTriggerContentGit{
@@ -435,6 +436,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 			name: "disabled trigger",
 			trigger: testkube.TestTrigger{
 				Disabled: true,
+				Event:    "modified",
 				Resource: &resource,
 				ContentSelector: &testkube.TestTriggerContentSelector{
 					Git: &testkube.TestTriggerContentGit{
@@ -447,6 +449,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "valid git content trigger via resourceRef",
 			trigger: testkube.TestTrigger{
+				Event: "modified",
 				ResourceRef: &testkube.TestTriggerResourceRef{
 					Kind: "Content",
 				},
@@ -461,6 +464,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "resourceRef non-content",
 			trigger: testkube.TestTrigger{
+				Event: "modified",
 				ResourceRef: &testkube.TestTriggerResourceRef{
 					Kind: "Deployment",
 				},
@@ -480,7 +484,21 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "no content selector",
 			trigger: testkube.TestTrigger{
+				Event:    "modified",
 				Resource: &resource,
+			},
+			expected: false,
+		},
+		{
+			name: "non-modified event",
+			trigger: testkube.TestTrigger{
+				Event:    "created",
+				Resource: &resource,
+				ContentSelector: &testkube.TestTriggerContentSelector{
+					Git: &testkube.TestTriggerContentGit{
+						Uri: "https://github.com/example/repo.git",
+					},
+				},
 			},
 			expected: false,
 		},
@@ -503,7 +521,8 @@ func TestIsGitContentWorkflowTrigger(t *testing.T) {
 			name: "valid git workflow trigger",
 			trigger: testkube.WorkflowTrigger{
 				When: testkube.WorkflowTriggerWhen{
-					Git: &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+					Event: "modified",
+					Git:   &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
 				},
 			},
 			expected: true,
@@ -513,7 +532,8 @@ func TestIsGitContentWorkflowTrigger(t *testing.T) {
 			trigger: testkube.WorkflowTrigger{
 				Disabled: true,
 				When: testkube.WorkflowTriggerWhen{
-					Git: &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+					Event: "modified",
+					Git:   &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
 				},
 			},
 			expected: false,
@@ -525,7 +545,18 @@ func TestIsGitContentWorkflowTrigger(t *testing.T) {
 					Resource: testkube.WorkflowTriggerResource{Kind: "deployment"},
 				},
 				When: testkube.WorkflowTriggerWhen{
-					Git: &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+					Event: "modified",
+					Git:   &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "non-modified workflow event",
+			trigger: testkube.WorkflowTrigger{
+				When: testkube.WorkflowTriggerWhen{
+					Event: "deleted",
+					Git:   &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
 				},
 			},
 			expected: false,

@@ -206,6 +206,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 	return !trigger.Disabled &&
 		isContentResource(trigger) &&
+		isModifiedGitContentEvent(trigger.Event) &&
 		trigger.ContentSelector != nil &&
 		trigger.ContentSelector.Git != nil &&
 		trigger.ContentSelector.Git.Uri != ""
@@ -215,7 +216,12 @@ func isGitContentWorkflowTrigger(trigger testkube.WorkflowTrigger) bool {
 	if trigger.Disabled || trigger.When.Git == nil || trigger.When.Git.Uri == "" {
 		return false
 	}
-	return trigger.Watch == nil || strings.EqualFold(trigger.Watch.Resource.Kind, string(testkube.CONTENT_TestTriggerResources))
+	return isModifiedGitContentEvent(trigger.When.Event) &&
+		(trigger.Watch == nil || strings.EqualFold(trigger.Watch.Resource.Kind, string(testkube.CONTENT_TestTriggerResources)))
+}
+
+func isModifiedGitContentEvent(event string) bool {
+	return strings.EqualFold(event, "modified")
 }
 
 func workflowTriggerToTestTrigger(trigger testkube.WorkflowTrigger) testkube.TestTrigger {
