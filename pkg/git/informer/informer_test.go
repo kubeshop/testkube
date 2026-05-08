@@ -261,7 +261,7 @@ func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
 
 	informer := NewInformer(stubTestTriggerClient{}, nil, nil, "testkube", "", Options{})
 
-	key := triggerKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
 	changed, err := informer.hasNewMatchingCommit(context.Background(), key, trigger)
 	require.NoError(t, err)
 	assert.False(t, changed)
@@ -568,7 +568,7 @@ func TestUpdateRepositories_MatchesWorkflowGitTrigger(t *testing.T) {
 		"",
 		Options{},
 	)
-	workflowKey := triggerKey(triggerSourceV2, workflowTrigger.Namespace, workflowTrigger.Name)
+	workflowKey := triggerKey(workflowTriggerSource, workflowTrigger.Namespace, workflowTrigger.Name)
 	informer.commits[workflowKey] = "old"
 
 	informer.updateRepositories(context.Background())

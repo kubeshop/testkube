@@ -29,8 +29,8 @@ import (
 
 const reconcileInterval = 2 * time.Minute
 const defaultGitUsername = "git"
-const triggerSourceV1 = "v1"
-const triggerSourceV2 = "v2"
+const testTriggerSource = "v1"
+const workflowTriggerSource = "v2"
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
 var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
@@ -151,7 +151,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		if !isGitContentTrigger(trigger) {
 			continue
 		}
-		key := triggerKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+		key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
 
 		changed, err := i.hasNewMatchingCommit(ctx, key, trigger)
@@ -178,7 +178,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		}
 
 		trigger := workflowTriggerToTestTrigger(workflowTrigger)
-		key := triggerKey(triggerSourceV2, trigger.Namespace, trigger.Name)
+		key := triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
 
 		changed, err := i.hasNewMatchingCommit(ctx, key, trigger)
@@ -684,13 +684,21 @@ func triggerRepositoryPath(source, namespace, name string) string {
 }
 
 func triggerRepositoryPathFromKey(key string) string {
+	source, namespace, name, ok := parseTriggerKey(key)
+	if !ok {
+		return filepath.Join(os.TempDir(), "testkube-git-trigger", key)
+	}
+	return triggerRepositoryPath(source, namespace, name)
+}
+
+func parseTriggerKey(key string) (source, namespace, name string, ok bool) {
 	sourceAndRest := strings.SplitN(key, ":", 2)
 	if len(sourceAndRest) != 2 {
-		return filepath.Join(os.TempDir(), "testkube-git-trigger", key)
+		return "", "", "", false
 	}
 	namespaceAndName := strings.SplitN(sourceAndRest[1], "/", 2)
 	if len(namespaceAndName) != 2 {
-		return filepath.Join(os.TempDir(), "testkube-git-trigger", sourceAndRest[0], sourceAndRest[1])
+		return "", "", "", false
 	}
-	return triggerRepositoryPath(sourceAndRest[0], namespaceAndName[0], namespaceAndName[1])
+	return sourceAndRest[0], namespaceAndName[0], namespaceAndName[1], true
 }
