@@ -73,11 +73,11 @@ func readFile(fsys fs.FS, workingDir string, values ...expressions.StaticValue) 
 	filePath, _ := values[0].StringValue()
 	file, err := fsys.Open(strings.TrimLeft(absPath(filePath, workingDir), "/"))
 	if err != nil {
-		return nil, fmt.Errorf("opening file(%s): %s", filePath, err.Error())
+		return nil, fmt.Errorf("opening file(%s): %w", filePath, err)
 	}
 	content, err := io.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("reading file(%s): %s", filePath, err.Error())
+		return nil, fmt.Errorf("reading file(%s): %w", filePath, err)
 	}
 	return string(content), nil
 }
@@ -147,6 +147,7 @@ func NewFsMachine(fsys fs.FS, workingDir string) expressions.Machine {
 		workingDir = "/"
 	}
 	return expressions.NewMachine().
+		Register("workingDir", workingDir).
 		RegisterFunction("file", func(values ...expressions.StaticValue) (interface{}, bool, error) {
 			v, err := readFile(fsys, workingDir, values...)
 			return v, true, err

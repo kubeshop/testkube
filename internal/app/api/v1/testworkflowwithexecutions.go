@@ -9,28 +9,28 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test workflow '%s' with execution", name)
 		if name == "" {
 			return s.Error(c, http.StatusBadRequest, errors.New(errPrefix+": id cannot be empty"))
 		}
-		crWorkflow, err := s.TestWorkflowsClient.Get(name)
+		workflow, err := s.TestWorkflowsClient.Get(ctx, environmentId, name)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		workflow := testworkflowmappers.MapKubeToAPI(crWorkflow)
-
-		ctx := c.Context()
-		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name)
-		if err != nil && !IsNotFound(err) {
+		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name, testworkflow.LatestSortByScheduledAt)
+		if err != nil && !apiutils.IsNotFound(err) {
 			return s.ClientError(c, errPrefix, err)
 		}
 
@@ -44,12 +44,11 @@ func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test workflows with executions"
-		crWorkflows, err := s.getFilteredTestWorkflowList(c)
+		workflows, err := s.getFilteredTestWorkflowList(c)
 		if err != nil {
 			return s.ClientError(c, errPrefix+": get filtered workflows", err)
 		}
 
-		workflows := testworkflowmappers.MapListKubeToAPI(crWorkflows)
 		ctx := c.Context()
 		results := make([]testkube.TestWorkflowWithExecutionSummary, 0, len(workflows))
 		workflowNames := make([]string, len(workflows))
@@ -82,11 +81,11 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 		sort.Slice(results, func(i, j int) bool {
 			iTime := results[i].Workflow.Created
 			if results[i].LatestExecution != nil {
-				iTime = results[i].LatestExecution.StatusAt
+				iTime = results[i].LatestExecution.ScheduledAt
 			}
 			jTime := results[j].Workflow.Created
 			if results[j].LatestExecution != nil {
-				jTime = results[j].LatestExecution.StatusAt
+				jTime = results[j].LatestExecution.ScheduledAt
 			}
 			return iTime.After(jTime)
 		})
@@ -114,7 +113,7 @@ func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 		var page, pageSize int
 		pageParam := c.Query("page", "")
 		if pageParam != "" {
-			pageSize = result.PageDefaultLimit
+			pageSize = testworkflow.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "workflow page filter invalid", err)

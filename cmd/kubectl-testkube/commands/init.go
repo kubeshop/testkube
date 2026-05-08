@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -61,6 +62,7 @@ func NewInitCmd() *cobra.Command {
 func NewInitCmdStandalone() *cobra.Command {
 	var export bool
 	var options common.HelmOptions
+	var setOptions, argOptions map[string]string
 
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
@@ -75,13 +77,18 @@ func NewInitCmdStandalone() *cobra.Command {
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + standaloneInstallationName + ".")
 			ui.NL()
+			common.ShowOperatorDeprecationWarning("Testkube API Server", options.NoCRDs)
 
 			if !isContextApproved(options.NoConfirm, standaloneInstallationName) {
 				return
 			}
 
 			common.ProcessMasterFlags(cmd, &options, nil)
-
+			options.SetOptions = setOptions
+			options.ArgOptions = argOptions
+			ui.NL()
+			ui.H2("Running Helm command...")
+			ui.NL()
 			common.HandleCLIError(common.HelmUpgradeOrInstallTestkube(options))
 
 			ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data. Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
@@ -97,8 +104,10 @@ func NewInitCmdStandalone() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
+	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
+	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
 
 	return cmd
 }
@@ -106,6 +115,7 @@ func NewInitCmdStandalone() *cobra.Command {
 func NewInitCmdDemo() *cobra.Command {
 	var noConfirm, dryRun, export bool
 	var license, namespace string
+	var setOptions, argOptions map[string]string
 
 	cmd := &cobra.Command{
 		Use:     demoProfile,
@@ -113,8 +123,11 @@ func NewInitCmdDemo() *cobra.Command {
 		Aliases: []string{"on-premise-demo", "on-prem-demo", "enterprise-demo"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
-				valuesResp, err := http.Get(demoValuesUrl)
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, demoValuesUrl, nil)
+				ui.ExitOnError("cannot create values request", err)
+				valuesResp, err := http.DefaultClient.Do(req)
 				ui.ExitOnError("cannot fetch values", err)
+				defer valuesResp.Body.Close()
 				valuesBytes, err := io.ReadAll(valuesResp.Body)
 				ui.ExitOnError("cannot fetch values", err)
 				values := string(valuesBytes)
@@ -132,6 +145,9 @@ func NewInitCmdDemo() *cobra.Command {
 
 			sendTelemetry(cmd, cfg, license, "installation launched")
 
+			ui.NL()
+			ui.H2("Running Kubectl command...")
+			ui.NL()
 			kubecontext, cliErr := common.GetCurrentKubernetesContext()
 			if cliErr != nil {
 				if cfg.TelemetryEnabled {
@@ -206,7 +222,7 @@ func NewInitCmdDemo() *cobra.Command {
 				}
 			}
 
-			spinner := ui.NewSpinner("Installing Testkube On-Prem Demo...")
+			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started")
 			options := common.HelmOptions{
 				Namespace:     namespace,
@@ -214,6 +230,21 @@ func NewInitCmdDemo() *cobra.Command {
 				DemoValuesURL: demoValuesUrl,
 				DryRun:        dryRun,
 			}
+
+			cliErr = common.CleanExistingCompletedMigrationJobs(options.Namespace)
+			if cliErr != nil {
+				spinner.Fail("Failed to install Testkube On-Prem Demo")
+				if cfg.TelemetryEnabled {
+					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
+					_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+				}
+				common.HandleCLIError(cliErr)
+			}
+
+			spinner.Success()
+			spinner = ui.NewSpinner("Running Helm command...")
+			options.SetOptions = setOptions
+			options.ArgOptions = argOptions
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
@@ -253,6 +284,10 @@ func NewInitCmdDemo() *cobra.Command {
 			sendTelemetry(cmd, cfg, license, "opening dashboard")
 			cfg, err = config.Load()
 			ui.ExitOnError("Cannot open dashboard", err)
+
+			ui.NL()
+			ui.H2("Launching web browser...")
+			ui.NL()
 			openOnPremDashboard(cmd, cfg, false, false, license)
 		},
 	}
@@ -262,6 +297,8 @@ func NewInitCmdDemo() *cobra.Command {
 	cmd.Flags().StringVarP(&license, "license", "l", "", "License key")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "Dry run")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
+	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
+	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
 
 	return cmd
 }

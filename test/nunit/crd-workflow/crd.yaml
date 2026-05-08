@@ -1,0 +1,34 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: nunit-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: nunit
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: nunit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/nunit/nunit-project/ExampleProject
+  container:
+    image: bitnamilegacy/dotnet-sdk:8-debian-12 # TODO: replace
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/nunit/nunit-project/ExampleProject
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run tests
+    shell: dotnet test --logger:"junit;LogFilePath=nunit-report/nunit-junit-report.xml"
+    artifacts:
+      paths:
+      - 'nunit-report/*'

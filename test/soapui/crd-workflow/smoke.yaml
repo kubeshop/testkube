@@ -1,0 +1,163 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: soapui-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: soapui
+    category: api-testing
+  annotations:
+    testkube.io/icon: soapui
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/soapui/soapui-smoke-test.xml
+  container:
+    image: smartbear/soapuios-testrunner:5.9.1
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
+    workingDir: /data/repo/test/soapui
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run tests
+    shell: /usr/local/SmartBear/SoapUI-*/bin/testrunner.sh soapui-smoke-test.xml
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: soapui-workflow-smoke-command-line-env
+  labels:
+    core-tests: workflows
+    tool: soapui
+    category: api-testing
+  annotations:
+    testkube.io/icon: soapui
+description: Running SoapUI test using COMMAND_LINE ENV variable
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/soapui/soapui-smoke-test.xml
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run tests
+    run:
+      image: smartbear/soapuios-testrunner:5.9.1 # workingDir can't be used because of entrypoint script
+      env:
+      - name: COMMAND_LINE
+        value: "/data/repo/test/soapui/soapui-smoke-test.xml"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: soapui-workflow-smoke-negative-non-existant-file
+  labels:
+    core-tests: workflows
+    tool: soapui
+    category: api-testing
+  annotations:
+    testkube.io/icon: soapui
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/soapui/some-non-existant-file.xml
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run tests
+    negative: true
+    run:
+      image: smartbear/soapuios-testrunner:5.9.1 # workingDir can't be used because of entrypoint script
+      env:
+      - name: COMMAND_LINE
+        value: "/data/repo/test/soapui/some-non-existant-file.xml"
+---
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--soapui--beta
+  labels:
+    testkube.io/name: SoapUI
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: API
+    testkube.io/description: Run SoapUI test
+    testkube.io/example-path: example-soapui-test.yaml
+    testkube.io/icon: soapui
+    testkube.io/image: smartbear/soapuios-testrunner
+spec:
+  config:
+    soapui_testrunner_path:
+      description: SoapUI testrunner path
+      type: string
+      default: /usr/local/SmartBear/SoapUI-*/bin/testrunner.sh
+    run:
+      description: Run command
+      type: string
+      default: testrunner example-soapui-test.yaml
+    version:
+      description: SoapUI version to use
+      type: string
+      default: 5.9.1
+  steps:
+  - name: Run SoapUI test
+    run:
+      image: smartbear/soapuios-testrunner:{{ config.version }}
+      shell: |
+        testrunner() { {{ config.soapui_testrunner_path }} $@; }
+        {{ config.run }}
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: soapui-workflow-smoke-template
+  labels:
+    core-tests: workflows
+    tool: soapui
+    category: api-testing
+  annotations:
+    testkube.io/icon: soapui
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/soapui/soapui-smoke-test.xml
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
+    workingDir: /data/repo/test/soapui
+  job:
+    activeDeadlineSeconds:  180
+  steps:
+  - name: Run from template
+    template:
+      name: official/soapui/beta
+      config:
+        run: testrunner soapui-smoke-test.xml
+        version: 5.9.1

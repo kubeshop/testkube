@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/telemetry"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -39,17 +38,11 @@ func NewStatusCmd() *cobra.Command {
 				ui.PrintDisabled("Telemetry on API", "disabled")
 			}
 
-			if cfg.OAuth2Data.Enabled {
-				ui.PrintEnabled("OAuth", "enabled")
-			} else {
-				ui.PrintDisabled("Oauth", "disabled")
-			}
 			ui.NL()
 		},
 	}
 
 	cmd.AddCommand(telemetry.NewStatusTelemetryCmd())
-	cmd.AddCommand(oauth.NewStatusOAuthCmd())
 
 	return cmd
 }

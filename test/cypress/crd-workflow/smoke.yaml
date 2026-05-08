@@ -1,0 +1,617 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    image: cypress/included:14.5.1
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      shell: npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-args
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:14.5.1
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-junit-report
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+    junit: "true"
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:14.5.1
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      - --reporter
+      - junit
+      - --reporter-options
+      - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-clean-and-dev-shm-enabled
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    image: cypress/included:14.5.1
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+    volumeMounts:
+      - mountPath: /dev/shm
+        name: shm
+  pod:
+    volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 512Mi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Check /dev/shm size
+    shell: |
+      SHM_SIZE=$(df -m /dev/shm | awk 'NR==2 {print $2}')
+      if [ "$SHM_SIZE" -eq 512 ]; then
+        echo "✅ /dev/shm is 512Mi"
+      else
+        echo "❌ /dev/shm is not 512Mi (got ${SHM_SIZE}Mi)"
+        exit 1
+      fi
+  - name: Run tests
+    run:
+      shell: |
+        npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value \
+        --config '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+      - name: CYPRESS_INSTALL_BINARY # Official image - skips download & verification to speed up startup
+        value: "1"
+      - name: CYPRESS_BROWSER_ARGS
+        value: "--no-sandbox --disable-features=UseOzonePlatform" # Chrome flags - disable /dev/shm usage + features not available in containers to suppress their warnings
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-13
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-13
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-13-video-recording-enabled
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    artifacts-video: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-13
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=true
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/repo/test/cypress/cypress-13/cypress/videos
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-negative
+  labels:
+    core-tests: workflows
+    tool: cypress
+    category: e2e-ui-testing
+    artifacts: "true"
+  annotations: 
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:14.5.1
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+    negative: true
+  - name: Saving artifacts
+    workingDir: /data/artifacts
+    artifacts:
+      paths:
+      - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-template
+  labels:
+    core-tests: workflows
+    tool: cypress
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+    env:
+    - name: CYPRESS_CUSTOM_ENV
+      value: CYPRESS_CUSTOM_ENV_value
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run from template
+    template:
+      name: official/cypress/v1
+      config:
+        version: 14.5.1
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-template-checkout-on-step
+  labels:
+    core-tests: workflows
+    tool: cypress
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+    env:
+    - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
+      value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run from template
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/cypress/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
+    template:
+      name: official/cypress/v1
+      config:
+        version: 14.5.1
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-template-sub-step
+  labels:
+    core-tests: workflows
+    tool: cypress
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-14
+    env:
+    - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
+      value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run cypress test
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/cypress/cypress-14
+    steps:
+    - name: Run from template
+      workingDir: /data/repo/test/cypress/cypress-14
+      template:
+        name: official/cypress/v1
+        config:
+          version: 14.5.1
+          run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-12
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-12
+  container:
+    resources:
+      requests:
+        cpu: 1500m
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/cypress-12
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:12.7.0
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: distributed-cypress-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    image: cypress/included:14.5.1
+    workingDir: /data/repo/test/cypress/cypress-14
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    parallel:
+      maxCount: 2
+      shards:
+        testFiles: 'glob("cypress/e2e/**/*.js")'
+      description: '{{ join(map(shard.testFiles, "relpath(_.value, \"cypress/e2e\")"), ", ") }}'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      container:
+        resources:
+          requests:
+            cpu: 1500m
+            memory: 2Gi
+      run:
+        args:
+        - --env
+        - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+        - --config
+        - '{"video":true,"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+        - --spec
+        - '{{ join(shard.testFiles, ",") }}'
+        env:
+        - name: CYPRESS_CUSTOM_ENV
+          value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-matrix-junit
+  labels:
+    core-tests: workflows
+    tool: cypress
+    artifacts: "true"
+    junit: "true"
+    category: e2e-ui-testing
+  annotations:
+    testkube.io/icon: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
+  container:
+    image: cypress/included:14.5.1
+    workingDir: /data/repo/test/cypress/cypress-14
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run tests
+    parallel:
+      matrix:
+        browser: ['chrome', 'firefox']
+      description: '{{ matrix.browser }} browser'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+        to: /data/artifacts/{{ matrix.browser }}
+      container:
+        resources:
+          requests:
+            cpu: 1500m
+            memory: 2Gi
+      run:
+        args:
+        - '--browser'
+        - '{{ matrix.browser }}'
+        - --env
+        - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+        - --reporter
+        - junit
+        - --reporter-options
+        - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+        env:
+        - name: CYPRESS_CUSTOM_ENV
+          value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'

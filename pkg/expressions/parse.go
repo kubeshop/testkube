@@ -109,7 +109,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 	// Call - abc(a, b, c)
 	if t[0].Type == tokenTypeAccessor && len(t) > 1 && t[1].Type == tokenTypeOpen {
-		args := make([]callArgument, 0)
+		args := make([]CallArgument, 0)
 		index := 2
 		for {
 			// Ensure there is another token (for call close or next argument)
@@ -135,10 +135,10 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 				return nil, index, err
 			}
 			if len(t) > index && t[index].Type == tokenTypeSpread {
-				args = append(args, callArgument{expr: next, spread: true})
+				args = append(args, CallArgument{Expression: next, Spread: true})
 				index++
 			} else {
-				args = append(args, callArgument{expr: next})
+				args = append(args, CallArgument{Expression: next})
 			}
 		}
 		return newCall(t[0].Value.(string), args), index + 1, nil
@@ -256,10 +256,71 @@ func IsTemplateStringWithoutExpressions(tpl string) bool {
 	return !strings.Contains(tpl, "{{")
 }
 
-func IsTemplateStringWithInternalFnCall(tpl string) bool {
-	return strings.Contains(tpl, "{{\"{{\"}}"+InternalFnCall)
+// ExtractPureTemplateExpression checks if a template string consists of only
+// a single expression (i.e., "{{ expr }}") with no surrounding literal text.
+// If so, it returns the inner expression string.
+// This is used to detect cases where an expression may return a non-string
+// value (like an array) that should be preserved rather than stringified.
+func ExtractPureTemplateExpression(tpl string) (string, bool) {
+	s := strings.TrimSpace(tpl)
+	if !strings.HasPrefix(s, "{{") || !strings.HasSuffix(s, "}}") {
+		return "", false
+	}
+	inner := s[2 : len(s)-2]
+	if strings.Contains(inner, "{{") || strings.Contains(inner, "}}") {
+		return "", false
+	}
+	inner = strings.TrimSpace(inner)
+	if inner == "" {
+		return "", false
+	}
+	return inner, true
 }
 
-func CleanTemplateStringInternalFnCall(tpl string) string {
-	return strings.ReplaceAll(tpl, "{{\"{{\"}}"+InternalFnCall, "{{")
+// IsWildcardAccessorOnly checks whether an expression is purely a wildcard
+// accessor chain (e.g., "services.slave.*.ip") with no additional operators,
+// function calls, or array/object constructors.
+//
+// Such expressions resolve to arrays implicitly through the map() transform,
+// but in template contexts they should be stringified (comma-joined) rather
+// than expanded as separate slice elements.
+//
+// When a wildcard accessor is used inside an explicit array-producing construct
+// (e.g., "list(services.slave.*.ip...)"), this function returns false so that
+// expansion still works as expected.
+func IsWildcardAccessorOnly(expr string) bool {
+	tokens, _, _ := tokenize(expr, 0)
+	if len(tokens) == 0 {
+		return false
+	}
+	// The expression must consist of exactly one tokenTypeAccessor optionally
+	// followed by one or more tokenTypePropertyAccessor tokens — nothing else.
+	if tokens[0].Type != tokenTypeAccessor {
+		return false
+	}
+	for _, tok := range tokens[1:] {
+		if tok.Type != tokenTypePropertyAccessor {
+			return false
+		}
+	}
+	// Now verify that the accessor chain actually contains a wildcard segment.
+	for _, tok := range tokens {
+		switch tok.Type {
+		case tokenTypeAccessor:
+			if name, ok := tok.Value.(string); ok {
+				// Strip all whitespace so spaced accessors like
+				// "services.slave . * . ip" are normalized to
+				// "services.slave.*.ip" before the check.
+				normalized := strings.Join(strings.Fields(name), "")
+				if strings.Contains(normalized, ".*") {
+					return true
+				}
+			}
+		case tokenTypePropertyAccessor:
+			if name, ok := tok.Value.(string); ok && strings.TrimSpace(name) == "*" {
+				return true
+			}
+		}
+	}
+	return false
 }

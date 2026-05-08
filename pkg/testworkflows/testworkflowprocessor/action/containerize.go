@@ -5,16 +5,19 @@ import (
 	"slices"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
+func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, globalEnv []testworkflowsv1.EnvVar, actionsCleanup []actiontypes.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
@@ -39,11 +42,15 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	// Find the highest priority container configuration
 	var bestContainerConfig *actiontypes.Action
 	var bestIsToolkit = false
+	var bestIsDefaultImage = true
 	for i := range containerConfigs {
 		if executable[containerConfigs[i].Container.Ref] {
-			if bestContainerConfig == nil || bestIsToolkit {
+			image := containerConfigs[i].Container.Config.Image
+			isDefaultImage := image == "" || image == constants.DefaultInitImage || image == constants.DefaultToolkitImage
+			if bestContainerConfig == nil || bestIsToolkit || (bestIsDefaultImage && !isDefaultImage) {
 				bestContainerConfig = containerConfigs[i]
 				bestIsToolkit = toolkit[bestContainerConfig.Container.Ref]
+				bestIsDefaultImage = isDefaultImage
 			}
 		}
 	}
@@ -55,14 +62,17 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	}
 
 	// Build the CR base
-	cr, _ = defaultContainer.Detach().ToKubernetesTemplate()
+	cr, err = defaultContainer.Detach().ToKubernetesTemplate()
+	if err != nil {
+		return corev1.Container{}, nil, nil, err
+	}
 	cr.Image = ""
 	cr.Env = nil
 	cr.EnvFrom = nil
 	if len(containerConfigs) > 0 {
 		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
-			return corev1.Container{}, nil, err
+			return corev1.Container{}, nil, nil, err
 		}
 
 		// Combine environment variables from each execution
@@ -75,12 +85,33 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
-				cr.Env = append(cr.Env, newEnv)
+				if newEnv.ValueFrom != nil {
+					if newEnv.ValueFrom.ConfigMapKeyRef != nil && newEnv.ValueFrom.ConfigMapKeyRef.Optional == nil {
+						newEnv.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+					}
+
+					if newEnv.ValueFrom.SecretKeyRef != nil && newEnv.ValueFrom.SecretKeyRef.Optional == nil {
+						newEnv.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+					}
+				}
+
+				cr.Env = append(cr.Env, newEnv.EnvVar)
+				if e.Global != nil && *e.Global {
+					globalEnv = append(globalEnv, e)
+				}
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
 				newEnvFrom := *e.DeepCopy()
 				sensitive := newEnvFrom.SecretRef != nil
 				newEnvFrom.Prefix = actiontypes.EnvName(fmt.Sprintf("%d", i), false, sensitive, e.Prefix)
+				if newEnvFrom.ConfigMapRef != nil && newEnvFrom.ConfigMapRef.Optional == nil {
+					newEnvFrom.ConfigMapRef.Optional = common.Ptr(true)
+				}
+
+				if newEnvFrom.SecretRef != nil && newEnvFrom.SecretRef.Optional == nil {
+					newEnvFrom.SecretRef.Optional = common.Ptr(true)
+				}
+
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}
@@ -129,17 +160,57 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			}},
 			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupActions, constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
-			}})
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupInternal, constants2.EnvInternalConfig), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.InternalAnnotationFieldPath},
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupInternal, constants2.EnvSignature), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SignatureAnnotationFieldPath},
+			}},
+		)
 	}
 
 	// Avoid using /.tktw/init if there is Init Process Image - use /init then
+	cr.Name = fmt.Sprintf("%d", groupId+1)
 	initPath := constants.DefaultInitPath
 	if cr.Image == constants.DefaultInitImage || cr.Image == constants.DefaultToolkitImage {
 		initPath = "/init"
 	}
 
+	// Inject resource requests and limits needed for metrics
+	cr.Env = append(cr.Env,
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceRequestsCPU), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "requests.cpu",
+				Divisor:       resource.MustParse("1m"),
+			},
+		}},
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceLimitsCPU), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "limits.cpu",
+				Divisor:       resource.MustParse("1m"),
+			},
+		}},
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceRequestsMemory), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "requests.memory",
+			},
+		}},
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceLimitsMemory), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "limits.memory",
+			},
+		}},
+	)
+
+	// Inject container name
+	cr.Env = append(cr.Env, corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupRuntime, constants2.EnvContainerName), Value: cr.Name})
+
 	// Point the Init Process to the proper group
-	cr.Name = fmt.Sprintf("%d", groupId+1)
 	cr.Command = []string{initPath, fmt.Sprintf("%d", groupId)}
 	cr.Args = nil
 

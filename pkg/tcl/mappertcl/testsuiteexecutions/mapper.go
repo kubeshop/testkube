@@ -9,7 +9,7 @@
 package testsuiteexecutions
 
 import (
-	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
+	testsuiteexecutionv1 "github.com/kubeshop/testkube/api/testsuiteexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

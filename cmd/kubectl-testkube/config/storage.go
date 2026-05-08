@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path"
-
-	"github.com/kubeshop/testkube/pkg/oauth"
 )
 
 const (
@@ -37,9 +35,6 @@ var DefaultConfig = Data{
 	APIServerPort:    APIServerPort,
 	DashboardName:    DashboardName,
 	DashboardPort:    DashboardPort,
-	OAuth2Data: OAuth2Data{
-		Provider: oauth.GithubProviderType,
-	},
 }
 
 func GetStorage(dir string) (Storage, error) {

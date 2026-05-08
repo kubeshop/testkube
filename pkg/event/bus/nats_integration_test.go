@@ -77,12 +77,27 @@ func TestMultipleMessages_Integration(t *testing.T) {
 
 }
 
+func TestNATSBus_Reconnect_Integration(t *testing.T) {
+	// Requires NATS server lifecycle control - recommend using testcontainers
+	// or nats-server.RunServer() for automated test setup/teardown
+	t.Skip("requires NATS server restart capability")
+
+	// Test outline:
+	// 1. Start NATS, create bus, subscribe to topic
+	// 2. Publish event, verify handler receives it
+	// 3. Stop NATS (force connection close)
+	// 4. Attempt publish - should fail with ErrConnectionClosed
+	// 5. Restart NATS
+	// 6. Publish again - should auto-reconnect and succeed
+	// 7. Verify subscription was re-registered (handler receives event)
+}
+
 func TestNATS_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	// given event
 
-	event := testkube.NewEventStartTest(testkube.NewQueuedExecution())
+	event := testkube.NewEventStartTestWorkflow(testkube.NewQueuedExecution(), "")
 	event.Id = "123"
 
 	// and connection
@@ -91,12 +106,12 @@ func TestNATS_Integration(t *testing.T) {
 	defer nc.Close()
 
 	// and automatic JSON encoder
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER) //nolint:staticcheck
 	assert.NoError(t, err)
-	defer ec.Close()
+	defer ec.Close() //nolint:staticcheck
 
 	// and NATS event bus
-	n := NewNATSBus(ec)
+	n := NewNATSBus(ec, ConnectionConfig{NatsURI: cfg.NatsURI})
 
 	var wg sync.WaitGroup
 	wg.Add(2)

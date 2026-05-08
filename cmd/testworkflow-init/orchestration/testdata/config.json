@@ -1,0 +1,43 @@
+{
+  "e":{
+    "i":"67bf7a918f210ba8e6221016",
+    "g":"67bf7a918f210ba8e6221016",
+    "n":"k6-sample-2",
+    "N":2,
+    "s":"2025-02-26T20:33:21.883Z",
+    "o":"tkcorg_1234",
+    "e":"tkcenv_1234"
+  },
+  "w":{
+    "w":"k6-sample",
+    "l":{
+      "docs":"example"
+    }
+  },
+  "r":{
+    "i":"67bf7a918f210ba8e6221016",
+    "r":"67bf7a918f210ba8e6221016"
+  },
+  "c":{
+
+  },
+  "W":{
+    "n":"testkube",
+    "s":"testkube-api-server-tests-job",
+    "i":"testworkflow-init:2a4ee64979c10fdd66096e2e2c0f63ec594b281cae92c31833cf853733575a10@sha256:25d35677c866fba1c4d39e90930f46c34862a9e845454be1b4463281cbd2b957",
+    "t":"io_testworkflow-toolkit:a30e63e76f8f7da0db1c3ff6303eb6d6e7d8fa78cd8a4b27beb48fa371f434d7@sha256:d8dc451205cf7ad74ef1432dcce421ab5ce5ee6e154bb8b242cee45a2e26d9b6",
+    "p":true,
+    "P":"testkube-image-cache",
+    "T":1800000000000,
+    "C":{
+      "C":"testkube-enterprise-api:8089",
+      "a":"tkcagnt_1234",
+      "i":true,
+      "A":"http://testkube-api-server:8088"
+    },
+    "f":{
+      "exec":"true",
+      "tw-storage":"false"
+    }
+  }
+}

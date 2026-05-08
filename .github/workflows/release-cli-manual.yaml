@@ -1,0 +1,210 @@
+name: Manual CLI Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Are you sure you want to proceed with CLI release?'
+        type: choice
+        required: true
+        options:
+          - 'no'
+          - 'yes'
+
+permissions:
+  id-token: write # needed for keyless signing
+  contents: write
+
+env:
+  TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
+  ALPINE_IMAGE: alpine:3.23.3
+  BUSYBOX_IMAGE: busybox:1.36.1-musl
+
+jobs:
+  pre_build:
+    name: Pre-build
+    runs-on: depot-ubuntu-22.04
+    if: ${{ inputs.confirm == 'yes' }}
+    strategy:
+      matrix:
+        include:
+          - name: "linux"
+            path: .builds-linux.goreleaser.yml
+          - name: "windows"
+            path: .builds-windows.goreleaser.yml
+          - name: "darwin"
+            path: .builds-darwin.goreleaser.yml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Go Cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Get tag
+        id: tag
+        run: |
+          # Find tag pointing to current commit
+          TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "Error: No tag found"
+            exit 1
+          fi
+          # Strip 'v' prefix if present
+          TAG_STRIPPED=${TAG#v}
+          echo "tag=$TAG_STRIPPED" >> $GITHUB_OUTPUT
+          echo "Found tag: $TAG (stripped: $TAG_STRIPPED)"
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser-pro
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
+          args: release -f ${{ matrix.path }} --skip=publish,validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          KEYGEN_PUBLIC_KEY: "${{secrets.KEYGEN_PUBLIC_KEY}}"
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: testkube_${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}/testkube_${{ matrix.name }}_*
+          retention-days: 1
+
+  release:
+    name: Create and upload release-artifacts
+    needs: pre_build
+    runs-on: depot-ubuntu-22.04
+    if: ${{ inputs.confirm == 'yes' }}
+
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: 253113
+          private-key: ${{ secrets.TESTKUBE_GH_APP_GITOPS_KEY }}
+          owner: kubeshop
+      - name: Get GitHub App User ID
+        id: get-user-id
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Configure git
+        run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+          git config --global url."https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
+      - uses: anchore/sbom-action/download-syft@v0.24.0
+      - name: Download Artifacts for Linux
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_linux
+          path: linux
+      - name: Download Artifacts for Windows
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_windows
+          path: windows
+      - name: Download Artifacts for Darwin
+        uses: actions/download-artifact@master
+        with:
+          name: testkube_darwin
+          path: darwin
+      # Added as a workaround since files lose their permissions when being moved from one stage to another in GH. A bug was reported
+      # and will be fixed in the next release of GoReleaser, thus we will be able to remove this code.
+      - name: Add executable mode
+        run: chmod -R +x linux/ darwin/
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Go Cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Get tag
+        id: tag
+        run: |
+          git fetch --tags --force
+          TAG=$(git describe --tags --abbrev=0)
+          TAG_STRIPPED=${TAG#v}
+          echo "tag=${TAG_STRIPPED}" >> "$GITHUB_OUTPUT"
+      - name: Check if GitHub release already exists
+        id: release-check
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if gh release view "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser-pro
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
+          args: release -f .goreleaser.yml --skip=validate${{ steps.release-check.outputs.skip_publish == 'true' && ',publish' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
+          ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          SLACK_BOT_CLIENT_ID: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}"
+          SLACK_BOT_CLIENT_SECRET: "${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}"
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      - name: Publish package
+        env:
+          USERNAME: "aptly"
+          PASSWORD: ${{ secrets.APTLY_PASSWORD }}
+          APTLY_URL: "repo.testkube.io:8080"
+          VERSION: ${{steps.tag.outputs.tag}}
+        run: |
+          ### Clean temporary file directory first (in case of re-runs)
+          curl -u "${USERNAME}:${PASSWORD}" -X DELETE "http://${APTLY_URL}/api/files/testkube" || true
+
+          ### Remove existing packages from the repository (ignore errors if they don't exist)
+          curl -u "${USERNAME}:${PASSWORD}" -X DELETE "http://${APTLY_URL}/api/repos/testkube/packages?q=testkube+%28%3D+${VERSION}%29" || true
+
+          ### Upload files for all architectures
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST -F "file=@dist/testkube_${VERSION}_linux_amd64.deb" "http://${APTLY_URL}/api/files/testkube"
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST -F "file=@dist/testkube_${VERSION}_linux_arm64.deb" "http://${APTLY_URL}/api/files/testkube"
+
+          ### Add file to repo
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST "http://${APTLY_URL}/api/repos/testkube/file/testkube"
+
+          ### Create snapshot with timestamp to avoid conflicts on re-runs
+          SNAPSHOT_NAME="testkube-${VERSION}-$(date +%s)"
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X POST -H 'Content-Type: application/json' --data '{"Name":"'"${SNAPSHOT_NAME}"'"}' "http://${APTLY_URL}/api/repos/testkube/snapshots"
+
+          ### Publish repo with new snapshot (ForceOverwrite handles conflicts in published pool)
+          curl --fail-with-body -u "${USERNAME}:${PASSWORD}" -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "'"${SNAPSHOT_NAME}"'"}], "ForceOverwrite": true}' "http://${APTLY_URL}/api/publish/:linux/linux"

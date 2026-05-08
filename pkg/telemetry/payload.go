@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	runContextAgent        = "agent"
-	containerEnvKubernetes = "kubernetes"
+	runContextAgent = "agent"
 )
 
 type Params struct {
@@ -41,6 +40,7 @@ type Params struct {
 	TestWorkflowSteps          int32      `json:"test_workflow_steps,omitempty"`
 	TestWorkflowExecuteCount   int32      `json:"test_workflow_execute_count,omitempty"`
 	TestWorkflowParallelUsed   bool       `json:"test_workflow_parallel_used,omitempty"`
+	ToolName                   string     `json:"tool_name,omitempty"`
 	TestWorkflowMatrixUsed     bool       `json:"test_workflow_matrix_used,omitempty"`
 	TestWorkflowServicesUsed   bool       `json:"test_workflow_services_used,omitempty"`
 	TestWorkflowIsSample       bool       `json:"test_workflow_is_sample,omitempty"`
@@ -53,6 +53,12 @@ type Params struct {
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
 	Email                      string     `json:"email,omitempty"`
+	Source                     string     `json:"source,omitempty"`
+	PreviewExecutionID         string     `json:"preview_execution_id,omitempty"`
+	PreviewArtifacts           int32      `json:"preview_artifacts,omitempty"`
+	PreviewSkipArtifacts       bool       `json:"preview_skip_artifacts,omitempty"`
+	PreviewError               string     `json:"preview_error,omitempty"`
+	AgentCapabilities          []string   `json:"agent_capabilities,omitempty"`
 }
 
 type Event struct {
@@ -89,10 +95,10 @@ type RunParams struct {
 }
 
 type RunContext struct {
-	Type           string
-	OrganizationId string
-	EnvironmentId  string
-	ContainerEnv   string
+	Type               string
+	OrganizationId     string
+	EnvironmentId      string
+	DockerImageVersion string
 }
 
 type WorkflowParams struct {
@@ -169,7 +175,7 @@ func NewCLIWithLicensePayload(context RunContext, id, name, version, category, c
 	}
 }
 
-func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
+func NewAPIPayload(clusterId, name, version, host, clusterType string, capabilities []string) Payload {
 	return Payload{
 		ClientID: clusterId,
 		UserID:   clusterId,
@@ -177,17 +183,18 @@ func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
 			{
 				Name: text.GAEventName(name),
 				Params: Params{
-					EventCount:      1,
-					EventCategory:   "api",
-					AppVersion:      version,
-					AppName:         "testkube-api-server",
-					Host:            AnonymizeHost(host),
-					OperatingSystem: runtime.GOOS,
-					Architecture:    runtime.GOARCH,
-					MachineID:       GetMachineID(),
-					ClusterID:       clusterId,
-					ClusterType:     clusterType,
-					Context:         getAgentContext(),
+					EventCount:        1,
+					EventCategory:     "api",
+					AppVersion:        version,
+					AppName:           "testkube-api-server",
+					Host:              AnonymizeHost(host),
+					OperatingSystem:   runtime.GOOS,
+					Architecture:      runtime.GOARCH,
+					MachineID:         GetMachineID(),
+					ClusterID:         clusterId,
+					ClusterType:       clusterType,
+					Context:           getAgentContext(),
+					AgentCapabilities: capabilities,
 				},
 			}},
 	}
@@ -345,18 +352,14 @@ func AnonymizeHost(host string) string {
 func getAgentContext() RunContext {
 	orgID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ORG_ID", "TESTKUBE_CLOUD_ORG_ID", "")
 	envID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ENV_ID", "TESTKUBE_CLOUD_ENV_ID", "")
-	containerEnv := os.Getenv("TESTKUBE_CONTAINER_ENV")
-	if containerEnv == "" {
-		containerEnv = containerEnvKubernetes
-	}
-
+	dockerImageVersion := os.Getenv("TESTKUBE_DOCKER_IMAGE_VERSION")
 	if orgID == "" || envID == "" {
 		return RunContext{}
 	}
 	return RunContext{
-		Type:           runContextAgent,
-		EnvironmentId:  envID,
-		OrganizationId: orgID,
-		ContainerEnv:   containerEnv,
+		Type:               runContextAgent,
+		EnvironmentId:      envID,
+		OrganizationId:     orgID,
+		DockerImageVersion: dockerImageVersion,
 	}
 }

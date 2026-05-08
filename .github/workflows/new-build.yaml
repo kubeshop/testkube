@@ -1,0 +1,260 @@
+name: Build
+on:
+  push:
+    tags:
+      - "[0-9].[0-9]+.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-preview.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-rc.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-dev.[0-9]+"
+      - "[0-9].[0-9]+.[0-9]+-beta.[0-9]+"
+    branches-ignore:
+      - renovate/**
+      - dependabot/**
+      
+env:
+  ALPINE_IMAGE: alpine:3.23.3
+  BUSYBOX_IMAGE: busybox:1.36.1-musl
+
+permissions:
+  id-token: write # needed for depot
+
+jobs:
+  build:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Depot CLI
+        uses: depot/setup-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create Docker tags and metadata for the API
+        id: api-meta
+        uses: docker/metadata-action@v6
+        with:
+          bake-target: "api-meta"
+          images: |
+            kubeshop/testkube-api-server
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Create Docker tags and metadata for the API
+        id: cli-meta
+        uses: docker/metadata-action@v6
+        with:
+          bake-target: "cli-meta"
+          images: |
+            kubeshop/testkube-cli
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Create Docker tags and metadata for tw-init
+        id: tw-init-meta
+        uses: docker/metadata-action@v6
+        with:
+          bake-target: "tw-init-meta"
+          images: |
+            kubeshop/testkube-tw-init
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Create Docker tags and metadata for tw-toolkit
+        id: tw-toolkit-meta
+        uses: docker/metadata-action@v6
+        with:
+          bake-target: "tw-toolkit-meta"
+          images: |
+            kubeshop/testkube-tw-toolkit
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Create Docker tags and metadata for mcp-server
+        id: mcp-server-meta
+        uses: docker/metadata-action@v6
+        with:
+          bake-target: "mcp-server-meta"
+          images: |
+            kubeshop/mcp-server
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - uses: benjlevesque/short-sha@v3.0
+        id: short-sha
+        with:
+          length: 7
+
+      - name: Build
+        uses: depot/bake-action@v1
+        with:
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.api-meta.outputs.bake-file }}
+            ${{ steps.cli-meta.outputs.bake-file }}
+            ${{ steps.tw-init-meta.outputs.bake-file }}
+            ${{ steps.tw-toolkit-meta.outputs.bake-file }}
+            ${{ steps.mcp-server-meta.outputs.bake-file }}
+          targets: api,cli,tw-init,tw-toolkit,mcp-server
+          provenance: mode=max
+          sbom: true
+          # Only tags are pushed, pushes to branches test whether app can be built.
+          push: ${{github.ref_type == 'tag'}}
+          save: true
+          save-tag: ${{ steps.short-sha.outputs.sha }}
+        env:
+          VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
+          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+          KEYGEN_PUBLIC_KEY: ${{secrets.KEYGEN_PUBLIC_KEY}}
+          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
+
+  helm:
+    runs-on: depot-ubuntu-22.04
+    needs: build
+    # Only runs on releases (candidates) and preview releases, excluding -dev and -beta
+    if: ${{ startsWith(github.event.ref, 'refs/tags') && !contains(github.event.ref, '-dev') && !contains(github.event.ref, '-beta') }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GAR_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_PROD }}
+      GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
+      CHARTS_REPOSITORY: testkube
+    steps:
+      - uses: actions/checkout@v6
+      - id: helm-version
+        name: Extract Helm Chart version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq '.version' k8s/helm/testkube/Chart.yaml
+
+      - name: Auth to Google Cloud
+        if: ${{ github.ref_type == 'tag' }}
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GAR_PROJECT_ID }}
+          credentials_json: ${{ secrets.GKE_SA_KEY_PROD }} #Key to SA in Testkube Prod project
+
+      - name: Configure Docker for GAR
+        if: ${{ github.ref_type == 'tag' }}
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: helm-publish
+        name: Publish Helm Chart
+        run: |
+          REGISTRY=registry-1.docker.io
+          REGISTRY_GAR=${{ env.GAR_LOCATION }}-docker.pkg.dev
+
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login ${REGISTRY} --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts --force-update
+
+          # testkube chart
+          helm dependency build k8s/helm/testkube
+          helm package k8s/helm/testkube
+          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
+          helm push testkube-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+
+          # testkube runner chart
+          helm dependency build k8s/helm/testkube-runner
+          helm package k8s/helm/testkube-runner
+          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY}/kubeshop
+          helm push testkube-runner-${{ steps.helm-version.outputs.result }}.tgz oci://${REGISTRY_GAR}/${{ env.GAR_PROJECT_ID }}/${{ env.CHARTS_REPOSITORY }}
+
+      - id: helm-index-update
+        name: Dispatch update for legacy Helm index
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.CI_BOT_TOKEN }}
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'kubeshop',
+              repo: 'helm-charts',
+              ref: 'main',
+              workflow_id: 'index-update.yaml',
+              inputs: {
+                chart_version: '${{ steps.helm-version.outputs.result }}'
+              }
+            })
+
+  publish_mcp_registry:
+    name: Publish to MCP Registry
+    runs-on: depot-ubuntu-22.04
+    needs: build
+    # Only publish to MCP Registry for final release tags (e.g., 2.7.0), not preview/rc/dev/beta
+    if: ${{ startsWith(github.event.ref, 'refs/tags') && !contains(github.event.ref, '-') }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      DOCKER_IMAGE: kubeshop/mcp-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get version tag
+        id: tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Using version from tag: $TAG"
+
+      - name: Update server.json with version
+        run: |
+          cd build/mcp-server
+          jq --arg version "${{ steps.tag.outputs.tag }}" \
+            '.version = $version | .packages[0].identifier = "docker.io/kubeshop/mcp-server:" + $version' \
+            server.json > server.json.tmp
+          mv server.json.tmp server.json
+
+          echo "Updated server.json:"
+          cat server.json
+
+      - name: Install mcp-publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.5.0
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz
+          chmod +x mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Authenticate via GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: |
+          cd build/mcp-server
+          ../../mcp-publisher publish
+
+      - name: Verify publication
+        run: |
+          echo "Waiting for registry to update..."
+          sleep 30
+
+          echo "Verifying publication..."
+          curl -f https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp || \
+            echo "Warning: Could not verify publication immediately. It may take a few minutes to appear."
+
+      - name: Summary
+        run: |
+          echo "MCP Server v${{ steps.tag.outputs.tag }} published to MCP Registry"
+          echo "Registry URL: https://registry.modelcontextprotocol.io/v0/servers/io.github.kubeshop/testkube-mcp"

@@ -37,6 +37,13 @@ func (ui *UI) NL(amount ...int) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) DebugNL(amount ...int) {
+	if !ui.Verbose {
+		return
+	}
+	ui.NL(amount...)
+}
+
 // Success shows success in terminal
 func (ui *UI) Success(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, "%s", LightYellow(message))
@@ -99,7 +106,6 @@ func (ui *UI) Print(message string, subMessages ...string) {
 
 func (ui *UI) Printf(format string, data ...any) {
 	fmt.Fprintf(ui.Writer, format, data...)
-	fmt.Fprintln(ui.Writer)
 }
 
 func (ui *UI) PrintDot() {
@@ -130,6 +136,15 @@ func (ui *UI) Info(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, "%s", White(message))
 	for _, sub := range subMessages {
 		fmt.Fprintf(ui.Writer, " %s", LightGray(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
+// Hint shows a tip/hint message prefixed with a lightbulb icon.
+func (ui *UI) Hint(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s  %s", IconSuggestion, LightGray(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", White(sub))
 	}
 	fmt.Fprintln(ui.Writer)
 }

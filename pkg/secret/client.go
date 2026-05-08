@@ -16,7 +16,7 @@ import (
 
 const testkubeTestSecretLabel = "tests-secrets"
 
-//go:generate mockgen -destination=./mock_client.go -package=secret "github.com/kubeshop/testkube/pkg/secret" Interface
+//go:generate go tool mockgen -destination=./mock_client.go -package=secret "github.com/kubeshop/testkube/pkg/secret" Interface
 type Interface interface {
 	Get(id string, namespace ...string) (map[string]string, error)
 	GetObject(id string) (*v1.Secret, error)
@@ -30,7 +30,7 @@ type Interface interface {
 
 // Client provide methods to manage secrets
 type Client struct {
-	ClientSet *kubernetes.Clientset
+	ClientSet kubernetes.Interface
 	Log       *zap.SugaredLogger
 	Namespace string
 }
@@ -41,12 +41,16 @@ func NewClient(namespace string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewClientFor(clientSet, namespace), nil
+}
 
+// NewClientFor is a method to create new secret client using existing clientSet
+func NewClientFor(clientSet kubernetes.Interface, namespace string) *Client {
 	return &Client{
 		ClientSet: clientSet,
 		Log:       log.DefaultLogger,
 		Namespace: namespace,
-	}, nil
+	}
 }
 
 // Get is a method to retrieve an existing secret
@@ -96,7 +100,7 @@ func (c *Client) List(all bool, namespace string) (map[string]map[string]string,
 
 	selector := ""
 	if !all {
-		selector = fmt.Sprintf("createdBy=testkube")
+		selector = "createdBy=testkube"
 	}
 
 	secretList, err := secretsClient.List(ctx, metav1.ListOptions{

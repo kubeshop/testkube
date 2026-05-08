@@ -10,9 +10,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// MaxConcurrentDownloads is the maximum number of concurrent file downloads
+// allowed when building artifact archives.
+const MaxConcurrentDownloads = 10
+
 // Client is storage client abstraction
 //
-//go:generate mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" Client
+//go:generate go tool mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" Client
 type Client interface {
 	ClientBucket
 	ClientImplicitBucket
@@ -34,6 +38,7 @@ type ClientImplicitBucket interface {
 type ClientBucket interface {
 	CreateBucket(ctx context.Context, bucket string) error
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
+	BucketExists(ctx context.Context, bucket string) (bool, error)
 	ListBuckets(ctx context.Context) ([]string, error)
 	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, minio.ObjectInfo, error)
 	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error)

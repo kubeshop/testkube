@@ -6,21 +6,26 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 const (
@@ -31,6 +36,7 @@ const (
 var (
 	dummyEntrypoint = []string{"/dummy-entrypoint", "entrypoint-arg"}
 	dummyCmd        = []string{"/dummy-cmd", "cmd-arg"}
+	dummyTime       = time.Date(2020, 10, 14, 1, 2, 3, 400, time.UTC)
 )
 
 type dummyInspector struct{}
@@ -49,13 +55,22 @@ func (*dummyInspector) ResolveName(registry, image string) string {
 }
 
 var (
-	ins         = &dummyInspector{}
-	proc        = NewPro(ins)
-	execMachine = expressions.NewMachine().
-			Register("resource.root", "dummy-id").
-			Register("resource.id", "dummy-id-abc")
+	ins        = &dummyInspector{}
+	proc       = NewPro(ins)
+	testConfig = testworkflowconfig.InternalConfig{
+		Resource: testworkflowconfig.ResourceConfig{
+			Id:     "dummy-id-abc",
+			RootId: "dummy-id",
+		},
+	}
 	envActions = actiontypes.EnvVarFrom(constants2.EnvGroupActions, false, false, constants2.EnvActions, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
+	})
+	envInternal = actiontypes.EnvVarFrom(constants2.EnvGroupInternal, false, false, constants2.EnvInternalConfig, corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.InternalAnnotationFieldPath},
+	})
+	envSignature = actiontypes.EnvVarFrom(constants2.EnvGroupInternal, false, false, constants2.EnvSignature, corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SignatureAnnotationFieldPath},
 	})
 	envDebugNode = actiontypes.EnvVarFrom(constants2.EnvGroupDebug, false, false, constants2.EnvNodeName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
@@ -70,6 +85,25 @@ var (
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
 	})
 )
+
+func newResourceEnvVars(container string) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		newResourceFieldRefEnvVar(constants2.EnvResourceRequestsCPU, container, "requests.cpu", resource.MustParse("1m")),
+		newResourceFieldRefEnvVar(constants2.EnvResourceLimitsCPU, container, "limits.cpu", resource.MustParse("1m")),
+		newResourceFieldRefEnvVar(constants2.EnvResourceRequestsMemory, container, "requests.memory", resource.Quantity{}),
+		newResourceFieldRefEnvVar(constants2.EnvResourceLimitsMemory, container, "limits.memory", resource.Quantity{}),
+	}
+}
+
+func newRuntimeEnvVar(container string) corev1.EnvVar {
+	return actiontypes.EnvVar(constants2.EnvGroupRuntime, false, false, constants2.EnvContainerName, container)
+}
+
+func newResourceFieldRefEnvVar(envvar, container, resource string, divisor resource.Quantity) corev1.EnvVar {
+	return actiontypes.EnvVarFrom(constants2.EnvGroupResources, false, false, envvar, corev1.EnvVarSource{
+		ResourceFieldRef: &corev1.ResourceFieldSelector{ContainerName: container, Resource: resource, Divisor: divisor},
+	})
+}
 
 func env(index int, computed bool, name, value string) corev1.EnvVar {
 	return actiontypes.EnvVar(fmt.Sprintf("%d", index), computed, false, name, value)
@@ -96,10 +130,14 @@ func getSpec(actions actiontypes.ActionGroups) string {
 	return string(v)
 }
 
+func workflowInt(v int32) *intstr.IntOrString {
+	return &intstr.IntOrString{Type: intstr.Int, IntVal: v}
+}
+
 func TestProcessEmpty(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{}
 
-	_, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	_, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "has nothing to run")
@@ -114,11 +152,13 @@ func TestProcessBasic(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
 	assert.NoError(t, err)
 
 	sig := res.Signature
 	sigSerialized, _ := json.Marshal(sig)
+
+	internalConfigSerialized, _ := json.Marshal(testConfig)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
@@ -127,8 +167,8 @@ func TestProcessBasic(t *testing.T) {
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -142,12 +182,23 @@ func TestProcessBasic(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
 		})
 
+	wantEnv := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv = append(append(wantEnv, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -167,8 +218,10 @@ func TestProcessBasic(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SignatureAnnotationName: string(sigSerialized),
-						constants.SpecAnnotationName:      getSpec(wantActions),
+						constants.SignatureAnnotationName:   string(sigSerialized),
+						constants.InternalAnnotationName:    string(internalConfigSerialized),
+						constants.SpecAnnotationName:        getSpec(wantActions),
+						constants.ScheduledAtAnnotationName: dummyTime.Format(time.RFC3339Nano),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -182,15 +235,8 @@ func TestProcessBasic(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/init", "0"},
-							Env: []corev1.EnvVar{
-								env(0, false, "CI", "1"),
-								envDebugNode,
-								envDebugPod,
-								envDebugNamespace,
-								envDebugServiceAccount,
-								envActions,
-							},
-							VolumeMounts: volumeMounts,
+							Env:             wantEnv,
+							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 							},
@@ -206,14 +252,16 @@ func TestProcessBasic(t *testing.T) {
 
 	assert.Equal(t, want, res.Job)
 
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 3, len(volumes))
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 4, len(volumes))
 	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
 	assert.Equal(t, constants.DefaultTmpDirPath, volumeMounts[1].MountPath)
 	assert.Equal(t, constants.DefaultDataPath, volumeMounts[2].MountPath)
+	assert.Equal(t, constants.DefaultTestkubePath, volumeMounts[3].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
+	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
 }
 
 func TestProcessShellWithNonStandardImage(t *testing.T) {
@@ -228,11 +276,13 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
 	assert.NoError(t, err)
 
 	sig := res.Signature
 	sigSerialized, _ := json.Marshal(sig)
+
+	internalConfigSerialized, _ := json.Marshal(testConfig)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
@@ -241,8 +291,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				Setup(true, false, true).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -257,12 +307,26 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
 		})
 
+	wantEnv1 := []corev1.EnvVar{
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -282,8 +346,10 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SignatureAnnotationName: string(sigSerialized),
-						constants.SpecAnnotationName:      getSpec(wantActions),
+						constants.SignatureAnnotationName:   string(sigSerialized),
+						constants.InternalAnnotationName:    string(internalConfigSerialized),
+						constants.SpecAnnotationName:        getSpec(wantActions),
+						constants.ScheduledAtAnnotationName: dummyTime.Format(time.RFC3339Nano),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -296,14 +362,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/init", "0"},
-							Env: []corev1.EnvVar{
-								envDebugNode,
-								envDebugPod,
-								envDebugNamespace,
-								envDebugServiceAccount,
-								envActions,
-							},
-							VolumeMounts: volumeMounts,
+							Env:             wantEnv1,
+							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(int64(dummyGroupId)),
 							},
@@ -315,10 +375,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 							Image:           "custom:1.2.3",
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/.tktw/init", "1"},
-							Env: []corev1.EnvVar{
-								env(0, false, "CI", "1"),
-							},
-							VolumeMounts: volumeMounts,
+							Env:             wantEnv2,
+							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(int64(dummyGroupId)),
 							},
@@ -334,14 +392,111 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 
 	assert.Equal(t, want, res.Job)
 
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 3, len(volumes))
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 4, len(volumes))
 	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
 	assert.Equal(t, constants.DefaultTmpDirPath, volumeMounts[1].MountPath)
 	assert.Equal(t, constants.DefaultDataPath, volumeMounts[2].MountPath)
+	assert.Equal(t, constants.DefaultTestkubePath, volumeMounts[3].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 	assert.True(t, volumeMounts[2].Name == volumes[2].Name)
+	assert.True(t, volumeMounts[3].Name == volumes[3].Name)
+}
+
+func TestProcessShellWithNonStandardImageDisableFsGroupDefaulting(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepDefaults:   testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{Image: "custom:1.2.3"}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && assert.NotNil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext) {
+		assert.Equal(t, common.Ptr(int64(dummyGroupId)), res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.InitContainers, 1) && res.Job.Spec.Template.Spec.InitContainers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.InitContainers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessTemplateIntegerSecurityContextConfig(t *testing.T) {
+	templates := map[string]*testworkflowsv1.TestWorkflowTemplate{
+		"repro-integer-config": {
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Config: map[string]testworkflowsv1.ParameterSchema{
+						"runAsUser": {
+							Type:    testworkflowsv1.ParameterTypeInteger,
+							Default: workflowInt(65532),
+						},
+						"runAsGroup": {
+							Type:    testworkflowsv1.ParameterTypeInteger,
+							Default: workflowInt(65532),
+						},
+					},
+					Container: &testworkflowsv1.ContainerConfig{
+						SecurityContext: &testworkflowsv1.WorkflowSecurityContext{
+							RunAsUser:  testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsUser }}"),
+							RunAsGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
+						},
+					},
+					Pod: &testworkflowsv1.PodConfig{
+						SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+							FSGroup: testworkflowsv1.NewWorkflowInt64OrString("{{ config.runAsGroup }}"),
+						},
+					},
+				},
+			},
+		},
+	}
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Use: []testworkflowsv1.TemplateRef{{Name: "repro-integer-config"}},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+			},
+		},
+	}
+
+	err := testworkflowresolver.ApplyTemplates(wf, templates, nil)
+	assert.NoError(t, err)
+	runAsUser, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsUser", wf.Spec.Container.SecurityContext.RunAsUser)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsUser)
+
+	runAsGroup, err := testworkflowsv1.ResolveWorkflowInt64("container.securityContext.runAsGroup", wf.Spec.Container.SecurityContext.RunAsGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *runAsGroup)
+
+	fsGroup, err := testworkflowsv1.ResolveWorkflowInt64("pod.securityContext.fsGroup", wf.Spec.Pod.SecurityContext.FSGroup)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(65532), *fsGroup)
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
+	assert.NoError(t, err)
+
+	assert.Len(t, res.Job.Spec.Template.Spec.InitContainers, 0)
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) {
+		assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser)
+		assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+	assert.Equal(t, int64(65532), *res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
 }
 
 func TestProcessBasicEnvReference(t *testing.T) {
@@ -350,12 +505,12 @@ func TestProcessBasicEnvReference(t *testing.T) {
 			Steps: []testworkflowsv1.Step{
 				{StepDefaults: testworkflowsv1.StepDefaults{
 					Container: &testworkflowsv1.ContainerConfig{
-						Env: []corev1.EnvVar{
-							{Name: "ZERO", Value: "foo"},
-							{Name: "UNDETERMINED", Value: "{{call(abc)}}xxx"},
-							{Name: "INPUT", Value: "{{env.ZERO}}bar"},
-							{Name: "NEXT", Value: "foo{{env.UNDETERMINED}}{{env.LAST}}"},
-							{Name: "LAST", Value: "foo{{env.INPUT}}bar"},
+						Env: []testworkflowsv1.EnvVar{
+							{EnvVar: corev1.EnvVar{Name: "ZERO", Value: "foo"}},
+							{EnvVar: corev1.EnvVar{Name: "UNDETERMINED", Value: "{{call(abc)}}xxx"}},
+							{EnvVar: corev1.EnvVar{Name: "INPUT", Value: "{{env.ZERO}}bar"}},
+							{EnvVar: corev1.EnvVar{Name: "NEXT", Value: "foo{{env.UNDETERMINED}}{{env.LAST}}"}},
+							{EnvVar: corev1.EnvVar{Name: "LAST", Value: "foo{{env.INPUT}}bar"}},
 						},
 					},
 				}, StepOperations: testworkflowsv1.StepOperations{
@@ -365,7 +520,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -375,8 +530,8 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -388,12 +543,28 @@ func TestProcessBasicEnvReference(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
 		})
 
+	wantEnv := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		env(0, false, "ZERO", "foo"),
+		env(0, true, "UNDETERMINED", "{{call(abc)}}xxx"),
+		env(0, false, "INPUT", "foobar"),
+		env(0, true, "NEXT", "foo{{env.UNDETERMINED}}foofoobarbar"),
+		env(0, false, "LAST", "foofoobarbar"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv = append(append(wantEnv, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantPod := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -405,20 +576,8 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					env(0, false, "ZERO", "foo"),
-					env(0, true, "UNDETERMINED", "{{call(abc)}}xxx"),
-					env(0, false, "INPUT", "foobar"),
-					env(0, true, "NEXT", "foo{{env.UNDETERMINED}}foofoobarbar"),
-					env(0, false, "LAST", "foofoobarbar"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -444,7 +603,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -454,9 +613,9 @@ func TestProcessMultipleSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -470,7 +629,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 		}).
@@ -481,12 +640,27 @@ func TestProcessMultipleSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Ref()).
-				Execute(sig[1].Ref(), false).
+				Execute(sig[1].Ref(), false, false).
 				End(sig[1].Ref()).
 				End(constants.RootOperationName).
 				End("")
 		})
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -497,15 +671,8 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -517,10 +684,8 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -553,7 +718,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -563,12 +728,12 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
-				Declare(sig[1].Children()[0].Ref(), sig[0].Ref(), constants.RootOperationName, sig[1].Ref()).
-				Declare(sig[1].Children()[1].Ref(), and(sig[1].Children()[0].Ref(), sig[0].Ref()), constants.RootOperationName, sig[1].Ref()).
-				Declare(sig[2].Ref(), and(sig[1].Ref(), sig[0].Ref()), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[1].Id(), sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[1].Children()[0].Ref(), sig[1].Children()[0].Id(), sig[0].Ref(), constants.RootOperationName, sig[1].Ref()).
+				Declare(sig[1].Children()[1].Ref(), sig[1].Children()[1].Id(), and(sig[1].Children()[0].Ref(), sig[0].Ref()), constants.RootOperationName, sig[1].Ref()).
+				Declare(sig[2].Ref(), sig[2].Id(), and(sig[1].Ref(), sig[0].Ref()), constants.RootOperationName).
 				Result(sig[1].Ref(), and(sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref())).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref(), sig[2].Ref())).
 				Result("", constants.RootOperationName).
@@ -583,7 +748,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
 				Start(sig[1].Ref()).
@@ -596,7 +761,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Children()[0].Ref()).
-				Execute(sig[1].Children()[0].Ref(), false).
+				Execute(sig[1].Children()[0].Ref(), false, false).
 				End(sig[1].Children()[0].Ref()).
 				CurrentStatus(and(sig[1].Children()[0].Ref(), sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
 		}).
@@ -607,7 +772,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-3"),
 				}).
 				Start(sig[1].Children()[1].Ref()).
-				Execute(sig[1].Children()[1].Ref(), false).
+				Execute(sig[1].Children()[1].Ref(), false, false).
 				End(sig[1].Children()[1].Ref()).
 				End(sig[1].Ref()).
 				CurrentStatus(and(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
@@ -619,12 +784,35 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-4"),
 				}).
 				Start(sig[2].Ref()).
-				Execute(sig[2].Ref(), false).
+				Execute(sig[2].Ref(), false, false).
 				End(sig[2].Ref()).
 				End(constants.RootOperationName).
 				End("")
 		})
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
+	wantEnv3 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv3 = append(append(wantEnv3, newResourceEnvVars("3")...), newRuntimeEnvVar("3"))
+	wantEnv4 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv4 = append(append(wantEnv4, newResourceEnvVars("4")...), newRuntimeEnvVar("4"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -635,15 +823,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -653,10 +834,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -666,10 +845,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "2"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv3,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -681,10 +858,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "3"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv4,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -719,13 +894,28 @@ func TestProcessLocalContent(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	assert.NoError(t, err)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
 	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -736,15 +926,8 @@ func TestProcessLocalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMountsWithContent,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMountsWithContent,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -756,10 +939,8 @@ func TestProcessLocalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -771,14 +952,14 @@ func TestProcessLocalContent(t *testing.T) {
 	}
 
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 3, len(volumeMounts))
-	assert.Equal(t, 4, len(volumeMountsWithContent))
-	assert.Equal(t, volumeMounts, volumeMountsWithContent[:3])
-	assert.Equal(t, "/some/path", volumeMountsWithContent[3].MountPath)
+	assert.Equal(t, 4, len(volumeMounts))
+	assert.Equal(t, 5, len(volumeMountsWithContent))
+	assert.Equal(t, volumeMounts, volumeMountsWithContent[:4])
+	assert.Equal(t, "/some/path", volumeMountsWithContent[4].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMountsWithContent[3].Name, volumes[3].Name)
-	assert.Equal(t, volumes[3].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[3].SubPath])
+	assert.Equal(t, volumeMountsWithContent[4].Name, volumes[4].Name)
+	assert.Equal(t, volumes[4].ConfigMap.Name, res.ConfigMaps[0].Name)
+	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[4].SubPath])
 }
 
 func TestProcessGlobalContent(t *testing.T) {
@@ -799,12 +980,27 @@ func TestProcessGlobalContent(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	assert.NoError(t, err)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -815,15 +1011,8 @@ func TestProcessGlobalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -835,10 +1024,8 @@ func TestProcessGlobalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -849,13 +1036,16 @@ func TestProcessGlobalContent(t *testing.T) {
 		},
 	}
 
+	v, _ := json.Marshal(want)
+	fmt.Println(string(v))
+
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 4, len(volumeMounts))
-	assert.Equal(t, "/some/path", volumeMounts[3].MountPath)
+	assert.Equal(t, 5, len(volumeMounts))
+	assert.Equal(t, "/some/path", volumeMounts[4].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMounts[3].Name, volumes[3].Name)
-	assert.Equal(t, volumes[3].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[3].SubPath])
+	assert.Equal(t, volumeMounts[4].Name, volumes[4].Name)
+	assert.Equal(t, volumes[4].ConfigMap.Name, res.ConfigMaps[0].Name)
+	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[4].SubPath])
 }
 
 func TestProcessEscapedAnnotations(t *testing.T) {
@@ -874,7 +1064,7 @@ func TestProcessEscapedAnnotations(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	assert.NoError(t, err)
 	assert.Equal(t, `{{- with secret "internal/data/database/config" -}}{{ .Data.data.username }}@{{ .Data.data.password }}{{- end -}}`, res.Job.Spec.Template.Annotations["vault.hashicorp.com/agent-inject-template-database-config.txt"])
 }
@@ -888,15 +1078,15 @@ func TestProcessShell(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -910,7 +1100,7 @@ func TestProcessShell(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -918,6 +1108,111 @@ func TestProcessShell(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcessShellExplicitFsGroup(t *testing.T) {
+	explicitFsGroup := int64(2222)
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					SecurityContext: &testworkflowsv1.WorkflowPodSecurityContext{
+						FSGroup: testworkflowsv1.Int64ToWorkflowIntOrString(common.Ptr(explicitFsGroup)),
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Equal(t, common.Ptr(explicitFsGroup), res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && assert.NotNil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext) {
+		assert.Equal(t, common.Ptr(explicitFsGroup), res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessShellDisableFsGroupDefaulting(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessParallelWorkerDisableFsGroupDefaulting(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					DisableFsGroupDefaulting: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{{
+				Parallel: &testworkflowsv1.StepParallel{
+					Steps: []testworkflowsv1.Step{
+						{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+					},
+				},
+			}},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
+}
+
+func TestProcessParallelWorkerDisableFsGroupDefaultingOverride(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: *(&testworkflowsv1.StepParallel{
+			Pod: &testworkflowsv1.PodConfig{
+				DisableFsGroupDefaulting: common.Ptr(true),
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		}).NewTestWorkflowSpec(),
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, res.Job.Spec.Template.Spec.SecurityContext) {
+		assert.Nil(t, res.Job.Spec.Template.Spec.SecurityContext.FSGroup)
+	}
+	if assert.Len(t, res.Job.Spec.Template.Spec.Containers, 1) && res.Job.Spec.Template.Spec.Containers[0].SecurityContext != nil {
+		assert.Nil(t, res.Job.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup)
+	}
 }
 
 func TestProcessConsecutiveAlways(t *testing.T) {
@@ -935,16 +1230,16 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "true", constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", "true", constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -958,7 +1253,7 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[0].Ref()).
-			Execute(sig[0].Ref(), false).
+			Execute(sig[0].Ref(), false, false).
 			End(sig[0].Ref()).
 			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
@@ -968,7 +1263,7 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[1].Ref()).
-			Execute(sig[1].Ref(), false).
+			Execute(sig[1].Ref(), false, false).
 			End(sig[1].Ref()).
 			End(constants.RootOperationName).
 			End("")
@@ -995,16 +1290,16 @@ func TestProcessNestedCondition(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -1018,7 +1313,7 @@ func TestProcessNestedCondition(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[0].Ref()).
-			Execute(sig[0].Ref(), false).
+			Execute(sig[0].Ref(), false, false).
 			End(sig[0].Ref()).
 			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
@@ -1028,7 +1323,7 @@ func TestProcessNestedCondition(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[1].Ref()).
-			Execute(sig[1].Ref(), false).
+			Execute(sig[1].Ref(), false, false).
 			End(sig[1].Ref()).
 			End(constants.RootOperationName).
 			End("")
@@ -1056,7 +1351,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 	virtual := res.FullSignature[1]
 
@@ -1064,11 +1359,11 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(virtual.Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "true", constants.RootOperationName, virtual.Ref()).
-				Declare(sig[2].Ref(), "true", constants.RootOperationName, virtual.Ref()).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(virtual.Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", "true", constants.RootOperationName, virtual.Ref()).
+				Declare(sig[2].Ref(), "", "true", constants.RootOperationName, virtual.Ref()).
 				Result(virtual.Ref(), and(sig[1].Ref(), sig[2].Ref())).
 				Result(constants.RootOperationName, and(sig[0].Ref(), virtual.Ref())).
 				Result("", constants.RootOperationName).
@@ -1083,7 +1378,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[0].Ref()).
-			Execute(sig[0].Ref(), false).
+			Execute(sig[0].Ref(), false, false).
 			End(sig[0].Ref()).
 			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
 			Start(virtual.Ref()).
@@ -1095,7 +1390,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[1].Ref()).
-			Execute(sig[1].Ref(), false).
+			Execute(sig[1].Ref(), false, false).
 			End(sig[1].Ref()).
 			CurrentStatus(and(sig[1].Ref(), virtual.Ref(), sig[0].Ref(), constants.RootOperationName))
 
@@ -1106,7 +1401,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 				Args:    cmdShell("shell-test-2"),
 			}).
 			Start(sig[2].Ref()).
-			Execute(sig[2].Ref(), false).
+			Execute(sig[2].Ref(), false, false).
 			End(sig[2].Ref()).
 			End(virtual.Ref()).
 			End(constants.RootOperationName).
@@ -1134,7 +1429,7 @@ func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
@@ -1142,10 +1437,10 @@ func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
 			return list.
 				// configure
 				Setup(false, false, false).
-				Declare(constants.RootOperationName, "true").
-				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[0].Children()[0].Ref(), "false").
-				Declare(sig[0].Children()[1].Ref(), "false").
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), sig[0].Id(), "true", constants.RootOperationName).
+				Declare(sig[0].Children()[0].Ref(), sig[0].Children()[0].Id(), "false").
+				Declare(sig[0].Children()[1].Ref(), sig[0].Children()[1].Id(), "false").
 				Result(sig[0].Ref(), "true").
 				Result(constants.RootOperationName, sig[0].Ref()).
 				Result("", constants.RootOperationName).
@@ -1173,4 +1468,287 @@ func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcess_ConditionAlways(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "test-command-1"}},
+				{
+					StepMeta: testworkflowsv1.StepMeta{Condition: "always"},
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Env: []testworkflowsv1.EnvVar{
+									{EnvVar: corev1.EnvVar{Name: "result", Value: "{{passed}}"}},
+								},
+							},
+							Shell: common.Ptr("echo $result"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	sig := res.Signature
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(false, false, false).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", "true", constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+
+				// initialize
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName).
+
+				// start first container
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw-bin/sh"),
+					Args:    cmdShell("test-command-1"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false, false).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw-bin/sh"),
+					Args:    cmdShell("echo $result"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false, false).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcess_PureShellAtTheEnd(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepMeta: testworkflowsv1.StepMeta{Pure: common.Ptr(true)},
+					StepDefaults: testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{
+						Image: "custom-image:1.2.3",
+					}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "test-command-1"},
+				},
+				{
+					StepMeta:       testworkflowsv1.StepMeta{Pure: common.Ptr(true)},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "test-command-2"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	sig := res.Signature
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(true, false, true).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+
+				// initialize
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// start first container
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("test-command-1"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false, true).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("test-command-2"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false, true).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcess_MergingActions(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{Delay: "1s"},
+				},
+				{
+					StepDefaults: testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{
+						Image: "custom-image:1.2.3",
+					}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "test-command"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	sig := res.Signature
+
+	wantActions := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(true, false, true).
+				Declare(constants.RootOperationName, "", "true").
+				Declare(sig[0].Ref(), "", "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "", sig[0].Ref(), constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+
+				// initialize
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// start first container
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("sleep"),
+					Args:    cmd("1"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false, true).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("test-command"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false, false).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, wantActions, res.LiteActions())
+	assert.Equal(t, res.Job.Spec.Template.Spec.Containers[0].Image, "custom-image:1.2.3")
+}
+
+func TestProcess_ConditionWithArtifacts(t *testing.T) {
+	// Regression test: when a step has a condition (env.TEST) and artifacts,
+	// the group must not evaluate the condition before the Container transition
+	// that loads scoped env vars. The group should have condition "true" and
+	// children should carry the actual condition.
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Container: &testworkflowsv1.ContainerConfig{
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "TEST", Value: "true"}},
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepMeta: testworkflowsv1.StepMeta{Condition: "env.TEST"},
+					StepOperations: testworkflowsv1.StepOperations{
+						Shell: `echo "test"`,
+						Artifacts: &testworkflowsv1.StepArtifacts{
+							Paths: []string{"*.xml"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	assert.NoError(t, err)
+
+	// Find the Declare actions to verify conditions
+	actions := res.LiteActions()
+	var declares []lite.ActionDeclare
+	for _, group := range actions {
+		for _, a := range group {
+			if a.Declare != nil {
+				declares = append(declares, *a.Declare)
+			}
+		}
+	}
+
+	// There should be 4 declares: root, group, shell, artifacts
+	assert.Len(t, declares, 4)
+
+	// Root condition should be "true"
+	assert.Equal(t, "true", declares[0].Condition, "root should have condition 'true'")
+	assert.Equal(t, constants.RootOperationName, declares[0].Ref)
+
+	// Group condition should be "true" (not "env.TEST") so it starts
+	// before Container transition loads env vars
+	groupRef := declares[1].Ref
+	assert.Equal(t, "true", declares[1].Condition, "group should have condition 'true', not the step condition")
+
+	// Shell condition should contain "env.TEST" (evaluated after Container transition)
+	assert.Contains(t, declares[2].Condition, "env.TEST", "shell should have env.TEST condition")
+	assert.Contains(t, declares[2].Parents, groupRef, "shell should be child of group")
+
+	// Artifacts condition should also contain "env.TEST"
+	assert.Contains(t, declares[3].Condition, "env.TEST", "artifacts should have env.TEST condition")
+	assert.Contains(t, declares[3].Parents, groupRef, "artifacts should be child of group")
+
+	// Verify the ordering: group Start must come before Container transitions,
+	// and Container transitions must come before child Starts
+	var foundGroupStart, foundContainer, foundChildStart bool
+	for _, group := range actions {
+		for _, a := range group {
+			if a.Start != nil && *a.Start == groupRef {
+				foundGroupStart = true
+				assert.False(t, foundContainer, "group Start should come before any Container transition")
+			}
+			if a.Container != nil && foundGroupStart && !foundChildStart {
+				foundContainer = true
+			}
+			if a.Start != nil && *a.Start == declares[2].Ref {
+				foundChildStart = true
+				assert.True(t, foundContainer, "child Start should come after Container transition")
+			}
+		}
+	}
+	assert.True(t, foundGroupStart, "should find group Start")
+	assert.True(t, foundContainer, "should find Container transition")
+	assert.True(t, foundChildStart, "should find child Start")
 }

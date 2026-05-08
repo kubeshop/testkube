@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -59,8 +60,8 @@ func (d *EventsDebugger) getEvents() error {
 
 	for _, id := range executionIds {
 		ui.H1("Events for execution: " + id + " time: " + time.Now().String())
-		events := exec.Command(kubectl, args...)
-		grep := exec.Command("grep", id)
+		events := exec.CommandContext(context.Background(), kubectl, args...)
+		grep := exec.CommandContext(context.Background(), "grep", id)
 
 		// Get ps's stdout and attach it to grep's stdin.
 		pipe, _ := events.StdoutPipe()

@@ -2,28 +2,24 @@ package common
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/oauth2"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/cloudlogin"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/cloudlogin"
 )
+
+const UserAgentCLI = "Testkube-CLI"
 
 // GetClient returns api client
 func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	clientType := cmd.Flag("client").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
-	oauthEnabled, err := strconv.ParseBool(cmd.Flag("oauth-enabled").Value.String())
-	if err != nil {
-		return nil, "", fmt.Errorf("parsing flag value %w", err)
-	}
 
 	insecure, err := strconv.ParseBool(cmd.Flag("insecure").Value.String())
 	if err != nil {
@@ -34,6 +30,11 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("parsing flag value %w", err)
 	}
+
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+	headers["User-Agent"] = userAgent()
 
 	options := client.Options{
 		Namespace: namespace,
@@ -63,41 +64,40 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	options.APIServerName = cfg.APIServerName
 	options.APIServerPort = cfg.APIServerPort
 
-	switch cfg.ContextType {
-	case config.ContextTypeKubeconfig:
-		if oauthEnabled {
-			options.Provider = cfg.OAuth2Data.Provider
-			options.ClientID = cfg.OAuth2Data.ClientID
-			options.ClientSecret = cfg.OAuth2Data.ClientSecret
-			options.Scopes = cfg.OAuth2Data.Scopes
-			options.Token = cfg.OAuth2Data.Token
-
-			if os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN") != "" {
-				options.Token = &oauth2.Token{
-					AccessToken: os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN"),
-				}
-			}
-
-			if options.Token == nil {
-				return nil, "", errors.New("oauth token is empty, please configure your oauth settings first")
-			}
-		}
-	case config.ContextTypeCloud:
-
+	if cfg.ContextType == config.ContextTypeCloud {
 		token := cfg.CloudContext.ApiKey
 
-		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" && cfg.OAuth2Data.Enabled {
+		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
+			newTokenType := cfg.CloudContext.TokenType
 			var refreshToken string
-			authURI := fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
-			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
+			token, refreshToken, err = refreshUserToken(context.Background(), cfg)
 			if err != nil {
-				// Error: failed refreshing, go thru login flow
-				token, refreshToken, err = LoginUser(authURI)
+				if cfg.CloudContext.TokenType == config.TokenTypeEmailLink {
+					// Don't auto-restart the email-link flow from inside an
+					// unrelated command — a 5-minute "check your inbox" wait
+					// mid-command is worse UX than a hard error. Surface the
+					// exact command to re-run, filling in the user's email
+					// from the stored ID token when we can recover it.
+					hint := "testkube pro login --email-link <email>"
+					if stored := cloudlogin.EmailFromIDToken(cfg.CloudContext.ApiKey); stored != "" {
+						hint = fmt.Sprintf("testkube pro login --email-link %s", stored)
+					}
+					return nil, "", fmt.Errorf("email-link token refresh failed; re-run `%s`: %w", hint, err)
+				}
+				authURI := cfg.CloudContext.AuthUri
+				if authURI == "" {
+					authURI = fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
+				}
+				port := config.CallbackPort
+				if cfg.CloudContext.CallbackPort != 0 {
+					port = cfg.CloudContext.CallbackPort
+				}
+				newTokenType, token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.ApiUri, cfg.CloudContext.CustomAuth, port)
 				if err != nil {
 					return nil, "", fmt.Errorf("error logging in: %w", err)
 				}
 			}
-			if err := UpdateTokens(cfg, token, refreshToken); err != nil {
+			if err := UpdateTokens(cfg, newTokenType, token, refreshToken); err != nil {
 				return nil, "", fmt.Errorf("error storing new token: %w", err)
 			}
 		}
@@ -115,4 +115,8 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	}
 
 	return c, namespace, nil
+}
+
+func userAgent() string {
+	return fmt.Sprintf("%s/%s (%s; %s) Go/%s", UserAgentCLI, Version, runtime.GOOS, runtime.GOARCH, runtime.Version())
 }

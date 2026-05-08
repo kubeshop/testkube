@@ -1,15 +1,19 @@
 package orchestration
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
@@ -33,6 +37,8 @@ type executionGroup struct {
 
 	paused  atomic.Bool
 	pauseMu sync.Mutex
+
+	softKillProgress atomic.Bool
 }
 
 func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup {
@@ -45,7 +51,26 @@ func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup
 func (e *executionGroup) Create(cmd string, args []string) *execution {
 	// Instantiate the execution
 	ex := &execution{group: e}
-	ex.cmd = exec.Command(cmd, args...)
+	ex.cmd = exec.CommandContext(context.Background(), cmd, args...)
+	ex.cmd.Stdout = e.outStream
+	ex.cmd.Stderr = e.errStream
+
+	// Append to the list TODO: delete that after finish
+	e.executionsMu.Lock()
+	e.executions = append(e.executions, ex)
+	e.executionsMu.Unlock()
+
+	return ex
+}
+
+func (e *executionGroup) CreateWithContext(ctx context.Context, cmd string, args []string) *execution {
+	// Instantiate the execution
+	ex := &execution{group: e}
+	ex.cmd = exec.CommandContext(ctx, cmd, args...)
+	ex.cmd.Cancel = func() error {
+		return ex.cmd.Process.Signal(syscall.SIGTERM)
+	}
+	ex.cmd.WaitDelay = 10 * time.Second
 	ex.cmd.Stdout = e.outStream
 	ex.cmd.Stderr = e.errStream
 
@@ -116,6 +141,11 @@ func (e *executionGroup) Kill() (err error) {
 	e.executionsMu.Lock()
 	defer e.executionsMu.Unlock()
 
+	// Skip if there are no executions to kill
+	if len(e.executions) == 0 {
+		return nil
+	}
+
 	// Retrieve all started processes
 	ps, totalFailure, err := processes()
 	if totalFailure {
@@ -131,6 +161,24 @@ func (e *executionGroup) Kill() (err error) {
 	return errors.Wrap(err, "failed to kill")
 }
 
+// WaitAll waits for all tracked executions to finish.
+// Safe to call after Kill() even if Run() already waited on the process.
+func (e *executionGroup) WaitAll() {
+	e.executionsMu.Lock()
+	execs := make([]*execution, len(e.executions))
+	copy(execs, e.executions)
+	e.executionsMu.Unlock()
+
+	for _, ex := range execs {
+		ex.cmdMu.Lock()
+		cmd := ex.cmd
+		ex.cmdMu.Unlock()
+		if cmd != nil && cmd.Process != nil {
+			_ = cmd.Wait()
+		}
+	}
+}
+
 func (e *executionGroup) Abort() {
 	e.aborted.Store(true)
 	_ = e.Kill()
@@ -139,6 +187,10 @@ func (e *executionGroup) Abort() {
 
 func (e *executionGroup) IsAborted() bool {
 	return e.aborted.Load()
+}
+
+func (e *executionGroup) ClearAbortedStatus() {
+	e.aborted.Store(false)
 }
 
 type execution struct {
@@ -150,7 +202,7 @@ type execution struct {
 func (e *execution) Run() (*executionResult, error) {
 	// Immediately fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Ensure it's not paused
@@ -163,7 +215,7 @@ func (e *execution) Run() (*executionResult, error) {
 	if e.group.aborted.Load() {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Initialize local state
@@ -182,7 +234,7 @@ func (e *execution) Run() (*executionResult, error) {
 			// Handle edge case, when i.e. EPIPE happened
 			if !aborted {
 				aborted = true
-				e.cmd.Stderr.Write([]byte(fmt.Sprintf("\nThe process has been corrupted: %s.\n", exitDetails)))
+				fmt.Fprintf(e.cmd.Stderr, "\nThe process has been corrupted: %s.\n", exitDetails)
 			}
 		}
 	} else {
@@ -202,13 +254,13 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Mark the execution group as aborted when this process was aborted.
 	// In Kubernetes, when that child process is killed, it may mean OOM Kill.
-	if aborted && !e.group.aborted.Load() {
+	if aborted && !e.group.aborted.Load() && !e.group.softKillProgress.Load() {
 		e.group.Abort()
 	}
 
 	// Fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	return &executionResult{ExitCode: uint8(exitCode)}, nil
@@ -220,8 +272,8 @@ func getProcessStatus(err error) (bool, string, int) {
 	}
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
-			details := e.ProcessState.String()
-			return details == "signal: killed", details, e.ProcessState.ExitCode()
+			details := e.String()
+			return details == "signal: killed" || details == "signal: terminated", details, e.ExitCode()
 		}
 		return false, "", 1
 	}

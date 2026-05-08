@@ -4,10 +4,6 @@ package ui
 import (
 	"io"
 	"os"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/kubeshop/testkube/internal/common"
 )
 
 const (
@@ -61,6 +57,7 @@ func WarnOnErrorAndOutputPretty(item string, outputPretty bool, errors ...error)
 func Logo()                                         { ui.Logo() }
 func LogoNoColor()                                  { ui.LogoNoColor() }
 func NL(amount ...int)                              { ui.NL(amount...) }
+func DebugNL(amount ...int)                         { ui.DebugNL(amount...) }
 func H1(message string)                             { ui.H1(message) }
 func H2(message string)                             { ui.H2(message) }
 func Paragraph(message string)                      { ui.Paragraph(message) }
@@ -74,6 +71,7 @@ func LogLine(message string)                              { ui.LogLine(message) 
 func LogMultiLine(message string)                         { ui.LogMultiLine(message) }
 func Debug(message string, subMessages ...string)         { ui.Debug(message, subMessages...) }
 func Info(message string, subMessages ...string)          { ui.Info(message, subMessages...) }
+func Hint(message string, subMessages ...string)          { ui.Hint(message, subMessages...) }
 func Link(message string, subMessages ...string)          { ui.Link(message, subMessages...) }
 func ExecutionLink(message string, subMessages ...string) { ui.ExecutionLink(message, subMessages...) }
 func Err(err error)                                       { ui.Err(err) }
@@ -103,21 +101,6 @@ func Confirm(message string) bool                           { return ui.Confirm(
 func Select(title string, options []string) string          { return ui.Select(title, options) }
 func TextInput(message string, defaultValue ...string) string {
 	return ui.TextInput(message, defaultValue...)
-}
-
-func PrintCRD[T interface{}](cr T, kind string, groupVersion schema.GroupVersion) {
-	PrintCRDs([]T{cr}, kind, groupVersion)
-}
-
-func PrintCRDs[T interface{}](crs []T, kind string, groupVersion schema.GroupVersion) {
-	bytes, err := common.SerializeCRDs(crs, common.SerializeOptions{
-		OmitCreationTimestamp: true,
-		CleanMeta:             true,
-		Kind:                  kind,
-		GroupVersion:          &groupVersion,
-	})
-	ui.ExitOnError("serializing the crds", err)
-	_, _ = os.Stdout.Write(bytes)
 }
 
 func UseStdout() { ui = uiOut }

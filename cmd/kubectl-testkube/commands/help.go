@@ -29,16 +29,17 @@ func NewHelpCmd() *cobra.Command {
 			ui.Print(RootCmd.Short)
 			ui.NL()
 			ui.Print(ui.LightGray("Usage"))
-			ui.Printf(fmt.Sprintf("%s %s", ui.White(RootCmd.Use), ui.LightGray("[flags]")))
-			ui.Printf("%s %s", ui.White(RootCmd.Use), ui.LightGray("[command]"))
+			ui.Printf("%s %s\n", ui.White(RootCmd.Use), ui.LightGray("[flags]"))
+			ui.Printf("%s %s\n", ui.White(RootCmd.Use), ui.LightGray("[command]"))
 			ui.NL()
 			usage := helpMessageByGroups(RootCmd)
 			ui.Print(usage)
 			ui.Print(ui.LightGray("Flags"))
-			ui.Printf(RootCmd.Flags().FlagUsages())
-			ui.Print(ui.LightGray("Use \"kubectl testkube [command] --help\" for more information about a command."))
+			ui.Print(RootCmd.Flags().FlagUsages())
 			ui.NL()
-			ui.Printf("%s   %s", ui.LightGray("Docs & Support:"), ui.White("https://docs.testkube.io"))
+			ui.Print(ui.LightGray("Use \"testkube [command] --help\" for more information about a command."))
+			ui.NL()
+			ui.Printf("%s   %s\n", ui.LightGray("Docs & Support:"), ui.White("https://docs.testkube.io"))
 			ui.NL()
 		},
 	}
@@ -83,10 +84,10 @@ func helpMessageByGroups(cmd *cobra.Command) string {
 		if len(groupSplit) > 1 {
 			group = strings.Split(groupName, cmdGroupDelimiter)[1]
 		}
-		buf.WriteString(fmt.Sprintf("%s\n", ui.LightGray(group)))
+		fmt.Fprintf(&buf, "%s\n", ui.LightGray(group))
 
 		for _, cmd := range commands {
-			buf.WriteString(fmt.Sprintf("%s\n", cmd))
+			fmt.Fprintf(&buf, "%s\n", cmd)
 		}
 		buf.WriteString("\n")
 	}

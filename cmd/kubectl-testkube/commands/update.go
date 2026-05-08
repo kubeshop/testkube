@@ -3,14 +3,14 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/workflowtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -33,12 +33,12 @@ func NewUpdateCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		}}
 
-	cmd.AddCommand(tests.NewUpdateTestsCmd())
-	cmd.AddCommand(testsuites.UpdateTestSuitesCmd())
-	cmd.AddCommand(testsources.UpdateTestSourceCmd())
-	cmd.AddCommand(executors.UpdateExecutorCmd())
 	cmd.AddCommand(webhooks.UpdateWebhookCmd())
-	cmd.AddCommand(templates.UpdateTemplateCmd())
+	cmd.AddCommand(webhooktemplates.UpdateWebhookTemplateCmd())
+	cmd.AddCommand(workflowtriggers.NewUpdateWorkflowTriggerCmd())
+	cmd.AddCommand(testtriggers.NewUpdateTestTriggerCmd())
+	cmd.AddCommand(agents.NewUpdateAgentCommand())
+	cmd.AddCommand(testworkflows.NewUpdateTestWorkflowExecutionCmd())
 
 	return cmd
 }

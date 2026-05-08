@@ -6,8 +6,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agent"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -32,8 +30,6 @@ func NewMigrateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(tests.NewMigrateTestsCmd())
-	cmd.AddCommand(testsuites.NewMigrateTestSuitesCmd())
 	cmd.AddCommand(agent.NewMigrateAgentCmd())
 
 	return cmd

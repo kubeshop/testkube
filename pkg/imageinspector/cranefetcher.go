@@ -5,29 +5,46 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
+	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
+	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type craneFetcher struct {
+	insecureRegistries map[string]struct{}
 }
 
-func NewCraneFetcher() InfoFetcher {
-	return &craneFetcher{}
+func NewCraneFetcher(insecureRegistries ...string) InfoFetcher {
+	ir := make(map[string]struct{}, len(insecureRegistries))
+	for _, r := range insecureRegistries {
+		if r != "" {
+			ir[r] = struct{}{}
+		}
+	}
+	return &craneFetcher{insecureRegistries: ir}
 }
 
 func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSecrets []corev1.Secret) (*Info, error) {
 	// If registry is not provided, extract it from the image name
 	if registry == "" {
-		registry = extractRegistry(image)
+		if registry = ExtractRegistry(image); registry == "" {
+			registry = utils.DefaultDockerRegistry
+		}
 	}
 
 	// If registry is provided via config and the image does not start with the registry, prepend it
@@ -36,20 +53,40 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	}
 
 	// Support pull secrets
-	authConfigs, err := ParseSecretData(pullSecrets, registry)
+	authConfigs, err := ParseSecretData(pullSecrets, registry, image)
 	if err != nil {
 		return nil, err
 	}
 
+	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
+	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
+	keychain := authn.NewMultiKeychain(
+		authn.DefaultKeychain,
+		google.Keychain,
+		github.Keychain,
+		amazonKeychain,
+		azureKeychain,
+	)
+
 	// Select the auth
-	craneOptions := []crane.Option{crane.WithContext(ctx)}
+	cranePlatformOption := crane.WithPlatform(&v1.Platform{OS: runtime.GOOS, Architecture: runtime.GOARCH})
+	craneOptions := []crane.Option{crane.WithContext(ctx), crane.WithAuthFromKeychain(keychain)}
 	if len(authConfigs) > 0 {
 		craneOptions = append(craneOptions, crane.WithAuth(authn.FromConfig(authConfigs[0])))
+	}
+	if _, ok := c.insecureRegistries[registry]; ok {
+		craneOptions = append(craneOptions, crane.Insecure)
 	}
 
 	// Fetch the image configuration
 	fetchedAt := time.Now()
-	serializedImageConfig, err := crane.Config(image, craneOptions...)
+	serializedImageConfig, err := crane.Config(image, append(craneOptions, cranePlatformOption)...)
+
+	// Retry again without specifying platform
+	if err != nil && (strings.Contains(err.Error(), "no child") || strings.Contains(err.Error(), "not known")) {
+		serializedImageConfig, err = crane.Config(image, craneOptions...)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +137,18 @@ type DockerImage struct {
 	} `json:"history"`
 }
 
-// extractRegistry takes a container image string and returns the registry part.
-// It defaults to "docker.io" if no registry is specified.
-func extractRegistry(image string) string {
+// ExtractRegistry takes a container image string and returns the registry part.
+func ExtractRegistry(image string) string {
 	parts := strings.Split(image, "/")
 	// If the image is just a name, return the default registry.
 	if len(parts) == 1 {
-		return utils.DefaultDockerRegistry
+		return ""
 	}
 	// If the first part contains '.' or ':', it's likely a registry.
 	if strings.Contains(parts[0], ".") || strings.Contains(parts[0], ":") {
 		return parts[0]
 	}
-	return utils.DefaultDockerRegistry
+	return ""
 }
 
 func determineUserGroupPair(userGroupStr string) (int64, int64) {
@@ -134,7 +170,7 @@ type DockerAuths struct {
 }
 
 // ParseSecretData parses secret data for docker auth config
-func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.AuthConfig, error) {
+func ParseSecretData(imageSecrets []corev1.Secret, registry, image string) ([]authn.AuthConfig, error) {
 	var results []authn.AuthConfig
 	for _, imageSecret := range imageSecrets {
 		auths := DockerAuths{}
@@ -158,6 +194,37 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.Aut
 			}
 
 			results = append(results, authn.AuthConfig{Username: username, Password: password})
+		} else {
+			var slice []struct {
+				Path  string
+				Creds authn.AuthConfig
+			}
+
+			for path, creds := range auths.Auths {
+				slice = append(slice, struct {
+					Path  string
+					Creds authn.AuthConfig
+				}{
+					Path:  path,
+					Creds: creds,
+				})
+			}
+
+			sort.Slice(slice, func(i, j int) bool {
+				return slice[i].Path > slice[j].Path
+			})
+
+			for _, item := range slice {
+				if strings.HasPrefix(image, item.Path) {
+					username, password, err := extractRegistryCredentials(item.Creds)
+					if err != nil {
+						return nil, err
+					}
+
+					results = append(results, authn.AuthConfig{Username: username, Password: password})
+					break
+				}
+			}
 		}
 	}
 

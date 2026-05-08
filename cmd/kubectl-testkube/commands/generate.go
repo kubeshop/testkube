@@ -3,7 +3,6 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/crds"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/generate"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -19,7 +18,6 @@ func NewGenerateCmd() *cobra.Command {
 			ui.PrintOnError("Displaying help", err)
 		}}
 
-	cmd.AddCommand(crds.NewCRDTestsCmd())
 	cmd.AddCommand(generate.NewDocsCmd())
 
 	return cmd

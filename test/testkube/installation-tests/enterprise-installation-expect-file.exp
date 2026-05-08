@@ -1,0 +1,12 @@
+#!/usr/bin/expect -f
+
+set timeout -1 ;# disable the default 10s timeout
+
+spawn {*}$env(TESTKUBE_INIT_COMMAND)
+# Confirm credentials are copied
+expect "Do you want to continue?"
+send "y" ;# No return key on choices in Testkube CLI!
+# Don't open the dashboard
+expect "Do you want to open the dashboard?"
+send "n"
+expect eof

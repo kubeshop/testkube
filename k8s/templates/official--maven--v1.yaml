@@ -1,0 +1,27 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: official--maven--v1
+  labels:
+    testkube.io/name: Maven
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Other
+    testkube.io/description: Maven
+    testkube.io/icon: maven
+    testkube.io/image: maven
+spec:
+  config:
+    version:
+      description: Maven version to use
+      type: string
+      default: 3.9.6-eclipse-temurin-22-alpine
+    run:
+      description: Run command
+      type: string
+      default: "mvn test"
+  steps:
+  - name: Run Maven command
+    run:
+      image: "maven:{{ config.version }}"
+      shell: "{{ config.run }}"

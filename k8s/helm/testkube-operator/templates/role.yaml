@@ -1,0 +1,568 @@
+{{ if and .Values.enabled .Values.rbac.create }}
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-operator-manager-role
+  labels:
+  {{- if .Values.global.labels }}
+  {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - executors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - executors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - executors/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - scripts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - scripts/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - scripts/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - tests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - tests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - tests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsuites
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsuites/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsuites/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - webhooks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - webhooks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - webhooks/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - webhooktemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - webhooktemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - executor.testkube.io
+  resources:
+  - webhooktemplates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsources/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testtriggers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testtriggers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testtriggers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testexecutions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testexecutions/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testexecutions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsuiteexecutions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsuiteexecutions/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - testsuiteexecutions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - templates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - templates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - tests.testkube.io
+  resources:
+  - templates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - testworkflows.testkube.io
+  resources:
+  - testworkflowexecutions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - testworkflows.testkube.io
+  resources:
+  - testworkflowexecutions/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - testworkflows.testkube.io
+  resources:
+  - testworkflowexecutions/status
+  verbs:
+  - get
+  - patch
+  - update
+
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-operator-metrics-reader
+  labels:
+  {{- if .Values.global.labels }}
+  {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-operator-proxy-role
+  labels:
+  {{- if .Values.global.labels }}
+  {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-operator-leader-election-role
+  labels:
+  {{- if .Values.global.labels }}
+  {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-cronjobs-role
+  labels:
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+- apiGroups:
+  - ""
+  - "batch"
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - deletecollection
+
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-testworkflows-role
+  labels:
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+  - apiGroups:
+      - testworkflows.testkube.io
+    resources:
+      - testworkflows
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+      - deletecollection
+  - apiGroups:
+      - testworkflows.testkube.io
+    resources:
+      - testworkflowtemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+      - deletecollection
+
+{{- if and .Values.enabled (and .Values.webhook.enabled .Values.webhook.patch.enabled) }}
+---
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-webhook-cert-mgr
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    {{- if .Values.global.annotations }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  labels:
+    {{- include "testkube-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admission-webhook
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - "apiextensions.k8s.io"
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - update
+{{- end }}
+
+---
+
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-namespaces-role
+  labels:
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  namespace: {{ include "testkube-operator.namespace" . }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+
+{{- end -}}

@@ -4,6 +4,12 @@ metadata:
   name: junit5-workflow-smoke
   labels:
     core-tests: workflows
+    tool: junit
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
 spec:
   content:
     git:
@@ -18,6 +24,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: mvn test -Dtest=TestSmoke1,TestSmoke2
@@ -31,6 +39,11 @@ metadata:
   name: junit5-workflow-smoke-expected-fail
   labels:
     core-tests: expected-fail
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
 spec:
   content:
     git:
@@ -45,6 +58,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: mvn test -Dtest=TestSmokeFail
@@ -58,6 +73,11 @@ metadata:
   name: junit5-workflow-smoke-mixed-results
   labels:
     core-tests: expected-fail
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: junit
 spec:
   content:
     git:
@@ -72,6 +92,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: mvn test

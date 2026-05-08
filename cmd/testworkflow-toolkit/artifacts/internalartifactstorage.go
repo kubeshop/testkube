@@ -1,20 +1,24 @@
 package artifacts
 
 import (
-	"context"
 	"io"
+	"os"
 	"path/filepath"
 	"sync"
-	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 type InternalArtifactStorage interface {
 	FullPath(artifactPath string) string
 	SaveStream(artifactPath string, stream io.Reader) error
+	SaveFile(artifactPath string, r io.Reader, info os.FileInfo) error
 	Wait() error
 }
 
@@ -29,20 +33,38 @@ type internalArtifactStorage struct {
 	started  bool
 }
 
-func newArtifactUploader() Uploader {
-	if env.CloudEnabled() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		client, _ := env.Cloud(ctx)
-		return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
+func newArtifactUploader() (Uploader, error) {
+	cfg := config.Config()
+	cloud, err := env.Cloud()
+	if err != nil {
+		return nil, err
 	}
-	return NewDirectUploader(WithParallelism(30), DirectDetectMimetype)
+	return NewCloudUploader(
+		cloud,
+		cfg.Execution.EnvironmentId,
+		cfg.Execution.Id,
+		cfg.Workflow.Name,
+		config.Ref(),
+		WithParallelismCloud(30),
+		CloudDetectMimetype,
+	), nil
 }
 
-func InternalStorage() InternalArtifactStorage {
+func InternalStorage() (InternalArtifactStorage, error) {
+	uploader, err := newArtifactUploader()
+	if err != nil {
+		return nil, err
+	}
 	return &internalArtifactStorage{
-		prefix:   filepath.Join(".testkube", env.Ref()),
-		uploader: newArtifactUploader(),
+		prefix:   filepath.Join(".testkube", config.Ref()),
+		uploader: uploader,
+	}, nil
+}
+
+func InternalStorageForAgent(client controlplaneclient.Client, environmentId, executionId, workflowName, ref string) InternalArtifactStorage {
+	return &internalArtifactStorage{
+		prefix:   filepath.Join(".testkube", ref),
+		uploader: NewCloudUploader(client, environmentId, executionId, workflowName, ref, WithParallelismCloud(30), CloudDetectMimetype),
 	}
 }
 
@@ -66,7 +88,7 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 		return err
 	}
 
-	size := -1
+	var size int
 	if streamL, ok := stream.(withLength); ok {
 		size = streamL.Len()
 	} else {
@@ -79,6 +101,21 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 	}
 	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), stream, int64(size))
 	if err != nil {
+		return err
+	}
+	return s.uploader.End()
+}
+
+func (s *internalArtifactStorage) SaveFile(artifactPath string, r io.Reader, info os.FileInfo) error {
+	if info.IsDir() {
+		return errors.Errorf("error saving file: %q is a directory", info.Name())
+	}
+	err := s.start()
+	if err != nil {
+		return err
+	}
+
+	if err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), r, info.Size()); err != nil {
 		return err
 	}
 	return s.uploader.End()

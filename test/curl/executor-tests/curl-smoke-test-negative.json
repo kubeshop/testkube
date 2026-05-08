@@ -1,7 +1,0 @@
-{
-	"command": [
-	  "curl",
-	  "https://testkube.io/"
-	],
-	"expected_status": "418"
-  }

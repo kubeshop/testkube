@@ -1,0 +1,35 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-step-sharing
+  labels:
+    core-tests: special-cases
+description: "Step sharing - pass values via /testkube/outputs/ and files via step.results"
+spec:
+  use:
+    - name: special-cases-template-default-resources
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Produce
+    id: produce
+    shell: |
+      echo "my_token" > /testkube/outputs/token
+      echo '#!/bin/sh' > {{step.results}}/app
+      echo 'echo "running"' >> {{step.results}}/app
+      chmod +x {{step.results}}/app
+  - name: Consume
+    id: consume
+    shell: |
+      test "{{step.produce.outputs.token}}" = "my_token" || { echo "FAIL: output mismatch"; exit 1; }
+      test -x {{step.produce.results}}/app || { echo "FAIL: binary not found"; exit 1; }
+      {{step.produce.results}}/app
+      echo "consumed" > /testkube/outputs/status
+  - name: Verify
+    id: verify
+    shell: |
+      test "{{step.consume.outputs.status}}" = "consumed" || { echo "FAIL: chained output"; exit 1; }
+      test "{{step.produce.outputs.token}}" = "my_token" || { echo "FAIL: step1 output gone"; exit 1; }
+      test -x {{step.produce.results}}/app || { echo "FAIL: step1 file gone"; exit 1; }

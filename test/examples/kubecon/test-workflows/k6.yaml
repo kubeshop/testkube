@@ -3,20 +3,21 @@ kind: TestWorkflow
 metadata:
   name: k6-loadtest
   labels:
-    core-tests: workflows
+    category: performance-testing
+    artifacts: "true"
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   container:
     resources:
       requests:
         cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
   steps:
   - name: Run test
     container:

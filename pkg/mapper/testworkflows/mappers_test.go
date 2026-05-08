@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 )
 
@@ -18,9 +18,9 @@ var (
 		WorkingDir:      common.Ptr("/wd"),
 		Image:           "some-image",
 		ImagePullPolicy: "IfNotPresent",
-		Env: []corev1.EnvVar{
-			{Name: "some-naaame", Value: "some-value"},
-			{Name: "some-naaame", ValueFrom: &corev1.EnvVarSource{
+		Env: []testworkflowsv1.EnvVar{
+			{EnvVar: corev1.EnvVar{Name: "some-naaame", Value: "some-value"}},
+			{EnvVar: corev1.EnvVar{Name: "some-naaame", ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "api.value.1",
 					FieldPath:  "the.field.pa",
@@ -37,7 +37,7 @@ var (
 					LocalObjectReference: corev1.LocalObjectReference{Name: "some-sec"},
 					Key:                  "sec-key",
 				},
-			}},
+			}}},
 		},
 		EnvFrom: []corev1.EnvFromSource{
 			{
@@ -67,13 +67,20 @@ var (
 				corev1.ResourceMemory: {Type: intstr.Int, IntVal: 10204},
 			},
 		},
-		SecurityContext: &corev1.SecurityContext{
+		SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add:  []corev1.Capability{"NET_ADMIN"},
+				Drop: []corev1.Capability{"ALL"},
+			},
 			RunAsUser:                common.Ptr(int64(334)),
 			RunAsGroup:               common.Ptr(int64(11)),
 			RunAsNonRoot:             common.Ptr(true),
 			ReadOnlyRootFilesystem:   common.Ptr(false),
 			AllowPrivilegeEscalation: nil,
-		},
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: corev1.SeccompProfileTypeRuntimeDefault,
+			},
+		}),
 	}
 	content = testworkflowsv1.Content{
 		Git: &testworkflowsv1.ContentGit{
@@ -192,7 +199,7 @@ var (
 			WorkingDir:      common.Ptr("/aaaa"),
 			Image:           "ssss",
 			ImagePullPolicy: "Never",
-			Env:             []corev1.EnvVar{{Name: "xyz", Value: "bar"}},
+			Env:             []testworkflowsv1.EnvVar{{EnvVar: corev1.EnvVar{Name: "xyz", Value: "bar"}}},
 			Command:         common.Ptr([]string{"ab"}),
 			Args:            common.Ptr([]string{"abrgs"}),
 			Resources: &testworkflowsv1.Resources{
@@ -200,10 +207,10 @@ var (
 					corev1.ResourceMemory: {Type: intstr.String, StrVal: "300m"},
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
+			SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 				Privileged: common.Ptr(true),
 				RunAsUser:  common.Ptr(int64(33)),
-			},
+			}),
 		},
 	}
 	stepBaseOperations = testworkflowsv1.StepOperations{
@@ -214,8 +221,8 @@ var (
 				WorkingDir:      common.Ptr("/abc"),
 				Image:           "im-g",
 				ImagePullPolicy: "IfNotPresent",
-				Env: []corev1.EnvVar{
-					{Name: "abc", Value: "230"},
+				Env: []testworkflowsv1.EnvVar{
+					{EnvVar: corev1.EnvVar{Name: "abc", Value: "230"}},
 				},
 				EnvFrom: []corev1.EnvFromSource{
 					{Prefix: "abc"},
@@ -227,13 +234,13 @@ var (
 						corev1.ResourceCPU: {Type: intstr.Int, IntVal: 444},
 					},
 				},
-				SecurityContext: &corev1.SecurityContext{
+				SecurityContext: testworkflowsv1.WorkflowSecurityContextFromKube(&corev1.SecurityContext{
 					RunAsUser:                common.Ptr(int64(444)),
 					RunAsGroup:               nil,
 					RunAsNonRoot:             common.Ptr(true),
 					ReadOnlyRootFilesystem:   nil,
 					AllowPrivilegeEscalation: nil,
-				},
+				}),
 			},
 		},
 		Execute: &testworkflowsv1.StepExecute{
@@ -330,11 +337,16 @@ var (
 					Cron:        "* * * * *",
 					Labels:      map[string]string{"some-key": "some-value"},
 					Annotations: map[string]string{"some-key=2": "some-value-2"},
+					Timezone:    common.Ptr("America/New_York"),
 				},
 			},
 		},
-		Execution: &testworkflowsv1.TestWorkflowTagSchema{
+		Execution: &testworkflowsv1.TestWorkflowExecutionSchema{
 			Tags: map[string]string{"some-key": "some-value"},
+		},
+		Timeouts: &testworkflowsv1.TestWorkflowTimeouts{
+			Queue:          "30s",
+			Initialization: "60s",
 		},
 	}
 )
@@ -420,4 +432,63 @@ func TestMapEmptyTestWorkflowTemplateBackAndForth(t *testing.T) {
 	}
 	got := MapTestWorkflowTemplateAPIToKube(MapTestWorkflowTemplateKubeToAPI(*want.DeepCopy()))
 	assert.Equal(t, want, got)
+}
+
+func TestMapSecurityContextRoundTrip(t *testing.T) {
+	// Full SecurityContext with all fields including Capabilities, SeccompProfile, etc.
+	sc := &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Add:  []corev1.Capability{"NET_ADMIN", "SYS_PTRACE"},
+			Drop: []corev1.Capability{"ALL"},
+		},
+		Privileged:               common.Ptr(false),
+		SELinuxOptions:           &corev1.SELinuxOptions{User: "system_u", Role: "system_r", Type: "spc_t", Level: "s0"},
+		RunAsUser:                common.Ptr(int64(1000)),
+		RunAsGroup:               common.Ptr(int64(3000)),
+		RunAsNonRoot:             common.Ptr(true),
+		ReadOnlyRootFilesystem:   common.Ptr(true),
+		AllowPrivilegeEscalation: common.Ptr(false),
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+
+	workflowSC := testworkflowsv1.WorkflowSecurityContextFromKube(sc)
+	api := MapSecurityContextKubeToAPI(workflowSC)
+	result := MapSecurityContextAPIToKube(api)
+
+	assert.Equal(t, workflowSC, result)
+}
+
+func TestMapSecurityContextCapabilitiesOnly(t *testing.T) {
+	sc := &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+
+	api := MapSecurityContextKubeToAPI(testworkflowsv1.WorkflowSecurityContextFromKube(sc))
+	result := MapSecurityContextAPIToKube(api)
+
+	assert.NotNil(t, result.Capabilities)
+	assert.Equal(t, []corev1.Capability{"ALL"}, result.Capabilities.Drop)
+}
+
+func TestMapSecurityContextSeccompOnly(t *testing.T) {
+	sc := &corev1.SecurityContext{
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+
+	api := MapSecurityContextKubeToAPI(testworkflowsv1.WorkflowSecurityContextFromKube(sc))
+	result := MapSecurityContextAPIToKube(api)
+
+	assert.NotNil(t, result.SeccompProfile)
+	assert.Equal(t, corev1.SeccompProfileTypeRuntimeDefault, result.SeccompProfile.Type)
+}
+
+func TestMapSecurityContextNil(t *testing.T) {
+	assert.Nil(t, MapSecurityContextKubeToAPI(nil))
+	assert.Nil(t, MapSecurityContextAPIToKube(nil))
 }

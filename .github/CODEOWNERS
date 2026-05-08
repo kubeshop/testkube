@@ -1,12 +1,6 @@
 * @kubeshop/testkube-backend
 
-/assets/ @kubeshop/testkube-docs
-/docs/ @kubeshop/testkube-docs
-/licenses/ @kubeshop/testkube-docs
-LICENSE @kubeshop/testkube-docs
-*.md @kubeshop/testkube-docs
-
-/test/ @kubeshop/testkube-qa @kubeshop/testkube
+/test/ @kubeshop/testkube-qa @kubeshop/testkube-backend
 
 /.github/ @kubeshop/testkube-devops
 /goreleaser_files/ @kubeshop/testkube-devops

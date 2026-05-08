@@ -1,0 +1,43 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: {{ include "global.capabilities.hpa.apiVersion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "testkube-api.fullname" . }}
+  labels: {{- include "global.labels.standard" . | nindent 4 }}
+    {{- if .Values.autoscaling.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.autoscaling.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.autoscaling.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.autoscaling.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+    {{- if .Values.global.annotations}}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: {{ include "global.capabilities.deployment.apiVersion" . }}
+    kind: Deployment
+    name: {{ include "testkube-api.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+        {{- end }}
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
+        {{- end }}
+  {{- end }}

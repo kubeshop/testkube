@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -28,6 +27,10 @@ func (ag *Agent) Load() (listeners common.Listeners, err error) {
 	listeners = append(listeners, ag)
 
 	return listeners, nil
+}
+
+func (ag *Agent) Group() string {
+	return ""
 }
 
 func (ag *Agent) Name() string {
@@ -49,7 +52,17 @@ func (ag *Agent) Metadata() map[string]string {
 	}
 }
 
+func (ag *Agent) Match(event testkube.Event) bool {
+	_, valid := event.Valid(ag.Group(), ag.Selector(), ag.Events())
+	return valid
+}
+
 func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
+	// Avoid re-delivering Control Plane's event back to Control Plane
+	if event.External {
+		return testkube.NewSuccessEventResult(event.Id, "ignored external event")
+	}
+
 	event.ClusterName = ag.clusterName
 	// Non blocking send
 	select {
@@ -61,10 +74,9 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 }
 
 func (ag *Agent) runEventLoop(ctx context.Context) error {
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name)}
-	md := metadata.Pairs(apiKeyMeta, ag.apiKey)
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	ctx = ag.outgoingContext(ctx)
 
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name)}
 	stream, err := ag.client.Send(ctx, opts...)
 	if err != nil {
 		ag.logger.Errorf("failed to execute: %v", err)
@@ -114,15 +126,10 @@ func (ag *Agent) sendEvent(ctx context.Context, stream cloud.TestKubeCloudAPI_Se
 	t := time.NewTimer(ag.sendTimeout)
 	select {
 	case err := <-errChan:
-		if !t.Stop() {
-			<-t.C
-		}
+		t.Stop()
 		return err
 	case <-ctx.Done():
-		if !t.Stop() {
-			<-t.C
-		}
-
+		t.Stop()
 		return ctx.Err()
 	case <-t.C:
 		return errors.New("too slow")

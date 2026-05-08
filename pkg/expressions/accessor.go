@@ -14,9 +14,9 @@ func newAccessor(name string) Expression {
 	// Map values based on wildcard
 	segments := strings.Split(name, ".*")
 	if len(segments) > 1 {
-		return newCall("map", []callArgument{
-			{expr: newAccessor(strings.Join(segments[0:len(segments)-1], ".*"))},
-			{expr: NewStringValue("_.value" + segments[len(segments)-1])},
+		return newCall("map", []CallArgument{
+			{Expression: newAccessor(strings.Join(segments[0:len(segments)-1], ".*"))},
+			{Expression: NewStringValue("_.value" + segments[len(segments)-1])},
 		})
 	}
 
@@ -68,7 +68,7 @@ func (s *accessor) SafeResolve(m ...Machine) (v Expression, changed bool, err er
 			}
 		}
 		if err != nil {
-			return nil, false, fmt.Errorf("error while accessing %s: %s", s.String(), err.Error())
+			return nil, false, fmt.Errorf("error while accessing %s: %w", s.String(), err)
 		}
 	}
 	return s, false, nil

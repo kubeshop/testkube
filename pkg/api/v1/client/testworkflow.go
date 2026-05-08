@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -79,6 +80,12 @@ func (c TestWorkflowClient) CreateTestWorkflow(workflow testkube.TestWorkflow) (
 	return c.testWorkflowTransport.Execute(http.MethodPost, uri, body, nil)
 }
 
+// ValidateTestWorkflow validates new TestWorkflow Custom Resource
+func (c TestWorkflowClient) ValidateTestWorkflow(body []byte) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows")
+	return c.testWorkflowTransport.Validate(http.MethodPut, uri, body, nil)
+}
+
 // UpdateTestWorkflow updates TestWorkflow Custom Resource
 func (c TestWorkflowClient) UpdateTestWorkflow(workflow testkube.TestWorkflow) (result testkube.TestWorkflow, err error) {
 	if workflow.Name == "" {
@@ -93,6 +100,26 @@ func (c TestWorkflowClient) UpdateTestWorkflow(workflow testkube.TestWorkflow) (
 	}
 
 	return c.testWorkflowTransport.Execute(http.MethodPut, uri, body, nil)
+}
+
+// UpdateTestWorkflowStatus updates only the status of TestWorkflow Custom Resource
+// This method is used for status updates that should use the Kubernetes status subresource
+func (c TestWorkflowClient) UpdateTestWorkflowStatus(workflow testkube.TestWorkflow) error {
+	if workflow.Name == "" {
+		return fmt.Errorf("test workflow name '%s' is not valid", workflow.Name)
+	}
+
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/status", workflow.Name)
+
+	// For status updates, we send the entire workflow object as per Kubernetes convention
+	// The server/k8s client will handle extracting only the status field
+	body, err := json.Marshal(workflow)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.testWorkflowTransport.Execute(http.MethodPut, uri, body, nil)
+	return err
 }
 
 // DeleteTestWorkflow deletes single test by name
@@ -121,11 +148,56 @@ func (c TestWorkflowClient) ExecuteTestWorkflow(name string, request testkube.Te
 	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
 }
 
+// ExecuteTestWorkflows starts new external test workflow executions, reads data and returns IDs
+// Executions are started asynchronously client can check later for results
+func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) (executions []testkube.TestWorkflowExecution, err error) {
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions")
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executions, err
+	}
+
+	params := map[string]string{
+		"selector": selector,
+	}
+
+	return c.testWorkflowExecutionTransport.ExecuteMultiple(http.MethodPost, uri, body, params)
+}
+
 // GetTestWorkflowExecutionNotifications returns events stream from job pods, based on job pods logs
 func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	return c.GetTestWorkflowExecutionNotificationsWithOptions(id, TestWorkflowExecutionNotificationsOptions{Context: context.Background()})
+}
+
+func (c TestWorkflowClient) GetTestWorkflowExecutionNotificationsWithOptions(id string, options TestWorkflowExecutionNotificationsOptions) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
 	notifications = make(chan testkube.TestWorkflowExecutionNotification)
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications", id)
-	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications, options)
+	return notifications, err
+}
+
+// GetTestWorkflowExecutionServiceNotifications returns events stream from job pods, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	return c.GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName, serviceIndex, TestWorkflowExecutionNotificationsOptions{Context: context.Background()})
+}
+
+func (c TestWorkflowClient) GetTestWorkflowExecutionServiceNotificationsWithOptions(id, serviceName string, serviceIndex int, options TestWorkflowExecutionNotificationsOptions) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	notifications = make(chan testkube.TestWorkflowExecutionNotification)
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/services/%s/%d", id, serviceName, serviceIndex)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications, options)
+	return notifications, err
+}
+
+// GetTestWorkflowExecutionParallelStepNotifications returns events stream from job pods, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	return c.GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref, workerIndex, TestWorkflowExecutionNotificationsOptions{Context: context.Background()})
+}
+
+func (c TestWorkflowClient) GetTestWorkflowExecutionParallelStepNotificationsWithOptions(id, ref string, workerIndex int, options TestWorkflowExecutionNotificationsOptions) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	notifications = make(chan testkube.TestWorkflowExecutionNotification)
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/parallel-steps/%s/%d", id, ref, workerIndex)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications, options)
 	return notifications, err
 }
 
@@ -136,29 +208,44 @@ func (c TestWorkflowClient) GetTestWorkflowExecution(id string) (testkube.TestWo
 }
 
 // ListTestWorkflowExecutions list test workflow executions for selected workflow
-func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, selector, tagSelector string) (testkube.TestWorkflowExecutionsResult, error) {
+func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, options FilterTestWorkflowExecutionOptions) (testkube.TestWorkflowExecutionsResult, error) {
 	uri := c.testWorkflowExecutionsResultTransport.GetURI("/test-workflow-executions/")
 	if id != "" {
 		uri = c.testWorkflowExecutionsResultTransport.GetURI(fmt.Sprintf("/test-workflows/%s/executions", id))
 	}
 	params := map[string]string{
-		"selector":    selector,
+		"selector":    options.Selector,
 		"pageSize":    fmt.Sprintf("%d", limit),
-		"tagSelector": tagSelector,
+		"tagSelector": options.TagSelector,
+		"actorName":   options.ActorName,
+		"actorType":   string(options.ActorType),
+		"status":      options.Status,
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }
 
+// PauseTestWorkflowExecution pauses selected execution
+func (c TestWorkflowClient) PauseTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/pause", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
+}
+
+// ResumeTestWorkflowExecution pauses selected execution
+func (c TestWorkflowClient) ResumeTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/resume", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
+}
+
 // AbortTestWorkflowExecution aborts selected execution
-func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string) error {
+func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string, force bool) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort", workflow, id)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, map[string]string{"forceAgent": fmt.Sprint(force)}, false)
 }
 
 // AbortTestWorkflowExecutions aborts all workflow executions
 func (c TestWorkflowClient) AbortTestWorkflowExecutions(workflow string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/abort", workflow)
-	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, nil, false)
 }
 
 // GetTestWorkflowExecutionArtifacts returns execution artifacts
@@ -183,4 +270,42 @@ func (c TestWorkflowClient) DownloadTestWorkflowArtifactArchive(executionID, des
 func (c TestWorkflowClient) GetTestWorkflowExecutionLogs(id string) (result []byte, err error) {
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/logs", id)
 	return c.testWorkflowTransport.GetRawBody(http.MethodGet, uri, nil, nil)
+}
+
+// UpdateTestWorkflowExecutionTags updates tags on a test workflow execution
+func (c TestWorkflowClient) UpdateTestWorkflowExecutionTags(executionID string, tags map[string]string) error {
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions/%s/tags", executionID)
+
+	body, err := json.Marshal(tags)
+	if err != nil {
+		return err
+	}
+
+	return c.testWorkflowExecutionTransport.Validate(http.MethodPatch, uri, body, nil)
+}
+
+// ReRunTestWorkflowExecution reruns selected execution
+func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
+	if workflow == "" {
+		return result, fmt.Errorf("test workflow name '%s' is not valid", workflow)
+	}
+
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/rerun", workflow, id)
+
+	body, err := json.Marshal(runningContext)
+	if err != nil {
+		return result, err
+	}
+
+	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
+}
+
+// ExportExecutions downloads the export archive from the server
+func (c TestWorkflowClient) ExportExecutions(destination string, since string) (fileName string, err error) {
+	uri := c.testWorkflowTransport.GetURI("/export")
+	var params map[string][]string
+	if since != "" {
+		params = map[string][]string{"since": {since}}
+	}
+	return c.testWorkflowTransport.GetFile(uri, ExportArchiveFileName, destination, params)
 }

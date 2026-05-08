@@ -1,0 +1,11 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// WorkflowTrigger contains a protobuf encoded representation of a
+// WorkflowTrigger object.
+message WorkflowTrigger {
+  // payload contains the following Go struct as JSON encoded data:
+  //   github.com/kubeshop/testkube/api/workflowtriggers/v1.WorkflowTrigger
+  bytes payload = 1;
+}

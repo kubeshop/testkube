@@ -1,0 +1,40 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ExecutionStart contains fields used to initially start an Execution.
+message ExecutionStart {
+  // execution_id is the unique identifier of the execution to be started.
+  string execution_id = 1;
+  // group_id is the identifier of the execution group to which this execution belongs.
+  string group_id = 2;
+  // name is the human friendly name used to identify the execution.
+  string name = 3;
+  // number is the count of the execution for the parent workflow.
+  int32 number = 4;
+  // queued_at is the time at which the execution was originally queued, it can be used
+  // to calculate durations for the execution based on when it was first recognised.
+  // This field correlates to the ScheduledAt field used in some internal data structures.
+  google.protobuf.Timestamp queued_at = 5;
+  // disable_webhooks indicates whether or not webhooks should be disabled for this execution.
+  bool disable_webhooks = 6;
+  // environment_id is the unique identifier of the environment in which the execution should be started.
+  string environment_id = 7;
+  // execution_token is an authentication token that can be used to obtain any required
+  // additional information about an execution from the Control Plane.
+  string execution_token = 8;
+  // ancestor_execution_ids contains the identifiers for any executions that triggered this execution
+  // to be started. It may be empty.
+  repeated string ancestor_execution_ids = 9;
+  // workflow_name is the name of the workflow to which this execution is related.
+  // It can be used to obtain the full workflow either from kubernetes directly or
+  // via the Control Plane if the workflow is in a different location inaccessible
+  // to the client.
+  string workflow_name = 10;
+  // variable_overrides indicates values that should be used to override pre-set variables when executing
+  // this instance of the workflow execution. Keys may refer to known variables, and the values to the
+  // override values. Unknown keys may be ignored.
+  map<string, string> variable_overrides = 11;
+}

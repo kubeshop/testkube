@@ -22,7 +22,6 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/go-errors/errors v1.5.1
-	github.com/go-git/go-git/v6 v6.0.0-alpha.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/contrib/otelfiber/v2 v2.2.3
@@ -89,8 +88,8 @@ require (
 	k8s.io/apiextensions-apiserver v0.36.0
 	k8s.io/apimachinery v0.36.0
 	k8s.io/client-go v0.36.0
-	k8s.io/kube-openapi v0.0.0-20260505163821-33341827b392
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	k8s.io/kube-openapi v0.0.0-20260507235316-19c3011e7fa0
+	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
 	sigs.k8s.io/controller-runtime v0.24.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -171,6 +170,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/go-git/go-billy/v6 v6.0.0-20260424211911-732291493fb8 // indirect
+	github.com/go-git/go-git/v6 v6.0.0-alpha.3 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

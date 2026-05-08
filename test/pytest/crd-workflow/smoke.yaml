@@ -4,6 +4,10 @@ metadata:
   name: pytest-workflow-smoke
   labels:
     core-tests: workflows
+    tool: pytest
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: pytest
 spec:
   content:
     git:
@@ -18,6 +22,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: |
@@ -30,6 +36,12 @@ metadata:
   name: pytest-workflow-smoke-junit-success-only
   labels:
     core-tests: workflows
+    tool: pytest
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: pytest
 spec:
   content:
     git:
@@ -44,6 +56,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: |
@@ -60,6 +74,12 @@ metadata:
   name: pytest-workflow-smoke-junit-mixed-failures
   labels:
     core-tests: expected-fail
+    tool: pytest
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: pytest
 spec:
   content:
     git:
@@ -74,12 +94,52 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: |
       pip install -r requirements.txt
       mkdir /data/artifacts
-      pytest tests --junit-xml=/data/artifacts/pytest-report.xml
+      pytest tests/success tests/fail --junit-xml=/data/artifacts/pytest-report.xml
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pytest-workflow-smoke-junit-random-failures
+  labels:
+    core-tests: expected-random-fail
+    tool: pytest
+    artifacts: "true"
+    junit: "true"
+    category: unit-component-testing
+  annotations:
+    testkube.io/icon: pytest
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/pytest/pytest-project
+  container:
+    image: python:3.12.6-alpine3.20
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds: 180
+  steps:
+  - name: Run random tests
+    shell: |
+      pip install -r requirements.txt
+      mkdir /data/artifacts
+      pytest tests/random tests/success --junit-xml=/data/artifacts/pytest-report.xml
     artifacts:
       paths:
       - "/data/artifacts/**"

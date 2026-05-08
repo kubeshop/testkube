@@ -1,0 +1,22 @@
+edition = "2023";
+
+package testkube.testworkflow.signature.v1;
+
+// Signature is a representation of a step of a Test Workflow.
+message Signature {
+  // ref is the unique reference for the step in the Test Workflow.
+  string ref = 1;
+  // name is a human friendly name for the step.
+  string name = 2;
+  // category, no idea really, could be a test type e.g. "unit", "integration", or could be the
+  // name of the step e.g. "Run shell command", "Fetch tarball". Probably don't rely on this
+  // value to actually mean anything.
+  string category = 3;
+  // optional indicates whether this step is optional or not for the success of the Test Workflow.
+  bool optional = 4;
+  // negative indicates whether or not this step should pass (default) or fail (negative == true)
+  // for this step of the Test Workflow to be considered successful.
+  bool negative = 5;
+  // children refers to any other steps that may be executed as part of this step.
+  repeated Signature children = 7;
+}

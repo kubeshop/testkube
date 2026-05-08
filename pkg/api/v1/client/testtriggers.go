@@ -66,6 +66,26 @@ func (c TestTriggerClient) UpdateTestTrigger(options UpdateTestTriggerOptions) (
 	return c.triggerTransport.Execute(http.MethodPatch, uri, body, nil)
 }
 
+// UpdateTestTriggerWithReplaceMode updates TestTrigger Custom Resource using full replacement mode
+// instead of merge semantics. All fields from the request will replace existing fields.
+func (c TestTriggerClient) UpdateTestTriggerWithReplaceMode(options UpdateTestTriggerOptions) (trigger testkube.TestTrigger, err error) {
+	name := ""
+	if options.Name != "" {
+		name = options.Name
+	}
+
+	uri := c.triggerTransport.GetURI("/triggers/%s", name)
+	request := testkube.TestTriggerUpsertRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return trigger, err
+	}
+
+	params := map[string]string{"mode": "replace"}
+	return c.triggerTransport.Execute(http.MethodPatch, uri, body, params)
+}
+
 // DeleteTestTriggers deletes all triggers
 func (c TestTriggerClient) DeleteTestTriggers(selector string) (err error) {
 	uri := c.triggerTransport.GetURI("/triggers")

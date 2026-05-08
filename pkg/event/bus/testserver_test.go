@@ -9,7 +9,7 @@ import (
 
 func TestServerRestart(t *testing.T) {
 	// given NATS server
-	s, nc := TestServerWithConnection()
+	s, nc := TestServerWithConnection(t)
 	defer s.Shutdown()
 
 	// and NATS Subscription

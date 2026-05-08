@@ -2,42 +2,39 @@ package triggers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
-	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+
+	"k8s.io/client-go/dynamic"
+
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	intconfig "github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/coordination/leader"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/http"
-	"github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
+	testkubeclientsetv1 "github.com/kubeshop/testkube/pkg/operator/clientset/versioned"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/scheduler"
-	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/utils"
-	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
 	defaultScraperInterval        = 5 * time.Second
-	defaultLeaseCheckInterval     = 5 * time.Second
-	defaultMaxLeaseDuration       = 1 * time.Minute
 	defaultConditionsCheckBackoff = 1 * time.Second
 	defaultConditionsCheckTimeout = 60 * time.Second
 	defaultProbesCheckBackoff     = 1 * time.Second
@@ -46,96 +43,102 @@ const (
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
+// Service watches Kubernetes resources and TestTrigger CRDs in-cluster,
+// matches events against registered triggers, and executes actions.
+//
+// Lock ordering (deadlock-avoidance): acquire triggerStatusMu before any
+// per-status RWMutex. snapshotStatuses takes triggerStatusMu, copies each
+// status's trigger pointer into the returned entry, and releases the lock
+// before callers touch a status's own per-status lock. updateTrigger writes
+// the trigger pointer directly while holding triggerStatusMu.Lock().
 type Service struct {
+	// informers is set on lease acquisition (runWatcher) and nil-ed on
+	// release. informersMu guards the pointer so tests and external callers
+	// can safely observe it; runInformers reads it from the same goroutine
+	// that writes it and therefore doesn't need the lock.
 	informers                     *k8sInformers
-	leaseBackend                  LeaseBackend
+	informersMu                   sync.RWMutex
 	identifier                    string
 	clusterID                     string
+	agentName                     string
 	triggerExecutor               ExecutorF
 	scraperInterval               time.Duration
-	leaseCheckInterval            time.Duration
-	maxLeaseDuration              time.Duration
 	defaultConditionsCheckTimeout time.Duration
 	defaultConditionsCheckBackoff time.Duration
 	defaultProbesCheckTimeout     time.Duration
 	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
+	// triggerStatus is mutated by informer event handlers (addTrigger /
+	// updateTrigger / removeTrigger) and read by the matcher and scraper.
+	// triggerStatusMu guards the map itself; concurrency on individual
+	// *triggerStatus values is handled by their own embedded sync.RWMutex.
 	triggerStatus                 map[statusKey]*triggerStatus
-	scheduler                     *scheduler.Scheduler
+	triggerStatusMu               sync.RWMutex
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
-	testSuitesClient              testsuitesclientv3.Interface
-	testsClient                   testsclientv3.Interface
-	testWorkflowsClient           testworkflowsclientv1.Interface
-	resultRepository              result.Repository
-	testResultRepository          testresult.Repository
+	testWorkflowsClient           testworkflowclient.TestWorkflowClient
+	testTriggersClient            testtriggerclient.TestTriggerClient
+	workflowTriggersClient        workflowtriggerclient.WorkflowTriggerClient
 	logger                        *zap.SugaredLogger
-	configMap                     config.Repository
-	executorsClient               executorsclientv1.Interface
 	httpClient                    http.HttpClient
-	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
 	metrics                       metrics.Metrics
+	executionWorkerClient         executionworkertypes.Worker
 	testWorkflowExecutor          testworkflowexecutor.TestWorkflowExecutor
 	testWorkflowResultsRepository testworkflow.Repository
 	testkubeNamespace             string
 	watcherNamespaces             []string
-	disableSecretCreation         bool
+	proContext                    *intconfig.ProContext
+	testTriggerControlPlane       bool
+	eventLabels                   map[string]string
+	dynamicClient                 dynamic.Interface
+	dynamicManager                *dynamicInformerManager
+	Agent                         watcherAgent
+	coordinator                   *leader.Coordinator
 }
 
 type Option func(*Service)
 
 func NewService(
-	scheduler *scheduler.Scheduler,
+	agentName string,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
-	testSuitesClient testsuitesclientv3.Interface,
-	testsClient testsclientv3.Interface,
-	testWorkflowsClient testworkflowsclientv1.Interface,
-	resultRepository result.Repository,
-	testResultRepository testresult.Repository,
-	leaseBackend LeaseBackend,
+	testWorkflowsClient testworkflowclient.TestWorkflowClient,
+	testTriggersClient testtriggerclient.TestTriggerClient,
+	leaseBackend leasebackend.Repository,
 	logger *zap.SugaredLogger,
-	configMap config.Repository,
-	executorsClient executorsclientv1.Interface,
-	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
+	executionWorkerClient executionworkertypes.Worker,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	testWorkflowResultsRepository testworkflow.Repository,
+	proContext *intconfig.ProContext,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
 		identifier:                    identifier,
 		clusterID:                     defaultClusterID,
+		agentName:                     agentName,
 		scraperInterval:               defaultScraperInterval,
-		leaseCheckInterval:            defaultLeaseCheckInterval,
-		maxLeaseDuration:              defaultMaxLeaseDuration,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
-		scheduler:                     scheduler,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
-		testSuitesClient:              testSuitesClient,
 		testWorkflowsClient:           testWorkflowsClient,
-		testsClient:                   testsClient,
-		resultRepository:              resultRepository,
-		testResultRepository:          testResultRepository,
-		leaseBackend:                  leaseBackend,
+		testTriggersClient:            testTriggersClient,
 		logger:                        logger,
-		configMap:                     configMap,
-		executorsClient:               executorsClient,
-		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
+		executionWorkerClient:         executionWorkerClient,
 		testWorkflowExecutor:          testWorkflowExecutor,
 		testWorkflowResultsRepository: testWorkflowResultsRepository,
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
+		proContext:                    proContext,
 	}
 	if s.triggerExecutor == nil {
 		s.triggerExecutor = s.execute
@@ -145,15 +148,33 @@ func NewService(
 		opt(s)
 	}
 
-	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	// Initialize agent snapshot from proContext if available
+	s.Agent = watcherAgent{}
+	if s.proContext != nil {
+		s.Agent.Name = s.proContext.Agent.Name
+		s.Agent.Labels = s.proContext.Agent.Labels
+	}
+
+	coordinatorLogger := logger.With("component", "trigger-service", "identifier", s.identifier)
+	s.coordinator = leader.New(leaseBackend, s.identifier, s.clusterID, coordinatorLogger)
+
+	s.coordinator.Register(leader.Task{
+		Name: "trigger-watcher",
+		Start: func(taskCtx context.Context) error {
+			s.runWatcher(taskCtx)
+			return nil
+		},
+	})
+
+	s.coordinator.Register(leader.Task{
+		Name: "trigger-scraper",
+		Start: func(taskCtx context.Context) error {
+			s.runExecutionScraper(taskCtx)
+			return nil
+		},
+	})
 
 	return s
-}
-
-func WithIdentifier(id string) Option {
-	return func(s *Service) {
-		s.identifier = id
-	}
 }
 
 func WithHostnameIdentifier() Option {
@@ -162,36 +183,6 @@ func WithHostnameIdentifier() Option {
 		if err == nil {
 			s.identifier = identifier
 		}
-	}
-}
-
-func WithClusterID(id string) Option {
-	return func(s *Service) {
-		s.clusterID = id
-	}
-}
-
-func WithWatchFromDate(from time.Time) Option {
-	return func(s *Service) {
-		s.watchFromDate = from
-	}
-}
-
-func WithLeaseCheckerInterval(interval time.Duration) Option {
-	return func(s *Service) {
-		s.leaseCheckInterval = interval
-	}
-}
-
-func WithScraperInterval(interval time.Duration) Option {
-	return func(s *Service) {
-		s.scraperInterval = interval
-	}
-}
-
-func WithExecutor(triggerExecutor ExecutorF) Option {
-	return func(s *Service) {
-		s.triggerExecutor = triggerExecutor
 	}
 }
 
@@ -212,157 +203,249 @@ func WithWatcherNamespaces(namespaces string) Option {
 	}
 }
 
-func WithDisableSecretCreation(disableSecretCreation bool) Option {
+// WithTestTriggerControlPlane enables Control Plane-backed trigger watching
+func WithTestTriggerControlPlane(enabled bool) Option {
 	return func(s *Service) {
-		s.disableSecretCreation = disableSecretCreation
+		s.testTriggerControlPlane = enabled
+	}
+}
+
+// WithWorkflowTriggersClient injects the client used for control-plane-backed
+// WorkflowTrigger v2 polling. When set alongside testTriggerControlPlane=true
+// the dynamic informer is bypassed and this client is polled instead.
+func WithWorkflowTriggersClient(client workflowtriggerclient.WorkflowTriggerClient) Option {
+	return func(s *Service) {
+		s.workflowTriggersClient = client
+	}
+}
+
+func WithEventLabels(eventLabels map[string]string) Option {
+	return func(s *Service) {
+		s.eventLabels = eventLabels
+	}
+}
+
+func WithDynamicClient(client dynamic.Interface) Option {
+	return func(s *Service) {
+		s.dynamicClient = client
 	}
 }
 
 func (s *Service) Run(ctx context.Context) {
-	leaseChan := make(chan bool)
+	if s.coordinator == nil {
+		<-ctx.Done()
+		return
+	}
 
-	go s.runLeaseChecker(ctx, leaseChan)
-
-	go s.runWatcher(ctx, leaseChan)
-
-	go s.runExecutionScraper(ctx)
+	if err := s.coordinator.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		if s.logger != nil {
+			s.logger.Errorw("trigger service: coordinator stopped unexpectedly", "error", err)
+		}
+	}
 }
 
-func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
-	key := newStatusKey(t.Namespace, t.Name)
-	s.triggerStatus[key] = newTriggerStatus(t)
+func (s *Service) addTrigger(ctx context.Context, t *testtriggersv1.TestTrigger) {
+	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	if _, exists := s.triggerStatus[key]; exists {
+		// Informer resyncs replay AddFunc for every existing object. Skip to
+		// avoid re-registering the same trigger's dynamic informer reference.
+		return
+	}
+	s.triggerStatus[key] = newTriggerStatusFromV1(t)
+	s.ensureDynamicInformerForTrigger(ctx, t, key)
 }
 
-func (s *Service) updateTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+func (s *Service) updateTrigger(ctx context.Context, target *testtriggersv1.TestTrigger) {
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
 	if s.triggerStatus[key] != nil {
-		s.triggerStatus[key].testTrigger = target
+		old := s.triggerStatus[key].trigger
+		newInternal := convertV1ToInternal(target)
+
+		// Only restart dynamic informer if the GVR actually changed
+		gvrChanged := old != nil && (old.ResourceGroup != newInternal.ResourceGroup ||
+			old.ResourceVersion != newInternal.ResourceVersion ||
+			old.ResourceKind != newInternal.ResourceKind)
+
+		if gvrChanged && old.ResourceKind != "" {
+			s.releaseDynamicInformerForTrigger(&testtriggersv1.TestTrigger{
+				Spec: testtriggersv1.TestTriggerSpec{ResourceRef: &testtriggersv1.TestTriggerResourceRef{
+					Group: old.ResourceGroup, Version: old.ResourceVersion, Kind: old.ResourceKind,
+				}},
+			}, key)
+		}
+
+		s.triggerStatus[key].trigger = newInternal
+
+		if gvrChanged {
+			s.ensureDynamicInformerForTrigger(ctx, target, key)
+		}
 	} else {
-		s.triggerStatus[key] = newTriggerStatus(target)
+		s.triggerStatus[key] = newTriggerStatusFromV1(target)
+		s.ensureDynamicInformerForTrigger(ctx, target, key)
 	}
 }
 
 func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
-	key := newStatusKey(target.Namespace, target.Name)
+	key := newStatusKey(triggerSourceV1, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
 	delete(s.triggerStatus, key)
+	s.releaseDynamicInformerForTrigger(target, key)
 }
 
-func (s *Service) addTest(test *testsv3.Test) {
-	ctx := context.Background()
-	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
-	if err != nil {
-		s.logger.Debugw("getting telemetry enabled error", "error", err)
+// ensureDynamicInformerForTrigger starts a dynamic informer if the trigger
+// uses resourceRef pointing to a custom resource. Built-in types already
+// have typed informers and must NOT get a dynamic informer to avoid double-firing.
+// The caller's ctx is propagated so in-flight probe/condition waits cancel
+// when the trigger service loses its lease.
+func (s *Service) ensureDynamicInformerForTrigger(ctx context.Context, t *testtriggersv1.TestTrigger, key statusKey) {
+	if t.Spec.ResourceRef == nil {
+		return
 	}
-
-	if !telemetryEnabled {
+	if s.dynamicManager == nil {
+		s.logger.Warnf(
+			"trigger service: TestTrigger %s/%s has resourceRef=%s but no dynamic client is configured; custom-resource events will be ignored",
+			t.Namespace, t.Name, t.Spec.ResourceRef.Kind,
+		)
+		return
+	}
+	if isBuiltinResource(t.Spec.ResourceRef.Kind) {
+		s.logger.Debugf("trigger service: skipping dynamic informer for built-in type %s", t.Spec.ResourceRef.Kind)
 		return
 	}
 
-	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
+	gvr, err := resolveGVR(s.dynamicManager.mapper, t.Spec.ResourceRef.Group, t.Spec.ResourceRef.Version, t.Spec.ResourceRef.Kind)
 	if err != nil {
-		s.logger.Debugw("getting cluster id error", "error", err)
-	}
-
-	host, err := os.Hostname()
-	if err != nil {
-		s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
-	}
-
-	var dataSource string
-	if test.Spec.Content != nil {
-		dataSource = string(test.Spec.Content.Type_)
-	}
-
-	out, err := telemetry.SendCreateEvent("testkube_api_create_test", telemetry.CreateParams{
-		AppVersion: version.Version,
-		DataSource: dataSource,
-		Host:       host,
-		ClusterID:  clusterID,
-		TestType:   test.Spec.Type_,
-		TestSource: test.Spec.Source,
-	})
-	if err != nil {
-		s.logger.Debugw("sending create test telemetry event error", "error", err)
-	} else {
-		s.logger.Debugw("sending create test telemetry event", "output", out)
-	}
-
-	if test.Labels == nil {
-		test.Labels = make(map[string]string)
-	}
-
-	test.Labels[testkube.TestLabelTestType] = utils.SanitizeName(test.Spec.Type_)
-	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
-	if err == nil {
-		test.Labels[testkube.TestLabelExecutor] = executorCR.Name
-	} else {
-		s.logger.Debugw("can't get executor spec", "error", err)
-	}
-
-	if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
-		s.logger.Debugw("can't update test spec", "error", err)
-	}
-}
-
-func (s *Service) updateTest(test *testsv3.Test) {
-	changed := false
-	if test.Labels == nil {
-		test.Labels = make(map[string]string)
-	}
-
-	testType := utils.SanitizeName(test.Spec.Type_)
-	if test.Labels[testkube.TestLabelTestType] != testType {
-		test.Labels[testkube.TestLabelTestType] = testType
-		changed = true
-	}
-
-	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
-	if err == nil {
-		if test.Labels[testkube.TestLabelExecutor] != executorCR.Name {
-			test.Labels[testkube.TestLabelExecutor] = executorCR.Name
-			changed = true
-		}
-	} else {
-		s.logger.Debugw("can't get executor spec", "error", err)
-	}
-
-	if changed {
-		if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
-			s.logger.Debugw("can't update test spec", "error", err)
-		}
-	}
-}
-
-func (s *Service) addTestSuite(testSuite *testsuitev3.TestSuite) {
-	ctx := context.Background()
-	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
-	if err != nil {
-		s.logger.Debugw("getting telemetry enabled error", "error", err)
-	}
-
-	if !telemetryEnabled {
+		s.logger.Errorf("trigger service: failed to resolve GVR for %s: %v", t.Spec.ResourceRef.Kind, err)
 		return
 	}
 
-	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
-	if err != nil {
-		s.logger.Debugw("getting cluster id error", "error", err)
-	}
+	s.dynamicManager.ensureInformer(ctx, gvr, string(key), s.dynamicEventHandler(ctx, gvr))
+}
 
-	host, err := os.Hostname()
-	if err != nil {
-		s.logger.Debugw("getting hostname error", "hostname", host, "error", err)
+func (s *Service) releaseDynamicInformerForTrigger(t *testtriggersv1.TestTrigger, key statusKey) {
+	if t.Spec.ResourceRef == nil {
+		return
 	}
+	s.releaseDynamicInformerByGVK(t.Spec.ResourceRef.Group, t.Spec.ResourceRef.Version, t.Spec.ResourceRef.Kind, key)
+}
 
-	out, err := telemetry.SendCreateEvent("testkube_api_create_test_suite", telemetry.CreateParams{
-		AppVersion:     version.Version,
-		Host:           host,
-		ClusterID:      clusterID,
-		TestSuiteSteps: int32(len(testSuite.Spec.Before) + len(testSuite.Spec.Steps) + len(testSuite.Spec.After)),
-	})
+// releaseDynamicInformerByGVK resolves the GVR for the given kind and releases
+// the dynamic informer reference held under the given key. Safe to call when
+// the CRD has already been deleted — resolveGVR fails and we skip at Debug
+// level because that's an expected cleanup ordering, not an operator-actionable
+// condition.
+func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key statusKey) {
+	if s.dynamicManager == nil || isBuiltinResource(kind) {
+		return
+	}
+	gvr, err := resolveGVR(s.dynamicManager.mapper, group, version, kind)
 	if err != nil {
-		s.logger.Debugw("sending create test suite telemetry event error", "error", err)
+		s.logger.Debugf("trigger service: informer cleanup skipped for %s/%s/%s (key=%s): %v",
+			group, version, kind, key, err)
+		return
+	}
+	s.dynamicManager.releaseInformer(gvr, string(key))
+}
+
+func (s *Service) addWorkflowTrigger(ctx context.Context, t *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, t.Namespace, t.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	if _, exists := s.triggerStatus[key]; exists {
+		// Informer resyncs replay AddFunc. Skip to avoid re-registering dynamic informers.
+		return
+	}
+	s.triggerStatus[key] = &triggerStatus{trigger: convertV2ToInternal(t)}
+	s.ensureDynamicInformerForWorkflowTrigger(ctx, t, key)
+}
+
+func (s *Service) updateWorkflowTrigger(ctx context.Context, target *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	if s.triggerStatus[key] != nil {
+		old := s.triggerStatus[key].trigger
+		newInternal := convertV2ToInternal(target)
+
+		gvrChanged := old != nil && (old.ResourceGroup != newInternal.ResourceGroup ||
+			old.ResourceVersion != newInternal.ResourceVersion ||
+			old.ResourceKind != newInternal.ResourceKind)
+
+		if gvrChanged && old.ResourceKind != "" {
+			s.releaseDynamicInformerByGVK(old.ResourceGroup, old.ResourceVersion, old.ResourceKind, key)
+		}
+
+		s.triggerStatus[key].trigger = newInternal
+
+		if gvrChanged {
+			s.ensureDynamicInformerForWorkflowTrigger(ctx, target, key)
+		}
 	} else {
-		s.logger.Debugw("sending create test suite telemetry event", "output", out)
+		s.triggerStatus[key] = &triggerStatus{trigger: convertV2ToInternal(target)}
+		s.ensureDynamicInformerForWorkflowTrigger(ctx, target, key)
 	}
+}
+
+func (s *Service) removeWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigger) {
+	key := newStatusKey(triggerSourceV2, target.Namespace, target.Name)
+	s.triggerStatusMu.Lock()
+	defer s.triggerStatusMu.Unlock()
+	delete(s.triggerStatus, key)
+	if target.Spec.Watch == nil {
+		return
+	}
+	s.releaseDynamicInformerByGVK(target.Spec.Watch.Resource.Group, target.Spec.Watch.Resource.Version, target.Spec.Watch.Resource.Kind, key)
+}
+
+// ensureDynamicInformerForWorkflowTrigger starts a dynamic informer for the
+// custom resource kind the trigger watches. Built-in types already have typed
+// informers in the trigger service; skipping them here prevents double-firing.
+// The caller's ctx is propagated so in-flight probe/condition waits cancel
+// when the trigger service loses its lease.
+func (s *Service) ensureDynamicInformerForWorkflowTrigger(ctx context.Context, t *workflowtriggersv1.WorkflowTrigger, key statusKey) {
+	if t.Spec.Watch == nil || t.Spec.Watch.Resource.Kind == "" {
+		return
+	}
+	if s.dynamicManager == nil {
+		s.logger.Warnf(
+			"trigger service: WorkflowTrigger %s/%s watches %s but no dynamic client is configured; events will be ignored",
+			t.Namespace, t.Name, t.Spec.Watch.Resource.Kind,
+		)
+		return
+	}
+	if isBuiltinResource(t.Spec.Watch.Resource.Kind) {
+		s.logger.Debugf("trigger service: skipping dynamic informer for built-in type %s", t.Spec.Watch.Resource.Kind)
+		return
+	}
+	gvr, err := resolveGVR(s.dynamicManager.mapper, t.Spec.Watch.Resource.Group, t.Spec.Watch.Resource.Version, t.Spec.Watch.Resource.Kind)
+	if err != nil {
+		s.logger.Errorf("trigger service: failed to resolve GVR for %s: %v", t.Spec.Watch.Resource.Kind, err)
+		return
+	}
+	s.dynamicManager.ensureInformer(ctx, gvr, string(key), s.dynamicEventHandler(ctx, gvr))
+}
+
+type triggerStatusEntry struct {
+	key    statusKey
+	status *triggerStatus
+	// trigger is captured under triggerStatusMu so matcher reads don't race
+	// with updateTrigger's direct assignment to status.trigger.
+	trigger *internalTrigger
+}
+
+// snapshotStatuses returns a shallow copy so match/scraper can iterate without
+// blocking high-volume informer events on the map lock.
+func (s *Service) snapshotStatuses() []triggerStatusEntry {
+	s.triggerStatusMu.RLock()
+	defer s.triggerStatusMu.RUnlock()
+	out := make([]triggerStatusEntry, 0, len(s.triggerStatus))
+	for k, v := range s.triggerStatus {
+		out = append(out, triggerStatusEntry{key: k, status: v, trigger: v.trigger})
+	}
+	return out
 }

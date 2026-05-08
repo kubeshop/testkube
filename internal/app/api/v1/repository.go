@@ -31,7 +31,7 @@ var (
 	errPathNotFound = errors.New("path: The specified path could not be found")
 )
 
-func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
+func (s *TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to validate repository"
 		var request testkube.Repository

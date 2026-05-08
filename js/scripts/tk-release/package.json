@@ -1,0 +1,25 @@
+{
+  "name": "tk-release",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "tk-release": "main.js"
+  },
+  "dependencies": {
+    "boxen": "8.0.1",
+    "cac": "7.0.0",
+    "chalk": "5.6.2",
+    "execa": "9.6.0",
+    "fs-extra": "11.3.5",
+    "inquirer": "13.4.2",
+    "log-symbols": "7.0.1",
+    "ora": "9.4.0",
+    "semver": "7.7.4",
+    "shelljs": "0.10.0",
+    "strands": "1.0.1",
+    "untildify": "6.0.0",
+    "xdg-app-paths": "8.3.0",
+    "yaml": "2.8.4"
+  }
+}

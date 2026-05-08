@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,8 +14,6 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
@@ -84,7 +83,7 @@ func (t DirectClient[A]) baseExec(method, uri, resource string, body []byte, par
 		buffer = bytes.NewBuffer(body)
 	}
 
-	req, err := http.NewRequest(method, uri, buffer)
+	req, err := http.NewRequestWithContext(context.Background(), method, uri, buffer)
 	if err != nil {
 		return resp, err
 	}
@@ -139,11 +138,11 @@ func (t DirectClient[A]) ExecuteMultiple(method, uri string, body []byte, params
 
 // Delete is a method to make delete api call
 func (t DirectClient[A]) Delete(uri, selector string, isContentExpected bool) error {
-	return t.ExecuteMethod(http.MethodDelete, uri, selector, isContentExpected)
+	return t.ExecuteMethod(http.MethodDelete, uri, map[string]string{"selector": selector}, isContentExpected)
 }
 
-func (t DirectClient[A]) ExecuteMethod(method, uri string, selector string, isContentExpected bool) error {
-	resp, err := t.baseExec(method, uri, uri, nil, map[string]string{"selector": selector})
+func (t DirectClient[A]) ExecuteMethod(method, uri string, params map[string]string, isContentExpected bool) error {
+	resp, err := t.baseExec(method, uri, uri, nil, params)
 	if err != nil {
 		return err
 	}
@@ -167,61 +166,22 @@ func (t DirectClient[A]) GetURI(pathTemplate string, params ...interface{}) stri
 	return fmt.Sprintf("%s%s%s", t.apiURI, t.apiPathPrefix, path)
 }
 
-// GetLogs returns logs stream from job pods, based on job pods logs
-func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Accept", "text/event-stream")
-	resp, err := t.sseClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer close(logs)
-		defer resp.Body.Close()
-
-		StreamToLogsChannel(resp.Body, logs)
-	}()
-
-	return nil
-}
-
-// GetLogsV2 returns logs stream version 2 from log server, based on job pods logs
-func (t DirectClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Accept", "text/event-stream")
-	resp, err := t.sseClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("error getting logs, invalid status code: " + resp.Status)
-	}
-
-	go func() {
-		defer close(logs)
-		defer resp.Body.Close()
-
-		StreamToLogsChannelV2(resp.Body, logs)
-	}()
-
-	return nil
-}
-
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
-func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
+func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification, options TestWorkflowExecutionNotificationsOptions) error {
+	req, err := http.NewRequestWithContext(options.RequestContext(), http.MethodGet, uri, nil)
 	if err != nil {
 		return err
+	}
+
+	if options.ResumeAfterSeqNo > 0 {
+		q := req.URL.Query()
+		q.Set("resumeAfterSeqNo", fmt.Sprintf("%d", options.ResumeAfterSeqNo))
+		req.URL.RawQuery = q.Encode()
+	}
+	if options.StreamID != "" {
+		q := req.URL.Query()
+		q.Set("streamId", options.StreamID)
+		req.URL.RawQuery = q.Encode()
 	}
 
 	req.Header.Set("Accept", "text/event-stream")
@@ -242,7 +202,7 @@ func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notif
 
 // GetFile returns file artifact
 func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, uri, nil)
 	if err != nil {
 		return "", err
 	}
@@ -264,7 +224,7 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[s
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		return name, fmt.Errorf("error: %d", resp.StatusCode)
+		return name, &HTTPStatusError{StatusCode: resp.StatusCode}
 	}
 
 	target := filepath.Join(destination, fileName)
@@ -304,6 +264,17 @@ func (t DirectClient[A]) GetRawBody(method, uri string, body []byte, params map[
 	return io.ReadAll(resp.Body)
 }
 
+// Validate is a method to make an api call to check errors
+func (t DirectClient[A]) Validate(method, uri string, body []byte, params map[string]string) error {
+	resp, err := t.baseExec(method, uri, uri, body, params)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func (t DirectClient[A]) getFromResponse(resp *http.Response) (result A, err error) {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	return
@@ -329,7 +300,7 @@ func (t DirectClient[A]) responseError(resp *http.Response) error {
 			return fmt.Errorf("can't get problem from api response: %w, output: %s", err, string(bytes))
 		}
 
-		return fmt.Errorf("problem: %+v", pr.Detail)
+		return fmt.Errorf("problem: %+v: %w", pr.Detail, &HTTPStatusError{StatusCode: resp.StatusCode})
 	}
 
 	return nil

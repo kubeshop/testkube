@@ -1,0 +1,25 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: write-read-100mb
+  labels:
+    core-tests: write-read
+description: "Write 100 MB, read (redirected to /dev/null)"
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Run test
+    shell: |
+      apk add pv
+      echo "creating /data/random.txt"
+      dd if=/dev/zero bs=1M count=100 | tr '\0' 'A' | pv -L 10M > /data/random.txt
+      echo "finished creating file"
+      ls -lh /data/random.txt
+      echo "reading file"
+      pv -L 10M /data/random.txt > /dev/null
+      echo "finished reading file"
+      sleep 2
+      echo "reading file with DD"
+      dd if=/data/random.txt of=/dev/null bs=1M iflag=direct
+      echo "finished reading file"

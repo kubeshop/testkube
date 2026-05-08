@@ -9,7 +9,7 @@
 package tests
 
 import (
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

@@ -1,0 +1,10 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// TestTriggerId is the information required to
+// uniquely identify a TestTrigger object.
+message TestTriggerId {
+  // Id is the unique ID string for a TestTrigger.
+  string id = 1;
+}

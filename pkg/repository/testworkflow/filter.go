@@ -15,10 +15,18 @@ type FilterImpl struct {
 	FStatuses      []testkube.TestWorkflowStatus
 	FPage          int
 	FPageSize      int
+	FSkip          *int
 	FTextSearch    string
 	FSelector      string
 	FTagSelector   string
 	FLabelSelector *LabelSelector
+	FActorName     string
+	FActorType     testkube.TestWorkflowRunningContextActorType
+	FGroupID       string
+	FRunnerID      string
+	FInitialized   *bool
+	FAssigned      *bool
+	FHealthRanges  [][2]float64
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -69,6 +77,11 @@ func (f *FilterImpl) WithPageSize(pageSize int) *FilterImpl {
 	return f
 }
 
+func (f *FilterImpl) WithSkip(skip int) *FilterImpl {
+	f.FSkip = &skip
+	return f
+}
+
 func (f *FilterImpl) WithTextSearch(textSearch string) *FilterImpl {
 	f.FTextSearch = textSearch
 	return f
@@ -84,8 +97,43 @@ func (f *FilterImpl) WithTagSelector(tagSelector string) *FilterImpl {
 	return f
 }
 
+func (f *FilterImpl) WithActorName(actorName string) *FilterImpl {
+	f.FActorName = actorName
+	return f
+}
+
+func (f *FilterImpl) WithActorType(actorType testkube.TestWorkflowRunningContextActorType) *FilterImpl {
+	f.FActorType = actorType
+	return f
+}
+
 func (f *FilterImpl) WithLabelSelector(selector *LabelSelector) *FilterImpl {
 	f.FLabelSelector = selector
+	return f
+}
+
+func (f *FilterImpl) WithGroupID(groupID string) *FilterImpl {
+	f.FGroupID = groupID
+	return f
+}
+
+func (f *FilterImpl) WithRunnerID(runnerID string) *FilterImpl {
+	f.FRunnerID = runnerID
+	return f
+}
+
+func (f *FilterImpl) WithInitialized(initialized bool) *FilterImpl {
+	f.FInitialized = &initialized
+	return f
+}
+
+func (f *FilterImpl) WithAssigned(assigned bool) *FilterImpl {
+	f.FAssigned = &assigned
+	return f
+}
+
+func (f *FilterImpl) WithHealthRanges(ranges [][2]float64) *FilterImpl {
+	f.FHealthRanges = ranges
 	return f
 }
 
@@ -145,6 +193,17 @@ func (f FilterImpl) PageSize() int {
 	return f.FPageSize
 }
 
+func (f FilterImpl) Skip() int {
+	if f.FSkip == nil {
+		return 0
+	}
+	return *f.FSkip
+}
+
+func (f FilterImpl) SkipDefined() bool {
+	return f.FSkip != nil
+}
+
 func (f FilterImpl) TextSearchDefined() bool {
 	return f.FTextSearch != ""
 }
@@ -163,4 +222,66 @@ func (f FilterImpl) TagSelector() string {
 
 func (f FilterImpl) LabelSelector() *LabelSelector {
 	return f.FLabelSelector
+}
+
+func (f FilterImpl) ActorName() string {
+	return f.FActorName
+}
+
+func (f FilterImpl) ActorType() testkube.TestWorkflowRunningContextActorType {
+	return f.FActorType
+}
+
+func (f FilterImpl) ActorNameDefined() bool {
+	return f.FActorName != ""
+}
+
+func (f FilterImpl) ActorTypeDefined() bool {
+	return f.FActorType != ""
+}
+
+func (f FilterImpl) GroupIDDefined() bool {
+	return f.FGroupID != ""
+}
+
+func (f FilterImpl) GroupID() string {
+	return f.FGroupID
+}
+
+func (f FilterImpl) RunnerIDDefined() bool {
+	return f.FRunnerID != ""
+}
+
+func (f FilterImpl) RunnerID() string {
+	return f.FRunnerID
+}
+
+func (f FilterImpl) InitializedDefined() bool {
+	return f.FInitialized != nil
+}
+
+func (f FilterImpl) Initialized() bool {
+	if f.FInitialized == nil {
+		return false
+	}
+	return *f.FInitialized
+}
+
+func (f FilterImpl) AssignedDefined() bool {
+	return f.FAssigned != nil
+}
+
+func (f FilterImpl) Assigned() bool {
+	if f.FAssigned == nil {
+		return false
+	}
+	return *f.FAssigned
+}
+
+func (f FilterImpl) HealthRangesDefined() bool {
+	return len(f.FHealthRanges) > 0
+}
+
+func (f FilterImpl) HealthRanges() [][2]float64 {
+	return f.FHealthRanges
 }

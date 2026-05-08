@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 )
@@ -62,11 +63,11 @@ func (t *server) Has(dirPath string, files []string) bool {
 }
 
 func (t *server) GetUrl(id string) string {
-	return fmt.Sprintf("http://%s:%d/download/%s.tar.gz", t.host, t.port, id)
+	return fmt.Sprintf("http://%s/download/%s.tar.gz", net.JoinHostPort(t.host, strconv.Itoa(t.port)), id)
 }
 
 func (t *server) GetRequestUrl(id string) string {
-	return fmt.Sprintf("http://%s:%d/upload/%s", t.host, t.port, id)
+	return fmt.Sprintf("http://%s/upload/%s", net.JoinHostPort(t.host, strconv.Itoa(t.port)), id)
 }
 
 func (t *server) Include(dirPath string, files []string) (Entry, error) {
@@ -121,6 +122,7 @@ func (t *server) handler() http.Handler {
 		}
 
 		err := common.UnpackTarball(dirPath, request.Body)
+		defer request.Body.Close()
 		if err != nil {
 			fmt.Printf("Warning: '%s' error while unpacking tarball to: %s\n", dirPath, err.Error())
 			writer.WriteHeader(http.StatusInternalServerError)
@@ -134,7 +136,7 @@ func (t *server) handler() http.Handler {
 func (t *server) Listen() (func(), error) {
 	addr := fmt.Sprintf(":%d", t.port)
 	srv := http.Server{Addr: addr, Handler: t.handler()}
-	listener, err := net.Listen("tcp", addr)
+	listener, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,7 @@ package stage
 import (
 	"strings"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
 type Condition struct {

@@ -22,8 +22,10 @@ func TestNewClient(t *testing.T) {
 	t.Run("returns new SSE client with a hour timeout", func(t *testing.T) {
 		// given / when
 		c := NewSSEClient()
+		transport := c.Transport.(*http.Transport)
 
 		// then
 		assert.Equal(t, time.Hour, c.Timeout)
+		assert.False(t, transport.ForceAttemptHTTP2)
 	})
 }

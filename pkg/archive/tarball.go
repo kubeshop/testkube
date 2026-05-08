@@ -24,7 +24,7 @@ func (t *Tarball) Extract(in io.Reader) ([]*File, error) {
 	}
 
 	var files []*File
-	for true {
+	for {
 		header, err := tarReader.Next()
 
 		if errors.Is(err, io.EOF) {
@@ -53,12 +53,8 @@ func (t *Tarball) Extract(in io.Reader) ([]*File, error) {
 
 func (t *Tarball) sanitizeFilepath(path string) string {
 	cleaned := filepath.Clean(path)
-	if strings.HasPrefix(cleaned, "..") {
-		cleaned = strings.TrimPrefix(cleaned, "..")
-	}
-	if strings.HasPrefix(cleaned, "/") {
-		cleaned = strings.TrimPrefix(cleaned, "/")
-	}
+	cleaned = strings.TrimPrefix(cleaned, "..")
+	cleaned = strings.TrimPrefix(cleaned, "/")
 	return cleaned
 }
 

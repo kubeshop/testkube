@@ -1,0 +1,44 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "testkube/testworkflow/execution/v1/accept_execution_request.proto";
+import "testkube/testworkflow/execution/v1/accept_execution_response.proto";
+import "testkube/testworkflow/execution/v1/decline_execution_request.proto";
+import "testkube/testworkflow/execution/v1/decline_execution_response.proto";
+import "testkube/testworkflow/execution/v1/get_execution_updates_request.proto";
+import "testkube/testworkflow/execution/v1/get_execution_updates_response.proto";
+import "testkube/testworkflow/execution/v1/get_execution_workflow_request.proto";
+import "testkube/testworkflow/execution/v1/get_execution_workflow_response.proto";
+import "testkube/testworkflow/execution/v1/set_execution_scheduling_request.proto";
+import "testkube/testworkflow/execution/v1/set_execution_scheduling_response.proto";
+
+// TestWorkflowExecutionService contains RPCs related to TestWorkflowExecutions.
+service TestWorkflowExecutionService {
+  // GetExecutionUpdates retrieves state transition imperatives from the Control Plane for
+  // Executions that are understood by the Control Plane to be under the control of the
+  // calling client.
+  rpc GetExecutionUpdates(GetExecutionUpdatesRequest) returns (GetExecutionUpdatesResponse);
+  // SetExecutionScheduling is deprecated, clients and servers should transition to AcceptExecution.
+  rpc SetExecutionScheduling(SetExecutionSchedulingRequest) returns (SetExecutionSchedulingResponse) {
+    option deprecated = true;
+  };
+  // AcceptExecution informs the server that the execution has been successfully applied to
+  // Kubernetes. This should be initiated by a client immediately after an execution has been
+  // successfully applied to Kubernetes in order to prevent the execution from being sent in
+  // subsequent calls to GetExecutionUpdates.
+  rpc AcceptExecution(AcceptExecutionRequest) returns (AcceptExecutionResponse);
+  // DeclineExecution informs the server that the client has decided not to execution the workflow.
+  // How this is handled by the server is dependent on server implementation but the expectation
+  // from the client is that it should not be passed this execution to attempt again, as the issue
+  // is not transient.
+  // In the event of transient errors, clients are expected to retry themselves before declining
+  // an execution.
+  rpc DeclineExecution(DeclineExecutionRequest) returns (DeclineExecutionResponse);
+  // GetExecutionWorkflow can be used to retrieve the workflow for an execution. This is a
+  // separate RPC from other GetWorkflow RPCs because it specifically retrieves the workflow
+  // that should be used to execute a particular execution. The server may wish to enrich
+  // the underlying workflow with additional information or transformations that apply to the
+  // specific execution for which it will be used.
+  rpc GetExecutionWorkflow(GetExecutionWorkflowRequest) returns (GetExecutionWorkflowResponse);
+}

@@ -97,7 +97,7 @@ func toBool(s interface{}) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error while converting value to bool: %v: %v", value, err)
 	}
-	return !(value == "" || value == "false" || value == "0" || value == "off"), nil
+	return value != "" && value != "false" && value != "0" && value != "off", nil
 }
 
 func toMap(s interface{}) (map[string]interface{}, error) {

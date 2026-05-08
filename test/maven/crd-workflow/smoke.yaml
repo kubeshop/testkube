@@ -1,0 +1,68 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: maven-workflow-smoke-jdk11
+  labels:
+    core-tests: workflows
+    tool: maven
+    category: build-integration
+  annotations:
+    testkube.io/icon: maven
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/maven/projects/hello-maven
+  container:
+    image: maven:3.9.6-eclipse-temurin-11-focal
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/maven/projects/hello-maven
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run tests
+    run:
+      shell: mvn test
+      env:
+      - name: TESTKUBE_MAVEN
+        value: "true"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: maven-workflow-smoke-jdk11-from-template
+  labels:
+    core-tests: workflows
+    tool: maven
+    category: build-integration
+  annotations:
+    testkube.io/icon: maven
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/maven/projects/hello-maven
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/maven/projects/hello-maven
+    env:
+    - name: TESTKUBE_MAVEN
+      value: "true"
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    template:
+      name: official/maven/v1
+      config:
+        version: 3.9.6-eclipse-temurin-11-focal

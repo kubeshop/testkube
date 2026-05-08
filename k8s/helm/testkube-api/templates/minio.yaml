@@ -1,0 +1,305 @@
+{{- if .Values.minio.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  # This name uniquely identifies the PVC. This is used in deployment.
+  name: testkube-minio-pv-claim-{{ .Release.Namespace }}
+  labels:
+    {{ include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if .Values.minio.storageClassName }}
+  storageClassName: {{ .Values.minio.storageClassName }}
+  {{- end }}
+  accessModes:
+  {{- range .Values.minio.accessModes }}
+  - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.minio.storage }}
+---
+apiVersion: {{ include "global.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  # This name uniquely identifies the Deployment
+  name: testkube-minio-{{ .Release.Namespace }}
+  labels:
+    {{ include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.annotations}}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.minio.replicaCount }}
+  selector:
+    matchLabels:
+      {{- if .Values.minio.matchLabels }}
+      {{- include "global.tplvalues.render" ( dict "value" .Values.minio.matchLabels "context" $ ) | nindent 6 }}
+      {{- end }}
+      app: testkube-minio-{{ .Release.Namespace }} # has to match .spec.template.metadata.labels
+  strategy:
+    # Specifies the strategy used to replace old Pods by new ones
+    # Refer: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+    type: Recreate
+  template:
+    metadata:
+      labels:
+      {{- if .Values.minio.matchLabels }}
+      {{- include "global.tplvalues.render" ( dict "value" .Values.minio.matchLabels "context" $ ) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.global.labels }}
+      {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 8 }}
+      {{- end }}
+      # This label is used as a selector in Service definition
+        app: testkube-minio-{{ .Release.Namespace }}
+    spec:
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.minio.image.pullSecrets) | nindent 6 }}
+        {{- if .Values.minio.priorityClassName }}
+      priorityClassName: {{ .Values.minio.priorityClassName }}
+      {{- end }}
+      # Volumes used by this deployment
+      volumes:
+        - name: data
+          # This volume is based on PVC
+          persistentVolumeClaim:
+            # Name of the PVC created earlier
+            claimName: testkube-minio-pv-claim-{{ .Release.Namespace }}
+        {{- if .Values.minio.extraVolumes }}
+        {{- include "global.tplvalues.render" (dict "value" .Values.minio.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: testkube-minio
+          # Volume mounts for this container
+          volumeMounts:
+            # Volume 'data' is mounted to path '/data'
+            - name: data
+              mountPath: "/data"
+            {{- if .Values.minio.extraVolumeMounts }}
+            {{- include "global.tplvalues.render" (dict "value" .Values.minio.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+          # Pulls the lastest Minio image from Docker Hub
+          image: {{ include "global.images.image" (dict "imageRoot" .Values.minio.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.minio.image.pullPolicy }}
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9090"
+          env:
+            {{- if .Values.minio.serviceMonitor.enabled }}
+            - name: MINIO_PROMETHEUS_AUTH_TYPE
+              value: "public"
+            {{- end }}
+            # MinIO access key and secret key
+            - name: MINIO_ROOT_USER
+              {{- if .Values.minio.secretUserName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.secretUserName }}
+                  key: {{ .Values.minio.secretUserKey }}
+              {{- else }}
+              value: {{ .Values.minio.minioRootUser }}
+              {{- end }}
+            - name: MINIO_ROOT_PASSWORD
+              {{- if .Values.minio.secretPasswordName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.secretPasswordName }}
+                  key: {{ .Values.minio.secretPasswordKey }}
+              {{- else }}
+              value: {{ .Values.minio.minioRootPassword }}
+              {{- end }}
+            - name: CONSOLE_PORT
+              value: "9090"
+            - name: CONSOLE_TLS_PORT
+              value: "9443"
+          {{- if .Values.minio.extraEnvVars }}
+          {{- include "global.tplvalues.render" (dict "value" .Values.minio.extraEnvVars "context" $) | nindent 12 }}
+          {{- end }}
+          ports:
+            - containerPort: 9000
+              name: http
+            - containerPort: 9090
+              name: web
+            - containerPort: 9443
+              name: https
+          # Readiness probe detects situations when MinIO server instance
+          # is not ready to accept traffic. Kubernetes doesn't forward
+          # traffic to the pod while readiness checks fail.
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: {{ .Values.minio.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.minio.livenessProbe.periodSeconds }}
+          # Liveness probe detects situations where MinIO server instance
+          # is not working properly and needs restart. Kubernetes automatically
+          # restarts the pods if liveness checks fail.
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: {{ .Values.minio.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.minio.readinessProbe.periodSeconds }}
+          {{- if .Values.minio.resources }}
+          resources: {{ toYaml .Values.minio.resources | nindent 12 }}
+          {{- end }}
+          securityContext: {{ include "minio.containerSecurityContext" . | nindent 12 }}
+      securityContext: {{ include "minio.podSecurityContext" . | nindent 8 }}
+      {{- if  .Values.minio.serviceAccountName }}
+      serviceAccountName: {{ .Values.minio.serviceAccountName }}
+      {{- end }}
+      {{- with .Values.minio.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.minio.affinity }}
+      affinity:
+      {{- toYaml .Values.minio.affinity | nindent 8 }}
+      {{- else if .Values.global.affinity }}
+      affinity:
+      {{- toYaml .Values.global.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.minio.tolerations }}
+      tolerations:
+      {{- toYaml .Values.minio.tolerations | nindent 6 }}
+      {{- else if .Values.global.tolerations }}
+      tolerations:
+      {{- toYaml .Values.global.tolerations | nindent 6 }}
+      {{- end }}
+      {{- if .Values.minio.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.minio.nodeSelector | nindent 8 }}
+      {{- else if .Values.global.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+      {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # This name uniquely identifies the service
+  name: testkube-minio-service-{{ .Release.Namespace }}
+  labels:
+    {{ include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9000
+      protocol: TCP
+    - name: web
+      port: 9090
+      protocol: TCP
+    - name: https
+      port: 9443
+      protocol: TCP
+  selector:
+    # Looks for labels `app:minio` in the namespace and applies the spec
+    app: testkube-minio-{{ .Release.Namespace }}
+    {{- if .Values.minio.matchLabels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.minio.matchLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- if and .Values.minio.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: testkube-minio-cluster
+  labels:
+    {{ include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- if .Values.minio.serviceMonitor.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.minio.serviceMonitor.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  jobName: testkube-minio-prober-cluster
+  prober:
+    url: testkube-minio-service-{{ .Release.Namespace }}.{{ .Release.Namespace }}:9000
+    path: /minio/v2/metrics/cluster
+    scheme: http
+  targets:
+    staticConfig:
+      static:
+        - testkube-minio-service-{{ .Release.Namespace }}.{{ .Release.Namespace }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: testkube-minio-servicemonitor
+  labels:
+    {{ include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- if .Values.minio.serviceMonitor.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.minio.serviceMonitor.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+    - path: /minio/v2/metrics/node
+      targetPort: 9000
+      {{- if .Values.minio.serviceMonitor.interval }}
+      interval: {{ .Values.minio.serviceMonitor.interval }}
+      {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: minio
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- if .Values.minio.serviceMonitor.matchLabels }}
+      {{- include "global.tplvalues.render" ( dict "value" .Values.minio.serviceMonitor.matchLabels  "context" $ ) | nindent 6 }}
+      {{- end }}
+{{- end }}
+---
+{{- if or .Values.global.podDisruptionBudget.enabled .Values.minio.podDisruptionBudget.enabled }}
+{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: policy/v1
+{{- else -}}
+apiVersion: policy/v1beta1
+{{- end }}
+kind: PodDisruptionBudget
+metadata:
+  name: testkube-minio
+  labels:
+  {{ include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if .Values.minio.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.minio.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if or .Values.minio.podDisruptionBudget.maxUnavailable (not .Values.minio.podDisruptionBudget.minAvailable) }}
+  maxUnavailable: {{ .Values.minio.podDisruptionBudget.maxUnavailable | default 1  }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: testkube-minio-{{ .Release.Namespace }}
+      {{- if .Values.minio.matchLabels }}
+      {{- include "global.tplvalues.render" ( dict "value" .Values.minio.matchLabels "context" $ ) | nindent 6 }}
+      {{- end }}
+  {{- end }}
+{{- end }}

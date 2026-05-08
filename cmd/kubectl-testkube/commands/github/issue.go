@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
-	prShared "github.com/cli/cli/v2/pkg/cmd/pr/shared"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -50,25 +51,37 @@ func OpenTicket(d testkube.DebugInfo) error {
 	if err != nil {
 		return fmt.Errorf("could not build issue: %w", err)
 	}
-	issue := prShared.IssueMetadataState{
-		Type:   prShared.IssueMetadata,
-		Body:   body,
-		Title:  title,
-		Labels: []string{BugType},
-	}
 
-	openURL, err := prShared.WithPrAndIssueQueryParams(nil, nil, BaseURL, issue)
+	openURL, err := buildIssueURL(BaseURL, title, body, []string{BugType})
 	if err != nil {
 		return err
 	}
 
-	if !prShared.ValidURL(openURL) {
+	if len(openURL) >= 8192 {
 		return fmt.Errorf("cannot open in browser: maximum URL length exceeded")
 	}
 
 	ui.Info(fmt.Sprintf("Opening %s in your browser.\n", BaseURL))
 
 	return open.Start(openURL)
+}
+
+// buildIssueURL constructs a GitHub new issue URL with the provided parameters.
+func buildIssueURL(baseURL, title, body string, labels []string) (string, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return "", err
+	}
+	q := u.Query()
+	if title != "" {
+		q.Set("title", title)
+	}
+	q.Set("body", body)
+	if len(labels) > 0 {
+		q.Set("labels", strings.Join(labels, ","))
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 // buildTicket builds up the title and the body of the ticket, completing the version numbers with data from the environment

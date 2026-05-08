@@ -24,7 +24,7 @@ func NewTestCmd() *cobra.Command {
 		},
 	}
 
-	PopulateMasterFlags(cmd, &opts)
+	PopulateMasterFlags(cmd, &opts, false)
 	PopulateHelmFlags(cmd, &opts)
 	return cmd
 }
@@ -298,21 +298,6 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
 		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "dummy-agent-uri", opts.Master.URIs.Agent)
-	})
-
-	t.Run("Test --feature-logs-v2 feature disabled by default", func(t *testing.T) {
-		cmd := NewTestCmd()
-		err := cmd.Execute()
-		assert.NoError(t, err)
-		assert.Equal(t, false, opts.Master.Features.LogsV2)
-	})
-
-	t.Run("Test --feature-logs-v2 feature flag", func(t *testing.T) {
-		cmd := NewTestCmd()
-		cmd.SetArgs([]string{"--feature-logs-v2", "true"})
-		err := cmd.Execute()
-		assert.NoError(t, err)
-		assert.Equal(t, true, opts.Master.Features.LogsV2)
 	})
 
 	t.Run("Test --root-domain for master flags", func(t *testing.T) {

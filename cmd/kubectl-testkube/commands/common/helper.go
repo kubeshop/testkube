@@ -1,29 +1,37 @@
 package common
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/cloudlogin"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/internal/migrations"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/cloudlogin"
-	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type HelmOptions struct {
-	Name, Namespace, Chart, Values string
-	NoMinio, NoMongo, NoConfirm    bool
-	MinioReplicas, MongoReplicas   int
+	Name, Namespace, Chart, Values                 string
+	NoMinio, NoMongo, NoPostgres, NoConfirm        bool
+	MinioReplicas, MongoReplicas, PostgresReplicas int
+	SetOptions, ArgOptions                         map[string]string
 
 	// On-prem
 	LicenseKey    string
@@ -33,17 +41,46 @@ type HelmOptions struct {
 	// For debug
 	DryRun         bool
 	MultiNamespace bool
-	NoOperator     bool
+	NoCRDs         bool
 	EmbeddedNATS   bool
 }
 
+type HelmGenericOptions struct {
+	DryRun      bool
+	ValuesFile  string
+	Args        []string
+	ReleaseName string
+
+	RegistryURL    string
+	RepositoryName string
+	ChartName      string
+
+	Namespace string
+	Values    map[string]interface{}
+}
+
 const (
-	github = "GitHub"
-	gitlab = "GitLab"
+	github                = "GitHub"
+	gitlab                = "GitLab"
+	google                = "Google"
+	emailLink             = "Email (magic link)"
+	dockerDaemonPrefixLen = 8
+	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
 
 func (o HelmOptions) GetApiURI() string {
 	return o.Master.URIs.Api
+}
+
+func ShowOperatorDeprecationWarning(manager string, noCRDs bool) {
+	ui.Warn("Testkube Operator is deprecated and will not be installed.")
+	ui.Warn(fmt.Sprintf("%s now manages the related operations.", manager))
+	if noCRDs {
+		ui.Warn("CRD installation is disabled and the existing Testkube CRDs in the cluster will be reused.")
+	} else {
+		ui.Warn("Testkube CRDs will be installed by this command.")
+	}
+	ui.NL()
 }
 
 func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
@@ -54,6 +91,23 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 
 	if err := updateHelmRepo(helmPath, options.DryRun, true); err != nil {
 		return err
+	}
+
+	// For default setup, change the Agent host to a cluster service endpoint,
+	// so it will be possible to install runners in different namespaces.
+	if options.SetOptions["testkube-cloud-api.api.agent.host"] == "" && options.Namespace != "" {
+		if options.SetOptions == nil {
+			options.SetOptions = make(map[string]string)
+		}
+		options.SetOptions["testkube-cloud-api.api.agent.host"] = fmt.Sprintf("testkube-enterprise-api.%s.svc.cluster.local", options.Namespace)
+	}
+
+	// Similarly for Minio, to access by runners in different namespaces
+	if options.SetOptions["testkube-cloud-api.api.minio.signing.hostname"] == "" && options.Namespace != "" {
+		if options.SetOptions == nil {
+			options.SetOptions = make(map[string]string)
+		}
+		options.SetOptions["testkube-cloud-api.api.minio.signing.hostname"] = fmt.Sprintf("testkube-enterprise-minio.%s.svc.cluster.local:9000", options.Namespace)
 	}
 
 	args := prepareTestkubeOnPremDemoArgs(options)
@@ -73,9 +127,10 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 		return cliErr
 	}
 
-	// disable mongo and minio for cloud
+	// disable mongo, minio, and postgres for cloud
 	options.NoMinio = true
 	options.NoMongo = true
+	options.NoPostgres = true
 
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
@@ -95,16 +150,66 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 	}
 
 	args := prepareTestkubeProHelmArgs(options, isMigration)
+	_, err := runHelmCommand(helmPath, args, options.DryRun)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func HelmUpgradeOrInstallGeneric(options HelmGenericOptions) *CLIError {
+	helmPath, err := lookupHelmPath()
+	if err != nil {
+		return err
+	}
+
+	if err = updateHelmRepoGeneric(helmPath, options.RegistryURL, options.RepositoryName, options.DryRun); err != nil {
+		return err
+	}
+
+	args := []string{
+		"upgrade", "--install", "--create-namespace",
+		"--namespace", options.Namespace,
+	}
+	if options.ValuesFile != "" {
+		args = append(args, "--values", options.ValuesFile)
+	}
+	args = append(args, options.ReleaseName, fmt.Sprintf("%s/%s", options.RepositoryName, options.ChartName))
+	for k, v := range options.Values {
+		switch v.(type) {
+		case int64, int32, int, uint32, uint64, bool:
+			args = append(args, "--set", fmt.Sprintf("%s=%v", k, v))
+		default:
+			if serialized, err := json.Marshal(v); err == nil {
+				args = append(args, "--set-json", fmt.Sprintf("%s=%s", k, serialized))
+			} else {
+				args = append(args, "--set", fmt.Sprintf("%s=%v", k, v))
+			}
+		}
+	}
+	args = append(args, options.Args...)
 	output, err := runHelmCommand(helmPath, args, options.DryRun)
 	if err != nil {
 		return err
 	}
 
-	ui.Debug("Helm command output:")
-	ui.Debug(helmPath, args...)
-
 	ui.Debug("Helm install testkube output", output)
+	return nil
+}
 
+func HelmUninstall(namespace string, releaseName string) *CLIError {
+	helmPath, err := lookupHelmPath()
+	if err != nil {
+		return err
+	}
+	args := []string{"uninstall", "--wait", "--namespace", namespace, releaseName}
+	output, err := runHelmCommand(helmPath, args, false)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Helm uninstall testkube output", output)
 	return nil
 }
 
@@ -141,13 +246,7 @@ func lookupHelmPath() (string, *CLIError) {
 	return helmPath, nil
 }
 
-func updateHelmRepo(helmPath string, dryRun bool, isOnPrem bool) *CLIError {
-	registryURL := "https://kubeshop.github.io/helm-charts"
-	registryName := "kubeshop"
-	if isOnPrem {
-		registryURL = "https://kubeshop.github.io/testkube-cloud-charts"
-		registryName = "testkubeenterprise"
-	}
+func updateHelmRepoGeneric(helmPath, registryURL, registryName string, dryRun bool) *CLIError {
 	_, err := runHelmCommand(helmPath, []string{"repo", "add", registryName, registryURL}, dryRun)
 	errMsg := fmt.Sprintf("Error: repository name (%s) already exists, please specify a different name", registryName)
 	if err != nil && !strings.Contains(err.Error(), errMsg) {
@@ -162,83 +261,154 @@ func updateHelmRepo(helmPath string, dryRun bool, isOnPrem bool) *CLIError {
 	return nil
 }
 
+func updateHelmRepo(helmPath string, dryRun, isOnPrem bool) *CLIError {
+	if isOnPrem {
+		return updateHelmRepoGeneric(helmPath, "https://kubeshop.github.io/testkube-cloud-charts", "testkubeenterprise", dryRun)
+	}
+	return updateHelmRepoGeneric(helmPath, "https://kubeshop.github.io/helm-charts", "kubeshop", dryRun)
+}
+
+// It cleans existing migrations job with long TTL
+func CleanExistingCompletedMigrationJobs(namespace string) (cliErr *CLIError) {
+	kubectlPath, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return cliErr
+	}
+
+	// Clean the job only when it's found and it's state is successful - ignore pending migrations.
+	cmd := []string{"get", "job", "testkube-enterprise-api-migrations", "-n", namespace, "-o", "jsonpath={.status.succeeded}"}
+	succeeded, _ := runKubectlCommand(kubectlPath, cmd)
+	if succeeded == "1" {
+		cmd = []string{"delete", "job", "testkube-enterprise-api-migrations", "--namespace", namespace}
+		_, err := runKubectlCommand(kubectlPath, cmd)
+		if err != nil {
+			return NewCLIError(
+				TKErrCleanOldMigrationJobFailed,
+				"Can't clean old migrations job",
+				"Migration job can't be deleted from some reason, check for errors in installation namespace, check execution. As a workaround try to delete job manually and retry installation/upgrade process",
+				err,
+			).WithExecutedCommand(strings.Join(cmd, " "))
+		}
+	}
+
+	return nil
+}
+
 func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput string, cliErr *CLIError) {
+	cmd := strings.Join(append([]string{helmPath}, args...), " ")
+	ui.DebugNL()
+	ui.Debug("Helm command:")
+	ui.Debug(cmd)
+
 	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
+	ui.DebugNL()
+	ui.Debug("Helm output:")
+	ui.Debug(string(output))
 	if err != nil {
 		return "", NewCLIError(
 			TKErrHelmCommandFailed,
 			"Helm command failed",
-			"Retry the command with a bigger timeout by setting --timeout 30m, if the error still persists, reach out to Testkube support",
+			"Retry the command with a bigger timeout by setting --helm-arg timeout=30m, if the error still persists, reach out to Testkube support",
 			err,
-		)
+		).WithExecutedCommand(cmd)
 	}
 	return string(output), nil
 }
 
+func appendHelmArgs(args []string, options HelmOptions, settings map[string]string) []string {
+	for key, value := range settings {
+		if _, ok := options.SetOptions[key]; !ok {
+			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	for key, value := range options.SetOptions {
+		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	for key, value := range options.ArgOptions {
+		args = append(args, fmt.Sprintf("--%s", key))
+		if value != "" {
+			args = append(args, value)
+		}
+	}
+
+	return args
+}
+
 func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
-	return []string{
+	args := []string{
 		"upgrade", "--install",
 		"--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", "global.enterpriseLicenseKey=" + options.LicenseKey,
-		"--values", options.DemoValuesURL,
+	}
+
+	settings := map[string]string{
+		"global.enterpriseLicenseKey": options.LicenseKey,
+	}
+
+	args = append(appendHelmArgs(args, options, settings), "--values", options.DemoValuesURL,
 		"--wait",
-		"testkube", "testkubeenterprise/testkube-enterprise"}
+		"testkube", "testkubeenterprise/testkube-enterprise")
+
+	return args
 }
 
 // prepareTestkubeProHelmArgs prepares Helm arguments for Testkube Pro installation.
 func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string {
-	args := prepareCommonHelmArgs(options)
+	args, settings := prepareCommonHelmArgs(options)
 
-	args = append(args,
-		"--set", "testkube-api.cloud.url="+options.Master.URIs.Agent,
-		"--set", "testkube-api.cloud.key="+options.Master.AgentToken,
-		"--set", "testkube-api.cloud.uiURL="+options.Master.URIs.Ui,
-		"--set", "testkube-logs.pro.url="+options.Master.URIs.Logs,
-		"--set", "testkube-logs.pro.key="+options.Master.AgentToken,
-	)
+	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
+	settings["testkube-api.cloud.key"] = options.Master.AgentToken
+	settings["testkube-api.cloud.uiUrl"] = options.Master.URIs.Ui
 
 	if isMigration {
-		args = append(args, "--set", "testkube-api.cloud.migrate=true")
+		settings["testkube-api.cloud.migrate"] = "true"
 	}
 
 	if options.Master.EnvId != "" {
-		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.Master.EnvId))
-		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.envId=%s", options.Master.EnvId))
+		settings["testkube-api.cloud.envId"] = options.Master.EnvId
 	}
 
 	if options.Master.OrgId != "" {
-		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
-		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
+		settings["testkube-api.cloud.orgId"] = options.Master.OrgId
 	}
 
-	return args
+	return appendHelmArgs(args, options, settings)
 }
 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
-	args := prepareCommonHelmArgs(options)
-
-	if options.NoMinio {
-		args = append(args, "--set", "testkube-api.logs.storage=mongo")
-	} else {
-		args = append(args, "--set", "testkube-api.logs.storage=minio")
-	}
-
-	return args
+	args, settings := prepareCommonHelmArgs(options)
+	settings["testkube-api.logs.storage"] = "minio"
+	return appendHelmArgs(args, options, settings)
 }
 
 // prepareCommonHelmArgs prepares common Helm arguments for both OS and Pro installation.
-func prepareCommonHelmArgs(options HelmOptions) []string {
+func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	args := []string{
 		"upgrade", "--install", "--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2),
-		"--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace),
-		"--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio),
-		"--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas), "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator),
-		"--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo),
-		"--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas),
+	}
+
+	settings := map[string]string{
+		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
+		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
+		"testkube-operator.installCRD":        fmt.Sprintf("%t", !options.NoCRDs),
+		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
+		"postgresql.enabled":                  fmt.Sprintf("%t", !options.NoPostgres),
+	}
+
+	if options.MinioReplicas > 0 {
+		settings["testkube-api.minio.replicas"] = fmt.Sprintf("%d", options.MinioReplicas)
+	}
+
+	if options.MongoReplicas > 0 {
+		settings["mongodb.replicas"] = fmt.Sprintf("%d", options.MongoReplicas)
+	}
+
+	if options.PostgresReplicas > 0 {
+		settings["postgresql.primary.replicaCount"] = fmt.Sprintf("%d", options.PostgresReplicas)
 	}
 
 	if options.Values != "" {
@@ -247,12 +417,12 @@ func prepareCommonHelmArgs(options HelmOptions) []string {
 
 	// if embedded nats is enabled disable nats chart
 	if options.EmbeddedNATS {
-		args = append(args, "--set", "testkube-api.nats.enabled=false")
-		args = append(args, "--set", "testkube-api.nats.embedded=true")
+		settings["testkube-api.nats.enabled"] = "false"
+		settings["testkube-api.nats.embedded"] = "true"
 	}
 
 	args = append(args, options.Name, options.Chart)
-	return args
+	return args, settings
 }
 
 func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
@@ -263,33 +433,44 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
+	cmd.Flags().BoolVar(&options.NoPostgres, "no-postgres", true, "don't install PostgreSQL")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
-	if options.Master.URIs.Api != "" {
-		cfg.CloudContext.AgentUri = options.Master.URIs.Api
+	if options.Master.URIs.Agent != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Agent
 	}
 	if options.Master.URIs.Ui != "" {
 		cfg.CloudContext.UiUri = options.Master.URIs.Ui
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		if options.Master.URIs.Agent == "" {
+			cfg.CloudContext.AgentUri = options.Master.URIs.Api
+		}
+	}
+	if options.Master.URIs.Auth != "" {
+		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 	}
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
-	cfg.CloudContext.TokenType = config.TokenTypeOIDC
+	cfg.CloudContext.TokenType = tokenType
 	if token != "" {
 		cfg.CloudContext.ApiKey = token
 	}
 	if refreshToken != "" {
 		cfg.CloudContext.RefreshToken = refreshToken
+	}
+	cfg.CloudContext.DockerContainerName = dockerContainerName
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
 	}
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
@@ -306,8 +487,8 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 		updated = true
 	}
-	if options.Master.URIs.Api != "" {
-		cfg.CloudContext.AgentUri = options.Master.URIs.Api
+	if options.Master.URIs.Agent != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Agent
 		updated = true
 	}
 	if options.Master.URIs.Ui != "" {
@@ -316,6 +497,13 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		if options.Master.URIs.Agent == "" {
+			cfg.CloudContext.AgentUri = options.Master.URIs.Api
+		}
+		updated = true
+	}
+	if options.Master.URIs.Auth != "" {
+		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 		updated = true
 	}
 	if options.Master.IdToken != "" {
@@ -328,6 +516,10 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.OrgId != "" {
 		cfg.CloudContext.OrganizationId = options.Master.OrgId
+		updated = true
+	}
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
 		updated = true
 	}
 
@@ -352,7 +544,7 @@ func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
 	return false
 }
 
-func UpdateTokens(cfg config.Data, token, refreshToken string) error {
+func UpdateTokens(cfg config.Data, tokenType, token, refreshToken string) error {
 	var updated bool
 	if token != cfg.CloudContext.ApiKey {
 		cfg.CloudContext.ApiKey = token
@@ -362,37 +554,16 @@ func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 		cfg.CloudContext.RefreshToken = refreshToken
 		updated = true
 	}
+	if tokenType != "" && tokenType != cfg.CloudContext.TokenType {
+		cfg.CloudContext.TokenType = tokenType
+		updated = true
+	}
 
 	if updated {
 		return config.Save(cfg)
 	}
 
 	return nil
-}
-
-func RunAgentMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _, err := GetClient(cmd)
-	ui.ExitOnError("getting client", err)
-
-	info, err := client.GetServerInfo()
-	ui.ExitOnError("getting server info", err)
-
-	if info.Version == "" {
-		ui.Failf("Can't detect cluster version")
-	}
-
-	ui.Info("Available agent migrations for", info.Version)
-	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
-	if len(results) == 0 {
-		ui.Warn("No agent migrations available for", info.Version)
-		return false, nil
-	}
-
-	for _, migration := range results {
-		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
-	}
-
-	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
 }
 
 func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (config.Data, error) {
@@ -425,7 +596,7 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 	return cfg, nil
 }
 
-func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) config.Data {
+func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *string, opts *HelmOptions) config.Data {
 	if apiKey != "" {
 		cfg.CloudContext.ApiKey = apiKey
 	}
@@ -433,17 +604,40 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) conf
 	cfg.CloudContext.ApiUri = opts.Master.URIs.Api
 	cfg.CloudContext.UiUri = opts.Master.URIs.Ui
 	cfg.CloudContext.AgentUri = opts.Master.URIs.Agent
+	if dockerContainerName != nil {
+		cfg.CloudContext.DockerContainerName = *dockerContainerName
+	}
+	cfg.CloudContext.CallbackPort = opts.Master.CallbackPort
 
 	return cfg
 }
 
-func LoginUser(authUri string) (string, string, error) {
+// LoginUser runs the interactive login method selector and returns the chosen
+// tokenType together with the tokens. Picking "Email (magic link)" delegates to
+// the email-link flow; everything else uses the Dex OIDC flow.
+func LoginUser(authUri, apiUri string, customConnector bool, port int) (tokenType, idToken, refreshToken string, err error) {
 	ui.H1("Login")
-	connectorID := ui.Select("Choose your login method", []string{github, gitlab})
+	connectorID := ""
+	if !customConnector {
+		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
+	}
 
-	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))
+	if connectorID == emailLink {
+		emailAddr := ui.TextInput("Enter your email", "")
+		if emailAddr == "" {
+			return "", "", "", fmt.Errorf("email is required for magic-link login")
+		}
+		idToken, refreshToken, err = LoginUserEmailLink(apiUri, emailAddr, port)
+		if err != nil {
+			return "", "", "", err
+		}
+		return config.TokenTypeEmailLink, idToken, refreshToken, nil
+	}
+
+	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port)
 	if err != nil {
-		return "", "", fmt.Errorf("cloud login: %w", err)
+		return "", "", "", fmt.Errorf("cloud login: %w", err)
 	}
 
 	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
@@ -452,15 +646,130 @@ func LoginUser(authUri string) (string, string, error) {
 	ui.Paragraph("")
 
 	if ok := ui.Confirm("Continue"); !ok {
+		return "", "", "", fmt.Errorf("login cancelled")
+	}
+
+	ui.Debug("Opening login page in browser to get a token", authUrl)
+	open.Run(authUrl)
+
+	idToken, refreshToken, err = uiGetToken(tokenChan)
+	if err != nil {
+		return "", "", "", fmt.Errorf("getting token: %w", err)
+	}
+	return config.TokenTypeOIDC, idToken, refreshToken, nil
+}
+
+// extractAndCleanDomain extracts domain from email and removes dots and hyphens for connector ID
+func extractAndCleanDomain(email string) (string, error) {
+	if !strings.Contains(email, "@") || strings.Count(email, "@") != 1 {
+		return "", fmt.Errorf("invalid email format")
+	}
+
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 || parts[1] == "" {
+		return "", fmt.Errorf("invalid email domain")
+	}
+
+	domain := parts[1]
+
+	cleanedDomain := strings.ToLower(domain)
+	cleanedDomain = strings.ReplaceAll(cleanedDomain, ".", "")
+	cleanedDomain = strings.ReplaceAll(cleanedDomain, "-", "")
+
+	return cleanedDomain, nil
+}
+
+// validateSSOConnector checks if SSO connector exists for the domain
+func validateSSOConnector(authUri, domain string) error {
+	if !strings.HasSuffix(authUri, "/") {
+		authUri += "/"
+	}
+
+	validateURL := fmt.Sprintf("%sauth/validate?connector_id=%s", authUri, url.QueryEscape(domain))
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, validateURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to validate SSO connector request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to validate SSO connector: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("SSO not configured for domain %s (HTTP %d)", domain, resp.StatusCode)
+	}
+
+	return nil
+}
+
+func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, error) {
+	ui.H1("SSO Login")
+
+	// Validate email format and extract domain
+	domain, err := extractAndCleanDomain(email)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid email format: %w", err)
+	}
+
+	// Validate that SSO is configured for this domain using API URL
+	err = validateSSOConnector(apiUrl, domain)
+	if err != nil {
+		return "", "", fmt.Errorf("SSO validation failed: %w", err)
+	}
+
+	ui.Debug("Logging into cloud with SSO for domain ", domain)
+	ssoAuthURL, tokenChan, err := cloudlogin.CloudLoginSSO(context.Background(), apiUrl, authUrl, domain, port)
+	if err != nil {
+		return "", "", fmt.Errorf("SSO login: %w", err)
+	}
+
+	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
+	ui.Link(ssoAuthURL)
+	ui.Paragraph("(just login and get back to your terminal)")
+	ui.Paragraph("")
+
+	if ok := ui.Confirm("Continue"); !ok {
 		return "", "", fmt.Errorf("login cancelled")
 	}
 
+	ui.Debug("Opening SSO login page in browser", ssoAuthURL)
 	// open browser with login page and redirect to localhost
-	open.Run(authUrl)
+	open.Run(ssoAuthURL)
 
 	idToken, refreshToken, err := uiGetToken(tokenChan)
 	if err != nil {
-		return "", "", fmt.Errorf("getting token")
+		return "", "", fmt.Errorf("getting token: %w", err)
+	}
+	return idToken, refreshToken, nil
+}
+
+func LoginUserEmailLink(apiUrl, email string, port int) (string, string, error) {
+	ui.Debug("Requesting email-link for", email)
+
+	// Bound the callback server's lifetime to the same 5-minute budget as
+	// uiGetToken so a user walking away doesn't leak the loopback listener.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	tokenChan, err := cloudlogin.CloudLoginEmailLink(ctx, apiUrl, email, port)
+	if err != nil {
+		return "", "", fmt.Errorf("email link login: %w", err)
+	}
+
+	ui.Paragraph(fmt.Sprintf("We've sent a sign-in link to %s.", email))
+	ui.Paragraph("Open the email on this machine and click the link to complete login.")
+	ui.Paragraph("(the CLI will continue automatically once the link is clicked)")
+	ui.Paragraph("")
+
+	idToken, refreshToken, err := uiGetToken(tokenChan)
+	if err != nil {
+		return "", "", fmt.Errorf("getting token: %w", err)
+	}
+	if idToken == "" || refreshToken == "" {
+		return "", "", fmt.Errorf("email-link login did not return tokens")
 	}
 	return idToken, refreshToken, nil
 }
@@ -509,6 +818,63 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 	}
 
 	return strings.TrimSpace(string(out)), nil
+}
+
+func KubectlScaleStatefulSet(namespace, statefulset string, replicas int) (string, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+
+	// kubectl patch --namespace=$n statefulset $1 -p "{\"spec\":{\"replicas\": $2}}"
+	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "statefulset", statefulset, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+// KubectlResourceExists checks whether a Kubernetes resource of the given type and name exists
+// in the specified namespace. It returns true when the resource is found.
+func KubectlResourceExists(namespace, resourceType, name string) (bool, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return false, cliErr
+	}
+
+	out, err := process.Execute(kubectl, "get", resourceType, name, "--namespace", namespace, "--ignore-not-found")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(string(out)) != "", nil
+}
+
+// DetectDatabaseType inspects the given namespace and returns which database is deployed:
+// config.DatabaseTypeMongoDB, config.DatabaseTypePostgreSQL, or "" if neither is found.
+func DetectDatabaseType(namespace string) (string, *CLIError) {
+	if exists, err := KubectlResourceExists(namespace, "deployment", "testkube-mongodb"); err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking deployment: MongoDB",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	} else if exists {
+		return config.DatabaseTypeMongoDB, nil
+	}
+	if exists, err := KubectlResourceExists(namespace, "statefulset", "testkube-postgresql"); err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyDatabase,
+			"Checking statefulset: PostgreSQL",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	} else if exists {
+		return config.DatabaseTypePostgreSQL, nil
+	}
+	return "", nil
 }
 
 func KubectlLogs(namespace string, labels map[string]string) error {
@@ -568,6 +934,51 @@ func KubectlPrintEvents(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
+func KubectlVersion() (client string, server string, err error) {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return "", "", err
+	}
+
+	args := []string{
+		"version",
+		"-o", "json",
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, eerr := process.Execute(kubectl, args...)
+	if eerr != nil {
+		return "", "", eerr
+	}
+
+	type Version struct {
+		ClientVersion struct {
+			Version string `json:"gitVersion,omitempty"`
+		} `json:"clientVersion,omitempty"`
+		ServerVersion struct {
+			Version string `json:"gitVersion,omitempty"`
+		} `json:"serverVersion,omitempty"`
+	}
+
+	var v Version
+
+	out, err = extractJSONObject(out)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = json.Unmarshal(out, &v)
+	if err != nil {
+		return "", "", err
+	}
+
+	return strings.TrimLeft(v.ClientVersion.Version, "v"), strings.TrimLeft(v.ServerVersion.Version, "v"), nil
+}
+
 func KubectlDescribePods(namespace string) error {
 	kubectl, err := lookupKubectlPath()
 	if err != nil {
@@ -580,8 +991,10 @@ func KubectlDescribePods(namespace string) error {
 		"-n", namespace,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -599,8 +1012,10 @@ func KubectlPrintPods(namespace string) error {
 		"--show-labels",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -616,8 +1031,10 @@ func KubectlGetStorageClass(namespace string) error {
 		"storageclass",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -634,8 +1051,10 @@ func KubectlGetServices(namespace string) error {
 		"-n", namespace,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -653,8 +1072,10 @@ func KubectlDescribeServices(namespace string) error {
 		"-o", "yaml",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -696,6 +1117,112 @@ func KubectlDescribeIngresses(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
+func KubectlGetNamespacesHavingSecrets(secretName string) ([]string, error) {
+	kubectl, clierr := lookupKubectlPath()
+	if clierr != nil {
+		return nil, clierr.ActualError
+	}
+
+	args := []string{
+		"get",
+		"secret",
+		"-A",
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, err := process.Execute(kubectl, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	nss := extractUniqueNamespaces(string(out), secretName)
+	return nss, nil
+}
+
+func extractUniqueNamespaces(data string, secretName string) []string {
+	// Split the data into lines
+	lines := strings.Split(data, "\n")
+
+	// Map to store unique namespaces
+	uniq := make(map[string]bool)
+
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			continue
+		}
+		if parts[1] == secretName {
+			uniq[parts[0]] = true
+		}
+	}
+
+	// Convert map keys (namespaces) to a slice of strings
+	list := make([]string, 0, len(uniq))
+	for namespace := range uniq {
+		list = append(list, namespace)
+	}
+
+	return list
+}
+
+func KubectlGetPodEnvs(selector, namespace string) (map[string]string, error) {
+	kubectl, clierr := lookupKubectlPath()
+	if clierr != nil {
+		return nil, clierr.ActualError
+	}
+
+	args := []string{
+		"get",
+		"secret",
+		selector,
+		"-n", namespace,
+		"-o", `jsonpath='{range .items[*].spec.containers[*]}{"\nContainer: "}{.name}{"\n"}{range .env[*]}{.name}={.value}{"\n"}{end}{end}'`,
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, err := process.Execute(kubectl, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertEnvToMap(string(out)), nil
+}
+
+func KubectlGetSecret(selector, namespace string) (map[string]string, error) {
+	kubectl, clierr := lookupKubectlPath()
+	if clierr != nil {
+		return nil, clierr.ActualError
+	}
+
+	args := []string{
+		"get",
+		"secret",
+		selector,
+		"-n", namespace,
+		"-o", `jsonpath='{.data}'`,
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, err := process.Execute(kubectl, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return secretsJSONToMap(string(out))
+}
+
 func lookupKubectlPath() (string, *CLIError) {
 	kubectlPath, err := exec.LookPath("kubectl")
 	if err != nil {
@@ -710,14 +1237,21 @@ func lookupKubectlPath() (string, *CLIError) {
 }
 
 func runKubectlCommand(kubectlPath string, args []string) (output string, cliErr *CLIError) {
+	cmd := strings.Join(append([]string{kubectlPath}, args...), " ")
+	ui.DebugNL()
+	ui.Debug("Kubectl command:")
+	ui.Debug(cmd)
 	out, err := process.Execute(kubectlPath, args...)
+	ui.DebugNL()
+	ui.Debug("Kubectl output:")
+	ui.Debug(string(out))
 	if err != nil {
 		return "", NewCLIError(
 			TKErrKubectlCommandFailed,
 			"Kubectl command failed",
 			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
 			err,
-		)
+		).WithExecutedCommand(cmd)
 	}
 	return string(out), nil
 }
@@ -734,4 +1268,302 @@ func UiGetNamespace(cmd *cobra.Command, defaultNamespace string) string {
 	}
 
 	return namespace
+}
+
+func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
+	out, err := process.Execute("docker", args...)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrDockerCommandFailed,
+			"Docker command failed",
+			"Check is the Docker service installed and running on your computer by executing 'docker info' ",
+			err,
+		).WithExecutedCommand(strings.Join(append([]string{"docker"}, args...), " "))
+	}
+	return string(out), nil
+}
+
+func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, dockerContainerName, dockerImage string) *CLIError {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
+	}
+
+	if options.Master.AgentToken == "" {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
+	}
+
+	args := prepareTestkubeProDockerArgs(options, dockerContainerName, dockerImage)
+	output, err := RunDockerCommand(args)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Docker command output:")
+	ui.Debug("Arguments", args...)
+
+	ui.Debug("Docker run testkube output", output)
+
+	return nil
+}
+
+// prepareTestkubeProDockerArgs prepares docker arguments for Testkube Pro running.
+func prepareTestkubeProDockerArgs(options HelmOptions, dockerContainerName, dockerImage string) []string {
+	args := []string{
+		"run",
+		"--name", dockerContainerName,
+		"--privileged",
+		"-d",
+		"-e", "CLOUD_URL=" + options.Master.URIs.Agent,
+		"-e", "AGENT_KEY=" + options.Master.AgentToken,
+		dockerImage,
+	}
+
+	return args
+}
+
+// prepareTestkubeUpgradeDockerArgs prepares docker arguments for Testkube Upgrade running.
+func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, latestVersion string) []string {
+	args := []string{
+		"exec",
+		dockerContainerName,
+		"helm",
+		"upgrade",
+		// These arguments are similar to Docker entrypoint script
+		"testkube",
+		"testkube/testkube",
+		"--namespace",
+		"testkube",
+		"--set",
+		"testkube-api.minio.enabled=false",
+		"--set",
+		"mongodb.enabled=false",
+		"--set",
+		"testkube-api.cloud.key=" + options.Master.AgentToken,
+		"--set",
+		"testkube-api.cloud.url=" + options.Master.URIs.Agent,
+		"--set",
+		"testkube-api.dockerImageVersion=" + latestVersion,
+	}
+
+	return args
+}
+
+func StreamDockerLogs(dockerContainerName string) *CLIError {
+	// Create a Docker client
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return NewCLIError(
+			TKErrInvalidDockerConfig,
+			"Invalid docker config",
+			"Check your environment variables used to connect to Docker daemon",
+			err)
+	}
+
+	ctx := context.Background()
+	// Set options to stream logs and show both stdout and stderr logs
+	opts := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true, // Follow logs in real-time
+		Timestamps: false,
+	}
+
+	// Fetch logs from the container
+	logs, err := cli.ContainerLogs(ctx, dockerContainerName, opts)
+	if err != nil {
+		return NewCLIError(
+			TKErrDockerLogStreamingFailed,
+			"Docker log streaming failed",
+			"Check that your Testkube Docker Agent container is up and runnning",
+			err)
+	}
+	defer logs.Close()
+
+	// Use a buffered scanner to read the logs line by line
+	scanner := bufio.NewScanner(logs)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) > dockerDaemonPrefixLen {
+			line = line[dockerDaemonPrefixLen:]
+		}
+
+		if ui.IsVerbose() {
+			fmt.Println(string(line)) // Optional: print logs to console
+		}
+
+		if strings.Contains(string(line), "Testkube installation succeed") {
+			break
+		}
+
+		if strings.Contains(string(line), "Testkube installation failed") {
+			return NewCLIError(
+				TKErrDockerInstallationFailed,
+				"Docker installation failed",
+				"Check logs of your Testkube Docker Agent container",
+				errors.New(string(line)))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return NewCLIError(
+			TKErrDockerLogReadingFailed,
+			"Docker log reading failed",
+			"Check logs of your Testkube Docker Agent container",
+			err)
+	}
+
+	return nil
+}
+
+func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg config.Data) *CLIError {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
+	}
+
+	if options.Master.AgentToken == "" {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
+	}
+
+	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName, latestVersion)
+	output, err := RunDockerCommand(args)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Docker command output:")
+	ui.Debug("Arguments", args...)
+
+	ui.Debug("Docker run testkube output", output)
+
+	return nil
+}
+
+type releaseMetadata struct {
+	TagName string `json:"tag_name"`
+}
+
+func GetLatestVersion() (string, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, latestReleaseUrl, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var metadata releaseMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return "", err
+	}
+
+	return strings.TrimPrefix(metadata.TagName, "v"), nil
+}
+
+func convertEnvToMap(input string) map[string]string {
+	result := make(map[string]string)
+	scanner := bufio.NewScanner(strings.NewReader(input))
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// Split on first = only
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue // Skip invalid lines
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Store in map
+		result[key] = value
+	}
+
+	return result
+}
+
+func secretsJSONToMap(in string) (map[string]string, error) {
+	res := map[string]string{}
+	in = strings.TrimLeft(in, "'")
+	in = strings.TrimRight(in, "'")
+	err := json.Unmarshal([]byte(in), &res)
+
+	if len(res) > 0 {
+		for k := range res {
+			decoded, err := base64.StdEncoding.DecodeString(res[k])
+			if err != nil {
+				return nil, err
+			}
+			res[k] = string(decoded)
+		}
+	}
+
+	return res, err
+}
+
+// extractJSONObject extracts JSON from any string
+func extractJSONObject(input []byte) ([]byte, error) {
+	// Find the first '{' and last '}' to extract JSON object
+	start := bytes.Index(input, []byte("{"))
+	end := bytes.LastIndex(input, []byte("}"))
+
+	if start == -1 || end == -1 || start > end {
+		return []byte(""), fmt.Errorf("invalid JSON format")
+	}
+
+	jsonStr := input[start : end+1]
+
+	// Validate JSON
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(jsonStr), "", "  "); err != nil {
+		return []byte(""), err
+	}
+
+	return prettyJSON.Bytes(), nil
+}
+
+// CheckLegacyName checks if the given resource type is legacy and shows a deprecation warning.
+func CheckLegacyName(commandName string) {
+	// Legacy resource types that are about to be deprecated
+	legacyNames := map[string]bool{
+		"test":                true,
+		"testsuite":           true,
+		"executor":            true,
+		"testsource":          true,
+		"template":            true,
+		"execution":           true,
+		"executions":          true,
+		"testsuiteexecution":  true,
+		"testsuiteexecutions": true,
+		"testsuite-artifacts": true,
+	}
+
+	if legacyNames[commandName] {
+		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
+		ui.Alert("! ⚠️ This functionality is about to be deprecated, read more at https://docs.testkube.io/articles/legacy-features !")
+		ui.Alert("! -------------------------------------------------------------------------------------------------------------- !")
+	}
 }

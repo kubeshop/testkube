@@ -90,8 +90,10 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("clusterId", params.ClusterID).
 		Set("eventCategory", params.EventCategory).
 		Set("host", params.Host).
-		Set("containerEnv", params.Context.ContainerEnv).
+		Set("dockerImageVersion", params.Context.DockerImageVersion).
 		Set("contextType", params.Context.Type).
+		Set("cliContext", params.CliContext).
+		Set("toolName", params.ToolName).
 		Set("cloudOrganizationId", params.Context.OrganizationId).
 		Set("cloudEnvironmentId", params.Context.EnvironmentId).
 		Set("machineId", params.MachineID).
@@ -99,6 +101,10 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("errorType", params.ErrorType).
 		Set("errorStackTrace", params.ErrorStackTrace).
 		Set("errorCode", params.ErrorCode)
+
+	if len(params.AgentCapabilities) > 0 {
+		properties = properties.Set("agentCapabilities", params.AgentCapabilities)
+	}
 
 	if params.License != "" {
 		properties = properties.Set("license", params.License)
@@ -134,6 +140,11 @@ func mapProperties(name string, params Params) analytics.Properties {
 	if params.TestSuiteSteps != 0 {
 		properties = properties.Set("testSuiteSteps", params.TestSuiteSteps)
 	}
+
+	if params.Source != "" {
+		properties = properties.Set("source", params.Source)
+	}
+
 	if name == "testkube_api_run_test_workflow" {
 		properties = properties.Set("testWorkflowSteps", params.TestWorkflowSteps)
 		properties = properties.Set("testWorkflowExecuteCount", params.TestWorkflowExecuteCount)

@@ -7,11 +7,11 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
@@ -23,19 +23,11 @@ type CloudOutputRepository struct {
 	httpClient *http.Client
 }
 
-type Option func(*CloudOutputRepository)
-
-func WithSkipVerify() Option {
-	return func(r *CloudOutputRepository) {
+func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, skipVerify bool, proContext *intconfig.ProContext) *CloudOutputRepository {
+	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, proContext), httpClient: http.DefaultClient}
+	if skipVerify {
 		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 		r.httpClient.Transport = transport
-	}
-}
-
-func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string, opts ...Option) *CloudOutputRepository {
-	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey), httpClient: http.DefaultClient}
-	for _, opt := range opts {
-		opt(r)
 	}
 	return r
 }
@@ -65,33 +57,55 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return err
 	}
-	defer buffer.Cleanup()
+	bufferLen := buffer.Len()
+	body := buffer.(io.Reader)
+	if bufferLen == 0 {
+		// http.Request won't send Content-Length: 0, if the body is non-nil
+		buffer.Cleanup()
+		body = http.NoBody
+	} else {
+		defer buffer.Cleanup()
+	}
 	url, err := r.PresignSaveLog(ctx, id, workflowName)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, buffer)
+
+	// Empty URL means the server has no log storage configured; skip the upload.
+	if url == "" {
+		return nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/octet-stream")
-	req.ContentLength = int64(buffer.Len())
+	req.ContentLength = int64(bufferLen)
 	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in cloud storage")
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return errors.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
 	return nil
 }
 
-// ReadLog streams the output from Cloud
-func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error) {
+// ReadLog streams the output from Cloud.
+// The caller is responsible for closing the stream.
+func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName string) (io.ReadCloser, error) {
 	url, err := r.PresignReadLog(ctx, id, workflowName)
 	if err != nil {
 		return nil, err
 	}
+
+	// Empty URL means the server has no log storage configured; return an empty stream.
+	if url == "" {
+		return io.NopCloser(http.NoBody), nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -101,8 +115,10 @@ func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName st
 		return nil, errors.Wrap(err, "failed to get file from cloud storage")
 	}
 	if res.StatusCode != http.StatusOK {
+		_ = res.Body.Close()
 		return nil, errors.Errorf("error getting file from presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
+	// Caller must close this stream.
 	return res.Body, nil
 }
 

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"slices"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -167,6 +167,16 @@ merging:
 		groups[i+1] = append(groups[i], groups[i+1]...)
 		groups = append(groups[:i], groups[i+1:]...)
 		i++
+	}
+
+	// Fix the auto-merged internal images
+	for i := range groups {
+		image := groups[i].Image()
+		// Re-use /.tktw/bin/sh when the internal image has been merged into different container
+		if image != constants.DefaultToolkitImage && image != constants.DefaultInitImage {
+			groups[i] = groups[i].RewireCommandDirectory(constants.DefaultInitImage, constants.DefaultInitImageBusyboxBinaryPath, constants.InternalBinPath)
+			groups[i] = groups[i].RewireCommandDirectory(constants.DefaultToolkitImage, constants.DefaultInitImageBusyboxBinaryPath, constants.InternalBinPath)
+		}
 	}
 
 	return groups

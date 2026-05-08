@@ -35,3 +35,17 @@ func AnnotateGroupId(obj metav1.Object, id string) {
 		AnnotateGroupId(&v.Spec.Template, id)
 	}
 }
+
+func AnnotateRunnerId(obj metav1.Object, id string) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.RunnerIdLabelName] = id
+	obj.SetLabels(labels)
+
+	// Annotate Pod template in the Job
+	if v, ok := obj.(*batchv1.Job); ok {
+		AnnotateRunnerId(&v.Spec.Template, id)
+	}
+}

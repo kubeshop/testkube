@@ -1,0 +1,37 @@
+apiVersion: v2
+name: testkube
+description: Testkube is an open-source platform that simplifies the deployment and management of automated testing infrastructure.
+type: application
+version: 2.9.0-rc.0
+appVersion: 2.9.0-rc.0
+dependencies:
+  - name: testkube-operator
+    version: 2.x.x-x
+    repository: "file://../testkube-operator"
+  - name: mongodb
+    condition: mongodb.enabled
+    version: 8.2.7-0
+    repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
+  - name: postgresql
+    condition: postgresql.enabled
+    version: 18.3-0
+    repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
+  - name: cloudnative-pg
+    version: 0.27.0
+    repository: https://cloudnative-pg.github.io/charts
+    condition: cloudnative-pg.enabled
+  - name: cluster
+    alias: postgresqlOperatorCluster
+    version: 0.4.0
+    repository: https://cloudnative-pg.github.io/charts
+    condition: postgresqlOperatorCluster.enabled
+  - name: nats
+    condition: testkube-api.nats.enabled
+    version: 1.2.6-4
+    repository: "file://./charts/nats"
+  - name: testkube-api
+    version: 2.x.x-x
+    repository: "file://../testkube-api"
+  - name: global
+    version: 0.x.x-x
+    repository: "file://../global"

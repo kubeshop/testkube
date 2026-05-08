@@ -56,6 +56,12 @@ func (c TestWorkflowTemplateClient) CreateTestWorkflowTemplate(template testkube
 	return c.testWorkflowTemplateTransport.Execute(http.MethodPost, uri, body, nil)
 }
 
+// ValidateTestWorkflowTemplate validates new TestWorkflowTemplate Custom Resource
+func (c TestWorkflowTemplateClient) ValidateTestWorkflowTemplate(body []byte) error {
+	uri := c.testWorkflowTemplateTransport.GetURI("/test-workflow-templates")
+	return c.testWorkflowTemplateTransport.Validate(http.MethodPut, uri, body, nil)
+}
+
 // UpdateTestWorkflowTemplate updates TestWorkflowTemplate Custom Resource
 func (c TestWorkflowTemplateClient) UpdateTestWorkflowTemplate(template testkube.TestWorkflowTemplate) (result testkube.TestWorkflowTemplate, err error) {
 	if template.Name == "" {

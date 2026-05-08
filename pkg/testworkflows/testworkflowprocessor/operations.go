@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -54,7 +54,7 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container stage.
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Run")
 	if step.Run.Shell != nil {
-		if step.Run.ContainerConfig.Command != nil || step.Run.ContainerConfig.Args != nil {
+		if step.Run.Command != nil || step.Run.Args != nil {
 			return nil, errors.New("run.shell should not be used in conjunction with run.command or run.args")
 		}
 		stage.SetCategory("Run shell command")
@@ -181,10 +181,15 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		SetWorkingDir("/").
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
+		SetCommand("/toolkit", "clone").
 		EnableToolkit(stage.Ref())
 
-	args := []string{mountPath}
+	args := []string{step.Content.Git.Uri, mountPath}
+
+	// Enable cone mode if expected
+	if step.Content.Git.Cone {
+		args = append([]string{"--cone"}, args...)
+	}
 
 	// Provide Git username
 	if step.Content.Git.UsernameFrom != nil {

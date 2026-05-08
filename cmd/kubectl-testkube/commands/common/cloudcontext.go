@@ -26,7 +26,7 @@ func UiPrintContext(cfg config.Data) {
 		}
 
 		// add agent information only when need to change agent data, it's usually not needed in usual workflow
-		if ui.Verbose {
+		if ui.IsVerbose() {
 			contextData["Agent Key"] = text.Obfuscate(cfg.CloudContext.AgentKey)
 			contextData["Agent URI"] = cfg.CloudContext.AgentUri
 		}
@@ -55,6 +55,9 @@ func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
 	if cmd.Flag("output") != nil && cmd.Flag("output").Value.String() != "pretty" {
 		return
 	}
+
+	// Check for legacy resource type and show deprecation warning
+	CheckLegacyName(cmd.Name())
 
 	header := "\n"
 	separator := "   "

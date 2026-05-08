@@ -1,0 +1,21 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: pytest-junit-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: suite-trigger
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - execute:
+      workflows:
+      - name: pytest-workflow-smoke-junit-mixed-failures
+      - name: pytest-workflow-smoke-junit-random-failures
+  events:
+  - cronjob:
+      cron: "30 7 * * *" # every day at 07:30

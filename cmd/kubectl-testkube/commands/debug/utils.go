@@ -1,7 +1,6 @@
 package debug
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -44,18 +43,6 @@ func PrintDebugInfo(info testkube.DebugInfo) {
 	ui.NL()
 	for _, l := range info.OperatorLogs {
 		ui.Info(l)
-	}
-	ui.NL()
-
-	ui.Info("EXECUTION LOGS")
-	ui.NL()
-	for id, logs := range info.ExecutionLogs {
-		ui.Info(fmt.Sprintf("EXECUTION ID: %s", id))
-		ui.NL()
-		for _, l := range logs {
-			ui.Info(l)
-		}
-		ui.NL()
 	}
 	ui.NL()
 }

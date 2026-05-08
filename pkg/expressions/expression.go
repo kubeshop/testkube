@@ -1,6 +1,6 @@
 package expressions
 
-//go:generate mockgen -destination=./mock_expression.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Expression
+//go:generate go tool mockgen -destination=./mock_expression.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Expression
 type Expression interface {
 	String() string
 	SafeString() string
@@ -23,7 +23,7 @@ const (
 	TypeInt64   Type = "int64"
 )
 
-//go:generate mockgen -destination=./mock_staticvalue.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" StaticValue
+//go:generate go tool mockgen -destination=./mock_staticvalue.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" StaticValue
 type StaticValue interface {
 	Expression
 	IsNone() bool

@@ -11,14 +11,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-var testEventTypes = []testkube.EventType{*testkube.EventStartTest}
+var testEventTypes = []testkube.EventType{*testkube.EventStartTestWorkflow}
 
 func TestCDEventListener_Notify(t *testing.T) {
-	t.Parallel()
-
 	t.Run("send event success response", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := cloudevents.NewEventFromHTTPRequest(r)
@@ -36,16 +32,14 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		assert.Equal(t, "", r.Error())
 	})
 
 	t.Run("send event failed response", func(t *testing.T) {
-		t.Parallel()
-
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadGateway)
@@ -61,17 +55,15 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
 		assert.NotEqual(t, "", r.Error())
-
 	})
 
 	t.Run("send event bad uri", func(t *testing.T) {
-		t.Parallel()
 		// given
 
 		client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget("abcdef"))
@@ -81,21 +73,22 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 		// when
 		r := l.Notify(testkube.Event{
-			Type_:         testkube.EventStartTest,
-			TestExecution: exampleExecution(),
+			Type_:                 testkube.EventStartTestWorkflow,
+			TestWorkflowExecution: exampleExecution(),
 		})
 
 		// then
 		assert.NotEqual(t, "", r.Error())
 	})
-
 }
 
-func exampleExecution() *testkube.Execution {
+func exampleExecution() *testkube.TestWorkflowExecution {
+	namespace := "testkube"
+
 	execution := testkube.NewQueuedExecution()
 	execution.Id = "1"
 	execution.Name = "test-1"
-	execution.TestName = "test"
-	execution.TestNamespace = "testkube"
+	execution.Namespace = namespace
+	execution.Workflow = &testkube.TestWorkflow{Name: "test", Namespace: namespace}
 	return execution
 }

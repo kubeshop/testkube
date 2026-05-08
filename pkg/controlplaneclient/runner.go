@@ -1,0 +1,233 @@
+//nolint:staticcheck
+package controlplaneclient
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"sync"
+	"time"
+
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/repository/channels"
+)
+
+type RunnerRequestsWatcher channels.Watcher[RunnerRequest]
+type NotificationWatcher channels.Watcher[*testkube.TestWorkflowExecutionNotification]
+
+type RunnerClient interface {
+	GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error)
+	WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher
+	ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error
+	ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error
+	ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error
+}
+
+func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
+	res, err := call(ctx, c.metadata().GRPC(), c.client.GetUnfinishedExecutions, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*cloud.UnfinishedExecution, 0)
+	for {
+		// Take the context error if possible
+		if err == nil && ctx.Err() != nil {
+			err = ctx.Err()
+		}
+
+		// End when it's done
+		if errors.Is(err, io.EOF) {
+			return result, nil
+		}
+
+		// Handle the error
+		if err != nil {
+			return nil, err
+		}
+
+		// Get the next execution to monitor
+		var exec *cloud.UnfinishedExecution
+		exec, err = res.Recv()
+		if err != nil {
+			continue
+		}
+
+		result = append(result, exec)
+	}
+}
+
+func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
+	ctx, cancel := context.WithCancelCause(ctx)
+	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
+	if err != nil {
+		cancel(nil)
+		return channels.NewError[RunnerRequest](err)
+	}
+	watcher := channels.NewWatcher[RunnerRequest]()
+	sendMu := sync.Mutex{}
+	send := func(v *cloud.RunnerResponse) error {
+		sendMu.Lock()
+		defer sendMu.Unlock()
+
+		errChan := make(chan error, 1)
+		go func() {
+			errChan <- stream.Send(v)
+			close(errChan)
+		}()
+
+		// Receive timeout should be longer than heartbeat interval in cloud.
+		t := time.NewTimer(c.opts.SendTimeout)
+		select {
+		case err := <-errChan:
+			t.Stop()
+			if err != nil {
+				cancel(err)
+			}
+			return err
+		case <-ctx.Done():
+			t.Stop()
+			return ctx.Err()
+		case <-t.C:
+			return errors.New("send response too slow")
+		}
+	}
+	go func() {
+		defer func() {
+			log := c.logger
+			level := zapcore.InfoLevel
+			if err != nil {
+				log = log.With("error", err)
+				level = zapcore.ErrorLevel
+			}
+			log.Logw(level, "shutting down watch runner requests")
+			cancel(err)
+			watcher.Close(err)
+		}()
+		for {
+			// Ignore if it's not implemented in the Control Plane
+			if getGrpcErrorCode(err) == codes.Unimplemented {
+				c.logger.Errorw("error watching runner requests", "error", err)
+				return
+			}
+
+			// Take the context error if possible
+			if errors.Is(err, context.Canceled) && ctx.Err() != nil {
+				err = context.Cause(ctx)
+			}
+
+			// Handle the error
+			if err != nil {
+				c.logger.Errorw("error watching runner requests", "error", err)
+				return
+			}
+
+			// Get the next runner request
+			var req *cloud.RunnerRequest
+			reqChan := make(chan struct {
+				req *cloud.RunnerRequest
+				err error
+			}, 1)
+			go func() {
+				recvReq, recvErr := stream.Recv()
+				reqChan <- struct {
+					req *cloud.RunnerRequest
+					err error
+				}{recvReq, recvErr}
+			}()
+
+			select {
+			case result := <-reqChan:
+				req = result.req
+				err = result.err
+				if err != nil {
+					c.logger.Errorw("failed to receive runner request", "error", err)
+					return
+				}
+			case <-ctx.Done():
+				err = ctx.Err()
+				return
+			case <-time.After(c.opts.RecvTimeout):
+				// Not erroring here because this isn't an error, it is expected gRPC behaviour
+				// if we stop playing ping pong with the server.
+				c.logger.Infow("did not receive runner request before timeout, closing connection",
+					"timeout", c.opts.RecvTimeout)
+				return
+			}
+
+			if req.Type == cloud.RunnerRequestType_PING {
+				err = send(&cloud.RunnerResponse{Type: cloud.RunnerRequestType_PING})
+				if err != nil {
+					c.logger.Errorw("failed to send ping response", "error", err)
+					return
+				}
+				continue
+			}
+
+			watcher.Send(&runnerRequestData{data: req, send: send})
+		}
+	}()
+	return watcher
+}
+
+func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
+	return processNotifications(
+		ctx,
+		c.metadata().GRPC(),
+		c.client.GetTestWorkflowNotificationsStream,
+		buildPongNotification,
+		buildCloudNotification,
+		buildCloudError,
+		buildCloudProtocol,
+		func(req *cloud.TestWorkflowNotificationsRequest) string {
+			return fmt.Sprintf("workflow:%s:%s", req.GetEnvironmentId(), req.GetExecutionId())
+		},
+		process,
+		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
+	)
+}
+
+func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
+	return processNotifications(
+		ctx,
+		c.metadata().GRPC(),
+		c.client.GetTestWorkflowParallelStepNotificationsStream,
+		buildParallelStepPongNotification,
+		buildParallelStepCloudNotification,
+		buildParallelStepCloudError,
+		buildParallelStepCloudProtocol,
+		func(req *cloud.TestWorkflowParallelStepNotificationsRequest) string {
+			return fmt.Sprintf("parallel:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetRef(), req.GetWorkerIndex())
+		},
+		process,
+		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
+	)
+}
+
+func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
+	return processNotifications(
+		ctx,
+		c.metadata().GRPC(),
+		c.client.GetTestWorkflowServiceNotificationsStream,
+		buildServicePongNotification,
+		buildServiceCloudNotification,
+		buildServiceCloudError,
+		buildServiceCloudProtocol,
+		func(req *cloud.TestWorkflowServiceNotificationsRequest) string {
+			return fmt.Sprintf("service:%s:%s:%s:%d", req.GetEnvironmentId(), req.GetExecutionId(), req.GetServiceName(), req.GetServiceIndex())
+		},
+		process,
+		c.opts.SendTimeout,
+		c.opts.RecvTimeout,
+		c.logger,
+	)
+}

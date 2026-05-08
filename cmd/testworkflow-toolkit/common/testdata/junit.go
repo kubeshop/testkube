@@ -176,3 +176,16 @@ var InvalidJUnit = `<?xml version="1.0" encoding="UTF-8"?>
 <foo>
 	<bar>
 </foo>`
+
+var OneLineJUnit = `<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="TestSuite" tests="2" errors="0" failures="1" skipped="0"><testcase name="Test1" classname="TestClass"><failure message="Test failed">Failure details</failure></testcase><testcase name="Test2" classname="TestClass"/></testsuite></testsuites>`
+
+var TestsuitesOnlyJUnit = `<testsuites id="" name="" tests="2" failures="0" skipped="0" errors="0" time="14.511833">
+    <testsuite name="smoke.spec.js" timestamp="2024-10-01T12:48:47.332Z" hostname="chromium" tests="1" failures="0" skipped="0" time="6.259" errors="0">
+        <testcase name="Smoke 1 - has title" classname="smoke.spec.js" time="6.259"></testcase>
+    </testsuite>
+    <testsuite name="smoke2.spec.js" timestamp="2024-10-01T12:48:47.332Z" hostname="chromium" tests="1" failures="0" skipped="0" time="6.657" errors="0">
+        <testcase name="Smoke 2 - has title" classname="smoke2.spec.js" time="6.657"></testcase>
+    </testsuite>
+</testsuites>`
+
+var TestsuiteOnlyJUnit = `<testsuite name="smoke.spec.js" timestamp="2024-10-01T12:48:47.332Z" hostname="chromium" tests="1" failures="0" skipped="0" time="6.259" errors="0"><testcase name="Smoke 1 - has title" classname="smoke.spec.js" time="6.259"></testcase></testsuite>`

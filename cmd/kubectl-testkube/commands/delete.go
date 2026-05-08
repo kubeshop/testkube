@@ -3,16 +3,15 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/workflowtriggers"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -37,15 +36,16 @@ func NewDeleteCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
+	cmd.PersistentFlags().Bool("ignore-not-found", false, "ignore 'not found' errors and non-zero exit code if the specified resource does not exist")
 
-	cmd.AddCommand(tests.NewDeleteTestsCmd())
-	cmd.AddCommand(testsuites.NewDeleteTestSuiteCmd())
 	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
-	cmd.AddCommand(executors.NewDeleteExecutorCmd())
-	cmd.AddCommand(testsources.NewDeleteTestSourceCmd())
-	cmd.AddCommand(templates.NewDeleteTemplateCmd())
+	cmd.AddCommand(webhooktemplates.NewDeleteWebhookTemplateCmd())
+	cmd.AddCommand(workflowtriggers.NewDeleteWorkflowTriggerCmd())
+	cmd.AddCommand(testtriggers.NewDeleteTestTriggerCmd())
 	cmd.AddCommand(testworkflows.NewDeleteTestWorkflowCmd())
 	cmd.AddCommand(testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd())
+	cmd.AddCommand(agents.NewDeleteAgentCommand())
+	cmd.AddCommand(agents.NewDeleteCRDCommand())
 
 	return cmd
 }

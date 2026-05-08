@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
+	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -13,9 +13,22 @@ import (
 	"text/template"
 	"time"
 
-	sprig "github.com/go-task/slim-sprig"
-	"github.com/pkg/errors"
+	"github.com/Masterminds/sprig/v3"
+	"github.com/jackc/pgx/v5"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, pgx.ErrNoRows) {
+		return true
+	}
+
+	return false
+}
 
 func ContainsTag(tags []string, tag string) bool {
 	for _, t := range tags {
@@ -157,30 +170,11 @@ func GetEnvVarWithDeprecation(key, deprecatedKey, defaultVal string) string {
 	return defaultVal
 }
 
-// EncodeStringMapToEnvVar encodes string map safely to env var
-func EncodeStringMapToEnvVar(mapStr map[string]string) (string, error) {
-	var str string
-	if mapStr != nil {
-		if data, err := json.Marshal(mapStr); err != nil {
-			return "", err
-		} else {
-			str = base64.StdEncoding.EncodeToString(data)
-		}
+// TruncateName truncates name to k8s name length
+func TruncateName(value string) string {
+	if len(value) > 63 {
+		return value[:63]
 	}
 
-	return str, nil
-}
-
-// DecodeEnvVarToStringMap decodes env var safely to string map
-func DecodeEnvVarToStringMap(str string) (map[string]string, error) {
-	var mapStr map[string]string
-	if str != "" {
-		if data, err := base64.StdEncoding.DecodeString(str); err != nil {
-			return nil, err
-		} else if err = json.Unmarshal(data, &mapStr); err != nil {
-			return nil, err
-		}
-	}
-
-	return mapStr, nil
+	return value
 }

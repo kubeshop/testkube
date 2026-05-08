@@ -1,0 +1,58 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: testkube-agent
+build:
+  local:
+    concurrency: 1 # for testing, should be possible to run all concurrently.
+  artifacts:
+    - image: docker.io/testkube-agent-server
+      context: .
+      custom:
+        buildCommand: GOCACHE="$(go env GOCACHE)" GOMODCACHE="$(go env GOMODCACHE)" docker buildx bake --set agent-server.tags="$IMAGE" --set agent-server.target="debug" agent-server
+        dependencies:
+          dockerfile:
+            path: build/_local/agent-server.Dockerfile
+    - image: docker.io/testworkflow-init
+      context: .
+      custom:
+        buildCommand: GOCACHE="$(go env GOCACHE)" GOMODCACHE="$(go env GOMODCACHE)" docker buildx bake --set testworkflow-init.tags="$IMAGE" testworkflow-init
+        dependencies:
+          dockerfile:
+            path: build/_local/testworkflow-init.Dockerfile
+    - image: docker.io/testworkflow-toolkit
+      context: .
+      custom:
+        buildCommand: GOCACHE="$(go env GOCACHE)" GOMODCACHE="$(go env GOMODCACHE)" docker buildx bake --set testworkflow-toolkit.tags="$IMAGE" --set testworkflow-toolkit.target="debug" testworkflow-toolkit
+        dependencies:
+          dockerfile:
+            path: build/_local/testworkflow-toolkit.Dockerfile
+deploy:
+  helm:
+    # see https://skaffold.dev/docs/renderers/helm/#skaffoldyaml-configuration
+    releases:
+      - name: testkube-agent
+        repo: https://kubeshop.github.io/helm-charts
+        remoteChart: testkube
+        # Alternative: Local chart - useful for when you are actively making changes to the chart.
+#        chartPath: /Users/you/path/to/helm-charts/charts/testkube
+        upgradeOnChange: true
+#        skipBuildDependencies: true # This implies that you need to build dependencies yourself when you make local chart changes!
+        namespace: tk-dev
+        wait: true
+        createNamespace: true
+        valuesFiles: ['build/_local/values.dev.yaml'] # IMPORTANT: You will have to copy the values.dev.tpl.yaml template to get started!
+        setValueTemplates:
+          testkube-api.image.registry: '{{.IMAGE_DOMAIN_docker_io_testkube_agent_server}}'
+          testkube-api.image.repository: '{{.IMAGE_REPO_NO_DOMAIN_docker_io_testkube_agent_server}}'
+          testkube-api.image.tag:  '{{.IMAGE_TAG_docker_io_testkube_agent_server}}@{{.IMAGE_DIGEST_docker_io_testkube_agent_server}}'
+          testkube-api.imageTwInit.registry: '{{.IMAGE_DOMAIN_docker_io_testworkflow_init}}'
+          testkube-api.imageTwInit.repository: '{{.IMAGE_REPO_NO_DOMAIN_docker_io_testworkflow_init}}'
+          testkube-api.imageTwInit.tag:  '{{.IMAGE_TAG_docker_io_testworkflow_init}}@{{.IMAGE_DIGEST_docker_io_testworkflow_init}}'
+          testkube-api.imageTwToolkit.registry: '{{.IMAGE_DOMAIN_docker_io_testworkflow_toolkit}}'
+          testkube-api.imageTwToolkit.repository: '{{.IMAGE_REPO_NO_DOMAIN_docker_io_testworkflow_toolkit}}'
+          testkube-api.imageTwToolkit.tag:  '{{.IMAGE_TAG_docker_io_testworkflow_toolkit}}@{{.IMAGE_DIGEST_docker_io_testworkflow_toolkit}}'
+    flags:
+      upgrade: ["--no-hooks"]
+  statusCheckDeadlineSeconds: 300
+  tolerateFailuresUntilDeadline: true

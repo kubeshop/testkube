@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCompileBasic(t *testing.T) {
@@ -121,6 +122,66 @@ func TestCompileTemplate(t *testing.T) {
 	assert.Equal(t, `abc50def`, must(MustCompileTemplate(`abc{{ 5 + 45 }}def`).Static().StringValue()))
 }
 
+func TestExtractPureTemplateExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantExpr string
+		wantOk   bool
+	}{
+		{`{{ ['1','2','3'] }}`, `['1','2','3']`, true},
+		{`{{ list('a','b') }}`, `list('a','b')`, true},
+		{`{{ split('x,y') }}`, `split('x,y')`, true},
+		{`{{ 5 + 3 }}`, `5 + 3`, true},
+		{`prefix{{ expr }}`, ``, false},
+		{`{{ expr }}suffix`, ``, false},
+		{`no expression`, ``, false},
+		{`{{ }}`, ``, false},
+		{`{{expr}}`, `expr`, true},
+		{`  {{ expr }}  `, `expr`, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			gotExpr, gotOk := ExtractPureTemplateExpression(tc.input)
+			assert.Equal(t, tc.wantOk, gotOk)
+			if tc.wantOk {
+				assert.Equal(t, tc.wantExpr, gotExpr)
+			}
+		})
+	}
+}
+
+func TestIsWildcardAccessorOnly(t *testing.T) {
+	tests := []struct {
+		expr string
+		want bool
+	}{
+		{"services.slave.*.ip", true},
+		{"a.b.c.*.d.e", true},
+		{"a.b.c.*.*.d.e", true},
+		{"services.slave.0.ip", false},
+		{"list('a','b','c')", false},
+		{"split('x,y,z')", false},
+		{`["a","b"]`, false},
+		{"env.MY_VAR", false},
+		// Ensure .* inside string literals is not treated as a wildcard accessor
+		{`split('192.168.*', '.')`, false},
+		{`map(items, 'v =~ ".*foo"')`, false},
+		{`"some.*value"`, false},
+		// Spaced wildcard accessors should still be detected
+		{"services.slave . * . ip", true},
+		{"a . *", true},
+		// Wildcard accessor inside explicit array-producing constructs should NOT
+		// be treated as a pure wildcard accessor (expansion should still happen).
+		{"list(services.slave.*.ip...)", false},
+		{"join(services.slave.*.ip, ',')", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.expr, func(t *testing.T) {
+			assert.Equal(t, tc.want, IsWildcardAccessorOnly(tc.expr))
+		})
+	}
+}
+
 func TestCompilePartialResolution(t *testing.T) {
 	vm := NewMachine().
 		Register("someint", 555).
@@ -179,6 +240,21 @@ func TestCompileResolution(t *testing.T) {
 	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm, FinalizerFail)).String())
 }
 
+func TestCompileResolutionWithFinalizer(t *testing.T) {
+	vm := NewMachine().
+		Register("status", "passed").
+		RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+			if name == "passed" {
+				return newMath(operatorEqualsAlias, newAccessor("status"), NewValue("passed")), true, nil
+			}
+			return nil, false, nil
+		})
+
+	expr, err := MustCompile(`string(passed)`).Resolve(vm, FinalizerFail)
+	require.NoError(t, err)
+	assert.Equal(t, `"true"`, expr.String())
+}
+
 func TestCircularResolution(t *testing.T) {
 	vm := NewMachine().
 		RegisterFunction("one", func(values ...StaticValue) (interface{}, bool, error) {
@@ -208,6 +284,10 @@ def
 
 func TestCompileEscapeTemplate(t *testing.T) {
 	assert.Equal(t, `foo{{"{{"}}barbaz{{"{{"}}`, MustCompileTemplate(`foo{{"{{bar"}}baz{{"{{"}}`).Template())
+}
+
+func TestCompileEscapeBrace(t *testing.T) {
+	assert.Equal(t, `foo{{"{"}}barbaz{{"{"}}`, MustCompileTemplate(`foo{{"{bar"}}baz{{"{"}}`).Template())
 }
 
 func TestCompileStandardLib(t *testing.T) {
@@ -278,12 +358,25 @@ a:
 	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("/data/abc/def/ccc", "/abc")`).String())
 	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("def/ccc", "/data/abc")`).String())
 	assert.Equal(t, `"/data"`, MustCompile(`abspath("..", "/data/abc")`).String())
+	assert.Equal(t, `"/data"`, MustCompile(`makepath("", "/data")`).String())
+	assert.Equal(t, `"data"`, MustCompile(`makepath("", "data")`).String())
+	assert.Equal(t, `"/parent/data"`, MustCompile(`makepath("/parent", "data")`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0, 0)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0, -3)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(5, 3)`).String())
 	assert.Equal(t, `[0,1,2,3,4]`, MustCompile(`range(5)`).String())
 	assert.Equal(t, `[5,6,7]`, MustCompile(`range(5, 8)`).String())
+	assert.Equal(t, `10`, MustCompile(`any(10, 20, 30, 10)`).String())
+	assert.Equal(t, `10`, MustCompile(`any(10, unknownVariable, 30, 10)`).String())
+	assert.Equal(t, `30`, MustCompile(`any(unknownVariable, 30, 10)`).String())
+	assert.Equal(t, `30`, MustCompile(`any(unknownCall(), 30, 10)`).String())
+	assert.Equal(t, `30`, MustCompile(`any(unknownCall(unknownVariable), 30, 10)`).String())
+	assert.Equal(t, `30`, MustCompile(`any(30, unknownCall(), 10)`).String())
+	assert.Equal(t, `30`, MustCompile(`any(30, unknownCall(unknownVariable), 10)`).String())
+	assert.Equal(t, `20`, MustCompile(`any([20, 44, 30]..., 10)`).String())
+	assert.Equal(t, `20`, MustCompile(`any(unknown, [20, 44, 30]..., 10)`).String())
+	assert.Equal(t, `null`, MustCompile(`any()`).String())
 	assert.InDelta(t, time.Now().UnixMilli(), must(time.Parse(RFC3339Millis, must(MustCompile(`date()`).Static().StringValue()))).UnixMilli(), 5)
 	assert.Equal(t, time.Now().Truncate(24*time.Hour).UnixMilli(), must(time.Parse("2006-01-02", must(MustCompile(`date("2006-01-02")`).Static().StringValue()))).UnixMilli())
 }
@@ -365,4 +458,15 @@ func TestCompileEscapedTemplate(t *testing.T) {
 
 	assert.Equal(t, input, MustCompileTemplate(input).Template())
 	assert.Equal(t, output, must(MustCompileTemplate(input).Static().StringValue()))
+}
+
+func TestCompileSingleQuoteString(t *testing.T) {
+	assert.Equal(t, `"foobar"`, MustCompile(`'foobar'`).String())
+	assert.Equal(t, `"foo'bar"`, MustCompile(`'foo\'bar'`).String())
+	assert.Equal(t, `"foo\"bar"`, MustCompile(`'foo"bar'`).String())
+	assert.ErrorContains(t, errOnly(Compile(`'foobar\'`)), "error while decoding string")
+	assert.Equal(t, `"\nabc\ndef\n"`, MustCompile(`'
+abc
+def
+'`).String())
 }

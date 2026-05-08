@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 )
 
 var (
@@ -85,7 +85,7 @@ func TestListTemplates(t *testing.T) {
 	assert.Equal(t, refList2Want, ListTemplates(&testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{{Steps: []testworkflowsv1.Step{{Parallel: &testworkflowsv1.StepParallel{
-				TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{Use: refList2},
+				Use: refList2,
 			}}}}},
 			After: []testworkflowsv1.Step{{Steps: []testworkflowsv1.Step{{Template: &refList2[0]}}}},
 		}}))

@@ -1,27 +1,37 @@
+//nolint:staticcheck
 package bus
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/avast/retry-go/v5"
 	"github.com/nats-io/nats.go"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var (
 	_ Bus = (*NATSBus)(nil)
+
+	NATS_RETRY_ATTEMPTS uint = 20
 )
 
 const (
 	SubscribeBuffer        = 1
-	SubscriptionName       = "events"
+	SubscriptionName       = "agentevents"
 	InternalPublishTopic   = "internal.all"
 	InternalSubscribeTopic = "internal.>"
+
+	natsMaxReconnects = -1
+	natsReconnectWait = 2 * time.Second
 )
 
 type ConnectionConfig struct {
@@ -35,7 +45,18 @@ type ConnectionConfig struct {
 }
 
 func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
-	opts = []nats.Option{}
+	opts = []nats.Option{
+		// Never stop trying to reconnect — the process should not require a restart
+		// due to a transient NATS outage.
+		// Note: RetryOnFailedConnect is intentionally omitted. It would make
+		// nats.Connect() return nil on an unreachable server, silently disabling
+		// the retry.DoWithData startup loop and removing crash-on-startup behaviour.
+		// MaxReconnects(-1) covers all runtime reconnection; startup retries are
+		// handled by the caller's retry loop.
+		nats.MaxReconnects(natsMaxReconnects),
+		nats.ReconnectWait(natsReconnectWait),
+	}
+
 	if cfg.NatsSecure {
 		if cfg.NatsSkipVerify {
 			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
@@ -55,23 +76,15 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 }
 
 func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.EncodedConn, error) {
-	opts = append(opts, optsFromConfig(cfg)...)
-
 	nc, err := NewNATSConnection(cfg, opts...)
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
 	}
 
 	// automatic NATS JSON CODEC
 	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
-	}
-
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
 
 	return ec, nil
@@ -79,25 +92,92 @@ func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.
 
 func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, error) {
 	opts = append(opts, optsFromConfig(cfg)...)
+	opts = append(opts,
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			log.DefaultLogger.Warnw("nats disconnected",
+				"error_type", "nats_disconnected",
+				"error", err)
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			log.DefaultLogger.Infow("nats reconnected",
+				"url", nc.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(_ *nats.Conn) {
+			log.DefaultLogger.Errorw("nats connection permanently closed",
+				"error_type", "nats_connection_closed")
+		}),
+	)
 
-	nc, err := nats.Connect(cfg.NatsURI, opts...)
+	nc, err := retry.NewWithData[*nats.Conn](
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(utils.DefaultRetryDelay),
+		retry.Attempts(NATS_RETRY_ATTEMPTS),
+	).Do(func() (*nats.Conn, error) {
+		return nats.Connect(cfg.NatsURI, opts...)
+	})
 	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
 	}
 
 	return nc, nil
 }
 
-func NewNATSBus(nc *nats.EncodedConn) *NATSBus {
-	return &NATSBus{
-		nc: nc,
+func NewNATSBus(nc *nats.EncodedConn, cfg ConnectionConfig) *NATSBus {
+	b := &NATSBus{
+		nc:  nc,
+		cfg: cfg,
 	}
+	// Override the default logging-only ClosedHandler set by NewNATSConnection
+	// so that a permanent connection close triggers a background reconnect
+	// even during quiet periods with no in-flight publishes or subscribes.
+	nc.Conn.SetClosedHandler(b.onConnectionClosed)
+	return b
+}
+
+// onConnectionClosed is the nats.ClosedHandler installed on every connection
+// managed by this bus (initial and those created by reconnect()).
+// It logs the event and, when a URI is configured and the bus has not been
+// intentionally shut down, triggers a background reconnect so a permanent
+// close during a quiet period does not leave the bus in a stuck state until
+// the next publish/subscribe attempt.
+func (n *NATSBus) onConnectionClosed(_ *nats.Conn) {
+	log.DefaultLogger.Errorw("nats connection permanently closed",
+		"error_type", "nats_connection_closed")
+	if n.cfg.NatsURI == "" || n.shutdown.Load() {
+		return
+	}
+	go func() {
+		if err := n.reconnect(); err != nil {
+			log.DefaultLogger.Errorw("nats background reconnect after connection closed failed",
+				"error", err)
+		}
+	}()
+}
+
+// subscriptionEntry holds everything needed to re-register a subscription on a
+// fresh connection after a reconnect.
+// When queue is empty a plain Subscribe is used; otherwise QueueSubscribe.
+type subscriptionEntry struct {
+	topic   string
+	queue   string // empty → plain Subscribe, non-empty → QueueSubscribe
+	handler Handler
+	sub     *nats.Subscription
 }
 
 type NATSBus struct {
 	nc            *nats.EncodedConn
-	subscriptions sync.Map
+	cfg           ConnectionConfig
+	connMu        sync.RWMutex
+	reconnectMu   sync.Mutex // serialises reconnect attempts; never held while connMu is held
+	subscriptions sync.Map   // map[string]*subscriptionEntry
+	shutdown      atomic.Bool
+}
+
+// getNC returns the current encoded connection under a read lock.
+func (n *NATSBus) getNC() *nats.EncodedConn {
+	n.connMu.RLock()
+	defer n.connMu.RUnlock()
+	return n.nc
 }
 
 // Publish publishes event to NATS on events topic
@@ -110,42 +190,230 @@ func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
 	return n.SubscribeTopic(SubscriptionName, queueName, handler)
 }
 
-// PublishTopic publishes event to NATS on given topic
-func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
-	log.Tracew(log.DefaultLogger, "publishing event", event.Log()...)
-	return n.nc.Publish(topic, event)
+// reconnect replaces the underlying connection when it has been permanently
+// closed.  Callers must NOT hold n.connMu when calling this.
+//
+// Design notes:
+//   - reconnectMu serialises concurrent reconnect attempts so only one goroutine
+//     pays the cost of NewNATSEncodedConnection's retry loop at a time.
+//   - connMu (the read/write lock guarding n.nc) is held only for the final
+//     pointer swap, so publishers are not stalled for the full retry duration.
+//   - CompareAndSwap is used when updating subscription entries so that a
+//     concurrent Unsubscribe (which calls LoadAndDelete) wins: if the key was
+//     deleted between Range seeing it and the Store, the orphan subscription is
+//     drained rather than re-inserted.
+func (n *NATSBus) reconnect() error {
+	if n.cfg.NatsURI == "" {
+		return errors.New("nats reconnect: no URI configured (embedded connection cannot reconnect)")
+	}
+
+	// Serialise reconnect attempts.  If two goroutines both detect
+	// ErrConnectionClosed, only one should create a new connection.
+	n.reconnectMu.Lock()
+	defer n.reconnectMu.Unlock()
+
+	// Re-check the shutdown flag now that we hold reconnectMu.  There is a
+	// TOCTOU window between onConnectionClosed's pre-goroutine check and here:
+	// Close() could have run concurrently, setting the flag and closing the
+	// connection.  Without this check the IsClosed() guard below would be true
+	// (Close() just closed the connection) and we would establish a live
+	// connection after intentional shutdown.
+	if n.shutdown.Load() {
+		return nil
+	}
+
+	// Re-check now that we hold reconnectMu: a previous waiter may have
+	// already swapped in a healthy connection.
+	if !n.getNC().Conn.IsClosed() {
+		return nil
+	}
+
+	log.DefaultLogger.Warnw("nats connection is closed, reinitialising",
+		"error_type", "nats_connection_closed",
+		"url", n.cfg.NatsURI)
+
+	// Create the new connection outside connMu so that publishers are not
+	// stalled during the (potentially slow) retry loop inside
+	// NewNATSEncodedConnection.  (reconnectMu is still held to serialise
+	// concurrent reconnect attempts.)
+	conn, err := NewNATSEncodedConnection(n.cfg)
+	if err != nil {
+		return fmt.Errorf("nats reconnect failed: %w", err)
+	}
+
+	// Register our closed handler on the new connection so that if it is
+	// itself permanently closed during a quiet period, another background
+	// reconnect is triggered automatically.
+	conn.Conn.SetClosedHandler(n.onConnectionClosed)
+
+	// Re-register subscriptions on the new connection BEFORE exposing it via
+	// n.nc.  This closes the window where messages could arrive on a topic that
+	// has no handler yet.
+	var failedKeys []any
+	n.subscriptions.Range(func(key, value any) bool {
+		entry := value.(*subscriptionEntry)
+
+		var newSub *nats.Subscription
+		var serr error
+		if entry.queue == "" {
+			newSub, serr = conn.Subscribe(entry.topic, entry.handler)
+		} else {
+			newSub, serr = conn.QueueSubscribe(entry.topic, entry.queue, entry.handler)
+		}
+		if serr != nil {
+			log.DefaultLogger.Errorw("failed to re-register subscription after nats reconnect",
+				"topic", entry.topic,
+				"queue", entry.queue,
+				"error", serr)
+			// Mark for removal: leaving a stale entry would cause silent message
+			// loss and unexpected Drain() calls on dead subscriptions.
+			failedKeys = append(failedKeys, key)
+			return true
+		}
+
+		newEntry := &subscriptionEntry{
+			topic:   entry.topic,
+			queue:   entry.queue,
+			handler: entry.handler,
+			sub:     newSub,
+		}
+		// CompareAndSwap against the exact pointer seen by Range.  If
+		// Unsubscribe ran LoadAndDelete between Range seeing this entry and now,
+		// the swap will fail and we drain the orphan subscription rather than
+		// silently re-inserting a ghost entry that can never be removed.
+		if !n.subscriptions.CompareAndSwap(key, value, newEntry) {
+			_ = newSub.Drain()
+		}
+		return true
+	})
+
+	for _, key := range failedKeys {
+		n.subscriptions.Delete(key)
+	}
+
+	// Hold the write lock only for the pointer swap.
+	n.connMu.Lock()
+	oldNC := n.nc
+	n.nc = conn
+	n.connMu.Unlock()
+
+	// Explicitly close the old connection after releasing the write lock.
+	// If the connection is already in CLOSED state this is a no-op; the
+	// explicit call makes the intent clear and guards the edge case where
+	// the connection reached a non-CLOSED terminal state without triggering
+	// the closed handler.
+	oldNC.Close()
+	return nil
 }
 
-// SubscribeTopic subscribes to NATS topic
+// PublishTopic publishes event to NATS on given topic.
+// If the connection is permanently closed it attempts a single reconnect before
+// giving up, so a transient NATS restart does not require a pod restart.
+func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
+	log.Tracew(log.DefaultLogger, "publishing event", event.Log()...)
+
+	nc := n.getNC()
+	err := nc.Publish(topic, event)
+	if err == nil {
+		return nil
+	}
+
+	if !errors.Is(err, nats.ErrConnectionClosed) {
+		return err
+	}
+
+	// ErrConnectionClosed means the connection is permanently gone — not a
+	// transient blip.  With MaxReconnects(-1) the NATS library handles transient
+	// outages internally (buffering publishes while reconnecting), so this path
+	// is a last-resort safety net for the rare case where the connection object
+	// itself must be replaced (e.g. after an explicit Close or an unforeseen
+	// client state machine edge-case).
+	log.DefaultLogger.Warnw("nats connection closed during publish, attempting reconnect",
+		"topic", topic,
+		"error_type", "nats_connection_closed")
+
+	if rerr := n.reconnect(); rerr != nil {
+		return fmt.Errorf("nats publish failed, reconnect error: %w", rerr)
+	}
+
+	return n.getNC().Publish(topic, event)
+}
+
+// SubscribeTopic subscribes to NATS topic.
+// If the connection is permanently closed it attempts a single reconnect before
+// giving up, mirroring the self-healing behaviour of PublishTopic.
 func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error {
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	// async subscribe on queue
-	s, err := n.nc.QueueSubscribe(topic, queue, handler)
-
-	if err == nil {
-		// store subscription for later unsubscribe
-		key := n.queueName(SubscriptionName, queue)
-		n.subscriptions.Store(key, s)
+	// Use plain Subscribe when queue is empty (consistent with reconnect()).
+	// QueueSubscribe with an empty queue name is invalid and would be rejected
+	// by the NATS server with a protocol error.
+	doSubscribe := func(nc *nats.EncodedConn) (*nats.Subscription, error) {
+		if queue == "" {
+			return nc.Subscribe(topic, handler)
+		}
+		return nc.QueueSubscribe(topic, queue, handler)
 	}
 
-	return err
+	s, err := doSubscribe(n.getNC())
+	if err != nil && !errors.Is(err, nats.ErrConnectionClosed) {
+		return err
+	}
+	if err != nil {
+		log.DefaultLogger.Warnw("nats connection closed during subscribe, attempting reconnect",
+			"topic", topic,
+			"error_type", "nats_connection_closed")
+		if rerr := n.reconnect(); rerr != nil {
+			return fmt.Errorf("nats subscribe failed, reconnect error: %w", rerr)
+		}
+		s, err = doSubscribe(n.getNC())
+		if err != nil {
+			return err
+		}
+	}
+
+	// store topic, queue, and handler so reconnect() can re-register them.
+	// Key includes the actual topic so that the same queue name used with
+	// different topics produces distinct entries and does not silently
+	// overwrite a previous subscription.
+	key := n.queueName(topic, queue)
+	n.subscriptions.Store(key, &subscriptionEntry{
+		topic:   topic,
+		queue:   queue,
+		handler: handler,
+		sub:     s,
+	})
+	return nil
 }
 
 func (n *NATSBus) Unsubscribe(queueName string) error {
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
-	key := n.queueName(SubscriptionName, queue)
-	if s, ok := n.subscriptions.Load(key); ok {
-		return s.(*nats.Subscription).Drain()
-	}
-	return nil
+	// Scan all entries matching this queue name, since subscriptions may have
+	// been created via SubscribeTopic with varying topics (and therefore
+	// different map keys).  Drain each matching subscription and remove it.
+	var firstErr error
+	n.subscriptions.Range(func(key, value any) bool {
+		entry := value.(*subscriptionEntry)
+		if entry.queue != queue {
+			return true
+		}
+		n.subscriptions.Delete(key)
+		if err := entry.sub.Drain(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+		return true
+	})
+	return firstErr
 }
 
 func (n *NATSBus) Close() error {
-	n.nc.Close()
+	// Signal that this is an intentional shutdown so the ClosedHandler does
+	// not spawn a background reconnect goroutine.
+	n.shutdown.Store(true)
+	n.getNC().Close()
 	return nil
 }
 
@@ -154,14 +422,28 @@ func (n *NATSBus) queueName(subscription, queue string) string {
 }
 
 func (n *NATSBus) TraceEvents() {
-	s, err := n.nc.Subscribe(SubscriptionName+".>", func(event testkube.Event) {
+	topic := SubscriptionName + ".>"
+	handler := Handler(func(event testkube.Event) error {
 		log.Tracew(log.DefaultLogger, "all events.> trace", event.Log()...)
+		return nil
 	})
 
+	s, err := n.getNC().Subscribe(topic, handler)
 	if err != nil {
 		log.DefaultLogger.Errorw("error subscribing to all events", "error", err)
 		return
 	}
+
+	// Store with empty queue so reconnect() re-registers it via plain Subscribe.
+	// Uses "trace:" prefix to separate from regular subscriptions (which use
+	// queueName format). TraceEvents is intended to be permanent; no Unsubscribe.
+	key := "trace:" + topic
+	n.subscriptions.Store(key, &subscriptionEntry{
+		topic:   topic,
+		queue:   "",
+		handler: handler,
+		sub:     s,
+	})
 
 	log.DefaultLogger.Infow("subscribed to all events", "subscription", s.Subject)
 }

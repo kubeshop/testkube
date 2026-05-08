@@ -9,6 +9,7 @@ const (
 	CmdTestWorkflowExecutionGetRunning               executor.Command = "workflow_execution_get_running"
 	CmdTestWorkflowExecutionGetLatestByWorkflows     executor.Command = "workflow_execution_get_latest_by_workflows"
 	CmdTestWorkflowExecutionGetExecutionTotals       executor.Command = "workflow_execution_get_execution_totals"
+	CmdTestWorkflowExecutionCount                    executor.Command = "workflow_execution_count"
 	CmdTestWorkflowExecutionGetExecutions            executor.Command = "workflow_execution_get_executions"
 	CmdTestWorkflowExecutionGetExecutionsSummary     executor.Command = "workflow_execution_get_executions_summary"
 	CmdTestWorkflowExecutionGetPreviousFinishedState executor.Command = "workflow_execution_get_previous_finished_state"
@@ -23,12 +24,16 @@ const (
 	CmdTestWorkflowExecutionGetWorkflowMetrics       executor.Command = "workflow_execution_get_workflow_metrics"
 	CmdTestWorkflowExecutionGetNextExecutionNumber   executor.Command = "workflow_execution_get_next_execution_number"
 	CmdTestWorkflowExecutionGetExecutionTags         executor.Command = "workflow_execution_get_execution_tags"
+	CmdTestWorkflowExecutionUpdateTags               executor.Command = "workflow_execution_update_tags"
 
 	CmdTestWorkflowOutputPresignSaveLog         executor.Command = "workflow_output_presign_save_log"
 	CmdTestWorkflowOutputPresignReadLog         executor.Command = "workflow_output_presign_read_log"
 	CmdTestWorkflowOutputHasLog                 executor.Command = "workflow_output_has_log"
 	CmdTestWorkflowOutputDeleteByTestWorkflow   executor.Command = "workflow_output_delete_by_test_workflow"
 	CmdTestworkflowOutputDeleteForTestWorkflows executor.Command = "workflow_output_delete_for_test_workflows"
+
+	CmdTestWorkflowGet         executor.Command = "workflow_get"
+	CmdTestWorkflowTemplateGet executor.Command = "workflow_template_get"
 )
 
 func command(v interface{}) executor.Command {
@@ -45,6 +50,8 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowExecutionGetLatestByWorkflows
 	case ExecutionGetExecutionTotalsRequest:
 		return CmdTestWorkflowExecutionGetExecutionTotals
+	case ExecutionCountRequest:
+		return CmdTestWorkflowExecutionCount
 	case ExecutionGetExecutionsRequest:
 		return CmdTestWorkflowExecutionGetExecutions
 	case ExecutionGetExecutionsSummaryRequest:
@@ -71,6 +78,8 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowExecutionGetNextExecutionNumber
 	case ExecutionGetExecutionTagsRequest:
 		return CmdTestWorkflowExecutionGetExecutionTags
+	case ExecutionUpdateTagsRequest:
+		return CmdTestWorkflowExecutionUpdateTags
 
 	case OutputPresignSaveLogRequest:
 		return CmdTestWorkflowOutputPresignSaveLog
@@ -82,6 +91,11 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowOutputDeleteByTestWorkflow
 	case ExecutionDeleteOutputForTestWorkflowsRequest:
 		return CmdTestworkflowOutputDeleteForTestWorkflows
+
+	case TestWorkflowGetRequest:
+		return CmdTestWorkflowGet
+	case TestWorkflowTemplateGetRequest:
+		return CmdTestWorkflowTemplateGet
 	}
 	panic("unknown test workflows Cloud request")
 }

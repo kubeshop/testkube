@@ -8,19 +8,18 @@ import (
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/pkg/errors"
+	gomock "go.uber.org/mock/gomock"
+
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
-	"github.com/golang/mock/gomock"
-	"github.com/pkg/errors"
 )
 
 func TestCloudLoader_Load(t *testing.T) {
-	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -96,7 +95,7 @@ func TestCloudLoader_Load(t *testing.T) {
 			ctx := context.Background()
 
 			cloudLoader := tt.setup()
-			object := &scraper.Object{
+			object := &scrapertypes.Object{
 				Name: "my-object",
 				Data: tt.data,
 			}

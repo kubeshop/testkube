@@ -9,7 +9,7 @@
 package testexecutions
 
 import (
-	testexecutionv1 "github.com/kubeshop/testkube-operator/api/testexecution/v1"
+	testexecutionv1 "github.com/kubeshop/testkube/api/testexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

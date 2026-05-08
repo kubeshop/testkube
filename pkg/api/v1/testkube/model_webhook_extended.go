@@ -9,7 +9,14 @@
  */
 package testkube
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/kubeshop/testkube/pkg/utils"
+	"gopkg.in/yaml.v3"
+)
 
 type Webhooks []Webhook
 
@@ -44,4 +51,100 @@ func (w Webhook) GetLabels() map[string]string {
 
 func (w Webhook) GetAnnotations() map[string]string {
 	return w.Annotations
+}
+
+func (w *Webhook) QuoteTextFields() {
+	if w.PayloadTemplate != "" {
+		w.PayloadTemplate, _ = printPayloadTemplate(w.PayloadTemplate)
+	}
+
+	for key, val := range w.Config {
+		if val.Value != nil && val.Value.Value != "" {
+			val.Value.Value = fmt.Sprintf("%q", val.Value.Value)
+		}
+		w.Config[key] = val
+	}
+
+	for key, value := range w.Parameters {
+		if value.Description != "" {
+			value.Description = fmt.Sprintf("%q", value.Description)
+		}
+
+		if value.Example != "" {
+			value.Example = fmt.Sprintf("%q", value.Example)
+		}
+
+		if value.Default_ != nil && value.Default_.Value != "" {
+			value.Pattern = fmt.Sprintf("%q", value.Pattern)
+		}
+
+		if value.Pattern != "" {
+			value.Pattern = fmt.Sprintf("%q", value.Pattern)
+		}
+
+		w.Parameters[key] = value
+	}
+}
+
+func printPayloadTemplate(text string) (string, error) {
+	data := struct {
+		PayloadTemplate string `yaml:"payloadTemplate"`
+	}{PayloadTemplate: text}
+	yamlData, err := yaml.Marshal(&data)
+	if err != nil {
+		return "", err
+	}
+
+	return string(yamlData), nil
+}
+
+func (w *Webhook) Equals(other *Webhook) bool {
+	// Avoid check when there is one existing and the other one not
+	if (w == nil) != (other == nil) {
+		return false
+	}
+
+	// Reset timestamps to avoid influence
+	wCreated := w.Created
+	otherCreated := other.Created
+	w.Created = time.Time{}
+	other.Created = time.Time{}
+
+	// Compare
+	result := cmp.Equal(w, other)
+
+	// Restore values
+	w.Created = wCreated
+	other.Created = otherCreated
+
+	return result
+}
+
+func (w *Webhook) ConvertDots(fn func(string) string) *Webhook {
+	if w == nil {
+		return w
+	}
+
+	if w.Labels != nil {
+		w.Labels = convertDotsInMap(w.Labels, fn)
+	}
+	if w.Annotations != nil {
+		w.Annotations = convertDotsInMap(w.Annotations, fn)
+	}
+	if w.Headers != nil {
+		w.Headers = convertDotsInMap(w.Headers, fn)
+	}
+	if w.Config != nil {
+		w.Config = convertDotsInMap(w.Config, fn)
+	}
+
+	return w
+}
+
+func (w *Webhook) EscapeDots() *Webhook {
+	return w.ConvertDots(utils.EscapeDots)
+}
+
+func (w *Webhook) UnscapeDots() *Webhook {
+	return w.ConvertDots(utils.UnescapeDots)
 }

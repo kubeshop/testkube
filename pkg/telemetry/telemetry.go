@@ -1,21 +1,17 @@
 package telemetry
 
 import (
-	"context"
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
-	"strings"
-
 	"github.com/spf13/cobra"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
-	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -31,8 +27,8 @@ var (
 type Sender func(client *http.Client, payload Payload) (out string, err error)
 
 // SendServerStartEvent will send event to GA
-func SendServerStartEvent(clusterId, version string) (string, error) {
-	payload := NewAPIPayload(clusterId, "testkube_api_start", version, "localhost", GetClusterType())
+func SendServerStartEvent(clusterId, version string, capabilities []string) (string, error) {
+	payload := NewAPIPayload(clusterId, "testkube_api_start", version, "localhost", GetClusterType(), capabilities)
 	return sendData(senders, payload)
 }
 
@@ -125,9 +121,45 @@ func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
 	return sendData(senders, payload)
 }
 
-// SendHeartbeatEvent will send CLI event to GA
-func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
-	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host, GetClusterType())
+// SendPreviewEvent sends a preview-specific telemetry event with execution context
+func SendPreviewEvent(cmd *cobra.Command, version, executionID string, artifactCount int32, skipArtifacts bool, previewErr string) (string, error) {
+	machineID := GetMachineID()
+	eventName := "preview_execution"
+	if previewErr != "" {
+		eventName = "preview_execution_error"
+	}
+
+	payload := Payload{
+		ClientID: machineID,
+		UserID:   machineID,
+		Events: []Event{
+			{
+				Name: text.GAEventName(eventName),
+				Params: Params{
+					EventCount:           1,
+					EventCategory:        "cli_command_execution",
+					AppVersion:           version,
+					AppName:              "kubectl-testkube",
+					MachineID:            machineID,
+					OperatingSystem:      runtime.GOOS,
+					Architecture:         runtime.GOARCH,
+					Context:              getCurrentContext(),
+					ClusterType:          GetClusterType(),
+					CliContext:           GetCliRunContext(),
+					PreviewExecutionID:   executionID,
+					PreviewArtifacts:     artifactCount,
+					PreviewSkipArtifacts: skipArtifacts,
+					PreviewError:         previewErr,
+				},
+			},
+		},
+	}
+	return sendData(senders, payload)
+}
+
+// SendHeartbeatEvent will send event to GA
+func SendHeartbeatEvent(host, version, clusterId string, capabilities []string) (string, error) {
+	payload := NewAPIPayload(clusterId, "testkube_api_heartbeat", version, host, GetClusterType(), capabilities)
 	return sendData(senders, payload)
 }
 
@@ -202,6 +234,11 @@ func getCurrentContext() RunContext {
 	}
 }
 
+// GetCurrentContext returns the current run context, making it accessible from other packages
+func GetCurrentContext() RunContext {
+	return getCurrentContext()
+}
+
 func getUserID(cmd *cobra.Command) string {
 	id := "command-cli-user"
 	client, _, err := common.GetClient(cmd)
@@ -218,58 +255,135 @@ func getUserID(cmd *cobra.Command) string {
 	return data.CloudContext.EnvironmentId
 }
 
-func GetClusterType() string {
-
-	clientset, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		log.DefaultLogger.Debugw("Creating k8s clientset", err)
-		return "unidentified"
+// IsRunningInDocker detects if the CLI is running inside a Docker container
+func IsRunningInDocker() bool {
+	// Method 1: Check for .dockerenv file
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
 	}
 
-	pods, err := clientset.CoreV1().Pods("kube-system").List(context.Background(), v1.ListOptions{})
-	if err != nil {
-		log.DefaultLogger.Debugw("Getting pods from kube-system namespace", err)
-		return "unidentified"
+	// Method 2: Check Docker-specific environment variables
+	dockerEnvVars := []string{
+		"DOCKER_CONTAINER",
+		"DOCKER_BUILDKIT",
+		"DOCKER_HOST",
+		"DOCKER_TLS_VERIFY",
+		"DOCKER_CERT_PATH",
+		"DOCKER_MACHINE_NAME",
 	}
 
-	// Loop through the pods and check if their name contains the search string.
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "-kind-") || strings.Contains(pod.Name, "kindnet") {
-			return "kind"
-		}
-		if strings.Contains(pod.Name, "-minikube") {
-			return "minikube"
-		}
-		if strings.Contains(pod.Name, "docker-desktop") {
-			return "docker-desktop"
-		}
-		if strings.Contains(pod.Name, "gke-") || strings.Contains(pod.Name, "-gke-") {
-			return "gke"
-		}
-		if strings.Contains(pod.Name, "aws-") || strings.Contains(pod.Name, "-aws-") {
-			return "eks"
-		}
-		if strings.Contains(pod.Name, "azure-") || strings.Contains(pod.Name, "-azuredisk-") || strings.Contains(pod.Name, "-azurefile-") {
-			return "aks"
-		}
-		if strings.Contains(pod.Name, "openshift") || strings.Contains(pod.Name, "oc-") {
-			return "openshift"
-		}
-		if strings.Contains(pod.Name, "k3d-") {
-			return "k3d"
-		}
-		if strings.Contains(pod.Name, "k3s-") {
-			return "k3s"
-		}
-		if strings.Contains(pod.Name, "microk8s-") {
-			return "microk8s"
+	for _, envVar := range dockerEnvVars {
+		if _, exists := os.LookupEnv(envVar); exists {
+			return true
 		}
 	}
 
-	return "others"
+	// Method 3: Check cgroup for Docker/containerd (Linux only)
+	if runtime.GOOS == "linux" {
+		if cgroupData, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+			cgroupContent := string(cgroupData)
+			if strings.Contains(cgroupContent, "docker") ||
+				strings.Contains(cgroupContent, "containerd") {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// GetDockerContext detects how the Docker container is being run
+func GetDockerContext() string {
+	if !IsRunningInDocker() {
+		return ""
+	}
+
+	// Check for Docker Compose
+	if _, ok := os.LookupEnv("COMPOSE_PROJECT_NAME"); ok {
+		projectName := os.Getenv("COMPOSE_PROJECT_NAME")
+		if projectName != "" {
+			return "docker-compose:" + projectName
+		}
+		return "docker-compose"
+	}
+
+	// Check for Docker Swarm
+	if _, ok := os.LookupEnv("DOCKER_SWARM"); ok {
+		return "docker-swarm"
+	}
+
+	// Check for Kubernetes (running in a pod)
+	if _, ok := os.LookupEnv("KUBERNETES_SERVICE_HOST"); ok {
+		namespace := os.Getenv("POD_NAMESPACE")
+		if namespace != "" {
+			return "kubernetes:" + namespace
+		}
+		return "kubernetes"
+	}
+
+	// Check for Docker BuildKit (during build)
+	if _, ok := os.LookupEnv("DOCKER_BUILDKIT"); ok {
+		return "docker-buildkit"
+	}
+
+	// Check for Docker Desktop
+	if _, ok := os.LookupEnv("DOCKER_DESKTOP"); ok {
+		return "docker-desktop"
+	}
+
+	// Check for specific container runtime
+	if runtime.GOOS == "linux" {
+		if cgroupData, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+			cgroupContent := string(cgroupData)
+			if strings.Contains(cgroupContent, "containerd") {
+				return "containerd"
+			}
+			if strings.Contains(cgroupContent, "crio") {
+				return "cri-o"
+			}
+		}
+	}
+
+	// Check for custom Testkube Docker image version
+	if version, ok := os.LookupEnv("TESTKUBE_DOCKER_IMAGE_VERSION"); ok {
+		return "docker:testkube:" + version
+	}
+
+	// Check for CI/CD environments that might be using Docker
+	if _, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
+		return "docker:github-actions"
+	}
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		return "docker:circleci"
+	}
+	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
+		return "docker:gitlab-ci"
+	}
+	if _, ok := os.LookupEnv("BUILDKITE"); ok {
+		return "docker:buildkite"
+	}
+
+	// Check for container orchestration platforms
+	if _, ok := os.LookupEnv("AWS_EXECUTION_ENV"); ok {
+		return "docker:aws"
+	}
+	if _, ok := os.LookupEnv("GOOGLE_CLOUD_PROJECT"); ok {
+		return "docker:gcp"
+	}
+	if _, ok := os.LookupEnv("AZURE_CONTAINER_REGISTRY"); ok {
+		return "docker:azure"
+	}
+
+	// Default Docker context
+	return "docker"
 }
 
 func GetCliRunContext() string {
+	// Check for Docker first with detailed context
+	if dockerContext := GetDockerContext(); dockerContext != "" {
+		return dockerContext
+	}
+
 	if value, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
 		if value == "true" {
 			return "github-actions"

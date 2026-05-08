@@ -5,17 +5,17 @@ import (
 	"sync"
 	"time"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 )
 
 type statusKey string
 
-func newStatusKey(namespace, name string) statusKey {
-	return statusKey(fmt.Sprintf("%s/%s", namespace, name))
+func newStatusKey(source, namespace, name string) statusKey {
+	return statusKey(fmt.Sprintf("%s:%s/%s", source, namespace, name))
 }
 
 type triggerStatus struct {
-	testTrigger              *testtriggersv1.TestTrigger
+	trigger                  *internalTrigger
 	lastExecutionStarted     *time.Time
 	lastExecutionFinished    *time.Time
 	testExecutionIDs         []string
@@ -24,8 +24,8 @@ type triggerStatus struct {
 	sync.RWMutex
 }
 
-func newTriggerStatus(testTrigger *testtriggersv1.TestTrigger) *triggerStatus {
-	return &triggerStatus{testTrigger: testTrigger}
+func newTriggerStatusFromV1(t *testtriggersv1.TestTrigger) *triggerStatus {
+	return &triggerStatus{trigger: convertV1ToInternal(t)}
 }
 
 func (s *triggerStatus) hasActiveTests() bool {
@@ -33,26 +33,6 @@ func (s *triggerStatus) hasActiveTests() bool {
 
 	s.RLock()
 	return len(s.testExecutionIDs) > 0 || len(s.testSuiteExecutionIDs) > 0 || len(s.testWorkflowExecutionIDs) > 0
-}
-
-func (s *triggerStatus) getExecutionIDs() []string {
-	defer s.RUnlock()
-
-	s.RLock()
-	executionIDs := make([]string, len(s.testExecutionIDs))
-	copy(executionIDs, s.testExecutionIDs)
-
-	return executionIDs
-}
-
-func (s *triggerStatus) getTestSuiteExecutionIDs() []string {
-	defer s.RUnlock()
-
-	s.RLock()
-	testSuiteExecutionIDs := make([]string, len(s.testSuiteExecutionIDs))
-	copy(testSuiteExecutionIDs, s.testSuiteExecutionIDs)
-
-	return testSuiteExecutionIDs
 }
 
 func (s *triggerStatus) getTestWorkflowExecutionIDs() []string {
@@ -72,42 +52,6 @@ func (s *triggerStatus) start() {
 	now := time.Now()
 	s.lastExecutionStarted = &now
 	s.lastExecutionFinished = nil
-}
-
-func (s *triggerStatus) addExecutionID(id string) {
-	defer s.Unlock()
-
-	s.Lock()
-	s.testExecutionIDs = append(s.testExecutionIDs, id)
-}
-
-func (s *triggerStatus) removeExecutionID(targetID string) {
-	defer s.Unlock()
-
-	s.Lock()
-	for i, id := range s.testExecutionIDs {
-		if id == targetID {
-			s.testExecutionIDs = append(s.testExecutionIDs[:i], s.testExecutionIDs[i+1:]...)
-		}
-	}
-}
-
-func (s *triggerStatus) addTestSuiteExecutionID(id string) {
-	defer s.Unlock()
-
-	s.Lock()
-	s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs, id)
-}
-
-func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
-	defer s.Unlock()
-
-	s.Lock()
-	for i, id := range s.testSuiteExecutionIDs {
-		if id == targetID {
-			s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs[:i], s.testSuiteExecutionIDs[i+1:]...)
-		}
-	}
 }
 
 func (s *triggerStatus) addTestWorkflowExecutionID(id string) {
@@ -136,7 +80,9 @@ func (s *triggerStatus) done() {
 	s.lastExecutionFinished = &now
 }
 
-func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *triggerStatus {
-	key := newStatusKey(t.Namespace, t.Name)
+func (s *Service) getStatusForTrigger(t *internalTrigger) *triggerStatus {
+	key := newStatusKey(t.Source, t.Namespace, t.Name)
+	s.triggerStatusMu.RLock()
+	defer s.triggerStatusMu.RUnlock()
 	return s.triggerStatus[key]
 }

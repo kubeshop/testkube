@@ -1,45 +1,80 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"errors"
-	"fmt"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestTrimSSEChunk(t *testing.T) {
+func TestStreamToTestWorkflowExecutionNotificationsChannel_HandlesSSEFramesAndHeartbeats(t *testing.T) {
+	stream := strings.NewReader(strings.Join([]string{
+		": connected",
+		"",
+		`data: {"ref":"root","log":"hello"}`,
+		"",
+		": ping",
+		"",
+		`data: {"ref":"root","result":{"status":"passed","finishedAt":"2026-03-24T00:00:00Z"}}`,
+		"",
+	}, "\n"))
 
-	in := []byte(`data: {"type": "error","message": "some message"}\n\n`)
-	out := trimDataChunk(in)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 4)
+	StreamToTestWorkflowExecutionNotificationsChannel(stream, notifications)
+	close(notifications)
 
-	assert.Equal(t, `{"type": "error","message": "some message"}`, string(out))
+	var received []testkube.TestWorkflowExecutionNotification
+	for notification := range notifications {
+		received = append(received, notification)
+	}
+
+	require.Len(t, received, 2)
+	assert.Equal(t, "hello", received[0].Log)
+	require.NotNil(t, received[1].Result)
+	require.NotNil(t, received[1].Result.Status)
+	assert.Equal(t, testkube.PASSED_TestWorkflowStatus, *received[1].Result.Status)
+	assert.False(t, received[1].Result.FinishedAt.IsZero())
 }
 
-// TestStreamToLogsChannelOldErrorFormat parses old output error format and return type field
-func TestStreamToLogsChannelOldErrorFormat(t *testing.T) {
-	log := make(chan output.Output)
-	in := []byte(`data: {"type": "error", "message": "some message"}` + "\n\n")
-	buf := bytes.NewBuffer(in)
+func TestStreamToTestWorkflowExecutionNotificationsChannel_HandlesSSEEventFieldsAndSeqNo(t *testing.T) {
+	stream := strings.NewReader(strings.Join([]string{
+		"id: 7",
+		"event: heartbeat",
+		`data: {"seqNo":7,"eventType":"heartbeat"}`,
+		"",
+		"id: 8",
+		"event: log",
+		`data: {"seqNo":8,"eventType":"log","ref":"root","log":"hello"}`,
+		"",
+	}, "\n"))
 
-	go StreamToLogsChannel(buf, log)
-	result := <-log
-	assert.Equal(t, output.Output{Type_: "error", Content: ""}, result)
+	notifications := make(chan testkube.TestWorkflowExecutionNotification, 4)
+	StreamToTestWorkflowExecutionNotificationsChannel(stream, notifications)
+	close(notifications)
+
+	var received []testkube.TestWorkflowExecutionNotification
+	for notification := range notifications {
+		received = append(received, notification)
+	}
+
+	require.Len(t, received, 2)
+	assert.Equal(t, int32(7), received[0].SeqNo)
+	assert.Equal(t, "heartbeat", received[0].EventType)
+	assert.Equal(t, int32(8), received[1].SeqNo)
+	assert.Equal(t, "log", received[1].EventType)
+	assert.Equal(t, "hello", received[1].Log)
 }
 
-// TestStreamToLogsChannelNewErrorFormat parses new output error format and return type and content fields
-func TestStreamToLogsChannelNewErrorFormat(t *testing.T) {
-	log := make(chan output.Output)
-	out, _ := json.Marshal(output.NewOutputError(errors.New("some message")))
-	in := []byte(fmt.Sprintf("%s\n", out))
-	buf := bytes.NewBuffer(in)
-
-	go StreamToLogsChannel(buf, log)
-	result := <-log
-	assert.Equal(t, "error", result.Type_)
-	assert.Equal(t, "some message", result.Content)
+func TestIsExpectedStreamCloseError(t *testing.T) {
+	assert.True(t, isExpectedStreamCloseError(io.EOF))
+	assert.True(t, isExpectedStreamCloseError(context.Canceled))
+	assert.True(t, isExpectedStreamCloseError(context.DeadlineExceeded))
+	assert.True(t, isExpectedStreamCloseError(errors.Join(errors.New("read failed"), context.Canceled)))
+	assert.False(t, isExpectedStreamCloseError(errors.New("connection reset by peer")))
 }

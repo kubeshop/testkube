@@ -1,0 +1,30 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "testkube/testworkflow/execution/v1/execution_start.proto";
+import "testkube/testworkflow/execution/v1/execution_state_transition.proto";
+
+// GetExecutionUpdatesResponse is the Control Plane response to a request for execution state
+// transitions that should be performed by the client.
+message GetExecutionUpdatesResponse {
+  // start may or may not be included and indicates an Execution that should be started.
+  // A maximum of one execution to start is expected for each call to the RPC, rapid calls
+  // to the RPC without informing the Control Plane that the Execution is successfully started
+  // are expected to yield the same Execution and so clients should take care to debounce
+  // executions based on the execution's unique identifier "execution_id" to avoid executing
+  // multiple duplicate executions wastefully.
+  // Currently start is repeated as we know in the future we may wish to send more than one
+  // execution, clients should build implementations expecting that more than one execution
+  // to start may be returned, however the current server implementation will only send
+  // up to one execution.
+  repeated ExecutionStart start = 1;
+  // update lists all Executions understood to be under the control of the client that should
+  // have their state transitioned. Subsequent calls to the RPC will yield duplicate updates
+  // if the Execution state transition successes have not been communicated to the Control
+  // Plane, however new state transition directives may be added in the interim so it is not
+  // expected that a client would wait to successfully transition all Executions before calling
+  // the RPC again, instead clients should interpret duplicate state transitions in a sensible
+  // manner to prevent overloading Execution state transition behaviour.
+  repeated ExecutionStateTransition update = 2;
+}

@@ -1,0 +1,10 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+// WebhookId is the information required to
+// uniquely identify a Webhook object.
+message WebhookId {
+  // Id is the unique ID string for a Webhook.
+  string id = 1;
+}

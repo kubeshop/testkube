@@ -3,39 +3,30 @@ kind: TestWorkflow
 metadata:
   name: playwright
   labels:
+    category: e2e-ui-testing
     core-tests: workflows
+    artifacts: "true"
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
+    image: mcr.microsoft.com/playwright:v1.56.1
   steps:
   - name: Install dependencies
-    run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
-      command:
-      - npm
-      args:
-      - ci
+    shell: npm ci
   - name: Run tests
-    run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
-      command:
-      - "npx"
-      args:
-      - "--yes"
-      - "playwright@1.32.3"
-      - "test"
+    shell: npx playwright test
   - name: Save artifacts
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
       paths:
       - playwright-report/**/*

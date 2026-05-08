@@ -15,6 +15,7 @@ var accessorRe = regexp.MustCompile(`^[a-zA-Z\d_]+(?:\s*\.\s*([a-zA-Z\d_]+|\*))*
 var propertyAccessorRe = regexp.MustCompile(`^\.\s*([a-zA-Z\d_]+|\*)`)
 var spreadRe = regexp.MustCompile(`^\.\.\.`)
 var spaceRe = regexp.MustCompile(`^\s+`)
+var singleQuoteStringRe = regexp.MustCompile(`^'(\\'|[^'])*'`)
 
 func tokenizeNext(exp string, i int) (token, int, error) {
 	for i < len(exp) {
@@ -41,21 +42,53 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			return tokenJson(noneValue), i + 4, nil
 		case spreadRe.MatchString(exp[i:]):
 			return tokenSpread, i + 3, nil
+		case singleQuoteStringRe.MatchString(exp[i:]):
+			// TODO: Optimize, and allow deeper in the tree (i.e. as part of array or object)
+			str := singleQuoteStringRe.Find([]byte(exp[i:]))
+			originalLen := len(str)
+			for index := 1; index < len(str)-1; index++ {
+				switch str[index] {
+				case '\\':
+					if len(str) > index+2 && str[index+1] == '\'' {
+						str = append(str[0:index], str[index+1:]...)
+					} else {
+						index++
+					}
+				case '"':
+					str = append(str[0:index], append([]byte{'\\', '"'}, str[index+1:]...)...)
+					index++
+				case '\n':
+					str = append(str[0:index], append([]byte{'\\', 'n'}, str[index+1:]...)...)
+					index++
+				case '\t':
+					str = append(str[0:index], append([]byte{'\\', 't'}, str[index+1:]...)...)
+					index++
+				}
+			}
+			str[0], str[len(str)-1] = '"', '"'
+			decoder := json.NewDecoder(bytes.NewBuffer(str))
+			var val interface{}
+			err := decoder.Decode(&val)
+			if err != nil {
+				return token{}, i, fmt.Errorf("error while decoding string from index %d in expression: %s: %w", i, exp, err)
+			}
+			return tokenJson(val), i + originalLen, nil
 		case jsonValueRe.MatchString(exp[i:]):
 			// Allow multi-line string with literal \n
-			// TODO: Optimize, and allow deeper in the tree
+			// TODO: Optimize, and allow deeper in the tree (i.e. as part of array or object)
 			appended := 0
 			if exp[i] == '"' {
 				inside := true
 				for index := i + 1; inside && index < len(exp); index++ {
-					if exp[index] == '\\' {
+					switch exp[index] {
+					case '\\':
 						index++
-					} else if exp[index] == '"' {
+					case '"':
 						inside = false
-					} else if exp[index] == '\n' {
+					case '\n':
 						exp = exp[0:index] + "\\n" + exp[index+1:]
 						appended++
-					} else if exp[index] == '\t' {
+					case '\t':
 						exp = exp[0:index] + "\\t" + exp[index+1:]
 						appended++
 					}
@@ -65,7 +98,7 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			var val interface{}
 			err := decoder.Decode(&val)
 			if err != nil {
-				return token{}, i, fmt.Errorf("error while decoding JSON from index %d in expression: %s: %s", i, exp, err.Error())
+				return token{}, i, fmt.Errorf("error while decoding JSON from index %d in expression: %s: %w", i, exp, err)
 			}
 			return tokenJson(val), i + int(decoder.InputOffset()) - appended, nil
 		case accessorRe.MatchString(exp[i:]):

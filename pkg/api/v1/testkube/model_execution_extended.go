@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"k8s.io/utils/ptr"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func NewExecutionWithID(id, testType, testName string) *Execution {
-	return &Execution{
+func NewExecutionWithID(id, testName string) *TestWorkflowExecution {
+	return &TestWorkflowExecution{
 		Id: id,
-		ExecutionResult: &ExecutionResult{
-			Status: ExecutionStatusQueued,
+		Result: &TestWorkflowResult{
+			Status: ptr.To(QUEUED_TestWorkflowStatus),
 		},
-		TestName: testName,
-		TestType: testType,
-		Labels:   map[string]string{},
+		Workflow: &TestWorkflow{
+			Name:   testName,
+			Labels: map[string]string{},
+		},
 	}
 }
 
@@ -26,7 +28,7 @@ func NewExecution(id, testNamespace, testName, testSuiteName, executionName, tes
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
 	if id == "" {
-		id = primitive.NewObjectID().Hex()
+		id = bson.NewObjectID().Hex()
 	}
 
 	return Execution{
@@ -48,7 +50,7 @@ func NewExecution(id, testNamespace, testName, testSuiteName, executionName, tes
 
 func NewFailedExecution(err error) Execution {
 	return Execution{
-		Id: primitive.NewObjectID().Hex(),
+		Id: bson.NewObjectID().Hex(),
 		ExecutionResult: &ExecutionResult{
 			ErrorMessage: err.Error(),
 			Status:       ExecutionStatusFailed,
@@ -57,10 +59,10 @@ func NewFailedExecution(err error) Execution {
 }
 
 // NewQueued execution for executions status used in test executions
-func NewQueuedExecution() *Execution {
-	return &Execution{
-		ExecutionResult: &ExecutionResult{
-			Status: ExecutionStatusQueued,
+func NewQueuedExecution() *TestWorkflowExecution {
+	return &TestWorkflowExecution{
+		Result: &TestWorkflowResult{
+			Status: ptr.To(QUEUED_TestWorkflowStatus),
 		},
 	}
 }
@@ -183,7 +185,7 @@ func (e Execution) IsCanceled() bool {
 		return true
 	}
 
-	return *e.ExecutionResult.Status == ABORTED_ExecutionStatus
+	return *e.ExecutionResult.Status == CANCELED_ExecutionStatus
 }
 
 func (e Execution) IsTimeout() bool {
@@ -204,7 +206,7 @@ func (e Execution) IsPassed() bool {
 
 func (e *Execution) WithID() *Execution {
 	if e.Id == "" {
-		e.Id = primitive.NewObjectID().Hex()
+		e.Id = bson.NewObjectID().Hex()
 	}
 
 	return e

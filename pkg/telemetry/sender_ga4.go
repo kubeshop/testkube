@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,13 +23,16 @@ var (
 
 func GoogleAnalyticsSender(client *http.Client, payload Payload) (out string, err error) {
 	out, err = sendValidationRequest(payload)
+	if err != nil {
+		return "", err
+	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return out, err
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, fmt.Sprintf(gaUrl, TestkubeMeasurementID, TestkubeMeasurementSecret), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}
@@ -58,7 +62,7 @@ func sendValidationRequest(payload Payload) (out string, err error) {
 
 	uri := fmt.Sprintf(gaValidationUrl, TestkubeMeasurementID, TestkubeMeasurementSecret)
 
-	request, err := http.NewRequest("POST", uri, bytes.NewBuffer(jsonData))
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, uri, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return out, err
 	}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 )
@@ -13,10 +13,10 @@ import (
 func TestGroup_Basic(t *testing.T) {
 	input := actiontypes.NewActionList().
 		// Configure
-		Declare("init", "true").
-		Declare("step1", "false").
-		Declare("step2", "true", "init").
-		Declare("step3", "true", "init").
+		Declare("init", "", "true").
+		Declare("step1", "", "false").
+		Declare("step2", "", "true", "init").
+		Declare("step3", "", "true", "init").
 		Result("init", "step2 && step3").
 		Result("", "init").
 		Start("").
@@ -33,7 +33,7 @@ func TestGroup_Basic(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 		CurrentStatus("init").
 
@@ -43,7 +43,7 @@ func TestGroup_Basic(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step3").
-		Execute("step3", false).
+		Execute("step3", false, false).
 		End("step3").
 		End("init").
 		End("")

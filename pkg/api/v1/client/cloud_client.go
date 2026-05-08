@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,8 +45,8 @@ type ArtifactURL struct {
 // GetFile, in cloud we need to call non
 func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
 
-	cloudURI := strings.Replace(uri, "/agent", "", -1)
-	req, err := http.NewRequest(http.MethodGet, cloudURI, nil)
+	cloudURI := strings.ReplaceAll(uri, "/agent", "")
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, cloudURI, nil)
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +68,7 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		return name, fmt.Errorf("error: %d", resp.StatusCode)
+		return name, &HTTPStatusError{StatusCode: resp.StatusCode}
 	}
 
 	var artifactURL ArtifactURL
@@ -76,11 +77,14 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 		return "", err
 	}
 
-	req, err = http.NewRequest(http.MethodGet, artifactURL.URL, nil)
+	req, err = http.NewRequestWithContext(context.TODO(), http.MethodGet, artifactURL.URL, nil)
 	if err != nil {
 		return "", err
 	}
-	resp, err = t.client.Do(req)
+	// Signed URLs should use default client as these URLs are self-sufficient
+	// and do not need Authorization headers added. Some Object Storage Providers
+	// even fail when both Auth header and signed query parameter are present.
+	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return name, err
 	}

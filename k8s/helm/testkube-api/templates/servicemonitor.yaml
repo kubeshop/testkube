@@ -1,0 +1,28 @@
+{{ if .Values.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "testkube-api.fullname" . }}-servicemonitor
+  labels: {{- include "testkube-api.monitoring" . | nindent 4 }}
+    {{- if .Values.prometheus.monitoringLabels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.prometheus.monitoringLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.prometheus.sampleLimit }}
+  sampleLimit: {{ .Values.prometheus.sampleLimit }}
+  {{- end }}
+  endpoints:
+  {{- if .Values.prometheus.interval }}
+  - interval: {{ .Values.prometheus.interval }}
+  {{- end }}
+    targetPort: {{ .Values.service.port }}
+  selector:
+    matchLabels:
+      {{- include "testkube-api.selectorLabels" . | nindent 6 }}
+      {{- if .Values.prometheus.matchLabels }}
+      {{- include "global.tplvalues.render" ( dict "value" .Values.prometheus.matchLabels  "context" $ ) | nindent 6 }}
+      {{- end }}
+  {{ end }}

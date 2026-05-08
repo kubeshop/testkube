@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -20,6 +21,8 @@ const (
 	TKErrMissingDependencyHelm ErrorCode = "TKERR-1101"
 	// TKErrMissingDependencyKubectl is returned when kubectl is not found in $PATH.
 	TKErrMissingDependencyKubectl ErrorCode = "TKERR-1102"
+	// TKErrMissingDependencyDatabase is returned when database can't be detected.
+	TKErrMissingDependencyDatabase ErrorCode = "TKERR-1103"
 
 	// TKERR-12xx errors are related to configuration issues.
 
@@ -27,25 +30,60 @@ const (
 	TKErrConfigInitFailed ErrorCode = "TKERR-1201"
 	// TKErrInvalidInstallConfig is returned when invalid configuration is supplied when installing or upgrading.
 	TKErrInvalidInstallConfig ErrorCode = "TKERR-1202"
+	// TKErrInvalidDockerConfig is returned when docker client configuration is invalid.
+	TKErrInvalidDockerConfig ErrorCode = "TKERR-1203"
+	// TKErrInvalidRuntimeParameter is returned when invalid runtime parameters are provided.
+	TKErrInvalidRuntimeParameter ErrorCode = "TKERR-1204"
 
 	// TKERR-13xx errors are related to install operations.
 
 	// TKErrHelmCommandFailed is returned when a helm command fails.
 	TKErrHelmCommandFailed ErrorCode = "TKERR-1301"
-	// TKErrKubectlCommandFailed is returned when a kubectl command fail.
+	// TKErrKubectlCommandFailed is returned when a kubectl command fails.
 	TKErrKubectlCommandFailed ErrorCode = "TKERR-1302"
+	// TKErrDockerCommandFailed is returned when a docker command fails.
+	TKErrDockerCommandFailed ErrorCode = "TKERR-1303"
+	// TKErrDockerLogStreamingFailed is returned when a docker log streaming fails.
+	TKErrDockerLogStreamingFailed ErrorCode = "TKERR-1304"
+	// TKErrDockerLogReadingFailed is returned when a docker log reading fails.
+	TKErrDockerLogReadingFailed ErrorCode = "TKERR-1305"
+	// TKErrDockerInstallationFailed is returned when a docker installation fails.
+	TKErrDockerInstallationFailed ErrorCode = "TKERR-1306"
+
+	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
+	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
+
+	// TKERR-15xx errors are related to agent operations.
+
+	// TKErrAgentGetFailed is returned when fetching an agent from the control plane fails.
+	TKErrAgentGetFailed ErrorCode = "TKERR-1501"
+	// TKErrAgentRotateKeyFailed is returned when rotating an agent's secret key fails.
+	TKErrAgentRotateKeyFailed ErrorCode = "TKERR-1502"
+
+	// TKERR-16xx errors are related to marketplace operations.
+
+	// TKErrMarketplaceFetchFailed is returned when fetching marketplace content (catalog, YAML, readme) fails.
+	TKErrMarketplaceFetchFailed ErrorCode = "TKERR-1601"
+	// TKErrMarketplaceWorkflowNotFound is returned when the requested workflow is not present in the catalog.
+	TKErrMarketplaceWorkflowNotFound ErrorCode = "TKERR-1602"
+	// TKErrMarketplaceInvalidParameter is returned for any parameter-related
+	// failure: the workflow spec.config could not be parsed, a --set value
+	// is malformed or references an unknown key, or the parameter values
+	// could not be re-applied to the workflow YAML.
+	TKErrMarketplaceInvalidParameter ErrorCode = "TKERR-1603"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"
 
 type CLIError struct {
-	Code        ErrorCode
-	Title       string
-	Description string
-	ActualError error
-	StackTrace  string
-	MoreInfo    string
-	Telemetry   *ErrorTelemetry
+	Code            ErrorCode
+	Title           string
+	Description     string
+	ActualError     error
+	StackTrace      string
+	MoreInfo        string
+	ExecutedCommand string
+	Telemetry       *ErrorTelemetry
 }
 
 type ErrorTelemetry struct {
@@ -69,9 +107,18 @@ func (e *CLIError) Error() string {
 }
 
 func (e *CLIError) Print() {
-	pterm.DefaultHeader.Println("Testkube Init Error")
+	pterm.DefaultHeader.Println("Testkube Error")
 
 	pterm.DefaultSection.Println("Error Details")
+
+	cmd := ""
+	if e.ExecutedCommand != "" {
+		pterm.FgDarkGray.Printfln("Executed command: %s", e.ExecutedCommand)
+		params := strings.Split(e.ExecutedCommand, " ")
+		if len(params) > 0 {
+			cmd = params[0]
+		}
+	}
 
 	items := []pterm.BulletListItem{
 		{Level: 0, Text: pterm.Sprintf("[%s]: %s", e.Code, e.Title), TextStyle: pterm.NewStyle(pterm.FgRed)},
@@ -81,6 +128,9 @@ func (e *CLIError) Print() {
 		items = append(items, pterm.BulletListItem{Level: 0, Text: pterm.Sprintf("%s", e.MoreInfo), TextStyle: pterm.NewStyle(pterm.FgGray)})
 	}
 	pterm.DefaultBulletList.WithItems(items).Render()
+	if cmd != "" {
+		pterm.DefaultBox.Printfln("Error description is provided in context of binary execution %s", cmd)
+	}
 
 	pterm.Println()
 	pterm.Println("Let us help you!")
@@ -96,6 +146,11 @@ func NewCLIError(code ErrorCode, title, moreInfoURL string, err error) *CLIError
 		MoreInfo:    moreInfoURL,
 		StackTrace:  fmt.Sprintf("%+v", err),
 	}
+}
+
+func (err *CLIError) WithExecutedCommand(executedCommand string) *CLIError {
+	err.ExecutedCommand = executedCommand
+	return err
 }
 
 // HandleCLIError checks does the error exist, and if it does, prints the error and exits the program.

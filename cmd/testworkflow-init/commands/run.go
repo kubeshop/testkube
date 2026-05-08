@@ -1,18 +1,20 @@
 package commands
 
 import (
+	"context"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
-func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
-	machine := data.GetInternalTestWorkflowMachine()
+func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionContainer) {
+	machine := runtime.GetInternalTestWorkflowMachine()
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 
@@ -32,27 +34,57 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 
 	// Ensure the command is not empty
 	if len(command) == 0 {
-		output.ExitErrorf(data.CodeInputError, "command is required")
+		output.ExitErrorf(constants.CodeInputError, "command is required")
 	}
 
 	// Resolve the command to run
+	expandedCommand := make([]string, 0, len(command))
 	for i := range command {
+		// Check if this argument is a pure template expression that may resolve to an array
+		if innerExpr, isPure := expressions.ExtractPureTemplateExpression(command[i]); isPure && !expressions.IsWildcardAccessorOnly(innerExpr) {
+			expr, err := expressions.CompileAndResolve(innerExpr, machine, expressions.FinalizerFail)
+			if err != nil {
+				output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
+			}
+			if expr.Static() != nil {
+				// Array result: expand into individual arguments
+				if items, sliceErr := expr.Static().SliceValue(); sliceErr == nil {
+					for _, item := range items {
+						sv := expressions.NewValue(item)
+						s, _ := sv.StringValue()
+						expandedCommand = append(expandedCommand, s)
+					}
+					continue
+				}
+				// Non-array result: reuse the already-resolved value
+				s, _ := expr.Static().StringValue()
+				expandedCommand = append(expandedCommand, s)
+				continue
+			}
+		}
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
-			output.ExitErrorf(data.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
+			output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 		}
-		command[i], _ = value.Static().StringValue()
+		s, _ := value.Static().StringValue()
+		expandedCommand = append(expandedCommand, s)
+	}
+	command = expandedCommand
+
+	// Ensure the command is not empty after expansion
+	if len(command) == 0 {
+		output.ExitErrorf(constants.CodeInputError, "command is required")
 	}
 
-	// Run the operation
-	execution := orchestration.Executions.Create(command[0], command[1:])
+	// Run the operation with context
+	execution := orchestration.Executions.CreateWithContext(ctx, command[0], command[1:])
 	result, err := execution.Run()
 	if err != nil {
-		output.ExitErrorf(data.CodeInternal, "failed to execute: %v", err)
+		output.ExitErrorf(constants.CodeInternal, "failed to execute: %v", err)
 	}
 
 	// Initialize local state
-	var status data.StepStatus
+	var status constants.StepStatus
 
 	success := result.ExitCode == 0
 
@@ -61,11 +93,11 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		success = !success
 	}
 	if result.Aborted {
-		status = data.StepStatusAborted
+		status = constants.StepStatusAborted
 	} else if success {
-		status = data.StepStatusPassed
+		status = constants.StepStatusPassed
 	} else {
-		status = data.StepStatusFailed
+		status = constants.StepStatusFailed
 	}
 
 	// Abandon saving execution data if the step has been finished before

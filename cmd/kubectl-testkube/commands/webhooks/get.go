@@ -1,7 +1,6 @@
 package webhooks
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -34,10 +33,7 @@ func NewGetWebhookCmd() *cobra.Command {
 				ui.ExitOnError("getting webhook: "+name, err)
 
 				if crdOnly {
-					if webhook.PayloadTemplate != "" {
-						webhook.PayloadTemplate = fmt.Sprintf("%q", webhook.PayloadTemplate)
-					}
-
+					webhook.QuoteTextFields()
 					common.UIPrintCRD(crd.TemplateWebhook, webhook, &firstEntry)
 					return
 				}
@@ -50,10 +46,7 @@ func NewGetWebhookCmd() *cobra.Command {
 
 				if crdOnly {
 					for _, webhook := range webhooks {
-						if webhook.PayloadTemplate != "" {
-							webhook.PayloadTemplate = fmt.Sprintf("%q", webhook.PayloadTemplate)
-						}
-
+						webhook.QuoteTextFields()
 						common.UIPrintCRD(crd.TemplateWebhook, webhook, &firstEntry)
 					}
 
@@ -67,6 +60,7 @@ func NewGetWebhookCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name, you can also pass it as argument")
+	cmd.Flags().MarkShorthandDeprecated("name", "please use --name instead")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&crdOnly, "crd-only", false, "show only test crd")
 

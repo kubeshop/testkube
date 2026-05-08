@@ -1,0 +1,21 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+import "testkube/testworkflow/signature/v1/signature.proto";
+
+// SetExecutionSchedulingRequest is a request to the Control Plane to indicate that a Test
+// Workflow Execution has been sent to Kubernetes and is awaiting scheduling by the
+// Kubernetes scheduler. It includes fields that are relevant for the Control Plane
+// but which could not have been known before this point in time.
+message SetExecutionSchedulingRequest {
+  option deprecated = true;
+  // execution_id is the unique identifier of the execution that is scheduling.
+  string execution_id = 1;
+  // namespace is the Kubernetes namespace into which the execution is being scheduled.
+  string namespace = 2;
+  // signature is an internal representation of the steps of the workflow that will be
+  // executed by the execution. It should be passed here as it is not until this point
+  // that it is possible to guarantee the state of the workflow that will be executed.
+  repeated testkube.testworkflow.signature.v1.Signature signature = 3;
+}

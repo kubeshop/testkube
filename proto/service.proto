@@ -2,10 +2,9 @@ syntax = "proto3";
 
 package cloud;
 
-option go_package = "pkg/cloud";
-
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 service TestKubeCloudAPI {
     // Deprecated, use ExecuteAsync instead,
@@ -16,7 +15,115 @@ service TestKubeCloudAPI {
     rpc ExecuteAsync(stream ExecuteResponse) returns (stream ExecuteRequest);
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
     rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
+    rpc GetTestWorkflowServiceNotificationsStream(stream TestWorkflowServiceNotificationsResponse) returns (stream TestWorkflowServiceNotificationsRequest);
+    rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
+    rpc GetCredential(CredentialRequest) returns (CredentialResponse);
+    rpc GetEventStream(EventStreamRequest) returns (stream EventStreamData);
+    rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
+
+    // Runner
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc UpdateAgentCapabilitiesOnStartup(UpdateAgentCapabilitiesOnStartupRequest) returns (UpdateAgentCapabilitiesOnStartupResponse);
+    rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest) {
+      // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.GetExecutionUpdates instead.
+      option deprecated = true;
+    };
+    rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse) {
+      // This RPC is deprecated, please use testkube.testworkflow.execution.v1/TestWorkflowExecutionService.SetExecutionScheduling instead.
+      option deprecated = true;
+    };
+    rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
+    rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
+    rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
+    rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
+    rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
+    rpc GetGitHubToken(GetGitHubTokenRequest) returns (GetGitHubTokenResponse);
+
+    // Execution
+    rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
+    rpc AppendExecutionReport(AppendExecutionReportRequest) returns (AppendExecutionReportResponse);
+
+    // CRD Synchronisation
+    // -- Test Workflows
+    rpc GetTestWorkflow(GetTestWorkflowRequest) returns (GetTestWorkflowResponse);
+    rpc ListTestWorkflows(ListTestWorkflowsRequest) returns (stream TestWorkflowListItem);
+    rpc ListTestWorkflowLabels(ListTestWorkflowLabelsRequest) returns (ListTestWorkflowLabelsResponse);
+    rpc CreateTestWorkflow(CreateTestWorkflowRequest) returns (CreateTestWorkflowResponse);
+    rpc UpdateTestWorkflow(UpdateTestWorkflowRequest) returns (UpdateTestWorkflowResponse);
+    rpc DeleteTestWorkflow(DeleteTestWorkflowRequest) returns (DeleteTestWorkflowResponse);
+    rpc DeleteTestWorkflowsByLabels(DeleteTestWorkflowsByLabelsRequest) returns (DeleteTestWorkflowsByLabelsResponse);
+    rpc WatchTestWorkflowUpdates(WatchTestWorkflowUpdatesRequest) returns (stream TestWorkflowUpdate);
+    // -- Test Workflow Templates
+    rpc GetTestWorkflowTemplate(GetTestWorkflowTemplateRequest) returns (GetTestWorkflowTemplateResponse);
+    rpc ListTestWorkflowTemplates(ListTestWorkflowTemplatesRequest) returns (stream TestWorkflowTemplateListItem);
+    rpc ListTestWorkflowTemplateLabels(ListTestWorkflowTemplateLabelsRequest) returns (ListTestWorkflowTemplateLabelsResponse);
+    rpc CreateTestWorkflowTemplate(CreateTestWorkflowTemplateRequest) returns (CreateTestWorkflowTemplateResponse);
+    rpc UpdateTestWorkflowTemplate(UpdateTestWorkflowTemplateRequest) returns (UpdateTestWorkflowTemplateResponse);
+    rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
+    rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
+    rpc WatchTestWorkflowTemplateUpdates(WatchTestWorkflowTemplateUpdatesRequest) returns (stream TestWorkflowTemplateUpdate);
+    // -- Test Triggers
+    rpc GetTestTrigger(GetTestTriggerRequest) returns (GetTestTriggerResponse);
+    rpc ListTestTriggers(ListTestTriggersRequest) returns (stream TestTriggerListItem);
+    rpc ListTestTriggerLabels(ListTestTriggerLabelsRequest) returns (ListTestTriggerLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc CreateTestTrigger(CreateTestTriggerRequest) returns (CreateTestTriggerResponse);
+    rpc UpdateTestTrigger(UpdateTestTriggerRequest) returns (UpdateTestTriggerResponse);
+    rpc DeleteTestTrigger(DeleteTestTriggerRequest) returns (DeleteTestTriggerResponse);
+    rpc DeleteAllTestTriggers(DeleteAllTestTriggersRequest) returns (DeleteAllTestTriggersResponse);
+    rpc DeleteTestTriggersByLabels(DeleteTestTriggersByLabelsRequest) returns (DeleteTestTriggersByLabelsResponse);
+    rpc WatchTestTriggerUpdates(WatchTestTriggerUpdatesRequest) returns (stream TestTriggerUpdate) {
+      option deprecated = true;
+    };
+    // -- Workflow Triggers (v2)
+    rpc GetWorkflowTrigger(GetWorkflowTriggerRequest) returns (GetWorkflowTriggerResponse);
+    rpc ListWorkflowTriggers(ListWorkflowTriggersRequest) returns (stream WorkflowTriggerListItem);
+    rpc CreateWorkflowTrigger(CreateWorkflowTriggerRequest) returns (CreateWorkflowTriggerResponse);
+    rpc UpdateWorkflowTrigger(UpdateWorkflowTriggerRequest) returns (UpdateWorkflowTriggerResponse);
+    rpc DeleteWorkflowTrigger(DeleteWorkflowTriggerRequest) returns (DeleteWorkflowTriggerResponse);
+    rpc DeleteAllWorkflowTriggers(DeleteAllWorkflowTriggersRequest) returns (DeleteAllWorkflowTriggersResponse);
+    rpc DeleteWorkflowTriggersByLabels(DeleteWorkflowTriggersByLabelsRequest) returns (DeleteWorkflowTriggersByLabelsResponse);
+    // -- Webhook
+    rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc ListWebhooks(ListWebhooksRequest) returns (stream WebhookListItem) {
+      option deprecated = true;
+    };
+    rpc ListWebhooksV2(ListWebhooksV2Request) returns (ListWebhooksResponse);
+    rpc ListWebhookLabels(ListWebhookLabelsRequest) returns (ListWebhookLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteAllWebhooks(DeleteAllWebhooksRequest) returns (DeleteAllWebhooksResponse) {
+      option deprecated = true;
+    };
+    rpc DeleteWebhooksByLabels(DeleteWebhooksByLabelsRequest) returns (DeleteWebhooksByLabelsResponse) {
+      option deprecated = true;
+    };
+    rpc WatchWebhookUpdates(WatchWebhookUpdatesRequest) returns (stream WebhookUpdate) {
+      option deprecated = true;
+    };
+
+    // MigrateSuperAgent is an RPC that should be called when a "Super" Agent client wishes
+    // to indicate to a server that it has succesfully performed all pre-migration operations
+    // and should now be considered to be a regular agent with capabilities.
+    // This RPC is defined as part of the legacy Service as it will be removed after "Super"
+    // Agents are no longer an applicable Agent type.
+    rpc MigrateSuperAgent(MigrateSuperAgentRequest) returns (MigrateSuperAgentResponse) {
+      option deprecated = true;
+    };
 }
 
 enum LogsStreamRequestType {
@@ -34,6 +141,9 @@ enum TestWorkflowNotificationType {
   WORKFLOW_STREAM_LOG = 1;
   WORKFLOW_STREAM_RESULT = 2;
   WORKFLOW_STREAM_OUTPUT = 3;
+  WORKFLOW_STREAM_READY = 4;
+  WORKFLOW_STREAM_HEARTBEAT = 5;
+  WORKFLOW_STREAM_RESUME_UNAVAILABLE = 6;
 }
 
 message LogsStreamRequest {
@@ -69,7 +179,9 @@ message ExecuteRequest {
 message TestWorkflowNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
+  string environment_id = 4;
   TestWorkflowNotificationsRequestType request_type = 3;
+  uint32 resume_after_seq_no = 5;
 }
 
 message TestWorkflowNotificationsResponse {
@@ -81,10 +193,51 @@ message TestWorkflowNotificationsResponse {
   string message = 6; // based on type: log/error = inline, others = serialized to JSON
 }
 
+enum TestkubeMode {
+  Enterprise = 0;
+  Pro = 1;
+}
+
+enum PlanStatus {
+    Active             = 0;
+    Canceled           = 1;
+    Incomplete         = 2;
+    IncompleteExpired  = 3;
+    PastDue            = 4;
+    Trailing           = 5;
+    Unpaid             = 6;
+    Deleted            = 7;
+    Locked             = 8;
+    Blocked            = 9;
+}
+
+message ProContextEnvironment {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message ProContextAgent {
+  string id = 1;
+  string name = 2;
+  string type = 3 [deprecated = true]; // Superseded by agent capabilities
+  bool disabled = 4;
+  map<string, string> labels = 5;
+  repeated ProContextEnvironment environments = 6;
+  bool is_super_agent = 7;
+}
+
 message ProContextResponse {
   string org_id = 1;
+  string org_slug = 8;
+  string org_name = 9;
   string env_id = 2;
   repeated Capability capabilities = 3;
+  bool trial = 4;
+  TestkubeMode mode = 5;
+  PlanStatus status = 6;
+  ProContextAgent agent = 7;
+  string public_dashboard_url = 10;
 }
 
 message Capability {
@@ -114,3 +267,763 @@ message WebsocketData {
     Opcode opcode = 1;
     bytes body    = 2;
 }
+
+message CredentialRequest {
+  string name = 1;
+  string execution_id = 2;
+  string source = 3; // "credential" or "vault"
+}
+
+message CredentialResponse {
+  bytes content = 1;
+}
+
+message TestWorkflowServiceNotificationsRequest {
+  string stream_id = 1;
+  string environment_id = 6;
+  string execution_id = 2;
+  string service_name = 3;
+  int32 service_index = 4;
+  TestWorkflowNotificationsRequestType request_type = 5;
+  string runner_id = 7;
+  uint32 resume_after_seq_no = 8;
+}
+
+message TestWorkflowServiceNotificationsResponse {
+  string stream_id = 1;
+  uint32 seq_no = 2;
+  string timestamp = 3;
+  string ref = 4;
+  TestWorkflowNotificationType type = 5;
+  string message = 6; // based on type: log/error = inline, others = serialized to JSON
+}
+
+message TestWorkflowParallelStepNotificationsRequest {
+  string stream_id = 1;
+  string environment_id = 6;
+  string execution_id = 2;
+  string ref = 3;
+  int32  worker_index = 4;
+  TestWorkflowNotificationsRequestType request_type = 5;
+  string runner_id = 7;
+  uint32 resume_after_seq_no = 8;
+}
+
+message TestWorkflowParallelStepNotificationsResponse {
+  string stream_id = 1;
+  uint32 seq_no = 2;
+  string timestamp = 3;
+  string ref = 4;
+  TestWorkflowNotificationType type = 5;
+  string message = 6; // based on type: log/error = inline, others = serialized to JSON
+}
+
+message ScheduleResourceSelector {
+  string name = 1;
+  map<string, string> labels = 2;
+}
+
+// Runtime configuration for test workflow execution
+message TestWorkflowRuntime {
+  map<string, string> env_vars = 1; // Runtime environment variables overrides
+}
+
+message ScheduleExecution {
+  ScheduleResourceSelector selector = 1;
+  map<string, string> config = 2;
+  string execution_name = 3;
+  map<string, string> tags = 4;
+  repeated ExecutionTarget targets = 5;
+  TestWorkflowRuntime runtime = 6; // Runtime configuration overrides for the execution
+}
+
+// map<string, []string> is not supported in protobuf
+message ExecutionTargetLabels {
+  repeated string labels = 1;
+}
+
+message ExecutionTarget {
+  map<string, ExecutionTargetLabels> match = 1; // runner labels to filter by
+  map<string, ExecutionTargetLabels> not = 2; // runner labels to filter against
+  repeated string replicate = 3; // runner labels to replicate by
+}
+
+enum RunningContextType {
+  UNKNOWN = 0;
+  UI = 1;
+  CLI = 2;
+  CICD = 3;
+  CRON = 4;
+  TESTTRIGGER = 5;
+  KUBERNETESOBJECT = 6;
+  EXECUTION = 7;
+}
+
+message RunningContext {
+  string name = 1;
+  string id = 3;
+  RunningContextType type = 2;
+}
+
+message UserSignature {
+  string name = 1;
+  string email = 2;
+}
+
+message SilentMode {
+  // disable webhooks for this execution
+  bool webhooks = 1;
+  // exclude from insights and analytics dashboards
+  bool insights = 2;
+  // exclude from health and flakiness calculations
+  bool health = 3;
+  // exclude from prometheus metrics
+  bool metrics = 4;
+  // disable CDEvents for this execution
+  bool cdevents = 5;
+}
+
+message ScheduleRequest {
+  // Test Workflow details
+  repeated ScheduleExecution executions = 2;
+
+  // Execution details
+  bool disable_webhooks = 3;
+  map<string, string> tags = 4;
+
+  // Running metadata
+  RunningContext running_context = 5;
+  repeated string parent_execution_ids = 7;
+  optional UserSignature user = 8; // keep in mind that it should not be trusted
+  optional string execution_reference = 9;
+
+  // Kubernetes resource TODO: is it required?
+  string kubernetes_object_name = 10;
+
+  // Test Workflow resolved spec
+  bytes resolvedWorkflow = 11;
+
+  // Silent mode settings
+  optional SilentMode silent_mode = 12;
+}
+
+message ScheduleResponse {
+  bytes execution = 1; // TestWorkflowExecution
+}
+
+message EventResource {
+  string type = 1;
+  string id = 2;
+}
+
+message EventStreamRequest {
+  repeated EventResource accept = 1;
+}
+
+message EventStreamData {
+  bool ping = 1;
+  optional Event event = 2;
+}
+
+message Event {
+  string id = 1;
+  EventResource resource = 3;
+  string type = 4;
+  bytes data = 5;
+}
+
+// Capabilities supported by an Agent
+enum AgentCapability {
+  AGENT_CAPABILITY_UNSPECIFIED = 0;
+  AGENT_CAPABILITY_RUNNER = 1;
+  AGENT_CAPABILITY_LISTENER = 2;
+  AGENT_CAPABILITY_GITOPS = 3;
+  AGENT_CAPABILITY_WEBHOOKS = 4;
+  AGENT_CAPABILITY_CLOUD_WEBHOOKS = 5;
+}
+
+message RegisterRequest {
+  string registration_token = 1;
+  string runner_name = 2;
+  string organization_id = 3;
+  bool floating = 4;
+  repeated AgentCapability capabilities = 5;
+  string runner_group = 6;
+  bool is_global = 7;
+  map<string, string> labels = 8;
+}
+
+message RegisterResponse {
+  string runner_id = 1;
+  string runner_key = 2;
+  string organization_id = 3;
+  string runner_name = 4;
+}
+
+message UpdateAgentCapabilitiesOnStartupRequest {
+  repeated AgentCapability capabilities = 1;
+}
+
+message UpdateAgentCapabilitiesOnStartupResponse {
+  repeated AgentCapability capabilities = 1;
+}
+
+enum RunnerRequestType {
+  option deprecated = true;
+  PING = 0 [deprecated = true]; // Heartbeat
+  CONSIDER = 1  [deprecated = true]; // Consider a new execution to be run
+  START = 2  [deprecated = true]; // Start
+  ABORT = 3  [deprecated = true]; // Abort the execution
+  RESUME = 4  [deprecated = true]; // Resume the execution
+  PAUSE = 5  [deprecated = true]; // Pause the execution
+  CANCEL = 6  [deprecated = true]; // Cancel the execution (API call)
+}
+
+message RunnerStartRequest {
+  option deprecated = true;
+  string token = 1 [deprecated = true];
+  TestWorkflowRuntime runtime = 2 [deprecated = true]; // Runtime configuration for the execution
+}
+
+message RunnerRequest {
+  option deprecated = true;
+  string message_id = 1 [deprecated = true];
+  string environment_id = 2 [deprecated = true];
+  string execution_id = 3 [deprecated = true];
+  RunnerRequestType type = 4 [deprecated = true];
+  oneof request {
+    RunnerStartRequest start = 5 [deprecated = true];
+  }
+}
+
+message RunnerConsiderResponse {
+  option deprecated = true;
+  bool ok = 1  [deprecated = true];
+}
+
+message RunnerStartResponse {
+  option deprecated = true;
+}
+
+message RunnerResponse {
+  option deprecated = true;
+  string message_id = 1 [deprecated = true];
+  string environment_id = 2 [deprecated = true];
+  string execution_id = 3 [deprecated = true];
+  RunnerRequestType type = 4 [deprecated = true];
+  oneof response {
+    string error = 5 [deprecated = true];
+    RunnerConsiderResponse consider = 6 [deprecated = true];
+    RunnerStartResponse start = 7 [deprecated = true];
+  }
+}
+
+message UnfinishedExecution {
+  string environment_id = 1;
+  string id = 2;
+}
+
+message GetExecutionRequest {
+  string id = 1;
+}
+
+message GetExecutionResponse {
+  bytes execution = 1; // TestWorkflowExecution
+}
+
+message InitExecutionRequest {
+  option deprecated = true;
+  string id = 1 [deprecated = true];
+  string namespace = 2 [deprecated = true];
+  bytes signature = 3 [deprecated = true]; // []TestWorkflowSignature
+}
+
+message InitExecutionResponse {
+  option deprecated = true;
+}
+
+message UpdateExecutionResultRequest {
+  string id = 1;
+  bytes result = 2; // TestWorkflowResult
+}
+
+message UpdateExecutionResultResponse {
+}
+
+message GetGitHubTokenRequest {
+  string url = 1;
+}
+
+message GetGitHubTokenResponse {
+  string token = 1;
+}
+
+message ExecutionOutput {
+  string ref = 1;
+  string name = 2;
+  bytes value = 3;
+}
+
+message UpdateExecutionOutputRequest {
+  string id = 1;
+  repeated ExecutionOutput output = 2;
+}
+
+message UpdateExecutionOutputResponse {
+}
+
+message SaveExecutionLogsPresignedRequest {
+  string id = 1;
+}
+
+message SaveExecutionLogsPresignedResponse {
+  string url = 1;
+}
+
+message FinishExecutionRequest {
+  string id = 1;
+  bytes result = 2; // TestWorkflowResult
+}
+
+message FinishExecutionResponse {
+}
+
+// Execution
+
+message SaveExecutionArtifactPresignedRequest {
+  string id = 1;
+  string step = 2;
+  string file_path = 3;
+  string content_type = 4;
+}
+
+message SaveExecutionArtifactPresignedResponse {
+  string url = 1;
+}
+
+message AppendExecutionReportRequest {
+  string id = 1;
+  string step = 2;
+  string file_path = 3;
+  bytes report = 4; // TODO: avoid sending report - it could be fetched directly from the artifact instead
+}
+
+message AppendExecutionReportResponse {
+
+}
+
+// CRD Synchronisation -- Test Workflows
+
+message GetTestWorkflowRequest {
+  string name = 1;
+}
+
+message GetTestWorkflowResponse {
+  bytes workflow = 1;
+}
+
+message ListTestWorkflowsRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+}
+
+message TestWorkflowListItem {
+  bytes workflow = 1;
+}
+
+message LabelListItem {
+  string name = 1;
+  repeated string value = 2;
+}
+
+message ListTestWorkflowLabelsRequest {
+}
+
+message ListTestWorkflowLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestWorkflowRequest {
+  bytes workflow = 1;
+}
+
+message CreateTestWorkflowResponse {}
+
+message UpdateTestWorkflowRequest {
+  bytes workflow = 1;
+}
+
+message UpdateTestWorkflowResponse {}
+
+message DeleteTestWorkflowRequest {
+  string name = 1;
+}
+
+message DeleteTestWorkflowResponse {}
+
+message DeleteTestWorkflowsByLabelsRequest {
+  map<string, string> labels = 1;
+}
+
+message DeleteTestWorkflowsByLabelsResponse {
+  uint32 count = 1;
+}
+
+enum UpdateType {
+  UPDATE = 0;
+  CREATE = 1;
+  DELETE = 2;
+}
+
+message WatchTestWorkflowUpdatesRequest {
+  bool include_initial_data = 1;
+}
+
+message TestWorkflowUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestWorkflow
+}
+
+// CRD Synchronisation -- Test Workflow Templates
+
+message GetTestWorkflowTemplateRequest {
+  string name = 1;
+}
+
+message GetTestWorkflowTemplateResponse {
+  bytes template = 1;
+}
+
+message ListTestWorkflowTemplatesRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+}
+
+message TestWorkflowTemplateListItem {
+  bytes template = 1;
+}
+
+message ListTestWorkflowTemplateLabelsRequest {
+}
+
+message ListTestWorkflowTemplateLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestWorkflowTemplateRequest {
+  bytes template = 1;
+}
+
+message CreateTestWorkflowTemplateResponse {}
+
+message UpdateTestWorkflowTemplateRequest {
+  bytes template = 1;
+}
+
+message UpdateTestWorkflowTemplateResponse {}
+
+message DeleteTestWorkflowTemplateRequest {
+  string name = 1;
+}
+
+message DeleteTestWorkflowTemplateResponse {}
+
+message DeleteTestWorkflowTemplatesByLabelsRequest {
+  map<string, string> labels = 1;
+}
+
+message DeleteTestWorkflowTemplatesByLabelsResponse {
+  uint32 count = 1;
+}
+
+message WatchTestWorkflowTemplateUpdatesRequest {
+  bool include_initial_data = 1;
+}
+
+message TestWorkflowTemplateUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestWorkflowTemplate
+}
+
+// CRD Synchronisation -- Test Triggers
+
+message GetTestTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message ListTestTriggersRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message TestTriggerListItem {
+  bytes trigger = 1; // TestTrigger
+}
+
+message ListTestTriggerLabelsRequest {
+  option deprecated = true;
+  string namespace = 1;
+}
+
+message ListTestTriggerLabelsResponse {
+  option deprecated = true;
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestTriggerRequest {
+  bytes trigger = 1; // TestTrigger
+}
+
+message CreateTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message UpdateTestTriggerRequest {
+  bytes trigger = 1; // TestTrigger
+}
+
+message UpdateTestTriggerResponse {
+  bytes trigger = 1; // TestTrigger
+}
+
+message DeleteTestTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteTestTriggerResponse {}
+
+message DeleteAllTestTriggersRequest {
+  string namespace = 1;
+}
+
+message DeleteAllTestTriggersResponse {
+  uint32 count = 1;
+}
+
+message DeleteTestTriggersByLabelsRequest {
+  string selector = 1;
+  string namespace = 2;
+}
+
+message DeleteTestTriggersByLabelsResponse {
+  uint32 count = 1;
+}
+
+message WatchTestTriggerUpdatesRequest {
+  option deprecated = true;
+  bool include_initial_data = 1;
+  string namespace = 2;
+}
+
+message TestTriggerUpdate {
+  option deprecated = true;
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestTrigger
+}
+
+// CRD Synchronisation -- Workflow Triggers (v2)
+
+message GetWorkflowTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger (flat REST shape, JSON-encoded)
+}
+
+message ListWorkflowTriggersRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message WorkflowTriggerListItem {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message CreateWorkflowTriggerRequest {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message CreateWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message UpdateWorkflowTriggerRequest {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message UpdateWorkflowTriggerResponse {
+  bytes trigger = 1; // testkube.WorkflowTrigger
+}
+
+message DeleteWorkflowTriggerRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteWorkflowTriggerResponse {}
+
+message DeleteAllWorkflowTriggersRequest {
+  string namespace = 1;
+}
+
+message DeleteAllWorkflowTriggersResponse {
+  uint32 count = 1;
+}
+
+message DeleteWorkflowTriggersByLabelsRequest {
+  string selector = 1;
+  string namespace = 2;
+}
+
+message DeleteWorkflowTriggersByLabelsResponse {
+  uint32 count = 1;
+}
+
+// CRD Synchronisation -- Webhooks
+
+message GetWebhookRequest {
+  option deprecated = true;
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetWebhookResponse {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksRequest {
+  option deprecated = true;
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+}
+
+message ListWebhooksV2Request {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+  string selector = 5;
+  string namespace = 6;
+  map<string, string> targetSelector = 7;
+}
+
+message WebhookListItem {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message ListWebhooksResponse {
+  repeated WebhookListItem items = 1;
+  uint32 total = 2;
+}
+
+message ListWebhookLabelsRequest {
+  option deprecated = true;
+  string namespace = 1;
+}
+
+message ListWebhookLabelsResponse {
+  option deprecated = true;
+  repeated LabelListItem labels = 1;
+}
+
+message CreateWebhookRequest {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message CreateWebhookResponse {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message UpdateWebhookRequest {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message UpdateWebhookResponse {
+  option deprecated = true;
+  bytes webhook = 1; // Webhook
+}
+
+message DeleteWebhookRequest {
+  option deprecated = true;
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteWebhookResponse {
+  option deprecated = true;
+}
+
+message DeleteAllWebhooksRequest {
+  option deprecated = true;
+  string namespace = 1;
+}
+
+message DeleteAllWebhooksResponse {
+  option deprecated = true;
+  uint32 count = 1;
+}
+
+message DeleteWebhooksByLabelsRequest {
+  option deprecated = true;
+  map<string, string> labels = 1;
+}
+
+message DeleteWebhooksByLabelsResponse {
+  option deprecated = true;
+  uint32 count = 1;
+}
+
+message WatchWebhookUpdatesRequest {
+  option deprecated = true;
+  bool include_initial_data = 1;
+  string namespace = 2;
+}
+
+message WebhookUpdate {
+  option deprecated = true;
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // Webhook
+}
+
+message MigrateSuperAgentRequest {
+  bool rollback = 1;
+}
+
+message MigrateSuperAgentResponse {}

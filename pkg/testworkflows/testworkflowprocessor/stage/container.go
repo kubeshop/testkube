@@ -1,6 +1,7 @@
 package stage
 
 import (
+	"fmt"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -8,7 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -30,7 +31,7 @@ type ContainerComposition interface {
 }
 
 type ContainerAccessors interface {
-	Env() []corev1.EnvVar
+	Env() []testworkflowsv1.EnvVar
 	EnvFrom() []corev1.EnvFromSource
 	VolumeMounts() []corev1.VolumeMount
 
@@ -44,7 +45,7 @@ type ContainerAccessors interface {
 	ToKubernetesTemplate() (corev1.Container, error)
 
 	Resources() testworkflowsv1.Resources
-	SecurityContext() *corev1.SecurityContext
+	SecurityContext() *testworkflowsv1.WorkflowSecurityContext
 
 	HasVolumeAt(path string) bool
 	ToContainerConfig() testworkflowsv1.ContainerConfig
@@ -63,14 +64,14 @@ type ContainerMutations[T any] interface {
 	SetArgs(args ...string) T
 	SetWorkingDir(workingDir string) T // "" = default to the image
 	SetResources(resources testworkflowsv1.Resources) T
-	SetSecurityContext(sc *corev1.SecurityContext) T
+	SetSecurityContext(sc *testworkflowsv1.WorkflowSecurityContext) T
 
 	ApplyCR(cr *testworkflowsv1.ContainerConfig) T
 	ApplyImageData(image *imageinspector.Info, resolvedImageName string) error
 	EnableToolkit(ref string) T
 }
 
-//go:generate mockgen -destination=./mock_container.go -package=stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage" Container
+//go:generate go tool mockgen -destination=./mock_container.go -package=stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage" Container
 type Container interface {
 	ContainerComposition
 	ContainerAccessors
@@ -110,7 +111,7 @@ func (c *container) CreateChild() Container {
 
 // Getters
 
-func (c *container) Env() []corev1.EnvVar {
+func (c *container) Env() []testworkflowsv1.EnvVar {
 	if c.parent == nil {
 		return c.Cr.Env
 	}
@@ -175,14 +176,17 @@ func (c *container) WorkingDir() string {
 	if c.parent == nil {
 		return path
 	}
-	if filepath.IsAbs(path) {
-		return path
+	firstParam := c.parent.WorkingDir()
+	secondParam := path
+	for _, param := range []*string{&firstParam, &secondParam} {
+		*param = strings.TrimSpace(*param)
+		if strings.HasPrefix(*param, "{{") && strings.HasSuffix(*param, "}}") {
+			*param = strings.TrimSuffix(strings.TrimPrefix(*param, "{{"), "}}")
+		} else {
+			*param = fmt.Sprintf("%q", *param)
+		}
 	}
-	parentPath := c.parent.WorkingDir()
-	if parentPath == "" {
-		return path
-	}
-	return filepath.Join(parentPath, path)
+	return fmt.Sprintf("{{makepath(%s, %s)}}", firstParam, secondParam)
 }
 
 func (c *container) Resources() (r testworkflowsv1.Resources) {
@@ -201,14 +205,17 @@ func (c *container) Resources() (r testworkflowsv1.Resources) {
 	return
 }
 
-func (c *container) SecurityContext() *corev1.SecurityContext {
+func (c *container) SecurityContext() *testworkflowsv1.WorkflowSecurityContext {
 	if c.parent == nil || c.parent.SecurityContext() == nil {
-		return c.Cr.SecurityContext
+		return testworkflowsv1.CloneWorkflowSecurityContext(c.Cr.SecurityContext)
 	}
 	if c.Cr.SecurityContext == nil {
-		return c.parent.SecurityContext()
+		return testworkflowsv1.CloneWorkflowSecurityContext(c.parent.SecurityContext())
 	}
-	return testworkflowresolver.MergeSecurityContext(c.parent.SecurityContext().DeepCopy(), c.Cr.SecurityContext)
+	return testworkflowresolver.MergeSecurityContext(
+		testworkflowsv1.CloneWorkflowSecurityContext(c.parent.SecurityContext()),
+		testworkflowsv1.CloneWorkflowSecurityContext(c.Cr.SecurityContext),
+	)
 }
 
 func (c *container) HasVolumeAt(path string) bool {
@@ -237,7 +244,9 @@ func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
 			break
 		}
 	}
-	c.Cr.Env = append(c.Cr.Env, env...)
+	c.Cr.Env = append(c.Cr.Env, common.MapSlice(env, func(e corev1.EnvVar) testworkflowsv1.EnvVar {
+		return testworkflowsv1.EnvVar{EnvVar: e}
+	})...)
 	if needsDedupe {
 		c.Cr.Env = testworkflowresolver.DedupeEnvVars(c.Cr.Env)
 	}
@@ -246,7 +255,7 @@ func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
 
 func (c *container) AppendEnvMap(env map[string]string) Container {
 	for k, v := range env {
-		c.Cr.Env = append(c.Cr.Env, corev1.EnvVar{Name: k, Value: v})
+		c.Cr.Env = append(c.Cr.Env, testworkflowsv1.EnvVar{EnvVar: corev1.EnvVar{Name: k, Value: v}})
 	}
 	return c
 }
@@ -291,7 +300,7 @@ func (c *container) SetResources(resources testworkflowsv1.Resources) Container 
 	return c
 }
 
-func (c *container) SetSecurityContext(sc *corev1.SecurityContext) Container {
+func (c *container) SetSecurityContext(sc *testworkflowsv1.WorkflowSecurityContext) Container {
 	c.Cr.SecurityContext = sc
 	return c
 }
@@ -342,7 +351,7 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 		Command:         command,
 		Args:            args,
 		Resources:       resources,
-		SecurityContext: c.SecurityContext().DeepCopy(),
+		SecurityContext: testworkflowsv1.CloneWorkflowSecurityContext(c.SecurityContext()),
 		VolumeMounts:    volumeMounts,
 	}
 }
@@ -372,17 +381,23 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 	if resourcesErr != nil {
 		return corev1.Container{}, resourcesErr
 	}
+	securityContext, securityContextErr := cr.SecurityContext.ToKube()
+	if securityContextErr != nil {
+		return corev1.Container{}, securityContextErr
+	}
 	return corev1.Container{
 		Image:           cr.Image,
 		ImagePullPolicy: cr.ImagePullPolicy,
 		Command:         command,
 		Args:            args,
-		Env:             cr.Env,
+		Env: common.MapSlice(cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
+			return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
+		}),
 		EnvFrom:         cr.EnvFrom,
 		VolumeMounts:    cr.VolumeMounts,
 		Resources:       resources,
 		WorkingDir:      workingDir,
-		SecurityContext: cr.SecurityContext,
+		SecurityContext: securityContext,
 	}, nil
 }
 
@@ -452,49 +467,9 @@ func (c *container) EnableToolkit(ref string) Container {
 			Name:      "TK_IP",
 			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
 		}).
-		AppendEnvMap(map[string]string{
-			"TK_REF":                    ref,
-			"TK_NS":                     "{{internal.namespace}}",
-			"TK_WF":                     "{{workflow.name}}",
-			"TK_EX":                     "{{execution.id}}",
-			"TK_EXN":                    "{{execution.name}}",
-			"TK_EXC":                    "{{execution.number}}",
-			"TK_EXS":                    "{{execution.scheduledAt}}",
-			"TK_DWH":                    "{{execution.disableWebhooks}}",
-			"TK_TAG":                    "{{execution.tags}}",
-			"TK_EXI":                    "{{resource.id}}",
-			"TK_EXR":                    "{{resource.root}}",
-			"TK_FS":                     "{{resource.fsPrefix}}",
-			"TK_SA":                     "{{internal.serviceaccount.default}}",
-			"TK_R":                      "{{internal.images.defaultRegistry}}",
-			"TK_DASH":                   "{{internal.dashboard.url}}",
-			"TK_API":                    "{{internal.api.url}}",
-			"TK_CLU":                    "{{internal.clusterId}}",
-			"TK_CDE":                    "{{internal.cdeventsTarget}}",
-			"TK_C_URL":                  "{{internal.cloud.api.url}}",
-			"TK_C_KEY":                  "{{internal.cloud.api.key}}",
-			"TK_C_TLS_INSECURE":         "{{internal.cloud.api.tlsInsecure}}",
-			"TK_C_SKIP_VERIFY":          "{{internal.cloud.api.skipVerify}}",
-			"TK_C_UI_URL":               "{{internal.cloud.ui.url}}",
-			"TK_C_ORG_ID":               "{{internal.cloud.api.orgId}}",
-			"TK_C_ENV_ID":               "{{internal.cloud.api.envId}}",
-			"TK_OS_ENDPOINT":            "{{internal.storage.url}}",
-			"TK_OS_ACCESSKEY":           "{{internal.storage.accessKey}}",
-			"TK_OS_SECRETKEY":           "{{internal.storage.secretKey}}",
-			"TK_OS_REGION":              "{{internal.storage.region}}",
-			"TK_OS_TOKEN":               "{{internal.storage.token}}",
-			"TK_OS_BUCKET":              "{{internal.storage.bucket}}",
-			"TK_OS_SSL":                 "{{internal.storage.ssl}}",
-			"TK_OS_SSL_SKIP_VERIFY":     "{{internal.storage.skipVerify}}",
-			"TK_OS_CERT_FILE":           "{{internal.storage.certFile}}",
-			"TK_OS_KEY_FILE":            "{{internal.storage.keyFile}}",
-			"TK_OS_CA_FILE":             "{{internal.storage.caFile}}",
-			"TESTKUBE_TW_TOOLKIT_IMAGE": "{{internal.images.toolkit}}",
-			"TESTKUBE_TW_INIT_IMAGE":    "{{internal.images.init}}",
-			"TK_IMG_P":                  "{{internal.images.persistence.enabled}}",
-			"TK_IMG_PK":                 "{{internal.images.persistence.key}}",
-			"TK_IMG_CRED_TTL":           "{{internal.images.cache.ttl}}",
-			"TK_LBL":                    "{{workflow.labels}}",
+		AppendEnv(corev1.EnvVar{
+			Name:  "TK_REF",
+			Value: ref,
 		})
 }
 

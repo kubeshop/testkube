@@ -9,7 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/h2non/filetype"
@@ -30,7 +30,7 @@ func NewCloudUploader(executor executor.Executor, skipVerify bool) *CloudUploade
 	return &CloudUploader{executor: executor, skipVerify: skipVerify}
 }
 
-func (u *CloudUploader) Upload(ctx context.Context, object *scraper.Object, execution testkube.Execution) error {
+func (u *CloudUploader) Upload(ctx context.Context, object *scrapertypes.Object, execution testkube.Execution) error {
 	log.DefaultLogger.Debugw("cloud uploader is requesting signed URL", "file", object.Name, "folder", execution.Id, "size", object.Size)
 
 	contentType := getContentType(object.Name)
@@ -67,7 +67,7 @@ func (u *CloudUploader) getSignedURL(ctx context.Context, req *PutObjectSignedUR
 	return commandResponse.URL, nil
 }
 
-func (u *CloudUploader) putObject(ctx context.Context, url string, object *scraper.Object, contentType string) error {
+func (u *CloudUploader) putObject(ctx context.Context, url string, object *scrapertypes.Object, contentType string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, object.Data)
 	if err != nil {
 		return err
@@ -81,6 +81,7 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, object *scrap
 	if err != nil {
 		return errors.Wrap(err, "failed to send file to cloud")
 	}
+	defer rsp.Body.Close()
 	if rsp.StatusCode != http.StatusOK {
 		return errors.Errorf("error getting file from presigned url: expected 200 OK response code, got %d", rsp.StatusCode)
 	}
@@ -88,7 +89,7 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, object *scrap
 }
 
 func (u *CloudUploader) Close() error {
-	return u.executor.Close()
+	return nil
 }
 
 func getContentType(filePath string) string {

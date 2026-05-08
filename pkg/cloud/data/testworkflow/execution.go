@@ -3,12 +3,12 @@ package testworkflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
-
-	"google.golang.org/grpc"
 
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -20,8 +20,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey)}
+func NewCloudRepository(client cloud.TestKubeCloudAPIClient, proContext *intconfig.ProContext) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, proContext)}
 }
 
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
@@ -32,6 +32,10 @@ func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWork
 	return pass(r.executor, ctx, req, process)
 }
 
+func (r *CloudRepository) GetWithRunner(ctx context.Context, id, runner string) (result testkube.TestWorkflowExecution, err error) {
+	return testkube.TestWorkflowExecution{}, errors.New("not yet implemented")
+}
+
 func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
 	req := ExecutionGetByNameAndWorkflowRequest{Name: name, WorkflowName: workflowName}
 	process := func(v ExecutionGetResponse) testkube.TestWorkflowExecution {
@@ -40,8 +44,17 @@ func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
-	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName}
+// GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
+func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow2.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
+	sortField := "scheduledat"
+	switch sortBy {
+	case testworkflow2.LatestSortByNumber:
+		sortField = "number"
+	case testworkflow2.LatestSortByStatusAt:
+		sortField = "statusat"
+	}
+
+	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName, SortBy: sortField}
 	process := func(v ExecutionGetLatestByWorkflowResponse) *testkube.TestWorkflowExecution {
 		return v.WorkflowExecution
 	}
@@ -64,10 +77,26 @@ func (r *CloudRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	return pass(r.executor, ctx, req, process)
 }
 
+func (r *CloudRepository) GetFinished(ctx context.Context, filter testworkflow2.Filter) (result []testkube.TestWorkflowExecution, err error) {
+	req := ExecutionGetFinishedRequest{Filter: filter.(*testworkflow2.FilterImpl)}
+	process := func(v ExecutionGetFinishedResponse) []testkube.TestWorkflowExecution {
+		return v.WorkflowExecutions
+	}
+	return pass(r.executor, ctx, req, process)
+}
+
 func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow2.Filter) (totals testkube.ExecutionsTotals, err error) {
 	req := ExecutionGetExecutionTotalsRequest{Filter: mapFilters(filter)}
 	process := func(v ExecutionGetExecutionTotalsResponse) testkube.ExecutionsTotals {
 		return v.Totals
+	}
+	return pass(r.executor, ctx, req, process)
+}
+
+func (r *CloudRepository) Count(ctx context.Context, filter testworkflow2.Filter) (count int64, err error) {
+	req := ExecutionCountRequest{Filter: filter.(*testworkflow2.FilterImpl)}
+	process := func(v ExecutionCountResponse) int64 {
+		return v.Count
 	}
 	return pass(r.executor, ctx, req, process)
 }
@@ -101,6 +130,14 @@ func (r *CloudRepository) Update(ctx context.Context, result testkube.TestWorkfl
 func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) (err error) {
 	req := ExecutionUpdateResultRequest{ID: id, Result: result}
 	return passNoContent(r.executor, ctx, req)
+}
+
+func (r *CloudRepository) UpdateResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
+}
+
+func (r *CloudRepository) FinishResultStrict(ctx context.Context, id, runnerid string, result *testkube.TestWorkflowResult) (updated bool, err error) {
+	return false, errors.New("not yet implemented") // This should only be called within Control Plane and thus need no CloudRepository proxy.
 }
 
 func (r *CloudRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
@@ -176,4 +213,43 @@ func (r *CloudRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 		return v.Tags
 	}
 	return pass(r.executor, ctx, req, process)
+}
+
+// Init sets the initialization data from the runner
+// Prefer scheduling directly with TestKubeCloudAPI/ScheduleExecution operation.
+// This one is a workaround for older Control Planes. It's not recommended, as it may cause race conditions.
+func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow2.InitData) (err error) {
+	execution, err := r.Get(ctx, id)
+	if err != nil {
+		return
+	}
+	execution.Namespace = data.Namespace
+	execution.Signature = data.Signature
+	execution.RunnerId = data.RunnerID
+	execution.AssignedAt = data.AssignedAt
+	if execution.AssignedAt.IsZero() {
+		execution.AssignedAt = time.Now()
+	}
+	return r.Update(ctx, execution)
+}
+
+func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
+	return false, errors.New("not supported")
+}
+
+func (r *CloudRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	return nil, errors.New("not supported")
+}
+
+func (r *CloudRepository) AbortIfQueued(ctx context.Context, id string) (bool, error) {
+	return false, errors.New("not supported")
+}
+
+func (r *CloudRepository) UpdateTags(ctx context.Context, id string, tags map[string]string) error {
+	req := ExecutionUpdateTagsRequest{ID: id, Tags: tags}
+	return passNoContent(r.executor, ctx, req)
+}
+
+func (r *CloudRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+	return errors.New("not supported")
 }

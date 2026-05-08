@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 type TableData interface {
@@ -13,20 +14,37 @@ type TableData interface {
 
 func (ui *UI) Table(tableData TableData, writer io.Writer) {
 	table := tablewriter.NewWriter(writer)
-	table.EnableBorder(false)
-	table.SetHeaderLine(true)
-
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.Options(
+		tablewriter.WithRendition(tw.Rendition{
+			Borders: tw.Border{Left: tw.Off, Right: tw.Off, Top: tw.Off, Bottom: tw.Off},
+			Settings: tw.Settings{
+				Lines: tw.Lines{ShowHeaderLine: tw.On},
+			},
+		}),
+		tablewriter.WithHeaderAlignment(tw.AlignLeft),
+	)
 	header, data := tableData.Table()
 
 	if len(header) > 0 {
-		table.SetHeader(header)
+		anyHeader := make([]any, len(header))
+		for i, h := range header {
+			anyHeader[i] = h
+		}
+		table.Header(anyHeader...)
 	}
 
 	for _, v := range data {
-		table.Append(v)
+		anyRow := make([]any, len(v))
+		for i, c := range v {
+			anyRow[i] = c
+		}
+		if err := table.Append(anyRow...); err != nil {
+			ui.Warn("table append error", err.Error())
+		}
 	}
-	table.Render()
+	if err := table.Render(); err != nil {
+		ui.Warn("table render error", err.Error())
+	}
 }
 
 func (ui *UI) JSONTable(tableData TableData, writer io.Writer) error {

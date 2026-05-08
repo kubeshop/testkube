@@ -8,79 +8,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
-
-func ParseJobTemplates(cfg *config.Config) (t executor.Templates, err error) {
-	t.Job, err = LoadConfigFromStringOrFile(
-		cfg.TestkubeTemplateJob,
-		cfg.TestkubeConfigDir,
-		"job-template.yml",
-		"job template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	t.Slave, err = LoadConfigFromStringOrFile(
-		cfg.TestkubeTemplateSlavePod,
-		cfg.TestkubeConfigDir,
-		"slave-pod-template.yml",
-		"slave pod template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	t.PVC, err = LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplatePVC,
-		cfg.TestkubeConfigDir,
-		"pvc-template.yml",
-		"pvc template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	return t, nil
-}
-
-func ParseContainerTemplates(cfg *config.Config) (t executor.Templates, err error) {
-	t.Job, err = LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplateJob,
-		cfg.TestkubeConfigDir,
-		"job-container-template.yml",
-		"job container template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	t.Scraper, err = LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplateScraper,
-		cfg.TestkubeConfigDir,
-		"job-scraper-template.yml",
-		"job scraper template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	t.PVC, err = LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplatePVC,
-		cfg.TestkubeConfigDir,
-		"pvc-template.yml",
-		"pvc template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	return t, nil
-}
 
 func LoadConfigFromStringOrFile(inputString, configDir, filename, configType string) (raw string, err error) {
 	var data []byte
@@ -97,16 +27,28 @@ func LoadConfigFromStringOrFile(inputString, configDir, filename, configType str
 			raw = inputString
 			log.DefaultLogger.Debugf("parsed %s from plain env var", configType)
 		}
-	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
-		}
-		raw = string(data)
-		log.DefaultLogger.Debugf("loaded %s from file %s", configType, filepath.Join(configDir, filename))
-	} else {
+	} else if raw, err = LoadConfigFromFile(configDir, filename, configType); err != nil {
+		return "", err
+	} else if raw == "" {
 		log.DefaultLogger.Warnf("no %s config found", configType)
 	}
 
 	return raw, nil
+}
+
+func LoadConfigFromFile(configDir, filename, configType string) (raw string, err error) {
+	f, err := os.Open(filepath.Join(configDir, filename))
+	if err != nil {
+		return "", nil
+	}
+
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
+	}
+
+	log.DefaultLogger.Debugf("loaded %s from file %s", configType, filepath.Join(configDir, filename))
+	return string(data), nil
 }

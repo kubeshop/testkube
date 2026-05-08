@@ -1,19 +1,51 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
+type LabelSource interface {
+	ListLabels(ctx context.Context) (map[string][]string, error)
+}
+
+type extendedLabelSource interface {
+	ListLabels(ctx context.Context, environmentId string) (map[string][]string, error)
+}
+
+type simpleLabelSource struct {
+	source        extendedLabelSource
+	environmentId string
+}
+
+func (s simpleLabelSource) ListLabels(ctx context.Context) (map[string][]string, error) {
+	return s.source.ListLabels(ctx, s.environmentId)
+}
+
+func getClientLabelSource(source extendedLabelSource, environmentId string) LabelSource {
+	return &simpleLabelSource{source: source, environmentId: environmentId}
+}
+
+func (s *TestkubeAPI) getEnvironmentId() string {
+	if s.proContext != nil {
+		return s.proContext.EnvID
+	}
+	return ""
+}
+
+func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
-		sources := append(*s.LabelSources, s.TestsClient, s.TestsSuitesClient)
+		sources := []LabelSource{
+			getClientLabelSource(s.TestWorkflowsClient, s.getEnvironmentId()),
+			getClientLabelSource(s.TestWorkflowTemplatesClient, s.getEnvironmentId()),
+		}
 
 		for _, source := range sources {
-			nextLabels, err := source.ListLabels()
+			nextLabels, err := source.ListLabels(c.Context())
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("failed to list labels: %w", err))
 			}
@@ -34,11 +66,7 @@ func (s *TestkubeAPI) ListTagsHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
-
-		results := make(map[string][]string)
-		deduplicateMap(tags, results)
-
-		return c.JSON(results)
+		return c.JSON(tags)
 	}
 }
 

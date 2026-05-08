@@ -1,0 +1,25 @@
+edition = "2023";
+
+package testkube.sync.v1;
+
+import "testkube/sync/v1/delete_request.proto";
+import "testkube/sync/v1/delete_response.proto";
+import "testkube/sync/v1/update_or_create_request.proto";
+import "testkube/sync/v1/update_or_create_response.proto";
+
+// SyncService contains RPCs related to synchronisation of Testkube objects from a remote
+// agent's connected Kubernetes cluster, up to a central Control Plane acting as a source
+// of truth for a Testkube installation.
+service SyncService {
+  // UpdateOrCreate is called to pass any detected changes to an object from an Agent client
+  // to a Contol Plane server.
+  // It is unknown at the point of calling whether or not the result will be the creation
+  // of a new resource in the Control Plane or an update to an existing one as an Agent
+  // does not have a synchronised data store with the Control Plane to avoid multi-leader
+  // replication issues.
+  rpc UpdateOrCreate(UpdateOrCreateRequest) returns (UpdateOrCreateResponse);
+  // Delete is a request that indicates that a Testkube object no longer exists within the
+  // observable scope of an Agent.
+  // It may not necessarily result in the deletion of a resource from the Control Plane.
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}

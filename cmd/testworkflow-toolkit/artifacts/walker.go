@@ -196,7 +196,6 @@ func (w *walker) walk(fsys fs.FS, path string, walker WalkerFn) error {
 	if sanitizedPath == "" {
 		sanitizedPath = "."
 	}
-
 	return fs.WalkDir(fsys, sanitizedPath, func(filePath string, d fs.DirEntry, err error) error {
 		resolvedPath := "/" + filepath.ToSlash(filePath)
 		if !w.matches(resolvedPath) {

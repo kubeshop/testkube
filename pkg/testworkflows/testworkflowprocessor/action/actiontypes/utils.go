@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -44,8 +44,8 @@ func (a ActionList) Setup(copyInit, copyToolkit, copyBinaries bool) ActionList {
 	return append(a, Action{Setup: &lite.ActionSetup{CopyInit: copyInit, CopyToolkit: copyToolkit, CopyBinaries: copyBinaries}})
 }
 
-func (a ActionList) Declare(ref string, condition string, parents ...string) ActionList {
-	return append(a, Action{Declare: &lite.ActionDeclare{Ref: ref, Condition: condition, Parents: parents}})
+func (a ActionList) Declare(ref string, id string, condition string, parents ...string) ActionList {
+	return append(a, Action{Declare: &lite.ActionDeclare{Ref: ref, Id: id, Condition: condition, Parents: parents}})
 }
 
 func (a ActionList) Start(ref string) ActionList {
@@ -68,12 +68,21 @@ func (a ActionList) Result(ref, expression string) ActionList {
 	return append(a, Action{Result: &lite.ActionResult{Ref: ref, Value: expression}})
 }
 
-func (a ActionList) Execute(ref string, negative bool) ActionList {
-	return append(a, Action{Execute: &lite.ActionExecute{Ref: ref, Negative: negative}})
+func (a ActionList) Execute(ref string, negative, pure bool) ActionList {
+	return append(a, Action{Execute: &lite.ActionExecute{Ref: ref, Negative: negative, Pure: pure}})
 }
 
 func (a ActionList) MutateContainer(ref string, config testworkflowsv1.ContainerConfig) ActionList {
 	return append(a, Action{Container: &ActionContainer{Ref: ref, Config: config}})
+}
+
+func (a ActionList) Image() string {
+	for i := range a {
+		if a[i].Container != nil {
+			return a[i].Container.Config.Image
+		}
+	}
+	return ""
 }
 
 type ActionGroups []ActionList

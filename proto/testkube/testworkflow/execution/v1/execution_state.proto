@@ -1,0 +1,26 @@
+edition = "2023";
+
+package testkube.testworkflow.execution.v1;
+
+// ExecutionState is a type used to indicate states of Test Workflow Executions.
+enum ExecutionState {
+  // EXECUTION_STATE_UNSPECIFIED an unknown state is provided, no action should be taken.
+  EXECUTION_STATE_UNSPECIFIED = 0;
+  // EXECUTION_STATE_RUNNING to transition to this state the Execution should be either:
+  // - Started if the Execution is currently Queued, Pending, or has no state set.
+  // - Resumed if the Execution is currently Paused.
+  EXECUTION_STATE_RUNNING = 1;
+  // EXECUTION_STATE_PAUSED, to transition to this state the Execution should be paused.
+  EXECUTION_STATE_PAUSED = 2;
+  // EXECUTION_STATE_CANCELLED, to transition to this state the Execution should be gracefully
+  // stopped and once the stop is complete the Control Plane should be updated
+  // that the Execution has been successfully cancelled.
+  EXECUTION_STATE_CANCELLED = 3;
+  // EXECUTION_STATE_ABORTED, to transition to this state the Execution should be first gracefully
+  // stopped, however if this fails the Execution can be forcefully stopped.
+  // If the state transition is successful, or has failed after forceful stop is attempted
+  // then the Control Plane should be updated that the Execution has been aborted.
+  // It is understood that this process can leave "floating", "orphaned", or "zombie"
+  // Execution related resources.
+  EXECUTION_STATE_ABORTED = 4;
+}

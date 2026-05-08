@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/ui/uicrd"
 )
 
 func NewGetTestWorkflowsCmd() *cobra.Command {
@@ -39,7 +40,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 				ui.ExitOnError("getting all test workflows in namespace "+namespace, err)
 
 				if crdOnly {
-					ui.PrintCRDs(common2.MapSlice(workflows, func(t testkube.TestWorkflowWithExecution) testworkflowsv1.TestWorkflow {
+					uicrd.PrintCRDs(common2.MapSlice(workflows, func(t testkube.TestWorkflowWithExecution) testworkflowsv1.TestWorkflow {
 						return *testworkflows.MapAPIToKube(t.Workflow)
 					}), "TestWorkflow", testworkflowsv1.GroupVersion)
 				} else {
@@ -54,7 +55,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 			ui.ExitOnError("getting test workflow in namespace "+namespace, err)
 
 			if crdOnly {
-				ui.PrintCRD(testworkflows.MapTestWorkflowAPIToKube(*workflow.Workflow), "TestWorkflow", testworkflowsv1.GroupVersion)
+				uicrd.PrintCRD(testworkflows.MapTestWorkflowAPIToKube(*workflow.Workflow), "TestWorkflow", testworkflowsv1.GroupVersion)
 			} else {
 				err = render.Obj(cmd, *workflow.Workflow, os.Stdout, renderer.TestWorkflowRenderer)
 				ui.ExitOnError("rendering obj", err)
@@ -63,6 +64,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 					ui.NL()
 					err = render.Obj(cmd, *workflow.LatestExecution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
 					ui.ExitOnError("rendering obj", err)
+					common.UIShellViewExecution(workflow.LatestExecution.Id)
 				}
 			}
 		},

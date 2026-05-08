@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -113,4 +113,13 @@ func TestInspector_ResolveName_Default_Override(t *testing.T) {
 	assert.Equal(t, "ghcr.io/image:1.2.3", inspector.ResolveName("default.io", "ghcr.io/image:1.2.3"))
 	assert.Equal(t, "docker.io/repo/image:1.2.3", inspector.ResolveName("default.io", "docker.io/repo/image:1.2.3"))
 	assert.Equal(t, "ghcr.io/repo/image:1.2.3", inspector.ResolveName("default.io", "ghcr.io/repo/image:1.2.3"))
+}
+
+func TestInspector_ResolveName_CustomDefault_NoOverride(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	infos := NewMockInfoFetcher(ctrl)
+	secrets := NewMockSecretFetcher(ctrl)
+	inspector := NewInspector("custom-registry:443", infos, secrets)
+
+	assert.Equal(t, "custom-registry:443/repo/image:1.2.3", inspector.ResolveName("", "custom-registry:443/repo/image:1.2.3"))
 }

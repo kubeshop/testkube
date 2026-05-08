@@ -1,0 +1,34 @@
+# Trivy ignore policy for testkube container images.
+#
+# Format: <VULN-ID> [exp:YYYY-MM-DD]
+# Each entry MUST include a justification block above it and an expiry date so
+# that ignored vulnerabilities are re-evaluated periodically.
+
+# ---------------------------------------------------------------------------
+# CVE-2026-34040 — Moby (github.com/docker/docker) AuthZ plugin bypass on
+#                  oversized request bodies (advisory GO-2026-4887).
+# GO-2026-4883   — Moby plugin-privilege off-by-one (same module).
+#
+# Affected modules in testkube-api-server binary:
+#   - github.com/docker/docker             v28.5.2+incompatible
+#   - github.com/docker/docker-credential-helpers v0.9.5
+#
+# Why ignored:
+#   * No upstream fix is published yet (latest moby tag is v28.5.2 as of
+#     2026-04-22; latest docker-credential-helpers is v0.9.6, also unpatched).
+#   * `go mod why github.com/docker/docker` reports the main module does NOT
+#     directly need the package — it is pulled in transitively and only the
+#     init() symbols of client-side types end up in the binary.
+#   * The vulnerable code paths are daemon-side / AuthZ-plugin-side. Testkube
+#     services act exclusively as Docker clients and do not run a Docker daemon
+#     or AuthZ plugins, so the attack surface in this context is none.
+#
+# Action when fixed: bump both modules with
+#   go get github.com/docker/docker@<fixed>
+#   go get github.com/docker/docker-credential-helpers@<fixed>
+#   go mod tidy
+# and remove these entries.
+# ---------------------------------------------------------------------------
+CVE-2026-34040 exp:2026-07-22
+GO-2026-4887  exp:2026-07-22
+GO-2026-4883  exp:2026-07-22

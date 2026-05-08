@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-//go:generate mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
+//go:generate go tool mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
 type Interface interface {
 	Get(ctx context.Context, id string, namespace ...string) (map[string]string, error)
 	Create(ctx context.Context, id string, stringData map[string]string) error
@@ -23,7 +23,7 @@ type Interface interface {
 
 // Client provide methods to manage configmaps
 type Client struct {
-	ClientSet *kubernetes.Clientset
+	ClientSet kubernetes.Interface
 	Log       *zap.SugaredLogger
 	Namespace string
 }
@@ -34,12 +34,16 @@ func NewClient(namespace string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewClientFor(clientSet, namespace), nil
+}
 
+// NewClientFor is a method to create new configmap client using existing clientSet
+func NewClientFor(clientSet kubernetes.Interface, namespace string) *Client {
 	return &Client{
 		ClientSet: clientSet,
 		Log:       log.DefaultLogger,
 		Namespace: namespace,
-	}, nil
+	}
 }
 
 // Create is a method to create new configmap

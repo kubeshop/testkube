@@ -3,24 +3,87 @@ package webhooks
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
 func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
+	updateTime := item.CreationTimestamp.Time
+	if item.DeletionTimestamp != nil {
+		updateTime = item.DeletionTimestamp.Time
+	} else {
+		for _, field := range item.ManagedFields {
+			if field.Time != nil && field.Time.After(updateTime) {
+				updateTime = field.Time.Time
+			}
+		}
+	}
 	return testkube.Webhook{
 		Name:                     item.Name,
 		Namespace:                item.Namespace,
+		Labels:                   item.Labels,
+		Annotations:              item.Annotations,
+		Created:                  item.CreationTimestamp.Time,
+		Updated:                  updateTime,
 		Uri:                      item.Spec.Uri,
 		Events:                   MapEventArrayToCRDEvents(item.Spec.Events),
 		Selector:                 item.Spec.Selector,
-		Labels:                   item.Labels,
 		PayloadObjectField:       item.Spec.PayloadObjectField,
 		PayloadTemplate:          item.Spec.PayloadTemplate,
 		PayloadTemplateReference: item.Spec.PayloadTemplateReference,
 		Headers:                  item.Spec.Headers,
 		Disabled:                 item.Spec.Disabled,
+		Config:                   common.MapMap(item.Spec.Config, MapConfigValueCRDToAPI),
+		Parameters:               common.MapSlice(item.Spec.Parameters, MapParameterSchemaCRDToAPI),
+		WebhookTemplateRef:       common.MapPtr(item.Spec.WebhookTemplateRef, MapTemplateRefCRDToAPI),
+		Target:                   common.MapPtr(item.Spec.Target, commonmapper.MapTargetKubeToAPI),
+	}
+}
+
+// MapStringToBoxedString maps string to boxed string
+func MapStringToBoxedString(v *string) *testkube.BoxedString {
+	if v == nil {
+		return nil
+	}
+	return &testkube.BoxedString{Value: *v}
+}
+
+// MapSecretRefCRDToAPI maps secret ref to OpenAPI spec
+func MapSecretRefCRDToAPI(v executorv1.SecretRef) testkube.SecretRef {
+	return testkube.SecretRef{
+		Namespace: v.Namespace,
+		Name:      v.Name,
+		Key:       v.Key,
+	}
+}
+
+// MapConigValueCRDToAPI maps config value to OpenAPI spec
+func MapConfigValueCRDToAPI(v executorv1.WebhookConfigValue) testkube.WebhookConfigValue {
+	return testkube.WebhookConfigValue{
+		Value:  MapStringToBoxedString(v.Value),
+		Secret: common.MapPtr(v.Secret, MapSecretRefCRDToAPI),
+	}
+}
+
+// MapParameterSchemaCRDToAPI maps parameter schema to OpenAPI spec
+func MapParameterSchemaCRDToAPI(v executorv1.WebhookParameterSchema) testkube.WebhookParameterSchema {
+	return testkube.WebhookParameterSchema{
+		Name:        v.Name,
+		Description: v.Description,
+		Required:    v.Required,
+		Example:     v.Example,
+		Default_:    MapStringToBoxedString(v.Default_),
+		Pattern:     v.Pattern,
+	}
+}
+
+// MapTemplateRefCRDToAPI maps template ref to OpenAPI spec
+func MapTemplateRefCRDToAPI(v executorv1.WebhookTemplateRef) testkube.WebhookTemplateRef {
+	return testkube.WebhookTemplateRef{
+		Name: v.Name,
 	}
 }
 
@@ -40,24 +103,97 @@ func MapEventArrayToCRDEvents(items []executorv1.EventType) (events []testkube.E
 	return
 }
 
-// MapAPIToCRD maps OpenAPI spec WebhookCreateRequest to CRD Webhook
-func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
+// MapAPIToCRD maps OpenAPI spec Webhook to CRD Webhook
+func MapAPIToCRD(webhook testkube.Webhook) executorv1.Webhook {
 	return executorv1.Webhook{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: request.Namespace,
-			Labels:    request.Labels,
+			Name:      webhook.Name,
+			Namespace: webhook.Namespace,
+			Labels:    webhook.Labels,
 		},
 		Spec: executorv1.WebhookSpec{
-			Uri:                      request.Uri,
-			Events:                   MapEventTypesToStringArray(request.Events),
-			Selector:                 request.Selector,
-			PayloadObjectField:       request.PayloadObjectField,
-			PayloadTemplate:          request.PayloadTemplate,
-			PayloadTemplateReference: request.PayloadTemplateReference,
-			Headers:                  request.Headers,
-			Disabled:                 request.Disabled,
+			Uri:                      webhook.Uri,
+			Events:                   MapEventTypesToStringArray(webhook.Events),
+			Selector:                 webhook.Selector,
+			PayloadObjectField:       webhook.PayloadObjectField,
+			PayloadTemplate:          webhook.PayloadTemplate,
+			PayloadTemplateReference: webhook.PayloadTemplateReference,
+			Headers:                  webhook.Headers,
+			Disabled:                 webhook.Disabled,
+			Config:                   common.MapMap(webhook.Config, MapConfigValueAPIToCRD),
+			Parameters:               common.MapSlice(webhook.Parameters, MapParameterSchemaAPIToCRD),
+			WebhookTemplateRef:       common.MapPtr(webhook.WebhookTemplateRef, MapTemplateRefAPIToCRD),
+			Target:                   common.MapPtr(webhook.Target, commonmapper.MapTargetApiToKube),
 		},
+	}
+}
+
+// MapAPICreateRequestToCRD maps OpenAPI spec WebhookCreateRequest to CRD Webhook
+func MapAPICreateRequestToCRD(webhook testkube.WebhookCreateRequest) executorv1.Webhook {
+	return executorv1.Webhook{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      webhook.Name,
+			Namespace: webhook.Namespace,
+			Labels:    webhook.Labels,
+		},
+		Spec: executorv1.WebhookSpec{
+			Uri:                      webhook.Uri,
+			Events:                   MapEventTypesToStringArray(webhook.Events),
+			Selector:                 webhook.Selector,
+			PayloadObjectField:       webhook.PayloadObjectField,
+			PayloadTemplate:          webhook.PayloadTemplate,
+			PayloadTemplateReference: webhook.PayloadTemplateReference,
+			Headers:                  webhook.Headers,
+			Disabled:                 webhook.Disabled,
+			Config:                   common.MapMap(webhook.Config, MapConfigValueAPIToCRD),
+			Parameters:               common.MapSlice(webhook.Parameters, MapParameterSchemaAPIToCRD),
+			WebhookTemplateRef:       common.MapPtr(webhook.WebhookTemplateRef, MapTemplateRefAPIToCRD),
+			Target:                   common.MapPtr(webhook.Target, commonmapper.MapTargetApiToKube),
+		},
+	}
+}
+
+// MapBoxedStringToString maps boxed string to string
+func MapBoxedStringToString(v *testkube.BoxedString) *string {
+	if v == nil {
+		return nil
+	}
+	return &v.Value
+}
+
+// MapSecretRefAPIToCRD maps secret ref to CRD spec
+func MapSecretRefAPIToCRD(v testkube.SecretRef) executorv1.SecretRef {
+	return executorv1.SecretRef{
+		Namespace: v.Namespace,
+		Name:      v.Name,
+		Key:       v.Key,
+	}
+}
+
+// MapConigValueAPIToCRD maps config value to CRD spec
+func MapConfigValueAPIToCRD(v testkube.WebhookConfigValue) executorv1.WebhookConfigValue {
+	return executorv1.WebhookConfigValue{
+		Value:  MapBoxedStringToString(v.Value),
+		Secret: common.MapPtr(v.Secret, MapSecretRefAPIToCRD),
+	}
+}
+
+// MapParameterSchemaAPIToCRD maps parameter schema to CRD spec
+func MapParameterSchemaAPIToCRD(v testkube.WebhookParameterSchema) executorv1.WebhookParameterSchema {
+	return executorv1.WebhookParameterSchema{
+		Name:        v.Name,
+		Description: v.Description,
+		Required:    v.Required,
+		Example:     v.Example,
+		Default_:    MapBoxedStringToString(v.Default_),
+		Pattern:     v.Pattern,
+	}
+}
+
+// MapTemplateRefAPIToCRD maps template ref to CRD spec
+func MapTemplateRefAPIToCRD(v testkube.WebhookTemplateRef) executorv1.WebhookTemplateRef {
+	return executorv1.WebhookTemplateRef{
+		Name: v.Name,
 	}
 }
 
@@ -69,7 +205,7 @@ func MapEventTypesToStringArray(eventTypes []testkube.EventType) (arr []executor
 	return
 }
 
-// MapUpdateToSpec maps WebhookUpdateRequest to Wehook CRD spec
+// MapUpdateToSpec maps WebhookUpdateRequest to Webhook CRD spec
 func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.Webhook) *executorv1.Webhook {
 	var fields = []struct {
 		source      *string
@@ -131,6 +267,22 @@ func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.
 		webhook.Spec.Disabled = *request.Disabled
 	}
 
+	if request.Config != nil {
+		webhook.Spec.Config = common.MapMap(*request.Config, MapConfigValueAPIToCRD)
+	}
+
+	if request.Parameters != nil {
+		webhook.Spec.Parameters = common.MapSlice(*request.Parameters, MapParameterSchemaAPIToCRD)
+	}
+
+	if request.WebhookTemplateRef != nil {
+		webhook.Spec.WebhookTemplateRef = common.MapPtr(*request.WebhookTemplateRef, MapTemplateRefAPIToCRD)
+	}
+
+	if request.Target != nil {
+		webhook.Spec.Target = common.MapPtr(request.Target, commonmapper.MapTargetApiToKube)
+	}
+
 	return webhook
 }
 
@@ -181,6 +333,10 @@ func MapSpecToUpdate(webhook *executorv1.Webhook) (request testkube.WebhookUpdat
 	request.Annotations = &webhook.Annotations
 	request.Headers = &webhook.Spec.Headers
 	request.Disabled = &webhook.Spec.Disabled
+	request.Config = common.Ptr(common.MapMap(webhook.Spec.Config, MapConfigValueCRDToAPI))
+	request.Parameters = common.Ptr(common.MapSlice(webhook.Spec.Parameters, MapParameterSchemaCRDToAPI))
+	request.WebhookTemplateRef = common.Ptr(common.MapPtr(webhook.Spec.WebhookTemplateRef, MapTemplateRefCRDToAPI))
+	request.Target = common.MapPtr(webhook.Spec.Target, commonmapper.MapTargetKubeToAPI)
 
 	return request
 }

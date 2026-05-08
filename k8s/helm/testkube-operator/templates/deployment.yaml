@@ -1,0 +1,150 @@
+{{- if .Values.enabled }}
+apiVersion: {{ include "global.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: testkube-operator-controller-manager
+  namespace: {{ include "testkube-operator.namespace" . }}
+  labels:
+    control-plane: controller-manager
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        {{- if .Values.podLabels }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.podLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.labels }}
+        {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "global.images.renderPullSecrets" (dict "global" .Values.global "secretPath" .Values.image.pullSecrets) | nindent 6 }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      containers:
+      - name: manager
+        args:
+        - --health-probe-bind-address=:{{ .Values.healthcheckPort }}
+        - --metrics-bind-address=:{{ .Values.metricsServerPort }}
+        - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
+        - --metrics-cert-path=/tmp/k8s-webhook-server/serving-certs
+        - --leader-elect
+        {{- if .Values.metricsServerPortInsecure }}
+        - --metrics-bind-address=:{{ .Values.metricsServerPortInsecure }}
+        - --metrics-secure=false
+        {{- end }}
+        command:
+        - /manager
+        image: {{ include "testkube-operator.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: APISERVER_FULLNAME
+          value: "{{ .Values.apiFullname }}"
+        - name: APISERVER_PORT
+          value: "{{ .Values.apiPort }}"
+        - name: APISERVER_TEMPLATE_CRONJOB
+          value: {{- if .Values.cronJobTemplate }}
+            "{{ .Values.cronJobTemplate | b64enc }}"
+          {{- else }}
+            "{{ .Files.Get "cronjob-template.yml" | b64enc }}"
+          {{- end }}
+        {{- if not .Values.webhook.enabled }}
+        - name: ENABLE_WEBHOOKS
+          value: "false"
+        {{- end }}
+        {{- if .Values.useArgoCDSync }}
+        - name: APISERVER_USE_ARGOCD_SYNC
+          value: "true"
+        {{- end }}
+        {{- if .Values.extraEnvVars }}
+        {{ include "global.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 8 | trim }}
+        {{- end }}
+        {{- if .Values.global }}
+        - name: APISERVER_REGISTRY
+          value:  {{ .Values.global.imageRegistry }}
+        {{- end }}
+        {{- if .Values.purgeExecutions }}
+        - name: APISERVER_PURGE_EXECUTIONS
+          value: "true"
+        {{- end }}
+        {{- if .Values.agentCronJobs }}        
+        - name: APISERVER_CONFIG
+          value: {{ .Values.apiFullname }}
+        {{- end }}
+        ports:
+        - containerPort: {{ .Values.webhookServerPort }}
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        {{- if .Values.metricsServerPortInsecure }}
+        - containerPort: {{ .Values.metricsServerPortInsecure }}
+          name: http
+          protocol: TCP
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.healthcheckPort }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.healthcheckPort }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+        {{- if .Values.resources }}
+        resources: {{ toYaml .Values.resources | nindent 10 }}
+        {{- end }}
+        securityContext: {{ include "testkube-operator.containerSecurityContext" . | nindent 10 }}
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      securityContext: {{ include "testkube-operator.podSecurityContext" . | nindent 8 }}
+      serviceAccountName: {{ include "testkube-operator.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: {{ .Values.volumes.secret.defaultMode }}
+          secretName: {{ .Values.webhook.certificate.secretName }}
+      {{- if .Values.affinity }}
+      affinity:
+      {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if .Values.global.affinity }}
+      affinity:
+      {{- toYaml .Values.global.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+      {{- toYaml .Values.tolerations | nindent 6 }}
+      {{- else if .Values.global.tolerations }}
+      tolerations:
+      {{- toYaml .Values.global.tolerations | nindent 6 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- else if .Values.global.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+      {{- end }}
+{{- end }}

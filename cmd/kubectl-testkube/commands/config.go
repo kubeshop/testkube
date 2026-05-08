@@ -5,7 +5,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	commands "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/config"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -30,7 +29,6 @@ func NewConfigCmd() *cobra.Command {
 	cmd.AddCommand(commands.NewConfigureNamespaceCmd())
 	cmd.AddCommand(commands.NewConfigureAPIURICmd())
 	cmd.AddCommand(commands.NewConfigureHeadersCmd())
-	cmd.AddCommand(oauth.NewConfigureOAuthCmd())
 	cmd.AddCommand(commands.NewConfigureAPIServerNameCmd())
 	cmd.AddCommand(commands.NewConfigureAPIServerPortCmd())
 

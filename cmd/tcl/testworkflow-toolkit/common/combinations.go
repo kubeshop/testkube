@@ -17,7 +17,7 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -158,11 +158,11 @@ func (p *ParamsSpec) String(parallelism int64) string {
 				infos = append(infos, "run sequentially")
 			}
 		} else if parallelism >= p.Count {
-			infos = append(infos, fmt.Sprintf("all in parallel"))
+			infos = append(infos, "all in parallel")
 		}
 	}
 	if p.Count == 1 {
-		return fmt.Sprintf("1 instance requested")
+		return "1 instance requested"
 	}
 	return fmt.Sprintf("%d instances requested: %s", p.Count, strings.Join(infos, ", "))
 }
@@ -266,10 +266,8 @@ func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards
 	}
 	if maxCount != nil && *maxCount > minShards {
 		count = &minShards
-		maxCount = nil
 	} else if maxCount != nil {
 		count = maxCount
-		maxCount = nil
 	}
 
 	return &ParamsSpec{

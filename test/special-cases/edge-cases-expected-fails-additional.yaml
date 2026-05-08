@@ -1,0 +1,94 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-high-parallel-step-failed-sync-paused
+  labels:
+    core-tests: expected-fail
+description: "one of 20 parallel steps failed (last), synced parallel (paused: true)"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 20
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      paused: true # synchronise running all workers
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - expected fail" && exit 1 || sleep 5 && echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-high-parallel-first-step-failed-sync-paused
+  labels:
+    core-tests: expected-fail
+description: "one of 20 parallel steps failed (last), synced parallel (paused: true)"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 20
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      paused: true # synchronise running all workers
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 5 && echo "parallel step - worker 3 - expected fail" && exit 1 || sleep 10 && echo "passed"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-high-parallel-step-failed
+  labels:
+    core-tests: expected-fail
+description: "one of 20 parallel steps failed (last)"
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    parallel:
+      count: 20
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      run:
+        image: alpine:3.22.0
+        shell: |
+          [ "{{ index }}" = "2" ] && sleep 10 && echo "parallel step - worker 3 - expected fail" && exit 1 || sleep 5 && echo "passed"

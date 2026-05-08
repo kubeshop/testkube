@@ -3,22 +3,27 @@ package orchestration
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|02|\d|[1-9]\d*)(C)?(S?)_`)
-	Setup                    = newSetup()
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|05|\d|[1-9]\d*)(C)?(S?)_`)
+	Setup                    *setup
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
 		"TK_C_KEY",        // Cloud API key
@@ -30,6 +35,16 @@ var (
 		"TK_SSH_KEY",      // Git SSH Key
 	}
 )
+
+// Initialize must be called before using Setup.
+// In production, this is called early in main().
+// In tests, this can be called after setting up test environment.
+func Initialize() {
+	if Setup == nil {
+		Setup = newSetup()
+		Setup.initialize()
+	}
+}
 
 func getWorkingDir() string {
 	wd, _ := os.Getwd()
@@ -44,25 +59,33 @@ type setup struct {
 	envGroups              map[string]map[string]string
 	envGroupsComputed      map[string]map[string]struct{}
 	envGroupsSensitive     map[string]map[string]struct{}
+	envAdditionalSensitive map[string]struct{}
 	envCurrentGroup        int
 	envSelectedGroup       string
 	minSensitiveWordLength int
 }
 
 func newSetup() *setup {
-	c := &setup{
+	return &setup{
 		envBase:                map[string]string{},
 		envGroups:              map[string]map[string]string{},
 		envGroupsComputed:      map[string]map[string]struct{}{},
 		envGroupsSensitive:     map[string]map[string]struct{}{},
+		envAdditionalSensitive: map[string]struct{}{},
 		envCurrentGroup:        -1,
 		minSensitiveWordLength: 1,
 	}
-	c.initialize()
-	return c
 }
 
 func (c *setup) initialize() {
+	// Clear existing data
+	c.envBase = map[string]string{}
+	c.envGroups = map[string]map[string]string{}
+	c.envGroupsComputed = map[string]map[string]struct{}{}
+	c.envGroupsSensitive = map[string]map[string]struct{}{}
+	c.envAdditionalSensitive = map[string]struct{}{}
+	c.envCurrentGroup = -1
+
 	// Iterate over the environment variables to group them
 	for _, item := range os.Environ() {
 		match := scopedRegex.FindStringSubmatch(item)
@@ -103,8 +126,17 @@ func (c *setup) SetSensitiveWordMinimumLength(length int) {
 	}
 }
 
+func (c *setup) AddSensitiveWords(words ...string) {
+	for i := range words {
+		c.envAdditionalSensitive[words[i]] = struct{}{}
+	}
+}
+
 func (c *setup) GetSensitiveWords() []string {
-	words := make([]string, 0)
+	words := make([]string, 0, len(c.envAdditionalSensitive))
+	for value := range c.envAdditionalSensitive {
+		words = append(words, value)
+	}
 	for _, name := range commonSensitiveVariables {
 		value := os.Getenv(name)
 		if len(value) < c.minSensitiveWordLength {
@@ -155,7 +187,39 @@ func (c *setup) GetActionGroups() (actions [][]lite.LiteAction) {
 	return actions
 }
 
-func (c *setup) UseEnv(group string) {
+func (c *setup) GetInternalConfig() (config testworkflowconfig.InternalConfig) {
+	serialized := c.envGroups[constants.EnvGroupInternal][constants.EnvInternalConfig]
+	if serialized == "" {
+		return
+	}
+	err := json.Unmarshal([]byte(serialized), &config)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read the internal config from Pod: %s", err.Error()))
+	}
+	return config
+}
+
+func (c *setup) GetSignature() (config []testworkflowconfig.SignatureConfig) {
+	serialized := c.envGroups[constants.EnvGroupInternal][constants.EnvSignature]
+	if serialized == "" {
+		return
+	}
+	err := json.Unmarshal([]byte(serialized), &config)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read the signature from Pod: %s", err.Error()))
+	}
+	return config
+}
+
+func (c *setup) GetContainerResources() (config testworkflowconfig.ContainerResourceConfig) {
+	config.Requests.CPU = c.envGroups[constants.EnvGroupResources][constants.EnvResourceRequestsCPU]
+	config.Requests.Memory = c.envGroups[constants.EnvGroupResources][constants.EnvResourceRequestsMemory]
+	config.Limits.CPU = c.envGroups[constants.EnvGroupResources][constants.EnvResourceLimitsCPU]
+	config.Limits.Memory = c.envGroups[constants.EnvGroupResources][constants.EnvResourceLimitsMemory]
+	return config
+}
+
+func (c *setup) UseEnv(group string) error {
 	c.UseBaseEnv()
 	c.envSelectedGroup = group
 
@@ -186,13 +250,17 @@ func (c *setup) UseEnv(group string) {
 
 	// Ensure the built-in binaries are available
 	if os.Getenv("PATH") == "" {
-		os.Setenv("PATH", data.InternalBinPath)
+		os.Setenv("PATH", constants.InternalBinPath)
 	} else {
-		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
+		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), constants.InternalBinPath))
 	}
 
 	// Compute dynamic environment variables
-	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd))
+	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd),
+		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
+			c.AddSensitiveWords(value)
+			output.Std.SetSensitiveWords(c.GetSensitiveWords())
+		}))
 	localEnvMachine := expressions.NewMachine().
 		RegisterAccessorExt(func(accessorName string) (interface{}, bool, error) {
 			if !strings.HasPrefix(accessorName, "env.") {
@@ -213,20 +281,21 @@ func (c *setup) UseEnv(group string) {
 	for name, expr := range envTemplates {
 		value, err := expressions.CompileAndResolveTemplate(expr, localEnvMachine, addonMachine, expressions.FinalizerFail)
 		if err != nil {
-			output.ExitErrorf(data.CodeInputError, "failed to compute '%s' environment variable: %s", name, err.Error())
+			return errors.Wrapf(err, "failed to compute '%s' environment variable", name)
 		}
 		str, _ := value.Static().StringValue()
 		os.Setenv(name, str)
 	}
+	return nil
 }
 
-func (c *setup) UseCurrentEnv() {
-	c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
+func (c *setup) UseCurrentEnv() error {
+	return c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
 }
 
-func (c *setup) AdvanceEnv() {
+func (c *setup) AdvanceEnv() error {
 	c.envCurrentGroup++
-	c.UseCurrentEnv()
+	return c.UseCurrentEnv()
 }
 
 func (c *setup) SetWorkingDir(workingDir string) {
@@ -254,4 +323,43 @@ func (c *setup) SetConfig(config lite.LiteContainerConfig) {
 	} else {
 		c.SetWorkingDir(*config.WorkingDir)
 	}
+}
+
+func (c *setup) GetSecretVolumeData(mountPaths []string) []string {
+	wordMap := make(map[string]struct{})
+	for _, dir := range mountPaths {
+		err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+
+			if !info.Mode().IsRegular() {
+				return nil
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				output.Std.Direct().Warnf("warn: error reading %s as secret volume key: %s\n", path, err.Error())
+				return nil
+			}
+
+			wordMap[string(data)] = struct{}{}
+			return nil
+		})
+
+		if err != nil {
+			output.Std.Direct().Warnf("warn: error using %s as secret volume path: %s\n", dir, err.Error())
+		}
+	}
+
+	words := make([]string, len(wordMap))
+	for word := range wordMap {
+		words = append(words, word)
+	}
+
+	return words
+}
+
+func (c *setup) GetContainerName() string {
+	return c.envGroups[constants.EnvGroupRuntime][constants.EnvContainerName]
 }
