@@ -12,8 +12,8 @@ package testkube
 type TestTriggerContentGit struct {
 	// URI of the git repository to watch.
 	Uri string `json:"uri"`
-	// branch, tag or commit to watch.
+	// Branch, tag or commit to watch.
 	Revision string `json:"revision,omitempty"`
-	// optional list of paths in repository to filter changes.
+	// Optional list of paths in repository to filter changes.
 	Paths []string `json:"paths,omitempty"`
 }
