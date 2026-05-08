@@ -20,57 +20,60 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 		testtrigger.ResourceType(testtrigger.ResourceContent),
 	)
 
-	for _, entry := range s.snapshotStatuses() {
-		if entry.trigger.Name != triggerName || entry.trigger.Namespace != namespace {
-			continue
-		}
-		if !strings.EqualFold(entry.trigger.ResourceKind, string(testtrigger.ResourceContent)) {
-			continue
-		}
-		status := entry.status
-		trigger := entry.trigger
-
-		if trigger.Disabled {
-			return nil
-		}
-		if trigger.Execution != "" && trigger.Execution != ExecutionTestWorkflow {
-			return nil
-		}
-		if !matchInternalResource(trigger, event, s.logger) {
-			return nil
-		}
-		if !matchEventOrCause(trigger.Event, event) {
-			return nil
-		}
-		if !matchFieldSelector(trigger.FieldConditions, event.Object, event.OldObject) {
-			return nil
-		}
-		if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 && event.conditionsGetter != nil {
-			matched, err := s.matchInternalConditions(ctx, event, trigger, s.logger)
-			if err != nil {
-				return err
-			}
-			if !matched {
-				return nil
-			}
-		}
-		if trigger.Probes != nil && len(trigger.Probes.Items) > 0 {
-			matched, err := s.matchInternalProbes(ctx, event, trigger, s.logger)
-			if err != nil {
-				return err
-			}
-			if !matched {
-				return nil
-			}
-		}
-		if trigger.ConcurrencyPolicy == concurrencyPolicyForbid && status.hasActiveTests() {
-			return nil
-		}
-		if trigger.ConcurrencyPolicy == concurrencyPolicyReplace && status.hasActiveTests() {
-			s.abortExecutions(ctx, trigger.Name, status)
-		}
-		return s.triggerExecutor(ctx, event, trigger)
+	key := newStatusKey(triggerSourceV1, namespace, triggerName)
+	s.triggerStatusMu.RLock()
+	status, exists := s.triggerStatus[key]
+	var trigger *internalTrigger
+	if exists {
+		trigger = status.trigger
+	}
+	s.triggerStatusMu.RUnlock()
+	if !exists || trigger == nil {
+		return nil
+	}
+	if !strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) {
+		return nil
 	}
 
-	return nil
+	if trigger.Disabled {
+		return nil
+	}
+	if trigger.Execution != "" && trigger.Execution != ExecutionTestWorkflow {
+		return nil
+	}
+	if !matchInternalResource(trigger, event, s.logger) {
+		return nil
+	}
+	if !matchEventOrCause(trigger.Event, event) {
+		return nil
+	}
+	if !matchFieldSelector(trigger.FieldConditions, event.Object, event.OldObject) {
+		return nil
+	}
+	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 && event.conditionsGetter != nil {
+		matched, err := s.matchInternalConditions(ctx, event, trigger, s.logger)
+		if err != nil {
+			return err
+		}
+		if !matched {
+			return nil
+		}
+	}
+	if trigger.Probes != nil && len(trigger.Probes.Items) > 0 {
+		matched, err := s.matchInternalProbes(ctx, event, trigger, s.logger)
+		if err != nil {
+			return err
+		}
+		if !matched {
+			return nil
+		}
+	}
+	if trigger.ConcurrencyPolicy == concurrencyPolicyForbid && status.hasActiveTests() {
+		return nil
+	}
+	if trigger.ConcurrencyPolicy == concurrencyPolicyReplace && status.hasActiveTests() {
+		s.abortExecutions(ctx, trigger.Name, status)
+	}
+	return s.triggerExecutor(ctx, event, trigger)
+
 }
