@@ -13,6 +13,16 @@ import (
 // and runs it through the matcher. Called by the git informer when new commits
 // are detected that match the trigger's content selector paths.
 func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string) error {
+	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1)
+}
+
+// MatchGitWorkflowTrigger creates a synthetic watcherEvent for a git content WorkflowTrigger
+// and executes only the target v2 trigger.
+func (s *Service) MatchGitWorkflowTrigger(ctx context.Context, triggerName, namespace string) error {
+	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV2)
+}
+
+func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string) error {
 	event := s.newWatcherEvent(
 		testtrigger.EventModified,
 		&metav1.ObjectMeta{Name: triggerName, Namespace: namespace},
@@ -20,7 +30,7 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 		testtrigger.ResourceType(testtrigger.ResourceContent),
 	)
 
-	key := newStatusKey(triggerSourceV1, namespace, triggerName)
+	key := newStatusKey(source, namespace, triggerName)
 	s.triggerStatusMu.RLock()
 	status, exists := s.triggerStatus[key]
 	var trigger *internalTrigger

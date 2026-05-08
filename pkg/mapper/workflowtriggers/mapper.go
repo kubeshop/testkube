@@ -3,8 +3,10 @@ package workflowtriggers
 import (
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -23,10 +25,13 @@ func MapCRDToAPI(crd *workflowtriggersv1.WorkflowTrigger) testkube.WorkflowTrigg
 		Annotations: crd.Annotations,
 		Disabled:    crd.Spec.Disabled,
 		Watch:       mapWatchCRDToAPI(crd.Spec.Watch),
-		When:        testkube.WorkflowTriggerWhen{Event: crd.Spec.When.Event},
-		Match:       mapMatchCRDToAPI(crd.Spec.Match),
-		Wait:        mapWaitCRDToAPI(crd.Spec.Wait),
-		Run:         mapRunCRDToAPI(crd.Spec.Run),
+		When: testkube.WorkflowTriggerWhen{
+			Event: crd.Spec.When.Event,
+			Git:   mapGitCRDToAPI(crd.Spec.When.Git),
+		},
+		Match: mapMatchCRDToAPI(crd.Spec.Match),
+		Wait:  mapWaitCRDToAPI(crd.Spec.Wait),
+		Run:   mapRunCRDToAPI(crd.Spec.Run),
 	}
 }
 
@@ -46,11 +51,115 @@ func MapAPIToCRD(api testkube.WorkflowTrigger) workflowtriggersv1.WorkflowTrigge
 		Spec: workflowtriggersv1.WorkflowTriggerSpec{
 			Disabled: api.Disabled,
 			Watch:    mapWatchAPIToCRD(api.Watch),
-			When:     workflowtriggersv1.WorkflowTriggerWhen{Event: api.When.Event},
-			Match:    mapMatchAPIToCRD(api.Match),
-			Wait:     mapWaitAPIToCRD(api.Wait),
-			Run:      mapRunAPIToCRD(api.Run),
+			When: workflowtriggersv1.WorkflowTriggerWhen{
+				Event: api.When.Event,
+				Git:   mapGitAPIToCRD(api.When.Git),
+			},
+			Match: mapMatchAPIToCRD(api.Match),
+			Wait:  mapWaitAPIToCRD(api.Wait),
+			Run:   mapRunAPIToCRD(api.Run),
 		},
+	}
+}
+
+func mapGitCRDToAPI(git *workflowtriggersv1.WorkflowTriggerWhenGitSpec) *testkube.TestTriggerContentGit {
+	if git == nil {
+		return nil
+	}
+	out := &testkube.TestTriggerContentGit{
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: mapEnvVarSourceKubeToAPI(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    mapEnvVarSourceKubeToAPI(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   mapEnvVarSourceKubeToAPI(git.SshKeyFrom),
+		MountPath:    git.MountPath,
+		Cone:         git.Cone,
+		Paths:        git.Paths,
+	}
+	if git.AuthType != "" {
+		authType := testkube.ContentGitAuthType(git.AuthType)
+		out.AuthType = &authType
+	}
+	return out
+}
+
+func mapGitAPIToCRD(git *testkube.TestTriggerContentGit) *workflowtriggersv1.WorkflowTriggerWhenGitSpec {
+	if git == nil {
+		return nil
+	}
+	out := &workflowtriggersv1.WorkflowTriggerWhenGitSpec{
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: mapEnvVarSourceAPIToKube(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
+		MountPath:    git.MountPath,
+		Cone:         git.Cone,
+		Paths:        git.Paths,
+	}
+	if git.AuthType != nil {
+		out.AuthType = testsv3.GitAuthType(*git.AuthType)
+	}
+	return out
+}
+
+func mapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVarSourceConfigMapKeyRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSourceConfigMapKeyRef{Name: v.Name, Key: v.Key}
+}
+
+func mapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourceSecretKeyRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSourceSecretKeyRef{Name: v.Name, Key: v.Key}
+}
+
+func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSource{
+		ConfigMapKeyRef: mapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
+		SecretKeyRef:    mapSecretKeyRefKubeToAPI(v.SecretKeyRef),
+	}
+}
+
+func mapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev1.ConfigMapKeySelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.ConfigMapKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
+		Key:                  v.Key,
+	}
+}
+
+func mapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.SecretKeySelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.SecretKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
+		Key:                  v.Key,
+	}
+}
+
+func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
+	if v == nil {
+		return nil
+	}
+	return &corev1.EnvVarSource{
+		ConfigMapKeyRef: mapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
+		SecretKeyRef:    mapSecretKeyRefAPIToKube(v.SecretKeyRef),
 	}
 }
 

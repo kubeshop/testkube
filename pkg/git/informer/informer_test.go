@@ -16,10 +16,20 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 )
 
 type stubTestTriggerClient struct {
 	listFn func(ctx context.Context, environmentID string, options testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error)
+}
+
+type stubWorkflowTriggerClient struct {
+	listFn func(ctx context.Context, environmentID string, options workflowtriggerclient.ListOptions, namespace string) ([]testkube.WorkflowTrigger, error)
+}
+
+type stubMatcher struct {
+	matchTestTriggerFn     func(context.Context, string, string) error
+	matchWorkflowTriggerFn func(context.Context, string, string) error
 }
 
 func (s stubTestTriggerClient) Get(context.Context, string, string, string) (*testkube.TestTrigger, error) {
@@ -51,6 +61,51 @@ func (s stubTestTriggerClient) DeleteAll(context.Context, string, string) (uint3
 
 func (s stubTestTriggerClient) DeleteByLabels(context.Context, string, string, string) (uint32, error) {
 	return 0, nil
+}
+
+func (s stubWorkflowTriggerClient) Get(context.Context, string, string, string) (*testkube.WorkflowTrigger, error) {
+	return nil, nil
+}
+
+func (s stubWorkflowTriggerClient) List(ctx context.Context, environmentID string, options workflowtriggerclient.ListOptions, namespace string) ([]testkube.WorkflowTrigger, error) {
+	if s.listFn != nil {
+		return s.listFn(ctx, environmentID, options, namespace)
+	}
+	return nil, nil
+}
+
+func (s stubWorkflowTriggerClient) Update(context.Context, string, testkube.WorkflowTrigger) error {
+	return nil
+}
+
+func (s stubWorkflowTriggerClient) Create(context.Context, string, testkube.WorkflowTrigger) error {
+	return nil
+}
+
+func (s stubWorkflowTriggerClient) Delete(context.Context, string, string, string) error {
+	return nil
+}
+
+func (s stubWorkflowTriggerClient) DeleteAll(context.Context, string, string) (uint32, error) {
+	return 0, nil
+}
+
+func (s stubWorkflowTriggerClient) DeleteByLabels(context.Context, string, string, string) (uint32, error) {
+	return 0, nil
+}
+
+func (s stubMatcher) MatchGitTrigger(ctx context.Context, triggerName, namespace string) error {
+	if s.matchTestTriggerFn != nil {
+		return s.matchTestTriggerFn(ctx, triggerName, namespace)
+	}
+	return nil
+}
+
+func (s stubMatcher) MatchGitWorkflowTrigger(ctx context.Context, triggerName, namespace string) error {
+	if s.matchWorkflowTriggerFn != nil {
+		return s.matchWorkflowTriggerFn(ctx, triggerName, namespace)
+	}
+	return nil
 }
 
 func TestPathMatches(t *testing.T) {
@@ -204,18 +259,18 @@ func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
 		},
 	}
 
-	informer := NewInformer(stubTestTriggerClient{}, nil, "testkube", "", Options{})
+	informer := NewInformer(stubTestTriggerClient{}, nil, nil, "testkube", "", Options{})
 
-	changed, err := informer.hasNewMatchingCommit(context.Background(), trigger)
+	key := triggerKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+	changed, err := informer.hasNewMatchingCommit(context.Background(), key, trigger)
 	require.NoError(t, err)
 	assert.False(t, changed)
 
-	key := triggerKey(trigger.Namespace, trigger.Name)
 	assert.Equal(t, sha, informer.commits[key])
 
 	// Even when local baseline drifts, SHA-pinned triggers stay non-watchable.
 	informer.commits[key] = "drifted"
-	changed, err = informer.hasNewMatchingCommit(context.Background(), trigger)
+	changed, err = informer.hasNewMatchingCommit(context.Background(), key, trigger)
 	require.NoError(t, err)
 	assert.False(t, changed)
 	assert.Equal(t, sha, informer.commits[key])
@@ -397,6 +452,52 @@ func TestIsGitContentTrigger(t *testing.T) {
 	}
 }
 
+func TestIsGitContentWorkflowTrigger(t *testing.T) {
+	tests := []struct {
+		name     string
+		trigger  testkube.WorkflowTrigger
+		expected bool
+	}{
+		{
+			name: "valid git workflow trigger",
+			trigger: testkube.WorkflowTrigger{
+				When: testkube.WorkflowTriggerWhen{
+					Git: &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "disabled workflow trigger",
+			trigger: testkube.WorkflowTrigger{
+				Disabled: true,
+				When: testkube.WorkflowTriggerWhen{
+					Git: &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "watch kind non-content",
+			trigger: testkube.WorkflowTrigger{
+				Watch: &testkube.WorkflowTriggerWatch{
+					Resource: testkube.WorkflowTriggerResource{Kind: "deployment"},
+				},
+				When: testkube.WorkflowTriggerWhen{
+					Git: &testkube.TestTriggerContentGit{Uri: "https://github.com/example/repo.git"},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, isGitContentWorkflowTrigger(tt.trigger))
+		})
+	}
+}
+
 func TestReconcile_StopsPromptlyOnCancel(t *testing.T) {
 	listCalled := make(chan struct{}, 1)
 	client := stubTestTriggerClient{
@@ -408,7 +509,7 @@ func TestReconcile_StopsPromptlyOnCancel(t *testing.T) {
 			return nil, nil
 		},
 	}
-	informer := NewInformer(client, nil, "testkube", "", Options{})
+	informer := NewInformer(client, nil, nil, "testkube", "", Options{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -430,4 +531,47 @@ func TestReconcile_StopsPromptlyOnCancel(t *testing.T) {
 	case <-time.After(250 * time.Millisecond):
 		t.Fatal("reconcile did not stop promptly after cancel")
 	}
+}
+
+func TestUpdateRepositories_MatchesWorkflowGitTrigger(t *testing.T) {
+	const revision = "0123456789abcdef0123456789abcdef01234567"
+	workflowTrigger := testkube.WorkflowTrigger{
+		Name:      "workflow-a",
+		Namespace: "testkube",
+		When: testkube.WorkflowTriggerWhen{
+			Event: "modified",
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: revision,
+			},
+		},
+		Watch: &testkube.WorkflowTriggerWatch{
+			Resource: testkube.WorkflowTriggerResource{Kind: "content"},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{},
+		stubWorkflowTriggerClient{
+			listFn: func(ctx context.Context, environmentID string, options workflowtriggerclient.ListOptions, namespace string) ([]testkube.WorkflowTrigger, error) {
+				return []testkube.WorkflowTrigger{workflowTrigger}, nil
+			},
+		},
+		stubMatcher{
+			matchWorkflowTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{},
+	)
+	workflowKey := triggerKey(triggerSourceV2, workflowTrigger.Namespace, workflowTrigger.Name)
+	informer.commits[workflowKey] = "old"
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, []string{"testkube/workflow-a"}, matched)
 }

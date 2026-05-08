@@ -24,10 +24,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 )
 
 const reconcileInterval = 2 * time.Minute
 const defaultGitUsername = "git"
+const triggerSourceV1 = "v1"
+const triggerSourceV2 = "v2"
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
 var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
@@ -63,6 +66,7 @@ func normalizeOptions(opts Options) Options {
 // Matcher fires trigger events when git content changes.
 type Matcher interface {
 	MatchGitTrigger(ctx context.Context, triggerName, namespace string) error
+	MatchGitWorkflowTrigger(ctx context.Context, triggerName, namespace string) error
 }
 
 // Informer polls git repositories referenced by content triggers and fires
@@ -70,6 +74,7 @@ type Matcher interface {
 type Informer struct {
 	mu                sync.Mutex
 	testTriggerClient testtriggerclient.TestTriggerClient
+	workflowClient    workflowtriggerclient.WorkflowTriggerClient
 	matcher           Matcher
 	commits           map[string]string // key -> last seen head hash
 	namespace         string
@@ -80,6 +85,7 @@ type Informer struct {
 // NewInformer returns a new git content informer.
 func NewInformer(
 	testTriggerClient testtriggerclient.TestTriggerClient,
+	workflowClient workflowtriggerclient.WorkflowTriggerClient,
 	matcher Matcher,
 	namespace string,
 	environmentID string,
@@ -87,6 +93,7 @@ func NewInformer(
 ) *Informer {
 	return &Informer{
 		testTriggerClient: testTriggerClient,
+		workflowClient:    workflowClient,
 		matcher:           matcher,
 		commits:           make(map[string]string),
 		namespace:         namespace,
@@ -119,26 +126,35 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	list, err := i.testTriggerClient.List(ctx, i.environmentID, testtriggerclient.ListOptions{}, i.namespace)
+	testTriggerList, err := i.testTriggerClient.List(ctx, i.environmentID, testtriggerclient.ListOptions{}, i.namespace)
 	if err != nil {
-		log.DefaultLogger.Errorf("git informer: error listing triggers: %v", err)
+		log.DefaultLogger.Errorf("git informer: error listing test triggers: %v", err)
 		return
 	}
 
-	active := make(map[string]struct{}, len(list))
-	for idx := range list {
+	workflowTriggerList := make([]testkube.WorkflowTrigger, 0)
+	if i.workflowClient != nil {
+		workflowTriggerList, err = i.workflowClient.List(ctx, i.environmentID, workflowtriggerclient.ListOptions{}, i.namespace)
+		if err != nil {
+			log.DefaultLogger.Errorf("git informer: error listing workflow triggers: %v", err)
+			return
+		}
+	}
+
+	active := make(map[string]struct{}, len(testTriggerList)+len(workflowTriggerList))
+	for idx := range testTriggerList {
 		if err := ctx.Err(); err != nil {
 			return
 		}
 
-		trigger := list[idx]
+		trigger := testTriggerList[idx]
 		if !isGitContentTrigger(trigger) {
 			continue
 		}
-		key := triggerKey(trigger.Namespace, trigger.Name)
+		key := triggerKey(triggerSourceV1, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
 
-		changed, err := i.hasNewMatchingCommit(ctx, trigger)
+		changed, err := i.hasNewMatchingCommit(ctx, key, trigger)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
@@ -148,6 +164,33 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		}
 		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace); err != nil {
 			log.DefaultLogger.Errorf("git informer: error matching trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
+		}
+	}
+
+	for idx := range workflowTriggerList {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+
+		workflowTrigger := workflowTriggerList[idx]
+		if !isGitContentWorkflowTrigger(workflowTrigger) {
+			continue
+		}
+
+		trigger := workflowTriggerToTestTrigger(workflowTrigger)
+		key := triggerKey(triggerSourceV2, trigger.Namespace, trigger.Name)
+		active[key] = struct{}{}
+
+		changed, err := i.hasNewMatchingCommit(ctx, key, trigger)
+		if err != nil {
+			log.DefaultLogger.Errorf("git informer: error checking workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
+			continue
+		}
+		if !changed || i.matcher == nil {
+			continue
+		}
+		if err := i.matcher.MatchGitWorkflowTrigger(ctx, trigger.Name, trigger.Namespace); err != nil {
+			log.DefaultLogger.Errorf("git informer: error matching workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 		}
 	}
 
@@ -168,6 +211,30 @@ func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 		trigger.ContentSelector.Git.Uri != ""
 }
 
+func isGitContentWorkflowTrigger(trigger testkube.WorkflowTrigger) bool {
+	if trigger.Disabled || trigger.When.Git == nil || trigger.When.Git.Uri == "" {
+		return false
+	}
+	return trigger.Watch == nil || strings.EqualFold(trigger.Watch.Resource.Kind, string(testkube.CONTENT_TestTriggerResources))
+}
+
+func workflowTriggerToTestTrigger(trigger testkube.WorkflowTrigger) testkube.TestTrigger {
+	resource := testkube.CONTENT_TestTriggerResources
+	out := testkube.TestTrigger{
+		Name:      trigger.Name,
+		Namespace: trigger.Namespace,
+		Disabled:  trigger.Disabled,
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: trigger.When.Git,
+		},
+	}
+	if trigger.Watch != nil && trigger.Watch.Resource.Kind != "" {
+		out.ResourceRef = &testkube.TestTriggerResourceRef{Kind: trigger.Watch.Resource.Kind}
+	}
+	return out
+}
+
 func isContentResource(trigger testkube.TestTrigger) bool {
 	if trigger.Resource != nil && *trigger.Resource == testkube.CONTENT_TestTriggerResources {
 		return true
@@ -180,24 +247,23 @@ func isContentResource(trigger testkube.TestTrigger) bool {
 	return false
 }
 
-func (i *Informer) hasNewMatchingCommit(ctx context.Context, trigger testkube.TestTrigger) (bool, error) {
+func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
 
 	paths := normalizePaths(trigger.ContentSelector.Git.Paths)
 	if len(paths) == 0 {
-		return i.hasNewHeadCommit(trigger)
+		return i.hasNewHeadCommit(key, trigger)
 	}
 
-	key := triggerKey(trigger.Namespace, trigger.Name)
 	if isCommitSHA(trigger.ContentSelector.Git.Revision) {
 		// Commit SHA is immutable; there is no moving ref to watch for path changes.
 		i.commits[key] = strings.TrimSpace(trigger.ContentSelector.Git.Revision)
 		return false, nil
 	}
 
-	repo, err := i.openOrUpdateRepository(ctx, trigger)
+	repo, err := i.openOrUpdateRepository(ctx, key, trigger)
 	if err != nil {
 		return false, err
 	}
@@ -273,25 +339,24 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, trigger testkube.Te
 	return false, nil
 }
 
-func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) {
+func (i *Informer) hasNewHeadCommit(key string, trigger testkube.TestTrigger) (bool, error) {
 	headHash, err := remoteHeadHash(trigger.ContentSelector.Git, i.options)
 	if err != nil {
 		return false, err
 	}
 
-	key := triggerKey(trigger.Namespace, trigger.Name)
 	prevHash, hasPrev := i.commits[key]
 	i.commits[key] = headHash
 
 	return hasPrev && prevHash != headHash, nil
 }
 
-func (i *Informer) openOrUpdateRepository(ctx context.Context, trigger testkube.TestTrigger) (*git.Repository, error) {
+func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigger testkube.TestTrigger) (*git.Repository, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	repoDir := triggerRepositoryPath(trigger.Namespace, trigger.Name)
+	repoDir := triggerRepositoryPathFromKey(key)
 	gitConfig := trigger.ContentSelector.Git
 	references := normalizeRefs(gitConfig.Revision)
 	if len(references) == 0 {
@@ -610,14 +675,22 @@ func pathMatchesNormalized(paths []string, file string) bool {
 	return false
 }
 
-func triggerKey(namespace, name string) string {
-	return namespace + "/" + name
+func triggerKey(source, namespace, name string) string {
+	return source + ":" + namespace + "/" + name
 }
 
-func triggerRepositoryPath(namespace, name string) string {
-	return filepath.Join(os.TempDir(), "testkube-git-trigger", triggerKey(namespace, name))
+func triggerRepositoryPath(source, namespace, name string) string {
+	return filepath.Join(os.TempDir(), "testkube-git-trigger", source, namespace, name)
 }
 
 func triggerRepositoryPathFromKey(key string) string {
-	return filepath.Join(os.TempDir(), "testkube-git-trigger", key)
+	sourceAndRest := strings.SplitN(key, ":", 2)
+	if len(sourceAndRest) != 2 {
+		return filepath.Join(os.TempDir(), "testkube-git-trigger", key)
+	}
+	namespaceAndName := strings.SplitN(sourceAndRest[1], "/", 2)
+	if len(namespaceAndName) != 2 {
+		return filepath.Join(os.TempDir(), "testkube-git-trigger", sourceAndRest[0], sourceAndRest[1])
+	}
+	return triggerRepositoryPath(sourceAndRest[0], namespaceAndName[0], namespaceAndName[1])
 }

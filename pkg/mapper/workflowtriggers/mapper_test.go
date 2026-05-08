@@ -6,8 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -28,7 +30,20 @@ func TestMapCRDToAPI_flattensSpecAndPreservesFields(t *testing.T) {
 					Group: "argoproj.io", Version: "v1alpha1", Kind: "Rollout",
 				},
 			},
-			When: workflowtriggersv1.WorkflowTriggerWhen{Event: "modified"},
+			When: workflowtriggersv1.WorkflowTriggerWhen{
+				Event: "modified",
+				Git: &workflowtriggersv1.WorkflowTriggerWhenGitSpec{
+					Uri:      "https://github.com/kubeshop/testkube.git",
+					Revision: "main",
+					AuthType: testsv3.GitAuthTypeHeader,
+					TokenFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "git-creds"},
+							Key:                  "token",
+						},
+					},
+				},
+			},
 			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 				{Path: ".spec.replicas", Operator: workflowtriggersv1.FieldOperatorEquals, Value: "3"},
 			},
@@ -55,6 +70,15 @@ func TestMapCRDToAPI_flattensSpecAndPreservesFields(t *testing.T) {
 	require.NotNil(t, api.Watch)
 	assert.Equal(t, "Rollout", api.Watch.Resource.Kind)
 	assert.Equal(t, "modified", api.When.Event)
+	require.NotNil(t, api.When.Git)
+	assert.Equal(t, "https://github.com/kubeshop/testkube.git", api.When.Git.Uri)
+	assert.Equal(t, "main", api.When.Git.Revision)
+	require.NotNil(t, api.When.Git.AuthType)
+	assert.Equal(t, testkube.HEADER_ContentGitAuthType, *api.When.Git.AuthType)
+	require.NotNil(t, api.When.Git.TokenFrom)
+	require.NotNil(t, api.When.Git.TokenFrom.SecretKeyRef)
+	assert.Equal(t, "git-creds", api.When.Git.TokenFrom.SecretKeyRef.Name)
+	assert.Equal(t, "token", api.When.Git.TokenFrom.SecretKeyRef.Key)
 	require.Len(t, api.Match, 1)
 	assert.Equal(t, "equals", api.Match[0].Operator)
 	require.NotNil(t, api.Wait)
@@ -69,8 +93,15 @@ func TestMapAPIToCRD_wrapsSpecAndParsesDelay(t *testing.T) {
 	api := testkube.WorkflowTrigger{
 		Name:     "canary",
 		Disabled: true,
-		When:     testkube.WorkflowTriggerWhen{Event: "created"},
-		Match:    []testkube.WorkflowTriggerFieldCondition{{Path: ".spec.image", Operator: "changed"}},
+		When: testkube.WorkflowTriggerWhen{
+			Event: "created",
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: "main",
+				AuthType: ptr(testkube.HEADER_ContentGitAuthType),
+			},
+		},
+		Match: []testkube.WorkflowTriggerFieldCondition{{Path: ".spec.image", Operator: "changed"}},
 		Run: testkube.WorkflowTriggerRun{
 			Workflow: testkube.WorkflowTriggerWorkflowSelector{Name: "smoke"},
 			Delay:    "10s",
@@ -82,6 +113,10 @@ func TestMapAPIToCRD_wrapsSpecAndParsesDelay(t *testing.T) {
 	assert.Equal(t, "canary", crd.Name)
 	assert.True(t, crd.Spec.Disabled)
 	assert.Equal(t, "created", crd.Spec.When.Event)
+	require.NotNil(t, crd.Spec.When.Git)
+	assert.Equal(t, "https://github.com/kubeshop/testkube.git", crd.Spec.When.Git.Uri)
+	assert.Equal(t, "main", crd.Spec.When.Git.Revision)
+	assert.Equal(t, testsv3.GitAuthTypeHeader, crd.Spec.When.Git.AuthType)
 	require.Len(t, crd.Spec.Match, 1)
 	assert.Equal(t, workflowtriggersv1.FieldOperatorChanged, crd.Spec.Match[0].Operator)
 	require.NotNil(t, crd.Spec.Run.Delay)
@@ -114,4 +149,8 @@ func TestMapListCRDToAPI_handlesEmptyAndMulti(t *testing.T) {
 	require.Len(t, out, 2)
 	assert.Equal(t, "a", out[0].Name)
 	assert.Equal(t, "b", out[1].Name)
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }

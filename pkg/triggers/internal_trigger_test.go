@@ -137,6 +137,11 @@ func TestConvertV2ToInternal(t *testing.T) {
 			},
 			When: workflowtriggersv1.WorkflowTriggerWhen{
 				Event: "created",
+				Git: &workflowtriggersv1.WorkflowTriggerWhenGitSpec{
+					Uri:      "https://github.com/kubeshop/testkube.git",
+					Revision: "main",
+					Paths:    []string{"pkg/triggers"},
+				},
 			},
 			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 				{
@@ -192,6 +197,11 @@ func TestConvertV2ToInternal(t *testing.T) {
 
 	// When
 	assert.Equal(t, "created", it.Event)
+	require.NotNil(t, it.ContentSelector)
+	require.NotNil(t, it.ContentSelector.Git)
+	assert.Equal(t, "https://github.com/kubeshop/testkube.git", it.ContentSelector.Git.Uri)
+	assert.Equal(t, "main", it.ContentSelector.Git.Revision)
+	assert.Equal(t, []string{"pkg/triggers"}, it.ContentSelector.Git.Paths)
 
 	// Match
 	require.Len(t, it.FieldConditions, 1)

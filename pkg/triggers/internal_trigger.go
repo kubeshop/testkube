@@ -224,6 +224,27 @@ func convertV2ToInternal(t *workflowtriggersv1.WorkflowTrigger) *internalTrigger
 
 	// When
 	it.Event = t.Spec.When.Event
+	if t.Spec.When.Git != nil {
+		it.ContentSelector = &testtriggersv1.TestTriggerContentSelector{
+			Git: &testtriggersv1.TestTriggerContentGitSpec{
+				Uri:          t.Spec.When.Git.Uri,
+				Revision:     t.Spec.When.Git.Revision,
+				Username:     t.Spec.When.Git.Username,
+				UsernameFrom: t.Spec.When.Git.UsernameFrom,
+				Token:        t.Spec.When.Git.Token,
+				TokenFrom:    t.Spec.When.Git.TokenFrom,
+				SshKey:       t.Spec.When.Git.SshKey,
+				SshKeyFrom:   t.Spec.When.Git.SshKeyFrom,
+				AuthType:     t.Spec.When.Git.AuthType,
+				MountPath:    t.Spec.When.Git.MountPath,
+				Cone:         t.Spec.When.Git.Cone,
+				Paths:        t.Spec.When.Git.Paths,
+			},
+		}
+		if it.ResourceKind == "" {
+			it.ResourceKind = string(testtriggersv1.TestTriggerResourceContent)
+		}
+	}
 
 	// Watch
 	if t.Spec.Watch != nil {
