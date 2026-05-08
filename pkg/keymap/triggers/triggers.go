@@ -1,6 +1,6 @@
 package triggers
 
-import "github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
+import "github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 
 type KeyMap struct {
 	Resources           []string            `json:"resources"`
@@ -33,6 +33,8 @@ func getSupportedEvents() map[string][]string {
 		string(testtrigger.CauseDeploymentImageUpdate),
 		string(testtrigger.CauseDeploymentScaleUpdate),
 		string(testtrigger.CauseDeploymentEnvUpdate),
+		string(testtrigger.CauseDeploymentGenerationModified),
+		string(testtrigger.CauseDeploymentResourceModified),
 	}
 	m[testtrigger.ResourceStatefulSet] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	m[testtrigger.ResourceDaemonSet] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
@@ -40,5 +42,6 @@ func getSupportedEvents() map[string][]string {
 	m[testtrigger.ResourceIngress] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	m[testtrigger.ResourceEvent] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	m[testtrigger.ResourceConfigMap] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
+	m[testtrigger.ResourceContent] = []string{string(testtrigger.EventModified)}
 	return m
 }

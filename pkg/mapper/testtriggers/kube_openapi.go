@@ -3,8 +3,11 @@ package testtriggers
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapTestTriggerListKubeToAPI maps TestTriggerList CRD to list of OpenAPI spec TestTrigger
@@ -39,16 +42,30 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		concurrencyPolicy = (*testkube.TestTriggerConcurrencyPolicies)(&crd.Spec.ConcurrencyPolicy)
 	}
 
+	var resourceRef *testkube.TestTriggerResourceRef
+	if crd.Spec.ResourceRef != nil {
+		resourceRef = &testkube.TestTriggerResourceRef{
+			Group:   crd.Spec.ResourceRef.Group,
+			Version: crd.Spec.ResourceRef.Version,
+			Kind:    crd.Spec.ResourceRef.Kind,
+		}
+	}
+
 	return testkube.TestTrigger{
 		Name:              crd.Name,
 		Namespace:         crd.Namespace,
 		Labels:            crd.Labels,
+		Selector:          mapLabelSelectorFromCRD(crd.Spec.Selector),
 		Resource:          resource,
+		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:             string(crd.Spec.Event),
+		Match:             mapFieldConditionsFromCRD(crd.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
+		ContentSelector:   mapContentSelectorFromCRD(crd.Spec.ContentSelector),
 		Action:            action,
+		ActionParameters:  mapActionParametersFromCRD(crd.Spec.ActionParameters),
 		Execution:         execution,
 		TestSelector:      mapSelectorFromCRD(crd.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
@@ -57,19 +74,19 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 }
 
 func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTriggerSelector {
-	var labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector
-	if selector.LabelSelector != nil {
-		labelSelector = mapLabelSelectorFromCRD(selector.LabelSelector)
-	}
 	return &testkube.TestTriggerSelector{
-		Name:          selector.Name,
-		NameRegex:     selector.NameRegex,
-		Namespace:     selector.Namespace,
-		LabelSelector: labelSelector,
+		Name:           selector.Name,
+		NameRegex:      selector.NameRegex,
+		Namespace:      selector.Namespace,
+		NamespaceRegex: selector.NamespaceRegex,
+		LabelSelector:  mapLabelSelectorFromCRD(selector.LabelSelector),
 	}
 }
 
 func mapLabelSelectorFromCRD(labelSelector *v1.LabelSelector) *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector {
+	if labelSelector == nil {
+		return nil
+	}
 	var matchExpressions []testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement
 	for _, e := range labelSelector.MatchExpressions {
 		expression := testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement{
@@ -84,6 +101,21 @@ func mapLabelSelectorFromCRD(labelSelector *v1.LabelSelector) *testkube.IoK8sApi
 		MatchExpressions: matchExpressions,
 		MatchLabels:      labelSelector.MatchLabels,
 	}
+}
+
+func mapFieldConditionsFromCRD(in []workflowtriggersv1.WorkflowTriggerFieldCondition) []testkube.TestTriggerFieldCondition {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]testkube.TestTriggerFieldCondition, 0, len(in))
+	for _, c := range in {
+		out = append(out, testkube.TestTriggerFieldCondition{
+			Path:     c.Path,
+			Operator: testkube.TestTriggerFieldOperator(c.Operator),
+			Value:    c.Value,
+		})
+	}
+	return out
 }
 
 func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *testkube.TestTriggerConditionSpec {
@@ -108,6 +140,18 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 	}
 }
 
+func mapActionParametersFromCRD(actionParameters *testsv1.TestTriggerActionParameters) *testkube.TestTriggerActionParameters {
+	if actionParameters == nil {
+		return nil
+	}
+
+	return &testkube.TestTriggerActionParameters{
+		Config: actionParameters.Config,
+		Tags:   actionParameters.Tags,
+		Target: common.MapPtr(actionParameters.Target, commonmapper.MapTargetKubeToAPI),
+	}
+}
+
 func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) testkube.TestTriggerUpsertRequest {
 	var resource *testkube.TestTriggerResources
 	if request.Spec.Resource != "" {
@@ -129,16 +173,31 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		concurrencyPolicy = (*testkube.TestTriggerConcurrencyPolicies)(&request.Spec.ConcurrencyPolicy)
 	}
 
+	var resourceRef *testkube.TestTriggerResourceRef
+	if request.Spec.ResourceRef != nil {
+		resourceRef = &testkube.TestTriggerResourceRef{
+			Group:   request.Spec.ResourceRef.Group,
+			Version: request.Spec.ResourceRef.Version,
+			Kind:    request.Spec.ResourceRef.Kind,
+		}
+	}
+
 	return testkube.TestTriggerUpsertRequest{
 		Name:              request.Name,
 		Namespace:         request.Namespace,
 		Labels:            request.Labels,
+		Annotations:       request.Annotations,
+		Selector:          mapLabelSelectorFromCRD(request.Spec.Selector),
 		Resource:          resource,
+		ResourceRef:       resourceRef,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:             string(request.Spec.Event),
+		Match:             mapFieldConditionsFromCRD(request.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),
+		ContentSelector:   mapContentSelectorFromCRD(request.Spec.ContentSelector),
 		Action:            action,
+		ActionParameters:  mapActionParametersFromCRD(request.Spec.ActionParameters),
 		Execution:         execution,
 		TestSelector:      mapSelectorFromCRD(request.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
@@ -174,5 +233,25 @@ func mapProbeSpecFromCRD(probeSpec *testsv1.TestTriggerProbeSpec) *testkube.Test
 		Timeout: probeSpec.Timeout,
 		Delay:   probeSpec.Delay,
 		Probes:  probes,
+	}
+}
+
+func mapContentSelectorFromCRD(selector *testsv1.TestTriggerContentSelector) *testkube.TestTriggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentSelector{
+		Git: mapContentGitFromCRD(selector.Git),
+	}
+}
+
+func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.TestTriggerContentGit {
+	if git == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentGit{
+		Uri:      git.Uri,
+		Revision: git.Revision,
+		Paths:    git.Paths,
 	}
 }

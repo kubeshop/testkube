@@ -3,8 +3,11 @@ package testtriggers
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUpsertRequest) testsv1.TestTrigger {
@@ -35,12 +38,82 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Labels:    request.Labels,
 		},
 		Spec: testsv1.TestTriggerSpec{
+			Selector:          mapLabelSelectorToCRD(request.Selector),
 			Resource:          resource,
+			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
 			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
 			Event:             testsv1.TestTriggerEvent(request.Event),
+			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorToCRD(request.ContentSelector),
 			Action:            action,
+			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
+			Execution:         execution,
+			TestSelector:      mapSelectorToCRD(request.TestSelector),
+			ConcurrencyPolicy: concurrencyPolicy,
+			Disabled:          request.Disabled,
+		},
+	}
+}
+
+func mapResourceRefToCRD(ref *testkube.TestTriggerResourceRef) *testsv1.TestTriggerResourceRef {
+	if ref == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerResourceRef{
+		Group:   ref.Group,
+		Version: ref.Version,
+		Kind:    ref.Kind,
+	}
+}
+
+// MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta creates a TestTrigger CRD from an upsert request
+// while preserving the existing ObjectMeta (including ResourceVersion) from the original CRD
+func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkube.TestTriggerUpsertRequest, existingMeta metav1.ObjectMeta) testsv1.TestTrigger {
+	var resource testsv1.TestTriggerResource
+	if request.Resource != nil {
+		resource = testsv1.TestTriggerResource(*request.Resource)
+	}
+
+	var action testsv1.TestTriggerAction
+	if request.Action != nil {
+		action = testsv1.TestTriggerAction(*request.Action)
+	}
+
+	var execution testsv1.TestTriggerExecution
+	if request.Execution != nil {
+		execution = testsv1.TestTriggerExecution(*request.Execution)
+	}
+
+	var concurrencyPolicy testsv1.TestTriggerConcurrencyPolicy
+	if request.ConcurrencyPolicy != nil {
+		concurrencyPolicy = testsv1.TestTriggerConcurrencyPolicy(*request.ConcurrencyPolicy)
+	}
+
+	// Preserve existing metadata but update labels and annotations
+	updatedMeta := existingMeta.DeepCopy()
+	if request.Labels != nil {
+		updatedMeta.Labels = request.Labels
+	}
+	if request.Annotations != nil {
+		updatedMeta.Annotations = request.Annotations
+	}
+
+	return testsv1.TestTrigger{
+		ObjectMeta: *updatedMeta,
+		Spec: testsv1.TestTriggerSpec{
+			Selector:          mapLabelSelectorToCRD(request.Selector),
+			Resource:          resource,
+			ResourceRef:       mapResourceRefToCRD(request.ResourceRef),
+			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
+			Event:             testsv1.TestTriggerEvent(request.Event),
+			Match:             mapFieldConditionsToCRD(request.Match),
+			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
+			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorToCRD(request.ContentSelector),
+			Action:            action,
+			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
@@ -50,19 +123,19 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
-	var labelSelector *metav1.LabelSelector
-	if selector.LabelSelector != nil {
-		labelSelector = mapLabelSelectorToCRD(selector.LabelSelector)
-	}
 	return testsv1.TestTriggerSelector{
-		Name:          selector.Name,
-		NameRegex:     selector.NameRegex,
-		Namespace:     selector.Namespace,
-		LabelSelector: labelSelector,
+		Name:           selector.Name,
+		NameRegex:      selector.NameRegex,
+		Namespace:      selector.Namespace,
+		NamespaceRegex: selector.NamespaceRegex,
+		LabelSelector:  mapLabelSelectorToCRD(selector.LabelSelector),
 	}
 }
 
 func mapLabelSelectorToCRD(labelSelector *testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector) *metav1.LabelSelector {
+	if labelSelector == nil {
+		return nil
+	}
 	var matchExpressions []metav1.LabelSelectorRequirement
 	for _, e := range labelSelector.MatchExpressions {
 		expression := metav1.LabelSelectorRequirement{
@@ -129,5 +202,52 @@ func mapProbeSpecCRD(probeSpec *testkube.TestTriggerProbeSpec) *testsv1.TestTrig
 		Timeout: probeSpec.Timeout,
 		Delay:   probeSpec.Delay,
 		Probes:  probes,
+	}
+}
+
+func mapFieldConditionsToCRD(in []testkube.TestTriggerFieldCondition) []workflowtriggersv1.WorkflowTriggerFieldCondition {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]workflowtriggersv1.WorkflowTriggerFieldCondition, 0, len(in))
+	for _, c := range in {
+		out = append(out, workflowtriggersv1.WorkflowTriggerFieldCondition{
+			Path:     c.Path,
+			Operator: workflowtriggersv1.WorkflowTriggerFieldOperator(c.Operator),
+			Value:    c.Value,
+		})
+	}
+	return out
+}
+
+func mapActionParametersCRD(actionParameters *testkube.TestTriggerActionParameters) *testsv1.TestTriggerActionParameters {
+	if actionParameters == nil {
+		return nil
+	}
+
+	return &testsv1.TestTriggerActionParameters{
+		Config: actionParameters.Config,
+		Tags:   actionParameters.Tags,
+		Target: common.MapPtr(actionParameters.Target, commonmapper.MapTargetApiToKube),
+	}
+}
+
+func mapContentSelectorToCRD(selector *testkube.TestTriggerContentSelector) *testsv1.TestTriggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentSelector{
+		Git: mapContentGitToCRD(selector.Git),
+	}
+}
+
+func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTriggerContentGitSpec {
+	if git == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentGitSpec{
+		Uri:      git.Uri,
+		Revision: git.Revision,
+		Paths:    git.Paths,
 	}
 }
