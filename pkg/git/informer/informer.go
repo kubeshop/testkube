@@ -182,6 +182,13 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 		return i.hasNewHeadCommit(trigger)
 	}
 
+	key := triggerKey(trigger.Namespace, trigger.Name)
+	if isCommitSHA(trigger.ContentSelector.Git.Revision) {
+		// Commit SHA is immutable; there is no moving ref to watch for path changes.
+		i.commits[key] = strings.TrimSpace(trigger.ContentSelector.Git.Revision)
+		return false, nil
+	}
+
 	repo, err := i.openOrUpdateRepository(trigger)
 	if err != nil {
 		return false, err
@@ -192,7 +199,6 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 		return false, err
 	}
 
-	key := triggerKey(trigger.Namespace, trigger.Name)
 	headHash := head.Hash().String()
 	prevHash, hasPrev := i.commits[key]
 
@@ -237,15 +243,24 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 		return nil
 	})
 	if err != nil && !errors.Is(err, storer.ErrStop) {
+		i.commits[key] = headHash
 		return false, err
 	}
 
 	i.commits[key] = headHash
 
-	if !foundPrev {
+	if matched {
 		return true, nil
 	}
-	return matched, nil
+	if !foundPrev {
+		log.DefaultLogger.Warnf(
+			"git informer: history boundary reached before previous commit for trigger %s/%s (repo depth/max scan limit); advancing baseline without firing",
+			trigger.Namespace,
+			trigger.Name,
+		)
+		return false, nil
+	}
+	return false, nil
 }
 
 func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) {

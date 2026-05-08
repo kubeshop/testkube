@@ -188,6 +188,37 @@ func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
 	assert.Empty(t, pullOpts.ReferenceName)
 }
 
+func TestHasNewMatchingCommit_CommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
+	sha := "0123456789abcdef0123456789abcdef01234567"
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-a",
+		Namespace: "default",
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: sha,
+				Paths:    []string{"pkg/git"},
+			},
+		},
+	}
+
+	informer := NewInformer(stubTestTriggerClient{}, nil, "testkube", "", Options{})
+
+	changed, err := informer.hasNewMatchingCommit(trigger)
+	require.NoError(t, err)
+	assert.False(t, changed)
+
+	key := triggerKey(trigger.Namespace, trigger.Name)
+	assert.Equal(t, sha, informer.commits[key])
+
+	// Even when local baseline drifts, SHA-pinned triggers stay non-watchable.
+	informer.commits[key] = "drifted"
+	changed, err = informer.hasNewMatchingCommit(trigger)
+	require.NoError(t, err)
+	assert.False(t, changed)
+	assert.Equal(t, sha, informer.commits[key])
+}
+
 func generateTestPrivateKey(t *testing.T) string {
 	t.Helper()
 

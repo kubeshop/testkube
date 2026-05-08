@@ -9,8 +9,8 @@ import (
 )
 
 func TestShouldRunGitInformer(t *testing.T) {
-	t.Run("disabled when control plane triggers are off", func(t *testing.T) {
-		assert.False(t, ShouldRunGitInformer(false, false, intconfig.ProContext{}))
+	t.Run("enabled in oss mode when control plane triggers are off", func(t *testing.T) {
+		assert.True(t, ShouldRunGitInformer(false, false, intconfig.ProContext{}))
 	})
 
 	t.Run("enabled in oss mode without environment id", func(t *testing.T) {
