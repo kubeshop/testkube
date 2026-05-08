@@ -296,6 +296,7 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 
 	var cloneErr error
 	for _, reference := range references {
+		_ = os.RemoveAll(repoDir)
 		cloneOpts, err := cloneOptionsForRef(gitConfig, i.options, reference)
 		if err != nil {
 			return nil, err
