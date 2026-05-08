@@ -4,6 +4,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -128,8 +129,35 @@ func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
 		return nil
 	}
 	return &testkube.EnvVarSource{
-		ConfigMapKeyRef: mapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
-		SecretKeyRef:    mapSecretKeyRefKubeToAPI(v.SecretKeyRef),
+		FieldRef:         mapFieldRefKubeToAPI(v.FieldRef),
+		ResourceFieldRef: mapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
+		ConfigMapKeyRef:  mapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
+		SecretKeyRef:     mapSecretKeyRefKubeToAPI(v.SecretKeyRef),
+	}
+}
+
+func mapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.FieldRef{
+		ApiVersion: v.APIVersion,
+		FieldPath:  v.FieldPath,
+	}
+}
+
+func mapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
+	if v == nil {
+		return nil
+	}
+	divisor := ""
+	if !v.Divisor.IsZero() {
+		divisor = v.Divisor.String()
+	}
+	return &testkube.ResourceFieldRef{
+		ContainerName: v.ContainerName,
+		Resource:      v.Resource,
+		Divisor:       divisor,
 	}
 }
 
@@ -158,8 +186,39 @@ func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 		return nil
 	}
 	return &corev1.EnvVarSource{
-		ConfigMapKeyRef: mapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
-		SecretKeyRef:    mapSecretKeyRefAPIToKube(v.SecretKeyRef),
+		FieldRef:         mapFieldRefAPIToKube(v.FieldRef),
+		ResourceFieldRef: mapResourceFieldRefAPIToKube(v.ResourceFieldRef),
+		ConfigMapKeyRef:  mapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
+		SecretKeyRef:     mapSecretKeyRefAPIToKube(v.SecretKeyRef),
+	}
+}
+
+func mapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.ObjectFieldSelector{
+		APIVersion: v.ApiVersion,
+		FieldPath:  v.FieldPath,
+	}
+}
+
+func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
+	if v == nil {
+		return nil
+	}
+	divisor := resource.Quantity{}
+	if v.Divisor != "" {
+		if parsedDivisor, err := resource.ParseQuantity(v.Divisor); err == nil {
+			divisor = parsedDivisor
+		} else {
+			divisor = resource.MustParse("1")
+		}
+	}
+	return &corev1.ResourceFieldSelector{
+		ContainerName: v.ContainerName,
+		Resource:      v.Resource,
+		Divisor:       divisor,
 	}
 }
 
