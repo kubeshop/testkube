@@ -349,7 +349,11 @@ func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) 
 }
 
 func cloneOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.CloneOptions, error) {
-	return cloneOptionsForRef(gitConfig, options, normalizeRef(gitConfig.Revision))
+	references := normalizeRefs(gitConfig.Revision)
+	if len(references) == 0 {
+		return cloneOptionsForRef(gitConfig, options, "")
+	}
+	return cloneOptionsForRef(gitConfig, options, references[0])
 }
 
 func cloneOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Options, reference string) (*git.CloneOptions, error) {
@@ -372,7 +376,11 @@ func cloneOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Optio
 }
 
 func pullOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.PullOptions, error) {
-	return pullOptionsForRef(gitConfig, options, normalizeRef(gitConfig.Revision))
+	references := normalizeRefs(gitConfig.Revision)
+	if len(references) == 0 {
+		return pullOptionsForRef(gitConfig, options, "")
+	}
+	return pullOptionsForRef(gitConfig, options, references[0])
 }
 
 func pullOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Options, reference string) (*git.PullOptions, error) {
@@ -445,14 +453,6 @@ func resolveCredentialValue(value string, source *testkube.EnvVarSource) string 
 	}
 	if source.ConfigMapKeyRef != nil && source.ConfigMapKeyRef.Key != "" {
 		return os.Getenv(source.ConfigMapKeyRef.Key)
-	}
-	return ""
-}
-
-func normalizeRef(revision string) string {
-	references := normalizeRefs(revision)
-	if len(references) > 0 {
-		return references[0]
 	}
 	return ""
 }
