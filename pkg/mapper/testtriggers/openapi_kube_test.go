@@ -6,10 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 func TestMapResourceFieldRefAPIToKube_InvalidDivisorDefaultsToOne(t *testing.T) {
-	mapped := mapResourceFieldRefAPIToKube(&testkube.ResourceFieldRef{
+	mapped := commonmapper.MapResourceFieldRefAPIToKube(&testkube.ResourceFieldRef{
 		ContainerName: "app",
 		Resource:      "limits.cpu",
 		Divisor:       "not-a-quantity",
@@ -19,7 +20,7 @@ func TestMapResourceFieldRefAPIToKube_InvalidDivisorDefaultsToOne(t *testing.T) 
 }
 
 func TestMapResourceFieldRefAPIToKube_ValidDivisorIsPreserved(t *testing.T) {
-	mapped := mapResourceFieldRefAPIToKube(&testkube.ResourceFieldRef{
+	mapped := commonmapper.MapResourceFieldRefAPIToKube(&testkube.ResourceFieldRef{
 		ContainerName: "app",
 		Resource:      "limits.cpu",
 		Divisor:       "1m",

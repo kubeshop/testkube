@@ -267,22 +267,6 @@ func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 	return commonmapper.MapEnvVarSourceAPIToKube(v)
 }
 
-func mapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
-	return commonmapper.MapFieldRefAPIToKube(v)
-}
-
-func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
-	return commonmapper.MapResourceFieldRefAPIToKube(v)
-}
-
-func mapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev1.ConfigMapKeySelector {
-	return commonmapper.MapConfigMapKeyRefAPIToKube(v)
-}
-
-func mapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.SecretKeySelector {
-	return commonmapper.MapSecretKeyRefAPIToKube(v)
-}
-
 func mapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType {
 	if v == nil {
 		return ""
