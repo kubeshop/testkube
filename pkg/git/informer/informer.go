@@ -199,11 +199,9 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 
 	foundPrev := false
 	matched := false
-	limitReached := false
 	scanned := 0
 	err = iter.ForEach(func(c *object.Commit) error {
 		if i.options.MaxCommitsScan > 0 && scanned >= i.options.MaxCommitsScan {
-			limitReached = true
 			return storer.ErrStop
 		}
 		scanned++
@@ -229,9 +227,6 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 	}
 
 	if !foundPrev {
-		if limitReached {
-			return true, nil
-		}
 		return true, nil
 	}
 	return matched, nil
