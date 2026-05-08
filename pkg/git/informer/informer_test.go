@@ -6,9 +6,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -188,7 +190,7 @@ func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
 	assert.Empty(t, pullOpts.ReferenceName)
 }
 
-func TestHasNewMatchingCommit_CommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
+func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
 	sha := "0123456789abcdef0123456789abcdef01234567"
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
@@ -217,6 +219,12 @@ func TestHasNewMatchingCommit_CommitSHARevisionWithPathsIsNotWatchable(t *testin
 	require.NoError(t, err)
 	assert.False(t, changed)
 	assert.Equal(t, sha, informer.commits[key])
+}
+
+func TestShouldAdvanceBaselineOnScanError(t *testing.T) {
+	assert.True(t, shouldAdvanceBaselineOnScanError(plumbing.ErrObjectNotFound))
+	assert.True(t, shouldAdvanceBaselineOnScanError(errors.Join(plumbing.ErrObjectNotFound, errors.New("wrapped"))))
+	assert.False(t, shouldAdvanceBaselineOnScanError(errors.New("network timeout")))
 }
 
 func generateTestPrivateKey(t *testing.T) string {

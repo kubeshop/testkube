@@ -243,7 +243,9 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 		return nil
 	})
 	if err != nil && !errors.Is(err, storer.ErrStop) {
-		i.commits[key] = headHash
+		if shouldAdvanceBaselineOnScanError(err) {
+			i.commits[key] = headHash
+		}
 		return false, err
 	}
 
@@ -529,6 +531,10 @@ func normalizeRefs(revision string) []string {
 
 func isCommitSHA(revision string) bool {
 	return gitCommitSHAPattern.MatchString(strings.TrimSpace(revision))
+}
+
+func shouldAdvanceBaselineOnScanError(err error) bool {
+	return errors.Is(err, plumbing.ErrObjectNotFound)
 }
 
 func normalizePaths(paths []string) []string {
