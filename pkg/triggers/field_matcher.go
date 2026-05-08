@@ -173,6 +173,9 @@ func resolveFieldExpression(path string, obj any) (expressions.Expression, error
 // derefPtr dereferences a pointer to its underlying value.
 // The expression engine's isStruct check requires a struct, not a pointer.
 func derefPtr(v any) any {
+	if v == nil {
+		return nil
+	}
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Ptr && !rv.IsNil() {
 		return rv.Elem().Interface()

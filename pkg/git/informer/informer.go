@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,8 @@ import (
 
 const reconcileInterval = 2 * time.Minute
 const defaultGitUsername = "git"
+
+var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
 
 type Options struct {
 	RepoDepth          int
@@ -221,7 +224,7 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 			return err
 		}
 		for _, stat := range stats {
-			if pathMatches(paths, stat.Name) {
+			if pathMatchesNormalized(paths, stat.Name) {
 				matched = true
 				return storer.ErrStop
 			}
@@ -448,13 +451,39 @@ func resolveCredentialValue(value string, source *testkube.EnvVarSource) string 
 	if source == nil {
 		return ""
 	}
-	if source.SecretKeyRef != nil && source.SecretKeyRef.Key != "" {
-		return os.Getenv(source.SecretKeyRef.Key)
+	if source.SecretKeyRef != nil {
+		return resolveCredentialValueFromRef(source.SecretKeyRef.Name, source.SecretKeyRef.Key)
 	}
-	if source.ConfigMapKeyRef != nil && source.ConfigMapKeyRef.Key != "" {
-		return os.Getenv(source.ConfigMapKeyRef.Key)
+	if source.ConfigMapKeyRef != nil {
+		return resolveCredentialValueFromRef(source.ConfigMapKeyRef.Name, source.ConfigMapKeyRef.Key)
 	}
 	return ""
+}
+
+// resolveCredentialValueFromRef resolves credentials from process env only.
+// It supports direct key/name env vars and a sanitized NAME_KEY fallback.
+func resolveCredentialValueFromRef(name, key string) string {
+	for _, envVarName := range []string{
+		key,
+		normalizeSecretOrConfigMapEnvVarName(name, key),
+		name,
+	} {
+		if envVarName == "" {
+			continue
+		}
+		if value := os.Getenv(envVarName); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func normalizeSecretOrConfigMapEnvVarName(name, key string) string {
+	if name == "" || key == "" {
+		return ""
+	}
+	candidate := strings.ToUpper(name + "_" + key)
+	return envVarNameSanitizer.ReplaceAllString(candidate, "_")
 }
 
 func normalizeRefs(revision string) []string {
@@ -483,7 +512,11 @@ func normalizePaths(paths []string) []string {
 }
 
 func pathMatches(paths []string, file string) bool {
-	for _, p := range normalizePaths(paths) {
+	return pathMatchesNormalized(normalizePaths(paths), file)
+}
+
+func pathMatchesNormalized(paths []string, file string) bool {
+	for _, p := range paths {
 		if file == p || strings.HasPrefix(file, p+"/") {
 			return true
 		}

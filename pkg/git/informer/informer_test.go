@@ -74,6 +74,13 @@ func TestPathMatches(t *testing.T) {
 	}
 }
 
+func TestPathMatchesNormalized(t *testing.T) {
+	paths := normalizePaths([]string{"src/", " pkg "})
+	assert.True(t, pathMatchesNormalized(paths, "src/main.go"))
+	assert.True(t, pathMatchesNormalized(paths, "pkg/util.go"))
+	assert.False(t, pathMatchesNormalized(paths, "internal/main.go"))
+}
+
 func TestNormalizeRefs(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -101,6 +108,9 @@ func TestNormalizePaths(t *testing.T) {
 func TestResolveCredentialValue(t *testing.T) {
 	t.Setenv("TK_GIT_USERNAME", "env-user")
 	t.Setenv("TK_GIT_TOKEN", "env-token")
+	t.Setenv("git-credentials_username", "ignored-invalid-env-name")
+	t.Setenv("GIT_CREDENTIALS_USERNAME", "env-user-from-name-key")
+	t.Setenv("git-credentials", "env-user-from-name")
 
 	assert.Equal(t, "inline", resolveCredentialValue("inline", &testkube.EnvVarSource{
 		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Key: "TK_GIT_USERNAME"},
@@ -110,6 +120,12 @@ func TestResolveCredentialValue(t *testing.T) {
 	}))
 	assert.Equal(t, "env-token", resolveCredentialValue("", &testkube.EnvVarSource{
 		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Key: "TK_GIT_TOKEN"},
+	}))
+	assert.Equal(t, "env-user-from-name-key", resolveCredentialValue("", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "git-credentials", Key: "username"},
+	}))
+	assert.Equal(t, "env-user-from-name", resolveCredentialValue("", &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Name: "git-credentials"},
 	}))
 	assert.Equal(t, "", resolveCredentialValue("", nil))
 }
