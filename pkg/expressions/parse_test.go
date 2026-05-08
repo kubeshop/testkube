@@ -150,6 +150,38 @@ func TestExtractPureTemplateExpression(t *testing.T) {
 	}
 }
 
+func TestIsWildcardAccessorOnly(t *testing.T) {
+	tests := []struct {
+		expr string
+		want bool
+	}{
+		{"services.slave.*.ip", true},
+		{"a.b.c.*.d.e", true},
+		{"a.b.c.*.*.d.e", true},
+		{"services.slave.0.ip", false},
+		{"list('a','b','c')", false},
+		{"split('x,y,z')", false},
+		{`["a","b"]`, false},
+		{"env.MY_VAR", false},
+		// Ensure .* inside string literals is not treated as a wildcard accessor
+		{`split('192.168.*', '.')`, false},
+		{`map(items, 'v =~ ".*foo"')`, false},
+		{`"some.*value"`, false},
+		// Spaced wildcard accessors should still be detected
+		{"services.slave . * . ip", true},
+		{"a . *", true},
+		// Wildcard accessor inside explicit array-producing constructs should NOT
+		// be treated as a pure wildcard accessor (expansion should still happen).
+		{"list(services.slave.*.ip...)", false},
+		{"join(services.slave.*.ip, ',')", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.expr, func(t *testing.T) {
+			assert.Equal(t, tc.want, IsWildcardAccessorOnly(tc.expr))
+		})
+	}
+}
+
 func TestCompilePartialResolution(t *testing.T) {
 	vm := NewMachine().
 		Register("someint", 555).
