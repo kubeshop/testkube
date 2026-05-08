@@ -31,6 +31,7 @@ const defaultGitUsername = "git"
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
 var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
+var gitCommitSHAPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
 
 type Options struct {
 	RepoDepth          int
@@ -194,9 +195,12 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 	key := triggerKey(trigger.Namespace, trigger.Name)
 	headHash := head.Hash().String()
 	prevHash, hasPrev := i.commits[key]
-	i.commits[key] = headHash
 
-	if !hasPrev || prevHash == headHash {
+	if !hasPrev {
+		i.commits[key] = headHash
+		return false, nil
+	}
+	if prevHash == headHash {
 		return false, nil
 	}
 
@@ -235,6 +239,8 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 	if err != nil && !errors.Is(err, storer.ErrStop) {
 		return false, err
 	}
+
+	i.commits[key] = headHash
 
 	if !foundPrev {
 		return true, nil
@@ -311,6 +317,10 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 }
 
 func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) (string, error) {
+	if isCommitSHA(gitConfig.Revision) {
+		return strings.TrimSpace(gitConfig.Revision), nil
+	}
+
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return "", err
@@ -373,7 +383,7 @@ func cloneOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Optio
 		ClientOptions: clientOptions,
 		Depth:         options.RepoDepth,
 	}
-	if reference != "" {
+	if reference != "" && !isCommitSHA(reference) {
 		cloneOpts.ReferenceName = plumbing.ReferenceName(reference)
 	}
 
@@ -401,7 +411,7 @@ func pullOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Option
 		ClientOptions: clientOptions,
 		Depth:         options.RepoDepth,
 	}
-	if reference != "" {
+	if reference != "" && !isCommitSHA(reference) {
 		pullOpts.ReferenceName = plumbing.ReferenceName(reference)
 	}
 
@@ -493,10 +503,17 @@ func normalizeRefs(revision string) []string {
 	if revision == "" {
 		return nil
 	}
+	if isCommitSHA(revision) {
+		return []string{revision}
+	}
 	if strings.HasPrefix(revision, "refs/") {
 		return []string{revision}
 	}
 	return []string{"refs/heads/" + revision, "refs/tags/" + revision}
+}
+
+func isCommitSHA(revision string) bool {
+	return gitCommitSHAPattern.MatchString(strings.TrimSpace(revision))
 }
 
 func normalizePaths(paths []string) []string {

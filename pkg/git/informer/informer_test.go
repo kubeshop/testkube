@@ -89,6 +89,7 @@ func TestNormalizeRefs(t *testing.T) {
 		{"main", []string{"refs/heads/main", "refs/tags/main"}},
 		{"refs/heads/main", []string{"refs/heads/main"}},
 		{"refs/tags/v1.0", []string{"refs/tags/v1.0"}},
+		{"0123456789abcdef0123456789abcdef01234567", []string{"0123456789abcdef0123456789abcdef01234567"}},
 		{"", nil},
 		{"  develop  ", []string{"refs/heads/develop", "refs/tags/develop"}},
 	}
@@ -166,6 +167,25 @@ func TestAuthClientOptions(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
+}
+
+func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
+	sha := "0123456789abcdef0123456789abcdef01234567"
+	opts := Options{RepoDepth: 1}
+
+	cloneOpts, err := cloneOptions(&testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: sha,
+	}, opts)
+	require.NoError(t, err)
+	assert.Empty(t, cloneOpts.ReferenceName)
+
+	pullOpts, err := pullOptions(&testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: sha,
+	}, opts)
+	require.NoError(t, err)
+	assert.Empty(t, pullOpts.ReferenceName)
 }
 
 func generateTestPrivateKey(t *testing.T) string {
