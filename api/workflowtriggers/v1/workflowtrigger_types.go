@@ -87,8 +87,9 @@ type WorkflowTriggerSelector struct {
 // WorkflowTriggerWhen defines the trigger source. Structured as a separate type
 // to allow future trigger sources (schedule, webhook, git) alongside event.
 type WorkflowTriggerWhen struct {
-	// Event is the K8s resource event type. Required when no other trigger source
-	// (schedule, webhook, etc.) is configured. Validated at application level.
+	// Event is the K8s resource event type. Currently required and validated at
+	// application level, including when other trigger sources (for example git)
+	// are configured.
 	// +kubebuilder:validation:Enum=created;modified;deleted
 	Event string `json:"event,omitempty"`
 	// Git defines git repository polling for content-triggered workflow execution.
