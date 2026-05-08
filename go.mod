@@ -95,7 +95,7 @@ require (
 )
 
 require (
-	github.com/go-git/go-git/v6 v6.0.0-alpha.3
+	github.com/go-git/go-git/v5 v5.13.2
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 )
 
