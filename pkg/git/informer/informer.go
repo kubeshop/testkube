@@ -313,7 +313,11 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 	}
 
 	_ = os.RemoveAll(repoDir)
-	if err = os.MkdirAll(filepath.Dir(repoDir), 0o755); err != nil {
+	parentDir := filepath.Dir(repoDir)
+	if err = os.MkdirAll(parentDir, 0o700); err != nil {
+		return nil, err
+	}
+	if err = os.Chmod(parentDir, 0o700); err != nil {
 		return nil, err
 	}
 
