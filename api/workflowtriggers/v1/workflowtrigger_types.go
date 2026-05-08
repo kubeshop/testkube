@@ -107,12 +107,16 @@ type WorkflowTriggerWhenGitSpec struct {
 	// External username to fetch with.
 	UsernameFrom *corev1.EnvVarSource `json:"usernameFrom,omitempty"`
 	// Plain text token to fetch with.
+	// Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
+	// and exposed through Kubernetes API reads or logs. Prefer TokenFrom instead.
 	Token string `json:"token,omitempty"`
-	// External token to fetch with.
+	// External token to fetch with. Preferred for sensitive credentials.
 	TokenFrom *corev1.EnvVarSource `json:"tokenFrom,omitempty"`
 	// Plain text SSH private key to fetch with.
+	// Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
+	// and exposed through Kubernetes API reads or logs. Prefer SshKeyFrom instead.
 	SshKey string `json:"sshKey,omitempty"`
-	// External SSH private key to fetch with.
+	// External SSH private key to fetch with. Preferred for sensitive credentials.
 	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
 	// Authorization type for the credentials.
 	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
