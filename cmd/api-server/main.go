@@ -823,8 +823,12 @@ func main() {
 				}).Reconcile(ctx)
 				return nil
 			})
-		} else if useTestTriggerControlPlane && useCloudTestTriggers {
-			log.DefaultLogger.Warn("git informer: skipping start because cloud test trigger client requires non-empty environment ID")
+		} else if useTestTriggerControlPlane && useCloudTestTriggers && proContext.EnvID == "" {
+			log.DefaultLogger.Warnw("git informer: skipping start",
+				"reason", "cloud test trigger client requires non-empty environment ID",
+				"useTestTriggerControlPlane", useTestTriggerControlPlane,
+				"useCloudTestTriggers", useCloudTestTriggers,
+			)
 		}
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
