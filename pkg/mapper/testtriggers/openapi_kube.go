@@ -1,8 +1,11 @@
 package testtriggers
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -246,8 +249,79 @@ func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrigge
 		return nil
 	}
 	return &testsv1.TestTriggerContentGitSpec{
-		Uri:      git.Uri,
-		Revision: git.Revision,
-		Paths:    git.Paths,
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: mapEnvVarSourceAPIToKube(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
+		AuthType:     mapGitAuthTypeAPIToKube(git.AuthType),
+		MountPath:    git.MountPath,
+		Cone:         git.Cone,
+		Paths:        git.Paths,
 	}
+}
+
+func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
+	if v == nil {
+		return nil
+	}
+	return &corev1.EnvVarSource{
+		FieldRef:         mapFieldRefAPIToKube(v.FieldRef),
+		ResourceFieldRef: mapResourceFieldRefAPIToKube(v.ResourceFieldRef),
+		ConfigMapKeyRef:  mapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
+		SecretKeyRef:     mapSecretKeyRefAPIToKube(v.SecretKeyRef),
+	}
+}
+
+func mapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.ObjectFieldSelector{
+		APIVersion: v.ApiVersion,
+		FieldPath:  v.FieldPath,
+	}
+}
+
+func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.ResourceFieldSelector{
+		ContainerName: v.ContainerName,
+		Resource:      v.Resource,
+		Divisor:       func() resource.Quantity { q, _ := resource.ParseQuantity(v.Divisor); return q }(),
+	}
+}
+
+func mapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev1.ConfigMapKeySelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.ConfigMapKeySelector{
+		Key:                  v.Key,
+		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
+		Optional:             v.Optional,
+	}
+}
+
+func mapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.SecretKeySelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.SecretKeySelector{
+		Key:                  v.Key,
+		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
+		Optional:             v.Optional,
+	}
+}
+
+func mapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType {
+	if v == nil {
+		return ""
+	}
+	return testsv3.GitAuthType(*v)
 }

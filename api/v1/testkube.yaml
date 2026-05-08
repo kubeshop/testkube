@@ -8292,9 +8292,32 @@ components:
         revision:
           type: string
           description: branch, tag or commit to watch.
+        username:
+          type: string
+          description: plain text username to fetch with
+        usernameFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        token:
+          type: string
+          description: plain text token to fetch with
+        tokenFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        sshKey:
+          type: string
+          description: plain text SSH private key to fetch with
+        sshKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        authType:
+          $ref: "#/components/schemas/ContentGitAuthType"
+        mountPath:
+          type: string
+          description: where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
+        cone:
+          type: boolean
+          description: enable cone mode for sparse checkout with paths
         paths:
           type: array
-          description: optional list of paths in repository to filter changes.
+          description: paths to fetch for the sparse checkout
           items:
             type: string
 

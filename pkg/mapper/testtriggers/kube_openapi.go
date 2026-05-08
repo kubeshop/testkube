@@ -1,8 +1,10 @@
 package testtriggers
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -250,8 +252,83 @@ func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.Test
 		return nil
 	}
 	return &testkube.TestTriggerContentGit{
-		Uri:      git.Uri,
-		Revision: git.Revision,
-		Paths:    git.Paths,
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: mapEnvVarSourceKubeToAPI(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    mapEnvVarSourceKubeToAPI(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   mapEnvVarSourceKubeToAPI(git.SshKeyFrom),
+		AuthType:     mapGitAuthTypeKubeToAPI(git.AuthType),
+		MountPath:    git.MountPath,
+		Cone:         git.Cone,
+		Paths:        git.Paths,
 	}
+}
+
+func mapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.FieldRef{
+		ApiVersion: v.APIVersion,
+		FieldPath:  v.FieldPath,
+	}
+}
+
+func mapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
+	if v == nil {
+		return nil
+	}
+	divisor := ""
+	if !v.Divisor.IsZero() {
+		divisor = v.Divisor.String()
+	}
+	return &testkube.ResourceFieldRef{
+		ContainerName: v.ContainerName,
+		Resource:      v.Resource,
+		Divisor:       divisor,
+	}
+}
+
+func mapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVarSourceConfigMapKeyRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSourceConfigMapKeyRef{
+		Key:      v.Key,
+		Name:     v.Name,
+		Optional: v.Optional,
+	}
+}
+
+func mapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourceSecretKeyRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSourceSecretKeyRef{
+		Key:      v.Key,
+		Name:     v.Name,
+		Optional: v.Optional,
+	}
+}
+
+func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSource{
+		FieldRef:         mapFieldRefKubeToAPI(v.FieldRef),
+		ResourceFieldRef: mapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
+		ConfigMapKeyRef:  mapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
+		SecretKeyRef:     mapSecretKeyRefKubeToAPI(v.SecretKeyRef),
+	}
+}
+
+func mapGitAuthTypeKubeToAPI(v testsv3.GitAuthType) *testkube.ContentGitAuthType {
+	if v == "" {
+		return nil
+	}
+	return common.Ptr(testkube.ContentGitAuthType(v))
 }

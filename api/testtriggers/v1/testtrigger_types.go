@@ -17,9 +17,11 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
@@ -277,6 +279,24 @@ type TestTriggerContentGitSpec struct {
 	Uri string `json:"uri"`
 	// Revision (branch name, tag, or commit SHA) to watch
 	Revision string `json:"revision,omitempty"`
+	// Plain text username to fetch with
+	Username string `json:"username,omitempty"`
+	// External username to fetch with
+	UsernameFrom *corev1.EnvVarSource `json:"usernameFrom,omitempty"`
+	// Plain text token to fetch with
+	Token string `json:"token,omitempty"`
+	// External token to fetch with
+	TokenFrom *corev1.EnvVarSource `json:"tokenFrom,omitempty"`
+	// Plain text SSH private key to fetch with
+	SshKey string `json:"sshKey,omitempty"`
+	// External SSH private key to fetch with
+	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
+	// Authorization type for the credentials
+	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
+	// Where to mount the fetched repository contents
+	MountPath string `json:"mountPath,omitempty"`
+	// Enable cone mode for sparse checkout with paths
+	Cone bool `json:"cone,omitempty"`
 	// Paths is a list of file/directory paths to watch for changes.
 	// If empty, all paths are watched.
 	Paths []string `json:"paths,omitempty"`

@@ -34,6 +34,18 @@ func TestKubernetesTestTriggerClient_CreateMapsExtendedFields(t *testing.T) {
 		require.NotNil(t, crd.Spec.ContentSelector.Git)
 		assert.Equal(t, trigger.ContentSelector.Git.Uri, crd.Spec.ContentSelector.Git.Uri)
 		assert.Equal(t, trigger.ContentSelector.Git.Revision, crd.Spec.ContentSelector.Git.Revision)
+		assert.Equal(t, trigger.ContentSelector.Git.Username, crd.Spec.ContentSelector.Git.Username)
+		assert.Equal(t, trigger.ContentSelector.Git.Token, crd.Spec.ContentSelector.Git.Token)
+		assert.Equal(t, trigger.ContentSelector.Git.SshKey, crd.Spec.ContentSelector.Git.SshKey)
+		assert.Equal(t, string(*trigger.ContentSelector.Git.AuthType), string(crd.Spec.ContentSelector.Git.AuthType))
+		assert.Equal(t, trigger.ContentSelector.Git.MountPath, crd.Spec.ContentSelector.Git.MountPath)
+		assert.Equal(t, trigger.ContentSelector.Git.Cone, crd.Spec.ContentSelector.Git.Cone)
+		require.NotNil(t, crd.Spec.ContentSelector.Git.UsernameFrom)
+		require.NotNil(t, crd.Spec.ContentSelector.Git.TokenFrom)
+		require.NotNil(t, crd.Spec.ContentSelector.Git.SshKeyFrom)
+		assert.Equal(t, trigger.ContentSelector.Git.UsernameFrom.SecretKeyRef.Key, crd.Spec.ContentSelector.Git.UsernameFrom.SecretKeyRef.Key)
+		assert.Equal(t, trigger.ContentSelector.Git.TokenFrom.SecretKeyRef.Key, crd.Spec.ContentSelector.Git.TokenFrom.SecretKeyRef.Key)
+		assert.Equal(t, trigger.ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key, crd.Spec.ContentSelector.Git.SshKeyFrom.SecretKeyRef.Key)
 		assert.Equal(t, trigger.ContentSelector.Git.Paths, crd.Spec.ContentSelector.Git.Paths)
 		return crd, nil
 	})
@@ -66,6 +78,8 @@ func TestKubernetesTestTriggerClient_UpdateMapsExtendedFieldsAndPreservesMetadat
 		require.NotNil(t, crd.Spec.ContentSelector)
 		require.NotNil(t, crd.Spec.ContentSelector.Git)
 		assert.Equal(t, trigger.ContentSelector.Git.Uri, crd.Spec.ContentSelector.Git.Uri)
+		assert.Equal(t, trigger.ContentSelector.Git.Token, crd.Spec.ContentSelector.Git.Token)
+		assert.Equal(t, string(*trigger.ContentSelector.Git.AuthType), string(crd.Spec.ContentSelector.Git.AuthType))
 		return crd, nil
 	})
 
@@ -78,6 +92,7 @@ func buildAPITrigger() testkube.TestTrigger {
 	action := testkube.RUN_TestTriggerActions
 	execution := testkube.TESTWORKFLOW_TestTriggerExecutions
 	concurrency := testkube.ALLOW_TestTriggerConcurrencyPolicies
+	authType := testkube.BASIC_ContentGitAuthType
 
 	return testkube.TestTrigger{
 		Name:      "git-trigger",
@@ -99,9 +114,30 @@ func buildAPITrigger() testkube.TestTrigger {
 		},
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: "main",
-				Paths:    []string{"pkg/triggers"},
+				Uri:       "https://github.com/kubeshop/testkube.git",
+				Revision:  "main",
+				Username:  "git-user",
+				Token:     "token-value",
+				SshKey:    "ssh-private-key",
+				AuthType:  &authType,
+				MountPath: "/data/repo",
+				Cone:      true,
+				Paths:     []string{"pkg/triggers"},
+				UsernameFrom: &testkube.EnvVarSource{
+					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
+						Key: "username",
+					},
+				},
+				TokenFrom: &testkube.EnvVarSource{
+					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
+						Key: "token",
+					},
+				},
+				SshKeyFrom: &testkube.EnvVarSource{
+					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
+						Key: "sshKey",
+					},
+				},
 			},
 		},
 		Action:            &action,

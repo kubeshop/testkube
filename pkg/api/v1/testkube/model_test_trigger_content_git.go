@@ -14,6 +14,20 @@ type TestTriggerContentGit struct {
 	Uri string `json:"uri"`
 	// Branch, tag or commit to watch.
 	Revision string `json:"revision,omitempty"`
-	// Optional list of paths in repository to filter changes.
+	// plain text username to fetch with
+	Username     string        `json:"username,omitempty"`
+	UsernameFrom *EnvVarSource `json:"usernameFrom,omitempty"`
+	// plain text token to fetch with
+	Token     string        `json:"token,omitempty"`
+	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
+	// plain text SSH private key to fetch with
+	SshKey     string              `json:"sshKey,omitempty"`
+	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
+	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
+	// where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
+	MountPath string `json:"mountPath,omitempty"`
+	// enable cone mode for sparse checkout with paths
+	Cone bool `json:"cone,omitempty"`
+	// paths to fetch for the sparse checkout
 	Paths []string `json:"paths,omitempty"`
 }
