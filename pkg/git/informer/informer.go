@@ -254,24 +254,34 @@ func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) 
 func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Repository, error) {
 	repoDir := triggerRepositoryPath(trigger.Namespace, trigger.Name)
 	gitConfig := trigger.ContentSelector.Git
+	references := normalizeRefs(gitConfig.Revision)
+	if len(references) == 0 {
+		references = []string{""}
+	}
 
 	repo, err := git.PlainOpen(repoDir)
 	if err == nil {
 		worktree, wtErr := repo.Worktree()
 		if wtErr == nil {
-			pullOpts, pullErr := pullOptions(gitConfig, i.options)
+			var pullErr error
+			for _, reference := range references {
+				pullOpts, err := pullOptionsForRef(gitConfig, i.options, reference)
+				if err != nil {
+					return nil, err
+				}
+				for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
+					pullErr = worktree.Pull(pullOpts)
+					if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
+						return repo, nil
+					}
+					if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
+						time.Sleep(i.options.PullRetryDelay)
+					}
+				}
+			}
 			if pullErr != nil {
-				return nil, pullErr
+				log.DefaultLogger.Warnf("git informer: pull failed for %s/%s, recreating local clone: %v", trigger.Namespace, trigger.Name, pullErr)
 			}
-			for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
-				if err = worktree.Pull(pullOpts); err == nil || errors.Is(err, git.NoErrAlreadyUpToDate) {
-					return repo, nil
-				}
-				if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
-					time.Sleep(i.options.PullRetryDelay)
-				}
-			}
-			log.DefaultLogger.Warnf("git informer: pull failed for %s/%s, recreating local clone: %v", trigger.Namespace, trigger.Name, err)
 		}
 	}
 
@@ -280,12 +290,19 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 		return nil, err
 	}
 
-	cloneOpts, err := cloneOptions(gitConfig, i.options)
-	if err != nil {
-		return nil, err
+	var cloneErr error
+	for _, reference := range references {
+		cloneOpts, err := cloneOptionsForRef(gitConfig, i.options, reference)
+		if err != nil {
+			return nil, err
+		}
+		repo, err := git.PlainClone(repoDir, cloneOpts)
+		if err == nil {
+			return repo, nil
+		}
+		cloneErr = err
 	}
-
-	return git.PlainClone(repoDir, cloneOpts)
+	return nil, cloneErr
 }
 
 func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) (string, error) {
@@ -306,13 +323,15 @@ func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) 
 		return "", err
 	}
 
-	if ref := normalizeRef(gitConfig.Revision); ref != "" {
-		for _, r := range refs {
-			if r.Name() == plumbing.ReferenceName(ref) {
-				return r.Hash().String(), nil
+	if references := normalizeRefs(gitConfig.Revision); len(references) > 0 {
+		for _, reference := range references {
+			for _, r := range refs {
+				if r.Name() == plumbing.ReferenceName(reference) {
+					return r.Hash().String(), nil
+				}
 			}
 		}
-		return "", fmt.Errorf("reference %q not found", ref)
+		return "", fmt.Errorf("reference not found: %v", references)
 	}
 
 	for _, r := range refs {
@@ -330,6 +349,10 @@ func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) 
 }
 
 func cloneOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.CloneOptions, error) {
+	return cloneOptionsForRef(gitConfig, options, normalizeRef(gitConfig.Revision))
+}
+
+func cloneOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Options, reference string) (*git.CloneOptions, error) {
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return nil, err
@@ -341,14 +364,18 @@ func cloneOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*
 		ClientOptions: clientOptions,
 		Depth:         options.RepoDepth,
 	}
-	if ref := normalizeRef(gitConfig.Revision); ref != "" {
-		cloneOpts.ReferenceName = plumbing.ReferenceName(ref)
+	if reference != "" {
+		cloneOpts.ReferenceName = plumbing.ReferenceName(reference)
 	}
 
 	return cloneOpts, nil
 }
 
 func pullOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.PullOptions, error) {
+	return pullOptionsForRef(gitConfig, options, normalizeRef(gitConfig.Revision))
+}
+
+func pullOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Options, reference string) (*git.PullOptions, error) {
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return nil, err
@@ -361,8 +388,8 @@ func pullOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*g
 		ClientOptions: clientOptions,
 		Depth:         options.RepoDepth,
 	}
-	if ref := normalizeRef(gitConfig.Revision); ref != "" {
-		pullOpts.ReferenceName = plumbing.ReferenceName(ref)
+	if reference != "" {
+		pullOpts.ReferenceName = plumbing.ReferenceName(reference)
 	}
 
 	return pullOpts, nil
@@ -423,14 +450,22 @@ func resolveCredentialValue(value string, source *testkube.EnvVarSource) string 
 }
 
 func normalizeRef(revision string) string {
+	references := normalizeRefs(revision)
+	if len(references) > 0 {
+		return references[0]
+	}
+	return ""
+}
+
+func normalizeRefs(revision string) []string {
 	revision = strings.TrimSpace(revision)
 	if revision == "" {
-		return ""
+		return nil
 	}
 	if strings.HasPrefix(revision, "refs/") {
-		return revision
+		return []string{revision}
 	}
-	return "refs/heads/" + revision
+	return []string{"refs/heads/" + revision, "refs/tags/" + revision}
 }
 
 func normalizePaths(paths []string) []string {

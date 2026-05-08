@@ -1,6 +1,7 @@
 package informer
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,7 +9,43 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 )
+
+type stubTestTriggerClient struct {
+	listFn func(ctx context.Context, environmentID string, options testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error)
+}
+
+func (s stubTestTriggerClient) Get(context.Context, string, string, string) (*testkube.TestTrigger, error) {
+	return nil, nil
+}
+
+func (s stubTestTriggerClient) List(ctx context.Context, environmentID string, options testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+	if s.listFn != nil {
+		return s.listFn(ctx, environmentID, options, namespace)
+	}
+	return nil, nil
+}
+
+func (s stubTestTriggerClient) Update(context.Context, string, testkube.TestTrigger) error {
+	return nil
+}
+
+func (s stubTestTriggerClient) Create(context.Context, string, testkube.TestTrigger) error {
+	return nil
+}
+
+func (s stubTestTriggerClient) Delete(context.Context, string, string, string) error {
+	return nil
+}
+
+func (s stubTestTriggerClient) DeleteAll(context.Context, string, string) (uint32, error) {
+	return 0, nil
+}
+
+func (s stubTestTriggerClient) DeleteByLabels(context.Context, string, string, string) (uint32, error) {
+	return 0, nil
+}
 
 func TestPathMatches(t *testing.T) {
 	tests := []struct {
@@ -48,6 +85,25 @@ func TestNormalizeRef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			assert.Equal(t, tt.expected, normalizeRef(tt.input))
+		})
+	}
+}
+
+func TestNormalizeRefs(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []string
+	}{
+		{"main", []string{"refs/heads/main", "refs/tags/main"}},
+		{"refs/heads/main", []string{"refs/heads/main"}},
+		{"refs/tags/v1.0", []string{"refs/tags/v1.0"}},
+		{"", nil},
+		{"  v1.2.3  ", []string{"refs/heads/v1.2.3", "refs/tags/v1.2.3"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, normalizeRefs(tt.input))
 		})
 	}
 }
@@ -268,5 +324,40 @@ func TestIsGitContentTrigger(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, isGitContentTrigger(tt.trigger))
 		})
+	}
+}
+
+func TestReconcile_StopsPromptlyOnCancel(t *testing.T) {
+	listCalled := make(chan struct{}, 1)
+	client := stubTestTriggerClient{
+		listFn: func(ctx context.Context, environmentID string, options testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+			select {
+			case listCalled <- struct{}{}:
+			default:
+			}
+			return nil, nil
+		},
+	}
+	informer := NewInformer(client, nil, "testkube", "", Options{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		informer.Reconcile(ctx)
+		close(done)
+	}()
+
+	select {
+	case <-listCalled:
+	case <-time.After(2 * time.Second):
+		t.Fatal("initial list was not called")
+	}
+
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("reconcile did not stop promptly after cancel")
 	}
 }
