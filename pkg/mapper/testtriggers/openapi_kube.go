@@ -294,6 +294,8 @@ func mapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.Resource
 	if v.Divisor != "" {
 		if parsedDivisor, err := resource.ParseQuantity(v.Divisor); err == nil {
 			divisor = parsedDivisor
+		} else {
+			divisor = resource.MustParse("1")
 		}
 	}
 	return &corev1.ResourceFieldSelector{

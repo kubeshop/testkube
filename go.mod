@@ -94,7 +94,10 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/opencontainers/go-digest v1.0.0 // indirect
+require (
+	github.com/go-git/go-git/v6 v6.0.0-alpha.3
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -170,7 +173,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/go-git/go-billy/v6 v6.0.0-20260424211911-732291493fb8 // indirect
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.2 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

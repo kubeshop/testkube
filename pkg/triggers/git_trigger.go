@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -18,5 +19,21 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 		nil,
 		testtrigger.ResourceType(testtrigger.ResourceContent),
 	)
-	return s.match(ctx, event)
+
+	for _, entry := range s.snapshotStatuses() {
+		if entry.trigger.Name != triggerName || entry.trigger.Namespace != namespace {
+			continue
+		}
+		if !strings.EqualFold(entry.trigger.ResourceKind, string(testtrigger.ResourceContent)) {
+			continue
+		}
+
+		matcher := *s
+		matcher.triggerStatus = map[statusKey]*triggerStatus{
+			entry.key: entry.status,
+		}
+		return matcher.match(ctx, event)
+	}
+
+	return nil
 }
