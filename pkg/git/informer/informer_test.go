@@ -206,7 +206,7 @@ func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
 
 	informer := NewInformer(stubTestTriggerClient{}, nil, "testkube", "", Options{})
 
-	changed, err := informer.hasNewMatchingCommit(trigger)
+	changed, err := informer.hasNewMatchingCommit(context.Background(), trigger)
 	require.NoError(t, err)
 	assert.False(t, changed)
 
@@ -215,7 +215,7 @@ func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
 
 	// Even when local baseline drifts, SHA-pinned triggers stay non-watchable.
 	informer.commits[key] = "drifted"
-	changed, err = informer.hasNewMatchingCommit(trigger)
+	changed, err = informer.hasNewMatchingCommit(context.Background(), trigger)
 	require.NoError(t, err)
 	assert.False(t, changed)
 	assert.Equal(t, sha, informer.commits[key])
@@ -225,6 +225,25 @@ func TestShouldAdvanceBaselineOnScanError(t *testing.T) {
 	assert.True(t, shouldAdvanceBaselineOnScanError(plumbing.ErrObjectNotFound))
 	assert.True(t, shouldAdvanceBaselineOnScanError(errors.Join(plumbing.ErrObjectNotFound, errors.New("wrapped"))))
 	assert.False(t, shouldAdvanceBaselineOnScanError(errors.New("network timeout")))
+}
+
+func TestSleepWithContext(t *testing.T) {
+	t.Run("returns canceled when context is canceled before delay", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		start := time.Now()
+		err := sleepWithContext(ctx, time.Second)
+		require.ErrorIs(t, err, context.Canceled)
+		assert.Less(t, time.Since(start), 100*time.Millisecond)
+	})
+
+	t.Run("waits for delay when context remains active", func(t *testing.T) {
+		start := time.Now()
+		err := sleepWithContext(context.Background(), 20*time.Millisecond)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, time.Since(start), 20*time.Millisecond)
+	})
 }
 
 func generateTestPrivateKey(t *testing.T) string {

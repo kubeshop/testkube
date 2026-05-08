@@ -127,6 +127,10 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 
 	active := make(map[string]struct{}, len(list))
 	for idx := range list {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+
 		trigger := list[idx]
 		if !isGitContentTrigger(trigger) {
 			continue
@@ -134,7 +138,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		key := triggerKey(trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
 
-		changed, err := i.hasNewMatchingCommit(trigger)
+		changed, err := i.hasNewMatchingCommit(ctx, trigger)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
@@ -176,7 +180,11 @@ func isContentResource(trigger testkube.TestTrigger) bool {
 	return false
 }
 
-func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, error) {
+func (i *Informer) hasNewMatchingCommit(ctx context.Context, trigger testkube.TestTrigger) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+
 	paths := normalizePaths(trigger.ContentSelector.Git.Paths)
 	if len(paths) == 0 {
 		return i.hasNewHeadCommit(trigger)
@@ -189,7 +197,7 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 		return false, nil
 	}
 
-	repo, err := i.openOrUpdateRepository(trigger)
+	repo, err := i.openOrUpdateRepository(ctx, trigger)
 	if err != nil {
 		return false, err
 	}
@@ -278,7 +286,11 @@ func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) 
 	return hasPrev && prevHash != headHash, nil
 }
 
-func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Repository, error) {
+func (i *Informer) openOrUpdateRepository(ctx context.Context, trigger testkube.TestTrigger) (*git.Repository, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	repoDir := triggerRepositoryPath(trigger.Namespace, trigger.Name)
 	gitConfig := trigger.ContentSelector.Git
 	references := normalizeRefs(gitConfig.Revision)
@@ -292,17 +304,27 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 		if wtErr == nil {
 			var pullErr error
 			for _, reference := range references {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				pullOpts, err := pullOptionsForRef(gitConfig, i.options, reference)
 				if err != nil {
 					return nil, err
 				}
 				for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
+					if err := ctx.Err(); err != nil {
+						return nil, err
+					}
+
 					pullErr = worktree.Pull(pullOpts)
 					if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
 						return repo, nil
 					}
 					if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
-						time.Sleep(i.options.PullRetryDelay)
+						if err := sleepWithContext(ctx, i.options.PullRetryDelay); err != nil {
+							return nil, err
+						}
 					}
 				}
 			}
@@ -323,6 +345,10 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 
 	var cloneErr error
 	for _, reference := range references {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		_ = os.RemoveAll(repoDir)
 		cloneOpts, err := cloneOptionsForRef(gitConfig, i.options, reference)
 		if err != nil {
@@ -539,6 +565,22 @@ func isCommitSHA(revision string) bool {
 
 func shouldAdvanceBaselineOnScanError(err error) bool {
 	return errors.Is(err, plumbing.ErrObjectNotFound)
+}
+
+func sleepWithContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return ctx.Err()
+	}
+
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func normalizePaths(paths []string) []string {
