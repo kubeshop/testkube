@@ -26,6 +26,7 @@ import (
 )
 
 const reconcileInterval = 2 * time.Minute
+const defaultGitUsername = "git"
 
 // Matcher fires trigger events when git content changes.
 type Matcher interface {
@@ -110,7 +111,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 	for k := range i.commits {
 		if _, ok := active[k]; !ok {
 			delete(i.commits, k)
-			_ = os.RemoveAll(filepath.Join(os.TempDir(), "testkube-git-trigger", k))
+			_ = os.RemoveAll(triggerRepositoryPathFromKey(k))
 		}
 	}
 }
@@ -209,7 +210,7 @@ func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) 
 }
 
 func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Repository, error) {
-	repoDir := filepath.Join(os.TempDir(), "testkube-git-trigger", triggerKey(trigger.Namespace, trigger.Name))
+	repoDir := triggerRepositoryPath(trigger.Namespace, trigger.Name)
 	gitConfig := trigger.ContentSelector.Git
 
 	repo, err := git.PlainOpen(repoDir)
@@ -332,8 +333,9 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 	case sshKey != "":
 		user := username
 		if user == "" {
-			user = "git"
+			user = defaultGitUsername
 		}
+		// Passphrase-protected keys are not supported by TestTriggerContentGit.
 		publicKeys, err := ssh.NewPublicKeys(user, []byte(sshKey), "")
 		if err != nil {
 			return nil, err
@@ -343,7 +345,7 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 		opts = append(opts, client.WithHTTPAuth(&http.TokenAuth{Token: token}))
 	case token != "" || username != "":
 		if username == "" {
-			username = "git"
+			username = defaultGitUsername
 		}
 		opts = append(opts, client.WithHTTPAuth(&http.BasicAuth{
 			Username: username,
@@ -406,4 +408,12 @@ func pathMatches(paths []string, file string) bool {
 
 func triggerKey(namespace, name string) string {
 	return namespace + "/" + name
+}
+
+func triggerRepositoryPath(namespace, name string) string {
+	return filepath.Join(os.TempDir(), "testkube-git-trigger", triggerKey(namespace, name))
+}
+
+func triggerRepositoryPathFromKey(key string) string {
+	return filepath.Join(os.TempDir(), "testkube-git-trigger", key)
 }
