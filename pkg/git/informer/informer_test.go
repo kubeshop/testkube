@@ -7,9 +7,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -330,6 +334,43 @@ func TestNormalizeOptions(t *testing.T) {
 		PullRetries:        -1,
 		PullRetryDelay:     -time.Second,
 	}))
+}
+
+func TestRepositoryOriginMatches(t *testing.T) {
+	t.Run("matches expected origin URL", func(t *testing.T) {
+		repo := initTestRepoWithOrigin(t, "https://example.com/repo-a.git")
+		assert.True(t, repositoryOriginMatches(repo, "https://example.com/repo-a.git"))
+	})
+
+	t.Run("returns false for different origin URL", func(t *testing.T) {
+		repo := initTestRepoWithOrigin(t, "https://example.com/repo-a.git")
+		assert.False(t, repositoryOriginMatches(repo, "https://example.com/repo-b.git"))
+	})
+
+	t.Run("returns false when origin remote does not exist", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := git.PlainInit(dir, false)
+		require.NoError(t, err)
+		assert.False(t, repositoryOriginMatches(repo, "https://example.com/repo-a.git"))
+	})
+}
+
+func initTestRepoWithOrigin(t *testing.T, originURL string) *git.Repository {
+	t.Helper()
+
+	repoDir := filepath.Join(t.TempDir(), "repo")
+	err := os.MkdirAll(repoDir, 0o755)
+	require.NoError(t, err)
+
+	repo, err := git.PlainInit(repoDir, false)
+	require.NoError(t, err)
+	_, err = repo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{originURL},
+	})
+	require.NoError(t, err)
+
+	return repo
 }
 
 func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {

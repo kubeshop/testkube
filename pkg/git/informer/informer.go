@@ -365,36 +365,44 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 
 	repo, err := git.PlainOpen(repoDir)
 	if err == nil {
-		worktree, wtErr := repo.Worktree()
-		if wtErr == nil {
-			var pullErr error
-			for _, reference := range references {
-				if err := ctx.Err(); err != nil {
-					return nil, err
-				}
-
-				pullOpts, err := pullOptionsForRef(gitConfig, i.options, reference)
-				if err != nil {
-					return nil, err
-				}
-				for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
+		if !repositoryOriginMatches(repo, gitConfig.Uri) {
+			log.DefaultLogger.Warnf(
+				"git informer: origin URL changed for %s/%s, recreating local clone",
+				trigger.Namespace,
+				trigger.Name,
+			)
+		} else {
+			worktree, wtErr := repo.Worktree()
+			if wtErr == nil {
+				var pullErr error
+				for _, reference := range references {
 					if err := ctx.Err(); err != nil {
 						return nil, err
 					}
 
-					pullErr = worktree.Pull(pullOpts)
-					if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
-						return repo, nil
+					pullOpts, err := pullOptionsForRef(gitConfig, i.options, reference)
+					if err != nil {
+						return nil, err
 					}
-					if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
-						if err := sleepWithContext(ctx, i.options.PullRetryDelay); err != nil {
+					for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
+						if err := ctx.Err(); err != nil {
 							return nil, err
+						}
+
+						pullErr = worktree.Pull(pullOpts)
+						if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
+							return repo, nil
+						}
+						if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
+							if err := sleepWithContext(ctx, i.options.PullRetryDelay); err != nil {
+								return nil, err
+							}
 						}
 					}
 				}
-			}
-			if pullErr != nil {
-				log.DefaultLogger.Warnf("git informer: pull failed for %s/%s, recreating local clone: %v", trigger.Namespace, trigger.Name, pullErr)
+				if pullErr != nil {
+					log.DefaultLogger.Warnf("git informer: pull failed for %s/%s, recreating local clone: %v", trigger.Namespace, trigger.Name, pullErr)
+				}
 			}
 		}
 	}
@@ -701,4 +709,24 @@ func parseTriggerKey(key string) (source, namespace, name string, ok bool) {
 		return "", "", "", false
 	}
 	return sourceAndRest[0], namespaceAndName[0], namespaceAndName[1], true
+}
+
+func repositoryOriginMatches(repo *git.Repository, expectedURL string) bool {
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return false
+	}
+
+	expectedURL = strings.TrimSpace(expectedURL)
+	if expectedURL == "" {
+		return false
+	}
+
+	for _, currentURL := range remote.Config().URLs {
+		if strings.TrimSpace(currentURL) == expectedURL {
+			return true
+		}
+	}
+
+	return false
 }
