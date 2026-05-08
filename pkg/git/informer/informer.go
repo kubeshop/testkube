@@ -93,14 +93,19 @@ func NewInformer(
 // Reconcile periodically polls git repositories and emits trigger events.
 func (i *Informer) Reconcile(ctx context.Context) {
 	log.DefaultLogger.Info("git informer: starting reconciler")
+
+	i.updateRepositories(ctx)
+
+	ticker := time.NewTicker(reconcileInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			log.DefaultLogger.Info("git informer: stopping reconciler")
 			return
-		default:
+		case <-ticker.C:
 			i.updateRepositories(ctx)
-			time.Sleep(reconcileInterval)
 		}
 	}
 }
