@@ -15,5 +15,5 @@ type TestWorkflowExecutionStatusCr struct {
 	// test workflow execution generation
 	Generation int64 `json:"generation,omitempty"`
 	// error message if the execution failed
-	Error string `json:"error,omitempty"`
+	Error_ string `json:"error,omitempty"`
 }

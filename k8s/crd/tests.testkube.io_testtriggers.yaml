@@ -177,10 +177,14 @@ spec:
                           watch
                         type: string
                       sshKey:
-                        description: Plain text SSH private key to fetch with
+                        description: |-
+                          Plain text SSH private key to fetch with.
+                          Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
+                          and exposed through Kubernetes API reads or logs. Prefer SshKeyFrom instead.
                         type: string
                       sshKeyFrom:
-                        description: External SSH private key to fetch with
+                        description: External SSH private key to fetch with. Preferred
+                          for sensitive credentials.
                         properties:
                           configMapKeyRef:
                             description: Selects a key of a ConfigMap.
@@ -309,10 +313,14 @@ spec:
                             x-kubernetes-map-type: atomic
                         type: object
                       token:
-                        description: Plain text token to fetch with
+                        description: |-
+                          Plain text token to fetch with.
+                          Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
+                          and exposed through Kubernetes API reads or logs. Prefer TokenFrom instead.
                         type: string
                       tokenFrom:
-                        description: External token to fetch with
+                        description: External token to fetch with. Preferred for sensitive
+                          credentials.
                         properties:
                           configMapKeyRef:
                             description: Selects a key of a ConfigMap.
