@@ -29,6 +29,7 @@ import (
 const reconcileInterval = 2 * time.Minute
 const defaultGitUsername = "git"
 
+// envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
 var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
 
 type Options struct {
@@ -461,7 +462,7 @@ func resolveCredentialValue(value string, source *testkube.EnvVarSource) string 
 }
 
 // resolveCredentialValueFromRef resolves credentials from process env only.
-// It supports direct key/name env vars and a sanitized NAME_KEY fallback.
+// Resolution order is: key -> sanitized NAME_KEY -> name.
 func resolveCredentialValueFromRef(name, key string) string {
 	for _, envVarName := range []string{
 		key,

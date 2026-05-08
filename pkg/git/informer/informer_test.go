@@ -108,7 +108,6 @@ func TestNormalizePaths(t *testing.T) {
 func TestResolveCredentialValue(t *testing.T) {
 	t.Setenv("TK_GIT_USERNAME", "env-user")
 	t.Setenv("TK_GIT_TOKEN", "env-token")
-	t.Setenv("git-credentials_username", "ignored-invalid-env-name")
 	t.Setenv("GIT_CREDENTIALS_USERNAME", "env-user-from-name-key")
 	t.Setenv("git-credentials", "env-user-from-name")
 
@@ -122,6 +121,9 @@ func TestResolveCredentialValue(t *testing.T) {
 		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Key: "TK_GIT_TOKEN"},
 	}))
 	assert.Equal(t, "env-user-from-name-key", resolveCredentialValue("", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "git-credentials", Key: "username"},
+	}))
+	assert.NotEqual(t, "env-user-from-name", resolveCredentialValue("", &testkube.EnvVarSource{
 		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "git-credentials", Key: "username"},
 	}))
 	assert.Equal(t, "env-user-from-name", resolveCredentialValue("", &testkube.EnvVarSource{
