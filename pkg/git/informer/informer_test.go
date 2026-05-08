@@ -2,6 +2,7 @@ package informer
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -132,6 +133,38 @@ x1YSAMuOHPoj7BMCm2SVFQKMTMFNMtsCRJ8XDhi5QsL/xJank/TL
 		})
 		require.Error(t, err)
 	})
+}
+
+func TestNormalizeOptions(t *testing.T) {
+	assert.Equal(t, Options{
+		RepoDepth:          0,
+		ListTimeoutSeconds: 15,
+		MaxCommitsScan:     0,
+		PullRetries:        0,
+		PullRetryDelay:     0,
+	}, normalizeOptions(Options{
+		RepoDepth:          -1,
+		ListTimeoutSeconds: 0,
+		MaxCommitsScan:     -1,
+		PullRetries:        -1,
+		PullRetryDelay:     -time.Second,
+	}))
+}
+
+func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/example/repo.git",
+		Revision: "main",
+	}
+	opts := Options{RepoDepth: 77}
+
+	cloneOpts, err := cloneOptions(gitConfig, opts)
+	require.NoError(t, err)
+	assert.Equal(t, 77, cloneOpts.Depth)
+
+	pullOpts, err := pullOptions(gitConfig, opts)
+	require.NoError(t, err)
+	assert.Equal(t, 77, pullOpts.Depth)
 }
 
 func TestIsGitContentTrigger(t *testing.T) {

@@ -28,6 +28,33 @@ import (
 const reconcileInterval = 2 * time.Minute
 const defaultGitUsername = "git"
 
+type Options struct {
+	RepoDepth          int
+	ListTimeoutSeconds int
+	MaxCommitsScan     int
+	PullRetries        int
+	PullRetryDelay     time.Duration
+}
+
+func normalizeOptions(opts Options) Options {
+	if opts.RepoDepth < 0 {
+		opts.RepoDepth = 0
+	}
+	if opts.ListTimeoutSeconds <= 0 {
+		opts.ListTimeoutSeconds = 15
+	}
+	if opts.MaxCommitsScan < 0 {
+		opts.MaxCommitsScan = 0
+	}
+	if opts.PullRetries < 0 {
+		opts.PullRetries = 0
+	}
+	if opts.PullRetryDelay < 0 {
+		opts.PullRetryDelay = 0
+	}
+	return opts
+}
+
 // Matcher fires trigger events when git content changes.
 type Matcher interface {
 	MatchGitTrigger(ctx context.Context, triggerName, namespace string) error
@@ -42,6 +69,7 @@ type Informer struct {
 	commits           map[string]string // key -> last seen head hash
 	namespace         string
 	environmentID     string
+	options           Options
 }
 
 // NewInformer returns a new git content informer.
@@ -50,6 +78,7 @@ func NewInformer(
 	matcher Matcher,
 	namespace string,
 	environmentID string,
+	options Options,
 ) *Informer {
 	return &Informer{
 		testTriggerClient: testTriggerClient,
@@ -57,6 +86,7 @@ func NewInformer(
 		commits:           make(map[string]string),
 		namespace:         namespace,
 		environmentID:     environmentID,
+		options:           normalizeOptions(options),
 	}
 }
 
@@ -169,7 +199,15 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 
 	foundPrev := false
 	matched := false
+	limitReached := false
+	scanned := 0
 	err = iter.ForEach(func(c *object.Commit) error {
+		if i.options.MaxCommitsScan > 0 && scanned >= i.options.MaxCommitsScan {
+			limitReached = true
+			return storer.ErrStop
+		}
+		scanned++
+
 		if c.Hash.String() == prevHash {
 			foundPrev = true
 			return storer.ErrStop
@@ -191,13 +229,16 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 	}
 
 	if !foundPrev {
+		if limitReached {
+			return true, nil
+		}
 		return true, nil
 	}
 	return matched, nil
 }
 
 func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) {
-	headHash, err := remoteHeadHash(trigger.ContentSelector.Git)
+	headHash, err := remoteHeadHash(trigger.ContentSelector.Git, i.options)
 	if err != nil {
 		return false, err
 	}
@@ -217,14 +258,19 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 	if err == nil {
 		worktree, wtErr := repo.Worktree()
 		if wtErr == nil {
-			pullOpts, pullErr := pullOptions(gitConfig)
+			pullOpts, pullErr := pullOptions(gitConfig, i.options)
 			if pullErr != nil {
 				return nil, pullErr
 			}
-			if err = worktree.Pull(pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
-				return nil, err
+			for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
+				if err = worktree.Pull(pullOpts); err == nil || errors.Is(err, git.NoErrAlreadyUpToDate) {
+					return repo, nil
+				}
+				if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
+					time.Sleep(i.options.PullRetryDelay)
+				}
 			}
-			return repo, nil
+			log.DefaultLogger.Warnf("git informer: pull failed for %s/%s, recreating local clone: %v", trigger.Namespace, trigger.Name, err)
 		}
 	}
 
@@ -233,7 +279,7 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 		return nil, err
 	}
 
-	cloneOpts, err := cloneOptions(gitConfig)
+	cloneOpts, err := cloneOptions(gitConfig, i.options)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +287,7 @@ func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Re
 	return git.PlainClone(repoDir, cloneOpts)
 }
 
-func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit) (string, error) {
+func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) (string, error) {
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return "", err
@@ -253,6 +299,7 @@ func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit) (string, error) {
 	})
 	refs, err := remote.List(&git.ListOptions{
 		ClientOptions: clientOptions,
+		Timeout:       options.ListTimeoutSeconds,
 	})
 	if err != nil {
 		return "", err
@@ -281,7 +328,7 @@ func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit) (string, error) {
 	return "", errors.New("unable to determine remote HEAD")
 }
 
-func cloneOptions(gitConfig *testkube.TestTriggerContentGit) (*git.CloneOptions, error) {
+func cloneOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.CloneOptions, error) {
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return nil, err
@@ -291,6 +338,7 @@ func cloneOptions(gitConfig *testkube.TestTriggerContentGit) (*git.CloneOptions,
 		URL:           gitConfig.Uri,
 		SingleBranch:  true,
 		ClientOptions: clientOptions,
+		Depth:         options.RepoDepth,
 	}
 	if ref := normalizeRef(gitConfig.Revision); ref != "" {
 		cloneOpts.ReferenceName = plumbing.ReferenceName(ref)
@@ -299,7 +347,7 @@ func cloneOptions(gitConfig *testkube.TestTriggerContentGit) (*git.CloneOptions,
 	return cloneOpts, nil
 }
 
-func pullOptions(gitConfig *testkube.TestTriggerContentGit) (*git.PullOptions, error) {
+func pullOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.PullOptions, error) {
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return nil, err
@@ -310,6 +358,7 @@ func pullOptions(gitConfig *testkube.TestTriggerContentGit) (*git.PullOptions, e
 		SingleBranch:  true,
 		Force:         true,
 		ClientOptions: clientOptions,
+		Depth:         options.RepoDepth,
 	}
 	if ref := normalizeRef(gitConfig.Revision); ref != "" {
 		pullOpts.ReferenceName = plumbing.ReferenceName(ref)

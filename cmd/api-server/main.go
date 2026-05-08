@@ -814,7 +814,13 @@ func main() {
 		// Start git content informer if control plane is used
 		if useTestTriggerControlPlane && proContext.EnvID != "" {
 			g.Go(func() error {
-				gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID).Reconcile(ctx)
+				gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
+					RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
+					ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
+					MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
+					PullRetries:        cfg.TestTriggerGitInformerPullRetries,
+					PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
+				}).Reconcile(ctx)
 				return nil
 			})
 		}

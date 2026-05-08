@@ -236,12 +236,17 @@ type Config struct {
 	DisableOfficialTemplates        bool     `envconfig:"DISABLE_OFFICIAL_TEMPLATES" default:"false"`
 	TerminationLogPath              string   `envconfig:"TERMINATION_LOG_PATH" default:"/dev/termination-log"`
 
-	ExportArchiveMaxSize                     int  `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
-	FeatureCloudStorage                      bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
-	TestWorkflowLogArchiveRequired           bool `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
-	WorkflowLogsInsecureSkipTLSVerifyBackend bool `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
-	TestTriggerControlPlane                  bool `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
-	ForceSuperAgentMode                      bool `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
+	ExportArchiveMaxSize                     int           `envconfig:"EXPORT_ARCHIVE_MAX_SIZE" default:"104857600"`
+	FeatureCloudStorage                      bool          `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
+	TestWorkflowLogArchiveRequired           bool          `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
+	WorkflowLogsInsecureSkipTLSVerifyBackend bool          `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
+	TestTriggerControlPlane                  bool          `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	TestTriggerGitInformerRepoDepth          int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH" default:"50"`
+	TestTriggerGitInformerListTimeout        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT" default:"15"`
+	TestTriggerGitInformerMaxCommitsScan     int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN" default:"500"`
+	TestTriggerGitInformerPullRetries        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES" default:"2"`
+	TestTriggerGitInformerPullRetryDelay     time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY" default:"2s"`
+	ForceSuperAgentMode                      bool          `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 
 type DeprecatedConfig struct {
