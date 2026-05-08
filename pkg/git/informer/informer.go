@@ -393,7 +393,7 @@ func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) 
 				}
 			}
 		}
-		return "", fmt.Errorf("reference not found: %q", strings.Join(references, "\", \""))
+		return "", fmt.Errorf("reference not found: %q", strings.Join(references, ", "))
 	}
 
 	for _, r := range refs {
