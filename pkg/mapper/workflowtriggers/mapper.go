@@ -114,14 +114,14 @@ func mapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	if v == nil {
 		return nil
 	}
-	return &testkube.EnvVarSourceConfigMapKeyRef{Name: v.Name, Key: v.Key}
+	return &testkube.EnvVarSourceConfigMapKeyRef{Name: v.Name, Key: v.Key, Optional: v.Optional}
 }
 
 func mapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourceSecretKeyRef {
 	if v == nil {
 		return nil
 	}
-	return &testkube.EnvVarSourceSecretKeyRef{Name: v.Name, Key: v.Key}
+	return &testkube.EnvVarSourceSecretKeyRef{Name: v.Name, Key: v.Key, Optional: v.Optional}
 }
 
 func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
