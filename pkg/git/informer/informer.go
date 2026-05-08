@@ -3,6 +3,7 @@ package informer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,9 +11,14 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/client"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/storer"
+	"github.com/go-git/go-git/v6/plumbing/transport/http"
+	"github.com/go-git/go-git/v6/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v6/storage/memory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -104,6 +110,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 	for k := range i.commits {
 		if _, ok := active[k]; !ok {
 			delete(i.commits, k)
+			_ = os.RemoveAll(filepath.Join(os.TempDir(), "testkube-git-trigger", k))
 		}
 	}
 }
@@ -129,21 +136,12 @@ func isContentResource(trigger testkube.TestTrigger) bool {
 }
 
 func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, error) {
-	repoDir := filepath.Join(os.TempDir(), "testkube-git-trigger", trigger.Namespace, trigger.Name)
-	_ = os.RemoveAll(repoDir)
-	if err := os.MkdirAll(filepath.Dir(repoDir), 0o755); err != nil {
-		return false, err
+	paths := normalizePaths(trigger.ContentSelector.Git.Paths)
+	if len(paths) == 0 {
+		return i.hasNewHeadCommit(trigger)
 	}
 
-	cloneOpts := &git.CloneOptions{
-		URL:          trigger.ContentSelector.Git.Uri,
-		SingleBranch: true,
-	}
-	if ref := normalizeRef(trigger.ContentSelector.Git.Revision); ref != "" {
-		cloneOpts.ReferenceName = plumbing.ReferenceName(ref)
-	}
-
-	repo, err := git.PlainClone(repoDir, cloneOpts)
+	repo, err := i.openOrUpdateRepository(trigger)
 	if err != nil {
 		return false, err
 	}
@@ -160,11 +158,6 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 
 	if !hasPrev || prevHash == headHash {
 		return false, nil
-	}
-
-	paths := trigger.ContentSelector.Git.Paths
-	if len(paths) == 0 {
-		return true, nil
 	}
 
 	// Walk commits from head back to previous to check if any changed paths match
@@ -202,6 +195,181 @@ func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, err
 	return matched, nil
 }
 
+func (i *Informer) hasNewHeadCommit(trigger testkube.TestTrigger) (bool, error) {
+	headHash, err := remoteHeadHash(trigger.ContentSelector.Git)
+	if err != nil {
+		return false, err
+	}
+
+	key := triggerKey(trigger.Namespace, trigger.Name)
+	prevHash, hasPrev := i.commits[key]
+	i.commits[key] = headHash
+
+	return hasPrev && prevHash != headHash, nil
+}
+
+func (i *Informer) openOrUpdateRepository(trigger testkube.TestTrigger) (*git.Repository, error) {
+	repoDir := filepath.Join(os.TempDir(), "testkube-git-trigger", triggerKey(trigger.Namespace, trigger.Name))
+	gitConfig := trigger.ContentSelector.Git
+
+	repo, err := git.PlainOpen(repoDir)
+	if err == nil {
+		worktree, wtErr := repo.Worktree()
+		if wtErr == nil {
+			pullOpts, pullErr := pullOptions(gitConfig)
+			if pullErr != nil {
+				return nil, pullErr
+			}
+			if err = worktree.Pull(pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+				return nil, err
+			}
+			return repo, nil
+		}
+	}
+
+	_ = os.RemoveAll(repoDir)
+	if err = os.MkdirAll(filepath.Dir(repoDir), 0o755); err != nil {
+		return nil, err
+	}
+
+	cloneOpts, err := cloneOptions(gitConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return git.PlainClone(repoDir, cloneOpts)
+}
+
+func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit) (string, error) {
+	clientOptions, err := authClientOptions(gitConfig)
+	if err != nil {
+		return "", err
+	}
+
+	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{gitConfig.Uri},
+	})
+	refs, err := remote.List(&git.ListOptions{
+		ClientOptions: clientOptions,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if ref := normalizeRef(gitConfig.Revision); ref != "" {
+		for _, r := range refs {
+			if r.Name() == plumbing.ReferenceName(ref) {
+				return r.Hash().String(), nil
+			}
+		}
+		return "", fmt.Errorf("reference %q not found", ref)
+	}
+
+	for _, r := range refs {
+		if r.Name() == plumbing.HEAD {
+			return r.Hash().String(), nil
+		}
+	}
+	for _, r := range refs {
+		if r.Name().IsBranch() {
+			return r.Hash().String(), nil
+		}
+	}
+
+	return "", errors.New("unable to determine remote HEAD")
+}
+
+func cloneOptions(gitConfig *testkube.TestTriggerContentGit) (*git.CloneOptions, error) {
+	clientOptions, err := authClientOptions(gitConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	cloneOpts := &git.CloneOptions{
+		URL:           gitConfig.Uri,
+		SingleBranch:  true,
+		ClientOptions: clientOptions,
+	}
+	if ref := normalizeRef(gitConfig.Revision); ref != "" {
+		cloneOpts.ReferenceName = plumbing.ReferenceName(ref)
+	}
+
+	return cloneOpts, nil
+}
+
+func pullOptions(gitConfig *testkube.TestTriggerContentGit) (*git.PullOptions, error) {
+	clientOptions, err := authClientOptions(gitConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	pullOpts := &git.PullOptions{
+		RemoteName:    "origin",
+		SingleBranch:  true,
+		Force:         true,
+		ClientOptions: clientOptions,
+	}
+	if ref := normalizeRef(gitConfig.Revision); ref != "" {
+		pullOpts.ReferenceName = plumbing.ReferenceName(ref)
+	}
+
+	return pullOpts, nil
+}
+
+func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
+	username := resolveCredentialValue(gitConfig.Username, gitConfig.UsernameFrom)
+	token := resolveCredentialValue(gitConfig.Token, gitConfig.TokenFrom)
+	sshKey := resolveCredentialValue(gitConfig.SshKey, gitConfig.SshKeyFrom)
+
+	authType := ""
+	if gitConfig.AuthType != nil {
+		authType = strings.ToLower(string(*gitConfig.AuthType))
+	}
+
+	opts := make([]client.Option, 0, 1)
+	switch {
+	case sshKey != "":
+		user := username
+		if user == "" {
+			user = "git"
+		}
+		publicKeys, err := ssh.NewPublicKeys(user, []byte(sshKey), "")
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, client.WithSSHAuth(publicKeys))
+	case token != "" && (authType == string(testkube.HEADER_ContentGitAuthType) || authType == "github"):
+		opts = append(opts, client.WithHTTPAuth(&http.TokenAuth{Token: token}))
+	case token != "" || username != "":
+		if username == "" {
+			username = "git"
+		}
+		opts = append(opts, client.WithHTTPAuth(&http.BasicAuth{
+			Username: username,
+			Password: token,
+		}))
+	}
+
+	return opts, nil
+}
+
+func resolveCredentialValue(value string, source *testkube.EnvVarSource) string {
+	if strings.TrimSpace(value) != "" {
+		return value
+	}
+	if source == nil {
+		return ""
+	}
+	if source.SecretKeyRef != nil && source.SecretKeyRef.Key != "" {
+		return os.Getenv(source.SecretKeyRef.Key)
+	}
+	if source.ConfigMapKeyRef != nil && source.ConfigMapKeyRef.Key != "" {
+		return os.Getenv(source.ConfigMapKeyRef.Key)
+	}
+	return ""
+}
+
 func normalizeRef(revision string) string {
 	revision = strings.TrimSpace(revision)
 	if revision == "" {
@@ -213,12 +381,22 @@ func normalizeRef(revision string) string {
 	return "refs/heads/" + revision
 }
 
-func pathMatches(paths []string, file string) bool {
+func normalizePaths(paths []string) []string {
+	if len(paths) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(paths))
 	for _, p := range paths {
 		p = strings.Trim(strings.TrimSpace(p), "/")
-		if p == "" {
-			continue
+		if p != "" {
+			out = append(out, p)
 		}
+	}
+	return out
+}
+
+func pathMatches(paths []string, file string) bool {
+	for _, p := range normalizePaths(paths) {
 		if file == p || strings.HasPrefix(file, p+"/") {
 			return true
 		}

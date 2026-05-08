@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -48,6 +49,55 @@ func TestNormalizeRef(t *testing.T) {
 			assert.Equal(t, tt.expected, normalizeRef(tt.input))
 		})
 	}
+}
+
+func TestNormalizePaths(t *testing.T) {
+	paths := []string{" /a ", "/b/c", "", "///", "d/"}
+	assert.Equal(t, []string{"a", "b/c", "d"}, normalizePaths(paths))
+}
+
+func TestResolveCredentialValue(t *testing.T) {
+	t.Setenv("TK_GIT_USERNAME", "env-user")
+	t.Setenv("TK_GIT_TOKEN", "env-token")
+
+	assert.Equal(t, "inline", resolveCredentialValue("inline", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Key: "TK_GIT_USERNAME"},
+	}))
+	assert.Equal(t, "env-user", resolveCredentialValue("", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Key: "TK_GIT_USERNAME"},
+	}))
+	assert.Equal(t, "env-token", resolveCredentialValue("", &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Key: "TK_GIT_TOKEN"},
+	}))
+	assert.Equal(t, "", resolveCredentialValue("", nil))
+}
+
+func TestAuthClientOptions(t *testing.T) {
+	t.Run("basic auth default", func(t *testing.T) {
+		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
+			Username: "user",
+			Token:    "token",
+		})
+		require.NoError(t, err)
+		assert.Len(t, opts, 1)
+	})
+
+	t.Run("header auth", func(t *testing.T) {
+		authType := testkube.HEADER_ContentGitAuthType
+		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
+			Token:    "token",
+			AuthType: &authType,
+		})
+		require.NoError(t, err)
+		assert.Len(t, opts, 1)
+	})
+
+	t.Run("ssh auth", func(t *testing.T) {
+		_, err := authClientOptions(&testkube.TestTriggerContentGit{
+			SshKey: "invalid-private-key",
+		})
+		require.Error(t, err)
+	})
 }
 
 func TestIsGitContentTrigger(t *testing.T) {
