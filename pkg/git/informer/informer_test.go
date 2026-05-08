@@ -84,6 +84,34 @@ func TestIsGitContentTrigger(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "valid git content trigger via resourceRef",
+			trigger: testkube.TestTrigger{
+				ResourceRef: &testkube.TestTriggerResourceRef{
+					Kind: "Content",
+				},
+				ContentSelector: &testkube.TestTriggerContentSelector{
+					Git: &testkube.TestTriggerContentGit{
+						Uri: "https://github.com/example/repo.git",
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "resourceRef non-content",
+			trigger: testkube.TestTrigger{
+				ResourceRef: &testkube.TestTriggerResourceRef{
+					Kind: "Deployment",
+				},
+				ContentSelector: &testkube.TestTriggerContentSelector{
+					Git: &testkube.TestTriggerContentGit{
+						Uri: "https://github.com/example/repo.git",
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name:     "no resource",
 			trigger:  testkube.TestTrigger{},
 			expected: false,

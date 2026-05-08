@@ -110,10 +110,22 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 
 func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 	return !trigger.Disabled &&
-		trigger.Resource != nil && *trigger.Resource == testkube.CONTENT_TestTriggerResources &&
+		isContentResource(trigger) &&
 		trigger.ContentSelector != nil &&
 		trigger.ContentSelector.Git != nil &&
 		trigger.ContentSelector.Git.Uri != ""
+}
+
+func isContentResource(trigger testkube.TestTrigger) bool {
+	if trigger.Resource != nil && *trigger.Resource == testkube.CONTENT_TestTriggerResources {
+		return true
+	}
+
+	if trigger.ResourceRef != nil && strings.EqualFold(trigger.ResourceRef.Kind, string(testkube.CONTENT_TestTriggerResources)) {
+		return true
+	}
+
+	return false
 }
 
 func (i *Informer) hasNewMatchingCommit(trigger testkube.TestTrigger) (bool, error) {
