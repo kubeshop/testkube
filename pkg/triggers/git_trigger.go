@@ -27,12 +27,49 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 		if !strings.EqualFold(entry.trigger.ResourceKind, string(testtrigger.ResourceContent)) {
 			continue
 		}
+		status := entry.status
+		trigger := entry.trigger
 
-		matcher := *s
-		matcher.triggerStatus = map[statusKey]*triggerStatus{
-			entry.key: entry.status,
+		if trigger.Disabled {
+			return nil
 		}
-		return matcher.match(ctx, event)
+		if trigger.Execution != "" && trigger.Execution != ExecutionTestWorkflow {
+			return nil
+		}
+		if !matchInternalResource(trigger, event, s.logger) {
+			return nil
+		}
+		if !matchEventOrCause(trigger.Event, event) {
+			return nil
+		}
+		if !matchFieldSelector(trigger.FieldConditions, event.Object, event.OldObject) {
+			return nil
+		}
+		if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 && event.conditionsGetter != nil {
+			matched, err := s.matchInternalConditions(ctx, event, trigger, s.logger)
+			if err != nil {
+				return err
+			}
+			if !matched {
+				return nil
+			}
+		}
+		if trigger.Probes != nil && len(trigger.Probes.Items) > 0 {
+			matched, err := s.matchInternalProbes(ctx, event, trigger, s.logger)
+			if err != nil {
+				return err
+			}
+			if !matched {
+				return nil
+			}
+		}
+		if trigger.ConcurrencyPolicy == concurrencyPolicyForbid && status.hasActiveTests() {
+			return nil
+		}
+		if trigger.ConcurrencyPolicy == concurrencyPolicyReplace && status.hasActiveTests() {
+			s.abortExecutions(ctx, trigger.Name, status)
+		}
+		return s.triggerExecutor(ctx, event, trigger)
 	}
 
 	return nil
