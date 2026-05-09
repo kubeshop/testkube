@@ -39,8 +39,6 @@ func TestKubernetesTestTriggerClient_CreateMapsExtendedFields(t *testing.T) {
 		assert.Equal(t, trigger.ContentSelector.Git.SshKey, crd.Spec.ContentSelector.Git.SshKey)
 		require.NotNil(t, trigger.ContentSelector.Git.AuthType)
 		assert.Equal(t, string(*trigger.ContentSelector.Git.AuthType), string(crd.Spec.ContentSelector.Git.AuthType))
-		assert.Equal(t, trigger.ContentSelector.Git.MountPath, crd.Spec.ContentSelector.Git.MountPath)
-		assert.Equal(t, trigger.ContentSelector.Git.Cone, crd.Spec.ContentSelector.Git.Cone)
 		require.NotNil(t, crd.Spec.ContentSelector.Git.UsernameFrom)
 		require.NotNil(t, crd.Spec.ContentSelector.Git.TokenFrom)
 		require.NotNil(t, crd.Spec.ContentSelector.Git.SshKeyFrom)
@@ -121,10 +119,8 @@ func buildAPITrigger() testkube.TestTrigger {
 				Username:  "git-user",
 				Token:     "token-value",
 				SshKey:    "ssh-private-key",
-				AuthType:  &authType,
-				MountPath: "/data/repo",
-				Cone:      true,
-				Paths:     []string{"pkg/triggers"},
+				AuthType: &authType,
+				Paths:    []string{"pkg/triggers"},
 				UsernameFrom: &testkube.EnvVarSource{
 					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
 						Key: "username",
