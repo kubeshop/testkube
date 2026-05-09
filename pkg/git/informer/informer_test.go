@@ -17,6 +17,9 @@ import (
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
@@ -194,6 +197,28 @@ func TestResolveCredentialValue(t *testing.T) {
 	assert.Equal(t, "", resolveCredentialValue("", nil))
 }
 
+func TestResolveCredentialValue_WithKubeClient(t *testing.T) {
+	informer := NewInformer(stubTestTriggerClient{}, nil, nil, "testkube", "", Options{
+		KubeClient: fake.NewSimpleClientset(
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "git-secret", Namespace: "testkube"},
+				Data:       map[string][]byte{"token": []byte("secret-token")},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: "git-config", Namespace: "testkube"},
+				Data:       map[string]string{"username": "config-user"},
+			},
+		),
+	})
+
+	assert.Equal(t, "secret-token", informer.resolveCredentialValue(context.Background(), "testkube", "", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "git-secret", Key: "token"},
+	}))
+	assert.Equal(t, "config-user", informer.resolveCredentialValue(context.Background(), "testkube", "", &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Name: "git-config", Key: "username"},
+	}))
+}
+
 func TestAuthClientOptions(t *testing.T) {
 	t.Run("basic auth default", func(t *testing.T) {
 		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
@@ -322,12 +347,14 @@ func generateTestPrivateKey(t *testing.T) string {
 
 func TestNormalizeOptions(t *testing.T) {
 	assert.Equal(t, Options{
+		ReconcileInterval:  time.Minute,
 		RepoDepth:          0,
 		ListTimeoutSeconds: 15,
 		MaxCommitsScan:     0,
 		PullRetries:        0,
 		PullRetryDelay:     0,
 	}, normalizeOptions(Options{
+		ReconcileInterval:  -time.Second,
 		RepoDepth:          -1,
 		ListTimeoutSeconds: 0,
 		MaxCommitsScan:     -1,

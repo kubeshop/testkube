@@ -257,8 +257,6 @@ func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrigge
 		SshKey:       git.SshKey,
 		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
 		AuthType:     mapGitAuthTypeAPIToKube(git.AuthType),
-		MountPath:    git.MountPath,
-		Cone:         git.Cone,
 		Paths:        git.Paths,
 	}
 }

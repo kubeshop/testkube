@@ -815,11 +815,13 @@ func main() {
 		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
 			g.Go(func() error {
 				gitinformer.NewInformer(testTriggersClient, workflowTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
+					ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
 					RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
 					ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
 					MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
 					PullRetries:        cfg.TestTriggerGitInformerPullRetries,
 					PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
+					KubeClient:         clientset,
 				}).Reconcile(ctx)
 				return nil
 			})

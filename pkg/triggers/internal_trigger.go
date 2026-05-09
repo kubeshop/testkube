@@ -236,8 +236,6 @@ func convertV2ToInternal(t *workflowtriggersv1.WorkflowTrigger) *internalTrigger
 				SshKey:       t.Spec.When.Git.SshKey,
 				SshKeyFrom:   t.Spec.When.Git.SshKeyFrom,
 				AuthType:     t.Spec.When.Git.AuthType,
-				MountPath:    t.Spec.When.Git.MountPath,
-				Cone:         t.Spec.When.Git.Cone,
 				Paths:        t.Spec.When.Git.Paths,
 			},
 		}

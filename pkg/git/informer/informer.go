@@ -20,6 +20,9 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v6/storage/memory"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -27,7 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 )
 
-const reconcileInterval = 2 * time.Minute
+const defaultReconcileInterval = time.Minute
 const defaultGitUsername = "git"
 const testTriggerSource = "v1"
 const workflowTriggerSource = "v2"
@@ -37,14 +40,19 @@ var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
 var gitCommitSHAPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
 
 type Options struct {
+	ReconcileInterval  time.Duration
 	RepoDepth          int
 	ListTimeoutSeconds int
 	MaxCommitsScan     int
 	PullRetries        int
 	PullRetryDelay     time.Duration
+	KubeClient         kubernetes.Interface
 }
 
 func normalizeOptions(opts Options) Options {
+	if opts.ReconcileInterval <= 0 {
+		opts.ReconcileInterval = defaultReconcileInterval
+	}
 	if opts.RepoDepth < 0 {
 		opts.RepoDepth = 0
 	}
@@ -80,6 +88,7 @@ type Informer struct {
 	namespace         string
 	environmentID     string
 	options           Options
+	kubeClient        kubernetes.Interface
 }
 
 // NewInformer returns a new git content informer.
@@ -99,6 +108,7 @@ func NewInformer(
 		namespace:         namespace,
 		environmentID:     environmentID,
 		options:           normalizeOptions(options),
+		kubeClient:        options.KubeClient,
 	}
 }
 
@@ -108,7 +118,7 @@ func (i *Informer) Reconcile(ctx context.Context) {
 
 	i.updateRepositories(ctx)
 
-	ticker := time.NewTicker(reconcileInterval)
+	ticker := time.NewTicker(i.options.ReconcileInterval)
 	defer ticker.Stop()
 
 	for {
@@ -260,7 +270,7 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger
 
 	paths := normalizePaths(trigger.ContentSelector.Git.Paths)
 	if len(paths) == 0 {
-		return i.hasNewHeadCommit(key, trigger)
+		return i.hasNewHeadCommit(ctx, key, trigger)
 	}
 
 	if isCommitSHA(trigger.ContentSelector.Git.Revision) {
@@ -345,8 +355,8 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger
 	return false, nil
 }
 
-func (i *Informer) hasNewHeadCommit(key string, trigger testkube.TestTrigger) (bool, error) {
-	headHash, err := remoteHeadHash(trigger.ContentSelector.Git, i.options)
+func (i *Informer) hasNewHeadCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (bool, error) {
+	headHash, err := i.remoteHeadHash(ctx, trigger.Namespace, trigger.ContentSelector.Git)
 	if err != nil {
 		return false, err
 	}
@@ -368,6 +378,10 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 	if len(references) == 0 {
 		references = []string{""}
 	}
+	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	repo, err := git.PlainOpen(repoDir)
 	if err == nil {
@@ -386,7 +400,7 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 						return nil, err
 					}
 
-					pullOpts, err := pullOptionsForRef(gitConfig, i.options, reference)
+					pullOpts, err := pullOptionsForRefWithClientOptions(gitConfig, i.options, reference, clientOptions)
 					if err != nil {
 						return nil, err
 					}
@@ -429,7 +443,7 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 		}
 
 		_ = os.RemoveAll(repoDir)
-		cloneOpts, err := cloneOptionsForRef(gitConfig, i.options, reference)
+		cloneOpts, err := cloneOptionsForRefWithClientOptions(gitConfig, i.options, reference, clientOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -442,14 +456,25 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 	return nil, cloneErr
 }
 
-func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) (string, error) {
-	if isCommitSHA(gitConfig.Revision) {
-		return strings.TrimSpace(gitConfig.Revision), nil
+func (i *Informer) remoteHeadHash(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) (string, error) {
+	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig)
+	if err != nil {
+		return "", err
 	}
+	return remoteHeadHashWithClientOptions(gitConfig, i.options, clientOptions)
+}
 
+func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) (string, error) {
 	clientOptions, err := authClientOptions(gitConfig)
 	if err != nil {
 		return "", err
+	}
+	return remoteHeadHashWithClientOptions(gitConfig, options, clientOptions)
+}
+
+func remoteHeadHashWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, error) {
+	if isCommitSHA(gitConfig.Revision) {
+		return strings.TrimSpace(gitConfig.Revision), nil
 	}
 
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
@@ -502,7 +527,10 @@ func cloneOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Optio
 	if err != nil {
 		return nil, err
 	}
+	return cloneOptionsForRefWithClientOptions(gitConfig, options, reference, clientOptions)
+}
 
+func cloneOptionsForRefWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, reference string, clientOptions []client.Option) (*git.CloneOptions, error) {
 	cloneOpts := &git.CloneOptions{
 		URL:           gitConfig.Uri,
 		SingleBranch:  true,
@@ -529,7 +557,10 @@ func pullOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Option
 	if err != nil {
 		return nil, err
 	}
+	return pullOptionsForRefWithClientOptions(gitConfig, options, reference, clientOptions)
+}
 
+func pullOptionsForRefWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, reference string, clientOptions []client.Option) (*git.PullOptions, error) {
 	pullOpts := &git.PullOptions{
 		RemoteName:    "origin",
 		SingleBranch:  true,
@@ -545,9 +576,22 @@ func pullOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Option
 }
 
 func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
-	username := resolveCredentialValue(gitConfig.Username, gitConfig.UsernameFrom)
-	token := resolveCredentialValue(gitConfig.Token, gitConfig.TokenFrom)
-	sshKey := resolveCredentialValue(gitConfig.SshKey, gitConfig.SshKeyFrom)
+	return authClientOptionsWithResolver(gitConfig, resolveCredentialValue)
+}
+
+func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
+	return authClientOptionsWithResolver(gitConfig, func(value string, source *testkube.EnvVarSource) string {
+		return i.resolveCredentialValue(ctx, namespace, value, source)
+	})
+}
+
+func authClientOptionsWithResolver(
+	gitConfig *testkube.TestTriggerContentGit,
+	resolver func(value string, source *testkube.EnvVarSource) string,
+) ([]client.Option, error) {
+	username := resolver(gitConfig.Username, gitConfig.UsernameFrom)
+	token := resolver(gitConfig.Token, gitConfig.TokenFrom)
+	sshKey := resolver(gitConfig.SshKey, gitConfig.SshKeyFrom)
 
 	authType := ""
 	if gitConfig.AuthType != nil {
@@ -580,6 +624,69 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 	}
 
 	return opts, nil
+}
+
+func (i *Informer) resolveCredentialValue(ctx context.Context, namespace, value string, source *testkube.EnvVarSource) string {
+	if strings.TrimSpace(value) != "" || source == nil {
+		return value
+	}
+	if i.kubeClient == nil {
+		return resolveCredentialValue(value, source)
+	}
+	if source.SecretKeyRef != nil {
+		if resolved, ok := i.resolveSecretKeyRefValue(ctx, namespace, source.SecretKeyRef); ok {
+			return resolved
+		}
+	}
+	if source.ConfigMapKeyRef != nil {
+		if resolved, ok := i.resolveConfigMapKeyRefValue(ctx, namespace, source.ConfigMapKeyRef); ok {
+			return resolved
+		}
+	}
+	return resolveCredentialValue(value, source)
+}
+
+func (i *Informer) resolveSecretKeyRefValue(ctx context.Context, namespace string, ref *testkube.EnvVarSourceSecretKeyRef) (string, bool) {
+	if ref == nil || ref.Name == "" || ref.Key == "" {
+		return "", false
+	}
+	secret, err := i.kubeClient.CoreV1().Secrets(namespace).Get(ctx, ref.Name, metav1.GetOptions{})
+	if err != nil {
+		if !(apierrors.IsNotFound(err) && ref.Optional != nil && *ref.Optional) {
+			log.DefaultLogger.Warnf("git informer: failed to read secret %s/%s key %s: %v", namespace, ref.Name, ref.Key, err)
+		}
+		return "", false
+	}
+	if value, ok := secret.Data[ref.Key]; ok {
+		return string(value), true
+	}
+	if ref.Optional == nil || !*ref.Optional {
+		log.DefaultLogger.Warnf("git informer: key %s not found in secret %s/%s", ref.Key, namespace, ref.Name)
+	}
+	return "", false
+}
+
+func (i *Informer) resolveConfigMapKeyRefValue(ctx context.Context, namespace string, ref *testkube.EnvVarSourceConfigMapKeyRef) (string, bool) {
+	if ref == nil || ref.Name == "" || ref.Key == "" {
+		return "", false
+	}
+	configMap, err := i.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, ref.Name, metav1.GetOptions{})
+	if err != nil {
+		if !(apierrors.IsNotFound(err) && ref.Optional != nil && *ref.Optional) {
+			log.DefaultLogger.Warnf("git informer: failed to read configmap %s/%s key %s: %v", namespace, ref.Name, ref.Key, err)
+		}
+		return "", false
+	}
+	if value, ok := configMap.Data[ref.Key]; ok {
+		return value, true
+	}
+	if value, ok := configMap.BinaryData[ref.Key]; ok {
+		return string(value), true
+	}
+	if ref.Optional == nil || !*ref.Optional {
+		log.DefaultLogger.Warnf("git informer: key %s not found in configmap %s/%s", ref.Key, namespace, ref.Name)
+	}
+	return "", false
 }
 
 func resolveCredentialValue(value string, source *testkube.EnvVarSource) string {

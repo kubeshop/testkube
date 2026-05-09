@@ -120,10 +120,6 @@ type WorkflowTriggerWhenGitSpec struct {
 	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
 	// Authorization type for the credentials.
 	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
-	// Where to mount the fetched repository contents.
-	MountPath string `json:"mountPath,omitempty"`
-	// Enable cone mode for sparse checkout with paths.
-	Cone bool `json:"cone,omitempty"`
 	// Paths is a list of file/directory paths to watch for changes.
 	// If empty, all paths are watched.
 	Paths []string `json:"paths,omitempty"`

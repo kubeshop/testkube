@@ -24,10 +24,6 @@ type TestTriggerContentGit struct {
 	SshKey     string              `json:"sshKey,omitempty"`
 	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
 	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
-	// where to mount the fetched repository contents (defaults to \"repo\" directory in the data volume)
-	MountPath string `json:"mountPath,omitempty"`
-	// enable cone mode for sparse checkout with paths
-	Cone bool `json:"cone,omitempty"`
 	// paths to fetch for the sparse checkout
 	Paths []string `json:"paths,omitempty"`
 }

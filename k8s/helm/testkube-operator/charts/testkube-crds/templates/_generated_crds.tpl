@@ -6598,12 +6598,6 @@ spec:
                         - header
                         - github
                         type: string
-                      cone:
-                        description: Enable cone mode for sparse checkout with paths
-                        type: boolean
-                      mountPath:
-                        description: Where to mount the fetched repository contents
-                        type: string
                       paths:
                         description: |-
                           Paths is a list of file/directory paths to watch for changes.
@@ -32935,12 +32929,6 @@ spec:
                         - basic
                         - header
                         - github
-                        type: string
-                      cone:
-                        description: Enable cone mode for sparse checkout with paths.
-                        type: boolean
-                      mountPath:
-                        description: Where to mount the fetched repository contents.
                         type: string
                       paths:
                         description: |-

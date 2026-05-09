@@ -76,8 +76,6 @@ func mapGitCRDToAPI(git *workflowtriggersv1.WorkflowTriggerWhenGitSpec) *testkub
 		TokenFrom:    mapEnvVarSourceKubeToAPI(git.TokenFrom),
 		SshKey:       git.SshKey,
 		SshKeyFrom:   mapEnvVarSourceKubeToAPI(git.SshKeyFrom),
-		MountPath:    git.MountPath,
-		Cone:         git.Cone,
 		Paths:        git.Paths,
 	}
 	if git.AuthType != "" {
@@ -100,8 +98,6 @@ func mapGitAPIToCRD(git *testkube.TestTriggerContentGit) *workflowtriggersv1.Wor
 		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
 		SshKey:       git.SshKey,
 		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
-		MountPath:    git.MountPath,
-		Cone:         git.Cone,
 		Paths:        git.Paths,
 	}
 	if git.AuthType != nil {
