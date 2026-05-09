@@ -24,6 +24,6 @@ type TestTriggerContentGit struct {
 	SshKey     string              `json:"sshKey,omitempty"`
 	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
 	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
-	// paths to fetch for the sparse checkout
+	// paths to watch for changes
 	Paths []string `json:"paths,omitempty"`
 }
