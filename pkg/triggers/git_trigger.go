@@ -57,9 +57,6 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	if !matchEventOrCause(trigger.Event, event) {
 		return nil
 	}
-	if !matchFieldSelector(trigger.FieldConditions, event.Object, event.OldObject) {
-		return nil
-	}
 	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 && event.conditionsGetter != nil {
 		matched, err := s.matchInternalConditions(ctx, event, trigger, s.logger)
 		if err != nil {
