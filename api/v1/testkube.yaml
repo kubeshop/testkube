@@ -8315,7 +8315,7 @@ components:
             - github
         paths:
           type: array
-          description: paths to fetch for the sparse checkout
+          description: paths to watch for changes
           items:
             type: string
 
