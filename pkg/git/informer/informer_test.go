@@ -211,10 +211,10 @@ func TestResolveCredentialValue_WithKubeClient(t *testing.T) {
 		),
 	})
 
-	assert.Equal(t, "secret-token", informer.resolveCredentialValue(context.Background(), "testkube", "", &testkube.EnvVarSource{
+	assert.Equal(t, "secret-token", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
 		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "git-secret", Key: "token"},
 	}))
-	assert.Equal(t, "config-user", informer.resolveCredentialValue(context.Background(), "testkube", "", &testkube.EnvVarSource{
+	assert.Equal(t, "config-user", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
 		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Name: "git-config", Key: "username"},
 	}))
 }

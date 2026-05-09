@@ -581,7 +581,7 @@ func authClientOptions(gitConfig *testkube.TestTriggerContentGit) ([]client.Opti
 
 func (i *Informer) authClientOptions(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) ([]client.Option, error) {
 	return authClientOptionsWithResolver(gitConfig, func(value string, source *testkube.EnvVarSource) string {
-		return i.resolveCredentialValue(ctx, namespace, value, source)
+		return i.resolveCredentialValue(ctx, value, namespace, source)
 	})
 }
 
@@ -626,7 +626,7 @@ func authClientOptionsWithResolver(
 	return opts, nil
 }
 
-func (i *Informer) resolveCredentialValue(ctx context.Context, namespace, value string, source *testkube.EnvVarSource) string {
+func (i *Informer) resolveCredentialValue(ctx context.Context, value, namespace string, source *testkube.EnvVarSource) string {
 	if strings.TrimSpace(value) != "" || source == nil {
 		return value
 	}
