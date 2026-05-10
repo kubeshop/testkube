@@ -1,0 +1,44 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: api-server-ci-build-lint
+  labels:
+    core-tests: workflows
+    tool: testkube-api-server
+    category: ci
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - cmd/api-server
+      - go.mod
+      - go.sum
+      - .golangci.yml
+  container:
+    workingDir: /data/repo
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1024Mi
+  steps:
+  - name: Lint
+    run:
+      image: golang:1.26-bookworm
+      shell: |
+        set -euo pipefail
+        apt-get update
+        apt-get install -y curl git
+
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+          | sh -s -- -b /usr/local/bin v2.12.2
+
+        golangci-lint run --timeout=10m ./cmd/api-server/...
+
+  - name: Build
+    run:
+      image: golang:1.26-bookworm
+      shell: |
+        set -euo pipefail
+        go build ./cmd/api-server
