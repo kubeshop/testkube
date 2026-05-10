@@ -1,7 +1,6 @@
 package testtriggers
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
@@ -255,72 +254,13 @@ func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.Test
 		Uri:          git.Uri,
 		Revision:     git.Revision,
 		Username:     git.Username,
-		UsernameFrom: mapEnvVarSourceKubeToAPI(git.UsernameFrom),
+		UsernameFrom: commonmapper.MapEnvVarSourceKubeToAPI(git.UsernameFrom),
 		Token:        git.Token,
-		TokenFrom:    mapEnvVarSourceKubeToAPI(git.TokenFrom),
+		TokenFrom:    commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
 		SshKey:       git.SshKey,
-		SshKeyFrom:   mapEnvVarSourceKubeToAPI(git.SshKeyFrom),
+		SshKeyFrom:   commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
 		AuthType:     mapGitAuthTypeKubeToAPI(git.AuthType),
 		Paths:        git.Paths,
-	}
-}
-
-func mapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
-	if v == nil {
-		return nil
-	}
-	return &testkube.FieldRef{
-		ApiVersion: v.APIVersion,
-		FieldPath:  v.FieldPath,
-	}
-}
-
-func mapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
-	if v == nil {
-		return nil
-	}
-	divisor := ""
-	if !v.Divisor.IsZero() {
-		divisor = v.Divisor.String()
-	}
-	return &testkube.ResourceFieldRef{
-		ContainerName: v.ContainerName,
-		Resource:      v.Resource,
-		Divisor:       divisor,
-	}
-}
-
-func mapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVarSourceConfigMapKeyRef {
-	if v == nil {
-		return nil
-	}
-	return &testkube.EnvVarSourceConfigMapKeyRef{
-		Key:      v.Key,
-		Name:     v.Name,
-		Optional: v.Optional,
-	}
-}
-
-func mapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourceSecretKeyRef {
-	if v == nil {
-		return nil
-	}
-	return &testkube.EnvVarSourceSecretKeyRef{
-		Key:      v.Key,
-		Name:     v.Name,
-		Optional: v.Optional,
-	}
-}
-
-func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
-	if v == nil {
-		return nil
-	}
-	return &testkube.EnvVarSource{
-		FieldRef:         mapFieldRefKubeToAPI(v.FieldRef),
-		ResourceFieldRef: mapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
-		ConfigMapKeyRef:  mapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
-		SecretKeyRef:     mapSecretKeyRefKubeToAPI(v.SecretKeyRef),
 	}
 }
 

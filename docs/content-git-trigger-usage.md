@@ -39,14 +39,14 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
-      authType: token
+      authType: basic
       tokenFrom:
         secretKeyRef:
           name: git-creds
           key: token
       paths:
-        - cmd/api-server/**
-        - pkg/triggers/**
+        - cmd/api-server
+        - pkg/triggers
   action: run
   execution: testworkflow
   testSelector:
@@ -87,14 +87,13 @@ spec:
     git:
       uri: git@github.com:kubeshop/testkube.git
       revision: main
-      authType: ssh
       sshKeyFrom:
         secretKeyRef:
           name: git-creds
           key: ssh-private-key
       paths:
-        - test/**
-        - cmd/**
+        - test
+        - cmd
   run:
     workflow:
       name: my-workflow
@@ -103,5 +102,6 @@ spec:
 ## Notes
 
 - `paths` is a change filter. If omitted, all repository paths are watched.
+- `paths` supports exact paths or directory/file prefixes (`path` or `path/...` semantics), not glob patterns.
 - `revision` accepts a branch, tag, or commit SHA.
 - Prefer `tokenFrom` / `sshKeyFrom` (and `usernameFrom`) over inline plain-text fields.
