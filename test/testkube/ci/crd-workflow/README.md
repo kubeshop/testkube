@@ -15,8 +15,8 @@ This directory contains a ready-to-apply TestWorkflow + TestTrigger pair for run
 ## Quick start
 
 ```bash
-kubectl apply -n testkube -f /home/runner/work/testkube/testkube/test/testkube/ci/crd-workflow/api-server-build-lint.yaml
-kubectl apply -n testkube -f /home/runner/work/testkube/testkube/test/testkube/ci/crd-workflow/api-server-build-lint-trigger.yaml
+kubectl apply -n testkube -f ./api-server-build-lint.yaml
+kubectl apply -n testkube -f ./api-server-build-lint-trigger.yaml
 ```
 
 ## Example 1: Trigger on any change in `main` (current config)
@@ -93,6 +93,6 @@ kubectl get testtrigger api-server-ci-main-content-trigger -n testkube
 ## Cleanup
 
 ```bash
-kubectl delete -n testkube -f /home/runner/work/testkube/testkube/test/testkube/ci/crd-workflow/api-server-build-lint-trigger.yaml
-kubectl delete -n testkube -f /home/runner/work/testkube/testkube/test/testkube/ci/crd-workflow/api-server-build-lint.yaml
+kubectl delete -n testkube -f ./api-server-build-lint-trigger.yaml
+kubectl delete -n testkube -f ./api-server-build-lint.yaml
 ```
