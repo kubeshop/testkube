@@ -2,6 +2,7 @@ apiVersion: tests.testkube.io/v1
 kind: TestTrigger
 metadata:
   name: api-server-ci-main-content-trigger
+  namespace: testkube
 spec:
   resource: content
   event: modified

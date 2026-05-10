@@ -2,6 +2,7 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: api-server-ci-build-lint
+  namespace: testkube
   labels:
     core-tests: workflows
     tool: testkube-api-server
