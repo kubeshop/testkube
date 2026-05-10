@@ -11,11 +11,6 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
-      paths:
-      - cmd/api-server
-      - go.mod
-      - go.sum
-      - .golangci.yml
   container:
     workingDir: /data/repo
     resources:

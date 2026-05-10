@@ -9,8 +9,6 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
-      paths:
-      - cmd/api-server/**
   action: run
   execution: testworkflow
   testSelector:
