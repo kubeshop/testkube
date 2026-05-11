@@ -24,6 +24,7 @@ type CloudContext struct {
 	EnvironmentName     string `json:"environmentName,omitempty"`
 	OrganizationId      string `json:"organization,omitempty"`
 	OrganizationName    string `json:"organizationName,omitempty"`
+	SkipTLS             bool   `json:"skipTls,omitempty"`
 	ApiKey              string `json:"apiKey,omitempty"`
 	RefreshToken        string `json:"refreshToken,omitempty"`
 	ApiUri              string `json:"apiUri,omitempty"`
@@ -51,6 +52,7 @@ type Data struct {
 	TelemetryEnabled bool              `json:"telemetryEnabled,omitempty"`
 	Namespace        string            `json:"namespace,omitempty"`
 	Initialized      bool              `json:"initialized,omitempty"`
+	SkipTLS          bool              `json:"skipTls,omitempty"`
 	APIURI           string            `json:"apiURI,omitempty"`
 	Headers          map[string]string `json:"headers,omitempty"`
 	APIServerName    string            `json:"apiServerName,omitempty"`

@@ -18,12 +18,12 @@ const (
 	AgentGitOpsType = "sync"
 )
 
-func NewAgentsClient(baseUrl, token, orgID string) *AgentsClient {
+func NewAgentsClient(baseUrl, token, orgID string, insecure ...bool) *AgentsClient {
 	return &AgentsClient{
 		RESTClient: RESTClient[AgentInput, Agent]{
 			BaseUrl: baseUrl,
 			Path:    "/organizations/" + orgID + "/agents",
-			Client:  http.NewClient(),
+			Client:  http.NewClient(insecure...),
 			Token:   token,
 		},
 	}

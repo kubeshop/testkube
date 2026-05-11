@@ -20,15 +20,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const viewUploadTimeout = 60 * time.Second
-
-var viewHTTPClient = &http.Client{
-	Timeout: viewUploadTimeout,
-}
 
 func NewViewCmd() *cobra.Command {
 	var sharesAPIURL string
@@ -89,7 +86,11 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 				viewerBaseURL = uris.View
 			}
 
-			if existing, err := lookupExistingShare(sharesAPIURL, execution.Id); err != nil {
+			skipTLS := common.ResolveSkipTLS(cmd, &cfg)
+			httpClient := tkhttp.NewClient(skipTLS)
+			httpClient.Timeout = viewUploadTimeout
+
+			if existing, err := lookupExistingShare(httpClient, sharesAPIURL, execution.Id); err != nil {
 				ui.Debug("could not check for existing share", err.Error())
 			} else if existing != nil {
 				viewerURL := fmt.Sprintf("%s/execution-views/%s", viewerBaseURL, existing.Token)
@@ -107,7 +108,7 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 				}
 			}
 
-			uploadAndViewExecution(cmd, cfg, client, execution, sharesAPIURL, viewerBaseURL, skipArtifacts)
+			uploadAndViewExecution(cmd, cfg, httpClient, client, execution, sharesAPIURL, viewerBaseURL, skipArtifacts)
 		},
 	}
 
@@ -119,7 +120,7 @@ Accepts either an execution ID (UUID) or an execution name (e.g. my-workflow-123
 	return cmd
 }
 
-func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, client apiclientv1.Client, execution testkube.TestWorkflowExecution, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
+func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, httpClient *http.Client, client apiclientv1.Client, execution testkube.TestWorkflowExecution, sharesAPIURL, viewerBaseURL string, skipArtifacts bool) {
 
 	installationID := telemetry.GetMachineID()
 
@@ -181,7 +182,7 @@ func uploadAndViewExecution(cmd *cobra.Command, cfg config.Data, client apiclien
 	}
 
 	ui.Info("Uploading to viewer...")
-	token, err := uploadExecution(sharesAPIURL, executionJSON, allLogs, artifactUploads)
+	token, err := uploadExecution(httpClient, sharesAPIURL, executionJSON, allLogs, artifactUploads)
 	if err != nil {
 		if cfg.TelemetryEnabled {
 			out, telErr := telemetry.SendPreviewEvent(cmd, common.Version, execution.Id, int32(len(artifactUploads)), skipArtifacts, err.Error())
@@ -258,14 +259,14 @@ type artifactUpload struct {
 	Name string
 }
 
-func lookupExistingShare(sharesAPIURL, executionID string) (*viewResponse, error) {
+func lookupExistingShare(httpClient *http.Client, sharesAPIURL, executionID string) (*viewResponse, error) {
 	url := fmt.Sprintf("%s/public-executions/by-execution/%s", sharesAPIURL, executionID)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
 
-	resp, err := viewHTTPClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("lookup request: %w", err)
 	}
@@ -292,7 +293,7 @@ func lookupExistingShare(sharesAPIURL, executionID string) (*viewResponse, error
 	}
 }
 
-func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifacts []artifactUpload) (string, error) {
+func uploadExecution(httpClient *http.Client, sharesAPIURL string, executionJSON, allLogs []byte, artifacts []artifactUpload) (string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -343,7 +344,7 @@ func uploadExecution(sharesAPIURL string, executionJSON, allLogs []byte, artifac
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	resp, err := viewHTTPClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("uploading execution: %w", err)
 	}

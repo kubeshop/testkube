@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/cloudlogin"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
+	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -440,6 +441,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 }
 
 func PopulateLoginDataToContext(orgID, envID, tokenType, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
+	cfg.CloudContext.SkipTLS = cfg.SkipTLS
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
@@ -578,13 +580,13 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 		cfg.CloudContext.EnvironmentId = envId
 	}
 
-	orgClient := cloudclient.NewOrganizationsClient(apiUrl, cfg.CloudContext.ApiKey)
+	orgClient := cloudclient.NewOrganizationsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
 	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting organization")
 	}
 
-	envsClient := cloudclient.NewEnvironmentsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
+	envsClient := cloudclient.NewEnvironmentsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
 	env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting environment")
@@ -608,6 +610,7 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 		cfg.CloudContext.DockerContainerName = *dockerContainerName
 	}
 	cfg.CloudContext.CallbackPort = opts.Master.CallbackPort
+	cfg.CloudContext.SkipTLS = cfg.SkipTLS
 
 	return cfg
 }
@@ -615,8 +618,9 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 // LoginUser runs the interactive login method selector and returns the chosen
 // tokenType together with the tokens. Picking "Email (magic link)" delegates to
 // the email-link flow; everything else uses the Dex OIDC flow.
-func LoginUser(authUri, apiUri string, customConnector bool, port int) (tokenType, idToken, refreshToken string, err error) {
+func LoginUser(authUri, apiUri string, customConnector bool, port int, skipTLS ...bool) (tokenType, idToken, refreshToken string, err error) {
 	ui.H1("Login")
+	allowInsecureTLS := len(skipTLS) == 1 && skipTLS[0]
 	connectorID := ""
 	if !customConnector {
 		connectorID = ui.Select("Choose your login method", []string{github, gitlab, google, emailLink})
@@ -627,7 +631,7 @@ func LoginUser(authUri, apiUri string, customConnector bool, port int) (tokenTyp
 		if emailAddr == "" {
 			return "", "", "", fmt.Errorf("email is required for magic-link login")
 		}
-		idToken, refreshToken, err = LoginUserEmailLink(apiUri, emailAddr, port)
+		idToken, refreshToken, err = LoginUserEmailLink(apiUri, emailAddr, port, allowInsecureTLS)
 		if err != nil {
 			return "", "", "", err
 		}
@@ -635,7 +639,7 @@ func LoginUser(authUri, apiUri string, customConnector bool, port int) (tokenTyp
 	}
 
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
-	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port)
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port, allowInsecureTLS)
 	if err != nil {
 		return "", "", "", fmt.Errorf("cloud login: %w", err)
 	}
@@ -680,7 +684,7 @@ func extractAndCleanDomain(email string) (string, error) {
 }
 
 // validateSSOConnector checks if SSO connector exists for the domain
-func validateSSOConnector(authUri, domain string) error {
+func validateSSOConnector(authUri, domain string, skipTLS bool) error {
 	if !strings.HasSuffix(authUri, "/") {
 		authUri += "/"
 	}
@@ -692,7 +696,7 @@ func validateSSOConnector(authUri, domain string) error {
 		return fmt.Errorf("failed to validate SSO connector request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := tkhttp.NewClient(skipTLS).Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to validate SSO connector: %w", err)
 	}
@@ -705,8 +709,9 @@ func validateSSOConnector(authUri, domain string) error {
 	return nil
 }
 
-func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, error) {
+func LoginUserSSO(apiUrl, authUrl, email string, port int, skipTLS ...bool) (string, string, error) {
 	ui.H1("SSO Login")
+	allowInsecureTLS := len(skipTLS) == 1 && skipTLS[0]
 
 	// Validate email format and extract domain
 	domain, err := extractAndCleanDomain(email)
@@ -715,13 +720,13 @@ func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, erro
 	}
 
 	// Validate that SSO is configured for this domain using API URL
-	err = validateSSOConnector(apiUrl, domain)
+	err = validateSSOConnector(apiUrl, domain, allowInsecureTLS)
 	if err != nil {
 		return "", "", fmt.Errorf("SSO validation failed: %w", err)
 	}
 
 	ui.Debug("Logging into cloud with SSO for domain ", domain)
-	ssoAuthURL, tokenChan, err := cloudlogin.CloudLoginSSO(context.Background(), apiUrl, authUrl, domain, port)
+	ssoAuthURL, tokenChan, err := cloudlogin.CloudLoginSSO(context.Background(), apiUrl, authUrl, domain, port, allowInsecureTLS)
 	if err != nil {
 		return "", "", fmt.Errorf("SSO login: %w", err)
 	}
@@ -746,15 +751,16 @@ func LoginUserSSO(apiUrl, authUrl, email string, port int) (string, string, erro
 	return idToken, refreshToken, nil
 }
 
-func LoginUserEmailLink(apiUrl, email string, port int) (string, string, error) {
+func LoginUserEmailLink(apiUrl, email string, port int, skipTLS ...bool) (string, string, error) {
 	ui.Debug("Requesting email-link for", email)
+	allowInsecureTLS := len(skipTLS) == 1 && skipTLS[0]
 
 	// Bound the callback server's lifetime to the same 5-minute budget as
 	// uiGetToken so a user walking away doesn't leak the loopback listener.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	tokenChan, err := cloudlogin.CloudLoginEmailLink(ctx, apiUrl, email, port)
+	tokenChan, err := cloudlogin.CloudLoginEmailLink(ctx, apiUrl, email, port, allowInsecureTLS)
 	if err != nil {
 		return "", "", fmt.Errorf("email link login: %w", err)
 	}

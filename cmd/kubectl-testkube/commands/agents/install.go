@@ -281,6 +281,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	// Load the Cloud settings
 	cfg, err := config.Load()
 	ui.ExitOnError("loading config file", err)
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 	opts := &common2.HelmOptions{}
 	common2.ProcessMasterFlags(cmd, opts, &cfg)
 
@@ -293,6 +294,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, defaultLabels []string, ext
 	controlPlane := ControlPlaneConfig{
 		URL:            agentUri,
 		Secure:         agentSecure,
+		SkipVerify:     skipTLS,
 		OrganizationID: cfg.CloudContext.OrganizationId,
 		EnvironmentID:  cfg.CloudContext.EnvironmentId,
 		Agent:          *agent,
