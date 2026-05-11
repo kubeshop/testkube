@@ -17,8 +17,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc"
-	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"golang.org/x/oauth2"
+
+	tkhttp "github.com/kubeshop/testkube/pkg/http"
 )
 
 const (
