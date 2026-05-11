@@ -34,7 +34,7 @@ func NewDeleteWebhookCmd() *cobra.Command {
 					ui.SuccessAndExit("Operation completed")
 				}
 				ui.ExitOnError("deleting webhook: "+name, err)
-				ui.SuccessAndExit("Succesfully deleted webhook", name)
+				ui.SuccessAndExit("Successfully deleted webhook", name)
 			}
 
 			if len(selectors) != 0 {
@@ -45,7 +45,7 @@ func NewDeleteWebhookCmd() *cobra.Command {
 					ui.SuccessAndExit("Operation completed")
 				}
 				ui.ExitOnError("deleting webhooks by labels: "+selector, err)
-				ui.SuccessAndExit("Succesfully deleted webhooks by labels", selector)
+				ui.SuccessAndExit("Successfully deleted webhooks by labels", selector)
 			}
 
 			ui.Failf("Pass Webhook name or labels to delete by labels")
