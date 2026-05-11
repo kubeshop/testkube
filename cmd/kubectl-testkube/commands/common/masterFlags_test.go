@@ -26,6 +26,8 @@ func NewTestCmd() *cobra.Command {
 
 	PopulateMasterFlags(cmd, &opts, false)
 	PopulateHelmFlags(cmd, &opts)
+	cmd.Flags().Bool("skip-tls", false, "")
+	cmd.Flags().Bool("insecure", false, "")
 	return cmd
 }
 
@@ -190,6 +192,26 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
 		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.testkube.io:443", opts.Master.URIs.Agent)
+	})
+
+	t.Run("Test defaults for master flags insecure with skip-tls", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--skip-tls", "true"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, true, opts.Master.Insecure)
+		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
+		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
+	})
+
+	t.Run("Test defaults for master flags insecure with insecure", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--insecure", "true"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, true, opts.Master.Insecure)
+		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
+		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 	})
 
 	t.Run("Test defaults for master flags secure with rood modified", func(t *testing.T) {

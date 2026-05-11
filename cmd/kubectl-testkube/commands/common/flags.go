@@ -112,8 +112,12 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {
 	configured := cfg != nil
 	if !cmd.Flags().Changed("master-insecure") {
-		if cmd.Flags().Changed("cloud-insecure") {
-			opts.Master.Insecure = cmd.Flag("cloud-insecure").Value.String() == "true"
+		if v, changed, ok := getBoolFlag(cmd, "cloud-insecure"); ok && changed {
+			opts.Master.Insecure = v
+		} else if v, changed, ok := getBoolFlag(cmd, "skip-tls"); ok && changed {
+			opts.Master.Insecure = v
+		} else if v, changed, ok := getBoolFlag(cmd, "insecure"); ok && changed {
+			opts.Master.Insecure = v
 		} else if configured && cfg.Master.Insecure {
 			opts.Master.Insecure = cfg.Master.Insecure
 		}
