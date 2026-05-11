@@ -11,11 +11,18 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+
+	phttp "github.com/kubeshop/testkube/pkg/http"
 )
 
-func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string) CloudClient[A] {
+func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string, insecure ...bool) CloudClient[A] {
 	if apiPathPrefix == "" {
 		apiPathPrefix = "/" + Version
+	}
+
+	isInsecure := false
+	if len(insecure) > 0 {
+		isInsecure = insecure[0]
 	}
 
 	return CloudClient[A]{
@@ -23,6 +30,7 @@ func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string
 		sseClient:     httpClient,
 		apiURI:        apiURI,
 		apiPathPrefix: apiPathPrefix,
+		insecure:      isInsecure,
 		DirectClient:  NewDirectClient[A](httpClient, apiURI, apiPathPrefix),
 	}
 }
@@ -34,6 +42,7 @@ type CloudClient[A All] struct {
 	sseClient     *http.Client
 	apiURI        string
 	apiPathPrefix string
+	insecure      bool
 	DirectClient[A]
 }
 
@@ -84,7 +93,14 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 	// Signed URLs should use default client as these URLs are self-sufficient
 	// and do not need Authorization headers added. Some Object Storage Providers
 	// even fail when both Auth header and signed query parameter are present.
-	resp, err = http.DefaultClient.Do(req)
+	// However, if skip-tls is configured, use a skip-tls-aware client instead.
+	var signedURLClient *http.Client
+	if t.insecure {
+		signedURLClient = phttp.NewClient(true)
+	} else {
+		signedURLClient = http.DefaultClient
+	}
+	resp, err = signedURLClient.Do(req)
 	if err != nil {
 		return name, err
 	}

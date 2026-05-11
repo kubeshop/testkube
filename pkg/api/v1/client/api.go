@@ -57,25 +57,25 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 }
 
 // NewCloudAPIClient returns cloud api client
-func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, apiPathPrefix string) APIClient {
+func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, apiPathPrefix string, insecure ...bool) APIClient {
 	return APIClient{
-		WebhookClient:         NewWebhookClient(NewCloudClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix)),
-		WebhookTemplateClient: NewWebhookTemplateClient(NewCloudClient[testkube.WebhookTemplate](httpClient, apiURI, apiPathPrefix)),
-		ConfigClient:          NewConfigClient(NewCloudClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
+		WebhookClient:         NewWebhookClient(NewCloudClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix, insecure...)),
+		WebhookTemplateClient: NewWebhookTemplateClient(NewCloudClient[testkube.WebhookTemplate](httpClient, apiURI, apiPathPrefix, insecure...)),
+		ConfigClient:          NewConfigClient(NewCloudClient[testkube.Config](httpClient, apiURI, apiPathPrefix, insecure...)),
 		TestWorkflowClient: NewTestWorkflowClient(
-			NewCloudClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix).WithSSEClient(sseClient),
-			NewCloudClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
-			NewCloudClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
-			NewCloudClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),
-			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix, insecure...).WithSSEClient(sseClient),
+			NewCloudClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix, insecure...),
+			NewCloudClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix, insecure...),
+			NewCloudClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix, insecure...),
+			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix, insecure...),
 		),
-		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
-		TestTriggerClient:          NewTestTriggerClient(NewCloudClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
-		WorkflowTriggerClient:      NewWorkflowTriggerClient(NewCloudClient[testkube.WorkflowTrigger](httpClient, apiURI, apiPathPrefix)),
+		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix, insecure...)),
+		TestTriggerClient:          NewTestTriggerClient(NewCloudClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix, insecure...)),
+		WorkflowTriggerClient:      NewWorkflowTriggerClient(NewCloudClient[testkube.WorkflowTrigger](httpClient, apiURI, apiPathPrefix, insecure...)),
 		SharedClient: NewSharedClient(
-			NewCloudClient[map[string][]string](httpClient, apiURI, apiPathPrefix),
-			NewCloudClient[testkube.ServerInfo](httpClient, apiURI, apiPathPrefix),
-			NewCloudClient[testkube.DebugInfo](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[map[string][]string](httpClient, apiURI, apiPathPrefix, insecure...),
+			NewCloudClient[testkube.ServerInfo](httpClient, apiURI, apiPathPrefix, insecure...),
+			NewCloudClient[testkube.DebugInfo](httpClient, apiURI, apiPathPrefix, insecure...),
 		),
 	}
 }
