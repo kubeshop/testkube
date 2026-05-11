@@ -9,7 +9,7 @@ type AlwaysInvalidMultiValidator struct {
 func (val AlwaysInvalidMultiValidator) Validate(subject any) v.ValidationResult {
 	return v.NewResult().
 		WithValidator("Always invalid " + val.Name).
-		WithError(v.Err("err1", v.ErrorKindCustom).WithDetails("some error occured")).
-		WithError(v.Err("err2", v.ErrorKindCustom).WithDetails("some error occured")).
+		WithError(v.Err("err1", v.ErrorKindCustom).WithDetails("some error occurred")).
+		WithError(v.Err("err2", v.ErrorKindCustom).WithDetails("some error occurred")).
 		WithError(v.Err("err3", v.ErrorKindCustom).WithDocsURI("https://docs.testkube.io/"))
 }
