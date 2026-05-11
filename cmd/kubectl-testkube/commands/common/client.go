@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -21,11 +20,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
 
-	insecure, err := strconv.ParseBool(cmd.Flag("insecure").Value.String())
-	if err != nil {
-		return nil, "", fmt.Errorf("parsing flag value %w", err)
-	}
-
 	headers, err := cmd.Flags().GetStringToString("header")
 	if err != nil {
 		return nil, "", fmt.Errorf("parsing flag value %w", err)
@@ -39,7 +33,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	options := client.Options{
 		Namespace: namespace,
 		ApiUri:    apiURI,
-		Insecure:  insecure,
 		Headers:   headers,
 	}
 
@@ -61,6 +54,8 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		cfg.APIServerPort = config.APIServerPort
 	}
 
+	options.Insecure = ResolveSkipTLS(cmd, &cfg)
+
 	options.APIServerName = cfg.APIServerName
 	options.APIServerPort = cfg.APIServerPort
 
@@ -70,7 +65,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
 			newTokenType := cfg.CloudContext.TokenType
 			var refreshToken string
-			token, refreshToken, err = refreshUserToken(context.Background(), cfg)
+			token, refreshToken, err = refreshUserToken(context.Background(), cfg, options.Insecure)
 			if err != nil {
 				if cfg.CloudContext.TokenType == config.TokenTypeEmailLink {
 					// Don't auto-restart the email-link flow from inside an
@@ -92,7 +87,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 				if cfg.CloudContext.CallbackPort != 0 {
 					port = cfg.CloudContext.CallbackPort
 				}
-				newTokenType, token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.ApiUri, cfg.CloudContext.CustomAuth, port)
+				newTokenType, token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.ApiUri, cfg.CloudContext.CustomAuth, port, options.Insecure)
 				if err != nil {
 					return nil, "", fmt.Errorf("error logging in: %w", err)
 				}

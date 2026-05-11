@@ -13,8 +13,8 @@ type Organization struct {
 	Name string
 }
 
-func GetOrganizations(url, token string) ([]cloudclient.Organization, error) {
-	c := cloudclient.NewOrganizationsClient(url, token)
+func GetOrganizations(url, token string, skipTLS ...bool) ([]cloudclient.Organization, error) {
+	c := cloudclient.NewOrganizationsClient(url, token, skipTLS...)
 	return c.List()
 }
 
@@ -35,9 +35,9 @@ func FindOrgId(orgs []cloudclient.Organization, name string) string {
 	return ""
 }
 
-func UiGetOrganizationId(url, token string) (string, string, error) {
+func UiGetOrganizationId(url, token string, skipTLS ...bool) (string, string, error) {
 	// Choose organization from orgs available
-	orgs, err := GetOrganizations(url, token)
+	orgs, err := GetOrganizations(url, token, skipTLS...)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get organizations: %s", err.Error())
 	}

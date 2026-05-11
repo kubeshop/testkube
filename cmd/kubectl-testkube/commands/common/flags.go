@@ -65,8 +65,8 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 		insecure                                                                  bool
 	)
 
-	cmd.Flags().BoolVar(&insecure, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
-	cmd.Flags().MarkDeprecated("cloud-insecure", "use --master-insecure instead")
+	cmd.Flags().BoolVar(&insecure, "cloud-insecure", false, "deprecated: use --skip-tls")
+	cmd.Flags().MarkDeprecated("cloud-insecure", "use --skip-tls")
 	cmd.Flags().StringVar(&agentURIPrefix, "cloud-agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-agent-prefix", "use --agent-prefix instead")
 	cmd.Flags().StringVar(&apiURIPrefix, "cloud-api-prefix", defaultApiPrefix, "usually don't need to be changed [required for custom cloud mode]")
@@ -78,7 +78,8 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().StringVar(&proRootDomain, "pro-root-domain", defaultRootDomain, "usually don't need to be changed [required for custom pro mode]")
 	cmd.Flags().MarkDeprecated("pro-root-domain", "use --root-domain instead")
 
-	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "should client connect in insecure mode (will use http instead of https)")
+	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "deprecated: use --skip-tls")
+	cmd.Flags().MarkDeprecated("master-insecure", "use --skip-tls")
 	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", defaultApiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
@@ -153,10 +154,6 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		}
 	}
 
-	if cmd.Flag("insecure") != nil && cmd.Flag("insecure").Value.String() == "true" {
-		opts.Master.Insecure = true
-	}
-
 	if cmd.Flag("api-prefix") != nil && cmd.Flags().Changed("api-prefix") {
 		opts.Master.ApiUrlPrefix = cmd.Flag("api-prefix").Value.String()
 	}
@@ -195,6 +192,71 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 
 	opts.Master.URIs = uris
 
+}
+
+// ResolveSkipTLS returns the effective skip-TLS value with precedence:
+// command flag (--skip-tls, --insecure, --master-insecure, --cloud-insecure) > persisted config > default false.
+func ResolveSkipTLS(cmd *cobra.Command, cfg *config.Data) bool {
+	if cmd != nil {
+		if v, changed, ok := getBoolFlag(cmd, "skip-tls"); ok && changed {
+			return v
+		}
+		if v, changed, ok := getBoolFlag(cmd, "insecure"); ok && changed {
+			return v
+		}
+		if v, changed, ok := getBoolFlag(cmd, "master-insecure"); ok && changed {
+			return v
+		}
+		if v, changed, ok := getBoolFlag(cmd, "cloud-insecure"); ok && changed {
+			return v
+		}
+	}
+
+	if cfg != nil {
+		if cfg.SkipTLS || cfg.CloudContext.SkipTLS {
+			return true
+		}
+	}
+
+	return false
+}
+
+// SyncSkipTLSFromFlags updates persisted skip-TLS settings when an explicit flag is passed.
+func SyncSkipTLSFromFlags(cmd *cobra.Command, cfg *config.Data) bool {
+	if cfg == nil {
+		return ResolveSkipTLS(cmd, nil)
+	}
+
+	if cmd != nil {
+		for _, name := range []string{"skip-tls", "insecure", "master-insecure", "cloud-insecure"} {
+			if v, changed, ok := getBoolFlag(cmd, name); ok && changed {
+				cfg.SkipTLS = v
+				cfg.CloudContext.SkipTLS = v
+				return v
+			}
+		}
+	}
+
+	v := ResolveSkipTLS(cmd, cfg)
+	cfg.SkipTLS = v
+	if cfg.ContextType == config.ContextTypeCloud {
+		cfg.CloudContext.SkipTLS = v
+	}
+	return v
+}
+
+func getBoolFlag(cmd *cobra.Command, name string) (value bool, changed bool, ok bool) {
+	if cmd == nil {
+		return false, false, false
+	}
+	if cmd.Flags().Lookup(name) == nil {
+		return false, false, false
+	}
+	v, err := cmd.Flags().GetBool(name)
+	if err != nil {
+		return false, cmd.Flags().Changed(name), true
+	}
+	return v, cmd.Flags().Changed(name), true
 }
 
 // CommaList is a custom flag type for features
