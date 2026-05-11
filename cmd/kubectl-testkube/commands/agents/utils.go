@@ -343,8 +343,9 @@ func GetControlPlaneEnvironments(cmd *cobra.Command) (map[string]cloudclient.Env
 	if cfg.CloudContext.ApiKey == "" {
 		return nil, errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	envs, err := common2.GetEnvironments(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
+	envs, err := common2.GetEnvironments(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, skipTLS)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting environments")
 	}
@@ -367,9 +368,10 @@ func GetControlPlaneAgents(cmd *cobra.Command, includeDeleted bool) ([]cloudclie
 	if cfg.CloudContext.ApiKey == "" {
 		return nil, errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
 	// Pass empty string for type to get all agent types including superagents
-	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, "", includeDeleted)
+	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, "", includeDeleted, skipTLS)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting agents")
 	}
@@ -407,8 +409,9 @@ func GetControlPlaneAgent(cmd *cobra.Command, idOrName string) (*cloudclient.Age
 	if cfg.CloudContext.ApiKey == "" {
 		return nil, errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	agent, err := common2.GetAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName)
+	agent, err := common2.GetAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, skipTLS)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting agent")
 	}
@@ -427,8 +430,9 @@ func DeleteControlPlaneAgent(cmd *cobra.Command, idOrName string) error {
 	if cfg.CloudContext.ApiKey == "" {
 		return errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	err = common2.DeleteAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName)
+	err = common2.DeleteAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, skipTLS)
 	if err != nil {
 		return errors.Wrap(err, "getting agent")
 	}
@@ -447,8 +451,9 @@ func GetControlPlaneAgentSecretKey(cmd *cobra.Command, idOrName string) (string,
 	if cfg.CloudContext.ApiKey == "" {
 		return "", errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	secretKey, err := common2.GetAgentSecretKey(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName)
+	secretKey, err := common2.GetAgentSecretKey(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, skipTLS)
 	if err != nil {
 		return "", errors.Wrap(err, "getting secret key")
 	}
@@ -467,8 +472,9 @@ func RotateControlPlaneAgentKey(cmd *cobra.Command, idOrName string, gracePeriod
 	if cfg.CloudContext.ApiKey == "" {
 		return cloudclient.RegenerateSecretKeyResponse{}, errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	result, err := common2.RegenerateAgentSecretKey(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, gracePeriod)
+	result, err := common2.RegenerateAgentSecretKey(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, gracePeriod, skipTLS)
 	if err != nil {
 		return cloudclient.RegenerateSecretKeyResponse{}, errors.Wrap(err, "rotating agent secret key")
 	}
@@ -487,8 +493,9 @@ func CreateAgent(cmd *cobra.Command, input cloudclient.AgentInput) (*cloudclient
 	if cfg.CloudContext.ApiKey == "" {
 		return nil, errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	agent, err := common2.CreateAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, input)
+	agent, err := common2.CreateAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, input, skipTLS)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating agent")
 	}
@@ -507,12 +514,13 @@ func UpdateAgent(cmd *cobra.Command, idOrName string, input cloudclient.AgentInp
 	if cfg.CloudContext.ApiKey == "" {
 		return nil, errors.New("no api key found in config")
 	}
+	skipTLS := common2.ResolveSkipTLS(cmd, &cfg)
 
-	err = common2.UpdateAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, input)
+	err = common2.UpdateAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, input, skipTLS)
 	if err != nil {
 		return nil, errors.Wrap(err, "updating agent")
 	}
-	agent, err := common2.GetAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName)
+	agent, err := common2.GetAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, skipTLS)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting updated agent")
 	}
@@ -616,6 +624,7 @@ func normalizeLegacySuperAgent(agent *cloudclient.Agent) {
 type ControlPlaneConfig struct {
 	URL            string
 	Secure         bool
+	SkipVerify     bool
 	OrganizationID string
 	EnvironmentID  string
 	Agent          cloudclient.Agent
@@ -698,11 +707,12 @@ func CreateRunnerHelmOptions(
 ) common2.HelmGenericOptions {
 	values := map[string]interface{}{
 		// Setting the connection
-		"runner.secret":     controlPlane.Agent.SecretKey,
-		"runner.orgId":      controlPlane.OrganizationID,
-		"runner.id":         controlPlane.Agent.ID,
-		"cloud.url":         controlPlane.URL,
-		"cloud.tls.enabled": controlPlane.Secure,
+		"runner.secret":        controlPlane.Agent.SecretKey,
+		"runner.orgId":         controlPlane.OrganizationID,
+		"runner.id":            controlPlane.Agent.ID,
+		"cloud.url":            controlPlane.URL,
+		"cloud.tls.enabled":    controlPlane.Secure,
+		"cloud.tls.skipVerify": controlPlane.SkipVerify,
 	}
 	maps.Copy(values, additionalValues)
 	if version != "" {

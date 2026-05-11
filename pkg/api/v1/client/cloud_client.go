@@ -11,11 +11,23 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+
+	phttp "github.com/kubeshop/testkube/pkg/http"
 )
 
-func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string) CloudClient[A] {
+func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string, insecure ...bool) CloudClient[A] {
 	if apiPathPrefix == "" {
 		apiPathPrefix = "/" + Version
+	}
+
+	isInsecure := false
+	if len(insecure) > 0 {
+		isInsecure = insecure[0]
+	}
+
+	signedURLClient := http.DefaultClient
+	if isInsecure {
+		signedURLClient = phttp.NewClient(true)
 	}
 
 	return CloudClient[A]{
@@ -23,6 +35,8 @@ func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string
 		sseClient:     httpClient,
 		apiURI:        apiURI,
 		apiPathPrefix: apiPathPrefix,
+		insecure:      isInsecure,
+		signedClient:  signedURLClient,
 		DirectClient:  NewDirectClient[A](httpClient, apiURI, apiPathPrefix),
 	}
 }
@@ -32,8 +46,10 @@ func NewCloudClient[A All](httpClient *http.Client, apiURI, apiPathPrefix string
 type CloudClient[A All] struct {
 	client        *http.Client
 	sseClient     *http.Client
+	signedClient  *http.Client
 	apiURI        string
 	apiPathPrefix string
+	insecure      bool
 	DirectClient[A]
 }
 
@@ -81,10 +97,13 @@ func (t CloudClient[A]) GetFile(uri, fileName, destination string, params map[st
 	if err != nil {
 		return "", err
 	}
-	// Signed URLs should use default client as these URLs are self-sufficient
-	// and do not need Authorization headers added. Some Object Storage Providers
-	// even fail when both Auth header and signed query parameter are present.
-	resp, err = http.DefaultClient.Do(req)
+	// Signed URLs should not reuse API auth headers, so use a dedicated client.
+	// Initialize it once during client construction to preserve connection pooling.
+	signedURLClient := t.signedClient
+	if signedURLClient == nil {
+		signedURLClient = http.DefaultClient
+	}
+	resp, err = signedURLClient.Do(req)
 	if err != nil {
 		return name, err
 	}

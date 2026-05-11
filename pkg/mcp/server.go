@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
+	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/mcp/tools"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -33,7 +33,7 @@ func NewMCPServer(cfg MCPServerConfig, client Client) (*server.MCPServer, error)
 
 	// If no client is provided, use the default API client
 	if client == nil {
-		httpClient := &http.Client{}
+		httpClient := tkhttp.NewClient(cfg.SkipTLS)
 		client = NewAPIClient(&cfg, httpClient)
 	}
 

@@ -50,6 +50,7 @@ func NewInitCmd() *cobra.Command {
 				os.Exit(1)
 			}
 			ui.NL()
+			skipTLS := common.SyncSkipTLSFromFlags(cmd, &cfg)
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
 
@@ -127,7 +128,7 @@ func NewInitCmd() *cobra.Command {
 				tokenType = config.TokenTypeOIDC
 			}
 			if !common.IsUserLoggedIn(cfg, options) {
-				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort)
+				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort, skipTLS)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}

@@ -87,9 +87,9 @@ Configuration Examples: https://docs.testkube.io/articles/mcp-configuration`,
 			}
 
 			if envMode {
-				runEnvironmentMode(debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
+				runEnvironmentMode(cmd, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
 			} else {
-				runDefaultMode(debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
+				runDefaultMode(cmd, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile)
 			}
 		},
 	}
@@ -165,7 +165,7 @@ func validateCloudContext(cfg config.Data) error {
 }
 
 // runEnvironmentMode handles the environment variable mode logic
-func runEnvironmentMode(debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) {
+func runEnvironmentMode(cmd *cobra.Command, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) {
 	// Parse environment variables
 	accessToken, orgID, envID, baseURL, dashboardURL, err := parseEnvironmentVariables()
 	if err != nil {
@@ -202,7 +202,7 @@ func runEnvironmentMode(debug bool, transport, shttpHost string, shttpPort int, 
 	displayConfiguration(configData, "environment variable")
 
 	// Start the MCP server
-	if err := startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-env"); err != nil {
+	if err := startMCPServer(common.ResolveSkipTLS(cmd, nil), accessToken, orgID, envID, baseURL, dashboardURL, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-env"); err != nil {
 		if ui.IsVerbose() {
 			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
 		}
@@ -210,7 +210,7 @@ func runEnvironmentMode(debug bool, transport, shttpHost string, shttpPort int, 
 }
 
 // runDefaultMode handles the default mode logic (OAuth + config file)
-func runDefaultMode(debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) {
+func runDefaultMode(cmd *cobra.Command, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string) {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -270,7 +270,7 @@ func runDefaultMode(debug bool, transport, shttpHost string, shttpPort int, shtt
 	displayConfiguration(configData, "default")
 
 	// Start the MCP server
-	if err := startMCPServer(accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-direct"); err != nil {
+	if err := startMCPServer(common.ResolveSkipTLS(cmd, &cfg), accessToken, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId, cfg.CloudContext.ApiUri, cfg.CloudContext.UiUri, debug, transport, shttpHost, shttpPort, shttpTLS, shttpCertFile, shttpKeyFile, "cli-direct"); err != nil {
 		if ui.IsVerbose() {
 			fmt.Fprintf(os.Stderr, "Failed to start MCP server: %v\n", err)
 		}
@@ -283,7 +283,7 @@ func runDefaultMode(debug bool, transport, shttpHost string, shttpPort int, shtt
 	}
 }
 
-func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string, source string) error {
+func startMCPServer(skipTLS bool, accessToken, orgID, envID, baseURL, dashboardURL string, debug bool, transport, shttpHost string, shttpPort int, shttpTLS bool, shttpCertFile, shttpKeyFile string, source string) error {
 	// Load config to check telemetry settings
 	cfg, err := config.Load()
 	telemetryEnabled := true
@@ -312,6 +312,7 @@ func startMCPServer(accessToken, orgID, envID, baseURL, dashboardURL string, deb
 		Debug:            debug,
 		TelemetryEnabled: telemetryEnabled,
 		Source:           source,
+		SkipTLS:          skipTLS,
 		SHTTPConfig: mcp.SHTTPConfig{
 			Host:      shttpHost,
 			Port:      shttpPort,
