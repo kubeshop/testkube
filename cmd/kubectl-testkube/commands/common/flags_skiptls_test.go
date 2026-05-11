@@ -54,6 +54,16 @@ func TestResolveSkipTLS(t *testing.T) {
 
 		assert.False(t, ResolveSkipTLS(cmd, cfg))
 	})
+
+	t.Run("non-bool flag value does not override persisted config", func(t *testing.T) {
+		cfg := &config.Data{SkipTLS: true}
+		cmd := &cobra.Command{Use: "test"}
+		cmd.Flags().String("skip-tls", "", "")
+		err := cmd.Flags().Set("skip-tls", "invalid")
+		assert.NoError(t, err)
+
+		assert.True(t, ResolveSkipTLS(cmd, cfg))
+	})
 }
 
 func TestSyncSkipTLSFromFlags(t *testing.T) {

@@ -258,7 +258,7 @@ func getBoolFlag(cmd *cobra.Command, name string) (value bool, changed bool, ok 
 	}
 	v, err := cmd.Flags().GetBool(name)
 	if err != nil {
-		return false, cmd.Flags().Changed(name), true
+		return false, false, false
 	}
 	return v, cmd.Flags().Changed(name), true
 }
