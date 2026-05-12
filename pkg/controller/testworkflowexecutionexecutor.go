@@ -106,7 +106,7 @@ func testWorkflowExecutionExecutor(client client.Client, recorder events.EventRe
 			if updateErr := client.Status().Update(ctx, &statusTWE); updateErr != nil {
 				return ctrl.Result{}, fmt.Errorf("updating error status for execution %q: %w (original error: %w)", twe.Name, updateErr, execErr)
 			}
-			recorder.Eventf(&statusTWE, nil, corev1.EventTypeWarning, "ExecutionNotScheduled", "ScheduleExecution", err.Error())
+			recorder.Eventf(&statusTWE, nil, corev1.EventTypeWarning, "ExecutionNotScheduled", "ScheduleExecution", "%s", err.Error())
 			return ctrl.Result{}, nil
 		}
 
