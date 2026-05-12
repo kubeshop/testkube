@@ -153,6 +153,16 @@ func (l *testWorkflowExecutionTelemetryListener) sendRunWorkflowTelemetry(ctx co
 		durationMs = execution.Result.DurationMs
 	}
 
+	var actorType, interfaceType string
+	if execution.RunningContext != nil {
+		if execution.RunningContext.Actor != nil && execution.RunningContext.Actor.Type_ != nil {
+			actorType = string(*execution.RunningContext.Actor.Type_)
+		}
+		if execution.RunningContext.Interface_ != nil && execution.RunningContext.Interface_.Type_ != nil {
+			interfaceType = string(*execution.RunningContext.Interface_.Type_)
+		}
+	}
+
 	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
 		RunParams: telemetry.RunParams{
 			AppVersion: version.Version,
@@ -176,6 +186,9 @@ func (l *testWorkflowExecutionTelemetryListener) sendRunWorkflowTelemetry(ctx co
 			TestWorkflowImages:       images,
 			TestWorkflowKubeshopGitURI: IsKubeshopGitURI(workflow.Spec.Content) ||
 				HasWorkflowStepLike(workflow.Spec, HasKubeshopGitURI),
+			RcActorType:     actorType,
+			RcInterfaceType: interfaceType,
+			TriggeredBy:     triggeredByBucket(actorType, interfaceType),
 		},
 	})
 

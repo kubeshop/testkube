@@ -369,3 +369,88 @@ func Test_GetDataSource(t *testing.T) {
 		})
 	}
 }
+
+func Test_triggeredByBucket(t *testing.T) {
+	type args struct {
+		actorType     string
+		interfaceType string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "Cron actor",
+			args: args{actorType: "cron"},
+			want: "scheduled",
+		},
+		{
+			name: "TestTrigger actor",
+			args: args{actorType: "testtrigger"},
+			want: "event-triggered",
+		},
+		{
+			name: "Workflow chained from another workflow",
+			args: args{actorType: "testworkflow"},
+			want: "composite",
+		},
+		{
+			name: "Workflow chained from another execution",
+			args: args{actorType: "testworkflowexecution"},
+			want: "composite",
+		},
+		{
+			name: "Program actor",
+			args: args{actorType: "program"},
+			want: "automation",
+		},
+		{
+			name: "User via CI/CD interface",
+			args: args{actorType: "user", interfaceType: "ci/cd"},
+			want: "ci-cd",
+		},
+		{
+			name: "User via UI",
+			args: args{actorType: "user", interfaceType: "ui"},
+			want: "human-ui",
+		},
+		{
+			name: "User via CLI",
+			args: args{actorType: "user", interfaceType: "cli"},
+			want: "human-cli",
+		},
+		{
+			name: "User via API",
+			args: args{actorType: "user", interfaceType: "api"},
+			want: "api",
+		},
+		{
+			name: "User with internal interface falls back to unknown",
+			args: args{actorType: "user", interfaceType: "internal"},
+			want: "unknown",
+		},
+		{
+			name: "User with no interface falls back to unknown",
+			args: args{actorType: "user"},
+			want: "unknown",
+		},
+		{
+			name: "Empty actor and interface",
+			args: args{},
+			want: "unknown",
+		},
+		{
+			name: "Unrecognised actor",
+			args: args{actorType: "made-up", interfaceType: "cli"},
+			want: "unknown",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := triggeredByBucket(tt.args.actorType, tt.args.interfaceType); got != tt.want {
+				t.Errorf("triggeredByBucket(%q, %q) = %v, want %v", tt.args.actorType, tt.args.interfaceType, got, tt.want)
+			}
+		})
+	}
+}
