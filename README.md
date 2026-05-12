@@ -1,4 +1,8 @@
-![Testkube Logo](assets/testkube-color-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/testkube_logo-light.png">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/testkube_logo-dark.png">
+  <img alt="Testkube" src="./assets/testkube_logo-light.png">
+</picture>
 
 # The Open Testing Platform for AI-driven engineering teams.
 
