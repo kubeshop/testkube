@@ -628,6 +628,13 @@ type Options struct {
 	Prefix string
 }
 
+func isExecutionReadyForLogFollow(execution testkube.TestWorkflowExecution) bool {
+	if execution.Result != nil && execution.Result.IsFinished() {
+		return true
+	}
+	return execution.RunnerId != ""
+}
+
 // uiWatch waits for execution assignment, streams logs, and returns exit code
 func uiWatch(
 	execution testkube.TestWorkflowExecution,
@@ -648,7 +655,7 @@ func uiWatch(
 	// Wait until the execution will be assigned to some runner
 	iteration := 0
 	executionId := execution.Id // Store ID before potential error
-	for !execution.Assigned() {
+	for !isExecutionReadyForLogFollow(execution) {
 		var err error
 		iteration++
 		time.Sleep(getIterationDelay(iteration))
@@ -659,7 +666,7 @@ func uiWatch(
 	}
 
 	// Print final logs in case execution is already finished
-	if execution.Result.IsFinished() {
+	if execution.Result != nil && execution.Result.IsFinished() {
 		ui.Info("Getting logs for test workflow execution", execution.Id)
 
 		logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
