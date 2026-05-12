@@ -50,6 +50,9 @@ type Params struct {
 	TestWorkflowArtifactUsed   bool       `json:"test_workflow_artifact_used,omitempty"`
 	TestWorkflowImage          string     `json:"test_workflow_image,omitempty"`
 	TestWorkflowKubeshopGitURI bool       `json:"test_workflow_kubeshop_git_uri,omitempty"`
+	RcActorType                string     `json:"rc_actor_type,omitempty"`
+	RcInterfaceType            string     `json:"rc_interface_type,omitempty"`
+	TriggeredBy                string     `json:"triggered_by,omitempty"`
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
 	Email                      string     `json:"email,omitempty"`
@@ -114,6 +117,9 @@ type WorkflowParams struct {
 	TestWorkflowTemplates      []string
 	TestWorkflowImages         []string
 	TestWorkflowKubeshopGitURI bool
+	RcActorType                string
+	RcInterfaceType            string
+	TriggeredBy                string
 }
 
 type CreateWorkflowParams struct {
@@ -328,6 +334,9 @@ func NewRunWorkflowPayload(name, clusterType string, params RunWorkflowParams) P
 					TestWorkflowImage:          params.TestWorkflowImage,
 					TestWorkflowArtifactUsed:   params.TestWorkflowArtifactUsed,
 					TestWorkflowKubeshopGitURI: params.TestWorkflowKubeshopGitURI,
+					RcActorType:                params.RcActorType,
+					RcInterfaceType:            params.RcInterfaceType,
+					TriggeredBy:                params.TriggeredBy,
 				},
 			}},
 	}

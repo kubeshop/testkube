@@ -104,7 +104,7 @@ func encodeStruct(v reflect.Value, sb *strings.Builder, prefix string) {
 		mt, _ := parseMetaTag(tagVal)
 
 		// If the field is a pointer, we'll dereference it, otherwise the address of the field will be returned.
-		if fieldVal.Kind() == reflect.Ptr {
+		if fieldVal.Kind() == reflect.Pointer {
 			if fieldVal.IsNil() {
 				continue
 			}
@@ -165,7 +165,7 @@ func isZero(v reflect.Value) bool {
 		return !v.Bool()
 	case reflect.Slice, reflect.Array:
 		return v.Len() == 0
-	case reflect.Map, reflect.Ptr, reflect.Interface:
+	case reflect.Map, reflect.Pointer, reflect.Interface:
 		return v.IsNil()
 	case reflect.Struct:
 		return false
