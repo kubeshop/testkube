@@ -8,7 +8,7 @@ Testkube provides a single platform for defining, running and analyzing automate
 
 ---
 
-Trusted by Engineering Teams at: CoreWeave, NVidia, Siemens, T-Mobile, Volvo, Harvard, SwissCom, etc.
+> Trusted by Engineering Teams at CoreWeave, NVidia, Siemens, T-Mobile, Harvard, SwissCom, and many more..
 
 ---
 
