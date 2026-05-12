@@ -4,11 +4,15 @@
 
 Testkube provides a single platform for defining, running and analyzing automated tests, using your existing testing tools/scripts, running in your existing infrastructure.
 
-[Get start with the Open-Source Agent](#open-source-agent---this-repo) - [Try the Commercial Control Plane](https://testkube.io/get-started)
+[Get start with Open-Source](#open-source-agent---this-repo) - [Try the Commercial Control Plane](https://testkube.io/get-started)
 
 ---
 
-[Website](https://testkube.io) |  [Documentation](https://docs.testkube.io) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog) |  [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio) 
+Trusted by Engineering Teams at: CoreWeave, NVidia, Siemens, T-Mobile, Volvo, Harvard, SwissCom, etc.
+
+---
+
+[Website](https://testkube.io) |  [Docs](https://docs.testkube.io) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog) |  [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio) 
 
 ---
 
