@@ -1,4 +1,4 @@
-![Testkube Logo](assets/logo-dark-text-full.png)
+![Testkube Logo](assets/testkube-color-dark.png)
 
 # The Open Testing Platform for AI-driven engineering teams.
 
@@ -31,7 +31,7 @@ Testkube provides a single platform for defining, running and analyzing automate
 
 ### Open Source Agent - this repo.
 
-MIT -licensed, runs standalone in your Kubernetes cluster, no control plane required. Great for single-cluster setups, self-managed environments, and evaluating Testkube.
+MIT-licensed, runs standalone in your Kubernetes cluster, no control plane required. Great for single-cluster setups, self-managed environments, and evaluating Testkube.
 
 - The [Helm or CLI Installation](https://docs.testkube.io/articles/install/standalone-agent#installing-the-standalone-agent) will make it easy to deploy the agent into your target cluster.
 - The [Quickstart](https://docs.testkube.io/articles/getting-started-with-open-source) is the easiest way to set up
