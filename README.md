@@ -1,47 +1,55 @@
-[Website](https://testkube.io) |  [Documentation](https://docs.testkube.io) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog) |  [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio)
+![Testkube Logo](assets/logo-dark-text-full.png)
 
-# Welcome to Testkube!
+# The Open Testing Platform for AI-driven engineering teams.
 
-Testkube is a Test Orchestration Platform for Cloud-Native Applications. It provides a single platform for defining, running and analyzing test executions, using your existing testing tools/scripts, running in your existing infrastructure.
+Testkube provides a single platform for defining, running and analyzing automated tests, using your existing testing tools/scripts, running in your existing infrastructure.
 
-Testkube consists of a **Control Plane** and any number of **Testkube Agents**. The Control Plane exposes a
-Dashboard for easy and centralized access to most Testkube features.
+[Get start with the Open-Source Agent](#open-source-agent---this-repo) - [Try the Commercial Control Plane](https://testkube.io/get-started)
 
-The Testkube Agent (this repo) is **100% Open-Source** and can be deployed standalone without a Control Plane - [Read More](https://docs.testkube.io/articles/open-source).
+---
 
-### Why use Testkube?
+[Website](https://testkube.io) |  [Documentation](https://docs.testkube.io) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog) |  [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio) 
+
+---
+
+## Why Testkube?
 
 - **Run any Tests** : Execute _any_ tests/tools/scripts at scale; API, E2E, Performance, Security, Infrastructure, etc. - [Examples & Guides](https://docs.testkube.io/articles/examples/overview).
 - **Trigger Tests whenever needed**: Trigger tests manually, on schedules, from CI/CD/GitOps pipelines, on Kubernetes Events, via the REST API, through MCP, etc. - [Read More](https://docs.testkube.io/articles/triggering-overview).
-- **Results and Analytics**: All test results, artifacts, logs and resource-metrics are aggregated for centralized troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
-- **Works with your tools**: Integrate with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks), the [Testkube REST API](https://docs.testkube.io/openapi/overview) or the [MCP Server](https://docs.testkube.io/articles/mcp-overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
-- **AI Agents**: Build AI Agents for troubleshooting, analysis, remediation, etc - [Read More](https://docs.testkube.io/articles/ai-agents)
+- **See Everything**: All test results, artifacts, logs and resource-metrics are aggregated for centralized troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
+- **Integrate Natively**: Testkube integrates with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks), the [Testkube REST API](https://docs.testkube.io/openapi/overview) or the [MCP Server](https://docs.testkube.io/articles/mcp-overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
+- **Testkube AI**: Use the Testkube MCP Server or native AI Agents for troubleshooting, analysis, remediation, etc - [Read More](https://docs.testkube.io/articles/testkube-ai-overview)
 - **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
 
-**See it in action:** Open the [interactive TestWorkflows showcase](test/testworkflows-showcase.html) to see how a workflow builds up from a single test to a fully orchestrated pipeline.
+**See it in action:** Open the [interactive TestWorkflows showcase](https://docs.testkube.io/articles/testworkflows-showcase) to see how a workflow builds up from a single test to a fully orchestrated pipeline.
 
-### Getting Started with Testkube Open Source
+## Two ways to run Testkube 
 
-To get started with the open source agent:
+### Open Source Agent - this repo.
+
+MIT -licensed, runs standalone in your Kubernetes cluster, no control plane required. Great for single-cluster setups, self-managed environments, and evaluating Testkube.
 
 - The [Helm or CLI Installation](https://docs.testkube.io/articles/install/standalone-agent#installing-the-standalone-agent) will make it easy to deploy the agent into your target cluster.
 - The [Quickstart](https://docs.testkube.io/articles/getting-started-with-open-source) is the easiest way to set up
   Testkube and run your first tests.
 
-Check out the [Testkube Open Source Overview](https://docs.testkube.io/articles/open-source) to learn
-more about the open source deployment architecture.
+Check out the [Testkube Open Source Overview](https://docs.testkube.io/articles/open-source) to learn more about the open source deployment architecture.
 
-### Getting Started with the Commercial Control Plane
+### Commercial Control Plane
 
-Looking for more than single environment test execution? Do you need orchestration accross clusters, support for different trigger points, and high level reporting and artifact collection? Enterprise may be for your team - there are several ways to get started:
+The control plane connects every Testkube agent across clusters, teams, and environments into a single dashboard:
 
-- The [Quickstart](https://docs.testkube.io/articles/tutorial/quickstart/overview) is the easiest way to set up
-  Testkube and run your first tests
-- The [Helm Chart Installation](https://docs.testkube.io/articles/install/install-with-helm) gives you more control over the installed components.
-- The [Feature Comparison](https://docs.testkube.io/articles/install/feature-comparison) page details the differences between Enterprise and Open Source.
+- **One control plane, unlimited clusters** - orchestrate and analyze tests across clusters and regions
+- **Testkube AI** - workflow generation, failure investigation, remediation PRs
+- **Enterprise-grade** - SSO/SCIM, RBAC, audit logs, SLA-backed support
 
-Check out the [Installation Overview](https://docs.testkube.io/articles/install/overview) to learn
-more about different ways to deploy and run the Testkube Control Plane.
+Check out the [Installation Overview](https://docs.testkube.io/articles/install/overview) to learn more about different ways to deploy and run the Testkube Control Plane.
+
+The online Trial is the easiest way to try the commercial Testkube offering - [Get Started](https://testkube.io/get-started)
+
+### Marketplace
+
+The [Testkube Marketplace](https://github.com/kubeshop/testkube-marketplace) provides an open and ready-to-use catalog of Testkube Workflows for Infrastructure Testing - [Read More](https://docs.testkube.io/articles/examples/marketplace).
 
 ### Documentation
 
