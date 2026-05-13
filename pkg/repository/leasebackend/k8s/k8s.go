@@ -135,6 +135,14 @@ func (b *K8sLeaseBackend) TryAcquire(ctx context.Context, id, clusterID string) 
 	return true, nil
 }
 
+// leaseName returns the Kubernetes Lease object name for the given clusterID.
+// The final composed name (namePrefix + "-" + clusterID) is sanitized via
+// SanitizeForK8sName to enforce the 63-character DNS-1123 limit. Callers may
+// pass a clusterID that was already sanitized; in that case the second pass is
+// a no-op unless the prefix pushes the combined length past 63 characters, in
+// which case re-sanitization truncates and appends a new hash over the full
+// prefixed string — uniqueness is still preserved since distinct prefixed
+// inputs produce distinct hashes.
 func (b *K8sLeaseBackend) leaseName(clusterID string) string {
 	if b.leaseNameOverride != "" {
 		return b.leaseNameOverride

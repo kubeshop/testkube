@@ -13,10 +13,15 @@ var k8sNameInvalidChars = regexp.MustCompile("[^a-z0-9-]+")
 // non-alphanumeric characters replaced with hyphens, leading/trailing hyphens
 // trimmed, and capped at 63 characters. Unlike utils.SanitizeName, it does not
 // strip file extensions (dots are treated as invalid characters and replaced).
-// When sanitization modifies the input (beyond lowercasing) or when truncation
-// is needed, a hash suffix derived from the original input is appended to
-// preserve uniqueness — distinct original inputs that normalize to the same
-// sanitized value (e.g. "env_a" vs "env-a") will produce distinct outputs.
+//
+// A hash suffix derived from the original input is appended in two cases:
+//  1. When sanitization modifies the lowercased input (character replacement or
+//     trimming) — e.g. "env_a" vs "env-a" produce distinct outputs.
+//  2. When the sanitized name exceeds 63 characters and must be truncated.
+//
+// Case-only differences are intentionally not hashed: DNS names are
+// case-insensitive, so "My-Cluster" and "my-cluster" correctly collapse to the
+// same lease name.
 func SanitizeForK8sName(name string) string {
 	original := name
 	name = strings.ToLower(name)
