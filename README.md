@@ -4,7 +4,7 @@
   <img alt="Testkube" src="./assets/testkube_logo-light.png">
 </picture>
 
-# The Open Testing Platform for AI-driven engineering teams.
+# The Open Testing Platform for AI-driven Engineering Teams
 
 Testkube provides a single platform for defining, running and analyzing automated tests, using your existing testing tools/scripts, running in your Kubernetes infrastructure.
 
