@@ -314,6 +314,13 @@ func main() {
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
+	// Scope the emitter lease to the AgentID so that agents for different
+	// environments sharing the same namespace each get their own emitter leader.
+	if proContext.Agent.ID != "" {
+		emitterClusterID := fmt.Sprintf("%s-%s", event.DefaultLeaseClusterID, proContext.Agent.ID)
+		eventsEmitter.SetLeaseClusterID(leasebackend.SanitizeForK8sName(emitterClusterID))
+	}
+
 	grpcTLSEnabled := !cfg.TestkubeProTLSInsecure
 
 	// Configure SyncStore here as it is required for the SuperAgent migration.

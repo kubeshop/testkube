@@ -24,14 +24,35 @@ const (
 	DefaultEventCacheCapacity        = 100000
 )
 
+// EmitterOption is a functional option for configuring the Emitter.
+type EmitterOption func(*Emitter)
+
+// WithLeaseClusterID overrides the default lease cluster ID used by the
+// emitter's leader-election loop. When empty, the default is not changed.
+func WithLeaseClusterID(id string) EmitterOption {
+	return func(e *Emitter) {
+		if id != "" {
+			e.leaseClusterID = id
+		}
+	}
+}
+
+// SetLeaseClusterID overrides the lease cluster ID after construction but
+// before Listen is called. When id is empty, the current value is kept.
+func (e *Emitter) SetLeaseClusterID(id string) {
+	if id != "" {
+		e.leaseClusterID = id
+	}
+}
+
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string, eventTTL time.Duration, cacheCapacity uint64) *Emitter {
+func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectRoot string, clusterName string, eventTTL time.Duration, cacheCapacity uint64, opts ...EmitterOption) *Emitter {
 	instanceId := utils.RandAlphanum(10)
 	cache := ttlcache.New[string, bool](
 		ttlcache.WithTTL[string, bool](eventTTL),
 		ttlcache.WithCapacity[string, bool](cacheCapacity),
 	)
-	return &Emitter{
+	e := &Emitter{
 		loader:              NewLoader(),
 		log:                 log.DefaultLogger.With("instance_id", instanceId),
 		bus:                 eventBus,
@@ -42,7 +63,12 @@ func NewEmitter(eventBus bus.Bus, leaseBackend leasebackend.Repository, subjectR
 		listeners:           make(common.Listeners, 0),
 		clusterName:         clusterName,
 		eventCache:          cache,
+		leaseClusterID:      DefaultLeaseClusterID,
 	}
+	for _, opt := range opts {
+		opt(e)
+	}
+	return e
 }
 
 type Interface interface {
@@ -62,6 +88,7 @@ type Emitter struct {
 	leaseBackend        leasebackend.Repository
 	subjectRoot         string
 	clusterName         string
+	leaseClusterID      string
 	eventCache          *ttlcache.Cache[string, bool]
 }
 
@@ -149,8 +176,8 @@ func (e *Emitter) eventTopic(event testkube.Event) string {
 }
 
 const (
-	leaseCheckInterval        = 5 * time.Second
-	leaseClusterID     string = "event-emitters"
+	leaseCheckInterval                = 5 * time.Second
+	DefaultLeaseClusterID      string = "event-emitters"
 )
 
 // TODO(emil): convert to using new common coordinator package for lease acquisition
@@ -170,7 +197,7 @@ func (e *Emitter) leaseCheckLoop(ctx context.Context, leaseChan chan<- bool) {
 }
 
 func (e *Emitter) leaseCheck(ctx context.Context, leaseChan chan<- bool) {
-	leased, err := e.leaseBackend.TryAcquire(ctx, leaseClusterID+"-"+e.instanceId, leaseClusterID)
+	leased, err := e.leaseBackend.TryAcquire(ctx, e.leaseClusterID+"-"+e.instanceId, e.leaseClusterID)
 	if err != nil {
 		e.log.Errorw("error while trying to acquire lease", "error", err)
 	}

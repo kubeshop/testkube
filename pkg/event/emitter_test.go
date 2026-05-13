@@ -816,3 +816,57 @@ func TestEmitter_ThreeWebhooksRealScenario(t *testing.T) {
 			"Total notifications should be 2 (up webhook + otel webhook)")
 	})
 }
+
+func TestEmitterLeaseClusterID(t *testing.T) {
+	t.Run("default lease cluster ID", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, DefaultLeaseClusterID, emitter.leaseClusterID)
+	})
+
+	t.Run("WithLeaseClusterID overrides default", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithLeaseClusterID("custom-id"))
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, "custom-id", emitter.leaseClusterID)
+	})
+
+	t.Run("WithLeaseClusterID empty string does not override", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity, WithLeaseClusterID(""))
+		defer emitter.eventCache.Stop()
+		assert.Equal(t, DefaultLeaseClusterID, emitter.leaseClusterID)
+	})
+
+	t.Run("SetLeaseClusterID overrides after construction", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+		emitter.SetLeaseClusterID("post-construction-id")
+		assert.Equal(t, "post-construction-id", emitter.leaseClusterID)
+	})
+
+	t.Run("SetLeaseClusterID empty string does not override", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "", DefaultEventTTL, DefaultEventCacheCapacity)
+		defer emitter.eventCache.Stop()
+		emitter.SetLeaseClusterID("")
+		assert.Equal(t, DefaultLeaseClusterID, emitter.leaseClusterID)
+	})
+}
