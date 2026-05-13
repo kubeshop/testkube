@@ -438,7 +438,7 @@ func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
 	assert.Equal(t, "refs/heads/main", pullOpts.ReferenceName.String())
 }
 
-func TestGitInformerConfig_TestkubeMainWithTestAndPkgPaths(t *testing.T) {
+func TestGitInformerConfig_MultiplePathFilters(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
 		Revision: "main",
