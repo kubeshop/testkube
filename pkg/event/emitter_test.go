@@ -869,4 +869,19 @@ func TestEmitterLeaseClusterID(t *testing.T) {
 		emitter.SetLeaseClusterID("")
 		assert.Equal(t, DefaultLeaseClusterID, emitter.leaseClusterID)
 	})
+
+	t.Run("leaseCheck uses overridden lease cluster ID in TryAcquire", func(t *testing.T) {
+		eventBus := bus.NewEventBusMock()
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockLeaseRepo := leasebackend.NewMockRepository(mockCtrl)
+		emitter := NewEmitter(eventBus, mockLeaseRepo, "agentevents", "instance-1", DefaultEventTTL, DefaultEventCacheCapacity, WithLeaseClusterID("custom-id"))
+		defer emitter.eventCache.Stop()
+
+		mockLeaseRepo.EXPECT().
+			TryAcquire(gomock.Any(), "custom-id-instance-1", "custom-id")
+
+		err := emitter.leaseCheck(context.Background())
+		assert.NoError(t, err)
+	})
 }
