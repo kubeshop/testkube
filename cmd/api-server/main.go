@@ -782,8 +782,7 @@ func main() {
 
 		triggerClusterID := "testkube-api"
 		if proContext.Agent.ID != "" {
-			sanitizedAgentID := leasebackend.SanitizeForK8sName(proContext.Agent.ID)
-			triggerClusterID = fmt.Sprintf("%s-%s", triggerClusterID, sanitizedAgentID)
+			triggerClusterID = fmt.Sprintf("%s-%s", triggerClusterID, proContext.Agent.ID)
 		}
 		triggerClusterID = leasebackend.SanitizeForK8sName(triggerClusterID)
 
@@ -909,8 +908,7 @@ func main() {
 		// Incorporate AgentID so that agents for different environments
 		// coexisting in the same namespace get independent leases.
 		if proContext.Agent.ID != "" {
-			sanitizedAgentID := leasebackend.SanitizeForK8sName(proContext.Agent.ID)
-			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizedAgentID)
+			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, proContext.Agent.ID)
 		}
 		leaderClusterID = leasebackend.SanitizeForK8sName(leaderClusterID)
 

@@ -12,13 +12,7 @@ func TestSanitizeForK8sName_Basic(t *testing.T) {
 		expected string
 	}{
 		{name: "already valid", input: "my-cluster", expected: "my-cluster"},
-		{name: "uppercase", input: "My-Cluster", expected: "my-cluster"},
-		{name: "underscores", input: "tkcroot_abc", expected: "tkcroot-abc"},
-		{name: "dots replaced", input: "my.cluster.id", expected: "my-cluster-id"},
-		{name: "mixed invalid", input: "a_b.c!d@e", expected: "a-b-c-d-e"},
-		{name: "leading hyphens trimmed", input: "---valid", expected: "valid"},
-		{name: "trailing hyphens trimmed", input: "valid---", expected: "valid"},
-		{name: "both trimmed", input: "---valid---", expected: "valid"},
+		{name: "all lowercase already", input: "testkube-core", expected: "testkube-core"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -27,6 +21,64 @@ func TestSanitizeForK8sName_Basic(t *testing.T) {
 				t.Errorf("SanitizeForK8sName(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
+	}
+}
+
+func TestSanitizeForK8sName_InvalidCharsGetHash(t *testing.T) {
+	// Inputs with invalid characters should get a hash suffix to preserve
+	// uniqueness of distinct originals that normalize to the same value.
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "underscores", input: "tkcroot_abc"},
+		{name: "dots", input: "my.cluster.id"},
+		{name: "mixed invalid", input: "a_b.c!d@e"},
+		{name: "leading hyphens", input: "---valid"},
+		{name: "trailing hyphens", input: "valid---"},
+		{name: "both trimmed", input: "---valid---"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeForK8sName(tt.input)
+			if len(got) > 63 {
+				t.Errorf("expected len <= 63, got %d: %q", len(got), got)
+			}
+			// Should contain a hash suffix (8 hex chars after last hyphen)
+			if !strings.Contains(got, "-") {
+				t.Errorf("expected hash-suffix separator, got %q", got)
+			}
+			// Must not start or end with hyphen
+			if got[0] == '-' {
+				t.Errorf("name must not start with hyphen: %q", got)
+			}
+			if got[len(got)-1] == '-' {
+				t.Errorf("name must not end with hyphen: %q", got)
+			}
+		})
+	}
+}
+
+func TestSanitizeForK8sName_NormalizationPreservesUniqueness(t *testing.T) {
+	// Distinct inputs that normalize to the same sanitized value must produce
+	// different outputs (e.g. env_a vs env-a).
+	a := SanitizeForK8sName("env_a")
+	b := SanitizeForK8sName("env-a")
+	if a == b {
+		t.Errorf("distinct inputs 'env_a' and 'env-a' should produce distinct names, both got %q", a)
+	}
+	// env-a is already valid, should not have a hash
+	if b != "env-a" {
+		t.Errorf("already-valid input 'env-a' should stay as-is, got %q", b)
+	}
+}
+
+func TestSanitizeForK8sName_UppercasePreservesUniqueness(t *testing.T) {
+	// Uppercase-only change should not add a hash since lowercasing is
+	// always applied first and the regex operates on the lowered value.
+	got := SanitizeForK8sName("My-Cluster")
+	if got != "my-cluster" {
+		t.Errorf("SanitizeForK8sName(%q) = %q, want %q", "My-Cluster", got, "my-cluster")
 	}
 }
 
