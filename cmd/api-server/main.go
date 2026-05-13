@@ -89,6 +89,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
@@ -901,7 +902,7 @@ func main() {
 		// Incorporate AgentID so that agents for different environments
 		// coexisting in the same namespace get independent leases.
 		if proContext.Agent.ID != "" {
-			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizeForDNS(proContext.Agent.ID))
+			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, utils.SanitizeName(proContext.Agent.ID))
 		}
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
@@ -1019,25 +1020,4 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 	return shouldUseCloudWebhooks(proContext)
 }
 
-// sanitizeForDNS converts a string to a DNS-1123 compatible label segment by
-// lowercasing, replacing invalid characters with hyphens, and trimming leading/
-// trailing non-alphanumeric characters.
-func sanitizeForDNS(s string) string {
-	s = strings.ToLower(s)
-	s = strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-			return r
-		}
-		return '-'
-	}, s)
-	s = strings.Trim(s, "-")
-	if s == "" {
-		return "agent"
-	}
-	// Cap at 63 characters (DNS label max length).
-	if len(s) > 63 {
-		s = s[:63]
-		s = strings.TrimRight(s, "-")
-	}
-	return s
-}
+
