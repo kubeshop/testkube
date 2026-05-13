@@ -1031,7 +1031,8 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 // trimmed, and capped at 63 characters. Unlike utils.SanitizeName, it does not
 // strip file extensions (dots are treated as invalid characters and replaced).
 // When truncation is needed, it appends a short hash suffix to preserve
-// uniqueness of the original input.
+// uniqueness of the sanitized pre-truncation value; distinct original inputs
+// that normalize to the same sanitized value may still collide.
 func sanitizeForK8sName(name string) string {
 	original := name
 	name = k8sNameInvalidChars.ReplaceAllString(name, "-")
