@@ -755,6 +755,8 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NoError(t, localRepo.DeleteRemote("origin"))
+	// Keep the real test remote first (used for fetch/pull) and include the
+	// GitHub URL to satisfy repositoryOriginMatches for kubeshop/testkube.
 	_, err = localRepo.CreateRemote(&config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{
