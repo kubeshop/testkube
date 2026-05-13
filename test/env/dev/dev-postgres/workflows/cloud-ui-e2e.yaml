@@ -138,3 +138,6 @@ spec:
         workingDir: /data/artifacts/
         paths:
         - '**/*'
+  - name: E2E Test Coverage report
+    optional: true
+    shell: npm run scenario-coverage
