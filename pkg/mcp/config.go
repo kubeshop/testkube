@@ -51,6 +51,9 @@ type MCPServerConfig struct {
 	// Used by the MCP bridge when spawned for metadata-only listing with dummy credentials.
 	SkipEndpointChecks bool
 
+	// SkipTLS disables TLS certificate verification for the control-plane HTTP client.
+	SkipTLS bool
+
 	// SHTTP-specific configuration
 	SHTTPConfig SHTTPConfig
 }

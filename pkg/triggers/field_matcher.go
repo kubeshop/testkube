@@ -177,7 +177,7 @@ func derefPtr(v any) any {
 		return nil
 	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr && !rv.IsNil() {
+	if rv.Kind() == reflect.Pointer && !rv.IsNil() {
 		return rv.Elem().Interface()
 	}
 	return v

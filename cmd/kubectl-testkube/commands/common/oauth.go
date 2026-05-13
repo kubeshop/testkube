@@ -61,7 +61,7 @@ func RefreshOAuthToken() (accessToken string, err error) {
 		return "", fmt.Errorf("missing login tokens")
 	}
 
-	newAccessToken, newRefreshToken, err := refreshUserToken(context.Background(), cfg)
+	newAccessToken, newRefreshToken, err := refreshUserToken(context.Background(), cfg, cfg.SkipTLS || cfg.CloudContext.SkipTLS)
 	if err != nil {
 		return "", fmt.Errorf("failed to refresh token: %w", err)
 	}
@@ -83,16 +83,16 @@ func RefreshOAuthToken() (accessToken string, err error) {
 // Returns a fresh (idToken, refreshToken); does not persist to config.
 // The email-link path skips the network when the current idToken is still valid
 // (verify-first), matching CheckAndRefreshToken's behavior for OIDC.
-func refreshUserToken(ctx context.Context, cfg config.Data) (string, string, error) {
+func refreshUserToken(ctx context.Context, cfg config.Data, skipTLS bool) (string, string, error) {
 	switch cfg.CloudContext.TokenType {
 	case config.TokenTypeEmailLink:
-		return cloudlogin.RefreshEmailLinkToken(ctx, cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
+		return cloudlogin.RefreshEmailLinkToken(ctx, cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken, skipTLS)
 	default:
 		authURI := cfg.CloudContext.AuthUri
 		if authURI == "" {
 			authURI = fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
 		}
-		return cloudlogin.CheckAndRefreshToken(ctx, authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
+		return cloudlogin.CheckAndRefreshToken(ctx, authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken, skipTLS)
 	}
 }
 

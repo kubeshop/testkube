@@ -22,6 +22,7 @@ func UiPrintContext(cfg config.Data) {
 			"Environment    ": cfg.CloudContext.EnvironmentName + ui.DarkGray(" ("+cfg.CloudContext.EnvironmentId+")"),
 			"API Key        ": text.Obfuscate(cfg.CloudContext.ApiKey),
 			"API URI        ": cfg.CloudContext.ApiUri,
+			"Skip TLS       ": fmt.Sprintf("%t", cfg.SkipTLS || cfg.CloudContext.SkipTLS),
 			"Namespace      ": cfg.Namespace,
 		}
 
@@ -35,6 +36,7 @@ func UiPrintContext(cfg config.Data) {
 	} else {
 		ui.InfoGrid(map[string]string{
 			"Namespace        ": cfg.Namespace,
+			"Skip TLS         ": fmt.Sprintf("%t", cfg.SkipTLS),
 			"Telemetry Enabled": fmt.Sprintf("%t", cfg.TelemetryEnabled),
 		})
 	}

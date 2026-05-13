@@ -29,11 +29,11 @@ func (e *HTTPError) Error() string {
 }
 
 // NewImportClient creates a new client for importing execution data archives to the control plane.
-func NewImportClient(baseUrl, token, orgID, envID string) *ImportClient {
+func NewImportClient(baseUrl, token, orgID, envID string, insecure ...bool) *ImportClient {
 	return &ImportClient{
 		BaseUrl: baseUrl,
 		Path:    "/organizations/" + orgID + "/environments/" + envID + "/agent/import",
-		Client:  http.NewClient(),
+		Client:  http.NewClient(insecure...),
 		Token:   token,
 	}
 }

@@ -50,7 +50,7 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 	case ClientCloud:
 		ConfigureClient(httpClient, nil, options.CloudApiKey, options.Headers)
 		ConfigureClient(sseClient, nil, options.CloudApiKey, options.Headers)
-		client = NewCloudAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix)
+		client = NewCloudAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix, options.Insecure)
 
 	case ClientDirect:
 		var token *oauth2.Token

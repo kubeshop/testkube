@@ -6,7 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -27,13 +27,13 @@ func NewTestWorkflowExecutionExecutorController(mgr ctrl.Manager, exec TestWorkf
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&testworkflowsv1.TestWorkflowExecution{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), mgr.GetEventRecorderFor("testworkflowexecution-controller"), exec)); err != nil {
+		Complete(testWorkflowExecutionExecutor(mgr.GetClient(), mgr.GetEventRecorder("testworkflowexecution-controller"), exec)); err != nil {
 		return fmt.Errorf("create new controller for TestWorkflowExecution: %w", err)
 	}
 	return nil
 }
 
-func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRecorder, exec TestWorkflowExecutor) reconcile.Reconciler {
+func testWorkflowExecutionExecutor(client client.Client, recorder events.EventRecorder, exec TestWorkflowExecutor) reconcile.Reconciler {
 	return reconcile.Func(func(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 		// Get and validate the TestWorkflowExecution.
 		var twe testworkflowsv1.TestWorkflowExecution
@@ -106,7 +106,7 @@ func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRe
 			if updateErr := client.Status().Update(ctx, &statusTWE); updateErr != nil {
 				return ctrl.Result{}, fmt.Errorf("updating error status for execution %q: %w (original error: %w)", twe.Name, updateErr, execErr)
 			}
-			recorder.Event(&statusTWE, corev1.EventTypeWarning, "ExecutionNotScheduled", err.Error())
+			recorder.Eventf(&statusTWE, nil, corev1.EventTypeWarning, "ExecutionNotScheduled", "ScheduleExecution", "%s", err.Error())
 			return ctrl.Result{}, nil
 		}
 
@@ -121,7 +121,7 @@ func testWorkflowExecutionExecutor(client client.Client, recorder record.EventRe
 			return ctrl.Result{}, fmt.Errorf("updating status generation for execution %q: %w", twe.Name, err)
 		}
 
-		recorder.Event(&statusTWE, corev1.EventTypeNormal, "ExecutionScheduled", fmt.Sprintf("Scheduled test workflow %q", twe.Spec.TestWorkflow.Name))
+		recorder.Eventf(&statusTWE, nil, corev1.EventTypeNormal, "ExecutionScheduled", "ScheduleExecution", "Scheduled test workflow %q", twe.Spec.TestWorkflow.Name)
 
 		log := ctrl.LoggerFrom(ctx)
 		log.Info("executed test workflow", "name", twe.Spec.TestWorkflow.Name)

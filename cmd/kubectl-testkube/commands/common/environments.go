@@ -13,8 +13,8 @@ type Environment struct {
 	Name string
 }
 
-func GetEnvironments(url, token, orgID string) ([]cloudclient.Environment, error) {
-	c := cloudclient.NewEnvironmentsClient(url, token, orgID)
+func GetEnvironments(url, token, orgID string, skipTLS ...bool) ([]cloudclient.Environment, error) {
+	c := cloudclient.NewEnvironmentsClient(url, token, orgID, skipTLS...)
 	return c.List()
 }
 
@@ -35,9 +35,9 @@ func FindEnvID(envs []cloudclient.Environment, name string) string {
 	return ""
 }
 
-func UiGetEnvironmentID(url, token, orgID string) (string, string, error) {
+func UiGetEnvironmentID(url, token, orgID string, skipTLS ...bool) (string, string, error) {
 	// Choose environment from orgs available
-	envs, err := GetEnvironments(url, token, orgID)
+	envs, err := GetEnvironments(url, token, orgID, skipTLS...)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get environments: %s", err.Error())
 	}

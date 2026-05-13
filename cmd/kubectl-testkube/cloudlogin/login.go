@@ -18,6 +18,8 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
+
+	tkhttp "github.com/kubeshop/testkube/pkg/http"
 )
 
 const (
@@ -42,17 +44,27 @@ func checkPortAvailable(port int) error {
 	return nil
 }
 
+func isSkipTLS(skipTLS []bool) bool {
+	return len(skipTLS) == 1 && skipTLS[0]
+}
+
+func contextWithHTTPClient(ctx context.Context, skipTLS bool) context.Context {
+	return context.WithValue(ctx, oauth2.HTTPClient, tkhttp.NewClient(skipTLS))
+}
+
 type Tokens struct {
 	IDToken      string
 	RefreshToken string
 }
 
-func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) (string, chan Tokens, error) {
+func CloudLogin(ctx context.Context, providerURL, connectorID string, port int, skipTLS ...bool) (string, chan Tokens, error) {
 	if err := checkPortAvailable(port); err != nil {
 		return "", nil, err
 	}
 
-	provider, err := oidc.NewProvider(ctx, providerURL)
+	httpCtx := contextWithHTTPClient(ctx, isSkipTLS(skipTLS))
+
+	provider, err := oidc.NewProvider(httpCtx, providerURL)
 	if err != nil {
 		return "", nil, err
 	}
@@ -71,7 +83,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 		if code != "" {
 			ch <- code
 			fmt.Fprintln(w, "<script>window.close()</script>")
-			fmt.Fprintln(w, "Your testkube CLI is now succesfully authenticated. Go back to the terminal to continue.")
+			fmt.Fprintln(w, "Your testkube CLI is now successfully authenticated. Go back to the terminal to continue.")
 		} else {
 			fmt.Fprintln(w, "Authorization failed.")
 		}
@@ -94,7 +106,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 
 		code := <-ch
 
-		token, err := oauth2Config.Exchange(ctx, code)
+		token, err := oauth2Config.Exchange(httpCtx, code)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to retrieve token: %v\n", err)
 			respCh <- Tokens{}
@@ -103,7 +115,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 
 		verifier := provider.Verifier(&oidc.Config{ClientID: clientID})
 
-		_, err = verifier.Verify(ctx, token.AccessToken)
+		_, err = verifier.Verify(httpCtx, token.AccessToken)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to verify ID token: %v\n", err)
 			respCh <- Tokens{}
@@ -119,13 +131,14 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 	return authURL, respCh, nil
 }
 
-func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshToken string) (string, string, error) {
-	provider, err := oidc.NewProvider(ctx, providerURL)
+func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshToken string, skipTLS ...bool) (string, string, error) {
+	httpCtx := contextWithHTTPClient(ctx, isSkipTLS(skipTLS))
+	provider, err := oidc.NewProvider(httpCtx, providerURL)
 	if err != nil {
 		return "", "", err
 	}
 	verifier := provider.Verifier(&oidc.Config{ClientID: clientID})
-	_, err = verifier.Verify(ctx, rawIDToken)
+	_, err = verifier.Verify(httpCtx, rawIDToken)
 	if err != nil {
 		// Attempt to refresh the token if verification fails
 		oauth2Config := oauth2.Config{
@@ -134,7 +147,7 @@ func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshT
 			Scopes:   []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
 		}
 
-		tokenSource := oauth2Config.TokenSource(ctx, &oauth2.Token{
+		tokenSource := oauth2Config.TokenSource(httpCtx, &oauth2.Token{
 			RefreshToken: refreshToken,
 		})
 		token, err := tokenSource.Token()
@@ -147,10 +160,11 @@ func CheckAndRefreshToken(ctx context.Context, providerURL, rawIDToken, refreshT
 	return rawIDToken, refreshToken, nil
 }
 
-func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID string, port int) (string, chan Tokens, error) {
+func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID string, port int, skipTLS ...bool) (string, chan Tokens, error) {
 	if err := checkPortAvailable(port); err != nil {
 		return "", nil, err
 	}
+	allowInsecureTLS := isSkipTLS(skipTLS)
 
 	codeVerifier, err := generateCodeVerifier()
 	if err != nil {
@@ -206,7 +220,7 @@ func CloudLoginSSO(ctx context.Context, apiBaseURL, authBaseURL, connectorID str
 
 		code := <-ch
 
-		token, err := exchangeCodeForTokens(apiBaseURL, code, codeVerifier, port)
+		token, err := exchangeCodeForTokens(apiBaseURL, code, codeVerifier, port, allowInsecureTLS)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to exchange code for tokens: %v\n", err)
 			respCh <- Tokens{}
@@ -234,10 +248,11 @@ func generateCodeChallenge(verifier string) string {
 	return base64.RawURLEncoding.EncodeToString(hash[:])
 }
 
-func CloudLoginEmailLink(ctx context.Context, apiBaseURL, email string, port int) (chan Tokens, error) {
+func CloudLoginEmailLink(ctx context.Context, apiBaseURL, email string, port int, skipTLS ...bool) (chan Tokens, error) {
 	if err := checkPortAvailable(port); err != nil {
 		return nil, err
 	}
+	allowInsecureTLS := isSkipTLS(skipTLS)
 
 	if !strings.HasSuffix(apiBaseURL, "/") {
 		apiBaseURL += "/"
@@ -269,7 +284,7 @@ func CloudLoginEmailLink(ctx context.Context, apiBaseURL, email string, port int
 		srv.ListenAndServe()
 	}()
 
-	if err := requestEmailLink(ctx, apiBaseURL, email, getRedirectAddress(port)); err != nil {
+	if err := requestEmailLink(ctx, apiBaseURL, email, getRedirectAddress(port), allowInsecureTLS); err != nil {
 		srv.Close()
 		return nil, err
 	}
@@ -287,7 +302,7 @@ func CloudLoginEmailLink(ctx context.Context, apiBaseURL, email string, port int
 			return
 		}
 
-		tokens, err := exchangeOOBCodeForTokens(ctx, apiBaseURL, email, oobCode)
+		tokens, err := exchangeOOBCodeForTokens(ctx, apiBaseURL, email, oobCode, allowInsecureTLS)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to exchange oobCode for tokens: %v\n", err)
 			respCh <- Tokens{}
@@ -303,7 +318,7 @@ func CloudLoginEmailLink(ctx context.Context, apiBaseURL, email string, port int
 // requestEmailLink asks the control plane to generate and email a sign-in link.
 // The `state=redirect=<url>` convention is what HandleOutOfBandGenerateLink expects
 // (see internal/auth/controller/out_of_band_flow.go).
-func requestEmailLink(ctx context.Context, apiBaseURL, email, redirectURL string) error {
+func requestEmailLink(ctx context.Context, apiBaseURL, email, redirectURL string, skipTLS ...bool) error {
 	form := url.Values{}
 	form.Set("email", email)
 	form.Set("state", "redirect="+redirectURL)
@@ -314,7 +329,7 @@ func requestEmailLink(ctx context.Context, apiBaseURL, email, redirectURL string
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := tkhttp.NewClient(isSkipTLS(skipTLS)).Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to request email link: %w", err)
 	}
@@ -327,7 +342,7 @@ func requestEmailLink(ctx context.Context, apiBaseURL, email, redirectURL string
 	return nil
 }
 
-func exchangeOOBCodeForTokens(ctx context.Context, apiBaseURL, email, oobCode string) (Tokens, error) {
+func exchangeOOBCodeForTokens(ctx context.Context, apiBaseURL, email, oobCode string, skipTLS ...bool) (Tokens, error) {
 	u, err := url.Parse(apiBaseURL + "auth/login/link")
 	if err != nil {
 		return Tokens{}, fmt.Errorf("invalid auth/login/link URL: %w", err)
@@ -342,7 +357,7 @@ func exchangeOOBCodeForTokens(ctx context.Context, apiBaseURL, email, oobCode st
 		return Tokens{}, fmt.Errorf("failed to build oobCode exchange request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := tkhttp.NewClient(isSkipTLS(skipTLS)).Do(req)
 	if err != nil {
 		return Tokens{}, fmt.Errorf("failed to exchange oobCode: %w", err)
 	}
@@ -371,7 +386,7 @@ func exchangeOOBCodeForTokens(ctx context.Context, apiBaseURL, email, oobCode st
 // control plane only when the current idToken is within 60s of expiry. Matches
 // the verify-first pattern used by CheckAndRefreshToken for OIDC so the common
 // case (token still valid) doesn't hit the network.
-func RefreshEmailLinkToken(ctx context.Context, apiBaseURL, idToken, refreshToken string) (string, string, error) {
+func RefreshEmailLinkToken(ctx context.Context, apiBaseURL, idToken, refreshToken string, skipTLS ...bool) (string, string, error) {
 	if idToken != "" && !jwtExpired(idToken, 60*time.Second) {
 		return idToken, refreshToken, nil
 	}
@@ -391,7 +406,7 @@ func RefreshEmailLinkToken(ctx context.Context, apiBaseURL, idToken, refreshToke
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := tkhttp.NewClient(isSkipTLS(skipTLS)).Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to refresh email-link token: %w", err)
 	}
@@ -460,7 +475,7 @@ func EmailFromIDToken(token string) string {
 	return claims.Email
 }
 
-func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int) (Tokens, error) {
+func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int, skipTLS ...bool) (Tokens, error) {
 	if !strings.HasSuffix(apiBaseURL, "/") {
 		apiBaseURL += "/"
 	}
@@ -486,7 +501,7 @@ func exchangeCodeForTokens(apiBaseURL, code, codeVerifier string, port int) (Tok
 		return Tokens{}, fmt.Errorf("failed to create token request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := tkhttp.NewClient(isSkipTLS(skipTLS)).Do(req)
 	if err != nil {
 		return Tokens{}, fmt.Errorf("failed to make token request: %w", err)
 	}

@@ -25,6 +25,7 @@ func NewSetContextCmd() *cobra.Command {
 
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
+			common.SyncSkipTLSFromFlags(cmd, &cfg)
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
 			if cmd.Flags().Changed("org") {
@@ -73,6 +74,10 @@ func NewSetContextCmd() *cobra.Command {
 
 			if namespace != "" {
 				cfg.Namespace = namespace
+			}
+
+			if cfg.ContextType == config.ContextTypeCloud {
+				cfg.CloudContext.SkipTLS = cfg.SkipTLS
 			}
 
 			err = config.Save(cfg)

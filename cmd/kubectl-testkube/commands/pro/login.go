@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	tkhttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/ui"
 
 	"github.com/spf13/cobra"
@@ -38,6 +39,8 @@ func NewLoginCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
+			skipTLS := common.SyncSkipTLSFromFlags(cmd, &cfg)
+			discoveryClient := tkhttp.NewClient(skipTLS)
 
 			if len(args) > 0 {
 				// Get the URL
@@ -52,13 +55,13 @@ func NewLoginCmd() *cobra.Command {
 				// Call the Control Plane
 				httpReq, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
 				ui.ExitOnError("creating request", reqErr)
-				req, err := http.DefaultClient.Do(httpReq)
+				req, err := discoveryClient.Do(httpReq)
 				if err != nil && strings.Contains(err.Error(), "response to HTTPS client") {
 					// Automatically handle http/https discovery
 					u.Scheme = "http"
 					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
 					ui.ExitOnError("creating request", reqErr)
-					req, err = http.DefaultClient.Do(httpReq)
+					req, err = discoveryClient.Do(httpReq)
 				}
 				ui.ExitOnError("requesting control plane info", err)
 
@@ -73,7 +76,7 @@ func NewLoginCmd() *cobra.Command {
 					u.Host = fmt.Sprintf("api.%s", u.Host)
 					httpReq, reqErr = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
 					ui.ExitOnError("creating request", reqErr)
-					req, err = http.DefaultClient.Do(httpReq)
+					req, err = discoveryClient.Do(httpReq)
 					ui.ExitOnError("requesting control plane info", err)
 					v, err = io.ReadAll(req.Body)
 					ui.ExitOnError("reading control plane info", err)
@@ -143,14 +146,14 @@ func NewLoginCmd() *cobra.Command {
 			switch {
 			case emailLink != "":
 				// Email magic-link flow (via --email-link flag)
-				token, refreshToken, err = common.LoginUserEmailLink(opts.Master.URIs.Api, emailLink, opts.Master.CallbackPort)
+				token, refreshToken, err = common.LoginUserEmailLink(opts.Master.URIs.Api, emailLink, opts.Master.CallbackPort, skipTLS)
 				tokenType = config.TokenTypeEmailLink
 			case email != "":
 				// SSO authentication flow
-				token, refreshToken, err = common.LoginUserSSO(opts.Master.URIs.Api, opts.Master.URIs.Auth, email, opts.Master.CallbackPort)
+				token, refreshToken, err = common.LoginUserSSO(opts.Master.URIs.Api, opts.Master.URIs.Auth, email, opts.Master.CallbackPort, skipTLS)
 			default:
 				// Interactive selector: GitHub / GitLab / Google / Email magic-link
-				tokenType, token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.URIs.Api, opts.Master.CustomAuth, opts.Master.CallbackPort)
+				tokenType, token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.URIs.Api, opts.Master.CustomAuth, opts.Master.CallbackPort, skipTLS)
 			}
 			ui.ExitOnError("getting token", err)
 
@@ -158,11 +161,11 @@ func NewLoginCmd() *cobra.Command {
 			envID := opts.Master.EnvId
 
 			if orgID == "" {
-				orgID, _, err = common.UiGetOrganizationId(opts.Master.URIs.Api, token)
+				orgID, _, err = common.UiGetOrganizationId(opts.Master.URIs.Api, token, skipTLS)
 				ui.ExitOnError("getting organization", err)
 			}
 			if envID == "" {
-				envID, _, err = common.UiGetEnvironmentID(opts.Master.URIs.Api, token, orgID)
+				envID, _, err = common.UiGetEnvironmentID(opts.Master.URIs.Api, token, orgID, skipTLS)
 				ui.ExitOnError("getting environment", err)
 			}
 

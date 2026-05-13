@@ -48,6 +48,7 @@ func NewInitCmd() *cobra.Command {
 				os.Exit(1)
 			}
 			ui.NL()
+			skipTLS := common.SyncSkipTLSFromFlags(cmd, &cfg)
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
 			common.ShowOperatorDeprecationWarning("Testkube Agent", options.NoCRDs)
@@ -115,7 +116,7 @@ func NewInitCmd() *cobra.Command {
 				ui.NL()
 				ui.H2("Launching web browser...")
 				ui.NL()
-				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort)
+				tokenType, token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.URIs.Api, options.Master.CustomAuth, options.Master.CallbackPort, skipTLS)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
