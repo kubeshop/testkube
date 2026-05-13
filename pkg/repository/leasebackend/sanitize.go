@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+const (
+	// maxK8sNameLen is the maximum length of a DNS-1123 label (Kubernetes name).
+	maxK8sNameLen = 63
+	// hashSuffixLen is the length of the SHA-256 hash suffix (8 hex chars).
+	hashSuffixLen = 8
+	// hashSeparatorLen is the total length consumed by the separator ("-") plus the hash.
+	hashSeparatorLen = 1 + hashSuffixLen // "-" + 8 hex chars = 9
+)
+
 var k8sNameInvalidChars = regexp.MustCompile("[^a-z0-9-]+")
 
 // SanitizeForK8sName produces a DNS-1123 label-safe string: lowercased,
@@ -31,17 +40,20 @@ func SanitizeForK8sName(name string) string {
 	name = strings.TrimRight(name, "-")
 	if name == "" {
 		h := sha256.Sum256([]byte(original))
-		return hex.EncodeToString(h[:4]) // 8 hex chars, deterministic fallback
+		return hex.EncodeToString(h[:hashSuffixLen/2]) // 8 hex chars, deterministic fallback
 	}
 	// Append a hash when sanitization changed the input (beyond lowercasing)
 	// or when truncation is needed, to preserve uniqueness of distinct originals.
-	needsHash := name != lowered || len(name) > 63
+	needsHash := name != lowered || len(name) > maxK8sNameLen
 	if needsHash {
 		h := sha256.Sum256([]byte(original))
-		suffix := hex.EncodeToString(h[:4]) // 8 hex chars
-		if len(name) > 63-9 {
-			name = name[:63-9]
+		suffix := hex.EncodeToString(h[:hashSuffixLen/2]) // 8 hex chars
+		if len(name) > maxK8sNameLen-hashSeparatorLen {
+			name = name[:maxK8sNameLen-hashSeparatorLen]
 		}
+		// TrimRight removes trailing hyphens that would produce "name---suffix".
+		// The result is at most maxK8sNameLen chars: up to (maxK8sNameLen - hashSeparatorLen)
+		// chars + "-" + hashSuffixLen chars = maxK8sNameLen.
 		name = strings.TrimRight(name, "-") + "-" + suffix
 	}
 	return name
