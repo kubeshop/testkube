@@ -6,13 +6,12 @@
 
 # The Open Testing Platform for AI-driven engineering teams.
 
-Testkube provides a single platform for defining, running and analyzing automated tests, using your existing testing tools/scripts, running in your existing infrastructure.
-
+Testkube provides a single platform for defining, running and analyzing automated tests, using your existing testing tools/scripts, running in your Kubernetes infrastructure.
 
 <a href="#open-source-agent---this-repo">
-<img src="https://img.shields.io/badge/Testkube%20OSS%20Agent-Get%20Started-lightgrey?style=for-the-badge" alt="Testkube OSS Agent - Get Started" /></a>
+<img src="https://img.shields.io/badge/Testkube%20OSS%20Agent-Get%20Started-lightgrey?style=for-the-badge" alt="Testkube Open Source - Get Started" /></a>
  
-<a href="https://testkube.io/get-started?utm=github">
+<a href="https://testkube.io/get-started?utm_campaign=44233401-2026%20-%20Thematic%20-%20Trial%20workflow&utm_source=Github&utm_medium=read%20me">
 <img src="https://img.shields.io/badge/Testkube%20Enterprise-Try%20Now-brightgreen?style=for-the-badge&logo=data:image/svg%2bxml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iX9Ch0LvQvtC5XzEiIGRhdGEtbmFtZT0i0KHQu9C+0LkgMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMTQ4LjUxIDE4Mi42MSI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMTQ1Ljk1LDY4LjA5TDgwLjQyLDIuNTVjLTMuNC0zLjQtOC45Mi0zLjQtMTIuMzMsMEwyLjU1LDY4LjA5Yy0xLjYzLDEuNjMtMi41NSwzLjg1LTIuNTUsNi4xNnYzNC4xYzAsMi4zMSwuOTIsNC41MywyLjU1LDYuMTZsNjUuNTQsNjUuNTRjMy40LDMuNCw4LjkyLDMuNCwxMi4zMywwbDY1LjU0LTY1LjU0YzEuNjMtMS42MywyLjU1LTMuODUsMi41NS02LjE2di0zNC4xYzAtMi4zMS0uOTItNC41My0yLjU1LTYuMTZabS01LjQ1LDM1Ljg3bC0xMi42NS0xMi42NSwxMi42NS0xMi42NXYyNS4zMVptLTE4LjEyLTE4LjEybC00NC4yNi00NC4yNlYxMS4xOWw1OS40NSw1OS40NS0xNS4xOSwxNS4xOVptLTkwLjc4LDUuNDdsNDIuNjYtNDIuNjYsNDIuNjYsNDIuNjYtNDIuNjYsNDIuNjZMMzEuNTksOTEuM1pNNzAuMzksMTEuMTl2MzAuMzlMMjYuMTMsODUuODRsLTE1LjE5LTE1LjE5TDcwLjM5LDExLjE5Wm0zLjg3LDE2NC4wOXYtMzAuMzlsNDguMTMtNDguMTMsMTUuMTksMTUuMTktNjMuMzIsNjMuMzJaIi8+Cjwvc3ZnPg==" /></a>
 
 ---
@@ -21,7 +20,7 @@ Testkube provides a single platform for defining, running and analyzing automate
 
 ---
 
-[Website](https://testkube.io) |  [Docs](https://docs.testkube.io) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog) |  [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio) 
+[Website](https://testkube.io/?utm_campaign=44233401-2026%20-%20Thematic%20-%20Trial%20workflow&utm_source=Github&utm_medium=read%20me) |  [Docs](https://docs.testkube.io/?utm_campaign=44233401-2026%20-%20Thematic%20-%20Trial%20workflow&utm_source=Github&utm_medium=read%20me) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog) |  [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio) 
 
 ---
 
@@ -33,6 +32,8 @@ Testkube provides a single platform for defining, running and analyzing automate
 - **Integrate Natively**: Testkube integrates with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks), the [Testkube REST API](https://docs.testkube.io/openapi/overview) or the [MCP Server](https://docs.testkube.io/articles/mcp-overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
 - **Testkube AI**: Use the Testkube MCP Server or native AI Agents for troubleshooting, analysis, remediation, etc - [Read More](https://docs.testkube.io/articles/testkube-ai-overview)
 - **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
+
+![Testkube Dashboard](assets/dashboard.png)
 
 **See it in action:** Open the [interactive TestWorkflows showcase](https://docs.testkube.io/articles/testworkflows-showcase) to see how a workflow builds up from a single test to a fully orchestrated pipeline.
 
@@ -58,7 +59,7 @@ The control plane connects every Testkube agent across clusters, teams, and envi
 
 Check out the [Installation Overview](https://docs.testkube.io/articles/install/overview) to learn more about different ways to deploy and run the Testkube Control Plane.
 
-The online Trial is the easiest way to try the commercial Testkube offering - [Get Started](https://testkube.io/get-started)
+The online Trial is the easiest way to try the commercial Testkube offering - [Get Started](https://testkube.io/get-started?utm_campaign=44233401-2026%20-%20Thematic%20-%20Trial%20workflow&utm_source=Github&utm_medium=read%20me)
 
 ### Marketplace
 
@@ -66,7 +67,7 @@ The [Testkube Marketplace](https://github.com/kubeshop/testkube-marketplace) pro
 
 ### Documentation
 
-Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io).
+Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io/?utm_campaign=44233401-2026%20-%20Thematic%20-%20Trial%20workflow&utm_source=Github&utm_medium=read%20me).
 
 ### Contributing
 
