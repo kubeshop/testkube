@@ -20,7 +20,7 @@ Testkube provides a single platform for defining, running and analyzing automate
 
 ---
 
-[Website](https://testkube.io/?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=home-page) |  [Docs](https://docs.testkube.io/?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=docs-click) |  [Changelog](https://docs.testkube.io/changelog) |  [Blog](https://testkube.io/blog?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=blog_click) |  [Slack](https://hubs.ly/Q04gqKkB0) |  [LinkedIn](https://www.linkedin.com/company/testkube) |  [X](https://twitter.com/testkubeio) 
+[Website](https://testkube.io/?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=home-page) |  [Docs](https://docs.testkube.io/?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=docs-click) |  [Changelog](https://docs.testkube.io/changelog?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=docs-click) |  [Blog](https://testkube.io/blog?utm_campaign=40056390-2026%20-%20Thematic%20-%20Open%20Source&utm_source=Github&utm_medium=readme&utm_content=blog_click) |  [Slack](https://hubs.ly/Q04gqKkB0)  |  [LinkedIn](https://hubs.ly/Q04gqR4k0)  |  [X](https://hubs.ly/Q04gqRp90) 
 
 ---
 
