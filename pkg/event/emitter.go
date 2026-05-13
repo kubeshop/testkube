@@ -176,8 +176,8 @@ func (e *Emitter) eventTopic(event testkube.Event) string {
 }
 
 const (
-	leaseCheckInterval                = 5 * time.Second
-	DefaultLeaseClusterID      string = "event-emitters"
+	leaseCheckInterval           = 5 * time.Second
+	DefaultLeaseClusterID string = "event-emitters"
 )
 
 // TODO(emil): convert to using new common coordinator package for lease acquisition
