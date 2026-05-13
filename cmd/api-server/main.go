@@ -907,9 +907,7 @@ func main() {
 		// coexisting in the same namespace get independent leases.
 		if proContext.Agent.ID != "" {
 			sanitizedAgentID := sanitizeForK8sName(proContext.Agent.ID)
-			if sanitizedAgentID != "" {
-				leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizedAgentID)
-			}
+			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizedAgentID)
 		}
 		leaderClusterID = sanitizeForK8sName(leaderClusterID)
 
