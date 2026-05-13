@@ -438,6 +438,24 @@ func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
 	assert.Equal(t, "refs/heads/main", pullOpts.ReferenceName.String())
 }
 
+func TestGitInformerConfig_TestkubeMainWithTestAndPkgPaths(t *testing.T) {
+	gitConfig := &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: "main",
+		Paths:    []string{"/test", "/pkg"},
+	}
+
+	refs := normalizeRefs(gitConfig.Revision)
+	assert.Contains(t, refs, "refs/heads/main")
+	assert.Equal(t, "https://github.com/kubeshop/testkube.git", gitConfig.Uri)
+
+	normalizedPaths := normalizePaths(gitConfig.Paths)
+	assert.Equal(t, []string{"test", "pkg"}, normalizedPaths)
+	assert.True(t, pathMatchesNormalized(normalizedPaths, "test/testkube/ci/crd-workflow/api-server-build-lint.yaml"))
+	assert.True(t, pathMatchesNormalized(normalizedPaths, "pkg/triggers/git_trigger.go"))
+	assert.False(t, pathMatchesNormalized(normalizedPaths, "cmd/api-server/main.go"))
+}
+
 func TestIsGitContentTrigger(t *testing.T) {
 	resource := testkube.CONTENT_TestTriggerResources
 
