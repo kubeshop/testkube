@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"net"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 	_ "time/tzdata" // Import timezone database to be used in case the host OS does not have a tzdb available.
@@ -97,8 +94,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
 )
-
-var k8sNameInvalidChars = regexp.MustCompile("[^a-zA-Z0-9-]+")
 
 func init() {
 	flag.Parse()
@@ -787,10 +782,10 @@ func main() {
 
 		triggerClusterID := "testkube-api"
 		if proContext.Agent.ID != "" {
-			sanitizedAgentID := sanitizeForK8sName(proContext.Agent.ID)
+			sanitizedAgentID := leasebackend.SanitizeForK8sName(proContext.Agent.ID)
 			triggerClusterID = fmt.Sprintf("%s-%s", triggerClusterID, sanitizedAgentID)
 		}
-		triggerClusterID = sanitizeForK8sName(triggerClusterID)
+		triggerClusterID = leasebackend.SanitizeForK8sName(triggerClusterID)
 
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
@@ -914,10 +909,10 @@ func main() {
 		// Incorporate AgentID so that agents for different environments
 		// coexisting in the same namespace get independent leases.
 		if proContext.Agent.ID != "" {
-			sanitizedAgentID := sanitizeForK8sName(proContext.Agent.ID)
+			sanitizedAgentID := leasebackend.SanitizeForK8sName(proContext.Agent.ID)
 			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizedAgentID)
 		}
-		leaderClusterID = sanitizeForK8sName(leaderClusterID)
+		leaderClusterID = leasebackend.SanitizeForK8sName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
 		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
@@ -1032,30 +1027,4 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 		return false
 	}
 	return shouldUseCloudWebhooks(proContext)
-}
-
-// sanitizeForK8sName produces a DNS-1123 label-safe string: lowercased,
-// non-alphanumeric characters replaced with hyphens, leading/trailing hyphens
-// trimmed, and capped at 63 characters. Unlike utils.SanitizeName, it does not
-// strip file extensions (dots are treated as invalid characters and replaced).
-// When truncation is needed, it appends a short hash suffix to preserve
-// uniqueness of the sanitized pre-truncation value; distinct original inputs
-// that normalize to the same sanitized value may still collide.
-func sanitizeForK8sName(name string) string {
-	original := name
-	name = strings.ToLower(name)
-	name = k8sNameInvalidChars.ReplaceAllString(name, "-")
-	name = strings.TrimLeft(name, "-")
-	name = strings.TrimRight(name, "-")
-	if len(name) > 63 {
-		h := sha256.Sum256([]byte(original))
-		suffix := hex.EncodeToString(h[:4]) // 8 hex chars
-		// Reserve space for "-" + 8-char hash suffix = 9 chars
-		name = strings.TrimRight(name[:63-9], "-") + "-" + suffix
-	}
-	if name == "" {
-		h := sha256.Sum256([]byte(original))
-		return hex.EncodeToString(h[:4]) // 8 hex chars, deterministic fallback
-	}
-	return name
 }
