@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var k8sNameInvalidChars = regexp.MustCompile("[^a-zA-Z0-9-]+")
+var k8sNameInvalidChars = regexp.MustCompile("[^a-z0-9-]+")
 
 // SanitizeForK8sName produces a DNS-1123 label-safe string: lowercased,
 // non-alphanumeric characters replaced with hyphens, leading/trailing hyphens
