@@ -898,6 +898,11 @@ func main() {
 		} else {
 			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
 		}
+		// Incorporate AgentID so that agents for different environments
+		// coexisting in the same namespace get independent leases.
+		if proContext.Agent.ID != "" {
+			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, proContext.Agent.ID)
+		}
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
 		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
