@@ -1033,6 +1033,7 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 // When truncation is needed, it appends a short hash suffix to preserve
 // uniqueness of the original input.
 func sanitizeForK8sName(name string) string {
+	original := name
 	name = k8sNameInvalidChars.ReplaceAllString(name, "-")
 	name = strings.TrimLeft(name, "-")
 	name = strings.TrimRight(name, "-")
@@ -1044,7 +1045,8 @@ func sanitizeForK8sName(name string) string {
 		name = strings.TrimRight(name[:63-9], "-") + "-" + suffix
 	}
 	if name == "" {
-		return "x"
+		h := sha256.Sum256([]byte(original))
+		return hex.EncodeToString(h[:4]) // 8 hex chars, deterministic fallback
 	}
 	return name
 }
