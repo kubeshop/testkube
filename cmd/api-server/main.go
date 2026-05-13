@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 	_ "time/tzdata" // Import timezone database to be used in case the host OS does not have a tzdb available.
@@ -92,7 +93,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
-	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -902,12 +902,12 @@ func main() {
 		// Incorporate AgentID so that agents for different environments
 		// coexisting in the same namespace get independent leases.
 		if proContext.Agent.ID != "" {
-			sanitizedAgentID := utils.SanitizeName(proContext.Agent.ID)
+			sanitizedAgentID := sanitizeForK8sName(proContext.Agent.ID)
 			if sanitizedAgentID != "" {
 				leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizedAgentID)
 			}
 		}
-		leaderClusterID = utils.SanitizeName(leaderClusterID)
+		leaderClusterID = sanitizeForK8sName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
 		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
@@ -1022,4 +1022,20 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 		return false
 	}
 	return shouldUseCloudWebhooks(proContext)
+}
+
+// sanitizeForK8sName produces a DNS-1123 label-safe string: lowercased,
+// non-alphanumeric characters replaced with hyphens, leading/trailing hyphens
+// trimmed, and capped at 63 characters. Unlike utils.SanitizeName, it does not
+// strip file extensions (dots are treated as invalid characters and replaced).
+func sanitizeForK8sName(name string) string {
+	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
+	name = reg.ReplaceAllString(name, "-")
+	name = strings.TrimLeft(name, "-")
+	name = strings.TrimRight(name, "-")
+	name = strings.ToLower(name)
+	if len(name) > 63 {
+		return name[:63]
+	}
+	return name
 }
