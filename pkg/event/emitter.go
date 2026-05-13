@@ -37,10 +37,12 @@ func WithLeaseClusterID(id string) EmitterOption {
 	}
 }
 
-// SetLeaseClusterID is deprecated and intentionally does not mutate the
-// emitter after construction. Configure the lease cluster ID with
-// WithLeaseClusterID when creating the emitter.
+// SetLeaseClusterID overrides the lease cluster ID used by the emitter's
+// leader-election loop. When empty, the current value is not changed.
 func (e *Emitter) SetLeaseClusterID(id string) {
+	if id != "" {
+		e.leaseClusterID = id
+	}
 }
 
 // NewEmitter returns new emitter instance
