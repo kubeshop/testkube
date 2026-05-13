@@ -2,6 +2,10 @@ package k8s
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"regexp"
+	"strings"
 	"time"
 
 	coordv1 "k8s.io/api/coordination/v1"
@@ -11,6 +15,8 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
+
+var k8sLeaseInvalidChars = regexp.MustCompile("[^a-zA-Z0-9-]+")
 
 // K8sLeaseBackend implements lease acquisition using Kubernetes Lease objects.
 // It allows multiple API server instances to coordinate without an external DB.
@@ -140,5 +146,30 @@ func (b *K8sLeaseBackend) leaseName(clusterID string) string {
 		return b.leaseNameOverride
 	}
 
-	return b.namePrefix + "-" + clusterID
+	name := b.namePrefix + "-" + clusterID
+	return sanitizeK8sLeaseName(name)
+}
+
+// sanitizeK8sLeaseName enforces DNS-1123 label rules on the lease name:
+// lowercased, non-alphanumeric characters (except hyphens) replaced with
+// hyphens, leading/trailing hyphens trimmed, and capped at 63 characters.
+// When truncation is needed, an 8-char SHA-256 hash suffix is appended to
+// preserve uniqueness of the sanitized pre-truncation value.
+func sanitizeK8sLeaseName(name string) string {
+	original := name
+	name = k8sLeaseInvalidChars.ReplaceAllString(name, "-")
+	name = strings.TrimLeft(name, "-")
+	name = strings.TrimRight(name, "-")
+	name = strings.ToLower(name)
+	if len(name) > 63 {
+		h := sha256.Sum256([]byte(name))
+		suffix := hex.EncodeToString(h[:4]) // 8 hex chars
+		// Reserve space for "-" + 8-char hash suffix = 9 chars
+		name = strings.TrimRight(name[:63-9], "-") + "-" + suffix
+	}
+	if name == "" {
+		h := sha256.Sum256([]byte(original))
+		return hex.EncodeToString(h[:4])
+	}
+	return name
 }

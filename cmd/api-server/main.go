@@ -785,6 +785,13 @@ func main() {
 			)
 		}
 
+		triggerClusterID := "testkube-api"
+		if proContext.Agent.ID != "" {
+			sanitizedAgentID := sanitizeForK8sName(proContext.Agent.ID)
+			triggerClusterID = fmt.Sprintf("%s-%s", triggerClusterID, sanitizedAgentID)
+		}
+		triggerClusterID = sanitizeForK8sName(triggerClusterID)
+
 		triggerService := triggers.NewService(
 			cfg.RunnerName,
 			clientset,
@@ -800,6 +807,7 @@ func main() {
 			testWorkflowResultsRepository,
 			&proContext,
 			triggers.WithHostnameIdentifier(),
+			triggers.WithClusterID(triggerClusterID),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),

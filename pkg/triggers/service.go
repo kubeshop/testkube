@@ -192,6 +192,17 @@ func WithTestkubeNamespace(namespace string) Option {
 	}
 }
 
+// WithClusterID overrides the default cluster ID used by the trigger service's
+// leader coordinator. This is useful to differentiate lease names when multiple
+// agents for different environments coexist in the same namespace.
+func WithClusterID(id string) Option {
+	return func(s *Service) {
+		if id != "" {
+			s.clusterID = id
+		}
+	}
+}
+
 func WithWatcherNamespaces(namespaces string) Option {
 	return func(s *Service) {
 		for _, namespace := range strings.Split(namespaces, ",") {
