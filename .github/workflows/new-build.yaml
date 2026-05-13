@@ -89,7 +89,7 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
-      - uses: benjlevesque/short-sha@v3.0
+      - uses: benjlevesque/short-sha@v4.0
         id: short-sha
         with:
           length: 7
