@@ -72,16 +72,16 @@ func TestService_updateTrigger(t *testing.T) {
 
 func TestWithClusterID(t *testing.T) {
 	t.Run("non-empty overrides default", func(t *testing.T) {
-		s := &Service{clusterID: defaultClusterID}
+		s := &Service{clusterID: DefaultClusterID}
 		opt := WithClusterID("my-custom-id")
 		opt(s)
 		assert.Equal(t, "my-custom-id", s.clusterID)
 	})
 
 	t.Run("empty string does not override", func(t *testing.T) {
-		s := &Service{clusterID: defaultClusterID}
+		s := &Service{clusterID: DefaultClusterID}
 		opt := WithClusterID("")
 		opt(s)
-		assert.Equal(t, defaultClusterID, s.clusterID)
+		assert.Equal(t, DefaultClusterID, s.clusterID)
 	})
 }

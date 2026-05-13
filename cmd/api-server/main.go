@@ -780,7 +780,7 @@ func main() {
 			)
 		}
 
-		triggerClusterID := "testkube-api"
+		triggerClusterID := triggers.DefaultClusterID
 		if proContext.Agent.ID != "" {
 			triggerClusterID = fmt.Sprintf("%s-%s", triggerClusterID, proContext.Agent.ID)
 		}

@@ -39,7 +39,7 @@ const (
 	defaultConditionsCheckTimeout = 60 * time.Second
 	defaultProbesCheckBackoff     = 1 * time.Second
 	defaultProbesCheckTimeout     = 60 * time.Second
-	defaultClusterID              = "testkube-api"
+	DefaultClusterID              = "testkube-api"
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
@@ -118,7 +118,7 @@ func NewService(
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
 		identifier:                    identifier,
-		clusterID:                     defaultClusterID,
+		clusterID:                     DefaultClusterID,
 		agentName:                     agentName,
 		scraperInterval:               defaultScraperInterval,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
