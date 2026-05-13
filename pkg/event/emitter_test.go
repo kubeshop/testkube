@@ -879,9 +879,11 @@ func TestEmitterLeaseClusterID(t *testing.T) {
 		defer emitter.eventCache.Stop()
 
 		mockLeaseRepo.EXPECT().
-			TryAcquire(gomock.Any(), "custom-id-instance-1", "custom-id")
+			TryAcquire(gomock.Any(), "custom-id-"+emitter.instanceId, "custom-id").
+			Return(true, nil)
 
-		err := emitter.leaseCheck(context.Background())
-		assert.NoError(t, err)
+		leaseChan := make(chan bool, 1)
+		emitter.leaseCheck(context.Background(), leaseChan)
+		assert.True(t, <-leaseChan)
 	})
 }
