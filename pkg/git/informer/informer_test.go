@@ -15,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -691,4 +692,118 @@ func TestUpdateRepositories_MatchesWorkflowGitTrigger(t *testing.T) {
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, []string{"testkube/workflow-a"}, matched)
+}
+
+func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+
+	commitFile := func(path, content, message string) string {
+		fullPath := filepath.Join(workDir, path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte(content), 0o644))
+		_, err = worktree.Add(path)
+		require.NoError(t, err)
+		hash, err := worktree.Commit(message, &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "test",
+				Email: "test@example.com",
+				When:  time.Now(),
+			},
+		})
+		require.NoError(t, err)
+		return hash.String()
+	}
+	pushMain := func() {
+		err = workRepo.Push(&git.PushOptions{
+			RemoteName: "origin",
+			RefSpecs: []config.RefSpec{
+				config.RefSpec("refs/heads/main:refs/heads/main"),
+			},
+		})
+		require.NoError(t, err)
+	}
+
+	firstHash := commitFile("README.md", "initial\n", "initial")
+	pushMain()
+
+	key := triggerKey(testTriggerSource, "testkube", "trigger-a")
+	repoDir := triggerRepositoryPathFromKey(key)
+	t.Cleanup(func() { _ = os.RemoveAll(repoDir) })
+	_ = os.RemoveAll(repoDir)
+
+	localRepo, err := git.PlainClone(repoDir, &git.CloneOptions{
+		URL:           remoteDir,
+		ReferenceName: plumbing.NewBranchReferenceName("main"),
+		SingleBranch:  true,
+	})
+	require.NoError(t, err)
+	require.NoError(t, localRepo.DeleteRemote("origin"))
+	_, err = localRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{
+			remoteDir,
+			"https://github.com/kubeshop/testkube.git",
+		},
+	})
+	require.NoError(t, err)
+
+	secondHash := commitFile("pkg/triggers/git_trigger.go", "package triggers\n", "pkg change")
+	pushMain()
+
+	resource := testkube.CONTENT_TestTriggerResources
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-a",
+		Namespace: "testkube",
+		Event:     "modified",
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: "main",
+				Paths:    []string{"/test", "/pkg"},
+			},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(ctx context.Context, environmentID string, options testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+				return []testkube.TestTrigger{trigger}, nil
+			},
+		},
+		nil,
+		stubMatcher{
+			matchTestTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{},
+	)
+	informer.commits[key] = firstHash
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, []string{"testkube/trigger-a"}, matched)
+	assert.Equal(t, secondHash, informer.commits[key])
 }
