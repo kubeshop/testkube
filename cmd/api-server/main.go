@@ -1035,7 +1035,12 @@ func sanitizeForK8sName(name string) string {
 	name = strings.TrimRight(name, "-")
 	name = strings.ToLower(name)
 	if len(name) > 63 {
-		return name[:63]
+		name = name[:63]
+	}
+	name = strings.TrimLeft(name, "-")
+	name = strings.TrimRight(name, "-")
+	if name == "" {
+		return "x"
 	}
 	return name
 }
