@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -95,6 +97,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
 )
+
+var k8sNameInvalidChars = regexp.MustCompile("[^a-zA-Z0-9-]+")
 
 func init() {
 	flag.Parse()
@@ -1028,17 +1032,19 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 // non-alphanumeric characters replaced with hyphens, leading/trailing hyphens
 // trimmed, and capped at 63 characters. Unlike utils.SanitizeName, it does not
 // strip file extensions (dots are treated as invalid characters and replaced).
+// When truncation is needed, it appends a short hash suffix to preserve
+// uniqueness of the original input.
 func sanitizeForK8sName(name string) string {
-	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
-	name = reg.ReplaceAllString(name, "-")
+	name = k8sNameInvalidChars.ReplaceAllString(name, "-")
 	name = strings.TrimLeft(name, "-")
 	name = strings.TrimRight(name, "-")
 	name = strings.ToLower(name)
 	if len(name) > 63 {
-		name = name[:63]
+		h := sha256.Sum256([]byte(name))
+		suffix := hex.EncodeToString(h[:4]) // 8 hex chars
+		// Reserve space for "-" + 8-char hash suffix = 9 chars
+		name = strings.TrimRight(name[:63-9], "-") + "-" + suffix
 	}
-	name = strings.TrimLeft(name, "-")
-	name = strings.TrimRight(name, "-")
 	if name == "" {
 		return "x"
 	}
