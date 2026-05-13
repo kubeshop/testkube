@@ -1043,12 +1043,12 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 // that normalize to the same sanitized value may still collide.
 func sanitizeForK8sName(name string) string {
 	original := name
+	name = strings.ToLower(name)
 	name = k8sNameInvalidChars.ReplaceAllString(name, "-")
 	name = strings.TrimLeft(name, "-")
 	name = strings.TrimRight(name, "-")
-	name = strings.ToLower(name)
 	if len(name) > 63 {
-		h := sha256.Sum256([]byte(name))
+		h := sha256.Sum256([]byte(original))
 		suffix := hex.EncodeToString(h[:4]) // 8 hex chars
 		// Reserve space for "-" + 8-char hash suffix = 9 chars
 		name = strings.TrimRight(name[:63-9], "-") + "-" + suffix
