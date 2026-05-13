@@ -902,8 +902,12 @@ func main() {
 		// Incorporate AgentID so that agents for different environments
 		// coexisting in the same namespace get independent leases.
 		if proContext.Agent.ID != "" {
-			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, utils.SanitizeName(proContext.Agent.ID))
+			sanitizedAgentID := utils.SanitizeName(proContext.Agent.ID)
+			if sanitizedAgentID != "" {
+				leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, sanitizedAgentID)
+			}
 		}
+		leaderClusterID = utils.SanitizeName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
 		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
@@ -1019,5 +1023,3 @@ func shouldRunWebhookEventReader(cfg *intconfig.Config, proContext intconfig.Pro
 	}
 	return shouldUseCloudWebhooks(proContext)
 }
-
-
