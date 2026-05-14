@@ -8312,7 +8312,6 @@ components:
           enum:
             - basic
             - header
-            - github
         paths:
           type: array
           description: paths to watch for changes
