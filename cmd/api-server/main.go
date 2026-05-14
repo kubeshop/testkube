@@ -813,17 +813,20 @@ func main() {
 
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
 		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
-			g.Go(func() error {
-				gitinformer.NewInformer(testTriggersClient, workflowTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
-					ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
-					RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
-					ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
-					MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
-					PullRetries:        cfg.TestTriggerGitInformerPullRetries,
-					PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
-					KubeClient:         clientset,
-				}).Reconcile(ctx)
-				return nil
+			leaderTasks = append(leaderTasks, leader.Task{
+				Name: "git-informer",
+				Start: func(taskCtx context.Context) error {
+					gitinformer.NewInformer(testTriggersClient, workflowTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
+						ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
+						RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
+						ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
+						MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
+						PullRetries:        cfg.TestTriggerGitInformerPullRetries,
+						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
+						KubeClient:         clientset,
+					}).Reconcile(taskCtx)
+					return nil
+				},
 			})
 		} else if useTestTriggerControlPlane && useCloudTestTriggers && proContext.EnvID == "" {
 			log.DefaultLogger.Warnw("git informer: skipping start",
