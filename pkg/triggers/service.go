@@ -39,7 +39,7 @@ const (
 	defaultConditionsCheckTimeout = 60 * time.Second
 	defaultProbesCheckBackoff     = 1 * time.Second
 	defaultProbesCheckTimeout     = 60 * time.Second
-	defaultClusterID              = "testkube-api"
+	DefaultClusterID              = "testkube-api"
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
 
@@ -118,7 +118,7 @@ func NewService(
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
 		identifier:                    identifier,
-		clusterID:                     defaultClusterID,
+		clusterID:                     DefaultClusterID,
 		agentName:                     agentName,
 		scraperInterval:               defaultScraperInterval,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
@@ -189,6 +189,17 @@ func WithHostnameIdentifier() Option {
 func WithTestkubeNamespace(namespace string) Option {
 	return func(s *Service) {
 		s.testkubeNamespace = namespace
+	}
+}
+
+// WithClusterID overrides the default cluster ID used by the trigger service's
+// leader coordinator. This is useful to differentiate lease names when multiple
+// agents for different environments coexist in the same namespace.
+func WithClusterID(id string) Option {
+	return func(s *Service) {
+		if id != "" {
+			s.clusterID = id
+		}
 	}
 }
 

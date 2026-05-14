@@ -316,6 +316,13 @@ func main() {
 	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
 	commons.ExitOnError("cannot connect to control plane", err)
 
+	// Scope the emitter lease to the AgentID so that agents for different
+	// environments sharing the same namespace each get their own emitter leader.
+	if proContext.Agent.ID != "" {
+		emitterClusterID := fmt.Sprintf("%s-%s", event.DefaultLeaseClusterID, proContext.Agent.ID)
+		eventsEmitter.SetLeaseClusterID(leasebackend.SanitizeForK8sName(emitterClusterID))
+	}
+
 	grpcTLSEnabled := !cfg.TestkubeProTLSInsecure
 
 	// Configure SyncStore here as it is required for the SuperAgent migration.
@@ -783,6 +790,12 @@ func main() {
 			)
 		}
 
+		triggerClusterID := triggers.DefaultClusterID
+		if proContext.Agent.ID != "" {
+			triggerClusterID = fmt.Sprintf("%s-%s", triggerClusterID, proContext.Agent.ID)
+		}
+		triggerClusterID = leasebackend.SanitizeForK8sName(triggerClusterID)
+
 		triggerService = triggers.NewService(
 			cfg.RunnerName,
 			clientset,
@@ -798,6 +811,7 @@ func main() {
 			testWorkflowResultsRepository,
 			&proContext,
 			triggers.WithHostnameIdentifier(),
+			triggers.WithClusterID(triggerClusterID),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithTestTriggerControlPlane(useTestTriggerControlPlane),
@@ -927,6 +941,12 @@ func main() {
 		} else {
 			leaderClusterID = fmt.Sprintf("%s-core", leaderClusterID)
 		}
+		// Incorporate AgentID so that agents for different environments
+		// coexisting in the same namespace get independent leases.
+		if proContext.Agent.ID != "" {
+			leaderClusterID = fmt.Sprintf("%s-%s", leaderClusterID, proContext.Agent.ID)
+		}
+		leaderClusterID = leasebackend.SanitizeForK8sName(leaderClusterID)
 
 		coordinatorLogger := log.DefaultLogger.With("component", "leader-coordinator")
 		leaderCoordinator := leader.New(leaderLeaseBackend, leaderIdentifier, leaderClusterID, coordinatorLogger)
