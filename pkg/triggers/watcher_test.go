@@ -223,6 +223,62 @@ func TestService_startCloudTestTriggerWatch_UsesWatcherNamespaces(t *testing.T) 
 	}, time.Second, 10*time.Millisecond)
 }
 
+func TestService_startCloudTestTriggerWatch_PreservesContentSelector(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	testTriggersClient := testtriggerclient.NewMockTestTriggerClient(ctrl)
+
+	namespace := "team-a"
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, namespace).
+		Return([]testkube.TestTrigger{{
+			Name:      "git-trigger",
+			Namespace: namespace,
+			Event:     "modified",
+			ContentSelector: &testkube.TestTriggerContentSelector{
+				Git: &testkube.TestTriggerContentGit{
+					Uri:      "https://github.com/kubeshop/testkube.git",
+					Revision: "main",
+					Paths:    []string{"pkg/triggers"},
+				},
+			},
+		}}, nil).
+		AnyTimes()
+
+	service := &Service{
+		triggerStatus:      make(map[statusKey]*triggerStatus),
+		testTriggersClient: testTriggersClient,
+		logger:             log.DefaultLogger,
+		eventsBus:          &bus.EventBusMock{},
+		metrics:            metrics.NewMetrics(),
+		proContext:         &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:    time.Hour,
+		watcherNamespaces:  []string{namespace},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudTestTriggerWatch(context.Background(), stop)
+
+	key := newStatusKey(triggerSourceV1, namespace, "git-trigger")
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		return service.triggerStatus[key] != nil
+	}, time.Second, 10*time.Millisecond)
+
+	service.triggerStatusMu.RLock()
+	internal := service.triggerStatus[key].trigger
+	service.triggerStatusMu.RUnlock()
+
+	require.NotNil(t, internal)
+	require.NotNil(t, internal.ContentSelector)
+	require.NotNil(t, internal.ContentSelector.Git)
+	assert.Equal(t, "https://github.com/kubeshop/testkube.git", internal.ContentSelector.Git.Uri)
+	assert.Equal(t, "main", internal.ContentSelector.Git.Revision)
+	assert.Equal(t, []string{"pkg/triggers"}, internal.ContentSelector.Git.Paths)
+}
+
 func TestService_startCloudWorkflowTriggerWatch_UsesWatcherNamespaces(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	workflowClient := workflowtriggerclient.NewMockWorkflowTriggerClient(ctrl)

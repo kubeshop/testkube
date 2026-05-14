@@ -138,7 +138,7 @@ func NewInformer(
 	}
 }
 
-func resolveNamespaces(watcherNamespaces, defaultNamespace string) []string {
+func resolveNamespaces(watcherNamespaces, _ string) []string {
 	namespaces := make([]string, 0)
 	seen := make(map[string]struct{})
 	for _, namespace := range strings.Split(watcherNamespaces, ",") {
@@ -155,10 +155,6 @@ func resolveNamespaces(watcherNamespaces, defaultNamespace string) []string {
 
 	if len(namespaces) > 0 {
 		return namespaces
-	}
-	defaultNamespace = strings.TrimSpace(defaultNamespace)
-	if defaultNamespace != "" {
-		return []string{defaultNamespace}
 	}
 	return []string{allNamespacesMarker}
 }

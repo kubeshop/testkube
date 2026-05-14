@@ -771,7 +771,7 @@ func TestUpdateRepositories_UsesWatcherNamespaces(t *testing.T) {
 	assert.ElementsMatch(t, []string{"team-a", "team-b"}, seen)
 }
 
-func TestUpdateRepositories_DefaultsToInformerNamespaceWhenWatcherNamespacesEmpty(t *testing.T) {
+func TestUpdateRepositories_DefaultsToAllNamespacesWhenWatcherNamespacesEmpty(t *testing.T) {
 	seen := make([]string, 0)
 	informer := NewInformer(
 		stubTestTriggerClient{
@@ -789,7 +789,7 @@ func TestUpdateRepositories_DefaultsToInformerNamespaceWhenWatcherNamespacesEmpt
 
 	informer.updateRepositories(context.Background())
 
-	assert.Equal(t, []string{"testkube"}, seen)
+	assert.Equal(t, []string{allNamespacesMarker}, seen)
 }
 
 func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
