@@ -37,18 +37,18 @@ tests:
           path: metadata.labels.app
           value: prometheus
 
-  - it: scrapes the Service named port "http" with 15s interval
+  - it: scrapes container port 8088 directly with 15s interval
     set:
       prometheus.enabled: true
     asserts:
       - equal:
-          path: spec.endpoints[0].port
-          value: http
+          path: spec.endpoints[0].targetPort
+          value: 8088
       - equal:
           path: spec.endpoints[0].interval
           value: 15s
       - notExists:
-          path: spec.endpoints[0].targetPort
+          path: spec.endpoints[0].port
 
   - it: matchLabels include runner selectorLabels
     set:
@@ -106,16 +106,16 @@ tests:
       - notExists:
           path: spec.sampleLimit
 
-  - it: stays bound to named port "http" even when service.port is overridden
+  - it: targetPort stays fixed at 8088 even when service.port is overridden
     set:
       prometheus.enabled: true
       service.port: 9090
     asserts:
       - equal:
-          path: spec.endpoints[0].port
-          value: http
-      - notExists:
           path: spec.endpoints[0].targetPort
+          value: 8088
+      - notExists:
+          path: spec.endpoints[0].port
 
   - it: propagates global.labels to metadata.labels
     set:

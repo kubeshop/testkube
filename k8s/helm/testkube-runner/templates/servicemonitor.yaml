@@ -16,7 +16,7 @@ spec:
   sampleLimit: {{ . }}
   {{- end }}
   endpoints:
-    - port: http
+    - targetPort: 8088
       {{- with .Values.prometheus.interval }}
       interval: {{ . }}
       {{- end }}
