@@ -694,6 +694,70 @@ func TestUpdateRepositories_MatchesWorkflowGitTrigger(t *testing.T) {
 	assert.Equal(t, []string{"testkube/workflow-a"}, matched)
 }
 
+func TestUpdateRepositories_UsesWatcherNamespaces(t *testing.T) {
+	seen := make([]string, 0)
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+				seen = append(seen, namespace)
+				return nil, nil
+			},
+		},
+		nil,
+		nil,
+		"testkube",
+		"",
+		Options{WatcherNamespaces: "team-a, team-b"},
+	)
+
+	informer.updateRepositories(context.Background())
+
+	assert.ElementsMatch(t, []string{"team-a", "team-b"}, seen)
+}
+
+func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
+	resource := testkube.CONTENT_TestTriggerResources
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-a",
+		Namespace: "team-b",
+		Event:     "modified",
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: "main",
+			},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+				if namespace == "team-a" {
+					return nil, errors.New("forbidden")
+				}
+				return []testkube.TestTrigger{trigger}, nil
+			},
+		},
+		nil,
+		stubMatcher{
+			matchTestTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{WatcherNamespaces: "team-a,team-b"},
+	)
+	informer.commits[triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)] = "old"
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, []string{"team-b/trigger-a"}, matched)
+}
+
 func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	tmpDir := t.TempDir()
 	remoteDir := filepath.Join(tmpDir, "remote.git")

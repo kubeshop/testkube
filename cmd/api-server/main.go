@@ -823,6 +823,7 @@ func main() {
 						MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
 						PullRetries:        cfg.TestTriggerGitInformerPullRetries,
 						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
+						WatcherNamespaces:  cfg.TestkubeWatcherNamespaces,
 						KubeClient:         clientset,
 					}).Reconcile(taskCtx)
 					return nil

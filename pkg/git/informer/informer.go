@@ -34,6 +34,7 @@ const defaultReconcileInterval = time.Minute
 const defaultGitUsername = "git"
 const testTriggerSource = "v1"
 const workflowTriggerSource = "v2"
+const allNamespacesMarker = "*"
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
 var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
@@ -46,6 +47,7 @@ type Options struct {
 	MaxCommitsScan     int
 	PullRetries        int
 	PullRetryDelay     time.Duration
+	WatcherNamespaces  string
 	KubeClient         kubernetes.Interface
 }
 
@@ -85,7 +87,7 @@ type Informer struct {
 	workflowClient    workflowtriggerclient.WorkflowTriggerClient
 	matcher           Matcher
 	commits           map[string]string // key -> last seen head hash
-	namespace         string
+	namespaces        []string
 	environmentID     string
 	options           Options
 	kubeClient        kubernetes.Interface
@@ -100,16 +102,38 @@ func NewInformer(
 	environmentID string,
 	options Options,
 ) *Informer {
+	options = normalizeOptions(options)
 	return &Informer{
 		testTriggerClient: testTriggerClient,
 		workflowClient:    workflowClient,
 		matcher:           matcher,
 		commits:           make(map[string]string),
-		namespace:         namespace,
+		namespaces:        resolveNamespaces(options.WatcherNamespaces),
 		environmentID:     environmentID,
-		options:           normalizeOptions(options),
+		options:           options,
 		kubeClient:        options.KubeClient,
 	}
+}
+
+func resolveNamespaces(watcherNamespaces string) []string {
+	namespaces := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, namespace := range strings.Split(watcherNamespaces, ",") {
+		value := strings.TrimSpace(namespace)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		namespaces = append(namespaces, value)
+	}
+
+	if len(namespaces) > 0 {
+		return namespaces
+	}
+	return []string{allNamespacesMarker}
 }
 
 // Reconcile periodically polls git repositories and emits trigger events.
@@ -136,28 +160,42 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	testTriggerList, err := i.testTriggerClient.List(ctx, i.environmentID, testtriggerclient.ListOptions{}, i.namespace)
-	if err != nil {
-		log.DefaultLogger.Errorf("git informer: error listing test triggers: %v", err)
+	testTriggerMap := make(map[string]testkube.TestTrigger)
+	testTriggerListSucceeded := false
+	for _, namespace := range i.namespaces {
+		testTriggerList, err := i.testTriggerClient.List(ctx, i.environmentID, testtriggerclient.ListOptions{}, namespace)
+		if err != nil {
+			log.DefaultLogger.Errorf("git informer: error listing test triggers in namespace %q: %v", namespace, err)
+			continue
+		}
+		testTriggerListSucceeded = true
+		for _, trigger := range testTriggerList {
+			testTriggerMap[triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)] = trigger
+		}
+	}
+	if !testTriggerListSucceeded {
 		return
 	}
 
-	workflowTriggerList := make([]testkube.WorkflowTrigger, 0)
+	workflowTriggerMap := make(map[string]testkube.WorkflowTrigger)
 	if i.workflowClient != nil {
-		workflowTriggerList, err = i.workflowClient.List(ctx, i.environmentID, workflowtriggerclient.ListOptions{}, i.namespace)
-		if err != nil {
-			log.DefaultLogger.Errorf("git informer: error listing workflow triggers: %v", err)
-			return
+		for _, namespace := range i.namespaces {
+			workflowTriggerList, err := i.workflowClient.List(ctx, i.environmentID, workflowtriggerclient.ListOptions{}, namespace)
+			if err != nil {
+				log.DefaultLogger.Errorf("git informer: error listing workflow triggers in namespace %q: %v", namespace, err)
+				continue
+			}
+			for _, trigger := range workflowTriggerList {
+				workflowTriggerMap[triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)] = trigger
+			}
 		}
 	}
 
-	active := make(map[string]struct{}, len(testTriggerList)+len(workflowTriggerList))
-	for idx := range testTriggerList {
+	active := make(map[string]struct{}, len(testTriggerMap)+len(workflowTriggerMap))
+	for _, trigger := range testTriggerMap {
 		if err := ctx.Err(); err != nil {
 			return
 		}
-
-		trigger := testTriggerList[idx]
 		if !isGitContentTrigger(trigger) {
 			continue
 		}
@@ -177,12 +215,10 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		}
 	}
 
-	for idx := range workflowTriggerList {
+	for _, workflowTrigger := range workflowTriggerMap {
 		if err := ctx.Err(); err != nil {
 			return
 		}
-
-		workflowTrigger := workflowTriggerList[idx]
 		if !isGitContentWorkflowTrigger(workflowTrigger) {
 			continue
 		}
