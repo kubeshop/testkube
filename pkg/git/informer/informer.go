@@ -802,7 +802,7 @@ func authClientOptionsWithResolver(
 		}
 		publicKeys.HostKeyCallback = hostKeyCallback
 		opts = append(opts, client.WithSSHAuth(publicKeys))
-	case token != "" && (authType == string(testkube.HEADER_ContentGitAuthType) || authType == string(testkube.GITHUB_ContentGitAuthType)):
+	case token != "" && authType == string(testkube.HEADER_ContentGitAuthType):
 		opts = append(opts, client.WithHTTPAuth(&http.TokenAuth{Token: token}))
 	case token != "" || username != "":
 		if username == "" {
