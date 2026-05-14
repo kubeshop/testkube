@@ -252,7 +252,10 @@ pod:
 service:
   ## Service type
   type: ClusterIP
-  ## HTTP Port (matches the runner containerPort 8088 and APISERVER_PORT)
+  ## External Service port. NOTE: the runner container always listens on 8088
+  ## internally (APISERVER_PORT is hardcoded in the deployment template), so
+  ## changing this only affects the Service's external port — metrics scraping
+  ## uses the named port "http", not this value.
   port: 8088
   ## Service Annotations
   annotations: {}

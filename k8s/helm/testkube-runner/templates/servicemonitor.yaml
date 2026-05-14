@@ -16,7 +16,7 @@ spec:
   sampleLimit: {{ . }}
   {{- end }}
   endpoints:
-    - targetPort: {{ .Values.service.port }}
+    - port: http
       {{- with .Values.prometheus.interval }}
       interval: {{ . }}
       {{- end }}
