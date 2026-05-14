@@ -38,6 +38,13 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "watch is required",
 		},
+		"event with git without watch is valid": {
+			modify: func(s *WorkflowTriggerSpec) {
+				s.Watch = nil
+				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
+			},
+			wantErrs: 0,
+		},
 		"watch without kind": {
 			modify: func(s *WorkflowTriggerSpec) {
 				s.Watch.Resource.Kind = ""
@@ -52,7 +59,15 @@ func TestValidate(t *testing.T) {
 				s.When.Event = ""
 			},
 			wantErrs:   1,
-			wantSubstr: "when.event is required",
+			wantSubstr: "when.event or when.git is required",
+		},
+		"missing event with git is valid": {
+			modify: func(s *WorkflowTriggerSpec) {
+				s.Watch = nil
+				s.When.Event = ""
+				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
+			},
+			wantErrs: 0,
 		},
 
 		// run validation

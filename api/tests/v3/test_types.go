@@ -108,7 +108,7 @@ type Repository struct {
 }
 
 // GitAuthType defines git auth type
-// +kubebuilder:validation:Enum=basic;header;github
+// +kubebuilder:validation:Enum=basic;header
 type GitAuthType string
 
 const (
@@ -116,8 +116,6 @@ const (
 	GitAuthTypeBasic GitAuthType = "basic"
 	// GitAuthTypeHeader for git header auth requests
 	GitAuthTypeHeader GitAuthType = "header"
-	// GitAuthTypeGitHub for GitHub App auth requests
-	GitAuthTypeGitHub GitAuthType = "github"
 )
 
 // artifact request body with test artifacts

@@ -136,7 +136,7 @@ spec:
         path: ""
     # Object. Git repository details. When specified, the repository will be automatically cloned and made available to all containers at /data/repo by default. You don't need to run git commands manually - Testkube handles the checkout process automatically.
     git:
-      # String. Authorization type for the credentials. Specifies how authentication should be handled for private repositories. Options include "header" for bearer tokens or "github" for GitHub App authentication.
+      # String. Authorization type for the credentials. Specifies how authentication should be handled for private repositories. Options include "basic" for username/token auth or "header" for bearer token auth.
       authType: ""
       # Boolean. Enable cone mode for sparse checkout with paths. Optimizes Git clone by fetching only specified directories when using paths. Reduces network transfer and checkout time for large repositories.
       cone: false

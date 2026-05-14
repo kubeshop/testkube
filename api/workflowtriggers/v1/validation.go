@@ -8,8 +8,8 @@ import "fmt"
 func (s *WorkflowTriggerSpec) Validate() []error {
 	var errs []error
 
-	// watch is required when event is set
-	if s.When.Event != "" && s.Watch == nil {
+	// watch is required for Kubernetes-only triggers.
+	if s.When.Event != "" && s.When.Git == nil && s.Watch == nil {
 		errs = append(errs, fmt.Errorf("watch is required when when.event is set"))
 	}
 
@@ -19,8 +19,8 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	}
 
 	// at least one trigger source must be set
-	if s.When.Event == "" {
-		errs = append(errs, fmt.Errorf("when.event is required"))
+	if s.When.Event == "" && s.When.Git == nil {
+		errs = append(errs, fmt.Errorf("when.event or when.git is required"))
 	}
 
 	// workflow selector must identify at least one workflow
