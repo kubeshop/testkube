@@ -14,7 +14,6 @@ type EnvVarSource struct {
 	// Selects a key of a ConfigMap.
 	ConfigMapKeyRef  *EnvVarSourceConfigMapKeyRef `json:"configMapKeyRef,omitempty"`
 	FieldRef         *FieldRef                    `json:"fieldRef,omitempty"`
-	FileKeyRef       *EnvVarSourceFileKeyRef      `json:"fileKeyRef,omitempty"`
 	ResourceFieldRef *ResourceFieldRef            `json:"resourceFieldRef,omitempty"`
 	// Selects a key of a secret in the pod's namespace
 	SecretKeyRef *EnvVarSourceSecretKeyRef `json:"secretKeyRef,omitempty"`
