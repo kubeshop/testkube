@@ -21,6 +21,59 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// FileChangeType indicates how a workspace file changed.
+type FileChangeType int32
+
+const (
+	FileChangeType_FILE_CHANGE_TYPE_UNSPECIFIED FileChangeType = 0
+	FileChangeType_FILE_CHANGE_TYPE_CREATED     FileChangeType = 1
+	FileChangeType_FILE_CHANGE_TYPE_UPDATED     FileChangeType = 2
+	FileChangeType_FILE_CHANGE_TYPE_DELETED     FileChangeType = 3
+)
+
+// Enum value maps for FileChangeType.
+var (
+	FileChangeType_name = map[int32]string{
+		0: "FILE_CHANGE_TYPE_UNSPECIFIED",
+		1: "FILE_CHANGE_TYPE_CREATED",
+		2: "FILE_CHANGE_TYPE_UPDATED",
+		3: "FILE_CHANGE_TYPE_DELETED",
+	}
+	FileChangeType_value = map[string]int32{
+		"FILE_CHANGE_TYPE_UNSPECIFIED": 0,
+		"FILE_CHANGE_TYPE_CREATED":     1,
+		"FILE_CHANGE_TYPE_UPDATED":     2,
+		"FILE_CHANGE_TYPE_DELETED":     3,
+	}
+)
+
+func (x FileChangeType) Enum() *FileChangeType {
+	p := new(FileChangeType)
+	*p = x
+	return p
+}
+
+func (x FileChangeType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FileChangeType) Descriptor() protoreflect.EnumDescriptor {
+	return file_testkube_runspace_v1_runspace_service_proto_enumTypes[0].Descriptor()
+}
+
+func (FileChangeType) Type() protoreflect.EnumType {
+	return &file_testkube_runspace_v1_runspace_service_proto_enumTypes[0]
+}
+
+func (x FileChangeType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FileChangeType.Descriptor instead.
+func (FileChangeType) EnumDescriptor() ([]byte, []int) {
+	return file_testkube_runspace_v1_runspace_service_proto_rawDescGZIP(), []int{0}
+}
+
 // BridgeMessage is an envelope sent from the Bridge up to AI Service.
 type BridgeMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -30,6 +83,8 @@ type BridgeMessage struct {
 	//	*BridgeMessage_Ack
 	//	*BridgeMessage_Event
 	//	*BridgeMessage_Heartbeat
+	//	*BridgeMessage_FileChanged
+	//	*BridgeMessage_Checkpoint
 	Payload       isBridgeMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -108,6 +163,24 @@ func (x *BridgeMessage) GetHeartbeat() *Heartbeat {
 	return nil
 }
 
+func (x *BridgeMessage) GetFileChanged() *FileChanged {
+	if x != nil {
+		if x, ok := x.Payload.(*BridgeMessage_FileChanged); ok {
+			return x.FileChanged
+		}
+	}
+	return nil
+}
+
+func (x *BridgeMessage) GetCheckpoint() *Checkpoint {
+	if x != nil {
+		if x, ok := x.Payload.(*BridgeMessage_Checkpoint); ok {
+			return x.Checkpoint
+		}
+	}
+	return nil
+}
+
 type isBridgeMessage_Payload interface {
 	isBridgeMessage_Payload()
 }
@@ -132,6 +205,16 @@ type BridgeMessage_Heartbeat struct {
 	Heartbeat *Heartbeat `protobuf:"bytes,4,opt,name=heartbeat,oneof"`
 }
 
+type BridgeMessage_FileChanged struct {
+	// file_changed is emitted when a workspace file is created, updated, or deleted.
+	FileChanged *FileChanged `protobuf:"bytes,5,opt,name=file_changed,json=fileChanged,oneof"`
+}
+
+type BridgeMessage_Checkpoint struct {
+	// checkpoint signals a stable agent state; triggers durable storage commit.
+	Checkpoint *Checkpoint `protobuf:"bytes,6,opt,name=checkpoint,oneof"`
+}
+
 func (*BridgeMessage_Hello) isBridgeMessage_Payload() {}
 
 func (*BridgeMessage_Ack) isBridgeMessage_Payload() {}
@@ -139,6 +222,10 @@ func (*BridgeMessage_Ack) isBridgeMessage_Payload() {}
 func (*BridgeMessage_Event) isBridgeMessage_Payload() {}
 
 func (*BridgeMessage_Heartbeat) isBridgeMessage_Payload() {}
+
+func (*BridgeMessage_FileChanged) isBridgeMessage_Payload() {}
+
+func (*BridgeMessage_Checkpoint) isBridgeMessage_Payload() {}
 
 // ControlMessage is an envelope sent from AI Service down to the Bridge.
 type ControlMessage struct {
@@ -560,16 +647,132 @@ func (x *Heartbeat) GetTimestampMs() int64 {
 	return 0
 }
 
+// FileChanged is emitted by the Bridge when a workspace file is created, updated,
+// or deleted. Enables per-write event streaming to AI Service and the UI.
+type FileChanged struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// path is relative to the workspace root.
+	Path *string `protobuf:"bytes,1,opt,name=path" json:"path,omitempty"`
+	// change_type indicates whether the file was created, updated, or deleted.
+	ChangeType *FileChangeType `protobuf:"varint,2,opt,name=change_type,json=changeType,enum=testkube.runspace.v1.FileChangeType" json:"change_type,omitempty"`
+	// content is the full file content for created/updated files; empty for deleted.
+	Content []byte `protobuf:"bytes,3,opt,name=content" json:"content,omitempty"`
+	// seq is a monotonically increasing sequence number for event ordering.
+	Seq           *uint64 `protobuf:"varint,4,opt,name=seq" json:"seq,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileChanged) Reset() {
+	*x = FileChanged{}
+	mi := &file_testkube_runspace_v1_runspace_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileChanged) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileChanged) ProtoMessage() {}
+
+func (x *FileChanged) ProtoReflect() protoreflect.Message {
+	mi := &file_testkube_runspace_v1_runspace_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileChanged.ProtoReflect.Descriptor instead.
+func (*FileChanged) Descriptor() ([]byte, []int) {
+	return file_testkube_runspace_v1_runspace_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FileChanged) GetPath() string {
+	if x != nil && x.Path != nil {
+		return *x.Path
+	}
+	return ""
+}
+
+func (x *FileChanged) GetChangeType() FileChangeType {
+	if x != nil && x.ChangeType != nil {
+		return *x.ChangeType
+	}
+	return FileChangeType_FILE_CHANGE_TYPE_UNSPECIFIED
+}
+
+func (x *FileChanged) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+func (x *FileChanged) GetSeq() uint64 {
+	if x != nil && x.Seq != nil {
+		return *x.Seq
+	}
+	return 0
+}
+
+// Checkpoint signals that the agent has reached a stable state and the current
+// workspace should be durably persisted (e.g. committed to GitHub).
+type Checkpoint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Checkpoint) Reset() {
+	*x = Checkpoint{}
+	mi := &file_testkube_runspace_v1_runspace_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Checkpoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Checkpoint) ProtoMessage() {}
+
+func (x *Checkpoint) ProtoReflect() protoreflect.Message {
+	mi := &file_testkube_runspace_v1_runspace_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Checkpoint.ProtoReflect.Descriptor instead.
+func (*Checkpoint) Descriptor() ([]byte, []int) {
+	return file_testkube_runspace_v1_runspace_service_proto_rawDescGZIP(), []int{9}
+}
+
 var File_testkube_runspace_v1_runspace_service_proto protoreflect.FileDescriptor
 
 const file_testkube_runspace_v1_runspace_service_proto_rawDesc = "" +
 	"\n" +
-	"+testkube/runspace/v1/runspace_service.proto\x12\x14testkube.runspace.v1\"\x8a\x02\n" +
+	"+testkube/runspace/v1/runspace_service.proto\x12\x14testkube.runspace.v1\"\x96\x03\n" +
 	"\rBridgeMessage\x129\n" +
 	"\x05hello\x18\x01 \x01(\v2!.testkube.runspace.v1.BridgeHelloH\x00R\x05hello\x123\n" +
 	"\x03ack\x18\x02 \x01(\v2\x1f.testkube.runspace.v1.BridgeAckH\x00R\x03ack\x12=\n" +
 	"\x05event\x18\x03 \x01(\v2%.testkube.runspace.v1.ControllerEventH\x00R\x05event\x12?\n" +
-	"\theartbeat\x18\x04 \x01(\v2\x1f.testkube.runspace.v1.HeartbeatH\x00R\theartbeatB\t\n" +
+	"\theartbeat\x18\x04 \x01(\v2\x1f.testkube.runspace.v1.HeartbeatH\x00R\theartbeat\x12F\n" +
+	"\ffile_changed\x18\x05 \x01(\v2!.testkube.runspace.v1.FileChangedH\x00R\vfileChanged\x12B\n" +
+	"\n" +
+	"checkpoint\x18\x06 \x01(\v2 .testkube.runspace.v1.CheckpointH\x00R\n" +
+	"checkpointB\t\n" +
 	"\apayload\"\xfb\x01\n" +
 	"\x0eControlMessage\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x04R\x03seq\x12<\n" +
@@ -593,7 +796,20 @@ const file_testkube_runspace_v1_runspace_service_proto_rawDesc = "" +
 	"\x12ShutdownController\x128\n" +
 	"\x18graceful_timeout_seconds\x18\x01 \x01(\rR\x16gracefulTimeoutSeconds\".\n" +
 	"\tHeartbeat\x12!\n" +
-	"\ftimestamp_ms\x18\x01 \x01(\x03R\vtimestampMs2q\n" +
+	"\ftimestamp_ms\x18\x01 \x01(\x03R\vtimestampMs\"\x94\x01\n" +
+	"\vFileChanged\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12E\n" +
+	"\vchange_type\x18\x02 \x01(\x0e2$.testkube.runspace.v1.FileChangeTypeR\n" +
+	"changeType\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\fR\acontent\x12\x10\n" +
+	"\x03seq\x18\x04 \x01(\x04R\x03seq\"\f\n" +
+	"\n" +
+	"Checkpoint*\x8c\x01\n" +
+	"\x0eFileChangeType\x12 \n" +
+	"\x1cFILE_CHANGE_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18FILE_CHANGE_TYPE_CREATED\x10\x01\x12\x1c\n" +
+	"\x18FILE_CHANGE_TYPE_UPDATED\x10\x02\x12\x1c\n" +
+	"\x18FILE_CHANGE_TYPE_DELETED\x10\x032q\n" +
 	"\x15RunspaceBridgeService\x12X\n" +
 	"\aConnect\x12#.testkube.runspace.v1.BridgeMessage\x1a$.testkube.runspace.v1.ControlMessage(\x010\x01B\xea\x01\n" +
 	"\x18com.testkube.runspace.v1B\x14RunspaceServiceProtoP\x01ZFgithub.com/kubeshop/testkube/pkg/proto/testkube/runspace/v1;runspacev1\xa2\x02\x03TRX\xaa\x02\x14Testkube.Runspace.V1\xca\x02\x14Testkube\\Runspace\\V1\xe2\x02 Testkube\\Runspace\\V1\\GPBMetadata\xea\x02\x16Testkube::Runspace::V1b\beditionsp\xe8\a"
@@ -610,32 +826,39 @@ func file_testkube_runspace_v1_runspace_service_proto_rawDescGZIP() []byte {
 	return file_testkube_runspace_v1_runspace_service_proto_rawDescData
 }
 
-var file_testkube_runspace_v1_runspace_service_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_testkube_runspace_v1_runspace_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_testkube_runspace_v1_runspace_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_testkube_runspace_v1_runspace_service_proto_goTypes = []any{
-	(*BridgeMessage)(nil),      // 0: testkube.runspace.v1.BridgeMessage
-	(*ControlMessage)(nil),     // 1: testkube.runspace.v1.ControlMessage
-	(*BridgeHello)(nil),        // 2: testkube.runspace.v1.BridgeHello
-	(*BridgeAck)(nil),          // 3: testkube.runspace.v1.BridgeAck
-	(*ControllerEvent)(nil),    // 4: testkube.runspace.v1.ControllerEvent
-	(*SendToController)(nil),   // 5: testkube.runspace.v1.SendToController
-	(*ShutdownController)(nil), // 6: testkube.runspace.v1.ShutdownController
-	(*Heartbeat)(nil),          // 7: testkube.runspace.v1.Heartbeat
+	(FileChangeType)(0),        // 0: testkube.runspace.v1.FileChangeType
+	(*BridgeMessage)(nil),      // 1: testkube.runspace.v1.BridgeMessage
+	(*ControlMessage)(nil),     // 2: testkube.runspace.v1.ControlMessage
+	(*BridgeHello)(nil),        // 3: testkube.runspace.v1.BridgeHello
+	(*BridgeAck)(nil),          // 4: testkube.runspace.v1.BridgeAck
+	(*ControllerEvent)(nil),    // 5: testkube.runspace.v1.ControllerEvent
+	(*SendToController)(nil),   // 6: testkube.runspace.v1.SendToController
+	(*ShutdownController)(nil), // 7: testkube.runspace.v1.ShutdownController
+	(*Heartbeat)(nil),          // 8: testkube.runspace.v1.Heartbeat
+	(*FileChanged)(nil),        // 9: testkube.runspace.v1.FileChanged
+	(*Checkpoint)(nil),         // 10: testkube.runspace.v1.Checkpoint
 }
 var file_testkube_runspace_v1_runspace_service_proto_depIdxs = []int32{
-	2, // 0: testkube.runspace.v1.BridgeMessage.hello:type_name -> testkube.runspace.v1.BridgeHello
-	3, // 1: testkube.runspace.v1.BridgeMessage.ack:type_name -> testkube.runspace.v1.BridgeAck
-	4, // 2: testkube.runspace.v1.BridgeMessage.event:type_name -> testkube.runspace.v1.ControllerEvent
-	7, // 3: testkube.runspace.v1.BridgeMessage.heartbeat:type_name -> testkube.runspace.v1.Heartbeat
-	5, // 4: testkube.runspace.v1.ControlMessage.send:type_name -> testkube.runspace.v1.SendToController
-	6, // 5: testkube.runspace.v1.ControlMessage.shutdown:type_name -> testkube.runspace.v1.ShutdownController
-	7, // 6: testkube.runspace.v1.ControlMessage.heartbeat_ack:type_name -> testkube.runspace.v1.Heartbeat
-	0, // 7: testkube.runspace.v1.RunspaceBridgeService.Connect:input_type -> testkube.runspace.v1.BridgeMessage
-	1, // 8: testkube.runspace.v1.RunspaceBridgeService.Connect:output_type -> testkube.runspace.v1.ControlMessage
-	8, // [8:9] is the sub-list for method output_type
-	7, // [7:8] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	3,  // 0: testkube.runspace.v1.BridgeMessage.hello:type_name -> testkube.runspace.v1.BridgeHello
+	4,  // 1: testkube.runspace.v1.BridgeMessage.ack:type_name -> testkube.runspace.v1.BridgeAck
+	5,  // 2: testkube.runspace.v1.BridgeMessage.event:type_name -> testkube.runspace.v1.ControllerEvent
+	8,  // 3: testkube.runspace.v1.BridgeMessage.heartbeat:type_name -> testkube.runspace.v1.Heartbeat
+	9,  // 4: testkube.runspace.v1.BridgeMessage.file_changed:type_name -> testkube.runspace.v1.FileChanged
+	10, // 5: testkube.runspace.v1.BridgeMessage.checkpoint:type_name -> testkube.runspace.v1.Checkpoint
+	6,  // 6: testkube.runspace.v1.ControlMessage.send:type_name -> testkube.runspace.v1.SendToController
+	7,  // 7: testkube.runspace.v1.ControlMessage.shutdown:type_name -> testkube.runspace.v1.ShutdownController
+	8,  // 8: testkube.runspace.v1.ControlMessage.heartbeat_ack:type_name -> testkube.runspace.v1.Heartbeat
+	0,  // 9: testkube.runspace.v1.FileChanged.change_type:type_name -> testkube.runspace.v1.FileChangeType
+	1,  // 10: testkube.runspace.v1.RunspaceBridgeService.Connect:input_type -> testkube.runspace.v1.BridgeMessage
+	2,  // 11: testkube.runspace.v1.RunspaceBridgeService.Connect:output_type -> testkube.runspace.v1.ControlMessage
+	11, // [11:12] is the sub-list for method output_type
+	10, // [10:11] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_testkube_runspace_v1_runspace_service_proto_init() }
@@ -648,6 +871,8 @@ func file_testkube_runspace_v1_runspace_service_proto_init() {
 		(*BridgeMessage_Ack)(nil),
 		(*BridgeMessage_Event)(nil),
 		(*BridgeMessage_Heartbeat)(nil),
+		(*BridgeMessage_FileChanged)(nil),
+		(*BridgeMessage_Checkpoint)(nil),
 	}
 	file_testkube_runspace_v1_runspace_service_proto_msgTypes[1].OneofWrappers = []any{
 		(*ControlMessage_Send)(nil),
@@ -659,13 +884,14 @@ func file_testkube_runspace_v1_runspace_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_testkube_runspace_v1_runspace_service_proto_rawDesc), len(file_testkube_runspace_v1_runspace_service_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   8,
+			NumEnums:      1,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_testkube_runspace_v1_runspace_service_proto_goTypes,
 		DependencyIndexes: file_testkube_runspace_v1_runspace_service_proto_depIdxs,
+		EnumInfos:         file_testkube_runspace_v1_runspace_service_proto_enumTypes,
 		MessageInfos:      file_testkube_runspace_v1_runspace_service_proto_msgTypes,
 	}.Build()
 	File_testkube_runspace_v1_runspace_service_proto = out.File

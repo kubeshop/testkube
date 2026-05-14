@@ -24,6 +24,10 @@ message BridgeMessage {
     ControllerEvent event = 3;
     // heartbeat is a keepalive ping; AI Service echoes it back.
     Heartbeat heartbeat = 4;
+    // file_changed is emitted when a workspace file is created, updated, or deleted.
+    FileChanged file_changed = 5;
+    // checkpoint signals a stable agent state; triggers durable storage commit.
+    Checkpoint checkpoint = 6;
   }
 }
 
@@ -81,3 +85,28 @@ message Heartbeat {
   // timestamp_ms is the sender's wall-clock time in milliseconds since epoch.
   int64 timestamp_ms = 1;
 }
+
+// FileChangeType indicates how a workspace file changed.
+enum FileChangeType {
+  FILE_CHANGE_TYPE_UNSPECIFIED = 0;
+  FILE_CHANGE_TYPE_CREATED = 1;
+  FILE_CHANGE_TYPE_UPDATED = 2;
+  FILE_CHANGE_TYPE_DELETED = 3;
+}
+
+// FileChanged is emitted by the Bridge when a workspace file is created, updated,
+// or deleted. Enables per-write event streaming to AI Service and the UI.
+message FileChanged {
+  // path is relative to the workspace root.
+  string path = 1;
+  // change_type indicates whether the file was created, updated, or deleted.
+  FileChangeType change_type = 2;
+  // content is the full file content for created/updated files; empty for deleted.
+  bytes content = 3;
+  // seq is a monotonically increasing sequence number for event ordering.
+  uint64 seq = 4;
+}
+
+// Checkpoint signals that the agent has reached a stable state and the current
+// workspace should be durably persisted (e.g. committed to GitHub).
+message Checkpoint {}
