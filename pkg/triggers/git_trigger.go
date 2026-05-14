@@ -92,9 +92,9 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 		trigger.Name,
 		event.resource,
 	)
-	var causes []string
-	for _, cause := range event.causes {
-		causes = append(causes, string(cause))
+	causes := make([]string, len(event.causes))
+	for idx, cause := range event.causes {
+		causes[idx] = string(cause)
 	}
 	s.metrics.IncTestTriggerEventCount(trigger.Name, string(event.resource), string(event.eventType), causes)
 	return s.triggerExecutor(ctx, event, trigger)
