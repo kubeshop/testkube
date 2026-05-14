@@ -69,3 +69,19 @@ func TestService_updateTrigger(t *testing.T) {
 	key := newStatusKey(triggerSourceV1, "testkube", "test-trigger-1")
 	assert.NotNil(t, s.triggerStatus[key])
 }
+
+func TestWithClusterID(t *testing.T) {
+	t.Run("non-empty overrides default", func(t *testing.T) {
+		s := &Service{clusterID: DefaultClusterID}
+		opt := WithClusterID("my-custom-id")
+		opt(s)
+		assert.Equal(t, "my-custom-id", s.clusterID)
+	})
+
+	t.Run("empty string does not override", func(t *testing.T) {
+		s := &Service{clusterID: DefaultClusterID}
+		opt := WithClusterID("")
+		opt(s)
+		assert.Equal(t, DefaultClusterID, s.clusterID)
+	})
+}
