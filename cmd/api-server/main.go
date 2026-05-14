@@ -93,7 +93,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/triggers"
 	"github.com/kubeshop/testkube/pkg/version"
-
 	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 )
 
