@@ -85,6 +85,18 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	if trigger.ConcurrencyPolicy == concurrencyPolicyReplace && status.hasActiveTests() {
 		s.abortExecutions(ctx, trigger.Name, status)
 	}
+	s.logger.Infof(
+		"trigger service: matcher component: event %s matches trigger %s/%s for resource %s",
+		event.eventType,
+		trigger.Namespace,
+		trigger.Name,
+		event.resource,
+	)
+	var causes []string
+	for _, cause := range event.causes {
+		causes = append(causes, string(cause))
+	}
+	s.metrics.IncTestTriggerEventCount(trigger.Name, string(event.resource), string(event.eventType), causes)
 	return s.triggerExecutor(ctx, event, trigger)
 
 }

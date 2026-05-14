@@ -396,6 +396,11 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 
 	if !hasPrev {
 		i.commits[key] = headHash
+		log.DefaultLogger.Warnf(
+			"git informer: initializing baseline at current HEAD for trigger %s/%s; commits pushed while informer was not running are not replayed",
+			trigger.Namespace,
+			trigger.Name,
+		)
 		return false, nil
 	}
 	if prevHash == headHash {
@@ -452,6 +457,13 @@ func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, tr
 
 	prevHash, hasPrev := i.commits[key]
 	i.commits[key] = headHash
+	if !hasPrev {
+		log.DefaultLogger.Warnf(
+			"git informer: initializing baseline at current HEAD for trigger %s/%s; commits pushed while informer was not running are not replayed",
+			trigger.Namespace,
+			trigger.Name,
+		)
+	}
 
 	return hasPrev && prevHash != headHash, nil
 }

@@ -106,3 +106,4 @@ spec:
 - `revision` accepts a branch, tag, or commit SHA.
 - Prefer `tokenFrom` / `sshKeyFrom` (and `usernameFrom`) over inline plain-text fields.
 - SSH auth requires host key verification via `known_hosts` (for example by mounting a known_hosts file and setting `SSH_KNOWN_HOSTS`).
+- The git informer keeps the last-seen commit baseline in memory. After API server restart/leader failover, each trigger is re-baselined to the current HEAD and commits pushed while the informer was down are not replayed.

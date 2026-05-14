@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,40 @@ func TestMatchGitTrigger_ExecutesOnlyTargetTrigger(t *testing.T) {
 	err := s.MatchGitTrigger(context.Background(), "trigger-a", "default")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"trigger-a"}, executed)
+}
+
+func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    v1.TestTriggerEventModified,
+		},
+	}
+	m := metrics.NewMetrics()
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, _ *watcherEvent, _ *internalTrigger) error {
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: m,
+	}
+
+	counter := m.TestTriggerEventCount.WithLabelValues(trigger.Name, "content", "modified", "")
+	metricBefore := &dto.Metric{}
+	require.NoError(t, counter.Write(metricBefore))
+	before := metricBefore.GetCounter().GetValue()
+
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	require.NoError(t, err)
+
+	metricAfter := &dto.Metric{}
+	require.NoError(t, counter.Write(metricAfter))
+	after := metricAfter.GetCounter().GetValue()
+	assert.Equal(t, before+1, after)
 }
 
 func TestMatchGitTrigger_UsesV1StatusKeyWhenV2HasSameName(t *testing.T) {
