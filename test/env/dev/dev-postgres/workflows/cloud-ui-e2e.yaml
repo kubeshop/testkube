@@ -60,6 +60,9 @@ spec:
       paths:
       - playwright-report/**
       - test-results/**
+  - name: E2E Test Coverage report
+    optional: true
+    shell: npm run scenario-coverage
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -138,3 +141,6 @@ spec:
         workingDir: /data/artifacts/
         paths:
         - '**/*'
+  - name: E2E Test Coverage report
+    optional: true
+    shell: npm run scenario-coverage
