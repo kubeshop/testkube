@@ -105,3 +105,4 @@ spec:
 - `paths` supports exact paths or directory/file prefixes (`path` or `path/...` semantics), not glob patterns.
 - `revision` accepts a branch, tag, or commit SHA.
 - Prefer `tokenFrom` / `sshKeyFrom` (and `usernameFrom`) over inline plain-text fields.
+- SSH auth requires host key verification via `known_hosts` (for example by mounting a known_hosts file and setting `SSH_KNOWN_HOSTS`).

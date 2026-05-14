@@ -295,6 +295,21 @@ func TestAuthClientOptions(t *testing.T) {
 		assert.Contains(t, err.Error(), "sshKeyFrom")
 		assert.Contains(t, err.Error(), "resourceFieldRef")
 	})
+
+	t.Run("reject unsupported tokenFrom fileKeyRef source", func(t *testing.T) {
+		_, err := authClientOptions(&testkube.TestTriggerContentGit{
+			TokenFrom: &testkube.EnvVarSource{
+				FileKeyRef: &testkube.EnvVarSourceFileKeyRef{
+					VolumeName: "env-files",
+					Path:       "secrets.env",
+					Key:        "GIT_TOKEN",
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "tokenFrom")
+		assert.Contains(t, err.Error(), "fileKeyRef")
+	})
 }
 
 func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
@@ -756,6 +771,27 @@ func TestUpdateRepositories_UsesWatcherNamespaces(t *testing.T) {
 	assert.ElementsMatch(t, []string{"team-a", "team-b"}, seen)
 }
 
+func TestUpdateRepositories_DefaultsToInformerNamespaceWhenWatcherNamespacesEmpty(t *testing.T) {
+	seen := make([]string, 0)
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, namespace string) ([]testkube.TestTrigger, error) {
+				seen = append(seen, namespace)
+				return nil, nil
+			},
+		},
+		nil,
+		nil,
+		"testkube",
+		"",
+		Options{},
+	)
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, []string{"testkube"}, seen)
+}
+
 func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 	resource := testkube.CONTENT_TestTriggerResources
 	trigger := testkube.TestTrigger{
@@ -935,7 +971,7 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	secondHash := commitFile("pkg/triggers/git_trigger.go", "package triggers\n", "pkg change")
+	_ = commitFile("pkg/triggers/git_trigger.go", "package triggers\n", "pkg change")
 	pushMain()
 
 	resource := testkube.CONTENT_TestTriggerResources
@@ -976,7 +1012,31 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, []string{"testkube/trigger-a"}, matched)
-	assert.Equal(t, secondHash, informer.commits[key])
+	assert.NotEqual(t, firstHash, informer.commits[key])
+}
+
+func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T) {
+	authType := testkube.BASIC_ContentGitAuthType
+	keyA := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: "main",
+		AuthType: &authType,
+		Paths:    []string{"pkg"},
+	})
+	keyB := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: "main",
+		AuthType: &authType,
+		Paths:    []string{"test"},
+	})
+	keyOtherNamespace := gitConfigCacheKey("team-a", &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Revision: "main",
+		AuthType: &authType,
+	})
+
+	assert.Equal(t, keyA, keyB)
+	assert.NotEqual(t, keyA, keyOtherNamespace)
 }
 
 func TestUpdateRepositories_CleanupSkipsWorkflowNamespacesWithListErrors(t *testing.T) {

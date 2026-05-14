@@ -93,6 +93,29 @@ type Informer struct {
 	kubeClient        kubernetes.Interface
 }
 
+type reconcileCache struct {
+	states map[string]*reconcileState
+}
+
+type reconcileState struct {
+	remoteHeadLoaded bool
+	remoteHeadHash   string
+	remoteHeadErr    error
+
+	repoLoaded bool
+	repo       *git.Repository
+	repoHead   string
+	repoErr    error
+
+	deltas map[string]commitDelta
+}
+
+type commitDelta struct {
+	paths     []string
+	foundPrev bool
+	err       error
+}
+
 // NewInformer returns a new git content informer.
 func NewInformer(
 	testTriggerClient testtriggerclient.TestTriggerClient,
@@ -108,14 +131,14 @@ func NewInformer(
 		workflowClient:    workflowClient,
 		matcher:           matcher,
 		commits:           make(map[string]string),
-		namespaces:        resolveNamespaces(options.WatcherNamespaces),
+		namespaces:        resolveNamespaces(options.WatcherNamespaces, namespace),
 		environmentID:     environmentID,
 		options:           options,
 		kubeClient:        options.KubeClient,
 	}
 }
 
-func resolveNamespaces(watcherNamespaces string) []string {
+func resolveNamespaces(watcherNamespaces, defaultNamespace string) []string {
 	namespaces := make([]string, 0)
 	seen := make(map[string]struct{})
 	for _, namespace := range strings.Split(watcherNamespaces, ",") {
@@ -132,6 +155,10 @@ func resolveNamespaces(watcherNamespaces string) []string {
 
 	if len(namespaces) > 0 {
 		return namespaces
+	}
+	defaultNamespace = strings.TrimSpace(defaultNamespace)
+	if defaultNamespace != "" {
+		return []string{defaultNamespace}
 	}
 	return []string{allNamespacesMarker}
 }
@@ -197,6 +224,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 	}
 
 	active := make(map[string]struct{}, len(testTriggerMap)+len(workflowTriggerMap))
+	cache := newReconcileCache()
 	for _, trigger := range testTriggerMap {
 		if err := ctx.Err(); err != nil {
 			return
@@ -207,7 +235,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
 
-		changed, err := i.hasNewMatchingCommit(ctx, key, trigger)
+		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
@@ -232,7 +260,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		key := triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
 
-		changed, err := i.hasNewMatchingCommit(ctx, key, trigger)
+		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
@@ -322,13 +350,17 @@ func isContentResource(trigger testkube.TestTrigger) bool {
 }
 
 func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (bool, error) {
+	return i.hasNewMatchingCommitWithCache(ctx, key, trigger, nil)
+}
+
+func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
 
 	paths := normalizePaths(trigger.ContentSelector.Git.Paths)
 	if len(paths) == 0 {
-		return i.hasNewHeadCommit(ctx, key, trigger)
+		return i.hasNewHeadCommitWithCache(ctx, key, trigger, cache)
 	}
 
 	if isCommitSHA(trigger.ContentSelector.Git.Revision) {
@@ -337,17 +369,10 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger
 		return false, nil
 	}
 
-	repo, err := i.openOrUpdateRepository(ctx, key, trigger)
+	repo, headHash, state, err := i.openOrUpdateRepositoryWithCache(ctx, key, trigger, cache)
 	if err != nil {
 		return false, err
 	}
-
-	head, err := repo.Head()
-	if err != nil {
-		return false, err
-	}
-
-	headHash := head.Hash().String()
 	prevHash, hasPrev := i.commits[key]
 
 	if !hasPrev {
@@ -358,39 +383,20 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger
 		return false, nil
 	}
 
-	// Walk commits from head back to previous to check if any changed paths match
-	iter, err := repo.Log(&git.LogOptions{From: head.Hash()})
-	if err != nil {
-		return false, err
+	delta := commitDelta{}
+	if state != nil {
+		if existing, ok := state.deltas[prevHash]; ok {
+			delta = existing
+		} else {
+			delta.paths, delta.foundPrev, delta.err = collectChangedPathsSince(repo, headHash, prevHash, i.options.MaxCommitsScan)
+			state.deltas[prevHash] = delta
+		}
+	} else {
+		delta.paths, delta.foundPrev, delta.err = collectChangedPathsSince(repo, headHash, prevHash, i.options.MaxCommitsScan)
 	}
-	defer iter.Close()
 
-	foundPrev := false
-	matched := false
-	scanned := 0
-	err = iter.ForEach(func(c *object.Commit) error {
-		if i.options.MaxCommitsScan > 0 && scanned >= i.options.MaxCommitsScan {
-			return storer.ErrStop
-		}
-		scanned++
-
-		if c.Hash.String() == prevHash {
-			foundPrev = true
-			return storer.ErrStop
-		}
-		stats, err := c.Stats()
-		if err != nil {
-			return err
-		}
-		for _, stat := range stats {
-			if pathMatchesNormalized(paths, stat.Name) {
-				matched = true
-				return storer.ErrStop
-			}
-		}
-		return nil
-	})
-	if err != nil && !errors.Is(err, storer.ErrStop) {
+	if delta.err != nil {
+		err = delta.err
 		if shouldAdvanceBaselineOnScanError(err) {
 			i.commits[key] = headHash
 		}
@@ -399,10 +405,12 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger
 
 	i.commits[key] = headHash
 
-	if matched {
-		return true, nil
+	for _, changedPath := range delta.paths {
+		if pathMatchesNormalized(paths, changedPath) {
+			return true, nil
+		}
 	}
-	if !foundPrev {
+	if !delta.foundPrev {
 		log.DefaultLogger.Warnf(
 			"git informer: history boundary reached before previous commit for trigger %s/%s (repo depth/max scan limit); advancing baseline without firing",
 			trigger.Namespace,
@@ -414,7 +422,11 @@ func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger
 }
 
 func (i *Informer) hasNewHeadCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (bool, error) {
-	headHash, err := i.remoteHeadHash(ctx, trigger.Namespace, trigger.ContentSelector.Git)
+	return i.hasNewHeadCommitWithCache(ctx, key, trigger, nil)
+}
+
+func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (bool, error) {
+	headHash, err := i.remoteHeadHashWithCache(ctx, trigger.Namespace, trigger.ContentSelector.Git, cache)
 	if err != nil {
 		return false, err
 	}
@@ -423,6 +435,21 @@ func (i *Informer) hasNewHeadCommit(ctx context.Context, key string, trigger tes
 	i.commits[key] = headHash
 
 	return hasPrev && prevHash != headHash, nil
+}
+
+func (i *Informer) remoteHeadHashWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) (string, error) {
+	if cache == nil {
+		return i.remoteHeadHash(ctx, namespace, gitConfig)
+	}
+
+	state := cache.stateFor(namespace, gitConfig)
+	if state.remoteHeadLoaded {
+		return state.remoteHeadHash, state.remoteHeadErr
+	}
+
+	state.remoteHeadHash, state.remoteHeadErr = i.remoteHeadHash(ctx, namespace, gitConfig)
+	state.remoteHeadLoaded = true
+	return state.remoteHeadHash, state.remoteHeadErr
 }
 
 func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigger testkube.TestTrigger) (*git.Repository, error) {
@@ -512,6 +539,49 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 		cloneErr = err
 	}
 	return nil, cloneErr
+}
+
+func (i *Informer) openOrUpdateRepositoryWithCache(
+	ctx context.Context,
+	key string,
+	trigger testkube.TestTrigger,
+	cache *reconcileCache,
+) (*git.Repository, string, *reconcileState, error) {
+	if cache == nil {
+		repo, err := i.openOrUpdateRepository(ctx, key, trigger)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		head, err := repo.Head()
+		if err != nil {
+			return nil, "", nil, err
+		}
+		return repo, head.Hash().String(), nil, nil
+	}
+
+	state := cache.stateFor(trigger.Namespace, trigger.ContentSelector.Git)
+	if state.repoLoaded {
+		return state.repo, state.repoHead, state, state.repoErr
+	}
+
+	repo, err := i.openOrUpdateRepository(ctx, key, trigger)
+	if err != nil {
+		state.repoErr = err
+		state.repoLoaded = true
+		return nil, "", state, err
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		state.repoErr = err
+		state.repoLoaded = true
+		return nil, "", state, err
+	}
+
+	state.repo = repo
+	state.repoHead = head.Hash().String()
+	state.repoLoaded = true
+	return state.repo, state.repoHead, state, nil
 }
 
 func (i *Informer) remoteHeadHash(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) (string, error) {
@@ -712,6 +782,10 @@ func validateCredentialSource(fieldName, value string, source *testkube.EnvVarSo
 		return fmt.Errorf("unsupported %s source: resourceFieldRef is not supported for git credentials, use secretKeyRef or configMapKeyRef", fieldName)
 	}
 
+	if source.FileKeyRef != nil {
+		return fmt.Errorf("unsupported %s source: fileKeyRef is not supported for git credentials, use secretKeyRef or configMapKeyRef", fieldName)
+	}
+
 	return nil
 }
 
@@ -810,6 +884,147 @@ func resolveCredentialValueFromRef(name, key string) string {
 		}
 	}
 	return ""
+}
+
+func collectChangedPathsSince(repo *git.Repository, headHash, prevHash string, maxCommitsScan int) ([]string, bool, error) {
+	head := plumbing.NewHash(headHash)
+	iter, err := repo.Log(&git.LogOptions{From: head})
+	if err != nil {
+		return nil, false, err
+	}
+	defer iter.Close()
+
+	paths := make([]string, 0)
+	seen := make(map[string]struct{})
+	foundPrev := false
+	scanned := 0
+
+	err = iter.ForEach(func(c *object.Commit) error {
+		if maxCommitsScan > 0 && scanned >= maxCommitsScan {
+			return storer.ErrStop
+		}
+		scanned++
+
+		if c.Hash.String() == prevHash {
+			foundPrev = true
+			return storer.ErrStop
+		}
+
+		stats, err := c.Stats()
+		if err != nil {
+			return err
+		}
+		for _, stat := range stats {
+			if _, ok := seen[stat.Name]; ok {
+				continue
+			}
+			seen[stat.Name] = struct{}{}
+			paths = append(paths, stat.Name)
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, storer.ErrStop) {
+		return nil, false, err
+	}
+
+	return paths, foundPrev, nil
+}
+
+func newReconcileCache() *reconcileCache {
+	return &reconcileCache{states: make(map[string]*reconcileState)}
+}
+
+func (c *reconcileCache) stateFor(namespace string, gitConfig *testkube.TestTriggerContentGit) *reconcileState {
+	key := gitConfigCacheKey(namespace, gitConfig)
+	if state, ok := c.states[key]; ok {
+		return state
+	}
+	state := &reconcileState{deltas: make(map[string]commitDelta)}
+	c.states[key] = state
+	return state
+}
+
+func gitConfigCacheKey(namespace string, gitConfig *testkube.TestTriggerContentGit) string {
+	if gitConfig == nil {
+		return namespace
+	}
+
+	authType := ""
+	if gitConfig.AuthType != nil {
+		authType = strings.ToLower(string(*gitConfig.AuthType))
+	}
+
+	return strings.Join([]string{
+		namespace,
+		gitConfig.Uri,
+		gitConfig.Revision,
+		authType,
+		gitConfig.Username,
+		gitConfig.Token,
+		gitConfig.SshKey,
+		envVarSourceCacheKey(gitConfig.UsernameFrom),
+		envVarSourceCacheKey(gitConfig.TokenFrom),
+		envVarSourceCacheKey(gitConfig.SshKeyFrom),
+	}, "|")
+}
+
+func envVarSourceCacheKey(source *testkube.EnvVarSource) string {
+	if source == nil {
+		return ""
+	}
+
+	return strings.Join([]string{
+		fieldRefCacheKey(source.FieldRef),
+		resourceFieldRefCacheKey(source.ResourceFieldRef),
+		configMapKeyRefCacheKey(source.ConfigMapKeyRef),
+		secretKeyRefCacheKey(source.SecretKeyRef),
+		fileKeyRefCacheKey(source.FileKeyRef),
+	}, ";")
+}
+
+func fieldRefCacheKey(ref *testkube.FieldRef) string {
+	if ref == nil {
+		return ""
+	}
+	return strings.Join([]string{ref.ApiVersion, ref.FieldPath}, ":")
+}
+
+func resourceFieldRefCacheKey(ref *testkube.ResourceFieldRef) string {
+	if ref == nil {
+		return ""
+	}
+	return strings.Join([]string{ref.ContainerName, ref.Resource, ref.Divisor}, ":")
+}
+
+func configMapKeyRefCacheKey(ref *testkube.EnvVarSourceConfigMapKeyRef) string {
+	if ref == nil {
+		return ""
+	}
+	return strings.Join([]string{ref.Name, ref.Key, boolPtrString(ref.Optional)}, ":")
+}
+
+func secretKeyRefCacheKey(ref *testkube.EnvVarSourceSecretKeyRef) string {
+	if ref == nil {
+		return ""
+	}
+	return strings.Join([]string{ref.Name, ref.Key, boolPtrString(ref.Optional)}, ":")
+}
+
+func fileKeyRefCacheKey(ref *testkube.EnvVarSourceFileKeyRef) string {
+	if ref == nil {
+		return ""
+	}
+	return strings.Join([]string{ref.VolumeName, ref.Path, ref.Key, boolPtrString(ref.Optional)}, ":")
+}
+
+func boolPtrString(value *bool) string {
+	if value == nil {
+		return ""
+	}
+	if *value {
+		return "true"
+	}
+	return "false"
 }
 
 func normalizeSecretOrConfigMapEnvVarName(name, key string) string {

@@ -16,6 +16,7 @@ func MapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
 		ResourceFieldRef: MapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
 		ConfigMapKeyRef:  MapConfigMapKeyRefKubeToAPI(v.ConfigMapKeyRef),
 		SecretKeyRef:     MapSecretKeyRefKubeToAPI(v.SecretKeyRef),
+		FileKeyRef:       MapFileKeyRefKubeToAPI(v.FileKeyRef),
 	}
 }
 
@@ -58,6 +59,18 @@ func MapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourc
 	return &testkube.EnvVarSourceSecretKeyRef{Name: v.Name, Key: v.Key, Optional: v.Optional}
 }
 
+func MapFileKeyRefKubeToAPI(v *corev1.FileKeySelector) *testkube.EnvVarSourceFileKeyRef {
+	if v == nil {
+		return nil
+	}
+	return &testkube.EnvVarSourceFileKeyRef{
+		VolumeName: v.VolumeName,
+		Path:       v.Path,
+		Key:        v.Key,
+		Optional:   v.Optional,
+	}
+}
+
 func MapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 	if v == nil {
 		return nil
@@ -67,6 +80,7 @@ func MapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 		ResourceFieldRef: MapResourceFieldRefAPIToKube(v.ResourceFieldRef),
 		ConfigMapKeyRef:  MapConfigMapKeyRefAPIToKube(v.ConfigMapKeyRef),
 		SecretKeyRef:     MapSecretKeyRefAPIToKube(v.SecretKeyRef),
+		FileKeyRef:       MapFileKeyRefAPIToKube(v.FileKeyRef),
 	}
 }
 
@@ -118,5 +132,17 @@ func MapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.Secr
 		Key:                  v.Key,
 		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
 		Optional:             v.Optional,
+	}
+}
+
+func MapFileKeyRefAPIToKube(v *testkube.EnvVarSourceFileKeyRef) *corev1.FileKeySelector {
+	if v == nil {
+		return nil
+	}
+	return &corev1.FileKeySelector{
+		VolumeName: v.VolumeName,
+		Path:       v.Path,
+		Key:        v.Key,
+		Optional:   v.Optional,
 	}
 }
