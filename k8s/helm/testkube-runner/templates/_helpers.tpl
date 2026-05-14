@@ -24,6 +24,22 @@ app.kubernetes.io/name: {{ include "testkube-runner.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/*
+Common labels
+*/}}
+{{- define "testkube-runner.labels" -}}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{ include "global.labels.standard" . }}
+{{ include "testkube-runner.selectorLabels" . }}
+{{- end }}
+
+{{/*
+Monitoring labels
+*/}}
+{{- define "testkube-runner.monitoring" -}}
+app: prometheus
+{{- end }}
+
 {{- define "testkube-runner.agent.image" -}}
 {{- $registryName := .Values.images.agent.registry -}}
 {{- $repositoryName := .Values.images.agent.repository -}}

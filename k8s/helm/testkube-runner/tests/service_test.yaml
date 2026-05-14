@@ -1,0 +1,118 @@
+suite: testkube-runner service
+templates:
+  - service.yaml
+release:
+  name: tk
+tests:
+  - it: renders a ClusterIP Service on port 8088 by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 8088
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+      - equal:
+          path: spec.ports[0].name
+          value: http
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+
+  - it: uses fullname for the service name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: tk-testkube-runner
+
+  - it: selector matches the runner pod selectorLabels
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: testkube-runner
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: tk
+
+  - it: includes standard Helm labels
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+          value: Helm
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: testkube-runner
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: tk
+      - isNotEmpty:
+          path: metadata.labels["helm.sh/chart"]
+
+  - it: exposes only one port (no gRPC, runner has no gRPC listener)
+    asserts:
+      - lengthEqual:
+          path: spec.ports
+          count: 1
+
+  - it: honors service.port override
+    set:
+      service.port: 9090
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 9090
+
+  - it: honors service.type override
+    set:
+      service.type: NodePort
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+
+  - it: propagates service.labels to metadata.labels
+    set:
+      service.labels:
+        team: qa
+        tier: backend
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: qa
+      - equal:
+          path: metadata.labels.tier
+          value: backend
+
+  - it: propagates service.annotations to metadata.annotations
+    set:
+      service.annotations:
+        prometheus.io/scrape: "true"
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: propagates global.labels to metadata.labels
+    set:
+      global.labels:
+        env: prod
+    asserts:
+      - equal:
+          path: metadata.labels.env
+          value: prod
+
+  - it: propagates global.annotations to metadata.annotations
+    set:
+      global.annotations:
+        team: platform
+    asserts:
+      - equal:
+          path: metadata.annotations.team
+          value: platform

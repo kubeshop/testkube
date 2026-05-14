@@ -248,6 +248,28 @@ pod:
   # - name: FOO
   #   value: BAR
 
+## Service parameters
+service:
+  ## Service type
+  type: ClusterIP
+  ## HTTP Port (matches the runner containerPort 8088 and APISERVER_PORT)
+  port: 8088
+  ## Service Annotations
+  annotations: {}
+  ## Service labels
+  labels: {}
+  ## NOTE: the runner does not expose a gRPC listener (unlike testkube-api),
+  ## so no `grpcPort` is published here.
+
+## Prometheus monitoring
+prometheus:
+  ## Toggle whether to install ServiceMonitor
+  enabled: false
+  ## Additional monitoring labels applied to the ServiceMonitor
+  monitoringLabels: {}
+  ## Scrape interval
+  interval: 15s
+
 ## Enable a [pod disruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
 podDisruptionBudget:
   enabled: false

@@ -1,0 +1,124 @@
+suite: testkube-runner servicemonitor
+templates:
+  - servicemonitor.yaml
+release:
+  name: tk
+tests:
+  - it: is not rendered by default (prometheus.enabled=false)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders when prometheus.enabled=true
+    set:
+      prometheus.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: apiVersion
+          value: monitoring.coreos.com/v1
+
+  - it: derives name from fullname with -servicemonitor suffix
+    set:
+      prometheus.enabled: true
+    asserts:
+      - equal:
+          path: metadata.name
+          value: tk-testkube-runner-servicemonitor
+
+  - it: carries the monitoring label app=prometheus
+    set:
+      prometheus.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.app
+          value: prometheus
+
+  - it: targets port 8088 by default with 15s interval
+    set:
+      prometheus.enabled: true
+    asserts:
+      - equal:
+          path: spec.endpoints[0].targetPort
+          value: 8088
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 15s
+
+  - it: matchLabels include runner selectorLabels
+    set:
+      prometheus.enabled: true
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: testkube-runner
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/instance"]
+          value: tk
+
+  - it: honors prometheus.interval override
+    set:
+      prometheus.enabled: true
+      prometheus.interval: 30s
+    asserts:
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 30s
+
+  - it: propagates prometheus.monitoringLabels to metadata.labels
+    set:
+      prometheus.enabled: true
+      prometheus.monitoringLabels:
+        release: kube-prometheus
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus
+
+  - it: propagates prometheus.matchLabels into selector.matchLabels
+    set:
+      prometheus.enabled: true
+      prometheus.matchLabels:
+        team: qa
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels.team
+          value: qa
+
+  - it: honors prometheus.sampleLimit when set
+    set:
+      prometheus.enabled: true
+      prometheus.sampleLimit: 10000
+    asserts:
+      - equal:
+          path: spec.sampleLimit
+          value: 10000
+
+  - it: omits sampleLimit when not set
+    set:
+      prometheus.enabled: true
+    asserts:
+      - notExists:
+          path: spec.sampleLimit
+
+  - it: targetPort follows service.port (stays in sync with Service)
+    set:
+      prometheus.enabled: true
+      service.port: 9090
+    asserts:
+      - equal:
+          path: spec.endpoints[0].targetPort
+          value: 9090
+
+  - it: propagates global.labels to metadata.labels
+    set:
+      prometheus.enabled: true
+      global.labels:
+        env: prod
+    asserts:
+      - equal:
+          path: metadata.labels.env
+          value: prod
