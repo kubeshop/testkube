@@ -271,7 +271,7 @@ func TestAuthClientOptions(t *testing.T) {
 			SshKey: testPrivateKey,
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "known_hosts")
+		assert.Contains(t, err.Error(), "ssh auth requires known_hosts-based host key verification")
 	})
 
 	t.Run("reject unsupported tokenFrom fieldRef source", func(t *testing.T) {
