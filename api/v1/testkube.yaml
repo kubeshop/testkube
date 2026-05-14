@@ -8308,11 +8308,7 @@ components:
         sshKeyFrom:
           $ref: "#/components/schemas/EnvVarSource"
         authType:
-          type: string
-          enum:
-            - basic
-            - header
-            - github
+          $ref: "#/components/schemas/ContentGitAuthType"
         paths:
           type: array
           description: paths to watch for changes
