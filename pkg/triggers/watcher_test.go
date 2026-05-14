@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -258,6 +259,130 @@ func TestService_startCloudWorkflowTriggerWatch_UsesWatcherNamespaces(t *testing
 		_, b := service.triggerStatus[newStatusKey(triggerSourceV2, "team-b", "wf-b")]
 		return a && b
 	}, time.Second, 10*time.Millisecond)
+}
+
+func TestService_startCloudTestTriggerWatch_PreservesFailedNamespaceSnapshot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	testTriggersClient := testtriggerclient.NewMockTestTriggerClient(ctrl)
+
+	var teamACalls int32
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, "team-a").
+		DoAndReturn(func(context.Context, string, testtriggerclient.ListOptions, string) ([]testkube.TestTrigger, error) {
+			call := atomic.AddInt32(&teamACalls, 1)
+			if call == 1 {
+				return []testkube.TestTrigger{{
+					Name:             "a",
+					Namespace:        "team-a",
+					Event:            "modified",
+					ResourceSelector: &testkube.TestTriggerSelector{},
+					TestSelector:     &testkube.TestTriggerSelector{},
+				}}, nil
+			}
+			return nil, assert.AnError
+		}).
+		AnyTimes()
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, "team-b").
+		Return([]testkube.TestTrigger{{
+			Name:             "b",
+			Namespace:        "team-b",
+			Event:            "modified",
+			ResourceSelector: &testkube.TestTriggerSelector{},
+			TestSelector:     &testkube.TestTriggerSelector{},
+		}}, nil).
+		AnyTimes()
+
+	service := &Service{
+		triggerStatus:      make(map[statusKey]*triggerStatus),
+		testTriggersClient: testTriggersClient,
+		logger:             log.DefaultLogger,
+		eventsBus:          &bus.EventBusMock{},
+		metrics:            metrics.NewMetrics(),
+		proContext:         &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:    20 * time.Millisecond,
+		watcherNamespaces:  []string{"team-a", "team-b"},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudTestTriggerWatch(context.Background(), stop)
+
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		_, a := service.triggerStatus[newStatusKey(triggerSourceV1, "team-a", "a")]
+		_, b := service.triggerStatus[newStatusKey(triggerSourceV1, "team-b", "b")]
+		return a && b
+	}, time.Second, 10*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&teamACalls) >= 2
+	}, time.Second, 10*time.Millisecond)
+
+	service.triggerStatusMu.RLock()
+	_, a := service.triggerStatus[newStatusKey(triggerSourceV1, "team-a", "a")]
+	_, b := service.triggerStatus[newStatusKey(triggerSourceV1, "team-b", "b")]
+	service.triggerStatusMu.RUnlock()
+	assert.True(t, a)
+	assert.True(t, b)
+}
+
+func TestService_startCloudWorkflowTriggerWatch_PreservesFailedNamespaceSnapshot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	workflowClient := workflowtriggerclient.NewMockWorkflowTriggerClient(ctrl)
+
+	var teamACalls int32
+	workflowClient.EXPECT().
+		List(gomock.Any(), "env-1", workflowtriggerclient.ListOptions{}, "team-a").
+		DoAndReturn(func(context.Context, string, workflowtriggerclient.ListOptions, string) ([]testkube.WorkflowTrigger, error) {
+			call := atomic.AddInt32(&teamACalls, 1)
+			if call == 1 {
+				return []testkube.WorkflowTrigger{{Name: "wf-a", Namespace: "team-a"}}, nil
+			}
+			return nil, assert.AnError
+		}).
+		AnyTimes()
+	workflowClient.EXPECT().
+		List(gomock.Any(), "env-1", workflowtriggerclient.ListOptions{}, "team-b").
+		Return([]testkube.WorkflowTrigger{{Name: "wf-b", Namespace: "team-b"}}, nil).
+		AnyTimes()
+
+	service := &Service{
+		triggerStatus:          make(map[statusKey]*triggerStatus),
+		workflowTriggersClient: workflowClient,
+		logger:                 log.DefaultLogger,
+		eventsBus:              &bus.EventBusMock{},
+		metrics:                metrics.NewMetrics(),
+		proContext:             &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:        20 * time.Millisecond,
+		watcherNamespaces:      []string{"team-a", "team-b"},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudWorkflowTriggerWatch(context.Background(), stop)
+
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		_, a := service.triggerStatus[newStatusKey(triggerSourceV2, "team-a", "wf-a")]
+		_, b := service.triggerStatus[newStatusKey(triggerSourceV2, "team-b", "wf-b")]
+		return a && b
+	}, time.Second, 10*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&teamACalls) >= 2
+	}, time.Second, 10*time.Millisecond)
+
+	service.triggerStatusMu.RLock()
+	_, a := service.triggerStatus[newStatusKey(triggerSourceV2, "team-a", "wf-a")]
+	_, b := service.triggerStatus[newStatusKey(triggerSourceV2, "team-b", "wf-b")]
+	service.triggerStatusMu.RUnlock()
+	assert.True(t, a)
+	assert.True(t, b)
 }
 
 func TestService_getCloudWatchNamespaces(t *testing.T) {

@@ -305,10 +305,12 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 
 	syncOnce := func() {
 		curr := map[string]testkube.WorkflowTrigger{}
+		failedNamespaces := map[string]struct{}{}
 		for _, namespace := range namespaces {
 			list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, namespace)
 			if err != nil {
 				s.logger.Errorf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
+				failedNamespaces[namespace] = struct{}{}
 				continue
 			}
 			for _, t := range list {
@@ -322,6 +324,18 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 				} else if !cmp.Equal(old, t) {
 					s.updateWorkflowTrigger(ctx, &crd)
 					s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+				}
+			}
+		}
+		if len(failedNamespaces) > 0 {
+			_, failedAll := failedNamespaces["*"]
+			for key, t := range prev {
+				if failedAll {
+					curr[key] = t
+					continue
+				}
+				if _, failed := failedNamespaces[t.Namespace]; failed {
+					curr[key] = t
 				}
 			}
 		}
@@ -382,10 +396,12 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 
 	syncOnce := func() {
 		curr := map[string]testkube.TestTrigger{}
+		failedNamespaces := map[string]struct{}{}
 		for _, namespace := range namespaces {
 			list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, namespace)
 			if err != nil {
 				s.logger.Errorf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
+				failedNamespaces[namespace] = struct{}{}
 				continue
 			}
 
@@ -399,6 +415,18 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 				} else if !cmp.Equal(old, t) {
 					crd := toCRD(t)
 					s.testTriggerEventHandler(ctx).UpdateFunc(nil, &crd)
+				}
+			}
+		}
+		if len(failedNamespaces) > 0 {
+			_, failedAll := failedNamespaces["*"]
+			for key, t := range prev {
+				if failedAll {
+					curr[key] = t
+					continue
+				}
+				if _, failed := failedNamespaces[t.Namespace]; failed {
+					curr[key] = t
 				}
 			}
 		}

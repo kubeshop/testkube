@@ -162,6 +162,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 
 	testTriggerMap := make(map[string]testkube.TestTrigger)
 	testTriggerListSucceeded := false
+	testTriggerListedNamespaces := make(map[string]struct{})
 	for _, namespace := range i.namespaces {
 		testTriggerList, err := i.testTriggerClient.List(ctx, i.environmentID, testtriggerclient.ListOptions{}, namespace)
 		if err != nil {
@@ -169,12 +170,14 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 			continue
 		}
 		testTriggerListSucceeded = true
+		testTriggerListedNamespaces[namespace] = struct{}{}
 		for _, trigger := range testTriggerList {
 			testTriggerMap[triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)] = trigger
 		}
 	}
 	workflowTriggerMap := make(map[string]testkube.WorkflowTrigger)
 	workflowTriggerListSucceeded := false
+	workflowTriggerListedNamespaces := make(map[string]struct{})
 	if i.workflowClient != nil {
 		for _, namespace := range i.namespaces {
 			workflowTriggerList, err := i.workflowClient.List(ctx, i.environmentID, workflowtriggerclient.ListOptions{}, namespace)
@@ -183,6 +186,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 				continue
 			}
 			workflowTriggerListSucceeded = true
+			workflowTriggerListedNamespaces[namespace] = struct{}{}
 			for _, trigger := range workflowTriggerList {
 				workflowTriggerMap[triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)] = trigger
 			}
@@ -244,6 +248,23 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 	// Clean up commits for removed triggers
 	for k := range i.commits {
 		if _, ok := active[k]; !ok {
+			source, namespace, _, parsed := parseTriggerKey(k)
+			if parsed {
+				switch source {
+				case testTriggerSource:
+					if _, all := testTriggerListedNamespaces[allNamespacesMarker]; !all {
+						if _, listed := testTriggerListedNamespaces[namespace]; !listed {
+							continue
+						}
+					}
+				case workflowTriggerSource:
+					if _, all := workflowTriggerListedNamespaces[allNamespacesMarker]; !all {
+						if _, listed := workflowTriggerListedNamespaces[namespace]; !listed {
+							continue
+						}
+					}
+				}
+			}
 			delete(i.commits, k)
 			_ = os.RemoveAll(triggerRepositoryPathFromKey(k))
 		}

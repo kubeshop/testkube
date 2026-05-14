@@ -752,10 +752,26 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 		Options{WatcherNamespaces: "team-a,team-b"},
 	)
 	informer.commits[triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)] = "old"
+	keepKey := triggerKey(testTriggerSource, "team-a", "stale-a")
+	removeKey := triggerKey(testTriggerSource, "team-b", "stale-b")
+	informer.commits[keepKey] = "old-a"
+	informer.commits[removeKey] = "old-b"
+
+	keepPath := triggerRepositoryPathFromKey(keepKey)
+	removePath := triggerRepositoryPathFromKey(removeKey)
+	require.NoError(t, os.MkdirAll(keepPath, 0o755))
+	require.NoError(t, os.MkdirAll(removePath, 0o755))
 
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, []string{"team-b/trigger-a"}, matched)
+	assert.Equal(t, "old-a", informer.commits[keepKey])
+	_, keepErr := os.Stat(keepPath)
+	assert.NoError(t, keepErr)
+	_, removeExists := informer.commits[removeKey]
+	assert.False(t, removeExists)
+	_, removeErr := os.Stat(removePath)
+	assert.True(t, os.IsNotExist(removeErr))
 }
 
 func TestUpdateRepositories_ContinuesWithWorkflowTriggersWhenAllTestTriggerListsFail(t *testing.T) {
@@ -920,4 +936,65 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 
 	assert.Equal(t, []string{"testkube/trigger-a"}, matched)
 	assert.Equal(t, secondHash, informer.commits[key])
+}
+
+func TestUpdateRepositories_CleanupSkipsWorkflowNamespacesWithListErrors(t *testing.T) {
+	const revision = "0123456789abcdef0123456789abcdef01234567"
+
+	workflowTrigger := testkube.WorkflowTrigger{
+		Name:      "workflow-active",
+		Namespace: "team-b",
+		When: testkube.WorkflowTriggerWhen{
+			Event: "modified",
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: revision,
+			},
+		},
+		Watch: &testkube.WorkflowTriggerWatch{
+			Resource: testkube.WorkflowTriggerResource{Kind: "content"},
+		},
+	}
+
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
+				return nil, nil
+			},
+		},
+		stubWorkflowTriggerClient{
+			listFn: func(_ context.Context, _ string, _ workflowtriggerclient.ListOptions, namespace string) ([]testkube.WorkflowTrigger, error) {
+				if namespace == "team-a" {
+					return nil, errors.New("forbidden")
+				}
+				return []testkube.WorkflowTrigger{workflowTrigger}, nil
+			},
+		},
+		nil,
+		"testkube",
+		"",
+		Options{WatcherNamespaces: "team-a,team-b"},
+	)
+	informer.commits[triggerKey(workflowTriggerSource, workflowTrigger.Namespace, workflowTrigger.Name)] = "old-active"
+
+	keepKey := triggerKey(workflowTriggerSource, "team-a", "stale-a")
+	removeKey := triggerKey(workflowTriggerSource, "team-b", "stale-b")
+	informer.commits[keepKey] = "old-a"
+	informer.commits[removeKey] = "old-b"
+
+	keepPath := triggerRepositoryPathFromKey(keepKey)
+	removePath := triggerRepositoryPathFromKey(removeKey)
+	require.NoError(t, os.MkdirAll(keepPath, 0o755))
+	require.NoError(t, os.MkdirAll(removePath, 0o755))
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, "old-a", informer.commits[keepKey])
+	_, keepErr := os.Stat(keepPath)
+	assert.NoError(t, keepErr)
+
+	_, removeExists := informer.commits[removeKey]
+	assert.False(t, removeExists)
+	_, removeErr := os.Stat(removePath)
+	assert.True(t, os.IsNotExist(removeErr))
 }
