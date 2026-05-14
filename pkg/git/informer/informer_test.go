@@ -296,20 +296,6 @@ func TestAuthClientOptions(t *testing.T) {
 		assert.Contains(t, err.Error(), "resourceFieldRef")
 	})
 
-	t.Run("reject unsupported tokenFrom fileKeyRef source", func(t *testing.T) {
-		_, err := authClientOptions(&testkube.TestTriggerContentGit{
-			TokenFrom: &testkube.EnvVarSource{
-				FileKeyRef: &testkube.EnvVarSourceFileKeyRef{
-					VolumeName: "env-files",
-					Path:       "secrets.env",
-					Key:        "GIT_TOKEN",
-				},
-			},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tokenFrom")
-		assert.Contains(t, err.Error(), "fileKeyRef")
-	})
 }
 
 func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
@@ -748,6 +734,46 @@ func TestUpdateRepositories_MatchesWorkflowGitTrigger(t *testing.T) {
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, []string{"testkube/workflow-a"}, matched)
+}
+
+func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
+	const revision = "0123456789abcdef0123456789abcdef01234567"
+	resource := testkube.CONTENT_TestTriggerResources
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-a",
+		Namespace: "testkube",
+		Event:     "modified",
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: revision,
+			},
+		},
+	}
+
+	key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
+				return []testkube.TestTrigger{trigger}, nil
+			},
+		},
+		nil,
+		stubMatcher{
+			matchTestTriggerFn: func(context.Context, string, string) error {
+				return errors.New("temporary matcher failure")
+			},
+		},
+		"testkube",
+		"",
+		Options{},
+	)
+	informer.commits[key] = "old-head"
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, "old-head", informer.commits[key])
 }
 
 func TestUpdateRepositories_UsesWatcherNamespaces(t *testing.T) {

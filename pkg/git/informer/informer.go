@@ -87,6 +87,7 @@ type Informer struct {
 	workflowClient    workflowtriggerclient.WorkflowTriggerClient
 	matcher           Matcher
 	commits           map[string]string // key -> last seen head hash
+	revisions         map[string]string // key -> last seen revision selector
 	namespaces        []string
 	environmentID     string
 	options           Options
@@ -131,6 +132,7 @@ func NewInformer(
 		workflowClient:    workflowClient,
 		matcher:           matcher,
 		commits:           make(map[string]string),
+		revisions:         make(map[string]string),
 		namespaces:        resolveNamespaces(options.WatcherNamespaces, namespace),
 		environmentID:     environmentID,
 		options:           options,
@@ -230,17 +232,23 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		}
 		key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
+		prevHash, hadPrevHash := i.commits[key]
 
 		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
 		}
-		if !changed || i.matcher == nil {
+		if !changed {
+			continue
+		}
+		if i.matcher == nil {
+			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
 			continue
 		}
 		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace); err != nil {
 			log.DefaultLogger.Errorf("git informer: error matching trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
+			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
 		}
 	}
 
@@ -255,17 +263,23 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		trigger := workflowTriggerToTestTrigger(workflowTrigger)
 		key := triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
+		prevHash, hadPrevHash := i.commits[key]
 
 		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
 		}
-		if !changed || i.matcher == nil {
+		if !changed {
+			continue
+		}
+		if i.matcher == nil {
+			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
 			continue
 		}
 		if err := i.matcher.MatchGitWorkflowTrigger(ctx, trigger.Name, trigger.Namespace); err != nil {
 			log.DefaultLogger.Errorf("git informer: error matching workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
+			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
 		}
 	}
 
@@ -290,9 +304,18 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 				}
 			}
 			delete(i.commits, k)
+			delete(i.revisions, k)
 			_ = os.RemoveAll(triggerRepositoryPathFromKey(k))
 		}
 	}
+}
+
+func (i *Informer) restoreCommitBaseline(key, previousHash string, hadPreviousHash bool) {
+	if hadPreviousHash {
+		i.commits[key] = previousHash
+		return
+	}
+	delete(i.commits, key)
 }
 
 func isGitContentTrigger(trigger testkube.TestTrigger) bool {
@@ -455,6 +478,9 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 
 	repoDir := triggerRepositoryPathFromKey(key)
 	gitConfig := trigger.ContentSelector.Git
+	revision := normalizeRevision(gitConfig.Revision)
+	previousRevision, hasPreviousRevision := i.revisions[key]
+	revisionChanged := hasPreviousRevision && previousRevision != revision
 	references := normalizeRefs(gitConfig.Revision)
 	if len(references) == 0 {
 		references = []string{""}
@@ -466,7 +492,15 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 
 	repo, err := git.PlainOpen(repoDir)
 	if err == nil {
-		if !repositoryOriginMatches(repo, gitConfig.Uri) {
+		if revisionChanged {
+			log.DefaultLogger.Warnf(
+				"git informer: revision changed for %s/%s from %q to %q, recreating local clone",
+				trigger.Namespace,
+				trigger.Name,
+				previousRevision,
+				revision,
+			)
+		} else if !repositoryOriginMatches(repo, gitConfig.Uri) {
 			log.DefaultLogger.Warnf(
 				"git informer: origin URL changed for %s/%s, recreating local clone",
 				trigger.Namespace,
@@ -492,6 +526,7 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 
 						pullErr = worktree.Pull(pullOpts)
 						if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
+							i.revisions[key] = revision
 							return repo, nil
 						}
 						if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
@@ -530,11 +565,16 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 		}
 		repo, err := git.PlainClone(repoDir, cloneOpts)
 		if err == nil {
+			i.revisions[key] = revision
 			return repo, nil
 		}
 		cloneErr = err
 	}
 	return nil, cloneErr
+}
+
+func normalizeRevision(revision string) string {
+	return strings.TrimSpace(revision)
 }
 
 func (i *Informer) openOrUpdateRepositoryWithCache(
@@ -778,10 +818,6 @@ func validateCredentialSource(fieldName, value string, source *testkube.EnvVarSo
 		return fmt.Errorf("unsupported %s source: resourceFieldRef is not supported for git credentials, use secretKeyRef or configMapKeyRef", fieldName)
 	}
 
-	if source.FileKeyRef != nil {
-		return fmt.Errorf("unsupported %s source: fileKeyRef is not supported for git credentials, use secretKeyRef or configMapKeyRef", fieldName)
-	}
-
 	return nil
 }
 
@@ -974,7 +1010,6 @@ func envVarSourceCacheKey(source *testkube.EnvVarSource) string {
 		resourceFieldRefCacheKey(source.ResourceFieldRef),
 		configMapKeyRefCacheKey(source.ConfigMapKeyRef),
 		secretKeyRefCacheKey(source.SecretKeyRef),
-		fileKeyRefCacheKey(source.FileKeyRef),
 	}, ";")
 }
 
@@ -1004,13 +1039,6 @@ func secretKeyRefCacheKey(ref *testkube.EnvVarSourceSecretKeyRef) string {
 		return ""
 	}
 	return strings.Join([]string{ref.Name, ref.Key, boolPtrString(ref.Optional)}, ":")
-}
-
-func fileKeyRefCacheKey(ref *testkube.EnvVarSourceFileKeyRef) string {
-	if ref == nil {
-		return ""
-	}
-	return strings.Join([]string{ref.VolumeName, ref.Path, ref.Key, boolPtrString(ref.Optional)}, ":")
 }
 
 func boolPtrString(value *bool) string {

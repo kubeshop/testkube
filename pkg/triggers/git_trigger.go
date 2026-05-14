@@ -2,12 +2,16 @@ package triggers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
+
+var errGitTriggerTargetNotReady = errors.New("git trigger target not ready")
 
 // MatchGitTrigger creates a synthetic watcherEvent for a git content trigger
 // and runs it through the matcher. Called by the git informer when new commits
@@ -39,7 +43,7 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	}
 	s.triggerStatusMu.RUnlock()
 	if !exists || trigger == nil {
-		return nil
+		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
 	if !strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) {
 		return nil

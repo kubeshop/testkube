@@ -164,3 +164,15 @@ func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{trigger.Name}, executed)
 }
+
+func TestMatchGitTrigger_ReturnsErrorWhenTargetTriggerNotReady(t *testing.T) {
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{},
+		logger:        log.DefaultLogger,
+		metrics:       metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitTrigger(context.Background(), "trigger-a", "default")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
+}

@@ -822,6 +822,11 @@ func main() {
 
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
 		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
+			informerWatcherNamespaces := cfg.TestkubeWatcherNamespaces
+			if !useTestTriggerControlPlane {
+				informerWatcherNamespaces = cfg.TestkubeNamespace
+			}
+
 			triggerService.RegisterLeaderTask(leader.Task{
 				Name: "git-informer",
 				Start: func(taskCtx context.Context) error {
@@ -832,7 +837,7 @@ func main() {
 						MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
 						PullRetries:        cfg.TestTriggerGitInformerPullRetries,
 						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
-						WatcherNamespaces:  cfg.TestkubeWatcherNamespaces,
+						WatcherNamespaces:  informerWatcherNamespaces,
 						KubeClient:         clientset,
 					}).Reconcile(taskCtx)
 					return nil
