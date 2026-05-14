@@ -3,8 +3,8 @@ package v1
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,9 +43,10 @@ func (s TestTriggersClient) List(selector, namespace string) (*testtriggersv1.Te
 	if err != nil {
 		return list, err
 	}
-	if namespace == "*" {
+	switch namespace {
+	case "*":
 		namespace = metav1.NamespaceAll
-	} else if namespace == "" {
+	case "":
 		namespace = s.Namespace
 	}
 
