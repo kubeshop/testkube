@@ -132,19 +132,34 @@ func isCustomMetricsReport(data []byte) bool {
 
 func isK6SummaryReport(data []byte) bool {
 	var report struct {
-		Metrics map[string]struct {
-			Values map[string]float64 `json:"values"`
-		} `json:"metrics"`
+		Metrics map[string]map[string]json.RawMessage `json:"metrics"`
 	}
 	if err := json.Unmarshal(data, &report); err != nil || len(report.Metrics) == 0 {
 		return false
 	}
 	for _, metric := range report.Metrics {
-		if len(metric.Values) > 0 {
+		if values, ok := metric["values"]; ok && hasNumericJSONValue(values) {
 			return true
+		}
+		for key, value := range metric {
+			if key == "type" || key == "contains" || key == "values" {
+				continue
+			}
+			if hasNumericJSONValue(value) {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+func hasNumericJSONValue(data []byte) bool {
+	var nested map[string]float64
+	if err := json.Unmarshal(data, &nested); err == nil && len(nested) > 0 {
+		return true
+	}
+	var value float64
+	return json.Unmarshal(data, &value) == nil
 }
 
 func isArtilleryReport(data []byte) bool {
