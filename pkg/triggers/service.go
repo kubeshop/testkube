@@ -255,6 +255,17 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
+// RegisterLeaderTask registers an additional leader-scoped task on the same
+// coordinator used by trigger-watcher/trigger-scraper. It must be called
+// before Run.
+func (s *Service) RegisterLeaderTask(task leader.Task) {
+	if s == nil || s.coordinator == nil {
+		return
+	}
+
+	s.coordinator.Register(task)
+}
+
 func (s *Service) addTrigger(ctx context.Context, t *testtriggersv1.TestTrigger) {
 	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
 	s.triggerStatusMu.Lock()

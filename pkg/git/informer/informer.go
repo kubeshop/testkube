@@ -678,6 +678,11 @@ func authClientOptionsWithResolver(
 		if err != nil {
 			return nil, err
 		}
+		hostKeyCallback, err := ssh.NewKnownHostsCallback()
+		if err != nil {
+			return nil, fmt.Errorf("ssh auth requires known_hosts-based host key verification: %w", err)
+		}
+		publicKeys.HostKeyCallback = hostKeyCallback
 		opts = append(opts, client.WithSSHAuth(publicKeys))
 	case token != "" && (authType == string(testkube.HEADER_ContentGitAuthType) || authType == "github"):
 		opts = append(opts, client.WithHTTPAuth(&http.TokenAuth{Token: token}))

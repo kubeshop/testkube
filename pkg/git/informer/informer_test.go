@@ -18,6 +18,8 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	gossh "golang.org/x/crypto/ssh"
+	sshknownhosts "golang.org/x/crypto/ssh/knownhosts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -242,6 +244,12 @@ func TestAuthClientOptions(t *testing.T) {
 
 	t.Run("ssh auth", func(t *testing.T) {
 		testPrivateKey := generateTestPrivateKey(t)
+		signer, err := gossh.ParsePrivateKey([]byte(testPrivateKey))
+		require.NoError(t, err)
+		knownHostsFile := filepath.Join(t.TempDir(), "known_hosts")
+		entry := sshknownhosts.Line([]string{"test-host"}, signer.PublicKey())
+		require.NoError(t, os.WriteFile(knownHostsFile, []byte(entry+"\n"), 0o600))
+		t.Setenv("SSH_KNOWN_HOSTS", knownHostsFile)
 
 		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
 			SshKey: testPrivateKey,
@@ -253,6 +261,17 @@ func TestAuthClientOptions(t *testing.T) {
 			SshKey: "invalid-private-key",
 		})
 		require.Error(t, err)
+	})
+
+	t.Run("ssh auth fails when known_hosts is unavailable", func(t *testing.T) {
+		testPrivateKey := generateTestPrivateKey(t)
+		t.Setenv("SSH_KNOWN_HOSTS", filepath.Join(t.TempDir(), "missing_known_hosts"))
+
+		_, err := authClientOptions(&testkube.TestTriggerContentGit{
+			SshKey: testPrivateKey,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "known_hosts")
 	})
 
 	t.Run("reject unsupported tokenFrom fieldRef source", func(t *testing.T) {

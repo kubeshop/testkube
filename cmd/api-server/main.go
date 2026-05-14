@@ -819,15 +819,10 @@ func main() {
 			triggers.WithEventLabels(cfg.EventLabels),
 			triggers.WithDynamicClient(dynamicClient),
 		)
-		log.DefaultLogger.Info("starting trigger service")
-		g.Go(func() error {
-			triggerService.Run(ctx)
-			return nil
-		})
 
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
 		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
-			leaderTasks = append(leaderTasks, leader.Task{
+			triggerService.RegisterLeaderTask(leader.Task{
 				Name: "git-informer",
 				Start: func(taskCtx context.Context) error {
 					gitinformer.NewInformer(testTriggersClient, workflowTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
@@ -850,6 +845,12 @@ func main() {
 				"useCloudTestTriggers", useCloudTestTriggers,
 			)
 		}
+
+		log.DefaultLogger.Info("starting trigger service")
+		g.Go(func() error {
+			triggerService.Run(ctx)
+			return nil
+		})
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
 	}
