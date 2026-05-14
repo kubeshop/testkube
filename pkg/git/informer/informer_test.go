@@ -254,6 +254,28 @@ func TestAuthClientOptions(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
+
+	t.Run("reject unsupported tokenFrom fieldRef source", func(t *testing.T) {
+		_, err := authClientOptions(&testkube.TestTriggerContentGit{
+			TokenFrom: &testkube.EnvVarSource{
+				FieldRef: &testkube.FieldRef{FieldPath: "metadata.name"},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "tokenFrom")
+		assert.Contains(t, err.Error(), "fieldRef")
+	})
+
+	t.Run("reject unsupported sshKeyFrom resourceFieldRef source", func(t *testing.T) {
+		_, err := authClientOptions(&testkube.TestTriggerContentGit{
+			SshKeyFrom: &testkube.EnvVarSource{
+				ResourceFieldRef: &testkube.ResourceFieldRef{Resource: "limits.cpu"},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "sshKeyFrom")
+		assert.Contains(t, err.Error(), "resourceFieldRef")
+	})
 }
 
 func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {

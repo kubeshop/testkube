@@ -647,6 +647,16 @@ func authClientOptionsWithResolver(
 	gitConfig *testkube.TestTriggerContentGit,
 	resolver func(value string, source *testkube.EnvVarSource) string,
 ) ([]client.Option, error) {
+	if err := validateCredentialSource("usernameFrom", gitConfig.Username, gitConfig.UsernameFrom); err != nil {
+		return nil, err
+	}
+	if err := validateCredentialSource("tokenFrom", gitConfig.Token, gitConfig.TokenFrom); err != nil {
+		return nil, err
+	}
+	if err := validateCredentialSource("sshKeyFrom", gitConfig.SshKey, gitConfig.SshKeyFrom); err != nil {
+		return nil, err
+	}
+
 	username := resolver(gitConfig.Username, gitConfig.UsernameFrom)
 	token := resolver(gitConfig.Token, gitConfig.TokenFrom)
 	sshKey := resolver(gitConfig.SshKey, gitConfig.SshKeyFrom)
@@ -682,6 +692,22 @@ func authClientOptionsWithResolver(
 	}
 
 	return opts, nil
+}
+
+func validateCredentialSource(fieldName, value string, source *testkube.EnvVarSource) error {
+	if strings.TrimSpace(value) != "" || source == nil {
+		return nil
+	}
+
+	if source.FieldRef != nil {
+		return fmt.Errorf("unsupported %s source: fieldRef is not supported for git credentials, use secretKeyRef or configMapKeyRef", fieldName)
+	}
+
+	if source.ResourceFieldRef != nil {
+		return fmt.Errorf("unsupported %s source: resourceFieldRef is not supported for git credentials, use secretKeyRef or configMapKeyRef", fieldName)
+	}
+
+	return nil
 }
 
 func (i *Informer) resolveCredentialValue(ctx context.Context, value, namespace string, source *testkube.EnvVarSource) string {
