@@ -248,6 +248,16 @@ func TestAuthClientOptions(t *testing.T) {
 		assert.Len(t, opts, 1)
 	})
 
+	t.Run("github auth", func(t *testing.T) {
+		authType := testkube.GITHUB_ContentGitAuthType
+		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
+			Token:    "token",
+			AuthType: &authType,
+		})
+		require.NoError(t, err)
+		assert.Len(t, opts, 1)
+	})
+
 	t.Run("ssh auth", func(t *testing.T) {
 		testPrivateKey := generateTestPrivateKey(t)
 		signer, err := gossh.ParsePrivateKey([]byte(testPrivateKey))

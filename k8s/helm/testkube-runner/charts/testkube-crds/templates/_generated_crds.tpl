@@ -2300,6 +2300,7 @@ spec:
                         enum:
                         - basic
                         - header
+                        - github
                         type: string
                       branch:
                         description: branch/tag name for checkout
@@ -6595,6 +6596,7 @@ spec:
                         enum:
                         - basic
                         - header
+                        - github
                         type: string
                       paths:
                         description: |-
@@ -8343,6 +8345,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -10300,6 +10303,7 @@ spec:
                                       enum:
                                         - basic
                                         - header
+                                        - github
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -11765,6 +11769,7 @@ spec:
                           enum:
                             - basic
                             - header
+                            - github
                           type: string
                         cone:
                           description: enable cone mode for sparse checkout with paths
@@ -12580,6 +12585,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -13931,6 +13937,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -15888,6 +15895,7 @@ spec:
                                       enum:
                                         - basic
                                         - header
+                                        - github
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -17293,6 +17301,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -19250,6 +19259,7 @@ spec:
                                       enum:
                                         - basic
                                         - header
+                                        - github
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -20936,6 +20946,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -22828,6 +22839,7 @@ spec:
                                       enum:
                                         - basic
                                         - header
+                                        - github
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -24236,6 +24248,7 @@ spec:
                           enum:
                             - basic
                             - header
+                            - github
                           type: string
                         cone:
                           description: enable cone mode for sparse checkout with paths
@@ -25051,6 +25064,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -26382,6 +26396,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -28274,6 +28289,7 @@ spec:
                                       enum:
                                         - basic
                                         - header
+                                        - github
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -29622,6 +29638,7 @@ spec:
                                 enum:
                                   - basic
                                   - header
+                                  - github
                                 type: string
                               cone:
                                 description: enable cone mode for sparse checkout with paths
@@ -31514,6 +31531,7 @@ spec:
                                       enum:
                                         - basic
                                         - header
+                                        - github
                                       type: string
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
@@ -32910,6 +32928,7 @@ spec:
                         enum:
                         - basic
                         - header
+                        - github
                         type: string
                       paths:
                         description: |-

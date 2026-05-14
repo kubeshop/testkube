@@ -6792,6 +6792,7 @@ components:
           enum:
             - basic
             - header
+            - github
           description: auth type for git requests
 
     RepositoryParameters:
@@ -8312,6 +8313,7 @@ components:
           enum:
             - basic
             - header
+            - github
         paths:
           type: array
           description: paths to watch for changes
@@ -10719,6 +10721,7 @@ components:
       enum:
         - basic
         - header
+        - github
 
     BoxedStringList:
       type: object

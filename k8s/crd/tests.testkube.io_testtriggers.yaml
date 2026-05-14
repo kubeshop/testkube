@@ -157,6 +157,7 @@ spec:
                         enum:
                         - basic
                         - header
+                        - github
                         type: string
                       paths:
                         description: |-
