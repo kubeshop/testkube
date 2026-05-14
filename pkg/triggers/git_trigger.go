@@ -12,6 +12,7 @@ import (
 )
 
 var errGitTriggerTargetNotReady = errors.New("git trigger target not ready")
+var errGitTriggerConditionsUnavailable = errors.New("git trigger conditions unavailable for synthetic content event")
 
 // MatchGitTrigger creates a synthetic watcherEvent for a git content trigger
 // and runs it through the matcher. Called by the git informer when new commits
@@ -61,7 +62,10 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	if !matchEventOrCause(trigger.Event, event) {
 		return nil
 	}
-	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 && event.conditionsGetter != nil {
+	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 {
+		if event.conditionsGetter == nil {
+			return fmt.Errorf("%w: %s/%s", errGitTriggerConditionsUnavailable, namespace, triggerName)
+		}
 		matched, err := s.matchInternalConditions(ctx, event, trigger, s.logger)
 		if err != nil {
 			return err

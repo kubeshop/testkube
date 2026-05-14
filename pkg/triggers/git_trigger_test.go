@@ -211,3 +211,40 @@ func TestMatchGitTrigger_ReturnsErrorWhenTargetTriggerNotReady(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
 }
+
+func TestMatchGitTrigger_ReturnsErrorWhenConditionsConfiguredForSyntheticEvent(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    v1.TestTriggerEventModified,
+			ConditionSpec: &v1.TestTriggerConditionSpec{
+				Conditions: []v1.TestTriggerCondition{
+					{Type_: "Ready", Status: conditionStatusPtr(v1.TRUE_TestTriggerConditionStatuses)},
+				},
+			},
+		},
+	}
+
+	executed := false
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, _ *watcherEvent, _ *internalTrigger) error {
+			executed = true
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errGitTriggerConditionsUnavailable)
+	assert.False(t, executed)
+}
+
+func conditionStatusPtr(v v1.TestTriggerConditionStatuses) *v1.TestTriggerConditionStatuses {
+	return &v
+}
