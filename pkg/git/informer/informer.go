@@ -173,11 +173,8 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 			testTriggerMap[triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)] = trigger
 		}
 	}
-	if !testTriggerListSucceeded {
-		return
-	}
-
 	workflowTriggerMap := make(map[string]testkube.WorkflowTrigger)
+	workflowTriggerListSucceeded := false
 	if i.workflowClient != nil {
 		for _, namespace := range i.namespaces {
 			workflowTriggerList, err := i.workflowClient.List(ctx, i.environmentID, workflowtriggerclient.ListOptions{}, namespace)
@@ -185,10 +182,14 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 				log.DefaultLogger.Errorf("git informer: error listing workflow triggers in namespace %q: %v", namespace, err)
 				continue
 			}
+			workflowTriggerListSucceeded = true
 			for _, trigger := range workflowTriggerList {
 				workflowTriggerMap[triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)] = trigger
 			}
 		}
+	}
+	if !testTriggerListSucceeded && !workflowTriggerListSucceeded {
+		return
 	}
 
 	active := make(map[string]struct{}, len(testTriggerMap)+len(workflowTriggerMap))

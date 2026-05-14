@@ -758,6 +758,54 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 	assert.Equal(t, []string{"team-b/trigger-a"}, matched)
 }
 
+func TestUpdateRepositories_ContinuesWithWorkflowTriggersWhenAllTestTriggerListsFail(t *testing.T) {
+	const revision = "0123456789abcdef0123456789abcdef01234567"
+
+	workflowTrigger := testkube.WorkflowTrigger{
+		Name:      "workflow-a",
+		Namespace: "team-a",
+		When: testkube.WorkflowTriggerWhen{
+			Event: "modified",
+			Git: &testkube.TestTriggerContentGit{
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: revision,
+			},
+		},
+		Watch: &testkube.WorkflowTriggerWatch{
+			Resource: testkube.WorkflowTriggerResource{Kind: "content"},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
+				return nil, errors.New("forbidden")
+			},
+		},
+		stubWorkflowTriggerClient{
+			listFn: func(_ context.Context, _ string, _ workflowtriggerclient.ListOptions, _ string) ([]testkube.WorkflowTrigger, error) {
+				return []testkube.WorkflowTrigger{workflowTrigger}, nil
+			},
+		},
+		stubMatcher{
+			matchWorkflowTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{WatcherNamespaces: "team-a"},
+	)
+	workflowKey := triggerKey(workflowTriggerSource, workflowTrigger.Namespace, workflowTrigger.Name)
+	informer.commits[workflowKey] = "old"
+
+	informer.updateRepositories(context.Background())
+
+	assert.Equal(t, []string{"team-a/workflow-a"}, matched)
+}
+
 func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	tmpDir := t.TempDir()
 	remoteDir := filepath.Join(tmpDir, "remote.git")
