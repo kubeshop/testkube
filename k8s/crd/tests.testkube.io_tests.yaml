@@ -427,6 +427,7 @@ spec:
                         enum:
                         - basic
                         - header
+                        - github
                         type: string
                       branch:
                         description: branch/tag name for checkout

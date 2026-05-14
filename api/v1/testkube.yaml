@@ -6792,6 +6792,7 @@ components:
           enum:
             - basic
             - header
+            - github
           description: auth type for git requests
 
     RepositoryParameters:
@@ -8299,12 +8300,12 @@ components:
           $ref: "#/components/schemas/EnvVarSource"
         token:
           type: string
-          description: plain text token to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer tokenFrom instead.
+          description: "plain text token to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer tokenFrom instead."
         tokenFrom:
           $ref: "#/components/schemas/EnvVarSource"
         sshKey:
           type: string
-          description: plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead.
+          description: "plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead."
         sshKeyFrom:
           $ref: "#/components/schemas/EnvVarSource"
         authType:
