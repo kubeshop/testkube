@@ -301,26 +301,28 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 	ticker := time.NewTicker(s.scraperInterval)
 
 	prev := map[string]testkube.WorkflowTrigger{}
+	namespaces := s.getCloudWatchNamespaces()
 
 	syncOnce := func() {
-		list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, s.testkubeNamespace)
-		if err != nil {
-			s.logger.Errorf("trigger service: error listing cloud workflow triggers: %v", err)
-			return
-		}
-
 		curr := map[string]testkube.WorkflowTrigger{}
-		for _, t := range list {
-			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
-			curr[key] = t
+		for _, namespace := range namespaces {
+			list, err := s.workflowTriggersClient.List(ctx, s.getEnvironmentId(), workflowtriggerclient.ListOptions{}, namespace)
+			if err != nil {
+				s.logger.Errorf("trigger service: error listing cloud workflow triggers in namespace %q: %v", namespace, err)
+				continue
+			}
+			for _, t := range list {
+				key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+				curr[key] = t
 
-			crd := workflowtriggersmapper.MapAPIToCRD(t)
-			if old, ok := prev[key]; !ok {
-				s.addWorkflowTrigger(ctx, &crd)
-				s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWorkflowTrigger, t.Name))
-			} else if !cmp.Equal(old, t) {
-				s.updateWorkflowTrigger(ctx, &crd)
-				s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+				crd := workflowtriggersmapper.MapAPIToCRD(t)
+				if old, ok := prev[key]; !ok {
+					s.addWorkflowTrigger(ctx, &crd)
+					s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWorkflowTrigger, t.Name))
+				} else if !cmp.Equal(old, t) {
+					s.updateWorkflowTrigger(ctx, &crd)
+					s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWorkflowTrigger, t.Name))
+				}
 			}
 		}
 
@@ -354,6 +356,7 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 	ticker := time.NewTicker(s.scraperInterval)
 
 	prev := map[string]testkube.TestTrigger{}
+	namespaces := s.getCloudWatchNamespaces()
 
 	toCRD := func(t testkube.TestTrigger) testtriggersv1.TestTrigger {
 		return testtriggers.MapTestTriggerUpsertRequestToTestTriggerCRD(testkube.TestTriggerUpsertRequest{
@@ -378,23 +381,25 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 	}
 
 	syncOnce := func() {
-		list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, s.testkubeNamespace)
-		if err != nil {
-			s.logger.Errorf("trigger service: error listing cloud test triggers: %v", err)
-			return
-		}
-
 		curr := map[string]testkube.TestTrigger{}
-		for _, t := range list {
-			key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
-			curr[key] = t
+		for _, namespace := range namespaces {
+			list, err := s.testTriggersClient.List(ctx, s.getEnvironmentId(), testtriggerclient.ListOptions{}, namespace)
+			if err != nil {
+				s.logger.Errorf("trigger service: error listing cloud test triggers in namespace %q: %v", namespace, err)
+				continue
+			}
 
-			if old, ok := prev[key]; !ok {
-				crd := toCRD(t)
-				s.testTriggerEventHandler(ctx).AddFunc(&crd)
-			} else if !cmp.Equal(old, t) {
-				crd := toCRD(t)
-				s.testTriggerEventHandler(ctx).UpdateFunc(nil, &crd)
+			for _, t := range list {
+				key := fmt.Sprintf("%s/%s", t.Namespace, t.Name)
+				curr[key] = t
+
+				if old, ok := prev[key]; !ok {
+					crd := toCRD(t)
+					s.testTriggerEventHandler(ctx).AddFunc(&crd)
+				} else if !cmp.Equal(old, t) {
+					crd := toCRD(t)
+					s.testTriggerEventHandler(ctx).UpdateFunc(nil, &crd)
+				}
 			}
 		}
 
@@ -420,6 +425,13 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 			}
 		}
 	}()
+}
+
+func (s *Service) getCloudWatchNamespaces() []string {
+	if len(s.watcherNamespaces) == 0 {
+		return []string{"*"}
+	}
+	return s.watcherNamespaces
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {

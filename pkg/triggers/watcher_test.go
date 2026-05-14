@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
+	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 	faketestkube "github.com/kubeshop/testkube/pkg/operator/clientset/versioned/fake"
 )
 
@@ -169,4 +170,104 @@ func TestService_startCloudTestTriggerWatchPreservesResourceRef(t *testing.T) {
 	assert.Equal(t, "argoproj.io", internal.ResourceGroup)
 	assert.Equal(t, "v1alpha1", internal.ResourceVersion)
 	assert.Equal(t, "Rollout", internal.ResourceKind)
+}
+
+func TestService_startCloudTestTriggerWatch_UsesWatcherNamespaces(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	testTriggersClient := testtriggerclient.NewMockTestTriggerClient(ctrl)
+
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, "team-a").
+		Return([]testkube.TestTrigger{{
+			Name:             "a",
+			Namespace:        "team-a",
+			Event:            "modified",
+			ResourceSelector: &testkube.TestTriggerSelector{},
+			TestSelector:     &testkube.TestTriggerSelector{},
+		}}, nil).
+		Times(1)
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, "team-b").
+		Return([]testkube.TestTrigger{{
+			Name:             "b",
+			Namespace:        "team-b",
+			Event:            "modified",
+			ResourceSelector: &testkube.TestTriggerSelector{},
+			TestSelector:     &testkube.TestTriggerSelector{},
+		}}, nil).
+		Times(1)
+
+	service := &Service{
+		triggerStatus:      make(map[statusKey]*triggerStatus),
+		testTriggersClient: testTriggersClient,
+		logger:             log.DefaultLogger,
+		eventsBus:          &bus.EventBusMock{},
+		metrics:            metrics.NewMetrics(),
+		proContext:         &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:    time.Hour,
+		watcherNamespaces:  []string{"team-a", "team-b"},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudTestTriggerWatch(context.Background(), stop)
+
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		_, a := service.triggerStatus[newStatusKey(triggerSourceV1, "team-a", "a")]
+		_, b := service.triggerStatus[newStatusKey(triggerSourceV1, "team-b", "b")]
+		return a && b
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestService_startCloudWorkflowTriggerWatch_UsesWatcherNamespaces(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	workflowClient := workflowtriggerclient.NewMockWorkflowTriggerClient(ctrl)
+
+	workflowClient.EXPECT().
+		List(gomock.Any(), "env-1", workflowtriggerclient.ListOptions{}, "team-a").
+		Return([]testkube.WorkflowTrigger{{Name: "wf-a", Namespace: "team-a"}}, nil).
+		Times(1)
+	workflowClient.EXPECT().
+		List(gomock.Any(), "env-1", workflowtriggerclient.ListOptions{}, "team-b").
+		Return([]testkube.WorkflowTrigger{{Name: "wf-b", Namespace: "team-b"}}, nil).
+		Times(1)
+
+	service := &Service{
+		triggerStatus:          make(map[statusKey]*triggerStatus),
+		workflowTriggersClient: workflowClient,
+		logger:                 log.DefaultLogger,
+		eventsBus:              &bus.EventBusMock{},
+		metrics:                metrics.NewMetrics(),
+		proContext:             &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:        time.Hour,
+		watcherNamespaces:      []string{"team-a", "team-b"},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudWorkflowTriggerWatch(context.Background(), stop)
+
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		_, a := service.triggerStatus[newStatusKey(triggerSourceV2, "team-a", "wf-a")]
+		_, b := service.triggerStatus[newStatusKey(triggerSourceV2, "team-b", "wf-b")]
+		return a && b
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestService_getCloudWatchNamespaces(t *testing.T) {
+	t.Run("uses watcher namespaces when configured", func(t *testing.T) {
+		s := &Service{watcherNamespaces: []string{"a", "b"}}
+		assert.Equal(t, []string{"a", "b"}, s.getCloudWatchNamespaces())
+	})
+
+	t.Run("uses wildcard when watcher namespaces are empty", func(t *testing.T) {
+		s := &Service{}
+		assert.Equal(t, []string{"*"}, s.getCloudWatchNamespaces())
+	})
 }
