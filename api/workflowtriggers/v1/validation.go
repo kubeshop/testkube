@@ -23,6 +23,11 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 		errs = append(errs, fmt.Errorf("when.event or when.git is required"))
 	}
 
+	// git triggers currently support only modified events in informer reconciliation
+	if s.When.Git != nil && s.When.Event != "modified" {
+		errs = append(errs, fmt.Errorf("when.event must be \"modified\" when when.git is set"))
+	}
+
 	// workflow selector must identify at least one workflow
 	if s.Run.Workflow.Name == "" && s.Run.Workflow.NameRegex == "" && s.Run.Workflow.LabelSelector == nil {
 		errs = append(errs, fmt.Errorf("run.workflow must specify name, nameRegex, or labelSelector"))

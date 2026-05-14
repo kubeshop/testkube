@@ -61,13 +61,23 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "when.event or when.git is required",
 		},
-		"missing event with git is valid": {
+		"missing event with git is invalid": {
 			modify: func(s *WorkflowTriggerSpec) {
 				s.Watch = nil
 				s.When.Event = ""
 				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
 			},
-			wantErrs: 0,
+			wantErrs:   1,
+			wantSubstr: "when.event must be \"modified\" when when.git is set",
+		},
+		"non-modified event with git is invalid": {
+			modify: func(s *WorkflowTriggerSpec) {
+				s.Watch = nil
+				s.When.Event = "created"
+				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
+			},
+			wantErrs:   1,
+			wantSubstr: "when.event must be \"modified\" when when.git is set",
 		},
 
 		// run validation
