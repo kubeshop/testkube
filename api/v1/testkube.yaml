@@ -6792,7 +6792,6 @@ components:
           enum:
             - basic
             - header
-            - github
           description: auth type for git requests
 
     RepositoryParameters:
