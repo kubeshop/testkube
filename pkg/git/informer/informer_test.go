@@ -168,6 +168,12 @@ func TestNormalizeRefs(t *testing.T) {
 	}
 }
 
+func TestNormalizeRevision(t *testing.T) {
+	assert.Equal(t, "", normalizeRevision(""))
+	assert.Equal(t, "main", normalizeRevision(" main "))
+	assert.Equal(t, "refs/heads/feature/a", normalizeRevision(" refs/heads/feature/a\t"))
+}
+
 func TestNormalizePaths(t *testing.T) {
 	paths := []string{" /a ", "/b/c", "", "///", "d/"}
 	assert.Equal(t, []string{"a", "b/c", "d"}, normalizePaths(paths))
@@ -734,6 +740,19 @@ func TestUpdateRepositories_MatchesWorkflowGitTrigger(t *testing.T) {
 	informer.updateRepositories(context.Background())
 
 	assert.Equal(t, []string{"testkube/workflow-a"}, matched)
+}
+
+func TestRestoreCommitBaseline(t *testing.T) {
+	informer := NewInformer(stubTestTriggerClient{}, nil, nil, "testkube", "", Options{})
+
+	informer.commits["with-previous"] = "new-hash"
+	informer.restoreCommitBaseline("with-previous", "old-hash", true)
+	assert.Equal(t, "old-hash", informer.commits["with-previous"])
+
+	informer.commits["without-previous"] = "new-hash"
+	informer.restoreCommitBaseline("without-previous", "", false)
+	_, exists := informer.commits["without-previous"]
+	assert.False(t, exists)
 }
 
 func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
