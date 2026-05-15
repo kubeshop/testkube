@@ -335,8 +335,8 @@ func (s *Service) ensureDynamicInformerForTrigger(ctx context.Context, t *testtr
 		)
 		return
 	}
-	if isBuiltinResource(t.Spec.ResourceRef.Kind) {
-		s.logger.Debugf("trigger service: skipping dynamic informer for built-in type %s", t.Spec.ResourceRef.Kind)
+	if isBuiltinResource(t.Spec.ResourceRef.Kind) || strings.EqualFold(t.Spec.ResourceRef.Kind, string(testtriggersv1.TestTriggerResourceContent)) {
+		s.logger.Debugf("trigger service: skipping dynamic informer for non-dynamic type %s", t.Spec.ResourceRef.Kind)
 		return
 	}
 
@@ -362,7 +362,7 @@ func (s *Service) releaseDynamicInformerForTrigger(t *testtriggersv1.TestTrigger
 // level because that's an expected cleanup ordering, not an operator-actionable
 // condition.
 func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key statusKey) {
-	if s.dynamicManager == nil || isBuiltinResource(kind) {
+	if s.dynamicManager == nil || isBuiltinResource(kind) || strings.EqualFold(kind, string(testtriggersv1.TestTriggerResourceContent)) {
 		return
 	}
 	gvr, err := resolveGVR(s.dynamicManager.mapper, group, version, kind)

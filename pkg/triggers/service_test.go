@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestService_addTrigger(t *testing.T) {
@@ -84,4 +85,23 @@ func TestWithClusterID(t *testing.T) {
 		opt(s)
 		assert.Equal(t, DefaultClusterID, s.clusterID)
 	})
+}
+
+func TestService_ensureDynamicInformerForTrigger_skipsContentResourceRef(t *testing.T) {
+	s := Service{
+		dynamicManager: newTestDynamicInformerManager(t),
+		logger:         log.DefaultLogger,
+	}
+
+	testTrigger := testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-1", Namespace: "testkube"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			ResourceRef: &testtriggersv1.TestTriggerResourceRef{Kind: string(testtriggersv1.TestTriggerResourceContent)},
+		},
+	}
+
+	assert.NotPanics(t, func() {
+		s.ensureDynamicInformerForTrigger(context.Background(), &testTrigger, newStatusKey(triggerSourceV1, "testkube", "test-trigger-1"))
+	})
+	assert.Empty(t, s.dynamicManager.informers)
 }
