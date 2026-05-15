@@ -23,9 +23,13 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 		errs = append(errs, fmt.Errorf("when.event or when.git is required"))
 	}
 
-	// git triggers currently support only modified events in informer reconciliation
+	// git triggers currently support only modified events, and only without a watch
+	// or with watch.resource.kind set to "content", in informer reconciliation.
 	if s.When.Git != nil && s.When.Event != "modified" {
 		errs = append(errs, fmt.Errorf("when.event must be \"modified\" when when.git is set"))
+	}
+	if s.When.Git != nil && s.Watch != nil && s.Watch.Resource.Kind != "content" {
+		errs = append(errs, fmt.Errorf("watch must be omitted or watch.resource.kind must be \"content\" when when.git is set"))
 	}
 
 	// workflow selector must identify at least one workflow
