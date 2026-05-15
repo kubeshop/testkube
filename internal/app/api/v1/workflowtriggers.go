@@ -50,7 +50,7 @@ func validateWorkflowTriggerSpec(trigger *testkube.WorkflowTrigger) error {
 
 	crd := workflowtriggersmapper.MapAPIToCRD(*trigger)
 	if errs := crd.Spec.Validate(); len(errs) > 0 {
-		return fmt.Errorf("invalid workflow trigger spec: %w", errors.Join(errs...))
+		return errors.Join(errs...)
 	}
 
 	return nil
