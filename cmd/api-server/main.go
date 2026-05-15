@@ -822,6 +822,9 @@ func main() {
 		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
 		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
 			informerWatcherNamespaces := cfg.TestkubeWatcherNamespaces
+			if !useTestTriggerControlPlane && strings.TrimSpace(informerWatcherNamespaces) == "" {
+				informerWatcherNamespaces = cfg.TestkubeNamespace
+			}
 
 			triggerService.RegisterLeaderTask(leader.Task{
 				Name: "git-informer",
