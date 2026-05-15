@@ -135,12 +135,6 @@ func TestContainerLogOptionsTLSRetryCustom(t *testing.T) {
 func TestGetContainerLogsStreamTLSExponentialBackoff(t *testing.T) {
 	t.Parallel()
 
-	opts := ContainerLogOptions{
-		TLSRetryMaxAttempts:  5,
-		TLSRetryInitialDelay: 10 * time.Millisecond,
-		TLSRetryMaxDelay:     100 * time.Millisecond,
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
@@ -181,9 +175,6 @@ func TestGetContainerLogsStreamTLSExponentialBackoff(t *testing.T) {
 			t.Fatal("timed out waiting for TLS error to propagate")
 		}
 	}
-
-	// Verify defaults are reasonable
-	_ = opts
 }
 
 type blockingReader struct {
