@@ -20,6 +20,9 @@ func (s *TestTriggerSpec) Validate() []error {
 	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
 	}
+	if isContentResource && s.ProbeSpec != nil && len(s.ProbeSpec.Probes) > 0 {
+		errs = append(errs, fmt.Errorf("resource %q does not support probeSpec.probes", TestTriggerResourceContent))
+	}
 	if isContentResource && (s.ContentSelector == nil || s.ContentSelector.Git == nil || s.ContentSelector.Git.Uri == "") {
 		errs = append(errs, fmt.Errorf("resource %q requires contentSelector.git.uri", TestTriggerResourceContent))
 	}
