@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	workflowtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/workflowtriggers"
 	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 )
 
@@ -45,6 +47,12 @@ func validateWorkflowTriggerSpec(trigger *testkube.WorkflowTrigger) error {
 			return fmt.Errorf("invalid run.delay %q: %w", trigger.Run.Delay, err)
 		}
 	}
+
+	crd := workflowtriggersmapper.MapAPIToCRD(*trigger)
+	if errs := crd.Spec.Validate(); len(errs) > 0 {
+		return fmt.Errorf("invalid workflow trigger spec: %w", errors.Join(errs...))
+	}
+
 	return nil
 }
 

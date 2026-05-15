@@ -12,10 +12,12 @@ import (
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
-	if s.Resource == TestTriggerResourceContent && s.Event != TestTriggerEventModified {
+	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
+
+	if isContentResource && s.Event != TestTriggerEventModified {
 		errs = append(errs, fmt.Errorf("resource %q requires event to be %q", TestTriggerResourceContent, TestTriggerEventModified))
 	}
-	if s.Resource == TestTriggerResourceContent && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
+	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
 		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
 	}
 

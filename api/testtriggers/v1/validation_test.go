@@ -48,3 +48,36 @@ func TestTestTriggerSpecValidate_ContentRejectsConditionSpecConditions(t *testin
 		t.Fatalf("expected validation error for content resource with conditionSpec.conditions")
 	}
 }
+
+func TestTestTriggerSpecValidate_ContentResourceRefRequiresModifiedEvent(t *testing.T) {
+	t.Parallel()
+
+	spec := TestTriggerSpec{
+		ResourceRef: &TestTriggerResourceRef{Kind: "content"},
+		Event:       TestTriggerEventCreated,
+	}
+
+	errs := spec.Validate()
+	if len(errs) == 0 {
+		t.Fatalf("expected validation error for content resourceRef with non-modified event")
+	}
+}
+
+func TestTestTriggerSpecValidate_ContentResourceRefRejectsConditionSpecConditions(t *testing.T) {
+	t.Parallel()
+
+	spec := TestTriggerSpec{
+		ResourceRef: &TestTriggerResourceRef{Kind: "content"},
+		Event:       TestTriggerEventModified,
+		ConditionSpec: &TestTriggerConditionSpec{
+			Conditions: []TestTriggerCondition{
+				{Type_: "Ready"},
+			},
+		},
+	}
+
+	errs := spec.Validate()
+	if len(errs) == 0 {
+		t.Fatalf("expected validation error for content resourceRef with conditionSpec.conditions")
+	}
+}
