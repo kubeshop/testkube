@@ -36,9 +36,9 @@ const (
 	LogProxyErrorRetryInitialDelay = 500 * time.Millisecond
 	LogProxyErrorRetryMaxDelay     = 5 * time.Second
 
-	LogTLSRetryMaxAttempts         = 30
-	LogTLSRetryInitialDelay        = 500 * time.Millisecond
-	LogTLSRetryMaxDelay            = 30 * time.Second
+	LogTLSRetryMaxAttempts  = 7
+	LogTLSRetryInitialDelay = 500 * time.Millisecond
+	LogTLSRetryMaxDelay     = 30 * time.Second
 )
 
 type Comment struct {
