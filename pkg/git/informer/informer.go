@@ -842,13 +842,13 @@ func (i *Informer) resolveCredentialValue(ctx context.Context, value, namespace 
 	}
 	hasRequiredRef := false
 	if source.SecretKeyRef != nil {
-		hasRequiredRef = hasRequiredRef || (source.SecretKeyRef.Optional == nil || !*source.SecretKeyRef.Optional)
+		hasRequiredRef = hasRequiredRef || isRequiredRef(source.SecretKeyRef.Optional)
 		if resolved, ok := i.resolveSecretKeyRefValue(ctx, namespace, source.SecretKeyRef); ok {
 			return resolved
 		}
 	}
 	if source.ConfigMapKeyRef != nil {
-		hasRequiredRef = hasRequiredRef || (source.ConfigMapKeyRef.Optional == nil || !*source.ConfigMapKeyRef.Optional)
+		hasRequiredRef = hasRequiredRef || isRequiredRef(source.ConfigMapKeyRef.Optional)
 		if resolved, ok := i.resolveConfigMapKeyRefValue(ctx, namespace, source.ConfigMapKeyRef); ok {
 			return resolved
 		}
@@ -857,6 +857,10 @@ func (i *Informer) resolveCredentialValue(ctx context.Context, value, namespace 
 		return ""
 	}
 	return resolveCredentialValue(value, source)
+}
+
+func isRequiredRef(optional *bool) bool {
+	return optional == nil || !*optional
 }
 
 func (i *Informer) resolveSecretKeyRefValue(ctx context.Context, namespace string, ref *testkube.EnvVarSourceSecretKeyRef) (string, bool) {
