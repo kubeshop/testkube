@@ -214,6 +214,11 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			apiTrigger.Disabled = request.Disabled
 		}
 
+		crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(mapAPITestTriggerToUpsertRequest(apiTrigger))
+		if errs := crdTestTrigger.Spec.Validate(); len(errs) > 0 {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
+		}
+
 		err = s.TestTriggersClient.Update(c.Context(), s.getEnvironmentId(), *apiTrigger)
 		s.Metrics.IncUpdateTestTrigger(err)
 		if err != nil {
@@ -391,6 +396,31 @@ func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
+	}
+}
+
+func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.TestTriggerUpsertRequest {
+	return testkube.TestTriggerUpsertRequest{
+		Namespace:         trigger.Namespace,
+		Name:              trigger.Name,
+		Labels:            trigger.Labels,
+		Annotations:       trigger.Annotations,
+		Selector:          trigger.Selector,
+		Resource:          trigger.Resource,
+		ResourceRef:       trigger.ResourceRef,
+		ResourceSelector:  trigger.ResourceSelector,
+		Event:             trigger.Event,
+		Match:             trigger.Match,
+		ConditionSpec:     trigger.ConditionSpec,
+		ProbeSpec:         trigger.ProbeSpec,
+		ContentSelector:   trigger.ContentSelector,
+		Action:            trigger.Action,
+		ActionParameters:  trigger.ActionParameters,
+		Execution:         trigger.Execution,
+		TestSelector:      trigger.TestSelector,
+		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
+		Disabled:          trigger.Disabled,
+		Sync:              trigger.Sync,
 	}
 }
 

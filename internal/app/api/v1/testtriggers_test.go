@@ -454,6 +454,42 @@ spec:
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 	})
 
+	t.Run("should return error when merged trigger fails spec validation", func(t *testing.T) {
+		// given
+		request := testkube.TestTriggerUpsertRequest{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Resource:  resourcePtr("content"),
+			Event:     "modified",
+		}
+
+		existingTrigger := &testkube.TestTrigger{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Action:    actionPtr("run"),
+			Execution: executionPtr("testworkflow"),
+			TestSelector: &testkube.TestTriggerSelector{
+				Name: "my-workflow",
+			},
+		}
+
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "test-trigger", "default").
+			Return(existingTrigger, nil).
+			Times(1)
+
+		requestBody, _ := json.Marshal(request)
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
 	t.Run("should clear conditionSpec when yaml update removes it", func(t *testing.T) {
 		// given - YAML without conditionSpec
 		requestBody := `
