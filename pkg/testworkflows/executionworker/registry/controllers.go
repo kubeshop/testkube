@@ -46,14 +46,8 @@ func NewControllersRegistry(clientSet kubernetes.Interface, namespaces Namespace
 		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
 			controllerOptions.WorkflowLogsInsecureSkipTLSVerifyBackend = true
 		}
-		if opt.TLSRetry.MaxAttempts > 0 {
-			controllerOptions.TLSRetry.MaxAttempts = opt.TLSRetry.MaxAttempts
-		}
-		if opt.TLSRetry.InitialDelay > 0 {
-			controllerOptions.TLSRetry.InitialDelay = opt.TLSRetry.InitialDelay
-		}
-		if opt.TLSRetry.MaxDelay > 0 {
-			controllerOptions.TLSRetry.MaxDelay = opt.TLSRetry.MaxDelay
+		if opt.TLSRetry.MaxAttempts > 0 || opt.TLSRetry.InitialDelay > 0 || opt.TLSRetry.MaxDelay > 0 {
+			controllerOptions.TLSRetry = opt.TLSRetry
 		}
 	}
 	r := &controllersRegistry{
