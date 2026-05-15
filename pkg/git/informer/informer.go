@@ -840,15 +840,21 @@ func (i *Informer) resolveCredentialValue(ctx context.Context, value, namespace 
 	if i.kubeClient == nil {
 		return resolveCredentialValue(value, source)
 	}
+	hasRequiredRef := false
 	if source.SecretKeyRef != nil {
+		hasRequiredRef = hasRequiredRef || (source.SecretKeyRef.Optional == nil || !*source.SecretKeyRef.Optional)
 		if resolved, ok := i.resolveSecretKeyRefValue(ctx, namespace, source.SecretKeyRef); ok {
 			return resolved
 		}
 	}
 	if source.ConfigMapKeyRef != nil {
+		hasRequiredRef = hasRequiredRef || (source.ConfigMapKeyRef.Optional == nil || !*source.ConfigMapKeyRef.Optional)
 		if resolved, ok := i.resolveConfigMapKeyRefValue(ctx, namespace, source.ConfigMapKeyRef); ok {
 			return resolved
 		}
+	}
+	if hasRequiredRef {
+		return ""
 	}
 	return resolveCredentialValue(value, source)
 }

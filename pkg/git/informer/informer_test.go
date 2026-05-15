@@ -207,6 +207,7 @@ func TestResolveCredentialValue(t *testing.T) {
 }
 
 func TestResolveCredentialValue_WithKubeClient(t *testing.T) {
+	boolPtr := func(v bool) *bool { return &v }
 	informer := NewInformer(stubTestTriggerClient{}, nil, nil, "testkube", "", Options{
 		KubeClient: fake.NewSimpleClientset(
 			&corev1.Secret{
@@ -219,12 +220,26 @@ func TestResolveCredentialValue_WithKubeClient(t *testing.T) {
 			},
 		),
 	})
+	t.Setenv("TOKEN", "env-token-fallback")
+	t.Setenv("USERNAME", "env-user-fallback")
 
 	assert.Equal(t, "secret-token", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
 		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "git-secret", Key: "token"},
 	}))
 	assert.Equal(t, "config-user", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
 		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Name: "git-config", Key: "username"},
+	}))
+	assert.Equal(t, "", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "missing-secret", Key: "TOKEN"},
+	}))
+	assert.Equal(t, "", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Name: "git-config", Key: "USERNAME"},
+	}))
+	assert.Equal(t, "env-token-fallback", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
+		SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{Name: "missing-secret", Key: "TOKEN", Optional: boolPtr(true)},
+	}))
+	assert.Equal(t, "env-user-fallback", informer.resolveCredentialValue(context.Background(), "", "testkube", &testkube.EnvVarSource{
+		ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{Name: "git-config", Key: "USERNAME", Optional: boolPtr(true)},
 	}))
 }
 
