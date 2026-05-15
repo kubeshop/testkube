@@ -240,9 +240,9 @@ type Config struct {
 	FeatureCloudStorage                      bool          `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestWorkflowLogArchiveRequired           bool          `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool          `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
-	WorkflowLogsTLSRetryMaxAttempts          int           `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_ATTEMPTS" default:"0"`
-	WorkflowLogsTLSRetryInitialDelay         time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_INITIAL_DELAY" default:"0"`
-	WorkflowLogsTLSRetryMaxDelay             time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_DELAY" default:"0"`
+	WorkflowLogsTLSRetryMaxAttempts          int           `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_ATTEMPTS" default:"30"`
+	WorkflowLogsTLSRetryInitialDelay         time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_INITIAL_DELAY" default:"500ms"`
+	WorkflowLogsTLSRetryMaxDelay             time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_DELAY" default:"30s"`
 	TestTriggerControlPlane                  bool          `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
 	ForceSuperAgentMode                      bool          `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
