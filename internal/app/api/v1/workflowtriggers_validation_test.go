@@ -55,3 +55,21 @@ func TestValidateWorkflowTriggerSpec_EnforcesGitRules(t *testing.T) {
 
 	require.Error(t, validateWorkflowTriggerSpec(trigger))
 }
+
+func TestValidateWorkflowTriggerSpec_RequiresGitURI(t *testing.T) {
+	t.Parallel()
+
+	trigger := &testkube.WorkflowTrigger{
+		When: testkube.WorkflowTriggerWhen{
+			Event: "modified",
+			Git:   &testkube.TestTriggerContentGit{},
+		},
+		Run: testkube.WorkflowTriggerRun{
+			Workflow: testkube.WorkflowTriggerWorkflowSelector{Name: "workflow"},
+		},
+	}
+
+	err := validateWorkflowTriggerSpec(trigger)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "when.git.uri is required when when.git is set")
+}

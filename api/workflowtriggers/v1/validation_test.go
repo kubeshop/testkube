@@ -79,6 +79,14 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "when.event must be \"modified\" when when.git is set",
 		},
+		"git without uri is invalid": {
+			modify: func(s *WorkflowTriggerSpec) {
+				s.Watch = nil
+				s.When.Git = &WorkflowTriggerWhenGitSpec{}
+			},
+			wantErrs:   1,
+			wantSubstr: "when.git.uri is required when when.git is set",
+		},
 		"git with wait conditions is invalid": {
 			modify: func(s *WorkflowTriggerSpec) {
 				s.Watch = nil

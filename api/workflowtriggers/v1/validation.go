@@ -28,6 +28,9 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	if s.When.Git != nil && s.When.Event != "modified" {
 		errs = append(errs, fmt.Errorf("when.event must be \"modified\" when when.git is set"))
 	}
+	if s.When.Git != nil && s.When.Git.Uri == "" {
+		errs = append(errs, fmt.Errorf("when.git.uri is required when when.git is set"))
+	}
 	if s.When.Git != nil && s.Watch != nil {
 		errs = append(errs, fmt.Errorf("watch must be omitted when when.git is set"))
 	}
