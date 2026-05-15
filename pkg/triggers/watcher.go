@@ -179,14 +179,16 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 
 	// WorkflowTrigger v2: when on control plane, poll via the cloud client.
 	// Otherwise watch the CRD directly via a dynamic informer scoped to the
-	// Testkube namespace (no generated clientset yet for this CRD).
+	// configured watcher namespaces (no generated clientset yet for this CRD).
 	if s.testTriggerControlPlane && s.workflowTriggersClient != nil {
 		s.startCloudWorkflowTriggerWatch(ctx, stop)
 	} else if s.dynamicClient != nil {
-		wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, s.testkubeNamespace, nil)
-		wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
-		wtInformer.AddEventHandler(s.workflowTriggerEventHandler(ctx))
-		go wtInformer.Run(stop)
+		for _, namespace := range s.getWorkflowTriggerWatchNamespaces() {
+			wtFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClient, 0, namespace, nil)
+			wtInformer := wtFactory.ForResource(workflowtriggersv1.GroupVersionResource).Informer()
+			wtInformer.AddEventHandler(s.workflowTriggerEventHandler(ctx))
+			go wtInformer.Run(stop)
+		}
 	}
 	if watchWebhookResources {
 		s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
@@ -461,6 +463,28 @@ func (s *Service) getCloudWatchNamespaces() []string {
 		return []string{"*"}
 	}
 	return s.watcherNamespaces
+}
+
+func (s *Service) getWorkflowTriggerWatchNamespaces() []string {
+	if len(s.watcherNamespaces) == 0 {
+		return []string{metav1.NamespaceAll}
+	}
+
+	namespaces := make([]string, 0, len(s.watcherNamespaces))
+	seen := make(map[string]struct{}, len(s.watcherNamespaces))
+	for _, namespace := range s.watcherNamespaces {
+		value := namespace
+		if value == "*" {
+			value = metav1.NamespaceAll
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		namespaces = append(namespaces, value)
+	}
+
+	return namespaces
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {

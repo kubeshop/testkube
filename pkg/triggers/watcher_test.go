@@ -452,3 +452,20 @@ func TestService_getCloudWatchNamespaces(t *testing.T) {
 		assert.Equal(t, []string{"*"}, s.getCloudWatchNamespaces())
 	})
 }
+
+func TestService_getWorkflowTriggerWatchNamespaces(t *testing.T) {
+	t.Run("uses watcher namespaces when configured", func(t *testing.T) {
+		s := &Service{watcherNamespaces: []string{"team-a", "team-b"}}
+		assert.Equal(t, []string{"team-a", "team-b"}, s.getWorkflowTriggerWatchNamespaces())
+	})
+
+	t.Run("uses all namespaces when watcher namespaces are empty", func(t *testing.T) {
+		s := &Service{}
+		assert.Equal(t, []string{metav1.NamespaceAll}, s.getWorkflowTriggerWatchNamespaces())
+	})
+
+	t.Run("normalizes wildcard and de-duplicates", func(t *testing.T) {
+		s := &Service{watcherNamespaces: []string{"*", "team-a", "*", "team-a"}}
+		assert.Equal(t, []string{metav1.NamespaceAll, "team-a"}, s.getWorkflowTriggerWatchNamespaces())
+	})
+}
