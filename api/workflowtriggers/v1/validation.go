@@ -25,7 +25,7 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 
 	// git triggers currently support only modified events and must not set watch,
 	// because watch is interpreted as a Kubernetes resource informer target.
-	if s.When.Git != nil && s.When.Event != "modified" {
+	if s.When.Git != nil && s.When.Event != "" && s.When.Event != "modified" {
 		errs = append(errs, fmt.Errorf("when.event must be \"modified\" when when.git is set"))
 	}
 	if s.When.Git != nil && s.When.Git.Uri == "" {

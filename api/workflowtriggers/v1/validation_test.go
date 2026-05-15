@@ -64,7 +64,7 @@ func TestValidate(t *testing.T) {
 		"missing event with git is invalid": {
 			modify: func(s *WorkflowTriggerSpec) {
 				s.Watch = nil
-				s.When.Event = ""
+				s.When.Event = "created"
 				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
 			},
 			wantErrs:   1,
