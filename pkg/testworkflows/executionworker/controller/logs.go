@@ -147,22 +147,31 @@ func buildPodLogOptions(containerName string, isDone func() bool, since *time.Ti
 	}
 }
 
+// streamFunc is a function that opens an io.ReadCloser stream. Used internally
+// by getContainerLogsStream and extracted to allow testing the retry logic.
+type streamFunc func(ctx context.Context) (io.ReadCloser, error)
+
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
 // EOF may happen not only on the actual container end, but also in case of the log rotation.
 // @see {@link https://stackoverflow.com/a/68673451}
 func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) (io.Reader, error) {
+	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, buildPodLogOptions(containerName, isDone, since, opts))
+	return getContainerLogsStreamWithStreamer(ctx, req.Stream, podName, containerName, isDone, opts)
+}
+
+// getContainerLogsStreamWithStreamer contains the retry loop logic, accepting a streamFunc
+// for testability. The retry behavior for TLS, proxy, and connection-lost errors is implemented here.
+func getContainerLogsStreamWithStreamer(ctx context.Context, openStream streamFunc, podName, containerName string, isDone func() bool, opts ContainerLogOptions) (io.Reader, error) {
 	// Fail immediately if the context is finished
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	// Create logs stream request
-	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, buildPodLogOptions(containerName, isDone, since, opts))
 	var err error
 	var stream io.ReadCloser
 	retries := 0
 	for {
-		stream, err = req.Stream(ctx)
+		stream, err = openStream(ctx)
 		if err == nil {
 			return stream, nil
 		}

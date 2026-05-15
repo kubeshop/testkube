@@ -188,6 +188,110 @@ func TestTLSRetryConfigBackoffDelayInitialExceedsMax(t *testing.T) {
 	assert.Equal(t, 30*time.Second, cfg.backoffDelay(5))
 }
 
+func TestGetContainerLogsStreamWithStreamerTLSRetry(t *testing.T) {
+	t.Parallel()
+
+	// Use small delays for fast testing
+	cfg := TLSRetryConfig{
+		MaxAttempts:  4,
+		InitialDelay: 10 * time.Millisecond,
+		MaxDelay:     80 * time.Millisecond,
+	}
+	opts := ContainerLogOptions{TLSRetry: cfg}
+
+	var attempts int
+	var timestamps []time.Time
+	tlsErr := fmt.Errorf("Get \"https://10.0.0.1:10250/containerLogs/ns/pod/c\": remote error: tls: internal error")
+
+	streamer := func(ctx context.Context) (io.ReadCloser, error) {
+		attempts++
+		timestamps = append(timestamps, time.Now())
+		return nil, tlsErr
+	}
+
+	ctx := context.Background()
+	_, err := getContainerLogsStreamWithStreamer(ctx, streamer, "pod", "container", func() bool { return false }, opts)
+
+	// Should have exhausted all retries (1 initial + maxAttempts retries)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "tls: internal error")
+	assert.Equal(t, cfg.MaxAttempts+1, attempts, "expected 1 initial attempt + MaxAttempts retries")
+
+	// Verify exponential backoff delays between attempts
+	// Expected: 10ms, 20ms, 40ms, 80ms (capped)
+	for i := 1; i < len(timestamps); i++ {
+		elapsed := timestamps[i].Sub(timestamps[i-1])
+		expectedDelay := cfg.backoffDelay(i)
+		// Allow 50% tolerance for timing jitter in CI
+		minDelay := expectedDelay * 50 / 100
+		assert.True(t, elapsed >= minDelay,
+			"retry %d: elapsed %v should be >= %v (expected delay %v)", i, elapsed, minDelay, expectedDelay)
+	}
+}
+
+func TestGetContainerLogsStreamWithStreamerTLSSucceedsAfterRetries(t *testing.T) {
+	t.Parallel()
+
+	cfg := TLSRetryConfig{
+		MaxAttempts:  5,
+		InitialDelay: 5 * time.Millisecond,
+		MaxDelay:     50 * time.Millisecond,
+	}
+	opts := ContainerLogOptions{TLSRetry: cfg}
+
+	var attempts int
+	tlsErr := fmt.Errorf("remote error: tls: internal error")
+
+	streamer := func(ctx context.Context) (io.ReadCloser, error) {
+		attempts++
+		if attempts <= 3 {
+			return nil, tlsErr
+		}
+		return io.NopCloser(bytes.NewBufferString("success")), nil
+	}
+
+	ctx := context.Background()
+	reader, err := getContainerLogsStreamWithStreamer(ctx, streamer, "pod", "container", func() bool { return false }, opts)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 4, attempts, "expected 3 failed attempts + 1 successful")
+	content, _ := io.ReadAll(reader)
+	assert.Equal(t, "success", string(content))
+}
+
+func TestGetContainerLogsStreamWithStreamerContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	cfg := TLSRetryConfig{
+		MaxAttempts:  10,
+		InitialDelay: 1 * time.Second, // Long delay to ensure context cancels first
+		MaxDelay:     5 * time.Second,
+	}
+	opts := ContainerLogOptions{TLSRetry: cfg}
+
+	var attempts int
+	tlsErr := fmt.Errorf("remote error: tls: internal error")
+
+	streamer := func(ctx context.Context) (io.ReadCloser, error) {
+		attempts++
+		return nil, tlsErr
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	// Cancel after a short delay to interrupt the backoff wait
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	_, err := getContainerLogsStreamWithStreamer(ctx, streamer, "pod", "container", func() bool { return false }, opts)
+
+	assert.Error(t, err)
+	assert.Equal(t, context.Canceled, err)
+	// Should have been interrupted before exhausting all retries
+	assert.Less(t, attempts, cfg.MaxAttempts+1)
+}
+
 func TestTLSRetryErrorPropagation(t *testing.T) {
 	t.Parallel()
 
