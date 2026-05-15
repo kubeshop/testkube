@@ -170,6 +170,7 @@ func getContainerLogsStreamWithStreamer(ctx context.Context, openStream streamFu
 	var err error
 	var stream io.ReadCloser
 	retries := 0
+	tlsRetries := 0
 	for {
 		stream, err = openStream(ctx)
 		if err == nil {
@@ -187,16 +188,16 @@ func getContainerLogsStreamWithStreamer(ctx context.Context, openStream streamFu
 			delay = LogRetryOnConnectionLostDelay
 			log.DefaultLogger.Warnw("connection lost while loading container logs, retrying", "pod", podName, "attempt", retries, "error", err)
 		case strings.Contains(errMsg, "tls: internal error"):
-			retries++
-			if retries > opts.TLSRetry.maxAttempts() {
+			tlsRetries++
+			if tlsRetries > opts.TLSRetry.maxAttempts() {
 				return nil, err
 			}
-			delay = opts.TLSRetry.backoffDelay(retries)
+			delay = opts.TLSRetry.backoffDelay(tlsRetries)
 			log.DefaultLogger.Errorw(
 				"kubelet TLS error while loading container logs, retrying",
 				"pod", podName,
 				"container", containerName,
-				"attempt", retries,
+				"attempt", tlsRetries,
 				"delay", delay,
 				"insecureSkipTLSVerifyBackend", opts.InsecureSkipTLSVerifyBackend,
 				"error", err,
