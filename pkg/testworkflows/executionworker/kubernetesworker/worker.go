@@ -58,9 +58,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 		config:    config,
 		registry: registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50, controller.ControllerOptions{
 			WorkflowLogsInsecureSkipTLSVerifyBackend: config.WorkflowLogsInsecureSkipTLSVerifyBackend,
-			WorkflowLogsTLSRetryMaxAttempts:          config.WorkflowLogsTLSRetryMaxAttempts,
-			WorkflowLogsTLSRetryInitialDelay:         config.WorkflowLogsTLSRetryInitialDelay,
-			WorkflowLogsTLSRetryMaxDelay:             config.WorkflowLogsTLSRetryMaxDelay,
+			TLSRetry:                                 config.TLSRetry,
 		}),
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,

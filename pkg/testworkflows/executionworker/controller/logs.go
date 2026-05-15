@@ -71,32 +71,62 @@ func (c *ContainerLog) Type() ContainerLogType {
 	return ContainerLogTypeLog
 }
 
-type ContainerLogOptions struct {
-	InsecureSkipTLSVerifyBackend bool
-	TLSRetryMaxAttempts          int
-	TLSRetryInitialDelay         time.Duration
-	TLSRetryMaxDelay             time.Duration
+// TLSRetryConfig holds configuration for TLS error retry with exponential backoff.
+// Zero values fall back to the built-in defaults (LogTLSRetry* constants).
+type TLSRetryConfig struct {
+	MaxAttempts  int
+	InitialDelay time.Duration
+	MaxDelay     time.Duration
 }
 
-func (o ContainerLogOptions) tlsRetryMaxAttempts() int {
-	if o.TLSRetryMaxAttempts > 0 {
-		return o.TLSRetryMaxAttempts
+func (c TLSRetryConfig) maxAttempts() int {
+	if c.MaxAttempts > 0 {
+		return c.MaxAttempts
 	}
 	return LogTLSRetryMaxAttempts
 }
 
-func (o ContainerLogOptions) tlsRetryInitialDelay() time.Duration {
-	if o.TLSRetryInitialDelay > 0 {
-		return o.TLSRetryInitialDelay
+func (c TLSRetryConfig) initialDelay() time.Duration {
+	if c.InitialDelay > 0 {
+		return c.InitialDelay
 	}
 	return LogTLSRetryInitialDelay
 }
 
-func (o ContainerLogOptions) tlsRetryMaxDelay() time.Duration {
-	if o.TLSRetryMaxDelay > 0 {
-		return o.TLSRetryMaxDelay
+func (c TLSRetryConfig) maxDelay() time.Duration {
+	if c.MaxDelay > 0 {
+		return c.MaxDelay
 	}
 	return LogTLSRetryMaxDelay
+}
+
+// backoffDelay computes the exponential backoff delay for the given retry attempt,
+// clamping at MaxDelay and protecting against integer overflow.
+func (c TLSRetryConfig) backoffDelay(retry int) time.Duration {
+	initial := c.initialDelay()
+	maxD := c.maxDelay()
+	shift := retry - 1
+	if shift <= 0 {
+		return initial
+	}
+	// Protect against overflow: if shift is >= 63 or would overflow int64, clamp to maxDelay
+	if shift >= 63 {
+		return maxD
+	}
+	delay := initial << shift
+	// Detect overflow: shifted value should be >= initial (if it wrapped, it becomes smaller or negative)
+	if delay <= 0 || delay < initial {
+		return maxD
+	}
+	if delay > maxD {
+		return maxD
+	}
+	return delay
+}
+
+type ContainerLogOptions struct {
+	InsecureSkipTLSVerifyBackend bool
+	TLSRetry                     TLSRetryConfig
 }
 
 func buildPodLogOptions(containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) *corev1.PodLogOptions {
@@ -146,13 +176,10 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 			log.DefaultLogger.Warnw("connection lost while loading container logs, retrying", "pod", podName, "attempt", retries, "error", err)
 		case strings.Contains(errMsg, "tls: internal error"):
 			retries++
-			if retries > opts.tlsRetryMaxAttempts() {
+			if retries > opts.TLSRetry.maxAttempts() {
 				return nil, err
 			}
-			delay = opts.tlsRetryInitialDelay() << (retries - 1)
-			if delay > opts.tlsRetryMaxDelay() {
-				delay = opts.tlsRetryMaxDelay()
-			}
+			delay = opts.TLSRetry.backoffDelay(retries)
 			log.DefaultLogger.Errorw(
 				"kubelet TLS error while loading container logs, retrying",
 				"pod", podName,

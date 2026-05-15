@@ -110,41 +110,81 @@ func TestBuildPodLogOptionsCanSkipKubeletBackendTLSVerification(t *testing.T) {
 	assert.True(t, opts.InsecureSkipTLSVerifyBackend)
 }
 
-func TestContainerLogOptionsTLSRetryDefaults(t *testing.T) {
+func TestTLSRetryConfigDefaults(t *testing.T) {
 	t.Parallel()
 
-	opts := ContainerLogOptions{}
-	assert.Equal(t, LogTLSRetryMaxAttempts, opts.tlsRetryMaxAttempts())
-	assert.Equal(t, LogTLSRetryInitialDelay, opts.tlsRetryInitialDelay())
-	assert.Equal(t, LogTLSRetryMaxDelay, opts.tlsRetryMaxDelay())
+	cfg := TLSRetryConfig{}
+	assert.Equal(t, LogTLSRetryMaxAttempts, cfg.maxAttempts())
+	assert.Equal(t, LogTLSRetryInitialDelay, cfg.initialDelay())
+	assert.Equal(t, LogTLSRetryMaxDelay, cfg.maxDelay())
 }
 
-func TestContainerLogOptionsTLSRetryCustom(t *testing.T) {
+func TestTLSRetryConfigCustom(t *testing.T) {
 	t.Parallel()
 
-	opts := ContainerLogOptions{
-		TLSRetryMaxAttempts:  50,
-		TLSRetryInitialDelay: 1 * time.Second,
-		TLSRetryMaxDelay:     60 * time.Second,
+	cfg := TLSRetryConfig{
+		MaxAttempts:  50,
+		InitialDelay: 1 * time.Second,
+		MaxDelay:     60 * time.Second,
 	}
-	assert.Equal(t, 50, opts.tlsRetryMaxAttempts())
-	assert.Equal(t, 1*time.Second, opts.tlsRetryInitialDelay())
-	assert.Equal(t, 60*time.Second, opts.tlsRetryMaxDelay())
+	assert.Equal(t, 50, cfg.maxAttempts())
+	assert.Equal(t, 1*time.Second, cfg.initialDelay())
+	assert.Equal(t, 60*time.Second, cfg.maxDelay())
 }
 
-func TestGetContainerLogsStreamTLSExponentialBackoff(t *testing.T) {
+func TestTLSRetryConfigBackoffDelay(t *testing.T) {
+	t.Parallel()
+
+	cfg := TLSRetryConfig{
+		InitialDelay: 500 * time.Millisecond,
+		MaxDelay:     30 * time.Second,
+	}
+
+	// Verify exponential progression
+	assert.Equal(t, 500*time.Millisecond, cfg.backoffDelay(1))
+	assert.Equal(t, 1*time.Second, cfg.backoffDelay(2))
+	assert.Equal(t, 2*time.Second, cfg.backoffDelay(3))
+	assert.Equal(t, 4*time.Second, cfg.backoffDelay(4))
+	assert.Equal(t, 8*time.Second, cfg.backoffDelay(5))
+	assert.Equal(t, 16*time.Second, cfg.backoffDelay(6))
+	// Capped at maxDelay
+	assert.Equal(t, 30*time.Second, cfg.backoffDelay(7))
+	assert.Equal(t, 30*time.Second, cfg.backoffDelay(10))
+}
+
+func TestTLSRetryConfigBackoffDelayOverflowProtection(t *testing.T) {
+	t.Parallel()
+
+	// Large initial delay that would overflow with many retries
+	cfg := TLSRetryConfig{
+		InitialDelay: 60 * time.Second,
+		MaxDelay:     5 * time.Minute,
+		MaxAttempts:  30,
+	}
+
+	// High shift values should clamp to maxDelay, not overflow to negative
+	delay := cfg.backoffDelay(29)
+	assert.True(t, delay > 0, "delay should be positive, got %v", delay)
+	assert.Equal(t, 5*time.Minute, delay)
+
+	// Extremely high shift (>= 63) should be safe
+	delay = cfg.backoffDelay(64)
+	assert.Equal(t, 5*time.Minute, delay)
+}
+
+func TestTLSRetryErrorPropagation(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
-	// Test via watchContainerLogsWithStream which uses a mock opener
-	var callCount atomic.Int32
+	// Verify that TLS errors from the stream opener propagate as errors through the channel.
+	// The retry/backoff logic inside getContainerLogsStream is tested via
+	// TestTLSRetryConfigBackoffDelay and TestTLSRetryConfigBackoffDelayOverflowProtection.
 	ch := watchContainerLogsWithStream(
 		ctx,
-		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
-			callCount.Add(1)
-			return nil, fmt.Errorf("remote error: tls: internal error")
+		func(streamCtx context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			return nil, fmt.Errorf("Get \"https://10.0.0.1:10250/containerLogs/ns/pod/c\": remote error: tls: internal error")
 		},
 		nil,
 		"default",
