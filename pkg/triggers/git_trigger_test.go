@@ -212,6 +212,50 @@ func TestMatchGitTrigger_ReturnsErrorWhenTargetTriggerNotReady(t *testing.T) {
 	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
 }
 
+func TestMatchGitTrigger_ReturnsErrorWhenTargetStatusIsStaleNonContent(t *testing.T) {
+	staleTrigger := &internalTrigger{
+		Name:         "trigger-a",
+		Namespace:    "default",
+		Source:       triggerSourceV1,
+		ResourceKind: "tests",
+		Event:        string(v1.TestTriggerEventCreated),
+	}
+
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, staleTrigger.Namespace, staleTrigger.Name): {trigger: staleTrigger},
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitTrigger(context.Background(), staleTrigger.Name, staleTrigger.Namespace)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
+}
+
+func TestMatchGitWorkflowTrigger_ReturnsErrorWhenTargetStatusIsStaleNonContent(t *testing.T) {
+	staleTrigger := &internalTrigger{
+		Name:         "workflow-trigger-a",
+		Namespace:    "default",
+		Source:       triggerSourceV2,
+		ResourceKind: "tests",
+		Event:        string(v1.TestTriggerEventCreated),
+	}
+
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV2, staleTrigger.Namespace, staleTrigger.Name): {trigger: staleTrigger},
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitWorkflowTrigger(context.Background(), staleTrigger.Name, staleTrigger.Namespace)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
+}
+
 func TestMatchGitTrigger_ReturnsErrorWhenConditionsConfiguredForSyntheticEvent(t *testing.T) {
 	trigger := &v1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},

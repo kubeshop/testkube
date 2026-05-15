@@ -46,12 +46,8 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	if !exists || trigger == nil {
 		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
-	if !strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) {
-		return nil
-	}
-
-	if trigger.Disabled {
-		return nil
+	if !isGitSyntheticTargetReady(trigger) {
+		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
 	if trigger.Execution != "" && trigger.Execution != ExecutionTestWorkflow {
 		return nil
@@ -60,7 +56,7 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 		return nil
 	}
 	if !matchEventOrCause(trigger.Event, event) {
-		return nil
+		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
 	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 {
 		if event.conditionsGetter == nil {
@@ -103,4 +99,10 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	s.metrics.IncTestTriggerEventCount(trigger.Name, string(event.resource), string(event.eventType), causes)
 	return s.triggerExecutor(ctx, event, trigger)
 
+}
+
+func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
+	return strings.EqualFold(trigger.ResourceKind, string(testtrigger.ResourceContent)) &&
+		!trigger.Disabled &&
+		strings.EqualFold(trigger.Event, string(testtrigger.EventModified))
 }
