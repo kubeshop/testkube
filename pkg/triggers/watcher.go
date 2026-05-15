@@ -332,6 +332,9 @@ func (s *Service) startCloudWorkflowTriggerWatch(ctx context.Context, stop <-cha
 		if len(failedNamespaces) > 0 {
 			_, failedAll := failedNamespaces["*"]
 			for key, t := range prev {
+				if _, exists := curr[key]; exists {
+					continue
+				}
 				if failedAll {
 					curr[key] = t
 					continue
@@ -424,6 +427,9 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 		if len(failedNamespaces) > 0 {
 			_, failedAll := failedNamespaces["*"]
 			for key, t := range prev {
+				if _, exists := curr[key]; exists {
+					continue
+				}
 				if failedAll {
 					curr[key] = t
 					continue
@@ -459,24 +465,25 @@ func (s *Service) startCloudTestTriggerWatch(ctx context.Context, stop <-chan st
 }
 
 func (s *Service) getCloudWatchNamespaces() []string {
-	if len(s.watcherNamespaces) == 0 {
-		return []string{"*"}
-	}
-	return s.watcherNamespaces
+	return s.normalizeWatchNamespaces("*")
 }
 
 func (s *Service) getWorkflowTriggerWatchNamespaces() []string {
+	return s.normalizeWatchNamespaces(metav1.NamespaceAll)
+}
+
+func (s *Service) normalizeWatchNamespaces(allValue string) []string {
 	if len(s.watcherNamespaces) == 0 {
-		return []string{metav1.NamespaceAll}
+		return []string{allValue}
 	}
 
 	namespaces := make([]string, 0, len(s.watcherNamespaces))
 	seen := make(map[string]struct{}, len(s.watcherNamespaces))
 	for _, namespace := range s.watcherNamespaces {
-		value := namespace
-		if value == "*" {
-			value = metav1.NamespaceAll
+		if namespace == "*" || namespace == metav1.NamespaceAll {
+			return []string{allValue}
 		}
+		value := namespace
 		if _, ok := seen[value]; ok {
 			continue
 		}

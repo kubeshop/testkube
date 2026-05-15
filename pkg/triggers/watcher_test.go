@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -441,6 +442,118 @@ func TestService_startCloudWorkflowTriggerWatch_PreservesFailedNamespaceSnapshot
 	assert.True(t, b)
 }
 
+func TestService_startCloudTestTriggerWatch_DoesNotOverwriteWildcardDataOnNamespaceFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	testTriggersClient := testtriggerclient.NewMockTestTriggerClient(ctrl)
+
+	var wildcardCalls int32
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, "*").
+		DoAndReturn(func(context.Context, string, testtriggerclient.ListOptions, string) ([]testkube.TestTrigger, error) {
+			call := atomic.AddInt32(&wildcardCalls, 1)
+			disabled := call >= 2
+			return []testkube.TestTrigger{{
+				Name:             "a",
+				Namespace:        "team-a",
+				Event:            "modified",
+				ResourceSelector: &testkube.TestTriggerSelector{},
+				TestSelector:     &testkube.TestTriggerSelector{},
+				Disabled:         disabled,
+			}}, nil
+		}).
+		AnyTimes()
+	testTriggersClient.EXPECT().
+		List(gomock.Any(), "env-1", testtriggerclient.ListOptions{}, "team-a").
+		DoAndReturn(func(context.Context, string, testtriggerclient.ListOptions, string) ([]testkube.TestTrigger, error) {
+			if atomic.LoadInt32(&wildcardCalls) < 2 {
+				return []testkube.TestTrigger{{
+					Name:             "a",
+					Namespace:        "team-a",
+					Event:            "modified",
+					ResourceSelector: &testkube.TestTriggerSelector{},
+					TestSelector:     &testkube.TestTriggerSelector{},
+				}}, nil
+			}
+			return nil, assert.AnError
+		}).
+		AnyTimes()
+
+	service := &Service{
+		triggerStatus:      make(map[statusKey]*triggerStatus),
+		testTriggersClient: testTriggersClient,
+		logger:             log.DefaultLogger,
+		eventsBus:          &bus.EventBusMock{},
+		metrics:            metrics.NewMetrics(),
+		proContext:         &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:    20 * time.Millisecond,
+		watcherNamespaces:  []string{"*", "team-a"},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudTestTriggerWatch(context.Background(), stop)
+
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		st := service.triggerStatus[newStatusKey(triggerSourceV1, "team-a", "a")]
+		return st != nil && st.trigger != nil && st.trigger.Disabled
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestService_startCloudWorkflowTriggerWatch_DoesNotOverwriteWildcardDataOnNamespaceFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	workflowClient := workflowtriggerclient.NewMockWorkflowTriggerClient(ctrl)
+
+	var wildcardCalls int32
+	workflowClient.EXPECT().
+		List(gomock.Any(), "env-1", workflowtriggerclient.ListOptions{}, "*").
+		DoAndReturn(func(context.Context, string, workflowtriggerclient.ListOptions, string) ([]testkube.WorkflowTrigger, error) {
+			call := atomic.AddInt32(&wildcardCalls, 1)
+			return []testkube.WorkflowTrigger{{
+				Name:      "wf-a",
+				Namespace: "team-a",
+				Labels: map[string]string{
+					"version": fmt.Sprintf("%d", call),
+				},
+			}}, nil
+		}).
+		AnyTimes()
+	workflowClient.EXPECT().
+		List(gomock.Any(), "env-1", workflowtriggerclient.ListOptions{}, "team-a").
+		DoAndReturn(func(context.Context, string, workflowtriggerclient.ListOptions, string) ([]testkube.WorkflowTrigger, error) {
+			if atomic.LoadInt32(&wildcardCalls) < 2 {
+				return []testkube.WorkflowTrigger{{Name: "wf-a", Namespace: "team-a"}}, nil
+			}
+			return nil, assert.AnError
+		}).
+		AnyTimes()
+
+	service := &Service{
+		triggerStatus:          make(map[statusKey]*triggerStatus),
+		workflowTriggersClient: workflowClient,
+		logger:                 log.DefaultLogger,
+		eventsBus:              &bus.EventBusMock{},
+		metrics:                metrics.NewMetrics(),
+		proContext:             &intconfig.ProContext{EnvID: "env-1"},
+		scraperInterval:        20 * time.Millisecond,
+		watcherNamespaces:      []string{"*", "team-a"},
+	}
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	service.startCloudWorkflowTriggerWatch(context.Background(), stop)
+
+	require.Eventually(t, func() bool {
+		service.triggerStatusMu.RLock()
+		defer service.triggerStatusMu.RUnlock()
+		st := service.triggerStatus[newStatusKey(triggerSourceV2, "team-a", "wf-a")]
+		return st != nil && st.trigger != nil && st.trigger.Labels["version"] == "2"
+	}, time.Second, 10*time.Millisecond)
+}
+
 func TestService_getCloudWatchNamespaces(t *testing.T) {
 	t.Run("uses watcher namespaces when configured", func(t *testing.T) {
 		s := &Service{watcherNamespaces: []string{"a", "b"}}
@@ -449,6 +562,11 @@ func TestService_getCloudWatchNamespaces(t *testing.T) {
 
 	t.Run("uses wildcard when watcher namespaces are empty", func(t *testing.T) {
 		s := &Service{}
+		assert.Equal(t, []string{"*"}, s.getCloudWatchNamespaces())
+	})
+
+	t.Run("normalizes wildcard and de-duplicates", func(t *testing.T) {
+		s := &Service{watcherNamespaces: []string{"*", "team-a", "*", "team-a"}}
 		assert.Equal(t, []string{"*"}, s.getCloudWatchNamespaces())
 	})
 }
@@ -466,6 +584,6 @@ func TestService_getWorkflowTriggerWatchNamespaces(t *testing.T) {
 
 	t.Run("normalizes wildcard and de-duplicates", func(t *testing.T) {
 		s := &Service{watcherNamespaces: []string{"*", "team-a", "*", "team-a"}}
-		assert.Equal(t, []string{metav1.NamespaceAll, "team-a"}, s.getWorkflowTriggerWatchNamespaces())
+		assert.Equal(t, []string{metav1.NamespaceAll}, s.getWorkflowTriggerWatchNamespaces())
 	})
 }
