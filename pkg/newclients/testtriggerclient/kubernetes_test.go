@@ -22,10 +22,6 @@ func TestKubernetesTestTriggerClient_CreateMapsExtendedFields(t *testing.T) {
 	trigger := buildAPITrigger()
 
 	mockClient.EXPECT().Create(gomock.Any()).DoAndReturn(func(crd *testtriggersv1.TestTrigger) (*testtriggersv1.TestTrigger, error) {
-		require.NotNil(t, crd.Spec.ResourceRef)
-		assert.Equal(t, trigger.ResourceRef.Group, crd.Spec.ResourceRef.Group)
-		assert.Equal(t, trigger.ResourceRef.Version, crd.Spec.ResourceRef.Version)
-		assert.Equal(t, trigger.ResourceRef.Kind, crd.Spec.ResourceRef.Kind)
 		require.Len(t, crd.Spec.Match, 1)
 		assert.Equal(t, string(trigger.Match[0].Operator), string(crd.Spec.Match[0].Operator))
 		assert.Equal(t, trigger.Match[0].Path, crd.Spec.Match[0].Path)
@@ -70,8 +66,6 @@ func TestKubernetesTestTriggerClient_UpdateMapsExtendedFieldsAndPreservesMetadat
 	mockClient.EXPECT().Get(trigger.Name, trigger.Namespace).Return(existing, nil)
 	mockClient.EXPECT().Update(gomock.Any()).DoAndReturn(func(crd *testtriggersv1.TestTrigger) (*testtriggersv1.TestTrigger, error) {
 		assert.Equal(t, existing.ResourceVersion, crd.ResourceVersion)
-		require.NotNil(t, crd.Spec.ResourceRef)
-		assert.Equal(t, trigger.ResourceRef.Kind, crd.Spec.ResourceRef.Kind)
 		require.Len(t, crd.Spec.Match, 1)
 		assert.Equal(t, trigger.Match[0].Path, crd.Spec.Match[0].Path)
 		require.NotNil(t, crd.Spec.ContentSelector)
@@ -95,14 +89,9 @@ func buildAPITrigger() testkube.TestTrigger {
 	authType := testkube.BASIC_ContentGitAuthType
 
 	return testkube.TestTrigger{
-		Name:      "git-trigger",
-		Namespace: "testkube",
-		Resource:  &resource,
-		ResourceRef: &testkube.TestTriggerResourceRef{
-			Group:   "apps",
-			Version: "v1",
-			Kind:    "Deployment",
-		},
+		Name:             "git-trigger",
+		Namespace:        "testkube",
+		Resource:         &resource,
 		Event:            string(testtriggersv1.TestTriggerEventModified),
 		ResourceSelector: &testkube.TestTriggerSelector{},
 		Match: []testkube.TestTriggerFieldCondition{
