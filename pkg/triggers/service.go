@@ -335,7 +335,7 @@ func (s *Service) ensureDynamicInformerForTrigger(ctx context.Context, t *testtr
 		)
 		return
 	}
-	if isBuiltinResource(t.Spec.ResourceRef.Kind) || strings.EqualFold(t.Spec.ResourceRef.Kind, string(testtriggersv1.TestTriggerResourceContent)) {
+	if isNonDynamicResource(t.Spec.ResourceRef.Kind) {
 		s.logger.Debugf("trigger service: skipping dynamic informer for non-dynamic type %s", t.Spec.ResourceRef.Kind)
 		return
 	}
@@ -362,7 +362,7 @@ func (s *Service) releaseDynamicInformerForTrigger(t *testtriggersv1.TestTrigger
 // level because that's an expected cleanup ordering, not an operator-actionable
 // condition.
 func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key statusKey) {
-	if s.dynamicManager == nil || isBuiltinResource(kind) || strings.EqualFold(kind, string(testtriggersv1.TestTriggerResourceContent)) {
+	if s.dynamicManager == nil || isNonDynamicResource(kind) {
 		return
 	}
 	gvr, err := resolveGVR(s.dynamicManager.mapper, group, version, kind)
@@ -372,6 +372,10 @@ func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key s
 		return
 	}
 	s.dynamicManager.releaseInformer(gvr, string(key))
+}
+
+func isNonDynamicResource(kind string) bool {
+	return isBuiltinResource(kind) || strings.EqualFold(kind, string(testtriggersv1.TestTriggerResourceContent))
 }
 
 func (s *Service) addWorkflowTrigger(ctx context.Context, t *workflowtriggersv1.WorkflowTrigger) {

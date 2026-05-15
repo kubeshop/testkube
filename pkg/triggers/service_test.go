@@ -87,7 +87,7 @@ func TestWithClusterID(t *testing.T) {
 	})
 }
 
-func TestService_ensureDynamicInformerForTrigger_skipsContentResourceRef(t *testing.T) {
+func TestService_ensureDynamicInformerForTrigger_SkipsContentResourceRef(t *testing.T) {
 	s := Service{
 		dynamicManager: newTestDynamicInformerManager(t),
 		logger:         log.DefaultLogger,
