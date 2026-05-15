@@ -36,5 +36,8 @@ type Config struct {
 	LogAbortedDetails                        bool
 	AllowLowSecurityFields                   bool
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool
+	WorkflowLogsTLSRetryMaxAttempts          int
+	WorkflowLogsTLSRetryInitialDelay         time.Duration
+	WorkflowLogsTLSRetryMaxDelay             time.Duration
 	DisableResourceMetrics                   bool
 }

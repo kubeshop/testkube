@@ -35,6 +35,10 @@ const (
 	LogRetryMaxAttempts            = 10
 	LogProxyErrorRetryInitialDelay = 500 * time.Millisecond
 	LogProxyErrorRetryMaxDelay     = 5 * time.Second
+
+	LogTLSRetryMaxAttempts    = 30
+	LogTLSRetryInitialDelay   = 500 * time.Millisecond
+	LogTLSRetryMaxDelay       = 30 * time.Second
 )
 
 type Comment struct {
@@ -69,6 +73,30 @@ func (c *ContainerLog) Type() ContainerLogType {
 
 type ContainerLogOptions struct {
 	InsecureSkipTLSVerifyBackend bool
+	TLSRetryMaxAttempts          int
+	TLSRetryInitialDelay         time.Duration
+	TLSRetryMaxDelay             time.Duration
+}
+
+func (o ContainerLogOptions) tlsRetryMaxAttempts() int {
+	if o.TLSRetryMaxAttempts > 0 {
+		return o.TLSRetryMaxAttempts
+	}
+	return LogTLSRetryMaxAttempts
+}
+
+func (o ContainerLogOptions) tlsRetryInitialDelay() time.Duration {
+	if o.TLSRetryInitialDelay > 0 {
+		return o.TLSRetryInitialDelay
+	}
+	return LogTLSRetryInitialDelay
+}
+
+func (o ContainerLogOptions) tlsRetryMaxDelay() time.Duration {
+	if o.TLSRetryMaxDelay > 0 {
+		return o.TLSRetryMaxDelay
+	}
+	return LogTLSRetryMaxDelay
 }
 
 func buildPodLogOptions(containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) *corev1.PodLogOptions {
@@ -118,15 +146,19 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 			log.DefaultLogger.Warnw("connection lost while loading container logs, retrying", "pod", podName, "attempt", retries, "error", err)
 		case strings.Contains(errMsg, "tls: internal error"):
 			retries++
-			if retries > LogRetryMaxAttempts {
+			if retries > opts.tlsRetryMaxAttempts() {
 				return nil, err
 			}
-			delay = LogRetryOnConnectionLostDelay
+			delay = opts.tlsRetryInitialDelay() << (retries - 1)
+			if delay > opts.tlsRetryMaxDelay() {
+				delay = opts.tlsRetryMaxDelay()
+			}
 			log.DefaultLogger.Errorw(
 				"kubelet TLS error while loading container logs, retrying",
 				"pod", podName,
 				"container", containerName,
 				"attempt", retries,
+				"delay", delay,
 				"insecureSkipTLSVerifyBackend", opts.InsecureSkipTLSVerifyBackend,
 				"error", err,
 			)

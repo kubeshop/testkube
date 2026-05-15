@@ -31,6 +31,9 @@ type ControllerOptions struct {
 	Signature                                []stage.Signature
 	RunnerId                                 string
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool
+	WorkflowLogsTLSRetryMaxAttempts          int
+	WorkflowLogsTLSRetryInitialDelay         time.Duration
+	WorkflowLogsTLSRetryMaxDelay             time.Duration
 }
 
 type LightweightNotification struct {
@@ -65,6 +68,9 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	var signature []stage.Signature
 	var expectedRunnerId string
 	var workflowLogsInsecureSkipTLSVerifyBackend bool
+	var workflowLogsTLSRetryMaxAttempts int
+	var workflowLogsTLSRetryInitialDelay time.Duration
+	var workflowLogsTLSRetryMaxDelay time.Duration
 	for _, opt := range opts {
 		if opt.Signature != nil {
 			signature = opt.Signature
@@ -74,6 +80,15 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		}
 		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
 			workflowLogsInsecureSkipTLSVerifyBackend = true
+		}
+		if opt.WorkflowLogsTLSRetryMaxAttempts > 0 {
+			workflowLogsTLSRetryMaxAttempts = opt.WorkflowLogsTLSRetryMaxAttempts
+		}
+		if opt.WorkflowLogsTLSRetryInitialDelay > 0 {
+			workflowLogsTLSRetryInitialDelay = opt.WorkflowLogsTLSRetryInitialDelay
+		}
+		if opt.WorkflowLogsTLSRetryMaxDelay > 0 {
+			workflowLogsTLSRetryMaxDelay = opt.WorkflowLogsTLSRetryMaxDelay
 		}
 	}
 
@@ -129,6 +144,9 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		ctxCancel:                                ctxCancel,
 		watcher:                                  watcher,
 		workflowLogsInsecureSkipTLSVerifyBackend: workflowLogsInsecureSkipTLSVerifyBackend,
+		workflowLogsTLSRetryMaxAttempts:          workflowLogsTLSRetryMaxAttempts,
+		workflowLogsTLSRetryInitialDelay:         workflowLogsTLSRetryInitialDelay,
+		workflowLogsTLSRetryMaxDelay:             workflowLogsTLSRetryMaxDelay,
 	}, nil
 }
 
@@ -142,6 +160,9 @@ type controller struct {
 	ctxCancel                                context.CancelFunc
 	watcher                                  watchers.ExecutionWatcher
 	workflowLogsInsecureSkipTLSVerifyBackend bool
+	workflowLogsTLSRetryMaxAttempts          int
+	workflowLogsTLSRetryInitialDelay         time.Duration
+	workflowLogsTLSRetryMaxDelay             time.Duration
 }
 
 func (c *controller) Signature() []stage.Signature {
@@ -241,6 +262,9 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbo
 		LogAbortedDetails: logAbortedDetails,
 		ContainerLogOptions: ContainerLogOptions{
 			InsecureSkipTLSVerifyBackend: c.workflowLogsInsecureSkipTLSVerifyBackend,
+			TLSRetryMaxAttempts:          c.workflowLogsTLSRetryMaxAttempts,
+			TLSRetryInitialDelay:         c.workflowLogsTLSRetryInitialDelay,
+			TLSRetryMaxDelay:             c.workflowLogsTLSRetryMaxDelay,
 		},
 	})
 	if err != nil {
@@ -261,6 +285,9 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 			DisableFollow: !follow,
 			ContainerLogOptions: ContainerLogOptions{
 				InsecureSkipTLSVerifyBackend: c.workflowLogsInsecureSkipTLSVerifyBackend,
+				TLSRetryMaxAttempts:          c.workflowLogsTLSRetryMaxAttempts,
+				TLSRetryInitialDelay:         c.workflowLogsTLSRetryInitialDelay,
+				TLSRetryMaxDelay:             c.workflowLogsTLSRetryMaxDelay,
 			},
 		})
 		if err != nil {

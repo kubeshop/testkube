@@ -61,6 +61,9 @@ func CreateExecutionWorker(
 		LogAbortedDetails:                        logAbortedDetails,
 		AllowLowSecurityFields:                   cfg.AllowLowSecurityFields,
 		WorkflowLogsInsecureSkipTLSVerifyBackend: cfg.WorkflowLogsInsecureSkipTLSVerifyBackend,
+		WorkflowLogsTLSRetryMaxAttempts:          cfg.WorkflowLogsTLSRetryMaxAttempts,
+		WorkflowLogsTLSRetryInitialDelay:         cfg.WorkflowLogsTLSRetryInitialDelay,
+		WorkflowLogsTLSRetryMaxDelay:             cfg.WorkflowLogsTLSRetryMaxDelay,
 		// Automatically disable resource metrics collection in standalone mode (no API key and no agent registration token configured),
 		// as the gRPC control plane connection from execution pods may not be available.
 		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",

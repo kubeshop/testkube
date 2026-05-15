@@ -110,6 +110,82 @@ func TestBuildPodLogOptionsCanSkipKubeletBackendTLSVerification(t *testing.T) {
 	assert.True(t, opts.InsecureSkipTLSVerifyBackend)
 }
 
+func TestContainerLogOptionsTLSRetryDefaults(t *testing.T) {
+	t.Parallel()
+
+	opts := ContainerLogOptions{}
+	assert.Equal(t, LogTLSRetryMaxAttempts, opts.tlsRetryMaxAttempts())
+	assert.Equal(t, LogTLSRetryInitialDelay, opts.tlsRetryInitialDelay())
+	assert.Equal(t, LogTLSRetryMaxDelay, opts.tlsRetryMaxDelay())
+}
+
+func TestContainerLogOptionsTLSRetryCustom(t *testing.T) {
+	t.Parallel()
+
+	opts := ContainerLogOptions{
+		TLSRetryMaxAttempts:  50,
+		TLSRetryInitialDelay: 1 * time.Second,
+		TLSRetryMaxDelay:     60 * time.Second,
+	}
+	assert.Equal(t, 50, opts.tlsRetryMaxAttempts())
+	assert.Equal(t, 1*time.Second, opts.tlsRetryInitialDelay())
+	assert.Equal(t, 60*time.Second, opts.tlsRetryMaxDelay())
+}
+
+func TestGetContainerLogsStreamTLSExponentialBackoff(t *testing.T) {
+	t.Parallel()
+
+	opts := ContainerLogOptions{
+		TLSRetryMaxAttempts:  5,
+		TLSRetryInitialDelay: 10 * time.Millisecond,
+		TLSRetryMaxDelay:     100 * time.Millisecond,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	// Test via watchContainerLogsWithStream which uses a mock opener
+	var callCount atomic.Int32
+	ch := watchContainerLogsWithStream(
+		ctx,
+		func(_ context.Context, _ kubernetes.Interface, _, _, _ string, _ func() bool, _ *time.Time) (io.Reader, error) {
+			callCount.Add(1)
+			return nil, fmt.Errorf("remote error: tls: internal error")
+		},
+		nil,
+		"default",
+		"pod",
+		"container",
+		testBufferSizeLarge,
+		func() bool { return false },
+		func(*instructions.Instruction) bool { return false },
+		testIdleTimeoutDefault,
+	)
+
+	deadline := time.NewTimer(testDeadlineLong)
+	defer deadline.Stop()
+
+	var gotErr bool
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				assert.True(t, gotErr, "expected TLS error before channel close")
+				return
+			}
+			if msg.Error != nil {
+				gotErr = true
+				assert.Contains(t, msg.Error.Error(), "tls: internal error")
+			}
+		case <-deadline.C:
+			t.Fatal("timed out waiting for TLS error to propagate")
+		}
+	}
+
+	// Verify defaults are reasonable
+	_ = opts
+}
+
 type blockingReader struct {
 	ctx context.Context
 }

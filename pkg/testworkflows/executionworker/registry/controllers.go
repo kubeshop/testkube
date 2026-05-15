@@ -136,6 +136,9 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints exec
 					Signature:                                signature,
 					RunnerId:                                 r.runnerId,
 					WorkflowLogsInsecureSkipTLSVerifyBackend: r.controllerOptions.WorkflowLogsInsecureSkipTLSVerifyBackend,
+					WorkflowLogsTLSRetryMaxAttempts:          r.controllerOptions.WorkflowLogsTLSRetryMaxAttempts,
+					WorkflowLogsTLSRetryInitialDelay:         r.controllerOptions.WorkflowLogsTLSRetryInitialDelay,
+					WorkflowLogsTLSRetryMaxDelay:             r.controllerOptions.WorkflowLogsTLSRetryMaxDelay,
 				})
 				if err != nil {
 					return nil, err
