@@ -107,6 +107,9 @@ func (c TLSRetryConfig) backoffDelay(retry int) time.Duration {
 	maxD := c.maxDelay()
 	shift := retry - 1
 	if shift <= 0 {
+		if initial > maxD {
+			return maxD
+		}
 		return initial
 	}
 	// Protect against overflow: if shift is >= 63 or would overflow int64, clamp to maxDelay

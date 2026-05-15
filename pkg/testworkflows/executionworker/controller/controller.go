@@ -77,14 +77,8 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
 			workflowLogsInsecureSkipTLSVerifyBackend = true
 		}
-		if opt.TLSRetry.MaxAttempts > 0 {
-			tlsRetry.MaxAttempts = opt.TLSRetry.MaxAttempts
-		}
-		if opt.TLSRetry.InitialDelay > 0 {
-			tlsRetry.InitialDelay = opt.TLSRetry.InitialDelay
-		}
-		if opt.TLSRetry.MaxDelay > 0 {
-			tlsRetry.MaxDelay = opt.TLSRetry.MaxDelay
+		if opt.TLSRetry.MaxAttempts > 0 || opt.TLSRetry.InitialDelay > 0 || opt.TLSRetry.MaxDelay > 0 {
+			tlsRetry = opt.TLSRetry
 		}
 	}
 

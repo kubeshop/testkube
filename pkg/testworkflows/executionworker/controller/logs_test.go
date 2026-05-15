@@ -172,6 +172,22 @@ func TestTLSRetryConfigBackoffDelayOverflowProtection(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, delay)
 }
 
+func TestTLSRetryConfigBackoffDelayInitialExceedsMax(t *testing.T) {
+	t.Parallel()
+
+	// Misconfiguration: InitialDelay > MaxDelay should still be clamped
+	cfg := TLSRetryConfig{
+		InitialDelay: 5 * time.Minute,
+		MaxDelay:     30 * time.Second,
+		MaxAttempts:  10,
+	}
+
+	// First retry should be clamped to MaxDelay, not return InitialDelay
+	assert.Equal(t, 30*time.Second, cfg.backoffDelay(1))
+	assert.Equal(t, 30*time.Second, cfg.backoffDelay(2))
+	assert.Equal(t, 30*time.Second, cfg.backoffDelay(5))
+}
+
 func TestTLSRetryErrorPropagation(t *testing.T) {
 	t.Parallel()
 
