@@ -8,14 +8,19 @@ import "fmt"
 func (s *WorkflowTriggerSpec) Validate() []error {
 	var errs []error
 
+	// watch is required when event is set
+	if s.When.Event != "" && s.Watch == nil && s.When.Git == nil {
+		errs = append(errs, fmt.Errorf("watch or when.git is required when when.event is set"))
+	}
+
 	// watch.resource.kind is required
 	if s.Watch != nil && s.Watch.Resource.Kind == "" {
 		errs = append(errs, fmt.Errorf("watch.resource.kind is required"))
 	}
 
 	// at least one trigger source must be set
-	if s.When.Event == "" && s.When.Git == nil {
-		errs = append(errs, fmt.Errorf("when.event or when.git is required"))
+	if s.When.Event == "" {
+		errs = append(errs, fmt.Errorf("when.event is required"))
 	}
 
 	// git triggers currently support only modified events and must not set watch,
@@ -28,6 +33,9 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	}
 	if s.When.Git != nil && s.Watch != nil {
 		errs = append(errs, fmt.Errorf("watch must be omitted when when.git is set"))
+	}
+	if s.When.Git != nil && s.Match != nil {
+		errs = append(errs, fmt.Errorf("match is not supported when when.git is set"))
 	}
 
 	// workflow selector must identify at least one workflow

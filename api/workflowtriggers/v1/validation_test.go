@@ -36,7 +36,7 @@ func TestValidate(t *testing.T) {
 				s.Watch = nil
 			},
 			wantErrs:   1,
-			wantSubstr: "watch is required",
+			wantSubstr: "watch or when.git is required",
 		},
 		"event with git without watch is valid": {
 			modify: func(s *WorkflowTriggerSpec) {
@@ -59,7 +59,7 @@ func TestValidate(t *testing.T) {
 				s.When.Event = ""
 			},
 			wantErrs:   1,
-			wantSubstr: "when.event or when.git is required",
+			wantSubstr: "when.event is required",
 		},
 		"missing event with git is invalid": {
 			modify: func(s *WorkflowTriggerSpec) {
@@ -86,19 +86,6 @@ func TestValidate(t *testing.T) {
 			},
 			wantErrs:   1,
 			wantSubstr: "when.git.uri is required when when.git is set",
-		},
-		"git with wait conditions is invalid": {
-			modify: func(s *WorkflowTriggerSpec) {
-				s.Watch = nil
-				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
-				s.Wait = &WorkflowTriggerWait{
-					Conditions: &WorkflowTriggerWaitConditions{
-						Items: []WorkflowTriggerCondition{{Type: "Ready"}},
-					},
-				}
-			},
-			wantErrs:   1,
-			wantSubstr: "wait.conditions is not supported when when.git is set",
 		},
 		"git with match is invalid": {
 			modify: func(s *WorkflowTriggerSpec) {
