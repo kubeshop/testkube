@@ -114,26 +114,29 @@ func buildAPITrigger() testkube.TestTrigger {
 		},
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:       "https://github.com/kubeshop/testkube.git",
-				Revision:  "main",
-				Username:  "git-user",
-				Token:     "token-value",
-				SshKey:    "ssh-private-key",
+				Uri:      "https://github.com/kubeshop/testkube.git",
+				Revision: "main",
+				Username: "git-user",
+				Token:    "token-value",
+				SshKey:   "ssh-private-key",
 				AuthType: &authType,
 				Paths:    []string{"pkg/triggers"},
 				UsernameFrom: &testkube.EnvVarSource{
 					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
-						Key: "username",
+						Name: "username",
+						Key:  "username",
 					},
 				},
 				TokenFrom: &testkube.EnvVarSource{
 					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
-						Key: "token",
+						Name: "token",
+						Key:  "token",
 					},
 				},
 				SshKeyFrom: &testkube.EnvVarSource{
 					SecretKeyRef: &testkube.EnvVarSourceSecretKeyRef{
-						Key: "sshKey",
+						Name: "sshKey",
+						Key:  "sshKey",
 					},
 				},
 			},
