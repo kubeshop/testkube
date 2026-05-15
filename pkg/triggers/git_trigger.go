@@ -56,7 +56,7 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 		return nil
 	}
 	if !matchEventOrCause(trigger.Event, event) {
-		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
+		return nil
 	}
 	if trigger.Conditions != nil && len(trigger.Conditions.Items) > 0 {
 		if event.conditionsGetter == nil {
