@@ -34,6 +34,9 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	if s.When.Git != nil && s.Wait != nil && s.Wait.Conditions != nil && len(s.Wait.Conditions.Items) > 0 {
 		errs = append(errs, fmt.Errorf("wait.conditions is not supported when when.git is set"))
 	}
+	if s.When.Git != nil && len(s.Match) > 0 {
+		errs = append(errs, fmt.Errorf("match is not supported when when.git is set"))
+	}
 
 	// workflow selector must identify at least one workflow
 	if s.Run.Workflow.Name == "" && s.Run.Workflow.NameRegex == "" && s.Run.Workflow.LabelSelector == nil {

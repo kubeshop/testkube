@@ -1,6 +1,10 @@
 package v1
 
-import "testing"
+import (
+	"testing"
+
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
+)
 
 func TestTestTriggerSpecValidate_ContentRequiresModifiedEvent(t *testing.T) {
 	t.Parallel()
@@ -8,6 +12,11 @@ func TestTestTriggerSpecValidate_ContentRequiresModifiedEvent(t *testing.T) {
 	spec := TestTriggerSpec{
 		Resource: TestTriggerResourceContent,
 		Event:    TestTriggerEventCreated,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
 	}
 
 	errs := spec.Validate()
@@ -22,6 +31,11 @@ func TestTestTriggerSpecValidate_ContentWithModifiedEvent(t *testing.T) {
 	spec := TestTriggerSpec{
 		Resource: TestTriggerResourceContent,
 		Event:    TestTriggerEventModified,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
 	}
 
 	errs := spec.Validate()
@@ -36,6 +50,11 @@ func TestTestTriggerSpecValidate_ContentRejectsConditionSpecConditions(t *testin
 	spec := TestTriggerSpec{
 		Resource: TestTriggerResourceContent,
 		Event:    TestTriggerEventModified,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
 		ConditionSpec: &TestTriggerConditionSpec{
 			Conditions: []TestTriggerCondition{
 				{Type_: "Ready"},
@@ -55,6 +74,11 @@ func TestTestTriggerSpecValidate_ContentResourceRefRequiresModifiedEvent(t *test
 	spec := TestTriggerSpec{
 		ResourceRef: &TestTriggerResourceRef{Kind: "content"},
 		Event:       TestTriggerEventCreated,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
 	}
 
 	errs := spec.Validate()
@@ -69,6 +93,11 @@ func TestTestTriggerSpecValidate_ContentResourceRefRejectsConditionSpecCondition
 	spec := TestTriggerSpec{
 		ResourceRef: &TestTriggerResourceRef{Kind: "content"},
 		Event:       TestTriggerEventModified,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
 		ConditionSpec: &TestTriggerConditionSpec{
 			Conditions: []TestTriggerCondition{
 				{Type_: "Ready"},
@@ -79,5 +108,27 @@ func TestTestTriggerSpecValidate_ContentResourceRefRejectsConditionSpecCondition
 	errs := spec.Validate()
 	if len(errs) == 0 {
 		t.Fatalf("expected validation error for content resourceRef with conditionSpec.conditions")
+	}
+}
+
+func TestTestTriggerSpecValidate_ContentRejectsMatch(t *testing.T) {
+	t.Parallel()
+
+	spec := TestTriggerSpec{
+		Resource: TestTriggerResourceContent,
+		Event:    TestTriggerEventModified,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
+		Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
+			{Path: ".metadata.name", Operator: workflowtriggersv1.FieldOperatorExists},
+		},
+	}
+
+	errs := spec.Validate()
+	if len(errs) == 0 {
+		t.Fatalf("expected validation error for content resource with match")
 	}
 }

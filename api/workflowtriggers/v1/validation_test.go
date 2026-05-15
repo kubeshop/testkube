@@ -92,6 +92,17 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "wait.conditions is not supported when when.git is set",
 		},
+		"git with match is invalid": {
+			modify: func(s *WorkflowTriggerSpec) {
+				s.Watch = nil
+				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
+				s.Match = []WorkflowTriggerFieldCondition{
+					{Path: ".metadata.name", Operator: FieldOperatorExists},
+				}
+			},
+			wantErrs:   1,
+			wantSubstr: "match is not supported when when.git is set",
+		},
 
 		// run validation
 		"workflow without selector": {

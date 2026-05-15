@@ -578,8 +578,8 @@ func TestService_getWorkflowTriggerWatchNamespaces(t *testing.T) {
 	})
 
 	t.Run("uses all namespaces when watcher namespaces are empty", func(t *testing.T) {
-		s := &Service{}
-		assert.Equal(t, []string{metav1.NamespaceAll}, s.getWorkflowTriggerWatchNamespaces())
+		s := &Service{testkubeNamespace: "testkube"}
+		assert.Equal(t, []string{"testkube"}, s.getWorkflowTriggerWatchNamespaces())
 	})
 
 	t.Run("normalizes wildcard and de-duplicates", func(t *testing.T) {

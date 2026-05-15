@@ -23,6 +23,9 @@ func (s *TestTriggerSpec) Validate() []error {
 	if isContentResource && (s.ContentSelector == nil || s.ContentSelector.Git == nil || s.ContentSelector.Git.Uri == "") {
 		errs = append(errs, fmt.Errorf("resource %q requires contentSelector.git.uri", TestTriggerResourceContent))
 	}
+	if isContentResource && len(s.Match) > 0 {
+		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
+	}
 
 	for i, cond := range s.Match {
 		if cond.Path == "" {

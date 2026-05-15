@@ -469,6 +469,9 @@ func (s *Service) getCloudWatchNamespaces() []string {
 }
 
 func (s *Service) getWorkflowTriggerWatchNamespaces() []string {
+	if len(s.watcherNamespaces) == 0 {
+		return []string{s.testkubeNamespace}
+	}
 	return s.normalizeWatchNamespaces(metav1.NamespaceAll)
 }
 
