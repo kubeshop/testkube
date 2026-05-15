@@ -577,7 +577,7 @@ func TestService_getWorkflowTriggerWatchNamespaces(t *testing.T) {
 		assert.Equal(t, []string{"team-a", "team-b"}, s.getWorkflowTriggerWatchNamespaces())
 	})
 
-	t.Run("uses all namespaces when watcher namespaces are empty", func(t *testing.T) {
+	t.Run("uses testkube namespace when watcher namespaces are empty", func(t *testing.T) {
 		s := &Service{testkubeNamespace: "testkube"}
 		assert.Equal(t, []string{"testkube"}, s.getWorkflowTriggerWatchNamespaces())
 	})
