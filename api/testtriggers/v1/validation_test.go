@@ -29,3 +29,22 @@ func TestTestTriggerSpecValidate_ContentWithModifiedEvent(t *testing.T) {
 		t.Fatalf("expected no validation errors, got %d", len(errs))
 	}
 }
+
+func TestTestTriggerSpecValidate_ContentRejectsConditionSpecConditions(t *testing.T) {
+	t.Parallel()
+
+	spec := TestTriggerSpec{
+		Resource: TestTriggerResourceContent,
+		Event:    TestTriggerEventModified,
+		ConditionSpec: &TestTriggerConditionSpec{
+			Conditions: []TestTriggerCondition{
+				{Type_: "Ready"},
+			},
+		},
+	}
+
+	errs := spec.Validate()
+	if len(errs) == 0 {
+		t.Fatalf("expected validation error for content resource with conditionSpec.conditions")
+	}
+}

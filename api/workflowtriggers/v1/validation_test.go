@@ -79,6 +79,19 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "when.event must be \"modified\" when when.git is set",
 		},
+		"git with wait conditions is invalid": {
+			modify: func(s *WorkflowTriggerSpec) {
+				s.Watch = nil
+				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
+				s.Wait = &WorkflowTriggerWait{
+					Conditions: &WorkflowTriggerWaitConditions{
+						Items: []WorkflowTriggerCondition{{Type: "Ready"}},
+					},
+				}
+			},
+			wantErrs:   1,
+			wantSubstr: "wait.conditions is not supported when when.git is set",
+		},
 
 		// run validation
 		"workflow without selector": {

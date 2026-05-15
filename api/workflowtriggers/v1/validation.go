@@ -31,6 +31,9 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	if s.When.Git != nil && s.Watch != nil && s.Watch.Resource.Kind != "content" {
 		errs = append(errs, fmt.Errorf("watch must be omitted or watch.resource.kind must be \"content\" when when.git is set"))
 	}
+	if s.When.Git != nil && s.Wait != nil && s.Wait.Conditions != nil && len(s.Wait.Conditions.Items) > 0 {
+		errs = append(errs, fmt.Errorf("wait.conditions is not supported when when.git is set"))
+	}
 
 	// workflow selector must identify at least one workflow
 	if s.Run.Workflow.Name == "" && s.Run.Workflow.NameRegex == "" && s.Run.Workflow.LabelSelector == nil {

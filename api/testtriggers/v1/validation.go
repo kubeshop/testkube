@@ -15,6 +15,9 @@ func (s *TestTriggerSpec) Validate() []error {
 	if s.Resource == TestTriggerResourceContent && s.Event != TestTriggerEventModified {
 		errs = append(errs, fmt.Errorf("resource %q requires event to be %q", TestTriggerResourceContent, TestTriggerEventModified))
 	}
+	if s.Resource == TestTriggerResourceContent && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
+		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
+	}
 
 	for i, cond := range s.Match {
 		if cond.Path == "" {
