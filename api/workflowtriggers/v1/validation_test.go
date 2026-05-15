@@ -61,7 +61,7 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "when.event is required",
 		},
-		"missing event with git is invalid": {
+		"wrong event with git is invalid": {
 			modify: func(s *WorkflowTriggerSpec) {
 				s.Watch = nil
 				s.When.Event = "created"
