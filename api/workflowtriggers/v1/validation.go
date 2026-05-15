@@ -8,11 +8,6 @@ import "fmt"
 func (s *WorkflowTriggerSpec) Validate() []error {
 	var errs []error
 
-	// watch is required for Kubernetes-only triggers.
-	if s.When.Event != "" && s.When.Git == nil && s.Watch == nil {
-		errs = append(errs, fmt.Errorf("watch is required when when.event is set"))
-	}
-
 	// watch.resource.kind is required
 	if s.Watch != nil && s.Watch.Resource.Kind == "" {
 		errs = append(errs, fmt.Errorf("watch.resource.kind is required"))
@@ -33,12 +28,6 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	}
 	if s.When.Git != nil && s.Watch != nil {
 		errs = append(errs, fmt.Errorf("watch must be omitted when when.git is set"))
-	}
-	if s.When.Git != nil && s.Wait != nil && s.Wait.Conditions != nil && len(s.Wait.Conditions.Items) > 0 {
-		errs = append(errs, fmt.Errorf("wait.conditions is not supported when when.git is set"))
-	}
-	if s.When.Git != nil && len(s.Match) > 0 {
-		errs = append(errs, fmt.Errorf("match is not supported when when.git is set"))
 	}
 
 	// workflow selector must identify at least one workflow
