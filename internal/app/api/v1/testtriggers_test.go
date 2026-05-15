@@ -526,6 +526,11 @@ spec:
 			TestSelector: &testkube.TestTriggerSelector{
 				Name: "my-test",
 			},
+			ContentSelector: &testkube.TestTriggerContentSelector{
+				Git: &testkube.TestTriggerContentGit{
+					Uri: "https://github.com/kubeshop/testkube.git",
+				},
+			},
 		}
 
 		// existing trigger has ALL optional fields populated
@@ -547,6 +552,11 @@ spec:
 				Timeout: 100,
 				Conditions: []testkube.TestTriggerCondition{
 					{Type_: "Ready", Status: conditionStatusPtr("True")},
+				},
+			},
+			ContentSelector: &testkube.TestTriggerContentSelector{
+				Git: &testkube.TestTriggerContentGit{
+					Uri: "https://github.com/example/old.git",
 				},
 			},
 			ProbeSpec: &testkube.TestTriggerProbeSpec{
@@ -591,6 +601,9 @@ spec:
 				assert.Equal(t, "created", trigger.Event)
 				assert.NotNil(t, trigger.TestSelector)
 				assert.Equal(t, "my-test", trigger.TestSelector.Name)
+				assert.NotNil(t, trigger.ContentSelector, "contentSelector should be set when provided in replace mode")
+				assert.NotNil(t, trigger.ContentSelector.Git)
+				assert.Equal(t, "https://github.com/kubeshop/testkube.git", trigger.ContentSelector.Git.Uri)
 				return nil
 			}).
 			Times(1)
