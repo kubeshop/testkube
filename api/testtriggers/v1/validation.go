@@ -12,6 +12,10 @@ import (
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
+	if s.Resource == TestTriggerResourceContent && s.Event != TestTriggerEventModified {
+		errs = append(errs, fmt.Errorf("resource %q requires event to be %q", TestTriggerResourceContent, TestTriggerEventModified))
+	}
+
 	for i, cond := range s.Match {
 		if cond.Path == "" {
 			errs = append(errs, fmt.Errorf("match[%d].path is required", i))
