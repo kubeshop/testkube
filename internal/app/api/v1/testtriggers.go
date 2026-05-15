@@ -214,8 +214,8 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			apiTrigger.Disabled = request.Disabled
 		}
 
-		crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(mapAPITestTriggerToUpsertRequest(apiTrigger))
-		if errs := crdTestTrigger.Spec.Validate(); len(errs) > 0 {
+		validatedCRDTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(mapAPITestTriggerToUpsertRequest(apiTrigger))
+		if errs := validatedCRDTrigger.Spec.Validate(); len(errs) > 0 {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
 		}
 
