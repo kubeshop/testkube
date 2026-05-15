@@ -103,7 +103,7 @@ spec:
 
 - `paths` is a change filter. If omitted, all repository paths are watched.
 - `paths` supports exact paths or directory/file prefixes (`path` or `path/...` semantics), not glob patterns.
-- `revision` accepts a branch, tag, or commit SHA.
+- `revision` accepts a branch, tag, or commit SHA. For triggers that should observe future changes, use a moving ref such as a branch or tag. A commit SHA is a pinned, immutable revision and is valid only as a fixed baseline; it will not observe future changes.
 - Prefer `tokenFrom` / `sshKeyFrom` (and `usernameFrom`) over inline plain-text fields.
 - SSH auth requires host key verification via `known_hosts` (for example by mounting a known_hosts file and setting `SSH_KNOWN_HOSTS`).
 - The git informer keeps the last-seen commit baseline in memory. After API server restart/leader failover, each trigger is re-baselined to the current HEAD and commits pushed while the informer was down are not replayed.
