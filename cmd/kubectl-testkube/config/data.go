@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type ContextType string
 
 const (
@@ -63,6 +65,14 @@ type Data struct {
 	ContextType  ContextType  `json:"contextType,omitempty"`
 	CloudContext CloudContext `json:"cloudContext,omitempty"`
 	Master       Master       `json:"master,omitempty"`
+
+	// LastUpdateCheckAt is the timestamp of the most recent successful GitHub
+	// release lookup performed by the CLI update-check feature. Used together
+	// with LatestKnownVersion to throttle the per-command hint to once per day.
+	LastUpdateCheckAt time.Time `json:"lastUpdateCheckAt,omitempty"`
+	// LatestKnownVersion caches the latest GitHub release tag (without the "v"
+	// prefix) observed during the last successful check.
+	LatestKnownVersion string `json:"latestKnownVersion,omitempty"`
 }
 
 func (c *Data) EnableAnalytics() {
