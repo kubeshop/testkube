@@ -17,6 +17,15 @@ const CliRunContextLocal = "others|local"
 
 // IsRunningInDocker detects whether the current process is running inside a
 // Docker (or compatible OCI) container.
+//
+// The detection deliberately ignores Docker *client* configuration variables
+// (DOCKER_HOST, DOCKER_TLS_VERIFY, DOCKER_CERT_PATH, DOCKER_MACHINE_NAME,
+// DOCKER_BUILDKIT) because those are commonly exported on developer
+// workstations talking to a remote or alternative daemon (docker-machine,
+// Colima, lima, etc.) and do not imply the current process itself is
+// containerized. We rely instead on filesystem/cgroup markers that only exist
+// inside a container, plus env vars that are conventionally set *by* a
+// container image rather than by the local shell.
 func IsRunningInDocker() bool {
 	// /.dockerenv is the canonical marker for Docker; other runtimes (podman,
 	// containerd-via-Docker-API) typically replicate it.
@@ -24,17 +33,11 @@ func IsRunningInDocker() bool {
 		return true
 	}
 
-	for _, envVar := range []string{
-		"DOCKER_CONTAINER",
-		"DOCKER_BUILDKIT",
-		"DOCKER_HOST",
-		"DOCKER_TLS_VERIFY",
-		"DOCKER_CERT_PATH",
-		"DOCKER_MACHINE_NAME",
-	} {
-		if _, exists := os.LookupEnv(envVar); exists {
-			return true
-		}
+	// DOCKER_CONTAINER is conventionally set by container images themselves
+	// (e.g. via ENV in a Dockerfile) to signal in-container execution to
+	// child processes. It is not a Docker client variable.
+	if _, exists := os.LookupEnv("DOCKER_CONTAINER"); exists {
+		return true
 	}
 
 	if runtime.GOOS == "linux" {
@@ -71,9 +74,6 @@ func DockerContext() string {
 			return "kubernetes:" + namespace
 		}
 		return "kubernetes"
-	}
-	if _, ok := os.LookupEnv("DOCKER_BUILDKIT"); ok {
-		return "docker-buildkit"
 	}
 	if _, ok := os.LookupEnv("DOCKER_DESKTOP"); ok {
 		return "docker-desktop"
