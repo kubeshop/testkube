@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/fs"
 	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -104,16 +102,8 @@ func (p *CustomMetricsPostProcessor) add(path string) error {
 	return nil
 }
 
-func isJSONFile(stat fs.FileInfo) bool {
-	if stat.IsDir() || stat.Size() == 0 {
-		return false
-	}
-	return strings.HasSuffix(stat.Name(), ".json")
-}
-
 func isGranularMetricsReport(data []byte) bool {
 	return isCustomMetricsReport(data) ||
-		isK6SummaryReport(data) ||
 		isArtilleryReport(data) ||
 		isPlaywrightJSONReport(data) ||
 		isCypressJSONReport(data)
@@ -128,38 +118,6 @@ func isCustomMetricsReport(data []byte) bool {
 		return false
 	}
 	return report.Kind == customMetricsReportKind && report.Version == "v1"
-}
-
-func isK6SummaryReport(data []byte) bool {
-	var report struct {
-		Metrics map[string]map[string]json.RawMessage `json:"metrics"`
-	}
-	if err := json.Unmarshal(data, &report); err != nil || len(report.Metrics) == 0 {
-		return false
-	}
-	for _, metric := range report.Metrics {
-		if values, ok := metric["values"]; ok && hasNumericJSONValue(values) {
-			return true
-		}
-		for key, value := range metric {
-			if key == "type" || key == "contains" || key == "values" {
-				continue
-			}
-			if hasNumericJSONValue(value) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func hasNumericJSONValue(data []byte) bool {
-	var nested map[string]float64
-	if err := json.Unmarshal(data, &nested); err == nil && len(nested) > 0 {
-		return true
-	}
-	var value float64
-	return json.Unmarshal(data, &value) == nil
 }
 
 func isArtilleryReport(data []byte) bool {

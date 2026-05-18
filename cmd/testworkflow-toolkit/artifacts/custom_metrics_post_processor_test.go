@@ -14,14 +14,14 @@ func TestIsGranularMetricsReport(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "k6 summary with nested values",
+			name: "k6 summary with nested values is handled by dedicated processor",
 			data: `{"metrics":{"http_req_duration":{"values":{"p(95)":123}}}}`,
-			want: true,
+			want: false,
 		},
 		{
-			name: "k6 summary export",
+			name: "k6 summary export is handled by dedicated processor",
 			data: `{"metrics":{"http_req_duration":{"avg":24.8,"p(95)":29.7},"http_reqs":{"rate":39.5,"count":1187}}}`,
-			want: true,
+			want: false,
 		},
 		{
 			name: "artillery report",
