@@ -224,6 +224,7 @@ spec:
       workingDir: /data/artifacts
       paths:
       - '*.html'
+      - '*.json'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow

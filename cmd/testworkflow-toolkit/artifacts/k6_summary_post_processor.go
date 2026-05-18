@@ -16,6 +16,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const maxK6SummaryProbeBytes int64 = 16 << 20
+
 // K6SummaryPostProcessor checks JSON files for k6 summary reports and sends them to the cloud.
 type K6SummaryPostProcessor struct {
 	fs            filesystem.FileSystem
@@ -77,7 +79,11 @@ func (p *K6SummaryPostProcessor) add(path string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to open %s", path)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		if file != nil {
+			_ = file.Close()
+		}
+	}()
 
 	stat, err := file.Stat()
 	if err != nil {
@@ -87,7 +93,20 @@ func (p *K6SummaryPostProcessor) add(path string) error {
 		return nil
 	}
 
-	data, err := io.ReadAll(file)
+	if !hasK6SummaryReportShape(file, maxK6SummaryProbeBytes) {
+		return nil
+	}
+	if err := file.Close(); err != nil {
+		return errors.Wrapf(err, "failed to close %s", path)
+	}
+	file = nil
+	reportFile, err := p.fs.OpenFileRO(absPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to reopen %s", path)
+	}
+	defer func() { _ = reportFile.Close() }()
+
+	data, err := io.ReadAll(reportFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
@@ -130,6 +149,168 @@ func isK6SummaryReport(data []byte) bool {
 		}
 	}
 	return false
+}
+
+func hasK6SummaryReportShape(reader io.Reader, maxBytes int64) bool {
+	limited := &io.LimitedReader{R: reader, N: maxBytes}
+	decoder := json.NewDecoder(limited)
+
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return false
+	}
+
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return false
+		}
+		if key == "metrics" {
+			return k6MetricsHaveNumericValues(decoder)
+		}
+		if err := skipJSONValue(decoder); err != nil {
+			return false
+		}
+	}
+	return false
+}
+
+func k6MetricsHaveNumericValues(decoder *json.Decoder) bool {
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return false
+	}
+
+	for decoder.More() {
+		if _, err := decoder.Token(); err != nil {
+			return false
+		}
+		if k6MetricHasNumericValue(decoder) {
+			return true
+		}
+	}
+	if _, err := decoder.Token(); err != nil {
+		return false
+	}
+	return false
+}
+
+func k6MetricHasNumericValue(decoder *json.Decoder) bool {
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return false
+	}
+
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return false
+		}
+		if key == "type" || key == "contains" {
+			if err := skipJSONValue(decoder); err != nil {
+				return false
+			}
+			continue
+		}
+		if jsonValueHasNumber(decoder) {
+			return true
+		}
+	}
+	if _, err := decoder.Token(); err != nil {
+		return false
+	}
+	return false
+}
+
+func jsonValueHasNumber(decoder *json.Decoder) bool {
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok {
+		_, ok := token.(float64)
+		return ok
+	}
+
+	switch delim {
+	case '{':
+		for decoder.More() {
+			if _, err := decoder.Token(); err != nil {
+				return false
+			}
+			if jsonValueHasNumber(decoder) {
+				return true
+			}
+		}
+		_, err := decoder.Token()
+		return err == nil
+	case '[':
+		for decoder.More() {
+			if jsonValueHasNumber(decoder) {
+				return true
+			}
+		}
+		_, err := decoder.Token()
+		return err == nil
+	default:
+		return false
+	}
+}
+
+func skipJSONValue(decoder *json.Decoder) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	delim, ok := token.(json.Delim)
+	if !ok {
+		return nil
+	}
+
+	switch delim {
+	case '{':
+		for decoder.More() {
+			if _, err := decoder.Token(); err != nil {
+				return err
+			}
+			if err := skipJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err := decoder.Token()
+		return err
+	case '[':
+		for decoder.More() {
+			if err := skipJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err := decoder.Token()
+		return err
+	default:
+		return nil
+	}
 }
 
 func hasNumericJSONValue(data []byte) bool {
