@@ -83,7 +83,8 @@ func NewArtifactsCmd() *cobra.Command {
 
 			if env.HasJunitSupport() {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix)
-				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
+				k6SummaryProcessor := artifacts.NewK6SummaryPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix)
+				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(artifacts.NewCompositePostProcessor(junitProcessor, k6SummaryProcessor)))
 			}
 			if compress != "" {
 				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
