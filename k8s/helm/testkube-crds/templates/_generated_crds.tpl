@@ -32912,8 +32912,7 @@ spec:
                   event:
                     description: |-
                       Event is the K8s resource event type. Currently required and validated at
-                      application level, including when other trigger sources (for example git)
-                      are configured.
+                      application level.
                     enum:
                     - created
                     - modified

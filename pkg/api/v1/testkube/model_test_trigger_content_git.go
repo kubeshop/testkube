@@ -17,12 +17,12 @@ type TestTriggerContentGit struct {
 	// plain text username to fetch with
 	Username     string        `json:"username,omitempty"`
 	UsernameFrom *EnvVarSource `json:"usernameFrom,omitempty"`
-	// plain text token to fetch with
+	// plain text token to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer tokenFrom instead.
 	Token     string        `json:"token,omitempty"`
 	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
-	// plain text SSH private key to fetch with
-	SshKey     string              `json:"sshKey,omitempty"`
-	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
+	// plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead.
+	SshKey     string        `json:"sshKey,omitempty"`
+	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
 	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
 	// paths to watch for changes
 	Paths []string `json:"paths,omitempty"`
