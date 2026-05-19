@@ -829,7 +829,7 @@ func main() {
 			triggerService.RegisterLeaderTask(leader.Task{
 				Name: "git-informer",
 				Start: func(taskCtx context.Context) error {
-					gitinformer.NewInformer(testTriggersClient, workflowTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
+					gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
 						ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
 						RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
 						ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,

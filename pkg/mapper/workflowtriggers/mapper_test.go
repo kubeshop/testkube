@@ -6,11 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -31,33 +28,7 @@ func TestMapCRDToAPI_flattensSpecAndPreservesFields(t *testing.T) {
 					Group: "argoproj.io", Version: "v1alpha1", Kind: "Rollout",
 				},
 			},
-			When: workflowtriggersv1.WorkflowTriggerWhen{
-				Event: "modified",
-				Git: &workflowtriggersv1.WorkflowTriggerWhenGitSpec{
-					Uri:      "https://github.com/kubeshop/testkube.git",
-					Revision: "main",
-					AuthType: testsv3.GitAuthTypeHeader,
-					TokenFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: "git-creds"},
-							Key:                  "token",
-						},
-					},
-					UsernameFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: "v1",
-							FieldPath:  "metadata.name",
-						},
-					},
-					SshKeyFrom: &corev1.EnvVarSource{
-						ResourceFieldRef: &corev1.ResourceFieldSelector{
-							ContainerName: "worker",
-							Resource:      "limits.cpu",
-							Divisor:       resource.MustParse("1m"),
-						},
-					},
-				},
-			},
+			When: workflowtriggersv1.WorkflowTriggerWhen{Event: "modified"},
 			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 				{Path: ".spec.replicas", Operator: workflowtriggersv1.FieldOperatorEquals, Value: "3"},
 			},
@@ -84,24 +55,6 @@ func TestMapCRDToAPI_flattensSpecAndPreservesFields(t *testing.T) {
 	require.NotNil(t, api.Watch)
 	assert.Equal(t, "Rollout", api.Watch.Resource.Kind)
 	assert.Equal(t, "modified", api.When.Event)
-	require.NotNil(t, api.When.Git)
-	assert.Equal(t, "https://github.com/kubeshop/testkube.git", api.When.Git.Uri)
-	assert.Equal(t, "main", api.When.Git.Revision)
-	require.NotNil(t, api.When.Git.AuthType)
-	assert.Equal(t, testkube.HEADER_ContentGitAuthType, *api.When.Git.AuthType)
-	require.NotNil(t, api.When.Git.TokenFrom)
-	require.NotNil(t, api.When.Git.TokenFrom.SecretKeyRef)
-	assert.Equal(t, "git-creds", api.When.Git.TokenFrom.SecretKeyRef.Name)
-	assert.Equal(t, "token", api.When.Git.TokenFrom.SecretKeyRef.Key)
-	require.NotNil(t, api.When.Git.UsernameFrom)
-	require.NotNil(t, api.When.Git.UsernameFrom.FieldRef)
-	assert.Equal(t, "v1", api.When.Git.UsernameFrom.FieldRef.ApiVersion)
-	assert.Equal(t, "metadata.name", api.When.Git.UsernameFrom.FieldRef.FieldPath)
-	require.NotNil(t, api.When.Git.SshKeyFrom)
-	require.NotNil(t, api.When.Git.SshKeyFrom.ResourceFieldRef)
-	assert.Equal(t, "worker", api.When.Git.SshKeyFrom.ResourceFieldRef.ContainerName)
-	assert.Equal(t, "limits.cpu", api.When.Git.SshKeyFrom.ResourceFieldRef.Resource)
-	assert.Equal(t, "1m", api.When.Git.SshKeyFrom.ResourceFieldRef.Divisor)
 	require.Len(t, api.Match, 1)
 	assert.Equal(t, "equals", api.Match[0].Operator)
 	require.NotNil(t, api.Wait)
@@ -116,35 +69,8 @@ func TestMapAPIToCRD_wrapsSpecAndParsesDelay(t *testing.T) {
 	api := testkube.WorkflowTrigger{
 		Name:     "canary",
 		Disabled: true,
-		When: testkube.WorkflowTriggerWhen{
-			Event: "created",
-			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: "main",
-				AuthType: ptr(testkube.HEADER_ContentGitAuthType),
-				TokenFrom: &testkube.EnvVarSource{
-					ConfigMapKeyRef: &testkube.EnvVarSourceConfigMapKeyRef{
-						Name:     "git-creds",
-						Key:      "token",
-						Optional: ptr(true),
-					},
-				},
-				UsernameFrom: &testkube.EnvVarSource{
-					FieldRef: &testkube.FieldRef{
-						ApiVersion: "v1",
-						FieldPath:  "metadata.namespace",
-					},
-				},
-				SshKeyFrom: &testkube.EnvVarSource{
-					ResourceFieldRef: &testkube.ResourceFieldRef{
-						ContainerName: "runner",
-						Resource:      "requests.memory",
-						Divisor:       "1Mi",
-					},
-				},
-			},
-		},
-		Match: []testkube.WorkflowTriggerFieldCondition{{Path: ".spec.image", Operator: "changed"}},
+		When:     testkube.WorkflowTriggerWhen{Event: "created"},
+		Match:    []testkube.WorkflowTriggerFieldCondition{{Path: ".spec.image", Operator: "changed"}},
 		Run: testkube.WorkflowTriggerRun{
 			Workflow: testkube.WorkflowTriggerWorkflowSelector{Name: "smoke"},
 			Delay:    "10s",
@@ -156,23 +82,6 @@ func TestMapAPIToCRD_wrapsSpecAndParsesDelay(t *testing.T) {
 	assert.Equal(t, "canary", crd.Name)
 	assert.True(t, crd.Spec.Disabled)
 	assert.Equal(t, "created", crd.Spec.When.Event)
-	require.NotNil(t, crd.Spec.When.Git)
-	assert.Equal(t, "https://github.com/kubeshop/testkube.git", crd.Spec.When.Git.Uri)
-	assert.Equal(t, "main", crd.Spec.When.Git.Revision)
-	assert.Equal(t, testsv3.GitAuthTypeHeader, crd.Spec.When.Git.AuthType)
-	require.NotNil(t, crd.Spec.When.Git.TokenFrom)
-	require.NotNil(t, crd.Spec.When.Git.TokenFrom.ConfigMapKeyRef)
-	assert.NotNil(t, crd.Spec.When.Git.TokenFrom.ConfigMapKeyRef.Optional)
-	assert.True(t, *crd.Spec.When.Git.TokenFrom.ConfigMapKeyRef.Optional)
-	require.NotNil(t, crd.Spec.When.Git.UsernameFrom)
-	require.NotNil(t, crd.Spec.When.Git.UsernameFrom.FieldRef)
-	assert.Equal(t, "v1", crd.Spec.When.Git.UsernameFrom.FieldRef.APIVersion)
-	assert.Equal(t, "metadata.namespace", crd.Spec.When.Git.UsernameFrom.FieldRef.FieldPath)
-	require.NotNil(t, crd.Spec.When.Git.SshKeyFrom)
-	require.NotNil(t, crd.Spec.When.Git.SshKeyFrom.ResourceFieldRef)
-	assert.Equal(t, "runner", crd.Spec.When.Git.SshKeyFrom.ResourceFieldRef.ContainerName)
-	assert.Equal(t, "requests.memory", crd.Spec.When.Git.SshKeyFrom.ResourceFieldRef.Resource)
-	assert.Equal(t, "1Mi", crd.Spec.When.Git.SshKeyFrom.ResourceFieldRef.Divisor.String())
 	require.Len(t, crd.Spec.Match, 1)
 	assert.Equal(t, workflowtriggersv1.FieldOperatorChanged, crd.Spec.Match[0].Operator)
 	require.NotNil(t, crd.Spec.Run.Delay)

@@ -42,8 +42,7 @@ type WorkflowTriggerLabelSel struct {
 }
 
 type WorkflowTriggerWhen struct {
-	Event string                 `json:"event,omitempty"`
-	Git   *TestTriggerContentGit `json:"git,omitempty"`
+	Event string `json:"event,omitempty"`
 }
 
 type WorkflowTriggerFieldCondition struct {

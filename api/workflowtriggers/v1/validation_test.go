@@ -36,14 +36,7 @@ func TestValidate(t *testing.T) {
 				s.Watch = nil
 			},
 			wantErrs:   1,
-			wantSubstr: "watch or when.git is required",
-		},
-		"event with git without watch is valid": {
-			modify: func(s *WorkflowTriggerSpec) {
-				s.Watch = nil
-				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
-			},
-			wantErrs: 0,
+			wantSubstr: "watch is required when when.event is set",
 		},
 		"watch without kind": {
 			modify: func(s *WorkflowTriggerSpec) {
@@ -61,44 +54,6 @@ func TestValidate(t *testing.T) {
 			wantErrs:   1,
 			wantSubstr: "when.event is required",
 		},
-		"wrong event with git is invalid": {
-			modify: func(s *WorkflowTriggerSpec) {
-				s.Watch = nil
-				s.When.Event = "created"
-				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
-			},
-			wantErrs:   1,
-			wantSubstr: "when.event must be \"modified\" when when.git is set",
-		},
-		"non-modified event with git is invalid": {
-			modify: func(s *WorkflowTriggerSpec) {
-				s.Watch = nil
-				s.When.Event = "created"
-				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
-			},
-			wantErrs:   1,
-			wantSubstr: "when.event must be \"modified\" when when.git is set",
-		},
-		"git without uri is invalid": {
-			modify: func(s *WorkflowTriggerSpec) {
-				s.Watch = nil
-				s.When.Git = &WorkflowTriggerWhenGitSpec{}
-			},
-			wantErrs:   1,
-			wantSubstr: "when.git.uri is required when when.git is set",
-		},
-		"git with match is invalid": {
-			modify: func(s *WorkflowTriggerSpec) {
-				s.Watch = nil
-				s.When.Git = &WorkflowTriggerWhenGitSpec{Uri: "https://github.com/kubeshop/testkube"}
-				s.Match = []WorkflowTriggerFieldCondition{
-					{Path: ".metadata.name", Operator: FieldOperatorExists},
-				}
-			},
-			wantErrs:   1,
-			wantSubstr: "match is not supported when when.git is set",
-		},
-
 		// run validation
 		"workflow without selector": {
 			modify: func(s *WorkflowTriggerSpec) {

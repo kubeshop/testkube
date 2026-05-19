@@ -22,12 +22,6 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1)
 }
 
-// MatchGitWorkflowTrigger creates a synthetic watcherEvent for a git content WorkflowTrigger
-// and executes only the target v2 trigger.
-func (s *Service) MatchGitWorkflowTrigger(ctx context.Context, triggerName, namespace string) error {
-	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV2)
-}
-
 func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string) error {
 	event := s.newWatcherEvent(
 		testtrigger.EventModified,

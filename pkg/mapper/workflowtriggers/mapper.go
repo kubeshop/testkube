@@ -6,7 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -28,7 +27,6 @@ func MapCRDToAPI(crd *workflowtriggersv1.WorkflowTrigger) testkube.WorkflowTrigg
 		Watch:       mapWatchCRDToAPI(crd.Spec.Watch),
 		When: testkube.WorkflowTriggerWhen{
 			Event: crd.Spec.When.Event,
-			Git:   mapGitCRDToAPI(crd.Spec.When.Git),
 		},
 		Match: mapMatchCRDToAPI(crd.Spec.Match),
 		Wait:  mapWaitCRDToAPI(crd.Spec.Wait),
@@ -54,56 +52,12 @@ func MapAPIToCRD(api testkube.WorkflowTrigger) workflowtriggersv1.WorkflowTrigge
 			Watch:    mapWatchAPIToCRD(api.Watch),
 			When: workflowtriggersv1.WorkflowTriggerWhen{
 				Event: api.When.Event,
-				Git:   mapGitAPIToCRD(api.When.Git),
 			},
 			Match: mapMatchAPIToCRD(api.Match),
 			Wait:  mapWaitAPIToCRD(api.Wait),
 			Run:   mapRunAPIToCRD(api.Run),
 		},
 	}
-}
-
-func mapGitCRDToAPI(git *workflowtriggersv1.WorkflowTriggerWhenGitSpec) *testkube.TestTriggerContentGit {
-	if git == nil {
-		return nil
-	}
-	out := &testkube.TestTriggerContentGit{
-		Uri:          git.Uri,
-		Revision:     git.Revision,
-		Username:     git.Username,
-		UsernameFrom: mapEnvVarSourceKubeToAPI(git.UsernameFrom),
-		Token:        git.Token,
-		TokenFrom:    mapEnvVarSourceKubeToAPI(git.TokenFrom),
-		SshKey:       git.SshKey,
-		SshKeyFrom:   mapEnvVarSourceKubeToAPI(git.SshKeyFrom),
-		Paths:        git.Paths,
-	}
-	if git.AuthType != "" {
-		authType := testkube.ContentGitAuthType(git.AuthType)
-		out.AuthType = &authType
-	}
-	return out
-}
-
-func mapGitAPIToCRD(git *testkube.TestTriggerContentGit) *workflowtriggersv1.WorkflowTriggerWhenGitSpec {
-	if git == nil {
-		return nil
-	}
-	out := &workflowtriggersv1.WorkflowTriggerWhenGitSpec{
-		Uri:          git.Uri,
-		Revision:     git.Revision,
-		Username:     git.Username,
-		UsernameFrom: mapEnvVarSourceAPIToKube(git.UsernameFrom),
-		Token:        git.Token,
-		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
-		SshKey:       git.SshKey,
-		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
-		Paths:        git.Paths,
-	}
-	if git.AuthType != nil {
-		out.AuthType = testsv3.GitAuthType(*git.AuthType)
-	}
-	return out
 }
 
 func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {

@@ -9,8 +9,8 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	var errs []error
 
 	// watch is required when event is set
-	if s.When.Event != "" && s.Watch == nil && s.When.Git == nil {
-		errs = append(errs, fmt.Errorf("watch or when.git is required when when.event is set"))
+	if s.When.Event != "" && s.Watch == nil {
+		errs = append(errs, fmt.Errorf("watch is required when when.event is set"))
 	}
 
 	// watch.resource.kind is required
@@ -21,24 +21,6 @@ func (s *WorkflowTriggerSpec) Validate() []error {
 	// at least one trigger source must be set
 	if s.When.Event == "" {
 		errs = append(errs, fmt.Errorf("when.event is required"))
-	}
-
-	// git triggers currently support only modified events and must not set watch,
-	// because watch is interpreted as a Kubernetes resource informer target.
-	if s.When.Git != nil && s.When.Event != "" && s.When.Event != "modified" {
-		errs = append(errs, fmt.Errorf("when.event must be \"modified\" when when.git is set"))
-	}
-	if s.When.Git != nil && s.When.Git.Uri == "" {
-		errs = append(errs, fmt.Errorf("when.git.uri is required when when.git is set"))
-	}
-	if s.When.Git != nil && s.Watch != nil {
-		errs = append(errs, fmt.Errorf("watch must be omitted when when.git is set"))
-	}
-	if s.When.Git != nil && s.Match != nil {
-		errs = append(errs, fmt.Errorf("match is not supported when when.git is set"))
-	}
-	if s.When.Git != nil && s.Wait != nil {
-		errs = append(errs, fmt.Errorf("wait is not supported when when.git is set"))
 	}
 
 	// workflow selector must identify at least one workflow

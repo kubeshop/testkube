@@ -14,11 +14,9 @@ limitations under the License.
 package v1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 )
 
 //+kubebuilder:object:root=true
@@ -84,45 +82,12 @@ type WorkflowTriggerSelector struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
-// WorkflowTriggerWhen defines the trigger source. Structured as a separate type
-// to allow future trigger sources (schedule, webhook, git) alongside event.
+// WorkflowTriggerWhen defines the trigger source.
 type WorkflowTriggerWhen struct {
 	// Event is the K8s resource event type. Currently required and validated at
-	// application level, including when other trigger sources (for example git)
-	// are configured.
+	// application level.
 	// +kubebuilder:validation:Enum=created;modified;deleted
 	Event string `json:"event,omitempty"`
-	// Git defines git repository polling for content-triggered workflow execution.
-	Git *WorkflowTriggerWhenGitSpec `json:"git,omitempty"`
-}
-
-// WorkflowTriggerWhenGitSpec defines git repository configuration for content triggers.
-type WorkflowTriggerWhenGitSpec struct {
-	// URI of the git repository.
-	Uri string `json:"uri"`
-	// Revision (branch name, tag, or commit SHA) to watch.
-	Revision string `json:"revision,omitempty"`
-	// Plain text username to fetch with.
-	Username string `json:"username,omitempty"`
-	// External username to fetch with.
-	UsernameFrom *corev1.EnvVarSource `json:"usernameFrom,omitempty"`
-	// Plain text token to fetch with.
-	// Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
-	// and exposed through Kubernetes API reads or logs. Prefer TokenFrom instead.
-	Token string `json:"token,omitempty"`
-	// External token to fetch with. Preferred for sensitive credentials.
-	TokenFrom *corev1.EnvVarSource `json:"tokenFrom,omitempty"`
-	// Plain text SSH private key to fetch with.
-	// Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
-	// and exposed through Kubernetes API reads or logs. Prefer SshKeyFrom instead.
-	SshKey string `json:"sshKey,omitempty"`
-	// External SSH private key to fetch with. Preferred for sensitive credentials.
-	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
-	// Authorization type for the credentials.
-	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
-	// Paths is a list of file/directory paths to watch for changes.
-	// If empty, all paths are watched.
-	Paths []string `json:"paths,omitempty"`
 }
 
 // WorkflowTriggerFieldCondition defines a field-level match condition.

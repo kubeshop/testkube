@@ -1,4 +1,4 @@
-# ContentGit usage for TestTrigger and WorkflowTrigger
+# ContentGit usage for TestTrigger
 
 This guide shows how to configure git-based content triggers using the new `ContentGit` fields.
 
@@ -52,51 +52,6 @@ spec:
   testSelector:
     name: my-workflow
     namespace: testkube
-```
-
-## WorkflowTrigger: watch any content change
-
-```yaml
-apiVersion: testworkflows.testkube.io/v1
-kind: WorkflowTrigger
-metadata:
-  name: workflow-trigger-main
-  namespace: testkube
-spec:
-  when:
-    event: modified
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-  run:
-    workflow:
-      name: my-workflow
-```
-
-## WorkflowTrigger: watch selected paths with SSH key from Secret
-
-```yaml
-apiVersion: testworkflows.testkube.io/v1
-kind: WorkflowTrigger
-metadata:
-  name: workflow-trigger-ssh
-  namespace: testkube
-spec:
-  when:
-    event: modified
-    git:
-      uri: git@github.com:kubeshop/testkube.git
-      revision: main
-      sshKeyFrom:
-        secretKeyRef:
-          name: git-creds
-          key: ssh-private-key
-      paths:
-        - test
-        - cmd
-  run:
-    workflow:
-      name: my-workflow
 ```
 
 ## Notes

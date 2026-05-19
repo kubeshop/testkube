@@ -27,13 +27,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
-	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
 )
 
 const defaultReconcileInterval = time.Minute
 const defaultGitUsername = "git"
 const testTriggerSource = "v1"
-const workflowTriggerSource = "v2"
 const allNamespacesMarker = "*"
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
@@ -76,7 +74,6 @@ func normalizeOptions(opts Options) Options {
 // Matcher fires trigger events when git content changes.
 type Matcher interface {
 	MatchGitTrigger(ctx context.Context, triggerName, namespace string) error
-	MatchGitWorkflowTrigger(ctx context.Context, triggerName, namespace string) error
 }
 
 // Informer polls git repositories referenced by content triggers and fires
@@ -84,7 +81,6 @@ type Matcher interface {
 type Informer struct {
 	mu                sync.Mutex
 	testTriggerClient testtriggerclient.TestTriggerClient
-	workflowClient    workflowtriggerclient.WorkflowTriggerClient
 	matcher           Matcher
 	commits           map[string]string // key -> last seen head hash
 	revisions         map[string]string // key -> last seen revision selector
@@ -120,7 +116,6 @@ type commitDelta struct {
 // NewInformer returns a new git content informer.
 func NewInformer(
 	testTriggerClient testtriggerclient.TestTriggerClient,
-	workflowClient workflowtriggerclient.WorkflowTriggerClient,
 	matcher Matcher,
 	namespace string,
 	environmentID string,
@@ -129,7 +124,6 @@ func NewInformer(
 	options = normalizeOptions(options)
 	return &Informer{
 		testTriggerClient: testTriggerClient,
-		workflowClient:    workflowClient,
 		matcher:           matcher,
 		commits:           make(map[string]string),
 		revisions:         make(map[string]string),
@@ -200,28 +194,11 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 			testTriggerMap[triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)] = trigger
 		}
 	}
-	workflowTriggerMap := make(map[string]testkube.WorkflowTrigger)
-	workflowTriggerListSucceeded := false
-	workflowTriggerListedNamespaces := make(map[string]struct{})
-	if i.workflowClient != nil {
-		for _, namespace := range i.namespaces {
-			workflowTriggerList, err := i.workflowClient.List(ctx, i.environmentID, workflowtriggerclient.ListOptions{}, namespace)
-			if err != nil {
-				log.DefaultLogger.Errorf("git informer: error listing workflow triggers in namespace %q: %v", namespace, err)
-				continue
-			}
-			workflowTriggerListSucceeded = true
-			workflowTriggerListedNamespaces[namespace] = struct{}{}
-			for _, trigger := range workflowTriggerList {
-				workflowTriggerMap[triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)] = trigger
-			}
-		}
-	}
-	if !testTriggerListSucceeded && !workflowTriggerListSucceeded {
+	if !testTriggerListSucceeded {
 		return
 	}
 
-	active := make(map[string]struct{}, len(testTriggerMap)+len(workflowTriggerMap))
+	active := make(map[string]struct{}, len(testTriggerMap))
 	cache := newReconcileCache()
 	for _, trigger := range testTriggerMap {
 		if err := ctx.Err(); err != nil {
@@ -252,52 +229,14 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		}
 	}
 
-	for _, workflowTrigger := range workflowTriggerMap {
-		if err := ctx.Err(); err != nil {
-			return
-		}
-		if !isGitContentWorkflowTrigger(workflowTrigger) {
-			continue
-		}
-
-		trigger := workflowTriggerToTestTrigger(workflowTrigger)
-		key := triggerKey(workflowTriggerSource, trigger.Namespace, trigger.Name)
-		active[key] = struct{}{}
-		prevHash, hadPrevHash := i.commits[key]
-
-		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
-		if err != nil {
-			log.DefaultLogger.Errorf("git informer: error checking workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
-			continue
-		}
-		if !changed {
-			continue
-		}
-		if i.matcher == nil {
-			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
-			continue
-		}
-		if err := i.matcher.MatchGitWorkflowTrigger(ctx, trigger.Name, trigger.Namespace); err != nil {
-			log.DefaultLogger.Errorf("git informer: error matching workflow trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
-			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
-		}
-	}
-
 	// Clean up commits for removed triggers
 	for k := range i.commits {
 		if _, ok := active[k]; !ok {
 			source, namespace, _, parsed := parseTriggerKey(k)
 			if parsed {
-				switch source {
-				case testTriggerSource:
+				if source == testTriggerSource {
 					if _, all := testTriggerListedNamespaces[allNamespacesMarker]; !all {
 						if _, listed := testTriggerListedNamespaces[namespace]; !listed {
-							continue
-						}
-					}
-				case workflowTriggerSource:
-					if _, all := workflowTriggerListedNamespaces[allNamespacesMarker]; !all {
-						if _, listed := workflowTriggerListedNamespaces[namespace]; !listed {
 							continue
 						}
 					}
@@ -327,33 +266,8 @@ func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 		trigger.ContentSelector.Git.Uri != ""
 }
 
-func isGitContentWorkflowTrigger(trigger testkube.WorkflowTrigger) bool {
-	if trigger.Disabled || trigger.When.Git == nil || trigger.When.Git.Uri == "" {
-		return false
-	}
-	return isModifiedGitContentEvent(trigger.When.Event) &&
-		(trigger.Watch == nil || strings.EqualFold(trigger.Watch.Resource.Kind, string(testkube.CONTENT_TestTriggerResources)))
-}
-
 func isModifiedGitContentEvent(event string) bool {
 	return strings.EqualFold(event, "modified")
-}
-
-func workflowTriggerToTestTrigger(trigger testkube.WorkflowTrigger) testkube.TestTrigger {
-	resource := testkube.CONTENT_TestTriggerResources
-	out := testkube.TestTrigger{
-		Name:      trigger.Name,
-		Namespace: trigger.Namespace,
-		Disabled:  trigger.Disabled,
-		Resource:  &resource,
-		ContentSelector: &testkube.TestTriggerContentSelector{
-			Git: trigger.When.Git,
-		},
-	}
-	if trigger.Watch != nil && trigger.Watch.Resource.Kind != "" {
-		out.ResourceRef = &testkube.TestTriggerResourceRef{Kind: trigger.Watch.Resource.Kind}
-	}
-	return out
 }
 
 func isContentResource(trigger testkube.TestTrigger) bool {

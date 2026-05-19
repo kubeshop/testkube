@@ -122,49 +122,6 @@ func TestMatchGitTrigger_UsesV1StatusKeyWhenV2HasSameName(t *testing.T) {
 	assert.Equal(t, []string{triggerSourceV1}, executed)
 }
 
-func TestMatchGitWorkflowTrigger_TargetsV2Trigger(t *testing.T) {
-	trigger := &workflowtriggersv1.WorkflowTrigger{
-		ObjectMeta: metav1.ObjectMeta{Name: "workflow-trigger-a", Namespace: "default"},
-		Spec: workflowtriggersv1.WorkflowTriggerSpec{
-			When: workflowtriggersv1.WorkflowTriggerWhen{Event: "modified"},
-			Watch: &workflowtriggersv1.WorkflowTriggerWatch{
-				Resource: workflowtriggersv1.WorkflowTriggerResource{Kind: "content"},
-			},
-			Run: workflowtriggersv1.WorkflowTriggerRun{
-				Workflow: workflowtriggersv1.WorkflowTriggerWorkflowSelector{Name: "wf"},
-			},
-		},
-	}
-
-	var executed []string
-	s := &Service{
-		triggerStatus: map[statusKey]*triggerStatus{
-			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {
-				trigger: &internalTrigger{
-					Name:         trigger.Name,
-					Namespace:    trigger.Namespace,
-					Source:       triggerSourceV1,
-					ResourceKind: string(v1.TestTriggerResourceContent),
-					Event:        string(v1.TestTriggerEventModified),
-				},
-			},
-			newStatusKey(triggerSourceV2, trigger.Namespace, trigger.Name): {
-				trigger: convertV2ToInternal(trigger),
-			},
-		},
-		triggerExecutor: func(_ context.Context, _ *watcherEvent, trigger *internalTrigger) error {
-			executed = append(executed, trigger.Source)
-			return nil
-		},
-		logger:  log.DefaultLogger,
-		metrics: metrics.NewMetrics(),
-	}
-
-	err := s.MatchGitWorkflowTrigger(context.Background(), trigger.Name, trigger.Namespace)
-	require.NoError(t, err)
-	assert.Equal(t, []string{triggerSourceV2}, executed)
-}
-
 func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
 	trigger := &v1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
@@ -230,28 +187,6 @@ func TestMatchGitTrigger_ReturnsErrorWhenTargetStatusIsStaleNonContent(t *testin
 	}
 
 	err := s.MatchGitTrigger(context.Background(), staleTrigger.Name, staleTrigger.Namespace)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
-}
-
-func TestMatchGitWorkflowTrigger_ReturnsErrorWhenTargetStatusIsStaleNonContent(t *testing.T) {
-	staleTrigger := &internalTrigger{
-		Name:         "workflow-trigger-a",
-		Namespace:    "default",
-		Source:       triggerSourceV2,
-		ResourceKind: "tests",
-		Event:        string(v1.TestTriggerEventCreated),
-	}
-
-	s := &Service{
-		triggerStatus: map[statusKey]*triggerStatus{
-			newStatusKey(triggerSourceV2, staleTrigger.Namespace, staleTrigger.Name): {trigger: staleTrigger},
-		},
-		logger:  log.DefaultLogger,
-		metrics: metrics.NewMetrics(),
-	}
-
-	err := s.MatchGitWorkflowTrigger(context.Background(), staleTrigger.Name, staleTrigger.Namespace)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
 }
