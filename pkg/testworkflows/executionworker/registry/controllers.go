@@ -46,6 +46,9 @@ func NewControllersRegistry(clientSet kubernetes.Interface, namespaces Namespace
 		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
 			controllerOptions.WorkflowLogsInsecureSkipTLSVerifyBackend = true
 		}
+		if opt.TLSRetry.MaxAttempts > 0 || opt.TLSRetry.InitialDelay > 0 || opt.TLSRetry.MaxDelay > 0 {
+			controllerOptions.TLSRetry = opt.TLSRetry
+		}
 	}
 	r := &controllersRegistry{
 		clientSet:              clientSet,
@@ -136,6 +139,7 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints exec
 					Signature:                                signature,
 					RunnerId:                                 r.runnerId,
 					WorkflowLogsInsecureSkipTLSVerifyBackend: r.controllerOptions.WorkflowLogsInsecureSkipTLSVerifyBackend,
+					TLSRetry:                                 r.controllerOptions.TLSRetry,
 				})
 				if err != nil {
 					return nil, err

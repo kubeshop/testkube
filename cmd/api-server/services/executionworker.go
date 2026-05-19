@@ -9,6 +9,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -61,6 +62,11 @@ func CreateExecutionWorker(
 		LogAbortedDetails:                        logAbortedDetails,
 		AllowLowSecurityFields:                   cfg.AllowLowSecurityFields,
 		WorkflowLogsInsecureSkipTLSVerifyBackend: cfg.WorkflowLogsInsecureSkipTLSVerifyBackend,
+		TLSRetry: controller.TLSRetryConfig{
+			MaxAttempts:  cfg.WorkflowLogsTLSRetryMaxAttempts,
+			InitialDelay: cfg.WorkflowLogsTLSRetryInitialDelay,
+			MaxDelay:     cfg.WorkflowLogsTLSRetryMaxDelay,
+		},
 		// Automatically disable resource metrics collection in standalone mode (no API key and no agent registration token configured),
 		// as the gRPC control plane connection from execution pods may not be available.
 		DisableResourceMetrics: cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken == "",
