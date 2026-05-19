@@ -35,6 +35,8 @@ global:
     ## scraper - scrape logs from testkube scraper container
     # -- Comma-separated array of containers which should get scraped for logs
     whitelistedContainers: init,logs,scraper
+  # -- Embedded object storage provider used by API fallback endpoint resolution (`minio` or `seaweedfs`).
+  storageProvider: minio
   ## Global TLS settings
   tls:
     # -- Toggle whether to globally skip certificate verification
@@ -530,6 +532,36 @@ testkube-logs:
     # -- (int/percentage) Number or percentage of pods that can be unavailable.
     maxUnavailable: ""
 
+# SeaweedFS chart parameters (embedded S3-compatible storage alternative to MinIO)
+seaweedfs:
+  # -- Toggle whether to install embedded SeaweedFS.
+  enabled: false
+  global:
+    seaweedfs:
+      image:
+        # -- SeaweedFS image name.
+        name: kubeshop/testkube-seaweedfs
+  master:
+    # -- Number of SeaweedFS master replicas.
+    replicas: 1
+  volume:
+    # -- Number of SeaweedFS volume replicas.
+    replicas: 1
+  filer:
+    # -- Number of SeaweedFS filer replicas.
+    replicas: 1
+    s3:
+      # -- Toggle whether to expose S3 API through filer.
+      enabled: true
+      # -- S3 API port for filer mode.
+      port: 8333
+      # -- Toggle whether to require access credentials for S3.
+      enableAuth: true
+      # -- Name of secret containing `seaweedfs_s3_config`.
+      existingConfigSecret: testkube-seaweedfs-s3-config
+      # -- Disable bucket creation hook by default.
+      createBuckets: []
+
 # Testkube API parameters
 testkube-api:
   # -- Testkube API full name override
@@ -880,7 +912,7 @@ testkube-api:
 
   # MinIO parameters
   minio:
-    # -- Toggle whether to install MinIO
+    # -- Toggle whether to install MinIO. If `global.storageProvider=seaweedfs`, MinIO deployment is skipped automatically.
     enabled: true
     # -- Minio extra vars
     extraEnvVars: []
@@ -1016,15 +1048,15 @@ testkube-api:
       #     - testkube.example.com
     #   secretName: testkube-cert-secret
 
-  # Storage for Testkube API using MinIO
+  # Storage for Testkube API using S3-compatible backend (MinIO or SeaweedFS)
   storage:
-    # -- MinIO endpoint
+    # -- S3 endpoint. If empty, chart resolves default from `global.storageProvider`.
     endpoint: ""
-    # -- MinIO endpoint port
+    # -- S3 endpoint port (used by MinIO fallback endpoint).
     endpoint_port: "9000"
-    # -- MinIO Access Key ID
+    # -- S3 Access Key ID
     accessKeyId: "minio"
-    # -- MinIO Secret Access Key
+    # -- S3 Secret Access Key
     accessKey: "minio123"
     # -- k8s Secret name for storage accessKeyId
     secretNameAccessKeyId: ""
@@ -1034,15 +1066,15 @@ testkube-api:
     secretNameSecretAccessKey: ""
     # -- Key for storage secretAccessKeyId taken from k8s secret
     secretKeySecretAccessKey: ""
-    # -- MinIO Region
+    # -- S3 Region
     region: ""
-    # -- MinIO Token
+    # -- S3 Token
     token: ""
-    # -- MinIO Bucket
+    # -- S3 Bucket
     bucket: "testkube-artifacts"
-    # -- MinIO Expiration period in days
+    # -- Artifact expiration period in days
     expiration: 0
-    # -- MinIO Use SSL
+    # -- Toggle whether to use TLS in the storage client
     SSL: false
     # -- Toggle whether to verify TLS certificates
     skipVerify: false

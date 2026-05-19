@@ -17,6 +17,9 @@ dependencies:
 - name: nats
   repository: file://./charts/nats
   version: 1.2.6-4
+- name: seaweed
+  repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
+  version: 4.23-0
 - name: testkube-api
   repository: file://../testkube-api
   version: 2.9.0-rc.0

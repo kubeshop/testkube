@@ -29,6 +29,11 @@ dependencies:
     condition: testkube-api.nats.enabled
     version: 1.2.6-4
     repository: "file://./charts/nats"
+  - name: seaweed
+    alias: seaweedfs
+    condition: seaweedfs.enabled
+    version: 4.23-0
+    repository: oci://us-east1-docker.pkg.dev/testkube-cloud-372110/testkube
   - name: testkube-api
     version: 2.x.x-x
     repository: "file://../testkube-api"
