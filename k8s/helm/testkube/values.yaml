@@ -37,6 +37,8 @@ global:
     whitelistedContainers: init,logs,scraper
   # -- Embedded object storage provider used by API fallback endpoint resolution (`minio` or `seaweedfs`).
   storageProvider: minio
+  # -- Default SeaweedFS S3 port used by API endpoint fallback when `global.storageProvider=seaweedfs`.
+  seaweedfsS3Port: 8333
   ## Global TLS settings
   tls:
     # -- Toggle whether to globally skip certificate verification

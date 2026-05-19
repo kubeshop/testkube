@@ -26,5 +26,5 @@ dependencies:
 - name: global
   repository: file://../global
   version: 0.1.3
-digest: sha256:c99d9e4731c48c49e95aa197edfca857c89ac74a0c056904a930576eb94bbfd2
-generated: "2026-05-15T21:42:24.913700328Z"
+digest: sha256:c878fd84045535eb41cef33fabd7c3f93038691b465d5c08ed9a103742de1f06
+generated: "2026-05-19T14:58:16.428168-04:00"
