@@ -14,6 +14,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const maxArtilleryReportProbeBytes int64 = 16 << 20
+
 // ArtilleryReportPostProcessor checks JSON files for Artillery reports and sends them to the cloud.
 type ArtilleryReportPostProcessor struct {
 	fs            filesystem.FileSystem
@@ -75,7 +77,11 @@ func (p *ArtilleryReportPostProcessor) add(path string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to open %s", path)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		if file != nil {
+			_ = file.Close()
+		}
+	}()
 
 	stat, err := file.Stat()
 	if err != nil {
@@ -85,7 +91,20 @@ func (p *ArtilleryReportPostProcessor) add(path string) error {
 		return nil
 	}
 
-	data, err := io.ReadAll(file)
+	if !hasArtilleryReportShape(file, maxArtilleryReportProbeBytes) {
+		return nil
+	}
+	if err := file.Close(); err != nil {
+		return errors.Wrapf(err, "failed to close %s", path)
+	}
+	file = nil
+	reportFile, err := p.fs.OpenFileRO(absPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to reopen %s", path)
+	}
+	defer func() { _ = reportFile.Close() }()
+
+	data, err := io.ReadAll(reportFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
@@ -98,6 +117,73 @@ func (p *ArtilleryReportPostProcessor) add(path string) error {
 		return errors.Wrapf(err, "failed to send Artillery report %s", stat.Name())
 	}
 	return nil
+}
+
+func hasArtilleryReportShape(reader io.Reader, maxBytes int64) bool {
+	limited := &io.LimitedReader{R: reader, N: maxBytes}
+	decoder := json.NewDecoder(limited)
+
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return false
+	}
+
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return false
+		}
+		if key == "aggregate" {
+			return artilleryAggregateHasMetricShape(decoder)
+		}
+		if err := skipJSONValue(decoder); err != nil {
+			return false
+		}
+	}
+	return false
+}
+
+func artilleryAggregateHasMetricShape(decoder *json.Decoder) bool {
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return false
+	}
+
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return false
+		}
+		if key == "counters" || key == "rates" || key == "summaries" || key == "histograms" {
+			if jsonValueHasNumber(decoder) {
+				return true
+			}
+			continue
+		}
+		if err := skipJSONValue(decoder); err != nil {
+			return false
+		}
+	}
+	if _, err := decoder.Token(); err != nil {
+		return false
+	}
+	return false
 }
 
 func isArtilleryReport(data []byte) bool {
