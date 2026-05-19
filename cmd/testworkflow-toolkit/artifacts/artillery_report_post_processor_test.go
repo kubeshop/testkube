@@ -78,6 +78,12 @@ func TestHasArtilleryReportShape(t *testing.T) {
 			want:     true,
 		},
 		{
+			name:     "aggregate shaped json without numeric metrics",
+			data:     `{"aggregate":{"counters":{"status":"ok"},"rates":{},"summaries":{"http.response_time":{"p95":"123.4"}}}}`,
+			maxBytes: maxArtilleryReportProbeBytes,
+			want:     false,
+		},
+		{
 			name:     "k6 summary export",
 			data:     `{"metrics":{"http_req_duration":{"avg":24.8,"p(95)":29.7},"http_reqs":{"rate":39.5,"count":1187}}}`,
 			maxBytes: maxArtilleryReportProbeBytes,
@@ -142,6 +148,22 @@ func TestArtilleryReportPostProcessorAddSkipsNonReportJSONWithoutFullRead(t *tes
 	mockClient := controlplaneclient.NewMockClient(mockCtrl)
 	pp := NewArtilleryReportPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")
 	if err := pp.add("browser-trace.json"); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
+
+func TestArtilleryReportPostProcessorAddSkipsAggregateShapedJSONWithoutFullRead(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockFS := filesystem.NewMockFileSystem(mockCtrl)
+	mockFS.EXPECT().
+		OpenFileRO("/aggregate-dump.json").
+		Return(newGuardedSingleReadFile("aggregate-dump.json", []byte(`{"aggregate":{"counters":{"status":"ok"}}}`)), nil)
+
+	mockClient := controlplaneclient.NewMockClient(mockCtrl)
+	pp := NewArtilleryReportPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")
+	if err := pp.add("aggregate-dump.json"); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
