@@ -240,6 +240,9 @@ type Config struct {
 	FeatureCloudStorage                      bool          `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 	TestWorkflowLogArchiveRequired           bool          `envconfig:"TESTWORKFLOW_LOG_ARCHIVE_REQUIRED" default:"true"`
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool          `envconfig:"TESTKUBE_WORKFLOW_LOGS_INSECURE_SKIP_TLS_VERIFY_BACKEND" default:"false"`
+	WorkflowLogsTLSRetryMaxAttempts          int           `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_ATTEMPTS" default:"7"`
+	WorkflowLogsTLSRetryInitialDelay         time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_INITIAL_DELAY" default:"500ms"`
+	WorkflowLogsTLSRetryMaxDelay             time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_DELAY" default:"30s"`
 	TestTriggerControlPlane                  bool          `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
 	TestTriggerGitInformerRepoDepth          int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH" default:"500"`
 	TestTriggerGitInformerListTimeout        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT" default:"15"`

@@ -5,6 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
@@ -36,5 +37,6 @@ type Config struct {
 	LogAbortedDetails                        bool
 	AllowLowSecurityFields                   bool
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool
+	TLSRetry                                 controller.TLSRetryConfig
 	DisableResourceMetrics                   bool
 }
