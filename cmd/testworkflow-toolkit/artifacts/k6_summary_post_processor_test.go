@@ -74,6 +74,12 @@ func TestHasK6SummaryReportShape(t *testing.T) {
 			want:     true,
 		},
 		{
+			name:     "k6 summary without numeric values",
+			data:     `{"metrics":{"http_req_duration":{"type":"trend","contains":"time","values":{},"status":"ok"}}}`,
+			maxBytes: maxK6SummaryProbeBytes,
+			want:     false,
+		},
+		{
 			name:     "k6 json output stream",
 			data:     `{"type":"Point","data":{"time":"2026-01-01T00:00:00Z","value":1,"metric":"http_reqs"}}` + "\n" + `{"type":"Point","data":{"value":2}}`,
 			maxBytes: maxK6SummaryProbeBytes,
