@@ -372,6 +372,13 @@ func isCompiledWildcardMap(expr string) bool {
 	return isWildcardMapExpr(compiled)
 }
 
+// wildcardMapArgRe matches exactly the second-argument pattern produced by the
+// wildcard accessor compiler: "_.value" or "_.value.<dotted.path>" where each
+// segment is a simple identifier (alphanumeric + underscore). This prevents
+// user-written map expressions like map(items, "_.value.x + 1") from being
+// mistakenly classified as compiled wildcard accessors.
+var wildcardMapArgRe = regexp.MustCompile(`^_\.value(?:\.[a-zA-Z_]\w*)*$`)
+
 // isWildcardMapExpr checks if the given expression tree matches the pattern
 // produced by compiling a wildcard accessor: map(<accessor>, "_.value...")
 func isWildcardMapExpr(expr Expression) bool {
@@ -379,7 +386,8 @@ func isWildcardMapExpr(expr Expression) bool {
 	if !ok || c.name != "map" || len(c.args) != 2 {
 		return false
 	}
-	// Second argument must be a static string starting with "_.value"
+	// Second argument must be a static string that is exactly the compiled
+	// wildcard accessor form: "_.value" or "_.value.<identifier>[.<identifier>]*"
 	if c.args[1].Static() == nil {
 		return false
 	}
@@ -387,7 +395,7 @@ func isWildcardMapExpr(expr Expression) bool {
 	if err != nil {
 		return false
 	}
-	if s != "_.value" && !strings.HasPrefix(s, "_.value.") {
+	if !wildcardMapArgRe.MatchString(s) {
 		return false
 	}
 	// First argument must be either a plain accessor or another wildcard map

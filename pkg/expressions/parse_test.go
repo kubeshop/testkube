@@ -182,6 +182,9 @@ func TestIsWildcardAccessorOnly(t *testing.T) {
 		// map() calls that are NOT compiled wildcard accessors
 		{`map(items,"_.value * 2")`, false},
 		{`map(items,"_.key")`, false},
+		{`map(items,"_.value.name + _.value.surname")`, false},
+		{`map(items,"_.value.x > 0")`, false},
+		{`map(items,"_.value.name + ' extra'")`, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.expr, func(t *testing.T) {
