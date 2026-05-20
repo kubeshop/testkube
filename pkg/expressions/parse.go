@@ -374,10 +374,11 @@ func isCompiledWildcardMap(expr string) bool {
 
 // wildcardMapArgRe matches exactly the second-argument pattern produced by the
 // wildcard accessor compiler: "_.value" or "_.value.<dotted.path>" where each
-// segment is a simple identifier (alphanumeric + underscore). This prevents
-// user-written map expressions like map(items, "_.value.x + 1") from being
-// mistakenly classified as compiled wildcard accessors.
-var wildcardMapArgRe = regexp.MustCompile(`^_\.value(?:\.[a-zA-Z_]\w*)*$`)
+// segment is a simple accessor token (alphanumeric + underscore, including
+// digit-leading segments). This prevents user-written map expressions like
+// map(items, "_.value.x + 1") from being mistakenly classified as compiled
+// wildcard accessors.
+var wildcardMapArgRe = regexp.MustCompile(`^_\.value(?:\.[a-zA-Z\d_]+)*$`)
 
 // isWildcardMapExpr checks if the given expression tree matches the pattern
 // produced by compiling a wildcard accessor: map(<accessor>, "_.value...")
