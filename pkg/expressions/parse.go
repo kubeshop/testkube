@@ -372,6 +372,15 @@ func isWildcardMapExpr(expr Expression) bool {
 	if !ok || c.name != wildcardMapFn || len(c.args) != 2 {
 		return false
 	}
+	// Second argument must be a static string starting with "_.value"
+	// (the compiler always produces "_.value" or "_.value.<suffix>").
+	if c.args[1].Static() == nil {
+		return false
+	}
+	s, err := c.args[1].Static().StringValue()
+	if err != nil || (s != "_.value" && !strings.HasPrefix(s, "_.value.")) {
+		return false
+	}
 	// First argument must be either a plain accessor or another _wc call
 	switch c.args[0].Expression.(type) {
 	case *accessor:
