@@ -383,6 +383,18 @@ func TestNormalizeOptions(t *testing.T) {
 	}))
 }
 
+func TestResolveNamespaces(t *testing.T) {
+	t.Run("returns unique trimmed namespaces", func(t *testing.T) {
+		namespaces := resolveNamespaces(" team-a,team-b,team-a , ,team-c ", "ignored")
+		assert.Equal(t, []string{"team-a", "team-b", "team-c"}, namespaces)
+	})
+
+	t.Run("defaults to all namespaces marker when empty", func(t *testing.T) {
+		namespaces := resolveNamespaces(" ,  ", "testkube")
+		assert.Equal(t, []string{allNamespacesMarker}, namespaces)
+	})
+}
+
 func TestRepositoryOriginMatches(t *testing.T) {
 	t.Run("matches expected origin URL", func(t *testing.T) {
 		repo := initTestRepoWithOrigin(t, "https://example.com/repo-a.git")

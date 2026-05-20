@@ -224,6 +224,67 @@ func TestMatchGitTrigger_ReturnsErrorWhenConditionsConfiguredForSyntheticEvent(t
 	assert.False(t, executed)
 }
 
+func TestMatchGitTrigger_ReturnsErrorWhenProbesConfiguredForSyntheticEvent(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    v1.TestTriggerEventModified,
+			ProbeSpec: &v1.TestTriggerProbeSpec{
+				Probes: []v1.TestTriggerProbe{
+					{Path: "/health", Port: 8080},
+				},
+			},
+		},
+	}
+
+	executed := false
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, _ *watcherEvent, _ *internalTrigger) error {
+			executed = true
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errGitTriggerProbesUnavailable)
+	assert.False(t, executed)
+}
+
+func TestMatchGitTrigger_SkipsNonTestWorkflowExecution(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource:  v1.TestTriggerResourceContent,
+			Event:     v1.TestTriggerEventModified,
+			Execution: v1.TestTriggerExecutionTest,
+		},
+	}
+
+	executed := false
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, _ *watcherEvent, _ *internalTrigger) error {
+			executed = true
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	require.NoError(t, err)
+	assert.False(t, executed)
+}
+
 func conditionStatusPtr(v v1.TestTriggerConditionStatuses) *v1.TestTriggerConditionStatuses {
 	return &v
 }
