@@ -372,6 +372,10 @@ func isWildcardMapExpr(expr Expression) bool {
 	if !ok || c.name != wildcardMapFn || len(c.args) != 2 {
 		return false
 	}
+	// The wildcard compiler never emits spread arguments.
+	if c.args[0].Spread || c.args[1].Spread {
+		return false
+	}
 	// Second argument must be a static string starting with "_.value"
 	// (the compiler always produces "_.value" or "_.value.<suffix>").
 	if c.args[1].Static() == nil {
