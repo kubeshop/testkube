@@ -6,6 +6,7 @@ metadata:
     core-tests: workflows
     tool: jmeter
     category: performance-testing
+    artifacts: "true"
   annotations:
     testkube.io/icon: jmeter
 spec:
@@ -33,6 +34,19 @@ spec:
       - -n
       - -t
       - jmeter-executor-smoke.jmx
+      - -j
+      - /data/artifacts/jmeter.log
+      - -o
+      - /data/artifacts/report
+      - -l
+      - /data/artifacts/jtl-report.jtl
+      - -e
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -41,6 +55,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: "true"
     category: performance-testing
   annotations:
     testkube.io/icon: jmeter
@@ -69,6 +84,19 @@ spec:
       - -n
       - -t
       - jmeter-executor-smoke.jmx
+      - -j
+      - /data/artifacts/jmeter.log
+      - -o
+      - /data/artifacts/report
+      - -l
+      - /data/artifacts/jtl-report.jtl
+      - -e
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -252,6 +280,19 @@ spec:
       - -n
       - -t
       - jmeter-executor-smoke.jmx
+      - -j
+      - /data/artifacts/jmeter.log
+      - -o
+      - /data/artifacts/report
+      - -l
+      - /data/artifacts/jtl-report.jtl
+      - -e
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -260,6 +301,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: "true"
     category: performance-testing
   annotations:
     testkube.io/icon: jmeter
@@ -314,6 +356,19 @@ spec:
       - '{{services.slave.*.ip}}'
       - -t
       - jmeter-executor-smoke.jmx
+      - -j
+      - /data/artifacts/jmeter.log
+      - -o
+      - /data/artifacts/report
+      - -l
+      - /data/artifacts/jtl-report.jtl
+      - -e
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
