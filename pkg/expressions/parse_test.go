@@ -174,6 +174,14 @@ func TestIsWildcardAccessorOnly(t *testing.T) {
 		// be treated as a pure wildcard accessor (expansion should still happen).
 		{"list(services.slave.*.ip...)", false},
 		{"join(services.slave.*.ip, ',')", false},
+		// Compiled wildcard accessor forms (map calls produced by the compiler)
+		// should be recognized as wildcard accessors.
+		{`map(services.slave,"_.value.ip")`, true},
+		{`map(a.b.c,"_.value.d.e")`, true},
+		{`map(map(a.b.c,"_.value"),"_.value.d.e")`, true},
+		// map() calls that are NOT compiled wildcard accessors
+		{`map(items,"_.value * 2")`, false},
+		{`map(items,"_.key")`, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.expr, func(t *testing.T) {

@@ -420,3 +420,25 @@ func TestGenericSimplifyWildcardAccessorNotSplit(t *testing.T) {
 	// Should remain as a single comma-separated string, not split into separate elements
 	assert.Equal(t, &[]string{"10.0.0.1,10.0.0.2"}, obj.Args)
 }
+
+func TestGenericSimplifyCompiledWildcardAccessorNotSplit(t *testing.T) {
+	// When a wildcard accessor has been compiled to its map() form (e.g. after
+	// a round-trip through Simplify when services were not yet available), it
+	// should still be treated as a comma-separated string, NOT expanded as an array.
+	machine := NewMachine().
+		Register("services", map[string]interface{}{
+			"slave": []interface{}{
+				map[string]interface{}{"ip": "10.0.0.1"},
+				map[string]interface{}{"ip": "10.0.0.2"},
+			},
+		})
+
+	// This is the compiled form of "services.slave.*.ip"
+	args := []string{`{{map(services.slave,"_.value.ip")}}`}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, machine)
+
+	assert.NoError(t, err)
+	// Should remain as a single comma-separated string, not split into separate elements
+	assert.Equal(t, &[]string{"10.0.0.1,10.0.0.2"}, obj.Args)
+}
