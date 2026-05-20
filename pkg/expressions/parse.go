@@ -334,9 +334,31 @@ func IsWildcardAccessorOnly(expr string) bool {
 	}
 
 	// Check the compiled form: wildcard accessors are compiled into
-	// map(<accessor>, "_.value[.<suffix>]") calls. If the expression matches
-	// this pattern, it is semantically equivalent to a wildcard accessor.
+	// map(<accessor>, "_.value[.<suffix>]") calls. Avoid the expensive
+	// Compile/AST walk unless the raw expression could plausibly match
+	// that pattern.
+	if !couldBeCompiledWildcardMap(expr) {
+		return false
+	}
 	return isCompiledWildcardMap(expr)
+}
+
+// couldBeCompiledWildcardMap performs a cheap, conservative pre-check for the
+// compiled wildcard form map(<base>, "_.value[.<suffix>]").
+// It must only reject expressions that definitely cannot match, leaving the
+// final validation to isCompiledWildcardMap.
+func couldBeCompiledWildcardMap(expr string) bool {
+	trimmed := strings.TrimSpace(expr)
+	if !strings.HasPrefix(trimmed, "map") {
+		return false
+	}
+
+	rest := strings.TrimLeft(trimmed[len("map"):], " \t\r\n")
+	if rest == "" || rest[0] != '(' {
+		return false
+	}
+
+	return strings.Contains(trimmed, "\"_.value") || strings.Contains(trimmed, "'_.value")
 }
 
 // isCompiledWildcardMap returns true if expr is the compiled form of a
