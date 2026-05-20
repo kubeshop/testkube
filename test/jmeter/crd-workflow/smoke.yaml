@@ -28,19 +28,7 @@ spec:
   - name: Run tests
     run:
       image: alpine/jmeter:5.6
-      command:
-      - jmeter
-      args:
-      - -n
-      - -t
-      - jmeter-executor-smoke.jmx
-      - -j
-      - /data/artifacts/jmeter.log
-      - -o
-      - /data/artifacts/report
-      - -l
-      - /data/artifacts/jtl-report.jtl
-      - -e
+      shell: mkdir -p /data/artifacts && jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
@@ -78,19 +66,7 @@ spec:
   - name: Run tests
     run:
       image: justb4/jmeter:5.5
-      command:
-      - jmeter
-      args:
-      - -n
-      - -t
-      - jmeter-executor-smoke.jmx
-      - -j
-      - /data/artifacts/jmeter.log
-      - -o
-      - /data/artifacts/report
-      - -l
-      - /data/artifacts/jtl-report.jtl
-      - -e
+      shell: mkdir -p /data/artifacts && jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
@@ -274,19 +250,7 @@ spec:
   - name: Run tests
     run:
       image: alpine/jmeter:latest
-      command:
-      - jmeter
-      args:
-      - -n
-      - -t
-      - jmeter-executor-smoke.jmx
-      - -j
-      - /data/artifacts/jmeter.log
-      - -o
-      - /data/artifacts/report
-      - -l
-      - /data/artifacts/jtl-report.jtl
-      - -e
+      shell: mkdir -p /data/artifacts && jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
@@ -345,24 +309,7 @@ spec:
   - name: Run tests
     run:
       image: alpine/jmeter:5.6
-      command:
-      - jmeter
-      args:
-      - -n
-      - -X
-      - -Jserver.rmi.ssl.disable=true
-      - -Jclient.rmi.localport=7000
-      - -R
-      - '{{services.slave.*.ip}}'
-      - -t
-      - jmeter-executor-smoke.jmx
-      - -j
-      - /data/artifacts/jmeter.log
-      - -o
-      - /data/artifacts/report
-      - -l
-      - /data/artifacts/jtl-report.jtl
-      - -e
+      shell: mkdir -p /data/artifacts && jmeter -n -X -Jserver.rmi.ssl.disable=true -Jclient.rmi.localport=7000 -R {{services.slave.*.ip}} -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
