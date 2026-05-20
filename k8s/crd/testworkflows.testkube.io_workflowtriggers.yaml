@@ -385,8 +385,8 @@ spec:
                 properties:
                   event:
                     description: |-
-                      Event is the K8s resource event type. Currently required and validated at
-                      application level.
+                      Event is the K8s resource event type. Required when no other trigger source
+                      (schedule, webhook, etc.) is configured. Validated at application level.
                     enum:
                     - created
                     - modified

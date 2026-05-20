@@ -82,10 +82,11 @@ type WorkflowTriggerSelector struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
-// WorkflowTriggerWhen defines the trigger source.
+// WorkflowTriggerWhen defines the trigger source. Structured as a separate type
+// to allow future trigger sources (schedule, webhook, git) alongside event.
 type WorkflowTriggerWhen struct {
-	// Event is the K8s resource event type. Currently required and validated at
-	// application level.
+	// Event is the K8s resource event type. Required when no other trigger source
+	// (schedule, webhook, etc.) is configured. Validated at application level.
 	// +kubebuilder:validation:Enum=created;modified;deleted
 	Event string `json:"event,omitempty"`
 }
