@@ -61,12 +61,12 @@ func mapHandler(fnName string) BasicFunctionHandler {
 		}
 		list, err := value[0].SliceValue()
 		if err != nil {
-			return nil, fmt.Errorf(`"%s" function expects 1st argument to be a list, %s provided: %v`, fnName, value[0], err)
+			return nil, fmt.Errorf(`"%s" function expects 1st argument to be a list, %v provided: %v`, fnName, value[0], err)
 		}
 		exprStr, _ := value[1].StringValue()
 		expr, err := Compile(exprStr)
 		if err != nil {
-			return nil, fmt.Errorf(`"%s" function expects 2nd argument to be valid expression, '%s' provided: %v`, fnName, value[1], err)
+			return nil, fmt.Errorf(`"%s" function expects 2nd argument to be valid expression, '%v' provided: %v`, fnName, value[1], err)
 		}
 		result := make([]string, len(list))
 		for i := 0; i < len(list); i++ {
