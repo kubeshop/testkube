@@ -422,7 +422,7 @@ func TestGenericSimplifyWildcardAccessorNotSplit(t *testing.T) {
 }
 
 func TestGenericSimplifyCompiledWildcardAccessorNotSplit(t *testing.T) {
-	// When a wildcard accessor has been compiled to its map() form (e.g. after
+	// When a wildcard accessor has been compiled to its _wc() form (e.g. after
 	// a round-trip through Simplify when services were not yet available), it
 	// should still be treated as a comma-separated string, NOT expanded as an array.
 	machine := NewMachine().
@@ -434,7 +434,7 @@ func TestGenericSimplifyCompiledWildcardAccessorNotSplit(t *testing.T) {
 		})
 
 	// This is the compiled form of "services.slave.*.ip"
-	args := []string{`{{map(services.slave,"_.value.ip")}}`}
+	args := []string{`{{_wc(services.slave,"_.value.ip")}}`}
 	obj := testObjWithSliceTemplate{Args: &args}
 	err := Simplify(&obj, machine)
 
@@ -445,7 +445,7 @@ func TestGenericSimplifyCompiledWildcardAccessorNotSplit(t *testing.T) {
 
 func TestInitContainerCommandResolution_CompiledWildcard(t *testing.T) {
 	// Simulates the init container's run.go command resolution for the JMeter
-	// distributed test workflow. The arg "{{map(services.slave,"_.value.ip")}}"
+	// distributed test workflow. The arg "{{_wc(services.slave,"_.value.ip")}}"
 	// is the compiled form of "{{services.slave.*.ip}}" and should resolve to
 	// a single comma-separated string, not expand into separate args.
 	machine := NewMachine().
@@ -459,7 +459,7 @@ func TestInitContainerCommandResolution_CompiledWildcard(t *testing.T) {
 	command := []string{
 		"-n", "-X", "-Jserver.rmi.ssl.disable=true",
 		"-Jclient.rmi.localport=7000", "-R",
-		`{{map(services.slave,"_.value.ip")}}`,
+		`{{_wc(services.slave,"_.value.ip")}}`,
 		"-t", "jmeter-executor-smoke.jmx",
 	}
 

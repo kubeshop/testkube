@@ -282,13 +282,13 @@ func ExtractPureTemplateExpression(tpl string) (string, bool) {
 // function calls, or array/object constructors.
 //
 // It also recognizes the compiled form of wildcard accessors — e.g.,
-// map(services.slave,"_.value.ip") — which is the internal representation
+// _wc(services.slave,"_.value.ip") — which is the internal representation
 // produced when the expression is compiled but cannot be fully resolved
 // (because the accessor value is not yet known). This ensures that wildcard
 // semantics (comma-join rather than array expansion) are preserved even after
 // an expression round-trips through compile → serialize → re-compile.
 //
-// Such expressions resolve to arrays implicitly through the map() transform,
+// Such expressions resolve to arrays implicitly through the _wc() transform,
 // but in template contexts they should be stringified (comma-joined) rather
 // than expanded as separate slice elements.
 //
@@ -334,37 +334,30 @@ func IsWildcardAccessorOnly(expr string) bool {
 	}
 
 	// Check the compiled form: wildcard accessors are compiled into
-	// map(<accessor>, "_.value[.<suffix>]") calls. Avoid the expensive
-	// Compile/AST walk unless the raw expression could plausibly match
-	// that pattern.
-	if !couldBeCompiledWildcardMap(expr) {
+	// _wc(<accessor>, "_.value[.<suffix>]") calls. Avoid the expensive
+	// Compile/AST walk unless the raw expression starts with the internal
+	// function name.
+	if !couldBeCompiledWildcard(expr) {
 		return false
 	}
-	return isCompiledWildcardMap(expr)
+	return isCompiledWildcard(expr)
 }
 
-// couldBeCompiledWildcardMap performs a cheap, conservative pre-check for the
-// compiled wildcard form map(<base>, "_.value[.<suffix>]").
-// It must only reject expressions that definitely cannot match, leaving the
-// final validation to isCompiledWildcardMap.
-func couldBeCompiledWildcardMap(expr string) bool {
+// couldBeCompiledWildcard performs a cheap pre-check: the expression must
+// start with the internal wildcard function name followed by '('.
+func couldBeCompiledWildcard(expr string) bool {
 	trimmed := strings.TrimSpace(expr)
-	if !strings.HasPrefix(trimmed, "map") {
+	if !strings.HasPrefix(trimmed, wildcardMapFn) {
 		return false
 	}
-
-	rest := strings.TrimLeft(trimmed[len("map"):], " \t\r\n")
-	if rest == "" || rest[0] != '(' {
-		return false
-	}
-
-	return strings.Contains(trimmed, "\"_.value") || strings.Contains(trimmed, "'_.value")
+	rest := strings.TrimLeft(trimmed[len(wildcardMapFn):], " \t\r\n")
+	return rest != "" && rest[0] == '('
 }
 
-// isCompiledWildcardMap returns true if expr is the compiled form of a
-// wildcard accessor, i.e. map(<base>, "_.value[.<suffix>]") where <base>
-// is either a plain accessor or a nested compiled wildcard map.
-func isCompiledWildcardMap(expr string) bool {
+// isCompiledWildcard returns true if expr is the compiled form of a
+// wildcard accessor, i.e. _wc(<base>, "_.value[.<suffix>]") where <base>
+// is either a plain accessor or a nested compiled wildcard.
+func isCompiledWildcard(expr string) bool {
 	compiled, err := Compile(expr)
 	if err != nil {
 		return false
@@ -372,34 +365,14 @@ func isCompiledWildcardMap(expr string) bool {
 	return isWildcardMapExpr(compiled)
 }
 
-// wildcardMapArgRe matches exactly the second-argument pattern produced by the
-// wildcard accessor compiler: "_.value" or "_.value.<dotted.path>" where each
-// segment is a simple accessor token (alphanumeric + underscore, including
-// digit-leading segments). This prevents user-written map expressions like
-// map(items, "_.value.x + 1") from being mistakenly classified as compiled
-// wildcard accessors.
-var wildcardMapArgRe = regexp.MustCompile(`^_\.value(?:\.[a-zA-Z\d_]+)*$`)
-
-// isWildcardMapExpr checks if the given expression tree matches the pattern
-// produced by compiling a wildcard accessor: map(<accessor>, "_.value...")
+// isWildcardMapExpr checks if the given expression tree is a _wc() call
+// produced by compiling a wildcard accessor.
 func isWildcardMapExpr(expr Expression) bool {
 	c, ok := expr.(*call)
-	if !ok || c.name != "map" || len(c.args) != 2 {
+	if !ok || c.name != wildcardMapFn || len(c.args) != 2 {
 		return false
 	}
-	// Second argument must be a static string that is exactly the compiled
-	// wildcard accessor form: "_.value" or "_.value.<identifier>[.<identifier>]*"
-	if c.args[1].Static() == nil {
-		return false
-	}
-	s, err := c.args[1].Static().StringValue()
-	if err != nil {
-		return false
-	}
-	if !wildcardMapArgRe.MatchString(s) {
-		return false
-	}
-	// First argument must be either a plain accessor or another wildcard map
+	// First argument must be either a plain accessor or another _wc call
 	switch c.args[0].Expression.(type) {
 	case *accessor:
 		return true

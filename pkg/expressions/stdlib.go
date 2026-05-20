@@ -18,6 +18,13 @@ import (
 
 const (
 	RFC3339Millis = "2006-01-02T15:04:05.000Z07:00"
+
+	// wildcardMapFn is the internal function name used by the wildcard accessor
+	// compiler (e.g., services.slave.*.ip → _wc(services.slave,"_.value.ip")).
+	// It behaves identically to "map" but has a distinct name so that
+	// IsWildcardAccessorOnly can unambiguously recognize compiler-generated
+	// expressions without false-positiving on user-written map() calls.
+	wildcardMapFn = "_wc"
 )
 
 type BasicFunctionHandler func(...StaticValue) (Expression, error)
@@ -423,6 +430,35 @@ var stdFunctions = map[string]StdFunction{
 				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i).Register("_.key", i))
 				if err != nil {
 					return nil, fmt.Errorf(`"map" function: error while mapping %d index (%v): %v`, i, list[i], err)
+				}
+				result[i] = v.String()
+			}
+			return Compile(fmt.Sprintf("list(%s)", strings.Join(result, ",")))
+		}),
+	},
+	// _wc is the internal wildcard-map function used by the wildcard accessor
+	// compiler. It has the same semantics as "map" but a distinct name so that
+	// IsWildcardAccessorOnly can identify compiler-generated expressions.
+	wildcardMapFn: {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"%s" function expects 2 arguments, %d provided`, wildcardMapFn, len(value))
+			}
+			list, err := value[0].SliceValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"%s" function expects 1st argument to be a list, %s provided: %v`, wildcardMapFn, value[0], err)
+			}
+			exprStr, _ := value[1].StringValue()
+			expr, err := Compile(exprStr)
+			if err != nil {
+				return nil, fmt.Errorf(`"%s" function expects 2nd argument to be valid expression, '%s' provided: %v`, wildcardMapFn, value[1], err)
+			}
+			result := make([]string, len(list))
+			for i := 0; i < len(list); i++ {
+				ex, _ := Compile(expr.String())
+				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i).Register("_.key", i))
+				if err != nil {
+					return nil, fmt.Errorf(`"%s" function: error while mapping %d index (%v): %v`, wildcardMapFn, i, list[i], err)
 				}
 				result[i] = v.String()
 			}
