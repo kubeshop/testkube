@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
@@ -81,7 +80,7 @@ func (s *TestkubeAPI) UpdateWebhookHandler() fiber.Handler {
 		// we need to get resource first and load its metadata.ResourceVersion
 		webhook, err := s.WebhooksClient.Get(name)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apiutils.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no webhook: %w", errPrefix, err))
 			}
 
@@ -135,7 +134,7 @@ func (s *TestkubeAPI) GetWebhookHandler() fiber.Handler {
 
 		item, err := s.WebhooksClient.Get(name)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apiutils.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: webhook not found: %w", errPrefix, err))
 			}
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get webhook: %w", errPrefix, err))
@@ -159,7 +158,7 @@ func (s *TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 
 		err := s.WebhooksClient.Delete(name)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apiutils.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: webhook not found: %w", errPrefix, err))
 			}
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete webhook: %w", errPrefix, err))

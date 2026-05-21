@@ -13,6 +13,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/config"
@@ -1108,6 +1110,23 @@ func TestGetTestTriggerHandler(t *testing.T) {
 		// then
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	})
+
+	t.Run("should return not found when test trigger does not exist", func(t *testing.T) {
+		// given
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "missing-trigger", "default").
+			Return(nil, status.Error(codes.NotFound, "test trigger not found")).
+			Times(1)
+
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test-triggers/missing-trigger", nil)
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 }
 

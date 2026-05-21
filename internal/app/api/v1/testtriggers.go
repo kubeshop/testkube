@@ -278,6 +278,9 @@ func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 
 		apiTestTrigger, err := s.TestTriggersClient.Get(c.Context(), s.getEnvironmentId(), name, namespace)
 		if err != nil {
+			if apiutils.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test trigger not found: %w", errPrefix, err))
+			}
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
