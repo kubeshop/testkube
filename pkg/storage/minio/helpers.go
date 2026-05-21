@@ -6,6 +6,9 @@ func GetTLSOptions(ssl, skipVerify bool, certFile, keyFile, caFile string) []Opt
 		if skipVerify {
 			opts = append(opts, Insecure())
 		} else {
+			// Always enable SSL when ssl=true, even without client certificates.
+			// This ensures the MinIO client connects via HTTPS.
+			opts = append(opts, Secure())
 			// Only load client certificates if both certFile and keyFile are provided
 			if certFile != "" && keyFile != "" {
 				opts = append(opts, ClientCert(certFile, keyFile))
