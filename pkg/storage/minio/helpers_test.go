@@ -30,14 +30,19 @@ func TestGetTLSOptions(t *testing.T) {
 		assert.True(t, connecter.TlsConfig.InsecureSkipVerify)
 	})
 
-	t.Run("ssl enabled without skipVerify and no certs returns no options - GCS scenario", func(t *testing.T) {
-		// This is the key scenario from the bug report:
-		// GCS with SSL enabled, skipVerify false, but no certificate files configured
+	t.Run("ssl enabled without skipVerify and no certs returns Secure option", func(t *testing.T) {
+		// SSL enabled without certificates should still enable HTTPS connections
 		opts := GetTLSOptions(true, false, "", "", "")
-		assert.Empty(t, opts, "Should not attempt to load certificates when paths are empty")
+		assert.Len(t, opts, 1)
+
+		// Apply option to verify it sets Ssl to true
+		connecter := &Connecter{}
+		err := opts[0](connecter)
+		require.NoError(t, err)
+		assert.True(t, connecter.Ssl)
 	})
 
-	t.Run("ssl enabled with only CA file returns RootCAs option", func(t *testing.T) {
+	t.Run("ssl enabled with only CA file returns Secure and RootCAs options", func(t *testing.T) {
 		// Create a temporary CA certificate file for testing
 		tmpDir := t.TempDir()
 		caFile := filepath.Join(tmpDir, "ca.pem")
@@ -59,18 +64,20 @@ Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
 		require.NoError(t, err)
 
 		opts := GetTLSOptions(true, false, "", "", caFile)
-		assert.Len(t, opts, 1)
+		assert.Len(t, opts, 2)
 
-		// Apply option to verify it sets RootCAs
+		// Apply options to verify they set Ssl and RootCAs
 		connecter := &Connecter{}
-		err = opts[0](connecter)
-		require.NoError(t, err)
+		for _, opt := range opts {
+			err = opt(connecter)
+			require.NoError(t, err)
+		}
 		assert.True(t, connecter.Ssl)
 		assert.NotNil(t, connecter.TlsConfig)
 		assert.NotNil(t, connecter.TlsConfig.RootCAs)
 	})
 
-	t.Run("ssl enabled with client certs returns ClientCert option", func(t *testing.T) {
+	t.Run("ssl enabled with client certs returns Secure and ClientCert options", func(t *testing.T) {
 		// Create temporary certificate files for testing
 		tmpDir := t.TempDir()
 		certFile := filepath.Join(tmpDir, "client.crt")
@@ -101,18 +108,20 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		require.NoError(t, err)
 
 		opts := GetTLSOptions(true, false, certFile, keyFile, "")
-		assert.Len(t, opts, 1)
+		assert.Len(t, opts, 2)
 
-		// Apply option to verify it sets client certificate
+		// Apply options to verify they set Ssl and client certificate
 		connecter := &Connecter{}
-		err = opts[0](connecter)
-		require.NoError(t, err)
+		for _, opt := range opts {
+			err = opt(connecter)
+			require.NoError(t, err)
+		}
 		assert.True(t, connecter.Ssl)
 		assert.NotNil(t, connecter.TlsConfig)
 		assert.Len(t, connecter.TlsConfig.Certificates, 1)
 	})
 
-	t.Run("ssl enabled with client certs and CA returns both options", func(t *testing.T) {
+	t.Run("ssl enabled with client certs and CA returns Secure, ClientCert, and RootCAs options", func(t *testing.T) {
 		// Create temporary certificate files for testing
 		tmpDir := t.TempDir()
 		certFile := filepath.Join(tmpDir, "client.crt")
@@ -146,7 +155,7 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		require.NoError(t, err)
 
 		opts := GetTLSOptions(true, false, certFile, keyFile, caFile)
-		assert.Len(t, opts, 2)
+		assert.Len(t, opts, 3)
 
 		// Apply options to verify both are configured
 		connecter := &Connecter{}
@@ -160,16 +169,30 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		assert.NotNil(t, connecter.TlsConfig.RootCAs)
 	})
 
-	t.Run("ssl enabled with only certFile returns no options", func(t *testing.T) {
-		// If only certFile is provided without keyFile, should not attempt to load
+	t.Run("ssl enabled with only certFile returns Secure option only", func(t *testing.T) {
+		// If only certFile is provided without keyFile, should not attempt to load client cert
+		// but should still enable SSL
 		opts := GetTLSOptions(true, false, "/path/to/cert", "", "")
-		assert.Empty(t, opts, "Should not load client cert with only certFile")
+		assert.Len(t, opts, 1)
+
+		connecter := &Connecter{}
+		err := opts[0](connecter)
+		require.NoError(t, err)
+		assert.True(t, connecter.Ssl)
+		assert.Nil(t, connecter.TlsConfig)
 	})
 
-	t.Run("ssl enabled with only keyFile returns no options", func(t *testing.T) {
-		// If only keyFile is provided without certFile, should not attempt to load
+	t.Run("ssl enabled with only keyFile returns Secure option only", func(t *testing.T) {
+		// If only keyFile is provided without certFile, should not attempt to load client cert
+		// but should still enable SSL
 		opts := GetTLSOptions(true, false, "", "/path/to/key", "")
-		assert.Empty(t, opts, "Should not load client cert with only keyFile")
+		assert.Len(t, opts, 1)
+
+		connecter := &Connecter{}
+		err := opts[0](connecter)
+		require.NoError(t, err)
+		assert.True(t, connecter.Ssl)
+		assert.Nil(t, connecter.TlsConfig)
 	})
 }
 
