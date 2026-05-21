@@ -420,3 +420,82 @@ func TestGenericSimplifyWildcardAccessorNotSplit(t *testing.T) {
 	// Should remain as a single comma-separated string, not split into separate elements
 	assert.Equal(t, &[]string{"10.0.0.1,10.0.0.2"}, obj.Args)
 }
+
+func TestGenericSimplifyCompiledWildcardAccessorNotSplit(t *testing.T) {
+	// When a wildcard accessor has been compiled to its _wc() form (e.g. after
+	// a round-trip through Simplify when services were not yet available), it
+	// should still be treated as a comma-separated string, NOT expanded as an array.
+	machine := NewMachine().
+		Register("services", map[string]interface{}{
+			"slave": []interface{}{
+				map[string]interface{}{"ip": "10.0.0.1"},
+				map[string]interface{}{"ip": "10.0.0.2"},
+			},
+		})
+
+	// This is the compiled form of "services.slave.*.ip"
+	args := []string{`{{_wc(services.slave,"_.value.ip")}}`}
+	obj := testObjWithSliceTemplate{Args: &args}
+	err := Simplify(&obj, machine)
+
+	assert.NoError(t, err)
+	// Should remain as a single comma-separated string, not split into separate elements
+	assert.Equal(t, &[]string{"10.0.0.1,10.0.0.2"}, obj.Args)
+}
+
+func TestInitContainerCommandResolution_CompiledWildcard(t *testing.T) {
+	// Simulates the init container's run.go command resolution for the JMeter
+	// distributed test workflow. The arg "{{_wc(services.slave,"_.value.ip")}}"
+	// is the compiled form of "{{services.slave.*.ip}}" and should resolve to
+	// a single comma-separated string, not expand into separate args.
+	machine := NewMachine().
+		Register("services", map[string]interface{}{
+			"slave": []interface{}{
+				map[string]interface{}{"ip": "172.16.9.160"},
+				map[string]interface{}{"ip": "172.16.9.161"},
+			},
+		})
+
+	command := []string{
+		"-n", "-X", "-Jserver.rmi.ssl.disable=true",
+		"-Jclient.rmi.localport=7000", "-R",
+		`{{_wc(services.slave,"_.value.ip")}}`,
+		"-t", "jmeter-executor-smoke.jmx",
+	}
+
+	// Simulate run.go logic
+	expandedCommand := make([]string, 0, len(command))
+	for i := range command {
+		if innerExpr, isPure := ExtractPureTemplateExpression(command[i]); isPure && !IsWildcardAccessorOnly(innerExpr) {
+			expr, err := CompileAndResolve(innerExpr, machine, FinalizerFail)
+			assert.NoError(t, err)
+			if expr.Static() != nil {
+				if items, sliceErr := expr.Static().SliceValue(); sliceErr == nil {
+					for _, item := range items {
+						sv := NewValue(item)
+						s, _ := sv.StringValue()
+						expandedCommand = append(expandedCommand, s)
+					}
+					continue
+				}
+				s, _ := expr.Static().StringValue()
+				expandedCommand = append(expandedCommand, s)
+				continue
+			}
+		}
+		value, err := CompileAndResolveTemplate(command[i], machine, FinalizerFail)
+		assert.NoError(t, err)
+		s, _ := value.Static().StringValue()
+		expandedCommand = append(expandedCommand, s)
+	}
+
+	// The -R arg should be followed by a SINGLE comma-separated string, not
+	// separate elements. JMeter expects: -R 172.16.9.160,172.16.9.161
+	expected := []string{
+		"-n", "-X", "-Jserver.rmi.ssl.disable=true",
+		"-Jclient.rmi.localport=7000", "-R",
+		"172.16.9.160,172.16.9.161",
+		"-t", "jmeter-executor-smoke.jmx",
+	}
+	assert.Equal(t, expected, expandedCommand)
+}

@@ -15,6 +15,17 @@ import (
 
 type Option func(*Connecter) error
 
+// Secure is an Option to enable TLS secure connections with default verification.
+func Secure() Option {
+	return func(o *Connecter) error {
+		if o.TlsConfig == nil {
+			o.TlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		o.Ssl = true
+		return nil
+	}
+}
+
 // Insecure is an Option to enable TLS secure connections that skip server verification.
 func Insecure() Option {
 	return func(o *Connecter) error {

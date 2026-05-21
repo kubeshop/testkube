@@ -81,10 +81,12 @@ func NewArtifactsCmd() *cobra.Command {
 				ui.Failf("could not create cloud client: %v", err)
 			}
 
-			postProcessors := make([]artifacts.PostProcessor, 0, 2)
+			postProcessors := make([]artifacts.PostProcessor, 0, 4)
 			if env.HasJunitSupport() {
 				postProcessors = append(postProcessors, artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
 			}
+			postProcessors = append(postProcessors, artifacts.NewArtilleryReportPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
+			postProcessors = append(postProcessors, artifacts.NewJMeterStatisticsPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
 			postProcessors = append(postProcessors, artifacts.NewK6SummaryPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix))
 			if len(postProcessors) == 1 {
 				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(postProcessors[0]))

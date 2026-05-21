@@ -1,0 +1,83 @@
+edition = "2023";
+
+package testkube.runspace.v1;
+
+// RunspaceBridgeService is the gRPC service exposed by AI Service (server) and consumed
+// by the Runspace Bridge daemon (client) running inside the Kubernetes pod.
+// The Bridge initiates a single bidirectional stream on startup and multiplexes all
+// control messages over it for the lifetime of the session.
+service RunspaceBridgeService {
+  // Connect is the long-lived bidirectional stream between Bridge and AI Service.
+  // The Bridge sends BridgeMessage frames upstream; AI Service sends ControlMessage
+  // frames downstream.
+  rpc Connect(stream BridgeMessage) returns (stream ControlMessage);
+}
+
+// BridgeMessage is an envelope sent from the Bridge up to AI Service.
+message BridgeMessage {
+  oneof payload {
+    // hello is the first frame, sent on stream open.
+    BridgeHello hello = 1;
+    // ack acknowledges receipt of a ControlMessage by sequence number.
+    BridgeAck ack = 2;
+    // event carries a ControllerEvent emitted by the TypeScript Controller process.
+    ControllerEvent event = 3;
+    // heartbeat is a keepalive ping; AI Service echoes it back.
+    Heartbeat heartbeat = 4;
+  }
+}
+
+// ControlMessage is an envelope sent from AI Service down to the Bridge.
+message ControlMessage {
+  // seq is a monotonically increasing sequence number, used for BridgeAck.
+  uint64 seq = 1;
+  oneof payload {
+    // send passes a JSON payload to the Controller's stdin.
+    SendToController send = 2;
+    // shutdown requests graceful Controller shutdown.
+    ShutdownController shutdown = 3;
+    // heartbeat_ack is AI Service's echo of the Bridge's heartbeat.
+    Heartbeat heartbeat_ack = 4;
+  }
+}
+
+// BridgeHello carries session identity for the Bridge's first frame.
+message BridgeHello {
+  string runspace_id  = 1;
+  string org_id       = 2;
+  string env_id       = 3;
+  // bridge_version is the semver of the Bridge binary, for compatibility checks.
+  string bridge_version = 4;
+}
+
+// BridgeAck acknowledges a ControlMessage sequence number.
+message BridgeAck {
+  uint64 seq = 1;
+}
+
+// ControllerEvent is a JSON-serialised event emitted by the TypeScript Controller
+// on its stdout channel.
+message ControllerEvent {
+  // type is the event type identifier (e.g. "file.changed", "step.complete").
+  string type    = 1;
+  // payload is the raw JSON body of the event.
+  bytes  payload = 2;
+}
+
+// SendToController is a JSON payload to be written to the Controller's stdin.
+message SendToController {
+  bytes payload = 1;
+}
+
+// ShutdownController requests the Bridge to send a shutdown signal to the Controller
+// and exit cleanly.
+message ShutdownController {
+  // graceful_timeout_seconds is how long to wait before SIGKILL.
+  uint32 graceful_timeout_seconds = 1;
+}
+
+// Heartbeat is a keepalive frame exchanged between Bridge and AI Service.
+message Heartbeat {
+  // timestamp_ms is the sender's wall-clock time in milliseconds since epoch.
+  int64 timestamp_ms = 1;
+}

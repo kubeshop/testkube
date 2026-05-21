@@ -263,16 +263,20 @@ func jsonValueHasNumber(decoder *json.Decoder) bool {
 				return true
 			}
 		}
-		_, err := decoder.Token()
-		return err == nil
+		if _, err := decoder.Token(); err != nil {
+			return false
+		}
+		return false
 	case '[':
 		for decoder.More() {
 			if jsonValueHasNumber(decoder) {
 				return true
 			}
 		}
-		_, err := decoder.Token()
-		return err == nil
+		if _, err := decoder.Token(); err != nil {
+			return false
+		}
+		return false
 	default:
 		return false
 	}
