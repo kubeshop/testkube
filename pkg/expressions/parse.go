@@ -276,3 +276,121 @@ func ExtractPureTemplateExpression(tpl string) (string, bool) {
 	}
 	return inner, true
 }
+
+// IsWildcardAccessorOnly checks whether an expression is purely a wildcard
+// accessor chain (e.g., "services.slave.*.ip") with no additional operators,
+// function calls, or array/object constructors.
+//
+// It also recognizes the compiled form of wildcard accessors — e.g.,
+// _wc(services.slave,"_.value.ip") — which is the internal representation
+// produced when the expression is compiled but cannot be fully resolved
+// (because the accessor value is not yet known). This ensures that wildcard
+// semantics (comma-join rather than array expansion) are preserved even after
+// an expression round-trips through compile → serialize → re-compile.
+//
+// Such expressions resolve to arrays implicitly through the _wc() transform,
+// but in template contexts they should be stringified (comma-joined) rather
+// than expanded as separate slice elements.
+//
+// When a wildcard accessor is used inside an explicit array-producing construct
+// (e.g., "list(services.slave.*.ip...)"), this function returns false so that
+// expansion still works as expected.
+func IsWildcardAccessorOnly(expr string) bool {
+	tokens, _, _ := tokenize(expr, 0)
+	if len(tokens) == 0 {
+		return false
+	}
+	// The expression must consist of exactly one tokenTypeAccessor optionally
+	// followed by one or more tokenTypePropertyAccessor tokens — nothing else.
+	if tokens[0].Type == tokenTypeAccessor {
+		allPropertyAccessors := true
+		for _, tok := range tokens[1:] {
+			if tok.Type != tokenTypePropertyAccessor {
+				allPropertyAccessors = false
+				break
+			}
+		}
+		if allPropertyAccessors {
+			// Now verify that the accessor chain actually contains a wildcard segment.
+			for _, tok := range tokens {
+				switch tok.Type {
+				case tokenTypeAccessor:
+					if name, ok := tok.Value.(string); ok {
+						// Strip all whitespace so spaced accessors like
+						// "services.slave . * . ip" are normalized to
+						// "services.slave.*.ip" before the check.
+						normalized := strings.Join(strings.Fields(name), "")
+						if strings.Contains(normalized, ".*") {
+							return true
+						}
+					}
+				case tokenTypePropertyAccessor:
+					if name, ok := tok.Value.(string); ok && strings.TrimSpace(name) == "*" {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	// Check the compiled form: wildcard accessors are compiled into
+	// _wc(<accessor>, "_.value[.<suffix>]") calls. Avoid the expensive
+	// Compile/AST walk unless the raw expression starts with the internal
+	// function name.
+	if !couldBeCompiledWildcard(expr) {
+		return false
+	}
+	return isCompiledWildcard(expr)
+}
+
+// couldBeCompiledWildcard performs a cheap pre-check: the expression must
+// start with the internal wildcard function name followed by '('.
+func couldBeCompiledWildcard(expr string) bool {
+	trimmed := strings.TrimSpace(expr)
+	if !strings.HasPrefix(trimmed, wildcardMapFn) {
+		return false
+	}
+	rest := strings.TrimLeft(trimmed[len(wildcardMapFn):], " \t\r\n")
+	return rest != "" && rest[0] == '('
+}
+
+// isCompiledWildcard returns true if expr is the compiled form of a
+// wildcard accessor, i.e. _wc(<base>, "_.value[.<suffix>]") where <base>
+// is either a plain accessor or a nested compiled wildcard.
+func isCompiledWildcard(expr string) bool {
+	compiled, err := Compile(expr)
+	if err != nil {
+		return false
+	}
+	return isWildcardMapExpr(compiled)
+}
+
+// isWildcardMapExpr checks if the given expression tree is a _wc() call
+// produced by compiling a wildcard accessor.
+func isWildcardMapExpr(expr Expression) bool {
+	c, ok := expr.(*call)
+	if !ok || c.name != wildcardMapFn || len(c.args) != 2 {
+		return false
+	}
+	// The wildcard compiler never emits spread arguments.
+	if c.args[0].Spread || c.args[1].Spread {
+		return false
+	}
+	// Second argument must be a static string starting with "_.value"
+	// (the compiler always produces "_.value" or "_.value.<suffix>").
+	if c.args[1].Static() == nil {
+		return false
+	}
+	s, err := c.args[1].Static().StringValue()
+	if err != nil || (s != "_.value" && !strings.HasPrefix(s, "_.value.")) {
+		return false
+	}
+	// First argument must be either a plain accessor or another _wc call
+	switch c.args[0].Expression.(type) {
+	case *accessor:
+		return true
+	case *call:
+		return isWildcardMapExpr(c.args[0].Expression)
+	}
+	return false
+}

@@ -40,8 +40,12 @@ spec:
       value: 'https://api-mongo.testkube.dev'
     - name: TEST_ORG_ID
       value: 'tkcorg_9deb42dda2197657'
+    - name: TEST_ORG_SLUG
+      value: 'testkube'
     - name: TEST_ENV_ID # Env with connected agent (Testkube-cloud-test-dev-E2E) - used for running some of the tests
       value: 'tkcenv_f2eedeef4063f90f'
+    - name: TEST_ENV_SLUG
+      value: 'testkube-cloud-test-dev-e2e'
     - name: TEST_FIXTURE_USER # Test user having access to connected environment
       value: 'test-user-10'
     - name: TESTKUBE_NAMESPACE # namespace where agent is installed
@@ -56,6 +60,9 @@ spec:
       paths:
       - playwright-report/**
       - test-results/**
+  - name: E2E Test Coverage report
+    optional: true
+    shell: npm run scenario-coverage
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -101,8 +108,12 @@ spec:
       value: 'https://api-mongo.testkube.dev'
     - name: TEST_ORG_ID
       value: 'tkcorg_9deb42dda2197657'
+    - name: TEST_ORG_SLUG
+      value: 'testkube'
     - name: TEST_ENV_ID # Env with connected agent (Testkube-cloud-test-dev-E2E) - used for running some of the tests
       value: 'tkcenv_f2eedeef4063f90f'
+    - name: TEST_ENV_SLUG
+      value: 'testkube-cloud-test-dev-e2e'
     - name: TEST_FIXTURE_USER # Test user having access to connected environment
       value: 'test-user-10'
     - name: TESTKUBE_NAMESPACE # namespace where agent is installed
@@ -131,3 +142,6 @@ spec:
         workingDir: /data/artifacts/
         paths:
         - '**/*'
+  - name: E2E Test Coverage report
+    optional: true
+    shell: npm run scenario-coverage

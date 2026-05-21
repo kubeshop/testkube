@@ -31,6 +31,7 @@ type ControllerOptions struct {
 	Signature                                []stage.Signature
 	RunnerId                                 string
 	WorkflowLogsInsecureSkipTLSVerifyBackend bool
+	TLSRetry                                 TLSRetryConfig
 }
 
 type LightweightNotification struct {
@@ -65,6 +66,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	var signature []stage.Signature
 	var expectedRunnerId string
 	var workflowLogsInsecureSkipTLSVerifyBackend bool
+	var tlsRetry TLSRetryConfig
 	for _, opt := range opts {
 		if opt.Signature != nil {
 			signature = opt.Signature
@@ -74,6 +76,9 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		}
 		if opt.WorkflowLogsInsecureSkipTLSVerifyBackend {
 			workflowLogsInsecureSkipTLSVerifyBackend = true
+		}
+		if opt.TLSRetry.MaxAttempts > 0 || opt.TLSRetry.InitialDelay > 0 || opt.TLSRetry.MaxDelay > 0 {
+			tlsRetry = opt.TLSRetry
 		}
 	}
 
@@ -129,6 +134,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		ctxCancel:                                ctxCancel,
 		watcher:                                  watcher,
 		workflowLogsInsecureSkipTLSVerifyBackend: workflowLogsInsecureSkipTLSVerifyBackend,
+		tlsRetry:                                 tlsRetry,
 	}, nil
 }
 
@@ -142,6 +148,7 @@ type controller struct {
 	ctxCancel                                context.CancelFunc
 	watcher                                  watchers.ExecutionWatcher
 	workflowLogsInsecureSkipTLSVerifyBackend bool
+	tlsRetry                                 TLSRetryConfig
 }
 
 func (c *controller) Signature() []stage.Signature {
@@ -241,6 +248,7 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbo
 		LogAbortedDetails: logAbortedDetails,
 		ContainerLogOptions: ContainerLogOptions{
 			InsecureSkipTLSVerifyBackend: c.workflowLogsInsecureSkipTLSVerifyBackend,
+			TLSRetry:                     c.tlsRetry,
 		},
 	})
 	if err != nil {
@@ -261,6 +269,7 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 			DisableFollow: !follow,
 			ContainerLogOptions: ContainerLogOptions{
 				InsecureSkipTLSVerifyBackend: c.workflowLogsInsecureSkipTLSVerifyBackend,
+				TLSRetry:                     c.tlsRetry,
 			},
 		})
 		if err != nil {

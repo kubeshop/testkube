@@ -1,0 +1,83 @@
+suite: testkube-runner poddisruptionbudget
+templates:
+  - poddisruptionbudget.yaml
+release:
+  name: tk
+tests:
+  - it: renders a PDB when podDisruptionBudget.enabled=true
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: metadata.name
+          value: tk-testkube-runner
+
+  - it: defaults to maxUnavailable=1 when neither min nor max specified
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+      - notExists:
+          path: spec.minAvailable
+
+  - it: honors podDisruptionBudget.minAvailable and omits maxUnavailable
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 2
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 2
+      - notExists:
+          path: spec.maxUnavailable
+
+  - it: honors podDisruptionBudget.maxUnavailable as a percentage
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.maxUnavailable: 50%
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 50%
+
+  - it: falls back to global.podDisruptionBudget when local is disabled
+    set:
+      podDisruptionBudget.enabled: false
+      global.podDisruptionBudget.enabled: true
+      global.podDisruptionBudget.minAvailable: 3
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.minAvailable
+          value: 3
+
+  - it: selector matches the runner selectorLabels
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: testkube-runner
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/instance"]
+          value: tk
+
+  - it: picks policy/v1 on Kubernetes 1.21+
+    set:
+      podDisruptionBudget.enabled: true
+    capabilities:
+      majorVersion: 1
+      minorVersion: 24
+    asserts:
+      - equal:
+          path: apiVersion
+          value: policy/v1

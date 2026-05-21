@@ -150,6 +150,52 @@ func TestExtractPureTemplateExpression(t *testing.T) {
 	}
 }
 
+func TestIsWildcardAccessorOnly(t *testing.T) {
+	tests := []struct {
+		expr string
+		want bool
+	}{
+		{"services.slave.*.ip", true},
+		{"a.b.c.*.d.e", true},
+		{"a.b.c.*.*.d.e", true},
+		{"services.slave.0.ip", false},
+		{"list('a','b','c')", false},
+		{"split('x,y,z')", false},
+		{`["a","b"]`, false},
+		{"env.MY_VAR", false},
+		// Ensure .* inside string literals is not treated as a wildcard accessor
+		{`split('192.168.*', '.')`, false},
+		{`map(items, 'v =~ ".*foo"')`, false},
+		{`"some.*value"`, false},
+		// Spaced wildcard accessors should still be detected
+		{"services.slave . * . ip", true},
+		{"a . *", true},
+		// Wildcard accessor inside explicit array-producing constructs should NOT
+		// be treated as a pure wildcard accessor (expansion should still happen).
+		{"list(services.slave.*.ip...)", false},
+		{"join(services.slave.*.ip, ',')", false},
+		// Compiled wildcard accessor forms (_wc calls produced by the compiler)
+		// should be recognized as wildcard accessors.
+		{`_wc(services.slave,"_.value.ip")`, true},
+		{`_wc(a.b.c,"_.value.d.e")`, true},
+		{`_wc(_wc(a.b.c,"_.value"),"_.value.d.e")`, true},
+		// User-written map() calls must NOT be classified as wildcard accessors,
+		// even when the second argument looks like "_.value.<path>".
+		{`map(services.slave,"_.value.ip")`, false},
+		{`map(workers,"_.value.host")`, false},
+		{`map(items,"_.value * 2")`, false},
+		{`map(items,"_.key")`, false},
+		{`map(items,"_.value.name + _.value.surname")`, false},
+		{`map(items,"_.value.x > 0")`, false},
+		{`map(items,"_.value.name + ' extra'")`, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.expr, func(t *testing.T) {
+			assert.Equal(t, tc.want, IsWildcardAccessorOnly(tc.expr))
+		})
+	}
+}
+
 func TestCompilePartialResolution(t *testing.T) {
 	vm := NewMachine().
 		Register("someint", 555).
@@ -350,8 +396,8 @@ a:
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {
-	assert.Equal(t, `map(a.b.c,"_.value.d.e")`, MustCompile("a.b.c.*.d.e").String())
-	assert.Equal(t, `map(map(a.b.c,"_.value"),"_.value.d.e")`, MustCompile("a.b.c.*.*.d.e").String())
+	assert.Equal(t, `_wc(a.b.c,"_.value.d.e")`, MustCompile("a.b.c.*.d.e").String())
+	assert.Equal(t, `_wc(_wc(a.b.c,"_.value"),"_.value.d.e")`, MustCompile("a.b.c.*.*.d.e").String())
 }
 
 func TestCompileSpread(t *testing.T) {

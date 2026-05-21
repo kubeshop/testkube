@@ -11,7 +11,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -36,6 +35,18 @@ var scheduleCmpOpts = []cmp.Option{
 type fakeTestWorkflowExecutor struct {
 	req *cloud.ScheduleRequest
 	err error
+}
+
+type fakeEventRecorder struct {
+	Events chan string
+}
+
+func newFakeEventRecorder(buffer int) *fakeEventRecorder {
+	return &fakeEventRecorder{Events: make(chan string, buffer)}
+}
+
+func (r *fakeEventRecorder) Eventf(_ runtime.Object, _ runtime.Object, eventtype, reason, _ string, note string, args ...any) {
+	r.Events <- fmt.Sprintf("%s %s %s", eventtype, reason, fmt.Sprintf(note, args...))
 }
 
 func (f *fakeTestWorkflowExecutor) Execute(_ context.Context, request *cloud.ScheduleRequest) ([]testkubev1.TestWorkflowExecution, error) {
@@ -274,7 +285,7 @@ func TestWorkflowExecutionExecutorController(t *testing.T) {
 				t.Fatalf("failed to add testworkflowsv1 to scheme: %v", err)
 			}
 			k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(test.objs...).WithStatusSubresource(&testworkflowsv1.TestWorkflowExecution{}).Build()
-			recorder := record.NewFakeRecorder(10)
+			recorder := newFakeEventRecorder(10)
 			reconciler := testWorkflowExecutionExecutor(k8sClient, recorder, exec)
 
 			_, err := reconciler.Reconcile(context.Background(), test.request)

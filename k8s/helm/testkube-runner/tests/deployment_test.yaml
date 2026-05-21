@@ -1,0 +1,185 @@
+suite: testkube-runner deployment
+templates:
+  - deployment.yaml
+release:
+  name: tk
+  namespace: testkube-dev
+tests:
+  - it: renders exactly one Deployment with the expected name
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: tk-testkube-runner
+
+  - it: has 1 replica and the expected selector labels
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: testkube-runner
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/instance"]
+          value: tk
+
+  - it: exposes container port 8088 named http
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].name
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 8088
+
+  - it: sets APISERVER_PORT to 8088 and APISERVER_FULLNAME to the runner fullname
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APISERVER_PORT
+            value: "8088"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APISERVER_FULLNAME
+            value: tk-testkube-runner
+
+  - it: uses kubeshop testkube-api-server image
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "kubeshop/testkube-api-server"
+
+  - it: injects toolkit and init image env vars
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_TW_TOOLKIT_IMAGE
+          any: true
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_TW_INIT_IMAGE
+          any: true
+
+  - it: passes runner credentials as direct env vars when set inline
+    set:
+      runner.id: agent-123
+      runner.orgId: org-456
+      runner.envId: env-789
+      runner.secret: shhh
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_AGENT_ID
+            value: agent-123
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_ORG_ID
+            value: org-456
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_ENV_ID
+            value: env-789
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_API_KEY
+            value: shhh
+
+  - it: reads runner credentials from secretRef when provided
+    set:
+      runner.secretRef.name: my-runner-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_AGENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: my-runner-secret
+                key: id
+
+  - it: sets TLS insecure flag when cloud.tls.enabled=false
+    set:
+      cloud.tls.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_TLS_INSECURE
+            value: "true"
+
+  - it: disables test triggers when listener.enabled is false (default)
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DISABLE_TEST_TRIGGERS
+            value: "true"
+
+  - it: enables test triggers when listener.enabled=true
+    set:
+      listener.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DISABLE_TEST_TRIGGERS
+            value: "false"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TEST_TRIGGER_CONTROL_PLANE
+            value: "true"
+
+  - it: enables gitops kubernetes→cloud sync when gitops.enabled=true
+    set:
+      gitops.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GITOPS_KUBERNETES_TO_CLOUD_ENABLED
+            value: "true"
+
+  - it: passes self-registration token and runner name when register.token is set
+    set:
+      runner.register.token: tok-abc123
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN
+            value: tok-abc123
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUNNER_NAME
+            value: tk-testkube-runner
+
+  - it: uses agent-sa-<release> ServiceAccount by default
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: agent-sa-tk
+
+  - it: honors pod.serviceAccount.name when set
+    set:
+      pod.serviceAccount.name: my-sa
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: my-sa

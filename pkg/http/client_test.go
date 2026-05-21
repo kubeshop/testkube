@@ -26,6 +26,6 @@ func TestNewClient(t *testing.T) {
 
 		// then
 		assert.Equal(t, time.Hour, c.Timeout)
-		assert.False(t, transport.ForceAttemptHTTP2)
+		assert.True(t, transport.ForceAttemptHTTP2)
 	})
 }

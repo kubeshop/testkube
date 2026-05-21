@@ -282,6 +282,7 @@ func NewConnectCmd() *cobra.Command {
 					cfg.CloudContext.ApiKey,
 					cfg.CloudContext.OrganizationId,
 					cfg.CloudContext.EnvironmentId,
+					cfg.SkipTLS || cfg.CloudContext.SkipTLS,
 				)
 				importErr := importClient.Import(cmd.Context(), exportPath)
 				if importErr != nil {

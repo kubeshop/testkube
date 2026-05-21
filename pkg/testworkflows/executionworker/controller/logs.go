@@ -35,6 +35,10 @@ const (
 	LogRetryMaxAttempts            = 10
 	LogProxyErrorRetryInitialDelay = 500 * time.Millisecond
 	LogProxyErrorRetryMaxDelay     = 5 * time.Second
+
+	LogTLSRetryMaxAttempts  = 7
+	LogTLSRetryInitialDelay = 500 * time.Millisecond
+	LogTLSRetryMaxDelay     = 30 * time.Second
 )
 
 type Comment struct {
@@ -67,8 +71,65 @@ func (c *ContainerLog) Type() ContainerLogType {
 	return ContainerLogTypeLog
 }
 
+// TLSRetryConfig holds configuration for TLS error retry with exponential backoff.
+// Zero values fall back to the built-in defaults (LogTLSRetry* constants).
+type TLSRetryConfig struct {
+	MaxAttempts  int
+	InitialDelay time.Duration
+	MaxDelay     time.Duration
+}
+
+func (c TLSRetryConfig) maxAttempts() int {
+	if c.MaxAttempts > 0 {
+		return c.MaxAttempts
+	}
+	return LogTLSRetryMaxAttempts
+}
+
+func (c TLSRetryConfig) initialDelay() time.Duration {
+	if c.InitialDelay > 0 {
+		return c.InitialDelay
+	}
+	return LogTLSRetryInitialDelay
+}
+
+func (c TLSRetryConfig) maxDelay() time.Duration {
+	if c.MaxDelay > 0 {
+		return c.MaxDelay
+	}
+	return LogTLSRetryMaxDelay
+}
+
+// backoffDelay computes the exponential backoff delay for the given retry attempt,
+// clamping at MaxDelay and protecting against integer overflow.
+func (c TLSRetryConfig) backoffDelay(retry int) time.Duration {
+	initial := c.initialDelay()
+	maxD := c.maxDelay()
+	shift := retry - 1
+	if shift <= 0 {
+		if initial > maxD {
+			return maxD
+		}
+		return initial
+	}
+	// Protect against overflow: if shift is >= 63 or would overflow int64, clamp to maxDelay
+	if shift >= 63 {
+		return maxD
+	}
+	delay := initial << shift
+	// Detect overflow: shifted value should be >= initial (if it wrapped, it becomes smaller or negative)
+	if delay <= 0 || delay < initial {
+		return maxD
+	}
+	if delay > maxD {
+		return maxD
+	}
+	return delay
+}
+
 type ContainerLogOptions struct {
 	InsecureSkipTLSVerifyBackend bool
+	TLSRetry                     TLSRetryConfig
 }
 
 func buildPodLogOptions(containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) *corev1.PodLogOptions {
@@ -86,22 +147,32 @@ func buildPodLogOptions(containerName string, isDone func() bool, since *time.Ti
 	}
 }
 
+// streamFunc is a function that opens an io.ReadCloser stream. Used internally
+// by getContainerLogsStream and extracted to allow testing the retry logic.
+type streamFunc func(ctx context.Context) (io.ReadCloser, error)
+
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
 // EOF may happen not only on the actual container end, but also in case of the log rotation.
 // @see {@link https://stackoverflow.com/a/68673451}
 func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time, opts ContainerLogOptions) (io.Reader, error) {
+	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, buildPodLogOptions(containerName, isDone, since, opts))
+	return getContainerLogsStreamWithStreamer(ctx, req.Stream, podName, containerName, isDone, opts)
+}
+
+// getContainerLogsStreamWithStreamer contains the retry loop logic, accepting a streamFunc
+// for testability. The retry behavior for TLS, proxy, and connection-lost errors is implemented here.
+func getContainerLogsStreamWithStreamer(ctx context.Context, openStream streamFunc, podName, containerName string, isDone func() bool, opts ContainerLogOptions) (io.Reader, error) {
 	// Fail immediately if the context is finished
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	// Create logs stream request
-	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, buildPodLogOptions(containerName, isDone, since, opts))
 	var err error
 	var stream io.ReadCloser
 	retries := 0
+	tlsRetries := 0
 	for {
-		stream, err = req.Stream(ctx)
+		stream, err = openStream(ctx)
 		if err == nil {
 			return stream, nil
 		}
@@ -117,16 +188,17 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 			delay = LogRetryOnConnectionLostDelay
 			log.DefaultLogger.Warnw("connection lost while loading container logs, retrying", "pod", podName, "attempt", retries, "error", err)
 		case strings.Contains(errMsg, "tls: internal error"):
-			retries++
-			if retries > LogRetryMaxAttempts {
+			tlsRetries++
+			if tlsRetries > opts.TLSRetry.maxAttempts() {
 				return nil, err
 			}
-			delay = LogRetryOnConnectionLostDelay
+			delay = opts.TLSRetry.backoffDelay(tlsRetries)
 			log.DefaultLogger.Errorw(
 				"kubelet TLS error while loading container logs, retrying",
 				"pod", podName,
 				"container", containerName,
-				"attempt", retries,
+				"attempt", tlsRetries,
+				"delay", delay,
 				"insecureSkipTLSVerifyBackend", opts.InsecureSkipTLSVerifyBackend,
 				"error", err,
 			)

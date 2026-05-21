@@ -82,6 +82,56 @@ func TestGetIterationDelay(t *testing.T) {
 		})
 	}
 }
+
+func TestIsExecutionReadyForLogFollowWaitsForRunnerID(t *testing.T) {
+	runningResult := newWorkflowResult(testkube.RUNNING_TestWorkflowStatus, false)
+	finishedResult := newWorkflowResult(testkube.PASSED_TestWorkflowStatus, true)
+
+	tests := []struct {
+		name      string
+		execution testkube.TestWorkflowExecution
+		expected  bool
+	}{
+		{
+			name: "not ready when signature exists without runner assignment",
+			execution: testkube.TestWorkflowExecution{
+				Result: runningResult,
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "step-1"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "ready when runner assigned",
+			execution: testkube.TestWorkflowExecution{
+				Result: runningResult,
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "step-1"},
+				},
+				RunnerId: "runner-1",
+			},
+			expected: true,
+		},
+		{
+			name: "ready when already finished",
+			execution: testkube.TestWorkflowExecution{
+				Result: finishedResult,
+				Signature: []testkube.TestWorkflowSignature{
+					{Ref: "step-1"},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, isExecutionReadyForLogFollow(tt.execution))
+		})
+	}
+}
+
 func TestParseConfig(t *testing.T) {
 	tests := []struct {
 		name     string

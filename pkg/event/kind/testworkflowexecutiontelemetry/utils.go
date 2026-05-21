@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 )
@@ -106,4 +107,34 @@ func GetClusterID(ctx context.Context, configMap configRepo.Repository) string {
 		return ""
 	}
 	return clusterID
+}
+
+// triggeredByBucket collapses the actor / interface enums from the execution's
+// RunningContext into a coarse activation signal used for value dashboards.
+// Returns "unknown" when the running context is missing or carries an
+// unrecognised combination.
+func triggeredByBucket(actorType, interfaceType string) string {
+	switch testkube.TestWorkflowRunningContextActorType(actorType) {
+	case testkube.CRON_TestWorkflowRunningContextActorType:
+		return "scheduled"
+	case testkube.TESTTRIGGER_TestWorkflowRunningContextActorType:
+		return "event-triggered"
+	case testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType,
+		testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType:
+		return "composite"
+	case testkube.PROGRAM_TestWorkflowRunningContextActorType:
+		return "automation"
+	case testkube.USER_TestWorkflowRunningContextActorType:
+		switch testkube.TestWorkflowRunningContextInterfaceType(interfaceType) {
+		case testkube.CICD_TestWorkflowRunningContextInterfaceType:
+			return "ci-cd"
+		case testkube.UI_TestWorkflowRunningContextInterfaceType:
+			return "human-ui"
+		case testkube.CLI_TestWorkflowRunningContextInterfaceType:
+			return "human-cli"
+		case testkube.API_TestWorkflowRunningContextInterfaceType:
+			return "api"
+		}
+	}
+	return "unknown"
 }

@@ -1,0 +1,131 @@
+suite: testkube-runner rolebindings
+templates:
+  - rolebinding.yaml
+release:
+  name: tk
+  namespace: testkube-dev
+tests:
+  - it: renders the 4 base RoleBindings by default
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: agent-rb binds agent-sa to agent-role
+    documentSelector:
+      path: metadata.name
+      value: agent-rb-tk
+    asserts:
+      - equal:
+          path: roleRef.kind
+          value: Role
+      - equal:
+          path: roleRef.name
+          value: agent-role-tk
+      - equal:
+          path: subjects[0].kind
+          value: ServiceAccount
+      - equal:
+          path: subjects[0].name
+          value: agent-sa-tk
+      - equal:
+          path: subjects[0].namespace
+          value: testkube-dev
+
+  - it: agent-lease-access-rb binds agent-sa to agent-lease-access role
+    documentSelector:
+      path: metadata.name
+      value: agent-lease-access-rb-tk
+    asserts:
+      - equal:
+          path: roleRef.name
+          value: agent-lease-access-tk
+      - equal:
+          path: subjects[0].name
+          value: agent-sa-tk
+
+  - it: aexec-rb (agent → exec) binds agent-sa to exec-role
+    documentSelector:
+      path: metadata.name
+      value: aexec-rb-tk
+    asserts:
+      - equal:
+          path: roleRef.name
+          value: exec-role-tk
+      - equal:
+          path: subjects[0].name
+          value: agent-sa-tk
+
+  - it: exec-rb binds exec-sa to exec-role
+    documentSelector:
+      path: metadata.name
+      value: exec-rb-tk
+    asserts:
+      - equal:
+          path: roleRef.name
+          value: exec-role-tk
+      - equal:
+          path: subjects[0].name
+          value: exec-sa-tk
+
+  - it: honors pod.serviceAccount.name override in subjects
+    set:
+      pod.serviceAccount.name: custom-agent
+    documentSelector:
+      path: metadata.name
+      value: agent-rb-tk
+    asserts:
+      - equal:
+          path: subjects[0].name
+          value: custom-agent
+
+  - it: places aexec-rb in execution.default.namespace when set
+    set:
+      execution.default.namespace: jobs-ns
+    documentSelector:
+      path: metadata.name
+      value: aexec-rb-tk
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: jobs-ns
+
+  - it: creates ClusterRoleBinding for watchers when watchAllNamespaces=true
+    set:
+      listener.enabled: true
+      listener.watchAllNamespaces: true
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-rb-tk
+    asserts:
+      - equal:
+          path: kind
+          value: ClusterRoleBinding
+      - equal:
+          path: roleRef.kind
+          value: ClusterRole
+      - equal:
+          path: roleRef.name
+          value: watchers-role-tk
+
+  - it: creates RoleBinding(s) for watchers when watchAllNamespaces=false
+    set:
+      listener.enabled: true
+      listener.watchAllNamespaces: false
+    documentSelector:
+      path: metadata.name
+      value: watchers-role-rb-tk
+    asserts:
+      - equal:
+          path: kind
+          value: RoleBinding
+      - equal:
+          path: roleRef.kind
+          value: Role
+
+  - it: no RoleBindings when all autoCreate disabled
+    set:
+      pod.serviceAccount.autoCreate: false
+      execution.default.serviceAccount.autoCreate: false
+    asserts:
+      - hasDocuments:
+          count: 0

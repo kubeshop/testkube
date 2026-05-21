@@ -62,7 +62,7 @@ func openCloudDashboard(cfg config.Data) {
 	// open browser
 	uri := fmt.Sprintf("%s/organization/%s/environment/%s", cfg.CloudContext.UiUri, cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 	err := open.Run(uri)
-	ui.PrintOnError("openning dashboard", err)
+	ui.PrintOnError("opening dashboard", err)
 }
 
 func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license string) {
@@ -93,7 +93,7 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 	ui.Debug("Port forwarding for minio", config.EnterpriseMinioName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseMinioName, config.EnterpriseMinioPort, config.EnterpriseMinioPortFrwardingPort, verbose)
 	if err != nil {
-		sendTelemetry(cmd, cfg, license, "port forwarding minio")
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding minio", err)
 	}
 	ui.ExitOnError("port forwarding minio", err)
 
@@ -106,7 +106,7 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 
 		ui.ExitOnError("opening dashboard in browser", err)
 
-		sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
+		sendTelemetry(cmd, cfg, license, "dashboard opened successfully")
 	}
 
 	c := make(chan os.Signal, 1)
