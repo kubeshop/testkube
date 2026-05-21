@@ -179,7 +179,8 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		err := opts[0](connecter)
 		require.NoError(t, err)
 		assert.True(t, connecter.Ssl)
-		assert.Nil(t, connecter.TlsConfig)
+		assert.NotNil(t, connecter.TlsConfig)
+		assert.Equal(t, uint16(tls.VersionTLS12), connecter.TlsConfig.MinVersion)
 	})
 
 	t.Run("ssl enabled with only keyFile returns Secure option only", func(t *testing.T) {
@@ -192,7 +193,8 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		err := opts[0](connecter)
 		require.NoError(t, err)
 		assert.True(t, connecter.Ssl)
-		assert.Nil(t, connecter.TlsConfig)
+		assert.NotNil(t, connecter.TlsConfig)
+		assert.Equal(t, uint16(tls.VersionTLS12), connecter.TlsConfig.MinVersion)
 	})
 }
 
