@@ -309,9 +309,17 @@ Define API environment in standalone mode
   value: "{{ .Values.nats.tls.certSecret.baseMountPath }}/{{ .Values.nats.tls.certSecret.caFile }}"
 {{- end }}
 {{- end }}
+{{- $storageProvider := default "minio" .Values.global.storageProvider }}
+{{- $seaweedS3Port := default 8333 .Values.global.seaweedfsS3Port }}
 - name: "STORAGE_ENDPOINT"
   {{- if .Values.storage.endpoint }}
   value:  "{{ .Values.storage.endpoint }}"
+  {{- else if eq $storageProvider "seaweedfs" }}
+  {{- if .Values.executionNamespaces }}
+  value:  "{{ .Release.Name }}-seaweedfs-filer.{{ .Release.Namespace }}.svc.cluster.local:{{ $seaweedS3Port }}"
+  {{- else }}
+  value:  "{{ .Release.Name }}-seaweedfs-filer:{{ $seaweedS3Port }}"
+  {{- end }}
   {{- else if .Values.executionNamespaces }}
   value:  "testkube-minio-service-{{ .Release.Namespace }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.storage.endpoint_port }}"
   {{- else }}
