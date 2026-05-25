@@ -1609,3 +1609,130 @@ func TestService_match_V1_AllBuiltinResources_CaseFolded(t *testing.T) {
 		})
 	}
 }
+
+// TestService_match_generationDedup verifies that triggers with changed_to
+// conditions only fire once per metadata.generation, preventing duplicate
+// executions when a custom resource's status oscillates during a single rollout.
+func TestService_match_generationDedup(t *testing.T) {
+trigger := &testtriggersv1.TestTrigger{
+ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "rollout-healthy"},
+Spec: testtriggersv1.TestTriggerSpec{
+Resource:         "rollout",
+ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "my-app"},
+Event:            "modified",
+Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
+{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorChangedTo, Value: "Healthy"},
+},
+Action:            "run",
+Execution:         "testworkflow",
+ConcurrencyPolicy: "allow",
+TestSelector:      testtriggersv1.TestTriggerSelector{Name: "smoke"},
+},
+}
+key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+status := &triggerStatus{trigger: convertV1ToInternal(trigger)}
+
+fireCount := 0
+s := &Service{
+triggerExecutor: func(ctx context.Context, e *watcherEvent, it *internalTrigger) error {
+fireCount++
+return nil
+},
+triggerStatus:    map[statusKey]*triggerStatus{key: status},
+firedGenerations: make(map[string]int64),
+logger:           log.DefaultLogger,
+metrics:          metrics.NewMetrics(),
+}
+
+makeEvent := func(oldPhase, newPhase string, generation int64) *watcherEvent {
+return &watcherEvent{
+resource:  "rollout",
+name:      "my-app",
+Namespace: "default",
+eventType: testtrigger.EventModified,
+objectMeta: &metav1.ObjectMeta{
+Name:       "my-app",
+Namespace:  "default",
+Generation: generation,
+},
+Object:    map[string]interface{}{"status": map[string]interface{}{"phase": newPhase}},
+OldObject: map[string]interface{}{"status": map[string]interface{}{"phase": oldPhase}},
+}
+}
+
+// First transition to Healthy at generation 2 should fire.
+require.NoError(t, s.match(context.Background(), makeEvent("Progressing", "Healthy", 2)))
+assert.Equal(t, 1, fireCount, "first Progressing→Healthy should fire")
+
+// Second transition to Healthy at same generation should be suppressed.
+require.NoError(t, s.match(context.Background(), makeEvent("Progressing", "Healthy", 2)))
+assert.Equal(t, 1, fireCount, "second Progressing→Healthy at same generation should be suppressed")
+
+// Third transition to Healthy at same generation should still be suppressed.
+require.NoError(t, s.match(context.Background(), makeEvent("Degraded", "Healthy", 2)))
+assert.Equal(t, 1, fireCount, "third Degraded→Healthy at same generation should be suppressed")
+
+// New generation (new rollout) should fire again.
+require.NoError(t, s.match(context.Background(), makeEvent("Progressing", "Healthy", 3)))
+assert.Equal(t, 2, fireCount, "Progressing→Healthy at new generation should fire")
+}
+
+// TestService_match_generationDedup_noEffectOnNonTransitionOperators verifies
+// that generation dedup does NOT affect triggers using equals/changed operators.
+func TestService_match_generationDedup_noEffectOnNonTransitionOperators(t *testing.T) {
+trigger := &testtriggersv1.TestTrigger{
+ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "phase-changed"},
+Spec: testtriggersv1.TestTriggerSpec{
+Resource:         "rollout",
+ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "my-app"},
+Event:            "modified",
+Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
+{Path: ".status.phase", Operator: workflowtriggersv1.FieldOperatorChanged},
+},
+Action:            "run",
+Execution:         "testworkflow",
+ConcurrencyPolicy: "allow",
+TestSelector:      testtriggersv1.TestTriggerSelector{Name: "smoke"},
+},
+}
+key := newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name)
+status := &triggerStatus{trigger: convertV1ToInternal(trigger)}
+
+fireCount := 0
+s := &Service{
+triggerExecutor: func(ctx context.Context, e *watcherEvent, it *internalTrigger) error {
+fireCount++
+return nil
+},
+triggerStatus:    map[statusKey]*triggerStatus{key: status},
+firedGenerations: make(map[string]int64),
+logger:           log.DefaultLogger,
+metrics:          metrics.NewMetrics(),
+}
+
+makeEvent := func(oldPhase, newPhase string, generation int64) *watcherEvent {
+return &watcherEvent{
+resource:  "rollout",
+name:      "my-app",
+Namespace: "default",
+eventType: testtrigger.EventModified,
+objectMeta: &metav1.ObjectMeta{
+Name:       "my-app",
+Namespace:  "default",
+Generation: generation,
+},
+Object:    map[string]interface{}{"status": map[string]interface{}{"phase": newPhase}},
+OldObject: map[string]interface{}{"status": map[string]interface{}{"phase": oldPhase}},
+}
+}
+
+// "changed" operator should fire every time the value changes, regardless of generation.
+require.NoError(t, s.match(context.Background(), makeEvent("Progressing", "Healthy", 2)))
+assert.Equal(t, 1, fireCount)
+
+require.NoError(t, s.match(context.Background(), makeEvent("Healthy", "Progressing", 2)))
+assert.Equal(t, 2, fireCount)
+
+require.NoError(t, s.match(context.Background(), makeEvent("Progressing", "Healthy", 2)))
+assert.Equal(t, 3, fireCount, "changed operator should not be affected by generation dedup")
+}

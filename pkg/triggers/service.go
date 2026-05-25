@@ -95,6 +95,13 @@ type Service struct {
 	dynamicManager                *dynamicInformerManager
 	Agent                         watcherAgent
 	coordinator                   *leader.Coordinator
+
+	// firedGenerations tracks the last metadata.generation at which a
+	// trigger fired for a specific resource. This prevents duplicate
+	// executions when a custom resource's status field (e.g. .status.phase)
+	// oscillates during a single rollout. Key format: "triggerKey:ns/name".
+	firedGenerations   map[string]int64
+	firedGenerationsMu sync.RWMutex
 }
 
 type Option func(*Service)
@@ -138,6 +145,7 @@ func NewService(
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
+		firedGenerations:              make(map[string]int64),
 		proContext:                    proContext,
 	}
 	if s.triggerExecutor == nil {
@@ -306,6 +314,7 @@ func (s *Service) removeTrigger(target *testtriggersv1.TestTrigger) {
 	defer s.triggerStatusMu.Unlock()
 	delete(s.triggerStatus, key)
 	s.releaseDynamicInformerForTrigger(target, key)
+	s.cleanupFiredGenerations(target.Namespace, target.Name)
 }
 
 // ensureDynamicInformerForTrigger starts a dynamic informer if the trigger
@@ -411,6 +420,7 @@ func (s *Service) removeWorkflowTrigger(target *workflowtriggersv1.WorkflowTrigg
 		return
 	}
 	s.releaseDynamicInformerByGVK(target.Spec.Watch.Resource.Group, target.Spec.Watch.Resource.Version, target.Spec.Watch.Resource.Kind, key)
+	s.cleanupFiredGenerations(target.Namespace, target.Name)
 }
 
 // ensureDynamicInformerForWorkflowTrigger starts a dynamic informer for the
@@ -459,4 +469,17 @@ func (s *Service) snapshotStatuses() []triggerStatusEntry {
 		out = append(out, triggerStatusEntry{key: k, status: v, trigger: v.trigger})
 	}
 	return out
+}
+
+// cleanupFiredGenerations removes all entries from firedGenerations whose key
+// starts with the trigger's namespace/name prefix. Called when a trigger is deleted.
+func (s *Service) cleanupFiredGenerations(triggerNamespace, triggerName string) {
+	prefix := triggerNamespace + "/" + triggerName + ":"
+	s.firedGenerationsMu.Lock()
+	defer s.firedGenerationsMu.Unlock()
+	for k := range s.firedGenerations {
+		if strings.HasPrefix(k, prefix) {
+			delete(s.firedGenerations, k)
+		}
+	}
 }

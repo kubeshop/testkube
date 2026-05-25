@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"net"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
+	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 )
 
@@ -54,6 +56,18 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 
 		// Field matching (v2 only, empty for v1 so always passes)
 		if !matchFieldSelector(t.FieldConditions, e.Object, e.OldObject) {
+			continue
+		}
+
+		// Generation-based deduplication: for triggers using changed_to/changed_from,
+		// prevent duplicate firings when a custom resource's status field oscillates
+		// multiple times within the same metadata.generation (e.g. Argo Rollout phase
+		// going Progressing→Healthy at each canary step during a single rollout).
+		if s.isAlreadyFiredForGeneration(t, e) {
+			s.logger.Debugf(
+				"trigger service: matcher component: skipping trigger %s/%s for resource %s/%s: already fired for generation %d",
+				t.Namespace, t.Name, e.Namespace, e.name, e.objectMeta.GetGeneration(),
+			)
 			continue
 		}
 
@@ -102,6 +116,9 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 
 		s.logger.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
 
+		// Record that this trigger fired for the resource's current generation.
+		s.recordFiredGeneration(t, e)
+
 		var causes []string
 		for _, cause := range e.causes {
 			causes = append(causes, string(cause))
@@ -113,6 +130,64 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		}
 	}
 	return nil
+}
+
+// hasTransitionOperator returns true if the trigger's field conditions include
+// a changed_to or changed_from operator — the operators susceptible to
+// duplicate firings when a resource's status oscillates within one generation.
+func hasTransitionOperator(conditions []workflowtriggersv1.WorkflowTriggerFieldCondition) bool {
+	for _, c := range conditions {
+		if c.Operator == workflowtriggersv1.FieldOperatorChangedTo || c.Operator == workflowtriggersv1.FieldOperatorChangedFrom {
+			return true
+		}
+	}
+	return false
+}
+
+// firedGenerationKey builds the deduplication map key for a trigger+resource pair.
+func firedGenerationKey(t *internalTrigger, e *watcherEvent) string {
+	return fmt.Sprintf("%s/%s:%s/%s", t.Namespace, t.Name, e.Namespace, e.name)
+}
+
+// isAlreadyFiredForGeneration checks whether the trigger has already fired for
+// this resource at its current metadata.generation. Only applies when the
+// trigger uses changed_to or changed_from operators and the resource has a
+// non-zero generation (custom resources with status subresource).
+func (s *Service) isAlreadyFiredForGeneration(t *internalTrigger, e *watcherEvent) bool {
+	if !hasTransitionOperator(t.FieldConditions) {
+		return false
+	}
+	if e.objectMeta == nil {
+		return false
+	}
+	gen := e.objectMeta.GetGeneration()
+	if gen == 0 {
+		return false
+	}
+	key := firedGenerationKey(t, e)
+	s.firedGenerationsMu.RLock()
+	lastGen, ok := s.firedGenerations[key]
+	s.firedGenerationsMu.RUnlock()
+	return ok && lastGen == gen
+}
+
+// recordFiredGeneration stores the resource's current generation so that
+// subsequent oscillations within the same generation are suppressed.
+func (s *Service) recordFiredGeneration(t *internalTrigger, e *watcherEvent) {
+	if !hasTransitionOperator(t.FieldConditions) {
+		return
+	}
+	if e.objectMeta == nil {
+		return
+	}
+	gen := e.objectMeta.GetGeneration()
+	if gen == 0 {
+		return
+	}
+	key := firedGenerationKey(t, e)
+	s.firedGenerationsMu.Lock()
+	s.firedGenerations[key] = gen
+	s.firedGenerationsMu.Unlock()
 }
 
 // matchInternalResource checks if the event's resource matches the trigger's resource criteria.
