@@ -145,12 +145,6 @@ func portForwardOnPremStorage(ctx context.Context, cfg config.Data, verbose bool
 			localPort:   config.EnterpriseMinioPortFrwardingPort,
 			label:       "seaweed-filer-s3",
 		},
-		{
-			name:        config.EnterpriseSeaweedFilerName,
-			servicePort: config.EnterpriseSeaweedFilerPort,
-			localPort:   config.EnterpriseMinioPortFrwardingPort,
-			label:       "seaweed-filer-http",
-		},
 	}
 
 	var attempts []string

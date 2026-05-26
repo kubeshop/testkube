@@ -25,7 +25,6 @@ const (
 	EnterpriseSeaweedS3Name          string = "testkube-enterprise-seaweedfs-s3"
 	EnterpriseSeaweedFilerName       string = "testkube-enterprise-seaweedfs-filer"
 	EnterpriseSeaweedS3Port          int    = 8333
-	EnterpriseSeaweedFilerPort       int    = 8888
 
 	configDirName = ".testkube"
 	configFile    = "config.json"
