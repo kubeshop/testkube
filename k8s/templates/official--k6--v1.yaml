@@ -12,12 +12,45 @@ metadata:
     testkube.io/image: grafana/k6
     testkube.io/example-path: k6.js
     testkube.io/example: |
-      import http from 'k6/http';
-      import { sleep } from 'k6';
-      export default function () {
-          http.get('https://test.k6.io');
-          sleep(1);
+      import http from "k6/http";
+      import { check, sleep } from "k6";
+
+      export const options = {
+        scenarios: {
+          homepage: {
+            executor: "constant-vus",
+            exec: "homepage",
+            vus: 1,
+            duration: "10s",
+          },
+          docs: {
+            executor: "constant-vus",
+            exec: "docs",
+            vus: 1,
+            duration: "10s",
+          },
+        },
+        thresholds: {
+          "http_req_duration{scenario:homepage}": ["p(95)<2000"],
+          "http_req_duration{scenario:docs}": ["p(95)<2000"],
+          "http_reqs{scenario:homepage}": ["count>0"],
+          "http_reqs{scenario:docs}": ["count>0"],
+          "http_req_failed{scenario:homepage}": ["rate<0.5"],
+          "http_req_failed{scenario:docs}": ["rate<0.5"],
+        },
       };
+
+      export function homepage() {
+        const res = http.get("https://test.k6.io");
+        check(res, { "homepage status is 200": (r) => r.status === 200 });
+        sleep(1);
+      }
+
+      export function docs() {
+        const res = http.get("https://test.k6.io/news.php");
+        check(res, { "docs status is 200": (r) => r.status === 200 });
+        sleep(1);
+      }
 spec:
   config:
     version:
@@ -27,9 +60,12 @@ spec:
     run:
       description: Run command
       type: string
-      default: "k6 run k6.js"
+      default: "mkdir -p /data/artifacts && k6 run k6.js --summary-export /data/artifacts/summary.json"
   steps:
   - name: Run k6 tests
     run:
       image: "grafana/k6:{{ config.version }}"
       shell: "{{ config.run }}"
+    artifacts:
+      paths:
+      - /data/artifacts/*
