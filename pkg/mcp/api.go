@@ -318,6 +318,16 @@ func (c *APIClient) GetExecutionLogs(ctx context.Context, executionID string, pa
 }
 
 func (c *APIClient) GetExecutionInfo(ctx context.Context, workflowName, executionID string) (string, error) {
+	if workflowName == "" {
+		return c.makeRequest(ctx, APIRequest{
+			Method: "GET",
+			Path:   "/agent/test-workflow-executions/{executionId}",
+			Scope:  ApiScopeOrgEnv,
+			PathParams: map[string]string{
+				"executionId": executionID,
+			},
+		})
+	}
 	return c.makeRequest(ctx, APIRequest{
 		Method: "GET",
 		Path:   "/agent/test-workflows/{workflowName}/executions/{executionId}",
