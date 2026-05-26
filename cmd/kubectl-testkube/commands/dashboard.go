@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/skratchdot/open-golang/open"
@@ -142,21 +143,40 @@ func portForwardOnPremStorage(ctx context.Context, cfg config.Data, verbose bool
 			name:        config.EnterpriseSeaweedFilerName,
 			servicePort: config.EnterpriseSeaweedS3Port,
 			localPort:   config.EnterpriseMinioPortFrwardingPort,
-			label:       "seaweed-filer",
+			label:       "seaweed-filer-s3",
+		},
+		{
+			name:        config.EnterpriseSeaweedFilerName,
+			servicePort: config.EnterpriseSeaweedFilerPort,
+			localPort:   config.EnterpriseMinioPortFrwardingPort,
+			label:       "seaweed-filer-http",
 		},
 	}
 
+	var attempts []string
 	for _, target := range targets {
 		running, err := k8sclient.IsPodOfServiceRunning(ctx, cfg.Namespace, target.name)
-		if err != nil || !running {
+		if err != nil {
+			attempts = append(attempts, fmt.Sprintf("%s check failed: %v", target.label, err))
+			continue
+		}
+		if !running {
 			continue
 		}
 
 		ui.Debug("Port forwarding for storage", target.label, target.name)
-		return k8sclient.PortForward(ctx, cfg.Namespace, target.name, target.servicePort, target.localPort, verbose)
+		if err := k8sclient.PortForward(ctx, cfg.Namespace, target.name, target.servicePort, target.localPort, verbose); err != nil {
+			attempts = append(attempts, fmt.Sprintf("%s forward failed: %v", target.label, err))
+			continue
+		}
+		return nil
 	}
 
-	return fmt.Errorf("no compatible storage service found for dashboard port-forward (checked: %s, %s, %s)", config.EnterpriseMinioName, config.EnterpriseSeaweedS3Name, config.EnterpriseSeaweedFilerName)
+	if len(attempts) == 0 {
+		return fmt.Errorf("no compatible storage service found for dashboard port-forward (checked: %s, %s, %s)", config.EnterpriseMinioName, config.EnterpriseSeaweedS3Name, config.EnterpriseSeaweedFilerName)
+	}
+
+	return fmt.Errorf("unable to port-forward compatible storage service (%s)", strings.Join(attempts, "; "))
 }
 
 func localPortCheck(port int) error {
