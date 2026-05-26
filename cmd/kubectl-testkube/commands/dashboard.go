@@ -90,12 +90,11 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding dex", err)
 	}
 	ui.ExitOnError("port forwarding dex", err)
-	ui.Debug("Port forwarding for minio", config.EnterpriseMinioName)
-	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseMinioName, config.EnterpriseMinioPort, config.EnterpriseMinioPortFrwardingPort, verbose)
+	err = portForwardOnPremStorage(ctx, cfg, verbose)
 	if err != nil {
-		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding minio", err)
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding storage", err)
 	}
-	ui.ExitOnError("port forwarding minio", err)
+	ui.ExitOnError("port forwarding storage", err)
 
 	if !skipBrowser {
 		ui.Debug("Opening dashboard in browser", uri)
@@ -116,6 +115,48 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 	ui.Success("Port forwarding the necessary services, hit Ctrl+c (or Cmd+c) to stop")
 	<-c
 	cancel()
+}
+
+type storageForwardTarget struct {
+	name        string
+	servicePort int
+	localPort   int
+	label       string
+}
+
+func portForwardOnPremStorage(ctx context.Context, cfg config.Data, verbose bool) error {
+	targets := []storageForwardTarget{
+		{
+			name:        config.EnterpriseMinioName,
+			servicePort: config.EnterpriseMinioPort,
+			localPort:   config.EnterpriseMinioPortFrwardingPort,
+			label:       "minio",
+		},
+		{
+			name:        config.EnterpriseSeaweedS3Name,
+			servicePort: config.EnterpriseSeaweedS3Port,
+			localPort:   config.EnterpriseMinioPortFrwardingPort,
+			label:       "seaweed-s3",
+		},
+		{
+			name:        config.EnterpriseSeaweedFilerName,
+			servicePort: config.EnterpriseSeaweedS3Port,
+			localPort:   config.EnterpriseMinioPortFrwardingPort,
+			label:       "seaweed-filer",
+		},
+	}
+
+	for _, target := range targets {
+		running, err := k8sclient.IsPodOfServiceRunning(ctx, cfg.Namespace, target.name)
+		if err != nil || !running {
+			continue
+		}
+
+		ui.Debug("Port forwarding for storage", target.label, target.name)
+		return k8sclient.PortForward(ctx, cfg.Namespace, target.name, target.servicePort, target.localPort, verbose)
+	}
+
+	return fmt.Errorf("no compatible storage service found for dashboard port-forward (checked: %s, %s, %s)", config.EnterpriseMinioName, config.EnterpriseSeaweedS3Name, config.EnterpriseSeaweedFilerName)
 }
 
 func localPortCheck(port int) error {
