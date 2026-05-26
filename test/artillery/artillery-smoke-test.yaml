@@ -4,7 +4,8 @@ config:
     - duration: 1
       arrivalRate: 1
 scenarios:
-  - flow:
+  - name: homepage
+    flow:
       - get:
           url: "/"
       - think: 0.1

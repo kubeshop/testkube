@@ -80,7 +80,7 @@ spec:
       name: official/k6/v1
       config:
         version: 1.1.0
-        run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+        run: "mkdir -p /data/artifacts && k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --summary-export /data/artifacts/summary.json"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -117,7 +117,7 @@ spec:
       name: official/k6/v1
       config:
         version: 1.1.0
-        run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+        run: "mkdir -p /data/artifacts && k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value --summary-export /data/artifacts/summary.json"
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
