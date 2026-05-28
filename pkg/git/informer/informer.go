@@ -355,10 +355,6 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 	return false, nil
 }
 
-func (i *Informer) hasNewHeadCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (bool, error) {
-	return i.hasNewHeadCommitWithCache(ctx, key, trigger, nil)
-}
-
 func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (bool, error) {
 	headHash, err := i.remoteHeadHashWithCache(ctx, trigger.Namespace, trigger.ContentSelector.Git, cache)
 	if err != nil {
@@ -552,14 +548,6 @@ func (i *Informer) remoteHeadHash(ctx context.Context, namespace string, gitConf
 		return "", err
 	}
 	return remoteHeadHashWithClientOptions(gitConfig, i.options, clientOptions)
-}
-
-func remoteHeadHash(gitConfig *testkube.TestTriggerContentGit, options Options) (string, error) {
-	clientOptions, err := authClientOptions(gitConfig)
-	if err != nil {
-		return "", err
-	}
-	return remoteHeadHashWithClientOptions(gitConfig, options, clientOptions)
 }
 
 func remoteHeadHashWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, error) {
@@ -783,7 +771,7 @@ func (i *Informer) resolveSecretKeyRefValue(ctx context.Context, namespace strin
 	}
 	secret, err := i.kubeClient.CoreV1().Secrets(namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	if err != nil {
-		if !(apierrors.IsNotFound(err) && ref.Optional != nil && *ref.Optional) {
+		if !apierrors.IsNotFound(err) || ref.Optional == nil || !*ref.Optional {
 			log.DefaultLogger.Warnf("git informer: failed to read secret %s/%s key %s: %v", namespace, ref.Name, ref.Key, err)
 		}
 		return "", false
@@ -803,7 +791,7 @@ func (i *Informer) resolveConfigMapKeyRefValue(ctx context.Context, namespace st
 	}
 	configMap, err := i.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	if err != nil {
-		if !(apierrors.IsNotFound(err) && ref.Optional != nil && *ref.Optional) {
+		if !apierrors.IsNotFound(err) || ref.Optional == nil || !*ref.Optional {
 			log.DefaultLogger.Warnf("git informer: failed to read configmap %s/%s key %s: %v", namespace, ref.Name, ref.Key, err)
 		}
 		return "", false

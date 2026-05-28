@@ -60,10 +60,6 @@ func MapAPIToCRD(api testkube.WorkflowTrigger) workflowtriggersv1.WorkflowTrigge
 	}
 }
 
-func mapEnvVarSourceKubeToAPI(v *corev1.EnvVarSource) *testkube.EnvVarSource {
-	return commonmapper.MapEnvVarSourceKubeToAPI(v)
-}
-
 func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 	return commonmapper.MapEnvVarSourceAPIToKube(v)
 }
