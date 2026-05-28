@@ -2273,7 +2273,7 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
             ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($22::text[]) AS cond)
         )
     )
-ORDER BY e.scheduled_at DESC
+ORDER BY e.organization_id, e.environment_id, e.scheduled_at DESC
 LIMIT NULLIF($24, 0) OFFSET $23
 `
 

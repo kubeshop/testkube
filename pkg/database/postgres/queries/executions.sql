@@ -725,7 +725,7 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
             ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
         )
     )
-ORDER BY e.scheduled_at DESC
+ORDER BY e.organization_id, e.environment_id, e.scheduled_at DESC
 LIMIT NULLIF(@lmt, 0) OFFSET @fst;
 
 -- name: InsertTestWorkflowExecution :exec
