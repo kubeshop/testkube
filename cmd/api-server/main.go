@@ -67,6 +67,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
@@ -766,6 +767,7 @@ func main() {
 		})
 	}
 
+	var triggerService *triggers.Service
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		commons.ExitOnError("getting k8s client config", err)
@@ -793,7 +795,7 @@ func main() {
 		}
 		triggerClusterID = leasebackend.SanitizeForK8sName(triggerClusterID)
 
-		triggerService := triggers.NewService(
+		triggerService = triggers.NewService(
 			cfg.RunnerName,
 			clientset,
 			testkubeClientset,
@@ -816,6 +818,38 @@ func main() {
 			triggers.WithEventLabels(cfg.EventLabels),
 			triggers.WithDynamicClient(dynamicClient),
 		)
+
+		// Start git content informer when enabled for trigger source-of-truth (cloud or OSS).
+		if services.ShouldRunGitInformer(useTestTriggerControlPlane, useCloudTestTriggers, proContext) {
+			informerWatcherNamespaces := cfg.TestkubeWatcherNamespaces
+			if !useTestTriggerControlPlane && strings.TrimSpace(informerWatcherNamespaces) == "" {
+				informerWatcherNamespaces = cfg.TestkubeNamespace
+			}
+
+			triggerService.RegisterLeaderTask(leader.Task{
+				Name: "git-informer",
+				Start: func(taskCtx context.Context) error {
+					gitinformer.NewInformer(testTriggersClient, triggerService, cfg.TestkubeNamespace, proContext.EnvID, gitinformer.Options{
+						ReconcileInterval:  cfg.TestTriggerGitInformerReconcileInterval,
+						RepoDepth:          cfg.TestTriggerGitInformerRepoDepth,
+						ListTimeoutSeconds: cfg.TestTriggerGitInformerListTimeout,
+						MaxCommitsScan:     cfg.TestTriggerGitInformerMaxCommitsScan,
+						PullRetries:        cfg.TestTriggerGitInformerPullRetries,
+						PullRetryDelay:     cfg.TestTriggerGitInformerPullRetryDelay,
+						WatcherNamespaces:  informerWatcherNamespaces,
+						KubeClient:         clientset,
+					}).Reconcile(taskCtx)
+					return nil
+				},
+			})
+		} else if useTestTriggerControlPlane && useCloudTestTriggers && proContext.EnvID == "" {
+			log.DefaultLogger.Warnw("git informer: skipping start",
+				"reason", "cloud test trigger client requires non-empty environment ID",
+				"useTestTriggerControlPlane", useTestTriggerControlPlane,
+				"useCloudTestTriggers", useCloudTestTriggers,
+			)
+		}
+
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {
 			triggerService.Run(ctx)

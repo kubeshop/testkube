@@ -255,6 +255,17 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
+// RegisterLeaderTask registers an additional leader-scoped task on the same
+// coordinator used by trigger-watcher/trigger-scraper. It must be called
+// before Run.
+func (s *Service) RegisterLeaderTask(task leader.Task) {
+	if s == nil || s.coordinator == nil {
+		return
+	}
+
+	s.coordinator.Register(task)
+}
+
 func (s *Service) addTrigger(ctx context.Context, t *testtriggersv1.TestTrigger) {
 	key := newStatusKey(triggerSourceV1, t.Namespace, t.Name)
 	s.triggerStatusMu.Lock()
@@ -324,8 +335,8 @@ func (s *Service) ensureDynamicInformerForTrigger(ctx context.Context, t *testtr
 		)
 		return
 	}
-	if isBuiltinResource(t.Spec.ResourceRef.Kind) {
-		s.logger.Debugf("trigger service: skipping dynamic informer for built-in type %s", t.Spec.ResourceRef.Kind)
+	if isNonDynamicResource(t.Spec.ResourceRef.Kind) {
+		s.logger.Debugf("trigger service: skipping dynamic informer for non-dynamic type %s", t.Spec.ResourceRef.Kind)
 		return
 	}
 
@@ -351,7 +362,7 @@ func (s *Service) releaseDynamicInformerForTrigger(t *testtriggersv1.TestTrigger
 // level because that's an expected cleanup ordering, not an operator-actionable
 // condition.
 func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key statusKey) {
-	if s.dynamicManager == nil || isBuiltinResource(kind) {
+	if s.dynamicManager == nil || isNonDynamicResource(kind) {
 		return
 	}
 	gvr, err := resolveGVR(s.dynamicManager.mapper, group, version, kind)
@@ -361,6 +372,10 @@ func (s *Service) releaseDynamicInformerByGVK(group, version, kind string, key s
 		return
 	}
 	s.dynamicManager.releaseInformer(gvr, string(key))
+}
+
+func isNonDynamicResource(kind string) bool {
+	return isBuiltinResource(kind) || strings.EqualFold(kind, string(testtriggersv1.TestTriggerResourceContent))
 }
 
 func (s *Service) addWorkflowTrigger(ctx context.Context, t *workflowtriggersv1.WorkflowTrigger) {

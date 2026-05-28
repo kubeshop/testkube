@@ -246,7 +246,8 @@ Testkube extends Kubernetes with Custom Resource Definitions to enable declarati
 - **`TestTrigger`** (`tests.testkube.io/v1`)
   - **Definition**: [`api/testtriggers/v1/testtrigger_types.go`](api/testtriggers/v1/testtrigger_types.go)
   - **Purpose**: Automatically triggers tests/workflows based on Kubernetes events
-  - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions
+  - **Features**: Watches Pods, Deployments, Services, etc. and triggers executions; supports git-content based triggers reconciled by the git informer
+  - **Leader behavior**: Git informer reconciliation is registered as a leader-coordinated task in `cmd/api-server/main.go`, so only the elected leader performs git polling/pulls
 
 #### Deprecated CRDs
 

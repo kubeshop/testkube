@@ -64,7 +64,13 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
 		}
 
-		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
+		s.Log.Infow(
+			"creating test trigger",
+			"name", testTrigger.Name,
+			"namespace", testTrigger.Namespace,
+			"resource", testTrigger.Spec.Resource,
+			"event", testTrigger.Spec.Event,
+		)
 
 		// Convert CRD to API object for the new interface
 		apiTrigger := testtriggersmapper.MapCRDToAPI(&testTrigger)
@@ -134,10 +140,13 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 				Annotations:       request.Annotations,
 				Selector:          request.Selector,
 				Resource:          request.Resource,
+				ResourceRef:       request.ResourceRef,
 				ResourceSelector:  request.ResourceSelector,
 				Event:             request.Event,
+				Match:             request.Match,
 				ConditionSpec:     request.ConditionSpec,
 				ProbeSpec:         request.ProbeSpec,
+				ContentSelector:   request.ContentSelector,
 				Action:            request.Action,
 				ActionParameters:  request.ActionParameters,
 				Execution:         request.Execution,
@@ -163,17 +172,26 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			if request.Resource != nil {
 				apiTrigger.Resource = request.Resource
 			}
+			if request.ResourceRef != nil {
+				apiTrigger.ResourceRef = request.ResourceRef
+			}
 			if request.ResourceSelector != nil {
 				apiTrigger.ResourceSelector = request.ResourceSelector
 			}
 			if request.Event != "" {
 				apiTrigger.Event = request.Event
 			}
+			if request.Match != nil {
+				apiTrigger.Match = request.Match
+			}
 			if request.ConditionSpec != nil {
 				apiTrigger.ConditionSpec = request.ConditionSpec
 			}
 			if request.ProbeSpec != nil {
 				apiTrigger.ProbeSpec = request.ProbeSpec
+			}
+			if request.ContentSelector != nil {
+				apiTrigger.ContentSelector = request.ContentSelector
 			}
 			if request.Action != nil {
 				apiTrigger.Action = request.Action
@@ -194,6 +212,11 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 				apiTrigger.Sync = request.Sync
 			}
 			apiTrigger.Disabled = request.Disabled
+		}
+
+		validatedCRDTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(mapAPITestTriggerToUpsertRequest(apiTrigger))
+		if errs := validatedCRDTrigger.Spec.Validate(); len(errs) > 0 {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errors.Join(errs...)))
 		}
 
 		err = s.TestTriggersClient.Update(c.Context(), s.getEnvironmentId(), *apiTrigger)
@@ -373,6 +396,31 @@ func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 func (s *TestkubeAPI) GetTestTriggerKeyMapHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(triggerskeymapmapper.MapTestTriggerKeyMapToAPI(triggers.NewKeyMap()))
+	}
+}
+
+func mapAPITestTriggerToUpsertRequest(trigger *testkube.TestTrigger) testkube.TestTriggerUpsertRequest {
+	return testkube.TestTriggerUpsertRequest{
+		Namespace:         trigger.Namespace,
+		Name:              trigger.Name,
+		Labels:            trigger.Labels,
+		Annotations:       trigger.Annotations,
+		Selector:          trigger.Selector,
+		Resource:          trigger.Resource,
+		ResourceRef:       trigger.ResourceRef,
+		ResourceSelector:  trigger.ResourceSelector,
+		Event:             trigger.Event,
+		Match:             trigger.Match,
+		ConditionSpec:     trigger.ConditionSpec,
+		ProbeSpec:         trigger.ProbeSpec,
+		ContentSelector:   trigger.ContentSelector,
+		Action:            trigger.Action,
+		ActionParameters:  trigger.ActionParameters,
+		Execution:         trigger.Execution,
+		TestSelector:      trigger.TestSelector,
+		ConcurrencyPolicy: trigger.ConcurrencyPolicy,
+		Disabled:          trigger.Disabled,
+		Sync:              trigger.Sync,
 	}
 }
 

@@ -3,6 +3,7 @@ package testtriggers
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -63,6 +64,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		Match:             mapFieldConditionsFromCRD(crd.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
+		ContentSelector:   mapContentSelectorFromCRD(crd.Spec.ContentSelector),
 		Action:            action,
 		ActionParameters:  mapActionParametersFromCRD(crd.Spec.ActionParameters),
 		Execution:         execution,
@@ -194,6 +196,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		Match:             mapFieldConditionsFromCRD(request.Spec.Match),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),
+		ContentSelector:   mapContentSelectorFromCRD(request.Spec.ContentSelector),
 		Action:            action,
 		ActionParameters:  mapActionParametersFromCRD(request.Spec.ActionParameters),
 		Execution:         execution,
@@ -232,4 +235,38 @@ func mapProbeSpecFromCRD(probeSpec *testsv1.TestTriggerProbeSpec) *testkube.Test
 		Delay:   probeSpec.Delay,
 		Probes:  probes,
 	}
+}
+
+func mapContentSelectorFromCRD(selector *testsv1.TestTriggerContentSelector) *testkube.TestTriggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentSelector{
+		Git: mapContentGitFromCRD(selector.Git),
+	}
+}
+
+func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.TestTriggerContentGit {
+	if git == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentGit{
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: commonmapper.MapEnvVarSourceKubeToAPI(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
+		AuthType:     mapGitAuthTypeKubeToAPI(git.AuthType),
+		Paths:        git.Paths,
+	}
+}
+
+func mapGitAuthTypeKubeToAPI(v testsv3.GitAuthType) *testkube.ContentGitAuthType {
+	if v == "" {
+		return nil
+	}
+	return common.Ptr(testkube.ContentGitAuthType(v))
 }

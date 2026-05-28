@@ -11,8 +11,10 @@ package testkube
 
 // EnvVarSource represents a source for the value of an EnvVar.
 type EnvVarSource struct {
+	// Selects a key of a ConfigMap.
 	ConfigMapKeyRef  *EnvVarSourceConfigMapKeyRef `json:"configMapKeyRef,omitempty"`
 	FieldRef         *FieldRef                    `json:"fieldRef,omitempty"`
 	ResourceFieldRef *ResourceFieldRef            `json:"resourceFieldRef,omitempty"`
-	SecretKeyRef     *EnvVarSourceSecretKeyRef    `json:"secretKeyRef,omitempty"`
+	// Selects a key of a secret in the pod's namespace
+	SecretKeyRef *EnvVarSourceSecretKeyRef `json:"secretKeyRef,omitempty"`
 }

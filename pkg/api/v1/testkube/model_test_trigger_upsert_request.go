@@ -29,6 +29,7 @@ type TestTriggerUpsertRequest struct {
 	Match             []TestTriggerFieldCondition     `json:"match,omitempty"`
 	ConditionSpec     *TestTriggerConditionSpec       `json:"conditionSpec,omitempty"`
 	ProbeSpec         *TestTriggerProbeSpec           `json:"probeSpec,omitempty"`
+	ContentSelector   *TestTriggerContentSelector     `json:"contentSelector,omitempty"`
 	Action            *TestTriggerActions             `json:"action"`
 	ActionParameters  *TestTriggerActionParameters    `json:"actionParameters,omitempty"`
 	Execution         *TestTriggerExecutions          `json:"execution"`

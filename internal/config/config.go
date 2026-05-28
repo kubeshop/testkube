@@ -244,6 +244,12 @@ type Config struct {
 	WorkflowLogsTLSRetryInitialDelay         time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_INITIAL_DELAY" default:"500ms"`
 	WorkflowLogsTLSRetryMaxDelay             time.Duration `envconfig:"TESTKUBE_WORKFLOW_LOGS_TLS_RETRY_MAX_DELAY" default:"30s"`
 	TestTriggerControlPlane                  bool          `envconfig:"TEST_TRIGGER_CONTROL_PLANE" default:"false"`
+	TestTriggerGitInformerRepoDepth          int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_REPO_DEPTH" default:"500"`
+	TestTriggerGitInformerListTimeout        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_LIST_TIMEOUT" default:"15"`
+	TestTriggerGitInformerMaxCommitsScan     int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_MAX_COMMITS_SCAN" default:"500"`
+	TestTriggerGitInformerReconcileInterval  time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_RECONCILE_INTERVAL" default:"1m"`
+	TestTriggerGitInformerPullRetries        int           `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRIES" default:"2"`
+	TestTriggerGitInformerPullRetryDelay     time.Duration `envconfig:"TEST_TRIGGER_GIT_INFORMER_PULL_RETRY_DELAY" default:"2s"`
 	ForceSuperAgentMode                      bool          `envconfig:"WARNING_UNSAFE_FORCE_SUPERAGENT_MODE" default:"false"`
 }
 

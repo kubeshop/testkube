@@ -8141,16 +8141,25 @@ components:
           description: label selector for events
         resource:
           $ref: "#/components/schemas/TestTriggerResources"
+        resourceRef:
+          $ref: "#/components/schemas/TestTriggerResourceRef"
         resourceSelector:
           $ref: "#/components/schemas/TestTriggerSelector"
         event:
           type: string
           description: listen for event for selected resource
           example: modified
+        match:
+          type: array
+          description: Match filters which object changes fire the trigger (ANDed).
+          items:
+            $ref: "#/components/schemas/TestTriggerFieldCondition"
         conditionSpec:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
         probeSpec:
           $ref: "#/components/schemas/TestTriggerProbeSpec"
+        contentSelector:
+          $ref: "#/components/schemas/TestTriggerContentSelector"
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         actionParameters:
@@ -8221,6 +8230,94 @@ components:
           $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
           description: label selector for Kubernetes resources
 
+    TestTriggerResourceRef:
+      type: object
+      required:
+        - kind
+      properties:
+        group:
+          type: string
+          description: Group is the API group (empty for core resources like Pod, Service).
+          example: apps
+        version:
+          type: string
+          description: Version is the API version.
+          example: v1
+        kind:
+          type: string
+          description: Kind is the resource kind.
+          example: Deployment
+
+    TestTriggerFieldCondition:
+      type: object
+      required:
+        - path
+        - operator
+      properties:
+        path:
+          type: string
+          description: Dot-path to the field in the watched resource, e.g. ".spec.replicas".
+        operator:
+          $ref: "#/components/schemas/TestTriggerFieldOperator"
+        value:
+          type: string
+          description: Value to compare against for value-based operators.
+
+    TestTriggerFieldOperator:
+      type: string
+      description: supported comparison operators for TestTrigger match conditions
+      enum:
+        - equals
+        - not_equals
+        - exists
+        - not_exists
+        - changed
+        - changed_to
+        - changed_from
+
+    TestTriggerContentSelector:
+      type: object
+      properties:
+        git:
+          $ref: "#/components/schemas/TestTriggerContentGit"
+
+    TestTriggerContentGit:
+      type: object
+      required:
+        - uri
+      properties:
+        uri:
+          type: string
+          description: URI of the git repository to watch.
+        revision:
+          type: string
+          description: branch, tag or commit to watch.
+        username:
+          type: string
+          description: plain text username to fetch with
+        usernameFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        token:
+          type: string
+          description: "plain text token to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer tokenFrom instead."
+        tokenFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        sshKey:
+          type: string
+          description: "plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead."
+        sshKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        authType:
+          type: string
+          enum:
+            - basic
+            - header
+        paths:
+          type: array
+          description: paths to watch for changes
+          items:
+            type: string
+
     TestTriggerResources:
       description: supported kubernetes resources for test triggers
       type: string
@@ -8233,6 +8330,7 @@ components:
         - ingress
         - event
         - configmap
+        - content
 
     TestTriggerExecutions:
       description: supported test resources for test triggers

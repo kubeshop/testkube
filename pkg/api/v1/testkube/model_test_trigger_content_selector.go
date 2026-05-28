@@ -9,11 +9,6 @@
  */
 package testkube
 
-type TestTriggerResourceRef struct {
-	// Group is the API group (empty for core resources like Pod, Service).
-	Group string `json:"group,omitempty"`
-	// Version is the API version.
-	Version string `json:"version,omitempty"`
-	// Kind is the resource kind.
-	Kind string `json:"kind"`
+type TestTriggerContentSelector struct {
+	Git *TestTriggerContentGit `json:"git,omitempty"`
 }

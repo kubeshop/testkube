@@ -14,6 +14,7 @@ func GetSupportedResources() []string {
 		ResourceIngress,
 		ResourceEvent,
 		ResourceConfigMap,
+		ResourceContent,
 	}
 }
 

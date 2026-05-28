@@ -12,6 +12,24 @@ import (
 func (s *TestTriggerSpec) Validate() []error {
 	var errs []error
 
+	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
+
+	if isContentResource && s.Event != TestTriggerEventModified {
+		errs = append(errs, fmt.Errorf("resource %q requires event to be %q", TestTriggerResourceContent, TestTriggerEventModified))
+	}
+	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {
+		errs = append(errs, fmt.Errorf("resource %q does not support conditionSpec.conditions", TestTriggerResourceContent))
+	}
+	if isContentResource && s.ProbeSpec != nil && len(s.ProbeSpec.Probes) > 0 {
+		errs = append(errs, fmt.Errorf("resource %q does not support probeSpec.probes", TestTriggerResourceContent))
+	}
+	if isContentResource && (s.ContentSelector == nil || s.ContentSelector.Git == nil || s.ContentSelector.Git.Uri == "") {
+		errs = append(errs, fmt.Errorf("resource %q requires contentSelector.git.uri", TestTriggerResourceContent))
+	}
+	if isContentResource && len(s.Match) > 0 {
+		errs = append(errs, fmt.Errorf("resource %q does not support match", TestTriggerResourceContent))
+	}
+
 	for i, cond := range s.Match {
 		if cond.Path == "" {
 			errs = append(errs, fmt.Errorf("match[%d].path is required", i))

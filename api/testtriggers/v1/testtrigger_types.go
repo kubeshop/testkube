@@ -17,9 +17,11 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 )
 
@@ -65,6 +67,8 @@ type TestTriggerSpec struct {
 	ConditionSpec *TestTriggerConditionSpec `json:"conditionSpec,omitempty"`
 	// What resource probes should be matched
 	ProbeSpec *TestTriggerProbeSpec `json:"probeSpec,omitempty"`
+	// ContentSelector identifies which content should be watched for changes
+	ContentSelector *TestTriggerContentSelector `json:"contentSelector,omitempty"`
 	// Action represents what needs to be executed for selected Execution
 	Action           TestTriggerAction            `json:"action"`
 	ActionParameters *TestTriggerActionParameters `json:"actionParameters,omitempty"`
@@ -83,7 +87,7 @@ type TestTriggerSpec struct {
 }
 
 // TestTriggerResource defines resource for test triggers
-// +kubebuilder:validation:Enum=pod;deployment;statefulset;daemonset;service;ingress;event;configmap
+// +kubebuilder:validation:Enum=pod;deployment;statefulset;daemonset;service;ingress;event;configmap;content
 type TestTriggerResource string
 
 // List of TestTriggerResources
@@ -96,6 +100,7 @@ const (
 	TestTriggerResourceIngress     TestTriggerResource = "ingress"
 	TestTriggerResourceEvent       TestTriggerResource = "event"
 	TestTriggerResourceConfigMap   TestTriggerResource = "configmap"
+	TestTriggerResourceContent     TestTriggerResource = "content"
 )
 
 // TestTriggerResourceRef identifies a K8s resource by GVK.
@@ -260,6 +265,41 @@ type TestTriggerActionParameters struct {
 	Tags map[string]string `json:"tags,omitempty"`
 	// Target helps decide on which runner the execution is scheduled.
 	Target *commonv1.Target `json:"target,omitempty" expr:"include"`
+}
+
+// TestTriggerContentSelector defines what content to watch for trigger events
+type TestTriggerContentSelector struct {
+	// Git specifies a git repository to watch for changes
+	Git *TestTriggerContentGitSpec `json:"git,omitempty"`
+}
+
+// TestTriggerContentGitSpec defines git repository configuration for content triggers
+type TestTriggerContentGitSpec struct {
+	// URI of the git repository
+	Uri string `json:"uri"`
+	// Revision (branch name, tag, or commit SHA) to watch
+	Revision string `json:"revision,omitempty"`
+	// Plain text username to fetch with
+	Username string `json:"username,omitempty"`
+	// External username to fetch with
+	UsernameFrom *corev1.EnvVarSource `json:"usernameFrom,omitempty"`
+	// Plain text token to fetch with.
+	// Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
+	// and exposed through Kubernetes API reads or logs. Prefer TokenFrom instead.
+	Token string `json:"token,omitempty"`
+	// External token to fetch with. Preferred for sensitive credentials.
+	TokenFrom *corev1.EnvVarSource `json:"tokenFrom,omitempty"`
+	// Plain text SSH private key to fetch with.
+	// Warning: this stores sensitive credentials directly in the CRD spec, which may be persisted in etcd
+	// and exposed through Kubernetes API reads or logs. Prefer SshKeyFrom instead.
+	SshKey string `json:"sshKey,omitempty"`
+	// External SSH private key to fetch with. Preferred for sensitive credentials.
+	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
+	// Authorization type for the credentials
+	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
+	// Paths is a list of file/directory paths to watch for changes.
+	// If empty, all paths are watched.
+	Paths []string `json:"paths,omitempty"`
 }
 
 //+kubebuilder:object:root=true

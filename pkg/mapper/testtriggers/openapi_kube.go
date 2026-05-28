@@ -1,8 +1,10 @@
 package testtriggers
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -46,6 +48,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorToCRD(request.ContentSelector),
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
@@ -110,6 +113,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 			Match:             mapFieldConditionsToCRD(request.Match),
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			ContentSelector:   mapContentSelectorToCRD(request.ContentSelector),
 			Action:            action,
 			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
@@ -121,6 +125,10 @@ func MapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta(request testkub
 }
 
 func mapSelectorToCRD(selector *testkube.TestTriggerSelector) testsv1.TestTriggerSelector {
+	if selector == nil {
+		return testsv1.TestTriggerSelector{}
+	}
+
 	return testsv1.TestTriggerSelector{
 		Name:           selector.Name,
 		NameRegex:      selector.NameRegex,
@@ -228,4 +236,42 @@ func mapActionParametersCRD(actionParameters *testkube.TestTriggerActionParamete
 		Tags:   actionParameters.Tags,
 		Target: common.MapPtr(actionParameters.Target, commonmapper.MapTargetApiToKube),
 	}
+}
+
+func mapContentSelectorToCRD(selector *testkube.TestTriggerContentSelector) *testsv1.TestTriggerContentSelector {
+	if selector == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentSelector{
+		Git: mapContentGitToCRD(selector.Git),
+	}
+}
+
+func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTriggerContentGitSpec {
+	if git == nil {
+		return nil
+	}
+	return &testsv1.TestTriggerContentGitSpec{
+		Uri:          git.Uri,
+		Revision:     git.Revision,
+		Username:     git.Username,
+		UsernameFrom: mapEnvVarSourceAPIToKube(git.UsernameFrom),
+		Token:        git.Token,
+		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
+		SshKey:       git.SshKey,
+		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
+		AuthType:     mapGitAuthTypeAPIToKube(git.AuthType),
+		Paths:        git.Paths,
+	}
+}
+
+func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
+	return commonmapper.MapEnvVarSourceAPIToKube(v)
+}
+
+func mapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType {
+	if v == nil {
+		return ""
+	}
+	return testsv3.GitAuthType(*v)
 }

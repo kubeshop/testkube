@@ -454,6 +454,42 @@ spec:
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 	})
 
+	t.Run("should return error when merged trigger fails spec validation", func(t *testing.T) {
+		// given
+		request := testkube.TestTriggerUpsertRequest{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Resource:  resourcePtr("content"),
+			Event:     "modified",
+		}
+
+		existingTrigger := &testkube.TestTrigger{
+			Name:      "test-trigger",
+			Namespace: "default",
+			Action:    actionPtr("run"),
+			Execution: executionPtr("testworkflow"),
+			TestSelector: &testkube.TestTriggerSelector{
+				Name: "my-workflow",
+			},
+		}
+
+		mockClient.EXPECT().
+			Get(gomock.Any(), "test-env", "test-trigger", "default").
+			Return(existingTrigger, nil).
+			Times(1)
+
+		requestBody, _ := json.Marshal(request)
+		req := httptest.NewRequestWithContext(context.Background(), "PUT", "/test-triggers", bytes.NewReader(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		// when
+		resp, err := app.Test(req)
+
+		// then
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
 	t.Run("should clear conditionSpec when yaml update removes it", func(t *testing.T) {
 		// given - YAML without conditionSpec
 		requestBody := `
@@ -526,6 +562,11 @@ spec:
 			TestSelector: &testkube.TestTriggerSelector{
 				Name: "my-test",
 			},
+			ContentSelector: &testkube.TestTriggerContentSelector{
+				Git: &testkube.TestTriggerContentGit{
+					Uri: "https://github.com/kubeshop/testkube.git",
+				},
+			},
 		}
 
 		// existing trigger has ALL optional fields populated
@@ -547,6 +588,11 @@ spec:
 				Timeout: 100,
 				Conditions: []testkube.TestTriggerCondition{
 					{Type_: "Ready", Status: conditionStatusPtr("True")},
+				},
+			},
+			ContentSelector: &testkube.TestTriggerContentSelector{
+				Git: &testkube.TestTriggerContentGit{
+					Uri: "https://github.com/example/old.git",
 				},
 			},
 			ProbeSpec: &testkube.TestTriggerProbeSpec{
@@ -591,6 +637,9 @@ spec:
 				assert.Equal(t, "created", trigger.Event)
 				assert.NotNil(t, trigger.TestSelector)
 				assert.Equal(t, "my-test", trigger.TestSelector.Name)
+				assert.NotNil(t, trigger.ContentSelector, "contentSelector should be set when provided in replace mode")
+				assert.NotNil(t, trigger.ContentSelector.Git)
+				assert.Equal(t, "https://github.com/kubeshop/testkube.git", trigger.ContentSelector.Git.Uri)
 				return nil
 			}).
 			Times(1)
