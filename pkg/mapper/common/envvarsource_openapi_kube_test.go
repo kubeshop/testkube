@@ -55,12 +55,12 @@ func TestMapEnvVarSourceAPIToKube_RoundTripSecretAndConfigMapRefs(t *testing.T) 
 	roundTripped := MapEnvVarSourceAPIToKube(MapEnvVarSourceKubeToAPI(source))
 	if assert.NotNil(t, roundTripped) {
 		if assert.NotNil(t, roundTripped.SecretKeyRef) {
-			assert.Equal(t, source.SecretKeyRef.LocalObjectReference.Name, roundTripped.SecretKeyRef.LocalObjectReference.Name)
+			assert.Equal(t, source.SecretKeyRef.Name, roundTripped.SecretKeyRef.Name)
 			assert.Equal(t, source.SecretKeyRef.Key, roundTripped.SecretKeyRef.Key)
 			assert.Equal(t, source.SecretKeyRef.Optional, roundTripped.SecretKeyRef.Optional)
 		}
 		if assert.NotNil(t, roundTripped.ConfigMapKeyRef) {
-			assert.Equal(t, source.ConfigMapKeyRef.LocalObjectReference.Name, roundTripped.ConfigMapKeyRef.LocalObjectReference.Name)
+			assert.Equal(t, source.ConfigMapKeyRef.Name, roundTripped.ConfigMapKeyRef.Name)
 			assert.Equal(t, source.ConfigMapKeyRef.Key, roundTripped.ConfigMapKeyRef.Key)
 			assert.Equal(t, source.ConfigMapKeyRef.Optional, roundTripped.ConfigMapKeyRef.Optional)
 		}
