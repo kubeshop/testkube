@@ -758,7 +758,12 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 		return nil, err
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutions(ctx, params)
+	var rows []sqlc.GetTestWorkflowExecutionsRow
+	err = r.withForceCustomPlan(ctx, func(qtx sqlc.TestWorkflowExecutionQueriesInterface) error {
+		var qerr error
+		rows, qerr = qtx.GetTestWorkflowExecutions(ctx, params)
+		return qerr
+	})
 	if err != nil {
 		return nil, err
 	}

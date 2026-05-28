@@ -1036,7 +1036,9 @@ func TestIsNameOnlyFilter(t *testing.T) {
 
 func TestPostgresRepository_GetExecutions(t *testing.T) {
 	mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
-	repo := &PostgresRepository{queries: mockQueries}
+	mockDB := &MockDatabaseInterface{}
+	mockTx := &MockTx{}
+	repo := &PostgresRepository{db: mockDB, queries: mockQueries}
 
 	t.Run("Success", func(t *testing.T) {
 		ctx := context.Background()
@@ -1046,6 +1048,7 @@ func TestPostgresRepository_GetExecutions(t *testing.T) {
 			sqlc.GetTestWorkflowExecutionsRow(createTestRow()),
 		}
 
+		expectForceCustomPlanTx(mockDB, mockTx, mockQueries, ctx)
 		mockQueries.On("GetTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsParams")).Return(rows, nil)
 
 		result, err := repo.GetExecutions(ctx, filter)
