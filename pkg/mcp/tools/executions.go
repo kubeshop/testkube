@@ -192,17 +192,17 @@ type ExecutionInfoGetter interface {
 func GetExecutionInfo(client ExecutionInfoGetter) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	tool = mcp.NewTool("get_execution_info",
 		mcp.WithDescription(GetExecutionInfoDescription),
-		mcp.WithString("workflowName", mcp.Required(), mcp.Description(WorkflowNameDescription)),
 		mcp.WithString("executionId", mcp.Required(), mcp.Description(ExecutionIdDescription)),
+		mcp.WithString("workflowName", mcp.Description(GetExecutionInfoWorkflowNameDescription)),
 	)
 
 	handler = func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		workflowName, err := RequiredParam[string](request, "workflowName")
+		executionId, err := RequiredParam[string](request, "executionId")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		executionId, err := RequiredParam[string](request, "executionId")
+		workflowName, err := OptionalParam[string](request, "workflowName")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

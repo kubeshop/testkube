@@ -1458,8 +1458,18 @@ type releaseMetadata struct {
 	TagName string `json:"tag_name"`
 }
 
+// GetLatestVersion fetches the latest Testkube release tag from GitHub using
+// a background context. It is kept for backwards-compatible callers that do
+// not need to bound the call. Prefer GetLatestVersionWithContext for new code.
 func GetLatestVersion() (string, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, latestReleaseUrl, nil)
+	return GetLatestVersionWithContext(context.Background())
+}
+
+// GetLatestVersionWithContext fetches the latest Testkube release tag from
+// GitHub honoring the provided context. The returned version has the leading
+// "v" prefix stripped.
+func GetLatestVersionWithContext(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestReleaseUrl, nil)
 	if err != nil {
 		return "", err
 	}

@@ -9,6 +9,7 @@ metadata:
     testkube.io/categories: Load & Performance
     testkube.io/description: Run Artillery tests
     testkube.io/icon: artillery
+    testkube.io/example-path: script.yaml
     testkube.io/example: |
       config:
         target: "https://testkube.kubeshop.io/"
@@ -16,7 +17,8 @@ metadata:
         - duration: 1
           arrivalRate: 1
       scenarios:
-      - flow:
+      - name: homepage
+        flow:
           - get:
               url: "/"
           - think: 0.1
@@ -33,7 +35,7 @@ spec:
     run:
       description: Run command
       type: string
-      default: "artillery run"
+      default: "mkdir -p /data/artifacts && artillery run script.yaml -o /data/artifacts/artillery-report.json"
   steps:
   - name: Run Artillery tests
     run:
@@ -41,3 +43,6 @@ spec:
       shell: |
         artillery() { {{ config.artillery_binary }} $@; }
         {{ config.run }}
+    artifacts:
+      paths:
+      - /data/artifacts/*
