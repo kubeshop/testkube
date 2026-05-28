@@ -16,8 +16,8 @@ spec:
     workingDir: /data/repo
     resources:
       requests:
-        cpu: 1000m
-        memory: 1024Mi
+        cpu: 1500m
+        memory: 2Gi
   steps:
   - name: Lint
     run:
