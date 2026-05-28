@@ -70,7 +70,7 @@ require (
 	github.com/valyala/fasthttp v1.71.0
 	github.com/wI2L/jsondiff v0.7.1
 	go.mongodb.org/mongo-driver/v2 v2.6.0
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.68.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
