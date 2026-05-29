@@ -412,6 +412,164 @@ func TestExtractTemplate_ParallelContent(t *testing.T) {
 	assert.Equal(t, expected, wf)
 }
 
+func testGitCreateCerts(caCert, clientCert, clientKey string) *testworkflowsv1.Content {
+	var caCertFrom, clientCertFrom, clientKeyFrom *corev1.EnvVarSource
+	if caCert != "" {
+		caCertFrom = testSecret(ComputedKeyword, caCert)
+	}
+	if clientCert != "" {
+		clientCertFrom = testSecret(ComputedKeyword, clientCert)
+	}
+	if clientKey != "" {
+		clientKeyFrom = testSecret(ComputedKeyword, clientKey)
+	}
+	return &testworkflowsv1.Content{
+		Git: &testworkflowsv1.ContentGit{
+			CaCertFrom:     caCertFrom,
+			ClientCertFrom: clientCertFrom,
+			ClientKeyFrom:  clientKeyFrom,
+		},
+	}
+}
+
+func testGitCerts(caCert, clientCert, clientKey *corev1.EnvVarSource) *testworkflowsv1.Content {
+	return &testworkflowsv1.Content{
+		Git: &testworkflowsv1.ContentGit{
+			CaCertFrom:     caCert,
+			ClientCertFrom: clientCert,
+			ClientKeyFrom:  clientKey,
+		},
+	}
+}
+
+func TestExtract_ContentCaCertOnly(t *testing.T) {
+	wf := testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCreateCerts("some-ca-cert", "", ""),
+			},
+		},
+	}
+	expected := testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCerts(testSecret("some-secret-1", GitCaCertKey), nil, nil),
+			},
+		},
+	}
+	i := 0
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
+		i++
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, [][]string{{GitCaCertKey, "some-ca-cert"}}, calls)
+	assert.Equal(t, expected, wf)
+}
+
+func TestExtract_ContentClientCertAndKey(t *testing.T) {
+	wf := testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCreateCerts("", "some-client-cert", "some-client-key"),
+			},
+		},
+	}
+	expected := testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCerts(nil, testSecret("some-secret-1", GitClientCertKey), testSecret("some-secret-2", GitClientKey)),
+			},
+		},
+	}
+	i := 0
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
+		i++
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, [][]string{{GitClientCertKey, "some-client-cert"}, {GitClientKey, "some-client-key"}}, calls)
+	assert.Equal(t, expected, wf)
+}
+
+func TestExtract_ContentAllCerts(t *testing.T) {
+	wf := testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCreateCerts("some-ca-cert", "some-client-cert", "some-client-key"),
+			},
+		},
+	}
+	expected := testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCerts(
+					testSecret("some-secret-1", GitCaCertKey),
+					testSecret("some-secret-2", GitClientCertKey),
+					testSecret("some-secret-3", GitClientKey),
+				),
+			},
+		},
+	}
+	i := 0
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
+		i++
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, [][]string{
+		{GitCaCertKey, "some-ca-cert"},
+		{GitClientCertKey, "some-client-cert"},
+		{GitClientKey, "some-client-key"},
+	}, calls)
+	assert.Equal(t, expected, wf)
+}
+
+func TestExtractTemplate_ContentAllCerts(t *testing.T) {
+	wf := testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCreateCerts("some-ca-cert", "some-client-cert", "some-client-key"),
+			},
+		},
+	}
+	expected := testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Content: testGitCerts(
+					testSecret("some-secret-1", GitCaCertKey),
+					testSecret("some-secret-2", GitClientCertKey),
+					testSecret("some-secret-3", GitClientKey),
+				),
+			},
+		},
+	}
+	i := 0
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
+		i++
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, [][]string{
+		{GitCaCertKey, "some-ca-cert"},
+		{GitClientCertKey, "some-client-cert"},
+		{GitClientKey, "some-client-key"},
+	}, calls)
+	assert.Equal(t, expected, wf)
+}
+
 func TestExtractTemplate_ServicesContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{

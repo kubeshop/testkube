@@ -8347,6 +8347,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -10305,6 +10533,234 @@ spec:
                                         - header
                                         - github
                                       type: string
+                                    caCert:
+                                      description: plain text CA certificate to verify repository TLS connection
+                                      type: string
+                                    caCertFrom:
+                                      description: external CA certificate to verify repository TLS connection
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientCert:
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientCertFrom:
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientKey:
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientKeyFrom:
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
                                       type: boolean
@@ -11771,6 +12227,234 @@ spec:
                             - header
                             - github
                           type: string
+                        caCert:
+                          description: plain text CA certificate to verify repository TLS connection
+                          type: string
+                        caCertFrom:
+                          description: external CA certificate to verify repository TLS connection
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                                - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                optional:
+                                  default: false
+                                  type: boolean
+                                path:
+                                  type: string
+                                volumeName:
+                                  type: string
+                              required:
+                                - key
+                                - path
+                                - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                                - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        clientCert:
+                          description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                          type: string
+                        clientCertFrom:
+                          description: external client certificate to authenticate the client to the Git server for mutual TLS
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                                - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                optional:
+                                  default: false
+                                  type: boolean
+                                path:
+                                  type: string
+                                volumeName:
+                                  type: string
+                              required:
+                                - key
+                                - path
+                                - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                                - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        clientKey:
+                          description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                          type: string
+                        clientKeyFrom:
+                          description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                                - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                optional:
+                                  default: false
+                                  type: boolean
+                                path:
+                                  type: string
+                                volumeName:
+                                  type: string
+                              required:
+                                - key
+                                - path
+                                - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                                - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
                         cone:
                           description: enable cone mode for sparse checkout with paths
                           type: boolean
@@ -12587,6 +13271,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -13939,6 +14851,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -15897,6 +17037,234 @@ spec:
                                         - header
                                         - github
                                       type: string
+                                    caCert:
+                                      description: plain text CA certificate to verify repository TLS connection
+                                      type: string
+                                    caCertFrom:
+                                      description: external CA certificate to verify repository TLS connection
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientCert:
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientCertFrom:
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientKey:
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientKeyFrom:
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
                                       type: boolean
@@ -17303,6 +18671,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -19261,6 +20857,234 @@ spec:
                                         - header
                                         - github
                                       type: string
+                                    caCert:
+                                      description: plain text CA certificate to verify repository TLS connection
+                                      type: string
+                                    caCertFrom:
+                                      description: external CA certificate to verify repository TLS connection
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientCert:
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientCertFrom:
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientKey:
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientKeyFrom:
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
                                       type: boolean
@@ -20948,6 +22772,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -22841,6 +24893,234 @@ spec:
                                         - header
                                         - github
                                       type: string
+                                    caCert:
+                                      description: plain text CA certificate to verify repository TLS connection
+                                      type: string
+                                    caCertFrom:
+                                      description: external CA certificate to verify repository TLS connection
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientCert:
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientCertFrom:
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientKey:
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientKeyFrom:
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
                                       type: boolean
@@ -24250,6 +26530,234 @@ spec:
                             - header
                             - github
                           type: string
+                        caCert:
+                          description: plain text CA certificate to verify repository TLS connection
+                          type: string
+                        caCertFrom:
+                          description: external CA certificate to verify repository TLS connection
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                                - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                optional:
+                                  default: false
+                                  type: boolean
+                                path:
+                                  type: string
+                                volumeName:
+                                  type: string
+                              required:
+                                - key
+                                - path
+                                - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                                - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        clientCert:
+                          description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                          type: string
+                        clientCertFrom:
+                          description: external client certificate to authenticate the client to the Git server for mutual TLS
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                                - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                optional:
+                                  default: false
+                                  type: boolean
+                                path:
+                                  type: string
+                                volumeName:
+                                  type: string
+                              required:
+                                - key
+                                - path
+                                - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                                - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        clientKey:
+                          description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                          type: string
+                        clientKeyFrom:
+                          description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                                - fieldPath
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            fileKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                optional:
+                                  default: false
+                                  type: boolean
+                                path:
+                                  type: string
+                                volumeName:
+                                  type: string
+                              required:
+                                - key
+                                - path
+                                - volumeName
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                                - resource
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  default: ""
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                                - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
                         cone:
                           description: enable cone mode for sparse checkout with paths
                           type: boolean
@@ -25066,6 +27574,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -26398,6 +29134,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -28291,6 +31255,234 @@ spec:
                                         - header
                                         - github
                                       type: string
+                                    caCert:
+                                      description: plain text CA certificate to verify repository TLS connection
+                                      type: string
+                                    caCertFrom:
+                                      description: external CA certificate to verify repository TLS connection
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientCert:
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientCertFrom:
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientKey:
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientKeyFrom:
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
                                       type: boolean
@@ -29640,6 +32832,234 @@ spec:
                                   - header
                                   - github
                                 type: string
+                              caCert:
+                                description: plain text CA certificate to verify repository TLS connection
+                                type: string
+                              caCertFrom:
+                                description: external CA certificate to verify repository TLS connection
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientCert:
+                                description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientCertFrom:
+                                description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                              clientKey:
+                                description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                type: string
+                              clientKeyFrom:
+                                description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                properties:
+                                  configMapKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fieldRef:
+                                    properties:
+                                      apiVersion:
+                                        type: string
+                                      fieldPath:
+                                        type: string
+                                    required:
+                                      - fieldPath
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  fileKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      optional:
+                                        default: false
+                                        type: boolean
+                                      path:
+                                        type: string
+                                      volumeName:
+                                        type: string
+                                    required:
+                                      - key
+                                      - path
+                                      - volumeName
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  resourceFieldRef:
+                                    properties:
+                                      containerName:
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        type: string
+                                    required:
+                                      - resource
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  secretKeyRef:
+                                    properties:
+                                      key:
+                                        type: string
+                                      name:
+                                        default: ""
+                                        type: string
+                                      optional:
+                                        type: boolean
+                                    required:
+                                      - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
                               cone:
                                 description: enable cone mode for sparse checkout with paths
                                 type: boolean
@@ -31533,6 +34953,234 @@ spec:
                                         - header
                                         - github
                                       type: string
+                                    caCert:
+                                      description: plain text CA certificate to verify repository TLS connection
+                                      type: string
+                                    caCertFrom:
+                                      description: external CA certificate to verify repository TLS connection
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientCert:
+                                      description: plain text client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientCertFrom:
+                                      description: external client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    clientKey:
+                                      description: plain text client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      type: string
+                                    clientKeyFrom:
+                                      description: external client private key used with the client certificate to authenticate the client to the Git server for mutual TLS
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fieldRef:
+                                          properties:
+                                            apiVersion:
+                                              type: string
+                                            fieldPath:
+                                              type: string
+                                          required:
+                                            - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            optional:
+                                              default: false
+                                              type: boolean
+                                            path:
+                                              type: string
+                                            volumeName:
+                                              type: string
+                                          required:
+                                            - key
+                                            - path
+                                            - volumeName
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        resourceFieldRef:
+                                          properties:
+                                            containerName:
+                                              type: string
+                                            divisor:
+                                              anyOf:
+                                                - type: integer
+                                                - type: string
+                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                              x-kubernetes-int-or-string: true
+                                            resource:
+                                              type: string
+                                          required:
+                                            - resource
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              type: string
+                                            name:
+                                              default: ""
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
                                     cone:
                                       description: enable cone mode for sparse checkout with paths
                                       type: boolean

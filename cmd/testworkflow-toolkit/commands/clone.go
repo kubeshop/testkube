@@ -34,13 +34,16 @@ var (
 
 // CloneOptions encapsulates all options for the clone command
 type CloneOptions struct {
-	RawPaths []string
-	Username string
-	Token    string
-	SSHKey   string
-	AuthType string
-	Revision string
-	Cone     bool
+	RawPaths   []string
+	Username   string
+	Token      string
+	SSHKey     string
+	CaCert     string
+	ClientCert string
+	ClientKey  string
+	AuthType   string
+	Revision   string
+	Cone       bool
 }
 
 // NewCloneCmd creates a new clone command
@@ -62,6 +65,9 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Username, "username", "u", "", "git username for authentication")
 	cmd.Flags().StringVarP(&opts.Token, "token", "t", "", "git token for authentication")
 	cmd.Flags().StringVarP(&opts.SSHKey, "sshKey", "s", "", "SSH private key for authentication")
+	cmd.Flags().StringVarP(&opts.CaCert, "caCert", "c", "", "CA certificate to verify repository TLS connection")
+	cmd.Flags().StringVarP(&opts.ClientCert, "clientCert", "e", "", "Client certificate for TLS authentication")
+	cmd.Flags().StringVarP(&opts.ClientKey, "clientKey", "k", "", "Client key for TLS authentication")
 	cmd.Flags().StringVarP(&opts.AuthType, "authType", "a", "basic", "authentication type (allowed: basic, header, github)")
 	cmd.Flags().StringVarP(&opts.Revision, "revision", "r", "", "commit hash, branch name or tag")
 	cmd.Flags().BoolVar(&opts.Cone, "cone", false, "enable cone mode for sparse checkout")
@@ -100,6 +106,16 @@ func RunClone(ctx context.Context, rawURI string, outputPath string, opts *Clone
 		return fmt.Errorf("setting up SSH key: %w", err)
 	}
 	defer cleanupSSH()
+
+	certAuthArgs, cleanupFuncs, err := setupCertAuth(opts)
+	if err != nil {
+		return fmt.Errorf("setting up certificate auth: %w", err)
+	}
+
+	authArgs = append(authArgs, certAuthArgs...)
+
+	// Ensure cleanup of temp cert/key files
+	defer RunCleanupFuncs(cleanupFuncs)
 
 	// Use temporary directory for cloning
 	tmpPath, err := os.MkdirTemp(constants.DefaultTmpDirPath, "clone-*")
