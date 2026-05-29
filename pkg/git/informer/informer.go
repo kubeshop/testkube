@@ -34,6 +34,17 @@ const defaultGitUsername = "git"
 const testTriggerSource = "v1"
 const allNamespacesMarker = "*"
 
+// Git metadata keys passed to MatchGitTrigger.
+const (
+	GitMetaKeyCommit          = "TESTKUBE_GIT_COMMIT"
+	GitMetaKeyRef             = "TESTKUBE_GIT_REF"
+	GitMetaKeyBranch          = "TESTKUBE_GIT_BRANCH"
+	GitMetaKeyTag             = "TESTKUBE_GIT_TAG"
+	GitMetaKeyCommitMessage   = "TESTKUBE_GIT_COMMIT_MESSAGE"
+	GitMetaKeyAuthor          = "TESTKUBE_GIT_AUTHOR"
+	GitMetaKeyCommitTimestamp = "TESTKUBE_GIT_COMMIT_TIMESTAMP"
+)
+
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
 var envVarNameSanitizer = regexp.MustCompile(`[^A-Za-z0-9_]`)
 var gitCommitSHAPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
@@ -73,7 +84,7 @@ func normalizeOptions(opts Options) Options {
 
 // Matcher fires trigger events when git content changes.
 type Matcher interface {
-	MatchGitTrigger(ctx context.Context, triggerName, namespace string) error
+	MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error
 }
 
 // Informer polls git repositories referenced by content triggers and fires
@@ -97,6 +108,7 @@ type reconcileCache struct {
 type reconcileState struct {
 	remoteHeadLoaded bool
 	remoteHeadHash   string
+	remoteHeadRef    string
 	remoteHeadErr    error
 
 	repoLoaded bool
@@ -111,6 +123,12 @@ type commitDelta struct {
 	paths     []string
 	foundPrev bool
 	err       error
+}
+
+// matchResult holds the outcome of a git commit check including metadata.
+type matchResult struct {
+	changed  bool
+	metadata map[string]string
 }
 
 // NewInformer returns a new git content informer.
@@ -216,14 +234,14 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			continue
 		}
-		if !changed {
+		if !changed.changed {
 			continue
 		}
 		if i.matcher == nil {
 			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
 			continue
 		}
-		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace); err != nil {
+		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace, changed.metadata); err != nil {
 			log.DefaultLogger.Errorf("git informer: error matching trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
 		}
@@ -282,39 +300,36 @@ func isContentResource(trigger testkube.TestTrigger) bool {
 	return false
 }
 
-func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (bool, error) {
+func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (matchResult, error) {
 	return i.hasNewMatchingCommitWithCache(ctx, key, trigger, nil)
 }
 
-func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (bool, error) {
+func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (matchResult, error) {
 	if err := ctx.Err(); err != nil {
-		return false, err
+		return matchResult{}, err
 	}
 
-	paths := normalizePaths(trigger.ContentSelector.Git.Paths)
-	if len(paths) == 0 {
+	gitConfig := trigger.ContentSelector.Git
+	paths := normalizePaths(gitConfig.Paths)
+	pathsIgnore := normalizePaths(gitConfig.PathsIgnore)
+
+	if len(paths) == 0 && len(pathsIgnore) == 0 {
 		return i.hasNewHeadCommitWithCache(ctx, key, trigger, cache)
-	}
-
-	if isCommitSHA(trigger.ContentSelector.Git.Revision) {
-		// Commit SHA is immutable; there is no moving ref to watch for path changes.
-		i.commits[key] = strings.TrimSpace(trigger.ContentSelector.Git.Revision)
-		return false, nil
 	}
 
 	repo, headHash, state, err := i.openOrUpdateRepositoryWithCache(ctx, key, trigger, cache)
 	if err != nil {
-		return false, err
+		return matchResult{}, err
 	}
 	prevHash, hasPrev := i.commits[key]
 
 	if !hasPrev {
 		i.commits[key] = headHash
 		logBaselineInitialization(trigger.Namespace, trigger.Name)
-		return false, nil
+		return matchResult{}, nil
 	}
 	if prevHash == headHash {
-		return false, nil
+		return matchResult{}, nil
 	}
 
 	delta := commitDelta{}
@@ -334,31 +349,43 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 		if shouldAdvanceBaselineOnScanError(err) {
 			i.commits[key] = headHash
 		}
-		return false, err
+		return matchResult{}, err
 	}
 
 	i.commits[key] = headHash
 
+	matched := false
 	for _, changedPath := range delta.paths {
-		if pathMatchesNormalized(paths, changedPath) {
-			return true, nil
+		if pathIsIgnored(pathsIgnore, changedPath) {
+			continue
+		}
+		if len(paths) == 0 || pathMatchesNormalized(paths, changedPath) {
+			matched = true
+			break
 		}
 	}
-	if !delta.foundPrev {
-		log.DefaultLogger.Warnf(
-			"git informer: history boundary reached before previous commit for trigger %s/%s (repo depth/max scan limit); advancing baseline without firing",
-			trigger.Namespace,
-			trigger.Name,
-		)
-		return false, nil
+
+	if !matched {
+		if !delta.foundPrev {
+			log.DefaultLogger.Warnf(
+				"git informer: history boundary reached before previous commit for trigger %s/%s (repo depth/max scan limit); advancing baseline without firing",
+				trigger.Namespace,
+				trigger.Name,
+			)
+		}
+		return matchResult{}, nil
 	}
-	return false, nil
+
+	// Collect git metadata from HEAD commit
+	meta := i.collectHeadMetadata(repo, headHash, gitConfig)
+	return matchResult{changed: true, metadata: meta}, nil
 }
 
-func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (bool, error) {
-	headHash, err := i.remoteHeadHashWithCache(ctx, trigger.Namespace, trigger.ContentSelector.Git, cache)
+func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (matchResult, error) {
+	gitConfig := trigger.ContentSelector.Git
+	headHash, ref, err := i.remoteHeadHashAndRefWithCache(ctx, trigger.Namespace, gitConfig, cache)
 	if err != nil {
-		return false, err
+		return matchResult{}, err
 	}
 
 	prevHash, hasPrev := i.commits[key]
@@ -367,7 +394,24 @@ func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, tr
 		logBaselineInitialization(trigger.Namespace, trigger.Name)
 	}
 
-	return hasPrev && prevHash != headHash, nil
+	if !hasPrev || prevHash == headHash {
+		return matchResult{}, nil
+	}
+
+	// Build metadata from remote HEAD info
+	meta := make(map[string]string)
+	meta[GitMetaKeyCommit] = headHash
+	if ref != "" {
+		meta[GitMetaKeyRef] = ref
+		if branch := branchFromRef(ref); branch != "" {
+			meta[GitMetaKeyBranch] = branch
+		}
+		if tag := tagFromRef(ref); tag != "" {
+			meta[GitMetaKeyTag] = tag
+		}
+	}
+
+	return matchResult{changed: true, metadata: meta}, nil
 }
 
 func logBaselineInitialization(namespace, triggerName string) {
@@ -393,6 +437,21 @@ func (i *Informer) remoteHeadHashWithCache(ctx context.Context, namespace string
 	return state.remoteHeadHash, state.remoteHeadErr
 }
 
+func (i *Informer) remoteHeadHashAndRefWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) (string, string, error) {
+	if cache == nil {
+		return i.remoteHeadHashAndRef(ctx, namespace, gitConfig)
+	}
+
+	state := cache.stateFor(namespace, gitConfig)
+	if state.remoteHeadLoaded {
+		return state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr
+	}
+
+	state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr = i.remoteHeadHashAndRef(ctx, namespace, gitConfig)
+	state.remoteHeadLoaded = true
+	return state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr
+}
+
 func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigger testkube.TestTrigger) (*git.Repository, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -400,10 +459,10 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 
 	repoDir := triggerRepositoryPathFromKey(key)
 	gitConfig := trigger.ContentSelector.Git
-	revision := normalizeRevision(gitConfig.Revision)
+	revision := effectiveRefsKey(gitConfig)
 	previousRevision, hasPreviousRevision := i.revisions[key]
 	revisionChanged := hasPreviousRevision && previousRevision != revision
-	references := normalizeRefs(gitConfig.Revision)
+	references := effectiveRefs(gitConfig)
 	if len(references) == 0 {
 		references = []string{""}
 	}
@@ -547,14 +606,38 @@ func (i *Informer) remoteHeadHash(ctx context.Context, namespace string, gitConf
 	if err != nil {
 		return "", err
 	}
-	return remoteHeadHashWithClientOptions(gitConfig, i.options, clientOptions)
+	hash, _, err := remoteHeadHashAndRefWithClientOptions(gitConfig, i.options, clientOptions)
+	return hash, err
 }
 
-func remoteHeadHashWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, error) {
-	if isCommitSHA(gitConfig.Revision) {
-		return strings.TrimSpace(gitConfig.Revision), nil
+func (i *Informer) remoteHeadHashAndRef(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) (string, string, error) {
+	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig)
+	if err != nil {
+		return "", "", err
 	}
+	return remoteHeadHashAndRefWithClientOptions(gitConfig, i.options, clientOptions)
+}
 
+// effectiveRefs derives git references to watch from Branches and Tags fields.
+// If both are empty, returns nil (meaning watch default HEAD).
+func effectiveRefs(gitConfig *testkube.TestTriggerContentGit) []string {
+	var refs []string
+	for _, b := range gitConfig.Branches {
+		b = strings.TrimSpace(b)
+		if b != "" && !strings.Contains(b, "*") && !strings.Contains(b, "?") {
+			refs = append(refs, "refs/heads/"+b)
+		}
+	}
+	for _, t := range gitConfig.Tags {
+		t = strings.TrimSpace(t)
+		if t != "" && !strings.Contains(t, "*") && !strings.Contains(t, "?") {
+			refs = append(refs, "refs/tags/"+t)
+		}
+	}
+	return refs
+}
+
+func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, string, error) {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{gitConfig.Uri},
@@ -564,36 +647,43 @@ func remoteHeadHashWithClientOptions(gitConfig *testkube.TestTriggerContentGit, 
 		Timeout:       options.ListTimeoutSeconds,
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	if references := normalizeRefs(gitConfig.Revision); len(references) > 0 {
+	if references := effectiveRefs(gitConfig); len(references) > 0 {
 		for _, reference := range references {
 			for _, r := range refs {
 				if r.Name() == plumbing.ReferenceName(reference) {
-					return r.Hash().String(), nil
+					return r.Hash().String(), reference, nil
 				}
 			}
 		}
-		return "", fmt.Errorf("reference not found: %q", strings.Join(references, ", "))
+		return "", "", fmt.Errorf("reference not found: %q", strings.Join(references, ", "))
 	}
 
+	// No specific branches/tags: watch default HEAD
 	for _, r := range refs {
 		if r.Name() == plumbing.HEAD {
-			return r.Hash().String(), nil
+			return r.Hash().String(), string(r.Name()), nil
 		}
 	}
 	for _, r := range refs {
 		if r.Name().IsBranch() {
-			return r.Hash().String(), nil
+			return r.Hash().String(), string(r.Name()), nil
 		}
 	}
 
-	return "", errors.New("unable to determine remote HEAD")
+	return "", "", errors.New("unable to determine remote HEAD")
+}
+
+// remoteHeadHashWithClientOptions is kept for backward compatibility with clone/pull logic.
+func remoteHeadHashWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, error) {
+	hash, _, err := remoteHeadHashAndRefWithClientOptions(gitConfig, options, clientOptions)
+	return hash, err
 }
 
 func cloneOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.CloneOptions, error) {
-	references := normalizeRefs(gitConfig.Revision)
+	references := effectiveRefs(gitConfig)
 	if len(references) == 0 {
 		return cloneOptionsForRef(gitConfig, options, "")
 	}
@@ -623,7 +713,7 @@ func cloneOptionsForRefWithClientOptions(gitConfig *testkube.TestTriggerContentG
 }
 
 func pullOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.PullOptions, error) {
-	references := normalizeRefs(gitConfig.Revision)
+	references := effectiveRefs(gitConfig)
 	if len(references) == 0 {
 		return pullOptionsForRef(gitConfig, options, "")
 	}
@@ -913,7 +1003,7 @@ func gitConfigCacheKey(namespace string, gitConfig *testkube.TestTriggerContentG
 	return strings.Join([]string{
 		namespace,
 		gitConfig.Uri,
-		gitConfig.Revision,
+		effectiveRefsKey(gitConfig),
 		authType,
 		gitConfig.Username,
 		gitConfig.Token,
@@ -1094,4 +1184,164 @@ func repositoryOriginMatches(repo *git.Repository, expectedURL string) bool {
 	}
 
 	return false
+}
+
+// effectiveRefsKey produces a stable string from Branches+Tags for use as a cache/revision key.
+func effectiveRefsKey(gitConfig *testkube.TestTriggerContentGit) string {
+	parts := make([]string, 0, len(gitConfig.Branches)+len(gitConfig.Tags))
+	for _, b := range gitConfig.Branches {
+		parts = append(parts, "b:"+strings.TrimSpace(b))
+	}
+	for _, t := range gitConfig.Tags {
+		parts = append(parts, "t:"+strings.TrimSpace(t))
+	}
+	return strings.Join(parts, ",")
+}
+
+// pathIsIgnored returns true if the file matches any of the ignore patterns.
+func pathIsIgnored(ignorePatterns []string, file string) bool {
+	if len(ignorePatterns) == 0 {
+		return false
+	}
+	for _, p := range ignorePatterns {
+		if matchGlob(p, file) {
+			return true
+		}
+	}
+	return false
+}
+
+// branchFromRef extracts the branch name from a full ref like "refs/heads/main".
+func branchFromRef(ref string) string {
+	const prefix = "refs/heads/"
+	if strings.HasPrefix(ref, prefix) {
+		return ref[len(prefix):]
+	}
+	return ""
+}
+
+// tagFromRef extracts the tag name from a full ref like "refs/tags/v1.0.0".
+func tagFromRef(ref string) string {
+	const prefix = "refs/tags/"
+	if strings.HasPrefix(ref, prefix) {
+		return ref[len(prefix):]
+	}
+	return ""
+}
+
+// matchGlob performs glob-style matching supporting * and ** patterns.
+// It matches file paths against patterns like "src/**", "*.md", "docs/*".
+func matchGlob(pattern, name string) bool {
+	matched, _ := filepath.Match(pattern, name)
+	if matched {
+		return true
+	}
+	// Support ** for recursive directory matching
+	if strings.Contains(pattern, "**") {
+		// Replace ** with a pattern that matches any path segment
+		parts := strings.Split(pattern, "**")
+		if len(parts) == 2 {
+			prefix := strings.TrimSuffix(parts[0], "/")
+			suffix := strings.TrimPrefix(parts[1], "/")
+			if prefix == "" && suffix == "" {
+				return true
+			}
+			if prefix == "" {
+				// **/suffix - match suffix anywhere
+				if suffix == "" {
+					return true
+				}
+				suffixMatch, _ := filepath.Match(suffix, filepath.Base(name))
+				return suffixMatch || strings.HasSuffix(name, "/"+suffix)
+			}
+			if strings.HasPrefix(name, prefix+"/") || name == prefix {
+				if suffix == "" {
+					return true
+				}
+				remaining := strings.TrimPrefix(name, prefix+"/")
+				suffixMatch, _ := filepath.Match(suffix, remaining)
+				return suffixMatch || strings.HasSuffix(remaining, "/"+suffix)
+			}
+		}
+	}
+	// Also try prefix match for directory patterns
+	normalizedPattern := strings.TrimSuffix(pattern, "/")
+	if name == normalizedPattern || strings.HasPrefix(name, normalizedPattern+"/") {
+		return true
+	}
+	return false
+}
+
+// branchMatchesPatterns checks if a branch name matches any of the given glob patterns.
+func branchMatchesPatterns(branch string, patterns []string) bool {
+	if len(patterns) == 0 {
+		return true
+	}
+	for _, p := range patterns {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		matched, _ := filepath.Match(p, branch)
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+// tagMatchesPatterns checks if a tag name matches any of the given glob patterns.
+func tagMatchesPatterns(tag string, patterns []string) bool {
+	if len(patterns) == 0 {
+		return true
+	}
+	for _, p := range patterns {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		matched, _ := filepath.Match(p, tag)
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+// collectHeadMetadata extracts metadata from the HEAD commit of a repository.
+func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gitConfig *testkube.TestTriggerContentGit) map[string]string {
+	meta := make(map[string]string)
+	meta[GitMetaKeyCommit] = headHash
+
+	// Determine branch/tag from effective refs
+	refs := effectiveRefs(gitConfig)
+	if len(refs) > 0 {
+		meta[GitMetaKeyRef] = refs[0]
+		if branch := branchFromRef(refs[0]); branch != "" {
+			meta[GitMetaKeyBranch] = branch
+		}
+		if tag := tagFromRef(refs[0]); tag != "" {
+			meta[GitMetaKeyTag] = tag
+		}
+	}
+
+	if repo == nil {
+		return meta
+	}
+
+	// Get commit details
+	head := plumbing.NewHash(headHash)
+	commit, err := repo.CommitObject(head)
+	if err != nil {
+		return meta
+	}
+
+	meta[GitMetaKeyCommitMessage] = strings.TrimSpace(commit.Message)
+	meta[GitMetaKeyAuthor] = commit.Author.Name
+	if commit.Author.Email != "" {
+		meta[GitMetaKeyAuthor] = commit.Author.Name + " <" + commit.Author.Email + ">"
+	}
+	meta[GitMetaKeyCommitTimestamp] = commit.Author.When.UTC().Format(time.RFC3339)
+
+	return meta
 }

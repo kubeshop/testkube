@@ -251,16 +251,20 @@ func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.Test
 		return nil
 	}
 	return &testkube.TestTriggerContentGit{
-		Uri:          git.Uri,
-		Revision:     git.Revision,
-		Username:     git.Username,
-		UsernameFrom: commonmapper.MapEnvVarSourceKubeToAPI(git.UsernameFrom),
-		Token:        git.Token,
-		TokenFrom:    commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
-		SshKey:       git.SshKey,
-		SshKeyFrom:   commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
-		AuthType:     mapGitAuthTypeKubeToAPI(git.AuthType),
-		Paths:        git.Paths,
+		Uri:            git.Uri,
+		Branches:       git.Branches,
+		BranchesIgnore: git.BranchesIgnore,
+		Paths:          git.Paths,
+		PathsIgnore:    git.PathsIgnore,
+		Tags:           git.Tags,
+		TagsIgnore:     git.TagsIgnore,
+		Username:       git.Username,
+		UsernameFrom:   commonmapper.MapEnvVarSourceKubeToAPI(git.UsernameFrom),
+		Token:          git.Token,
+		TokenFrom:      commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
+		SshKey:         git.SshKey,
+		SshKeyFrom:     commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
+		AuthType:       mapGitAuthTypeKubeToAPI(git.AuthType),
 	}
 }
 

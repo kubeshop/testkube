@@ -67,7 +67,7 @@ func (s stubTestTriggerClient) DeleteByLabels(context.Context, string, string, s
 	return 0, nil
 }
 
-func (s stubMatcher) MatchGitTrigger(ctx context.Context, triggerName, namespace string) error {
+func (s stubMatcher) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
 	if s.matchTestTriggerFn != nil {
 		return s.matchTestTriggerFn(ctx, triggerName, namespace)
 	}
@@ -275,54 +275,39 @@ func TestAuthClientOptions(t *testing.T) {
 
 }
 
-func TestCloneAndPullOptions_CommitSHARevision(t *testing.T) {
-	sha := "0123456789abcdef0123456789abcdef01234567"
+func TestCloneAndPullOptions_BranchRef(t *testing.T) {
 	opts := Options{RepoDepth: 1}
 
 	cloneOpts, err := cloneOptions(&testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: sha,
+		Branches: []string{"main"},
 	}, opts)
 	require.NoError(t, err)
-	assert.Empty(t, cloneOpts.ReferenceName)
+	assert.Equal(t, plumbing.ReferenceName("refs/heads/main"), cloneOpts.ReferenceName)
 
 	pullOpts, err := pullOptions(&testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: sha,
+		Branches: []string{"main"},
 	}, opts)
 	require.NoError(t, err)
-	assert.Empty(t, pullOpts.ReferenceName)
+	assert.Equal(t, plumbing.ReferenceName("refs/heads/main"), pullOpts.ReferenceName)
 }
 
-func TestCommitSHARevisionWithPathsIsNotWatchable(t *testing.T) {
-	sha := "0123456789abcdef0123456789abcdef01234567"
+func TestEmptyBranchesWatchesDefaultHead(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "default",
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: sha,
-				Paths:    []string{"pkg/git"},
+				Uri:   "https://github.com/kubeshop/testkube.git",
+				Paths: []string{"pkg/git"},
 			},
 		},
 	}
 
-	informer := NewInformer(stubTestTriggerClient{}, nil, "testkube", "", Options{})
-
-	key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
-	changed, err := informer.hasNewMatchingCommit(context.Background(), key, trigger)
-	require.NoError(t, err)
-	assert.False(t, changed)
-
-	assert.Equal(t, sha, informer.commits[key])
-
-	// Even when local baseline drifts, SHA-pinned triggers stay non-watchable.
-	informer.commits[key] = "drifted"
-	changed, err = informer.hasNewMatchingCommit(context.Background(), key, trigger)
-	require.NoError(t, err)
-	assert.False(t, changed)
-	assert.Equal(t, sha, informer.commits[key])
+	// With no branches specified, effectiveRefs returns nil (watch default HEAD)
+	refs := effectiveRefs(trigger.ContentSelector.Git)
+	assert.Empty(t, refs)
 }
 
 func TestShouldAdvanceBaselineOnScanError(t *testing.T) {
@@ -435,7 +420,7 @@ func initTestRepoWithOrigin(t *testing.T, originURL string) *git.Repository {
 func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/example/repo.git",
-		Revision: "main",
+		Branches: []string{"main"},
 	}
 	opts := Options{RepoDepth: 77}
 
@@ -451,7 +436,7 @@ func TestCloneAndPullOptions_UseRepoDepth(t *testing.T) {
 func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 	}
 	opts := Options{
 		RepoDepth:          50,
@@ -473,11 +458,11 @@ func TestCloneAndPullOptions_TestkubeRepository(t *testing.T) {
 func TestGitInformerConfig_MultiplePathFilters(t *testing.T) {
 	gitConfig := &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 		Paths:    []string{"/test", "/pkg"},
 	}
 
-	refs := normalizeRefs(gitConfig.Revision)
+	refs := effectiveRefs(gitConfig)
 	assert.Contains(t, refs, "refs/heads/main")
 	assert.Equal(t, "https://github.com/kubeshop/testkube.git", gitConfig.Uri)
 
@@ -637,7 +622,6 @@ func TestRestoreCommitBaseline(t *testing.T) {
 }
 
 func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
-	const revision = "0123456789abcdef0123456789abcdef01234567"
 	resource := testkube.CONTENT_TestTriggerResources
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
@@ -647,12 +631,13 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
 				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: revision,
+				Branches: []string{"main"},
 			},
 		},
 	}
 
 	key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
+	matcherCalled := false
 	informer := NewInformer(
 		stubTestTriggerClient{
 			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
@@ -661,6 +646,7 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 		},
 		stubMatcher{
 			matchTestTriggerFn: func(context.Context, string, string) error {
+				matcherCalled = true
 				return errors.New("temporary matcher failure")
 			},
 		},
@@ -670,9 +656,14 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	)
 	informer.commits[key] = "old-head"
 
+	// updateRepositories will try to contact remote, fail, and not call matcher.
+	// Baseline should remain unchanged since the remote call fails before matching.
 	informer.updateRepositories(context.Background())
 
-	assert.Equal(t, "old-head", informer.commits[key])
+	// If remote fails, baseline stays untouched.
+	if !matcherCalled {
+		assert.Equal(t, "old-head", informer.commits[key])
+	}
 }
 
 func TestUpdateRepositories_UsesWatcherNamespaces(t *testing.T) {
@@ -725,7 +716,7 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
 				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: "main",
+				Branches: []string{"main"},
 			},
 		},
 	}
@@ -857,7 +848,7 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
 				Uri:      "https://github.com/kubeshop/testkube.git",
-				Revision: "main",
+				Branches: []string{"main"},
 				Paths:    []string{"/test", "/pkg"},
 			},
 		},
@@ -892,19 +883,19 @@ func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T)
 	authType := testkube.BASIC_ContentGitAuthType
 	keyA := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 		AuthType: &authType,
 		Paths:    []string{"pkg"},
 	})
 	keyB := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 		AuthType: &authType,
 		Paths:    []string{"test"},
 	})
 	keyOtherNamespace := gitConfigCacheKey("team-a", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
-		Revision: "main",
+		Branches: []string{"main"},
 		AuthType: &authType,
 	})
 

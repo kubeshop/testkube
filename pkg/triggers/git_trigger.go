@@ -18,17 +18,30 @@ var errGitTriggerProbesUnavailable = errors.New("git trigger probes unavailable 
 // MatchGitTrigger creates a synthetic watcherEvent for a git content trigger
 // and runs it through the matcher. Called by the git informer when new commits
 // are detected that match the trigger's content selector paths.
-func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string) error {
-	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1)
+func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
+	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, gitMeta)
 }
 
-func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string) error {
+func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string, gitMeta map[string]string) error {
 	event := s.newWatcherEvent(
 		testtrigger.EventModified,
 		&metav1.ObjectMeta{Name: triggerName, Namespace: namespace},
 		nil,
 		testtrigger.ResourceType(testtrigger.ResourceContent),
 	)
+
+	// Attach git metadata to the event for downstream use by the executor.
+	if len(gitMeta) > 0 {
+		event.GitMetadata = &GitMetadata{
+			Commit:          gitMeta["TESTKUBE_GIT_COMMIT"],
+			Ref:             gitMeta["TESTKUBE_GIT_REF"],
+			Branch:          gitMeta["TESTKUBE_GIT_BRANCH"],
+			Tag:             gitMeta["TESTKUBE_GIT_TAG"],
+			CommitMessage:   gitMeta["TESTKUBE_GIT_COMMIT_MESSAGE"],
+			Author:          gitMeta["TESTKUBE_GIT_AUTHOR"],
+			CommitTimestamp: gitMeta["TESTKUBE_GIT_COMMIT_TIMESTAMP"],
+		}
+	}
 
 	key := newStatusKey(source, namespace, triggerName)
 	s.triggerStatusMu.RLock()

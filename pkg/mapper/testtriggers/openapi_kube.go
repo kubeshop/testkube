@@ -252,16 +252,20 @@ func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrigge
 		return nil
 	}
 	return &testsv1.TestTriggerContentGitSpec{
-		Uri:          git.Uri,
-		Revision:     git.Revision,
-		Username:     git.Username,
-		UsernameFrom: mapEnvVarSourceAPIToKube(git.UsernameFrom),
-		Token:        git.Token,
-		TokenFrom:    mapEnvVarSourceAPIToKube(git.TokenFrom),
-		SshKey:       git.SshKey,
-		SshKeyFrom:   mapEnvVarSourceAPIToKube(git.SshKeyFrom),
-		AuthType:     mapGitAuthTypeAPIToKube(git.AuthType),
-		Paths:        git.Paths,
+		Uri:            git.Uri,
+		Branches:       git.Branches,
+		BranchesIgnore: git.BranchesIgnore,
+		Paths:          git.Paths,
+		PathsIgnore:    git.PathsIgnore,
+		Tags:           git.Tags,
+		TagsIgnore:     git.TagsIgnore,
+		Username:       git.Username,
+		UsernameFrom:   mapEnvVarSourceAPIToKube(git.UsernameFrom),
+		Token:          git.Token,
+		TokenFrom:      mapEnvVarSourceAPIToKube(git.TokenFrom),
+		SshKey:         git.SshKey,
+		SshKeyFrom:     mapEnvVarSourceAPIToKube(git.SshKeyFrom),
+		AuthType:       mapGitAuthTypeAPIToKube(git.AuthType),
 	}
 }
 

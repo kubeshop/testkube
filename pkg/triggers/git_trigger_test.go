@@ -45,7 +45,7 @@ func TestMatchGitTrigger_ExecutesOnlyTargetTrigger(t *testing.T) {
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), "trigger-a", "default")
+	err := s.MatchGitTrigger(context.Background(), "trigger-a", "default", nil)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"trigger-a"}, executed)
 }
@@ -75,7 +75,7 @@ func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
 	require.NoError(t, counter.Write(metricBefore))
 	before := metricBefore.GetCounter().GetValue()
 
-	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.NoError(t, err)
 
 	metricAfter := &dto.Metric{}
@@ -117,7 +117,7 @@ func TestMatchGitTrigger_UsesV1StatusKeyWhenV2HasSameName(t *testing.T) {
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.NoError(t, err)
 	assert.Equal(t, []string{triggerSourceV1}, executed)
 }
@@ -152,7 +152,7 @@ func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.NoError(t, err)
 	assert.Equal(t, []string{trigger.Name}, executed)
 }
@@ -164,7 +164,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenTargetTriggerNotReady(t *testing.T) {
 		metrics:       metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), "trigger-a", "default")
+	err := s.MatchGitTrigger(context.Background(), "trigger-a", "default", nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
 }
@@ -186,7 +186,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenTargetStatusIsStaleNonContent(t *testin
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), staleTrigger.Name, staleTrigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), staleTrigger.Name, staleTrigger.Namespace, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errGitTriggerTargetNotReady)
 }
@@ -218,7 +218,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenConditionsConfiguredForSyntheticEvent(t
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errGitTriggerConditionsUnavailable)
 	assert.False(t, executed)
@@ -251,7 +251,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenProbesConfiguredForSyntheticEvent(t *te
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errGitTriggerProbesUnavailable)
 	assert.False(t, executed)
@@ -280,7 +280,7 @@ func TestMatchGitTrigger_SkipsNonTestWorkflowExecution(t *testing.T) {
 		metrics: metrics.NewMetrics(),
 	}
 
-	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace)
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.NoError(t, err)
 	assert.False(t, executed)
 }

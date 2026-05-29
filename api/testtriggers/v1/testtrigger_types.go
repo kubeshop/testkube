@@ -277,8 +277,24 @@ type TestTriggerContentSelector struct {
 type TestTriggerContentGitSpec struct {
 	// URI of the git repository
 	Uri string `json:"uri"`
-	// Revision (branch name, tag, or commit SHA) to watch
-	Revision string `json:"revision,omitempty"`
+	// Branches is a list of branch name patterns to watch (glob supported, e.g. "main", "release/*").
+	// If empty, all branches are watched.
+	Branches []string `json:"branches,omitempty"`
+	// BranchesIgnore is a list of branch name patterns to exclude (glob supported).
+	// Takes precedence over Branches when both match.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
+	// Paths is a list of file/directory paths to watch for changes (glob supported).
+	// If empty, all paths are watched.
+	Paths []string `json:"paths,omitempty"`
+	// PathsIgnore is a list of file/directory path patterns to exclude (glob supported).
+	// Takes precedence over Paths when both match.
+	PathsIgnore []string `json:"pathsIgnore,omitempty"`
+	// Tags is a list of tag name patterns to watch (glob supported, e.g. "v*", "v1.*").
+	// If empty, tag events are not watched unless Branches is also empty (watch all).
+	Tags []string `json:"tags,omitempty"`
+	// TagsIgnore is a list of tag name patterns to exclude (glob supported).
+	// Takes precedence over Tags when both match.
+	TagsIgnore []string `json:"tagsIgnore,omitempty"`
 	// Plain text username to fetch with
 	Username string `json:"username,omitempty"`
 	// External username to fetch with
@@ -297,9 +313,6 @@ type TestTriggerContentGitSpec struct {
 	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
 	// Authorization type for the credentials
 	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
-	// Paths is a list of file/directory paths to watch for changes.
-	// If empty, all paths are watched.
-	Paths []string `json:"paths,omitempty"`
 }
 
 //+kubebuilder:object:root=true

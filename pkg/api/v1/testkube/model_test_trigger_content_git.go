@@ -12,8 +12,19 @@ package testkube
 type TestTriggerContentGit struct {
 	// URI of the git repository to watch.
 	Uri string `json:"uri"`
-	// branch, tag or commit to watch.
-	Revision string `json:"revision,omitempty"`
+	// Branch name patterns to watch (glob supported, e.g. "main", "release/*").
+	// If empty, all branches are watched.
+	Branches []string `json:"branches,omitempty"`
+	// Branch name patterns to exclude (glob supported). Takes precedence over Branches.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
+	// paths to watch for changes (glob supported)
+	Paths []string `json:"paths,omitempty"`
+	// path patterns to exclude (glob supported). Takes precedence over Paths.
+	PathsIgnore []string `json:"pathsIgnore,omitempty"`
+	// Tag name patterns to watch (glob supported, e.g. "v*", "v1.*").
+	Tags []string `json:"tags,omitempty"`
+	// Tag name patterns to exclude (glob supported). Takes precedence over Tags.
+	TagsIgnore []string `json:"tagsIgnore,omitempty"`
 	// plain text username to fetch with
 	Username     string        `json:"username,omitempty"`
 	UsernameFrom *EnvVarSource `json:"usernameFrom,omitempty"`
@@ -21,9 +32,7 @@ type TestTriggerContentGit struct {
 	Token     string        `json:"token,omitempty"`
 	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
 	// plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead.
-	SshKey     string        `json:"sshKey,omitempty"`
-	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
+	SshKey     string              `json:"sshKey,omitempty"`
+	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
 	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
-	// paths to watch for changes
-	Paths []string `json:"paths,omitempty"`
 }

@@ -45,6 +45,26 @@ type watcherEvent struct {
 	addressGetter    addressGetterFn
 	EventLabels      map[string]string `json:"eventLabels"`
 	Agent            watcherAgent      `json:"agent"`
+	GitMetadata      *GitMetadata      `json:"gitMetadata,omitempty"`
+}
+
+// GitMetadata holds commit and ref information for git-triggered events.
+// Exposed as execution variables when a git content trigger fires.
+type GitMetadata struct {
+	// Commit is the HEAD commit SHA that triggered the event.
+	Commit string `json:"commit,omitempty"`
+	// Ref is the full git reference (e.g. refs/heads/main, refs/tags/v1.0.0).
+	Ref string `json:"ref,omitempty"`
+	// Branch is the short branch name (empty for tag events).
+	Branch string `json:"branch,omitempty"`
+	// Tag is the short tag name (empty for branch events).
+	Tag string `json:"tag,omitempty"`
+	// CommitMessage is the message of the HEAD commit.
+	CommitMessage string `json:"commitMessage,omitempty"`
+	// Author is the author of the HEAD commit.
+	Author string `json:"author,omitempty"`
+	// CommitTimestamp is the timestamp of the HEAD commit in RFC3339 format.
+	CommitTimestamp string `json:"commitTimestamp,omitempty"`
 }
 
 // watcherAgent represents agent context exposed to templates and JSONPath
