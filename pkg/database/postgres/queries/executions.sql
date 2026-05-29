@@ -1110,96 +1110,102 @@ SELECT
     )::json as reports_json,
     ra.global as resource_aggregations_global,
     ra.step as resource_aggregations_step
-FROM test_workflow_executions e
+FROM (
+    SELECT e.*
+    FROM test_workflow_executions e
+    LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+    WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
+        AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
+        AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
+        AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
+        AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
+        AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
+        AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
+        AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
+        AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
+        AND (COALESCE(@assigned, NULL) IS NULL OR
+             (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
+             (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+        AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
+        AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+        AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
+        AND (COALESCE(@initialized, NULL) IS NULL OR
+             (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
+             (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+        AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
+             EXISTS (
+                 SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
+                 WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
+                   AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
+                   AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
+             )
+        )
+        AND (
+            (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
+                    WHERE
+                    CASE
+                        WHEN key_condition LIKE '%:not_exists' THEN
+                            NOT (e.tags ? replace(key_condition, ':not_exists', ''))
+                        ELSE
+                            e.tags ? key_condition
+                    END
+                ) = array_length(@tag_keys::text[], 1)
+            )
+            AND
+            (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
+                    WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+                ) > 0
+            )
+        )
+        AND (
+            (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
+                    WHERE
+                    CASE
+                        WHEN key_condition LIKE '%:not_exists' THEN
+                            NOT (w.labels ? replace(key_condition, ':not_exists', ''))
+                        ELSE
+                            w.labels ? key_condition
+                    END
+                ) > 0
+            )
+            AND
+            (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
+                    WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+                ) > 0
+            )
+        )
+        AND (
+            (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
+                    WHERE
+                    CASE
+                        WHEN key_condition LIKE '%:not_exists' THEN
+                            NOT (w.labels ? replace(key_condition, ':not_exists', ''))
+                        ELSE
+                            w.labels ? key_condition
+                    END
+                ) = array_length(@selector_keys::text[], 1)
+            )
+            AND
+            (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
+                    WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
+                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
+            )
+        )
+    ORDER BY e.scheduled_at DESC
+    LIMIT NULLIF(@lmt, 0) OFFSET @fst
+) e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
-WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_id)
-    AND (COALESCE(@workflow_name::text, '') = '' OR e.workflow_name = @workflow_name::text)
-    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.workflow_name = ANY(@workflow_names::text[]))
-    AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
-    AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
-    AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
-    AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
-    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR e.status = ANY(@statuses::text[]))
-    AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
-    AND (COALESCE(@assigned, NULL) IS NULL OR
-         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR
-         (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
-    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
-    AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
-    AND (COALESCE(@initialized, NULL) IS NULL OR
-         (@initialized::boolean = true AND (e.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized::boolean = false AND e.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (COALESCE(@health_ranges::jsonb, '[]'::jsonb) = '[]'::jsonb OR
-         EXISTS (
-             SELECT 1 FROM jsonb_array_elements(@health_ranges::jsonb) AS range_obj
-             WHERE (w.status->>'health')::jsonb->>'overallHealth' IS NOT NULL
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision >= (range_obj->>'min')::double precision
-               AND ((w.status->>'health')::jsonb->>'overallHealth')::double precision <= (range_obj->>'max')::double precision
-         )
-    )
-    AND (
-        (COALESCE(@tag_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_keys::text[]) AS key_condition
-                WHERE
-                CASE
-                    WHEN key_condition LIKE '%:not_exists' THEN
-                        NOT (e.tags ? replace(key_condition, ':not_exists', ''))
-                    ELSE
-                        e.tags ? key_condition
-                END
-            ) = array_length(@tag_keys::text[], 1)
-        )
-        AND
-        (COALESCE(@tag_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@tag_conditions::text[]) AS cond
-                WHERE e.tags->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
-        )
-    )
-    AND (
-        (COALESCE(@label_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@label_keys::text[]) AS key_condition
-                WHERE
-                CASE
-                    WHEN key_condition LIKE '%:not_exists' THEN
-                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
-                    ELSE
-                        w.labels ? key_condition
-                END
-            ) > 0
-        )
-        AND
-        (COALESCE(@label_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@label_conditions::text[]) AS cond
-                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) > 0
-        )
-    )
-    AND (
-        (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
-                WHERE
-                CASE
-                    WHEN key_condition LIKE '%:not_exists' THEN
-                        NOT (w.labels ? replace(key_condition, ':not_exists', ''))
-                    ELSE
-                        w.labels ? key_condition
-                END
-            ) = array_length(@selector_keys::text[], 1)
-        )
-        AND
-        (COALESCE(@selector_conditions::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond
-                WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest(@selector_conditions::text[]) AS cond)
-        )
-    )
-ORDER BY e.scheduled_at DESC
-LIMIT NULLIF(@lmt, 0) OFFSET @fst;
+ORDER BY e.scheduled_at DESC;
 
 -- name: GetTestWorkflowExecutionsSummaryByWorkflow :many
 -- Fast-path summary query used when the only filter is a single workflow name
