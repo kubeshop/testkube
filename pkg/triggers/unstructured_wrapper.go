@@ -10,11 +10,10 @@ import (
 // For example, {{ .ObjectMeta.Labels }} works the same way for a CRD resource
 // as it does for a native Deployment.
 type unstructuredTemplateObject struct {
-	ObjectMeta metav1.ObjectMeta      `json:"metadata"`
-	Spec       map[string]interface{} `json:"spec,omitempty"`
-	Status     map[string]interface{} `json:"status,omitempty"`
-	Kind       string                 `json:"kind,omitempty"`
-	APIVersion string                 `json:"apiVersion,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	ObjectMeta      metav1.ObjectMeta      `json:"metadata"`
+	Spec            map[string]interface{} `json:"spec,omitempty"`
+	Status          map[string]interface{} `json:"status,omitempty"`
 }
 
 // newUnstructuredTemplateObject creates a template-friendly wrapper from an
@@ -23,8 +22,10 @@ type unstructuredTemplateObject struct {
 // making them accessible with the same template syntax used for typed objects.
 func newUnstructuredTemplateObject(u *unstructured.Unstructured) *unstructuredTemplateObject {
 	obj := &unstructuredTemplateObject{
-		Kind:       u.GetKind(),
-		APIVersion: u.GetAPIVersion(),
+		TypeMeta: metav1.TypeMeta{
+			Kind:       u.GetKind(),
+			APIVersion: u.GetAPIVersion(),
+		},
 	}
 
 	// Populate ObjectMeta from the unstructured accessors
