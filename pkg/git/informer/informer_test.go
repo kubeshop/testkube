@@ -210,10 +210,9 @@ func TestAuthClientOptions(t *testing.T) {
 	})
 
 	t.Run("header auth", func(t *testing.T) {
-		authType := testkube.HEADER_ContentGitAuthType
 		opts, err := authClientOptions(&testkube.TestTriggerContentGit{
 			Token:    "token",
-			AuthType: &authType,
+			AuthType: string(testkube.HEADER_ContentGitAuthType),
 		})
 		require.NoError(t, err)
 		assert.Len(t, opts, 1)
@@ -880,23 +879,22 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 }
 
 func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T) {
-	authType := testkube.BASIC_ContentGitAuthType
 	keyA := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
 		Branches: []string{"main"},
-		AuthType: &authType,
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
 		Paths:    []string{"pkg"},
 	})
 	keyB := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
 		Branches: []string{"main"},
-		AuthType: &authType,
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
 		Paths:    []string{"test"},
 	})
 	keyOtherNamespace := gitConfigCacheKey("team-a", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
 		Branches: []string{"main"},
-		AuthType: &authType,
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
 	})
 
 	assert.Equal(t, keyA, keyB)

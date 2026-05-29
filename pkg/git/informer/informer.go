@@ -771,10 +771,7 @@ func authClientOptionsWithResolver(
 	token := resolver(gitConfig.Token, gitConfig.TokenFrom)
 	sshKey := resolver(gitConfig.SshKey, gitConfig.SshKeyFrom)
 
-	authType := ""
-	if gitConfig.AuthType != nil {
-		authType = strings.ToLower(string(*gitConfig.AuthType))
-	}
+	authType := strings.ToLower(gitConfig.AuthType)
 
 	opts := make([]client.Option, 0, 1)
 	switch {
@@ -995,10 +992,7 @@ func gitConfigCacheKey(namespace string, gitConfig *testkube.TestTriggerContentG
 		return namespace
 	}
 
-	authType := ""
-	if gitConfig.AuthType != nil {
-		authType = strings.ToLower(string(*gitConfig.AuthType))
-	}
+	authType := strings.ToLower(gitConfig.AuthType)
 
 	return strings.Join([]string{
 		namespace,

@@ -265,17 +265,10 @@ func mapContentGitToCRD(git *testkube.TestTriggerContentGit) *testsv1.TestTrigge
 		TokenFrom:      mapEnvVarSourceAPIToKube(git.TokenFrom),
 		SshKey:         git.SshKey,
 		SshKeyFrom:     mapEnvVarSourceAPIToKube(git.SshKeyFrom),
-		AuthType:       mapGitAuthTypeAPIToKube(git.AuthType),
+		AuthType:       testsv3.GitAuthType(git.AuthType),
 	}
 }
 
 func mapEnvVarSourceAPIToKube(v *testkube.EnvVarSource) *corev1.EnvVarSource {
 	return commonmapper.MapEnvVarSourceAPIToKube(v)
-}
-
-func mapGitAuthTypeAPIToKube(v *testkube.ContentGitAuthType) testsv3.GitAuthType {
-	if v == nil {
-		return ""
-	}
-	return testsv3.GitAuthType(*v)
 }

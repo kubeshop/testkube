@@ -12,18 +12,17 @@ package testkube
 type TestTriggerContentGit struct {
 	// URI of the git repository to watch.
 	Uri string `json:"uri"`
-	// Branch name patterns to watch (glob supported, e.g. "main", "release/*").
-	// If empty, all branches are watched.
+	// Branch name patterns to watch (glob supported, e.g. \"main\", \"release/_*\"). If empty, all branches are watched.
 	Branches []string `json:"branches,omitempty"`
-	// Branch name patterns to exclude (glob supported). Takes precedence over Branches.
+	// Branch name patterns to exclude (glob supported). Takes precedence over branches.
 	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
 	// paths to watch for changes (glob supported)
 	Paths []string `json:"paths,omitempty"`
-	// path patterns to exclude (glob supported). Takes precedence over Paths.
+	// Path patterns to exclude (glob supported). Takes precedence over paths.
 	PathsIgnore []string `json:"pathsIgnore,omitempty"`
-	// Tag name patterns to watch (glob supported, e.g. "v*", "v1.*").
+	// Tag name patterns to watch (glob supported, e.g. \"v*\", \"v1.*\").
 	Tags []string `json:"tags,omitempty"`
-	// Tag name patterns to exclude (glob supported). Takes precedence over Tags.
+	// Tag name patterns to exclude (glob supported). Takes precedence over tags.
 	TagsIgnore []string `json:"tagsIgnore,omitempty"`
 	// plain text username to fetch with
 	Username     string        `json:"username,omitempty"`
@@ -32,7 +31,7 @@ type TestTriggerContentGit struct {
 	Token     string        `json:"token,omitempty"`
 	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
 	// plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead.
-	SshKey     string              `json:"sshKey,omitempty"`
-	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
-	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
+	SshKey     string        `json:"sshKey,omitempty"`
+	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
+	AuthType   string        `json:"authType,omitempty"`
 }

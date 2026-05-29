@@ -3,7 +3,6 @@ package testtriggers
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -264,13 +263,6 @@ func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.Test
 		TokenFrom:      commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
 		SshKey:         git.SshKey,
 		SshKeyFrom:     commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
-		AuthType:       mapGitAuthTypeKubeToAPI(git.AuthType),
+		AuthType:       string(git.AuthType),
 	}
-}
-
-func mapGitAuthTypeKubeToAPI(v testsv3.GitAuthType) *testkube.ContentGitAuthType {
-	if v == "" {
-		return nil
-	}
-	return common.Ptr(testkube.ContentGitAuthType(v))
 }
