@@ -21,8 +21,8 @@ func TestNewUnstructuredTemplateObject(t *testing.T) {
 				"name":      "my-rollout",
 				"namespace": "production",
 				"labels": map[string]interface{}{
-					"app":                           "myapp",
-					"tags.datadoghq.com/version":    "1.2.3",
+					"app":                        "myapp",
+					"tags.datadoghq.com/version": "1.2.3",
 				},
 				"annotations": map[string]interface{}{
 					"some-annotation": "some-value",
