@@ -1231,8 +1231,13 @@ func tagFromRef(ref string) string {
 
 // matchGlob performs glob-style matching supporting * and ** patterns.
 // It matches file paths against patterns like "src/**", "*.md", "docs/*".
+// Malformed patterns are treated as non-matching (filepath.Match returns ErrBadPattern).
 func matchGlob(pattern, name string) bool {
-	matched, _ := filepath.Match(pattern, name)
+	matched, err := filepath.Match(pattern, name)
+	if err != nil {
+		log.DefaultLogger.Debugf("git informer: malformed glob pattern %q: %v", pattern, err)
+		return false
+	}
 	if matched {
 		return true
 	}
@@ -1272,8 +1277,9 @@ func matchGlob(pattern, name string) bool {
 	return false
 }
 
-// branchMatchesPatterns checks if a branch name matches any of the given glob patterns.
-func branchMatchesPatterns(branch string, patterns []string) bool {
+// nameMatchesPatterns checks if a name (branch or tag) matches any of the given glob patterns.
+// Returns true if patterns is empty (matches all).
+func nameMatchesPatterns(name string, patterns []string) bool {
 	if len(patterns) == 0 {
 		return true
 	}
@@ -1282,25 +1288,11 @@ func branchMatchesPatterns(branch string, patterns []string) bool {
 		if p == "" {
 			continue
 		}
-		matched, _ := filepath.Match(p, branch)
-		if matched {
-			return true
-		}
-	}
-	return false
-}
-
-// tagMatchesPatterns checks if a tag name matches any of the given glob patterns.
-func tagMatchesPatterns(tag string, patterns []string) bool {
-	if len(patterns) == 0 {
-		return true
-	}
-	for _, p := range patterns {
-		p = strings.TrimSpace(p)
-		if p == "" {
+		matched, err := filepath.Match(p, name)
+		if err != nil {
+			log.DefaultLogger.Debugf("git informer: malformed glob pattern %q: %v", p, err)
 			continue
 		}
-		matched, _ := filepath.Match(p, tag)
 		if matched {
 			return true
 		}
