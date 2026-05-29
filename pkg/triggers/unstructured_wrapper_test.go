@@ -45,23 +45,34 @@ func TestNewUnstructuredTemplateObject(t *testing.T) {
 	obj := newUnstructuredTemplateObject(u)
 
 	// Verify ObjectMeta fields
-	assert.Equal(t, "my-rollout", obj.ObjectMeta.Name)
-	assert.Equal(t, "production", obj.ObjectMeta.Namespace)
+	objectMeta, ok := (*obj)["ObjectMeta"].(metav1.ObjectMeta)
+	require.True(t, ok)
+	assert.Equal(t, "my-rollout", objectMeta.Name)
+	assert.Equal(t, "production", objectMeta.Namespace)
 	assert.Equal(t, map[string]string{
 		"app":                        "myapp",
 		"tags.datadoghq.com/version": "1.2.3",
-	}, obj.ObjectMeta.Labels)
+	}, objectMeta.Labels)
 	assert.Equal(t, map[string]string{
 		"some-annotation": "some-value",
-	}, obj.ObjectMeta.Annotations)
+	}, objectMeta.Annotations)
 
 	// Verify Spec and Status
-	assert.Equal(t, int64(3), obj.Spec["replicas"])
-	assert.Equal(t, "Healthy", obj.Status["phase"])
+	spec, ok := (*obj)["Spec"].(map[string]interface{})
+	require.True(t, ok)
+	status, ok := (*obj)["Status"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, int64(3), spec["replicas"])
+	assert.Equal(t, "Healthy", status["phase"])
 
 	// Verify Kind and APIVersion
-	assert.Equal(t, "Rollout", obj.Kind)
-	assert.Equal(t, "argoproj.io/v1alpha1", obj.APIVersion)
+	assert.Equal(t, "Rollout", (*obj)["Kind"])
+	assert.Equal(t, "argoproj.io/v1alpha1", (*obj)["APIVersion"])
+
+	// Verify legacy raw map access compatibility
+	metadata, ok := (*obj)["metadata"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "my-rollout", metadata["name"])
 }
 
 func TestUnstructuredTemplateObject_GoTemplate(t *testing.T) {
@@ -115,6 +126,21 @@ func TestUnstructuredTemplateObject_GoTemplate(t *testing.T) {
 			tmpl:     `{{ .Kind }}`,
 			expected: "Rollout",
 		},
+		{
+			name:     "access legacy metadata.name",
+			tmpl:     `{{ .metadata.name }}`,
+			expected: "my-rollout",
+		},
+		{
+			name:     "access legacy metadata.labels with index",
+			tmpl:     `{{ index .metadata.labels "app" }}`,
+			expected: "myapp",
+		},
+		{
+			name:     "access TypeMeta.Kind",
+			tmpl:     `{{ .TypeMeta.Kind }}`,
+			expected: "Rollout",
+		},
 	}
 
 	for _, tt := range tests {
@@ -144,11 +170,13 @@ func TestUnstructuredTemplateObject_NilMetadata(t *testing.T) {
 	}
 
 	obj := newUnstructuredTemplateObject(u)
-	assert.Equal(t, "minimal", obj.ObjectMeta.Name)
-	assert.Nil(t, obj.ObjectMeta.Labels)
-	assert.Nil(t, obj.ObjectMeta.Annotations)
-	assert.Nil(t, obj.Spec)
-	assert.Nil(t, obj.Status)
+	objectMeta, ok := (*obj)["ObjectMeta"].(metav1.ObjectMeta)
+	require.True(t, ok)
+	assert.Equal(t, "minimal", objectMeta.Name)
+	assert.Nil(t, objectMeta.Labels)
+	assert.Nil(t, objectMeta.Annotations)
+	assert.Nil(t, (*obj)["Spec"])
+	assert.Nil(t, (*obj)["Status"])
 }
 
 func TestUnstructuredTemplateObject_MatchesDeploymentBehavior(t *testing.T) {
