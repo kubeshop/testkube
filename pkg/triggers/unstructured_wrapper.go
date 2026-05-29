@@ -2,6 +2,7 @@ package triggers
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -34,10 +35,14 @@ func newUnstructuredTemplateObject(u *unstructured.Unstructured) *unstructuredTe
 
 	metadata, ok := u.Object["metadata"].(map[string]interface{})
 	if !ok {
-		metadata = map[string]interface{}{
-			"name":      objectMeta.Name,
-			"namespace": objectMeta.Namespace,
-			"labels":    objectMeta.Labels,
+		if converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&objectMeta); err == nil {
+			metadata = converted
+		} else {
+			metadata = map[string]interface{}{
+				"name":      objectMeta.Name,
+				"namespace": objectMeta.Namespace,
+				"labels":    objectMeta.Labels,
+			}
 		}
 	}
 
