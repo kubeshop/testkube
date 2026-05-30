@@ -2,6 +2,7 @@ package informer
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -747,8 +748,8 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 		return nil, err
 	}
 
-	// Use a sanitized ref as part of the repo directory to support multi-ref path checking.
-	refSuffix := envVarNameSanitizer.ReplaceAllString(ref, "_")
+	// Use an encoded ref suffix to avoid collisions like refs/heads/a-b vs refs/heads/a/b.
+	refSuffix := refDirectorySuffix(ref)
 	repoDir := triggerRepositoryPathFromKey(key) + "__" + refSuffix
 	gitConfig := trigger.ContentSelector.Git
 	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
@@ -1312,6 +1313,10 @@ func normalizeSecretOrConfigMapEnvVarName(name, key string) string {
 	}
 	candidate := strings.ToUpper(name + "_" + key)
 	return envVarNameSanitizer.ReplaceAllString(candidate, "_")
+}
+
+func refDirectorySuffix(ref string) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(ref))
 }
 
 func normalizeRefs(revision string) []string {

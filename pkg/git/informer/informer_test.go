@@ -1103,6 +1103,15 @@ func TestRefSubKey(t *testing.T) {
 	}
 }
 
+func TestRefDirectorySuffix_AvoidsSanitizerCollisions(t *testing.T) {
+	refA := "refs/heads/a-b"
+	refB := "refs/heads/a/b"
+
+	assert.Equal(t, envVarNameSanitizer.ReplaceAllString(refA, "_"), envVarNameSanitizer.ReplaceAllString(refB, "_"),
+		"sanitizer output should collide for this regression test setup")
+	assert.NotEqual(t, refDirectorySuffix(refA), refDirectorySuffix(refB))
+}
+
 func TestEffectiveRefs(t *testing.T) {
 	tests := []struct {
 		name     string
