@@ -900,3 +900,292 @@ func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T)
 	assert.Equal(t, keyA, keyB)
 	assert.NotEqual(t, keyA, keyOtherNamespace)
 }
+
+func TestMatchGlob(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		input    string
+		expected bool
+	}{
+		{"exact match", "main.go", "main.go", true},
+		{"no match", "main.go", "other.go", false},
+		{"star matches extension", "*.go", "main.go", true},
+		{"star does not cross directories", "*.go", "pkg/main.go", false},
+		{"doublestar matches nested", "src/**/*.go", "src/pkg/main.go", true},
+		{"doublestar does not cross multiple dirs", "src/**/*.go", "src/a/b/c.go", false},
+		{"doublestar no match outside prefix", "src/**/*.go", "pkg/main.go", false},
+		{"prefix directory match", "src", "src/main.go", true},
+		{"prefix directory exact", "src", "src", true},
+		{"prefix directory trailing slash", "src/", "src/main.go", true},
+		{"question mark single char", "?.go", "a.go", true},
+		{"question mark no match multi char", "?.go", "ab.go", false},
+		{"doublestar prefix only", "src/**", "src/a/b.go", true},
+		{"doublestar suffix only", "**/test.go", "a/b/test.go", true},
+		{"malformed pattern returns false", "[invalid", "anything", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, matchGlob(tt.pattern, tt.input))
+		})
+	}
+}
+
+func TestNameMatchesPatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		patterns []string
+		expected bool
+	}{
+		{"empty patterns matches all", "main", nil, true},
+		{"exact match", "main", []string{"main"}, true},
+		{"no match", "develop", []string{"main"}, false},
+		{"glob star", "feature/foo", []string{"feature/*"}, true},
+		{"glob star no match", "bugfix/foo", []string{"feature/*"}, false},
+		{"multiple patterns first matches", "main", []string{"main", "develop"}, true},
+		{"multiple patterns second matches", "develop", []string{"main", "develop"}, true},
+		{"whitespace trimmed", "main", []string{"  main  "}, true},
+		{"empty pattern skipped", "main", []string{""}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, nameMatchesPatterns(tt.input, tt.patterns))
+		})
+	}
+}
+
+func TestNameMatchesAny(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		patterns []string
+		expected bool
+	}{
+		{"empty patterns returns false", "main", nil, false},
+		{"exact match", "main", []string{"main"}, true},
+		{"glob match", "v1.0.0", []string{"v*"}, true},
+		{"no match", "develop", []string{"main", "release/*"}, false},
+		{"glob question mark", "v1", []string{"v?"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, nameMatchesAny(tt.input, tt.patterns))
+		})
+	}
+}
+
+func TestPathIsIgnored(t *testing.T) {
+	tests := []struct {
+		name     string
+		patterns []string
+		file     string
+		expected bool
+	}{
+		{"empty patterns", nil, "any/file.go", false},
+		{"matches glob", []string{"*.md"}, "README.md", true},
+		{"does not match", []string{"*.md"}, "main.go", false},
+		{"directory pattern", []string{"docs"}, "docs/guide.md", true},
+		{"multiple patterns second matches", []string{"*.txt", "*.md"}, "notes.md", true},
+		{"doublestar ignore", []string{"**/*.test.js"}, "src/deep/file.test.js", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, pathIsIgnored(tt.patterns, tt.file))
+		})
+	}
+}
+
+func TestBranchFromRef(t *testing.T) {
+	tests := []struct {
+		ref      string
+		expected string
+	}{
+		{"refs/heads/main", "main"},
+		{"refs/heads/feature/foo", "feature/foo"},
+		{"refs/tags/v1.0", ""},
+		{"HEAD", ""},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ref, func(t *testing.T) {
+			assert.Equal(t, tt.expected, branchFromRef(tt.ref))
+		})
+	}
+}
+
+func TestTagFromRef(t *testing.T) {
+	tests := []struct {
+		ref      string
+		expected string
+	}{
+		{"refs/tags/v1.0", "v1.0"},
+		{"refs/tags/release/2.0", "release/2.0"},
+		{"refs/heads/main", ""},
+		{"HEAD", ""},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ref, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tagFromRef(tt.ref))
+		})
+	}
+}
+
+func TestEffectiveRefsKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *testkube.TestTriggerContentGit
+		expected string
+	}{
+		{
+			"branches only",
+			&testkube.TestTriggerContentGit{Branches: []string{"main", "develop"}},
+			"b:main,b:develop",
+		},
+		{
+			"tags only",
+			&testkube.TestTriggerContentGit{Tags: []string{"v1.0", "v2.0"}},
+			"t:v1.0,t:v2.0",
+		},
+		{
+			"branches and tags",
+			&testkube.TestTriggerContentGit{Branches: []string{"main"}, Tags: []string{"v1.0"}},
+			"b:main,t:v1.0",
+		},
+		{
+			"empty",
+			&testkube.TestTriggerContentGit{},
+			"",
+		},
+		{
+			"whitespace trimmed",
+			&testkube.TestTriggerContentGit{Branches: []string{" main "}},
+			"b:main",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, effectiveRefsKey(tt.config))
+		})
+	}
+}
+
+func TestRefSubKey(t *testing.T) {
+	tests := []struct {
+		name       string
+		triggerKey string
+		ref        string
+		expected   string
+	}{
+		{"with ref", "v1:ns/trigger", "refs/heads/main", "v1:ns/trigger|ref|refs/heads/main"},
+		{"empty ref returns trigger key", "v1:ns/trigger", "", "v1:ns/trigger"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, refSubKey(tt.triggerKey, tt.ref))
+		})
+	}
+}
+
+func TestEffectiveRefs(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *testkube.TestTriggerContentGit
+		expected []string
+	}{
+		{
+			"exact branches",
+			&testkube.TestTriggerContentGit{Branches: []string{"main", "develop"}},
+			[]string{"refs/heads/main", "refs/heads/develop"},
+		},
+		{
+			"exact tags",
+			&testkube.TestTriggerContentGit{Tags: []string{"v1.0", "v2.0"}},
+			[]string{"refs/tags/v1.0", "refs/tags/v2.0"},
+		},
+		{
+			"glob branches skipped",
+			&testkube.TestTriggerContentGit{Branches: []string{"feature/*"}},
+			nil,
+		},
+		{
+			"glob tags skipped",
+			&testkube.TestTriggerContentGit{Tags: []string{"v*"}},
+			nil,
+		},
+		{
+			"mixed exact and glob",
+			&testkube.TestTriggerContentGit{Branches: []string{"main", "release/*"}},
+			[]string{"refs/heads/main"},
+		},
+		{
+			"empty input",
+			&testkube.TestTriggerContentGit{},
+			nil,
+		},
+		{
+			"whitespace only entries skipped",
+			&testkube.TestTriggerContentGit{Branches: []string{"  ", "main"}},
+			[]string{"refs/heads/main"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := effectiveRefs(tt.config)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestPathMatchesNormalized_GlobPatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		paths    []string
+		file     string
+		expected bool
+	}{
+		{"glob star extension", []string{"*.md"}, "README.md", true},
+		{"glob star no match different ext", []string{"*.md"}, "main.go", false},
+		{"doublestar recursive", []string{"src/**/*.go"}, "src/pkg/file.go", true},
+		{"directory prefix", []string{"pkg"}, "pkg/util.go", true},
+		{"exact file", []string{"Makefile"}, "Makefile", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			normalized := normalizePaths(tt.paths)
+			assert.Equal(t, tt.expected, pathMatchesNormalized(normalized, tt.file))
+		})
+	}
+}
+
+func TestTriggerKeyFromRefSubKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"with ref separator", "v1:ns/trigger|ref|refs/heads/main", "v1:ns/trigger"},
+		{"without ref separator", "v1:ns/trigger", "v1:ns/trigger"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, triggerKeyFromRefSubKey(tt.input))
+		})
+	}
+}

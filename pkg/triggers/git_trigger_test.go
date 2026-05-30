@@ -289,3 +289,145 @@ func TestMatchGitTrigger_SkipsNonTestWorkflowExecution(t *testing.T) {
 func conditionStatusPtr(v v1.TestTriggerConditionStatuses) *v1.TestTriggerConditionStatuses {
 	return &v
 }
+
+func TestGitEventTypeFromMeta(t *testing.T) {
+	tests := []struct {
+		name     string
+		meta     map[string]string
+		expected string
+	}{
+		{"nil meta returns git-push", nil, "git-push"},
+		{"empty meta returns git-push", map[string]string{}, "git-push"},
+		{"branch meta returns git-push", map[string]string{"TESTKUBE_GIT_BRANCH": "main"}, "git-push"},
+		{"tag meta returns git-tag-push", map[string]string{"TESTKUBE_GIT_TAG": "v1.0"}, "git-tag-push"},
+		{"both branch and tag prefers tag", map[string]string{"TESTKUBE_GIT_BRANCH": "main", "TESTKUBE_GIT_TAG": "v1.0"}, "git-tag-push"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, gitEventTypeFromMeta(tt.meta))
+		})
+	}
+}
+
+func TestIsGitSyntheticTargetReady(t *testing.T) {
+	tests := []struct {
+		name     string
+		trigger  *internalTrigger
+		expected bool
+	}{
+		{
+			"git-push event is ready",
+			&internalTrigger{ResourceKind: "content", Event: "git-push"},
+			true,
+		},
+		{
+			"git-tag-push event is ready",
+			&internalTrigger{ResourceKind: "content", Event: "git-tag-push"},
+			true,
+		},
+		{
+			"modified event is not ready",
+			&internalTrigger{ResourceKind: "content", Event: "modified"},
+			false,
+		},
+		{
+			"created event is not ready",
+			&internalTrigger{ResourceKind: "content", Event: "created"},
+			false,
+		},
+		{
+			"disabled trigger is not ready",
+			&internalTrigger{ResourceKind: "content", Event: "git-push", Disabled: true},
+			false,
+		},
+		{
+			"non-content resource is not ready",
+			&internalTrigger{ResourceKind: "deployment", Event: "git-push"},
+			false,
+		},
+		{
+			"case insensitive resource kind",
+			&internalTrigger{ResourceKind: "Content", Event: "git-push"},
+			true,
+		},
+		{
+			"case insensitive event",
+			&internalTrigger{ResourceKind: "content", Event: "Git-Push"},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, isGitSyntheticTargetReady(tt.trigger))
+		})
+	}
+}
+
+func TestMatchGitTrigger_GitTagPushEvent(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    "git-tag-push",
+		},
+	}
+
+	var executedEvent string
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, event *watcherEvent, _ *internalTrigger) error {
+			executedEvent = string(event.eventType)
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	meta := map[string]string{"TESTKUBE_GIT_TAG": "v1.0.0"}
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, meta)
+	require.NoError(t, err)
+	assert.Equal(t, "git-tag-push", executedEvent)
+}
+
+func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    "git-push",
+		},
+	}
+
+	var capturedMeta *GitMetadata
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, event *watcherEvent, _ *internalTrigger) error {
+			capturedMeta = event.GitMetadata
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	meta := map[string]string{
+		"TESTKUBE_GIT_COMMIT":         "abc123",
+		"TESTKUBE_GIT_REF":            "refs/heads/main",
+		"TESTKUBE_GIT_BRANCH":         "main",
+		"TESTKUBE_GIT_COMMIT_MESSAGE": "fix: something",
+		"TESTKUBE_GIT_AUTHOR":         "dev <dev@example.com>",
+	}
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, meta)
+	require.NoError(t, err)
+	require.NotNil(t, capturedMeta)
+	assert.Equal(t, "abc123", capturedMeta.Commit)
+	assert.Equal(t, "refs/heads/main", capturedMeta.Ref)
+	assert.Equal(t, "main", capturedMeta.Branch)
+	assert.Equal(t, "fix: something", capturedMeta.CommitMessage)
+	assert.Equal(t, "dev <dev@example.com>", capturedMeta.Author)
+}
