@@ -1457,30 +1457,39 @@ func matchGlob(pattern, name string) bool {
 	}
 	// Support ** for recursive directory matching
 	if strings.Contains(pattern, "**") {
-		// Replace ** with a pattern that matches any path segment
-		parts := strings.Split(pattern, "**")
-		if len(parts) == 2 {
-			prefix := strings.TrimSuffix(parts[0], "/")
-			suffix := strings.TrimPrefix(parts[1], "/")
-			if prefix == "" && suffix == "" {
-				return true
+		// Globstar (**) matching across path segments: ** matches zero or more directories.
+		pattern = filepath.ToSlash(strings.TrimSuffix(pattern, "/"))
+		name = filepath.ToSlash(strings.TrimSuffix(name, "/"))
+
+		pSegs := strings.Split(pattern, "/")
+		nSegs := strings.Split(name, "/")
+
+		type state struct{ i, j int }
+		memo := map[state]bool{}
+		var match func(i, j int) bool
+		match = func(i, j int) bool {
+			s := state{i, j}
+			if v, ok := memo[s]; ok {
+				return v
 			}
-			if prefix == "" {
-				// **/suffix - match suffix anywhere
-				if suffix == "" {
-					return true
-				}
-				suffixMatch, _ := filepath.Match(suffix, filepath.Base(name))
-				return suffixMatch || strings.HasSuffix(name, "/"+suffix)
+
+			var res bool
+			switch {
+			case i == len(pSegs):
+				res = j == len(nSegs)
+			case pSegs[i] == "**":
+				res = match(i+1, j) || (j < len(nSegs) && match(i, j+1))
+			case j < len(nSegs):
+				ok, err := filepath.Match(pSegs[i], nSegs[j])
+				res = err == nil && ok && match(i+1, j+1)
+			default:
+				res = false
 			}
-			if strings.HasPrefix(name, prefix+"/") || name == prefix {
-				if suffix == "" {
-					return true
-				}
-				remaining := strings.TrimPrefix(name, prefix+"/")
-				suffixMatch, _ := filepath.Match(suffix, remaining)
-				return suffixMatch || strings.HasSuffix(remaining, "/"+suffix)
-			}
+
+			memo[s] = res
+			return res
+		}
+		return match(0, 0)
 		}
 	}
 	// Also try prefix match for directory patterns
