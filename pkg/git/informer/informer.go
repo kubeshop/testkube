@@ -111,6 +111,10 @@ type reconcileState struct {
 	remoteHeadRef    string
 	remoteHeadErr    error
 
+	allRefsLoaded bool
+	allRefs       []refHashPair
+	allRefsErr    error
+
 	repoLoaded bool
 	repo       *git.Repository
 	repoHead   string
@@ -227,7 +231,9 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		}
 		key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
 		active[key] = struct{}{}
-		prevHash, hadPrevHash := i.commits[key]
+
+		// Snapshot per-ref commit state before checking so we can restore on error.
+		prevCommits := i.snapshotRefCommits(key)
 
 		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
@@ -238,19 +244,20 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 			continue
 		}
 		if i.matcher == nil {
-			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
+			i.restoreRefCommits(key, prevCommits)
 			continue
 		}
 		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace, changed.metadata); err != nil {
 			log.DefaultLogger.Errorf("git informer: error matching trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
-			i.restoreCommitBaseline(key, prevHash, hadPrevHash)
+			i.restoreRefCommits(key, prevCommits)
 		}
 	}
 
 	// Clean up commits for removed triggers
 	for k := range i.commits {
-		if _, ok := active[k]; !ok {
-			source, namespace, _, parsed := parseTriggerKey(k)
+		triggerBase := triggerKeyFromRefSubKey(k)
+		if _, ok := active[triggerBase]; !ok {
+			source, namespace, _, parsed := parseTriggerKey(triggerBase)
 			if parsed {
 				if source == testTriggerSource {
 					if _, all := testTriggerListedNamespaces[allNamespacesMarker]; !all {
@@ -261,8 +268,8 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 				}
 			}
 			delete(i.commits, k)
-			delete(i.revisions, k)
-			_ = os.RemoveAll(triggerRepositoryPathFromKey(k))
+			delete(i.revisions, triggerBase)
+			_ = os.RemoveAll(triggerRepositoryPathFromKey(triggerBase))
 		}
 	}
 }
@@ -275,13 +282,53 @@ func (i *Informer) restoreCommitBaseline(key, previousHash string, hadPreviousHa
 	delete(i.commits, key)
 }
 
+// snapshotRefCommits captures all per-ref commit entries for a trigger key.
+func (i *Informer) snapshotRefCommits(triggerKey string) map[string]string {
+	snapshot := make(map[string]string)
+	prefix := triggerKey + "|ref|"
+	for k, v := range i.commits {
+		if k == triggerKey || strings.HasPrefix(k, prefix) {
+			snapshot[k] = v
+		}
+	}
+	return snapshot
+}
+
+// restoreRefCommits restores per-ref commit entries from a snapshot, removing any new keys.
+func (i *Informer) restoreRefCommits(triggerKey string, snapshot map[string]string) {
+	prefix := triggerKey + "|ref|"
+	// Remove all current keys for this trigger
+	for k := range i.commits {
+		if k == triggerKey || strings.HasPrefix(k, prefix) {
+			delete(i.commits, k)
+		}
+	}
+	// Restore snapshot
+	for k, v := range snapshot {
+		i.commits[k] = v
+	}
+}
+
+// triggerKeyFromRefSubKey extracts the base trigger key from a ref sub-key.
+func triggerKeyFromRefSubKey(k string) string {
+	if idx := strings.Index(k, "|ref|"); idx >= 0 {
+		return k[:idx]
+	}
+	return k
+}
+
 func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 	return !trigger.Disabled &&
 		isContentResource(trigger) &&
-		isModifiedGitContentEvent(trigger.Event) &&
+		isGitContentEvent(trigger.Event) &&
 		trigger.ContentSelector != nil &&
 		trigger.ContentSelector.Git != nil &&
 		trigger.ContentSelector.Git.Uri != ""
+}
+
+func isGitContentEvent(event string) bool {
+	e := strings.ToLower(event)
+	return e == "modified" || e == "git-push" || e == "git-tag-push"
 }
 
 func isModifiedGitContentEvent(event string) bool {
@@ -383,35 +430,55 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 
 func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (matchResult, error) {
 	gitConfig := trigger.ContentSelector.Git
-	headHash, ref, err := i.remoteHeadHashAndRefWithCache(ctx, trigger.Namespace, gitConfig, cache)
+	matchingRefs, err := i.remoteAllMatchingRefsWithCache(ctx, trigger.Namespace, gitConfig, cache)
 	if err != nil {
 		return matchResult{}, err
 	}
 
-	prevHash, hasPrev := i.commits[key]
-	i.commits[key] = headHash
-	if !hasPrev {
-		logBaselineInitialization(trigger.Namespace, trigger.Name)
-	}
-
-	if !hasPrev || prevHash == headHash {
-		return matchResult{}, nil
-	}
-
-	// Build metadata from remote HEAD info
-	meta := make(map[string]string)
-	meta[GitMetaKeyCommit] = headHash
-	if ref != "" {
-		meta[GitMetaKeyRef] = ref
-		if branch := branchFromRef(ref); branch != "" {
-			meta[GitMetaKeyBranch] = branch
+	// Check each matching ref independently. Fire if ANY ref has a new commit.
+	for _, pair := range matchingRefs {
+		refKey := refSubKey(key, pair.Ref)
+		prevHash, hasPrev := i.commits[refKey]
+		if !hasPrev {
+			// Migrate from legacy plain-key format (single ref per trigger).
+			if legacyHash, hasLegacy := i.commits[key]; hasLegacy {
+				prevHash = legacyHash
+				hasPrev = true
+				delete(i.commits, key)
+			}
 		}
-		if tag := tagFromRef(ref); tag != "" {
-			meta[GitMetaKeyTag] = tag
+		i.commits[refKey] = pair.Hash
+		if !hasPrev {
+			logBaselineInitialization(trigger.Namespace, trigger.Name)
+			continue
 		}
-	}
+		if prevHash == pair.Hash {
+			continue
+		}
 
-	return matchResult{changed: true, metadata: meta}, nil
+		// Build metadata from the changed ref
+		meta := make(map[string]string)
+		meta[GitMetaKeyCommit] = pair.Hash
+		if pair.Ref != "" {
+			meta[GitMetaKeyRef] = pair.Ref
+			if branch := branchFromRef(pair.Ref); branch != "" {
+				meta[GitMetaKeyBranch] = branch
+			}
+			if tag := tagFromRef(pair.Ref); tag != "" {
+				meta[GitMetaKeyTag] = tag
+			}
+		}
+		return matchResult{changed: true, metadata: meta}, nil
+	}
+	return matchResult{}, nil
+}
+
+// refSubKey returns a composite key for tracking per-ref state within a trigger.
+func refSubKey(triggerKey, ref string) string {
+	if ref == "" {
+		return triggerKey
+	}
+	return triggerKey + "|ref|" + ref
 }
 
 func logBaselineInitialization(namespace, triggerName string) {
@@ -450,6 +517,29 @@ func (i *Informer) remoteHeadHashAndRefWithCache(ctx context.Context, namespace 
 	state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr = i.remoteHeadHashAndRef(ctx, namespace, gitConfig)
 	state.remoteHeadLoaded = true
 	return state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr
+}
+
+func (i *Informer) remoteAllMatchingRefsWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]refHashPair, error) {
+	if cache == nil {
+		return i.remoteAllMatchingRefs(ctx, namespace, gitConfig)
+	}
+
+	state := cache.stateFor(namespace, gitConfig)
+	if state.allRefsLoaded {
+		return state.allRefs, state.allRefsErr
+	}
+
+	state.allRefs, state.allRefsErr = i.remoteAllMatchingRefs(ctx, namespace, gitConfig)
+	state.allRefsLoaded = true
+	return state.allRefs, state.allRefsErr
+}
+
+func (i *Informer) remoteAllMatchingRefs(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) ([]refHashPair, error) {
+	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig)
+	if err != nil {
+		return nil, err
+	}
+	return remoteAllMatchingRefsWithClientOptions(gitConfig, i.options, clientOptions)
 }
 
 func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigger testkube.TestTrigger) (*git.Repository, error) {
@@ -642,7 +732,27 @@ func effectiveRefs(gitConfig *testkube.TestTriggerContentGit) []string {
 	return refs
 }
 
+// refHashPair holds a single remote reference and its hash.
+type refHashPair struct {
+	Hash string
+	Ref  string
+}
+
 func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, string, error) {
+	results, err := remoteAllMatchingRefsWithClientOptions(gitConfig, options, clientOptions)
+	if err != nil {
+		return "", "", err
+	}
+	if len(results) == 0 {
+		return "", "", errors.New("unable to determine remote HEAD")
+	}
+	return results[0].Hash, results[0].Ref, nil
+}
+
+// remoteAllMatchingRefsWithClientOptions returns ALL remote refs that match the
+// configured branch/tag patterns and are not excluded by ignore filters.
+// When no branch/tag filters are set, it returns the default HEAD.
+func remoteAllMatchingRefsWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) ([]refHashPair, error) {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{gitConfig.Uri},
@@ -652,47 +762,50 @@ func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerConten
 		Timeout:       options.ListTimeoutSeconds,
 	})
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	hasBranchFilters := len(gitConfig.Branches) > 0
 	hasTagFilters := len(gitConfig.Tags) > 0
 
 	if hasBranchFilters || hasTagFilters {
-		// Match remote refs against branch/tag patterns (including globs) and apply ignore filters
+		var results []refHashPair
 		for _, r := range refs {
 			refName := string(r.Name())
 			if hasBranchFilters {
 				if branch := branchFromRef(refName); branch != "" {
-				if nameMatchesPatterns(branch, gitConfig.Branches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
-						return r.Hash().String(), refName, nil
+					if nameMatchesPatterns(branch, gitConfig.Branches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
+						results = append(results, refHashPair{Hash: r.Hash().String(), Ref: refName})
 					}
 				}
 			}
 			if hasTagFilters {
 				if tag := tagFromRef(refName); tag != "" {
-				if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
-						return r.Hash().String(), refName, nil
+					if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+						results = append(results, refHashPair{Hash: r.Hash().String(), Ref: refName})
 					}
 				}
 			}
 		}
-		return "", "", fmt.Errorf("no matching reference found for branches=%v tags=%v", gitConfig.Branches, gitConfig.Tags)
+		if len(results) == 0 {
+			return nil, fmt.Errorf("no matching reference found for branches=%v tags=%v", gitConfig.Branches, gitConfig.Tags)
+		}
+		return results, nil
 	}
 
 	// No specific branches/tags: watch default HEAD
 	for _, r := range refs {
 		if r.Name() == plumbing.HEAD {
-			return r.Hash().String(), string(r.Name()), nil
+			return []refHashPair{{Hash: r.Hash().String(), Ref: string(r.Name())}}, nil
 		}
 	}
 	for _, r := range refs {
 		if r.Name().IsBranch() {
-			return r.Hash().String(), string(r.Name()), nil
+			return []refHashPair{{Hash: r.Hash().String(), Ref: string(r.Name())}}, nil
 		}
 	}
 
-	return "", "", errors.New("unable to determine remote HEAD")
+	return nil, errors.New("unable to determine remote HEAD")
 }
 
 // remoteHeadHashWithClientOptions is kept for backward compatibility with clone/pull logic.
