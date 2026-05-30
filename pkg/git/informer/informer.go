@@ -734,8 +734,8 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 		return nil, err
 	}
 
-	// Use the ref as part of the repo directory to support multi-ref path checking.
-	refSuffix := strings.ReplaceAll(strings.ReplaceAll(ref, "/", "_"), "*", "_")
+	// Use a sanitized ref as part of the repo directory to support multi-ref path checking.
+	refSuffix := envVarNameSanitizer.ReplaceAllString(ref, "_")
 	repoDir := triggerRepositoryPathFromKey(key) + "__" + refSuffix
 	gitConfig := trigger.ContentSelector.Git
 	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
@@ -865,15 +865,15 @@ func remoteAllMatchingRefsWithClientOptions(gitConfig *testkube.TestTriggerConte
 			if branch := branchFromRef(refName); branch != "" {
 				// When branches is empty but branchesIgnore is set, match all branches minus ignored.
 				matchesBranch := hasBranchFilters && nameMatchesPatterns(branch, gitConfig.Branches)
-				matchesAll := !hasBranchFilters && !hasTagFilters && hasBranchIgnore
-				if (matchesBranch || matchesAll) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
+				matchesAllBranches := !hasBranchFilters && !hasTagFilters && hasBranchIgnore
+				if (matchesBranch || matchesAllBranches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
 					results = append(results, refHashPair{Hash: r.Hash().String(), Ref: refName})
 				}
 			}
 			if tag := tagFromRef(refName); tag != "" {
 				matchesTag := hasTagFilters && nameMatchesPatterns(tag, gitConfig.Tags)
-				matchesAll := !hasBranchFilters && !hasTagFilters && hasTagIgnore
-				if (matchesTag || matchesAll) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+				matchesAllTags := !hasBranchFilters && !hasTagFilters && hasTagIgnore
+				if (matchesTag || matchesAllTags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
 					results = append(results, refHashPair{Hash: r.Hash().String(), Ref: refName})
 				}
 			}
