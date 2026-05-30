@@ -1490,7 +1490,6 @@ func matchGlob(pattern, name string) bool {
 			return res
 		}
 		return match(0, 0)
-		}
 	}
 	// Also try prefix match for directory patterns
 	normalizedPattern := strings.TrimSuffix(pattern, "/")
