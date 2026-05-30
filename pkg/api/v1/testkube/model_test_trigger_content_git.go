@@ -12,7 +12,7 @@ package testkube
 type TestTriggerContentGit struct {
 	// URI of the git repository to watch.
 	Uri string `json:"uri"`
-	// Branch name patterns to watch (glob supported, e.g. \"main\", \"release/_*\"). If empty, all branches are watched.
+	// Branch name patterns to watch (glob supported, e.g. \"main\", \"release/*\"). If empty, all branches are watched.
 	Branches []string `json:"branches,omitempty"`
 	// Branch name patterns to exclude (glob supported). Takes precedence over branches.
 	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
