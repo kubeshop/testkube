@@ -748,8 +748,12 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 
 	keepPath := triggerRepositoryPathFromKey(keepKey)
 	removePath := triggerRepositoryPathFromKey(removeKey)
+	keepRefPath := keepPath + "__ref_main"
+	removeRefPath := removePath + "__ref_main"
 	require.NoError(t, os.MkdirAll(keepPath, 0o755))
 	require.NoError(t, os.MkdirAll(removePath, 0o755))
+	require.NoError(t, os.MkdirAll(keepRefPath, 0o755))
+	require.NoError(t, os.MkdirAll(removeRefPath, 0o755))
 
 	informer.updateRepositories(context.Background())
 
@@ -761,6 +765,10 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 	assert.False(t, removeExists)
 	_, removeErr := os.Stat(removePath)
 	assert.True(t, os.IsNotExist(removeErr))
+	_, keepRefErr := os.Stat(keepRefPath)
+	assert.NoError(t, keepRefErr)
+	_, removeRefErr := os.Stat(removeRefPath)
+	assert.True(t, os.IsNotExist(removeRefErr))
 }
 
 func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {

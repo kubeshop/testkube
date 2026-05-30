@@ -269,8 +269,19 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 			}
 			delete(i.commits, k)
 			delete(i.revisions, triggerBase)
-			_ = os.RemoveAll(triggerRepositoryPathFromKey(triggerBase))
+			removeTriggerRepositories(triggerRepositoryPathFromKey(triggerBase))
 		}
+	}
+}
+
+func removeTriggerRepositories(basePath string) {
+	_ = os.RemoveAll(basePath)
+	matches, err := filepath.Glob(basePath + "__*")
+	if err != nil {
+		return
+	}
+	for _, path := range matches {
+		_ = os.RemoveAll(path)
 	}
 }
 
@@ -1491,6 +1502,7 @@ func matchGlob(pattern, name string) bool {
 		}
 		return match(0, 0)
 	}
+
 	// Also try prefix match for directory patterns
 	normalizedPattern := strings.TrimSuffix(pattern, "/")
 	if name == normalizedPattern || strings.HasPrefix(name, normalizedPattern+"/") {
