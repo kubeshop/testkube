@@ -292,7 +292,7 @@ func TestCloneAndPullOptions_BranchRef(t *testing.T) {
 	assert.Equal(t, plumbing.ReferenceName("refs/heads/main"), pullOpts.ReferenceName)
 }
 
-func TestEmptyBranchesWatchesDefaultHead(t *testing.T) {
+func TestEmptyBranchesProduceNoStaticEffectiveRefs(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "default",
@@ -304,9 +304,62 @@ func TestEmptyBranchesWatchesDefaultHead(t *testing.T) {
 		},
 	}
 
-	// With no branches specified, effectiveRefs returns nil (watch default HEAD)
+	// With no branches specified, effectiveRefs returns nil and remote refs are resolved dynamically.
 	refs := effectiveRefs(trigger.ContentSelector.Git)
 	assert.Empty(t, refs)
+}
+
+func TestRemoteAllMatchingRefsWithClientOptions_EmptyFiltersWatchAllBranches(t *testing.T) {
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "README.md"), []byte("hello"), 0o644))
+	_, err = worktree.Add("README.md")
+	require.NoError(t, err)
+	hash, err := worktree.Commit("initial", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "test",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, workRepo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName("develop"), hash)))
+	require.NoError(t, workRepo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("refs/heads/main:refs/heads/main"),
+			config.RefSpec("refs/heads/develop:refs/heads/develop"),
+		},
+	}))
+
+	refs, err := remoteAllMatchingRefsWithClientOptions(&testkube.TestTriggerContentGit{Uri: remoteDir}, Options{ListTimeoutSeconds: 15}, nil)
+	require.NoError(t, err)
+
+	got := map[string]struct{}{}
+	for _, ref := range refs {
+		got[ref.Ref] = struct{}{}
+	}
+	assert.Contains(t, got, "refs/heads/main")
+	assert.Contains(t, got, "refs/heads/develop")
 }
 
 func TestShouldAdvanceBaselineOnScanError(t *testing.T) {

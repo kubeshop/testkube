@@ -865,7 +865,7 @@ func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerConten
 
 // remoteAllMatchingRefsWithClientOptions returns ALL remote refs that match the
 // configured branch/tag patterns and are not excluded by ignore filters.
-// When no branch/tag filters are set, it returns the default HEAD.
+// When no branch/tag filters are set, all branches are returned.
 func remoteAllMatchingRefsWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) ([]refHashPair, error) {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
@@ -910,14 +910,20 @@ func remoteAllMatchingRefsWithClientOptions(gitConfig *testkube.TestTriggerConte
 		return results, nil
 	}
 
-	// No specific branches/tags/ignore filters: watch default HEAD
-	for _, r := range refs {
-		if r.Name() == plumbing.HEAD {
-			return []refHashPair{{Hash: r.Hash().String(), Ref: string(r.Name())}}, nil
-		}
-	}
+	// No specific branches/tags/ignore filters: watch all branches
+	var results []refHashPair
 	for _, r := range refs {
 		if r.Name().IsBranch() {
+			results = append(results, refHashPair{Hash: r.Hash().String(), Ref: string(r.Name())})
+		}
+	}
+	if len(results) > 0 {
+		return results, nil
+	}
+
+	// Fallback to remote HEAD when branch refs are unavailable.
+	for _, r := range refs {
+		if r.Name() == plumbing.HEAD {
 			return []refHashPair{{Hash: r.Hash().String(), Ref: string(r.Name())}}, nil
 		}
 	}
