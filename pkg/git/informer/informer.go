@@ -1253,6 +1253,7 @@ func gitConfigCacheKey(namespace string, gitConfig *testkube.TestTriggerContentG
 		namespace,
 		gitConfig.Uri,
 		effectiveRefsKey(gitConfig),
+		effectiveIgnoreRefsKey(gitConfig),
 		authType,
 		gitConfig.Username,
 		gitConfig.Token,
@@ -1449,6 +1450,18 @@ func effectiveRefsKey(gitConfig *testkube.TestTriggerContentGit) string {
 	}
 	for _, t := range gitConfig.Tags {
 		parts = append(parts, "t:"+strings.TrimSpace(t))
+	}
+	return strings.Join(parts, ",")
+}
+
+// effectiveIgnoreRefsKey produces a stable string from BranchesIgnore+TagsIgnore for cache keying.
+func effectiveIgnoreRefsKey(gitConfig *testkube.TestTriggerContentGit) string {
+	parts := make([]string, 0, len(gitConfig.BranchesIgnore)+len(gitConfig.TagsIgnore))
+	for _, b := range gitConfig.BranchesIgnore {
+		parts = append(parts, "bi:"+strings.TrimSpace(b))
+	}
+	for _, t := range gitConfig.TagsIgnore {
+		parts = append(parts, "ti:"+strings.TrimSpace(t))
 	}
 	return strings.Join(parts, ",")
 }
