@@ -239,6 +239,7 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
+			i.restoreRefCommits(key, prevCommits)
 			continue
 		}
 		if !changed.changed {
