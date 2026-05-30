@@ -275,13 +275,18 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 }
 
 func removeTriggerRepositories(basePath string) {
-	_ = os.RemoveAll(basePath)
+	if err := os.RemoveAll(basePath); err != nil {
+		log.DefaultLogger.Warnf("git informer: failed removing repository path %s: %v", basePath, err)
+	}
 	matches, err := filepath.Glob(basePath + "__*")
 	if err != nil {
+		log.DefaultLogger.Warnf("git informer: failed listing per-ref repository paths for %s: %v", basePath, err)
 		return
 	}
 	for _, path := range matches {
-		_ = os.RemoveAll(path)
+		if err := os.RemoveAll(path); err != nil {
+			log.DefaultLogger.Warnf("git informer: failed removing per-ref repository path %s: %v", path, err)
+		}
 	}
 }
 
