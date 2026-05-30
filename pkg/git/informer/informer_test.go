@@ -689,7 +689,6 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	}
 
 	key := triggerKey(testTriggerSource, trigger.Namespace, trigger.Name)
-	matcherCalled := false
 	informer := NewInformer(
 		stubTestTriggerClient{
 			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
@@ -698,7 +697,6 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 		},
 		stubMatcher{
 			matchTestTriggerFn: func(context.Context, string, string) error {
-				matcherCalled = true
 				return errors.New("temporary matcher failure")
 			},
 		},
