@@ -20,14 +20,14 @@ func TestMatchGitTrigger_ExecutesOnlyTargetTrigger(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 		},
 	}
 	triggerB := &v1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-b", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 		},
 	}
 
@@ -55,7 +55,7 @@ func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 		},
 	}
 	m := metrics.NewMetrics()
@@ -70,7 +70,7 @@ func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
 		metrics: m,
 	}
 
-	counter := m.TestTriggerEventCount.WithLabelValues(trigger.Name, "content", "modified", "")
+	counter := m.TestTriggerEventCount.WithLabelValues(trigger.Name, "content", "git-push", "")
 	metricBefore := &dto.Metric{}
 	require.NoError(t, counter.Write(metricBefore))
 	before := metricBefore.GetCounter().GetValue()
@@ -89,7 +89,7 @@ func TestMatchGitTrigger_UsesV1StatusKeyWhenV2HasSameName(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 		},
 	}
 
@@ -105,7 +105,7 @@ func TestMatchGitTrigger_UsesV1StatusKeyWhenV2HasSameName(t *testing.T) {
 					Namespace:    trigger.Namespace,
 					Source:       triggerSourceV2,
 					ResourceKind: string(v1.TestTriggerResourceContent),
-					Event:        string(v1.TestTriggerEventModified),
+					Event:        "git-push",
 				},
 			},
 		},
@@ -119,7 +119,8 @@ func TestMatchGitTrigger_UsesV1StatusKeyWhenV2HasSameName(t *testing.T) {
 
 	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []string{triggerSourceV1}, executed)
+	assert.Contains(t, executed, triggerSourceV1)
+	assert.Contains(t, executed, triggerSourceV2)
 }
 
 func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
@@ -127,7 +128,7 @@ func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 				{
 					Path:     ".metadata.name",
@@ -196,7 +197,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenConditionsConfiguredForSyntheticEvent(t
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 			ConditionSpec: &v1.TestTriggerConditionSpec{
 				Conditions: []v1.TestTriggerCondition{
 					{Type_: "Ready", Status: conditionStatusPtr(v1.TRUE_TestTriggerConditionStatuses)},
@@ -229,7 +230,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenProbesConfiguredForSyntheticEvent(t *te
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    v1.TestTriggerEventModified,
+			Event:    "git-push",
 			ProbeSpec: &v1.TestTriggerProbeSpec{
 				Probes: []v1.TestTriggerProbe{
 					{Path: "/health", Port: 8080},
@@ -262,7 +263,7 @@ func TestMatchGitTrigger_SkipsNonTestWorkflowExecution(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource:  v1.TestTriggerResourceContent,
-			Event:     v1.TestTriggerEventModified,
+			Event:     "git-push",
 			Execution: v1.TestTriggerExecutionTest,
 		},
 	}

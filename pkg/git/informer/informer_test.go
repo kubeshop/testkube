@@ -483,7 +483,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "valid git content trigger",
 			trigger: testkube.TestTrigger{
-				Event:    "modified",
+				Event:    "git-push",
 				Resource: &resource,
 				ContentSelector: &testkube.TestTriggerContentSelector{
 					Git: &testkube.TestTriggerContentGit{
@@ -497,7 +497,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 			name: "disabled trigger",
 			trigger: testkube.TestTrigger{
 				Disabled: true,
-				Event:    "modified",
+				Event:    "git-push",
 				Resource: &resource,
 				ContentSelector: &testkube.TestTriggerContentSelector{
 					Git: &testkube.TestTriggerContentGit{
@@ -510,7 +510,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "valid git content trigger via resourceRef",
 			trigger: testkube.TestTrigger{
-				Event: "modified",
+				Event: "git-push",
 				ResourceRef: &testkube.TestTriggerResourceRef{
 					Kind: "Content",
 				},
@@ -525,7 +525,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "resourceRef non-content",
 			trigger: testkube.TestTrigger{
-				Event: "modified",
+				Event: "git-push",
 				ResourceRef: &testkube.TestTriggerResourceRef{
 					Kind: "Deployment",
 				},
@@ -545,7 +545,7 @@ func TestIsGitContentTrigger(t *testing.T) {
 		{
 			name: "no content selector",
 			trigger: testkube.TestTrigger{
-				Event:    "modified",
+				Event:    "git-push",
 				Resource: &resource,
 			},
 			expected: false,
@@ -625,7 +625,7 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "testkube",
-		Event:     "modified",
+		Event:     "git-push",
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
@@ -710,7 +710,7 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "team-b",
-		Event:     "modified",
+		Event:     "git-push",
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
@@ -842,7 +842,7 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	trigger := testkube.TestTrigger{
 		Name:      "trigger-a",
 		Namespace: "testkube",
-		Event:     "modified",
+		Event:     "git-push",
 		Resource:  &resource,
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{

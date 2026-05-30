@@ -234,7 +234,7 @@ func TestService_startCloudTestTriggerWatch_PreservesContentSelector(t *testing.
 		Return([]testkube.TestTrigger{{
 			Name:      "git-trigger",
 			Namespace: namespace,
-			Event:     "modified",
+			Event:     "git-push",
 			ContentSelector: &testkube.TestTriggerContentSelector{
 				Git: &testkube.TestTriggerContentGit{
 					Uri:      "https://github.com/kubeshop/testkube.git",

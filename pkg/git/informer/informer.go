@@ -328,11 +328,7 @@ func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 
 func isGitContentEvent(event string) bool {
 	e := strings.ToLower(event)
-	return e == "modified" || e == "git-push" || e == "git-tag-push"
-}
-
-func isModifiedGitContentEvent(event string) bool {
-	return strings.EqualFold(event, "modified")
+	return e == "git-push" || e == "git-tag-push"
 }
 
 func isContentResource(trigger testkube.TestTrigger) bool {
