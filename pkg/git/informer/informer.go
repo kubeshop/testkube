@@ -435,21 +435,28 @@ func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, tr
 		return matchResult{}, err
 	}
 
+	// Migrate legacy plain-key entry once before iterating refs.
+	legacyHash, hasLegacy := i.commits[key]
+	if hasLegacy {
+		delete(i.commits, key)
+	}
+
 	// Check each matching ref independently. Fire if ANY ref has a new commit.
 	for _, pair := range matchingRefs {
 		refKey := refSubKey(key, pair.Ref)
 		prevHash, hasPrev := i.commits[refKey]
-		if !hasPrev {
-			// Migrate from legacy plain-key format (single ref per trigger).
-			if legacyHash, hasLegacy := i.commits[key]; hasLegacy {
-				prevHash = legacyHash
-				hasPrev = true
-				delete(i.commits, key)
-			}
+		if !hasPrev && hasLegacy {
+			// Apply legacy hash as the baseline for the first ref that needs it.
+			prevHash = legacyHash
+			hasPrev = true
+			hasLegacy = false
 		}
 		i.commits[refKey] = pair.Hash
 		if !hasPrev {
-			logBaselineInitialization(trigger.Namespace, trigger.Name)
+			log.DefaultLogger.Warnf(
+				"git informer: initializing baseline at current HEAD for trigger %s/%s ref %s; commits pushed while informer was not running are not replayed",
+				trigger.Namespace, trigger.Name, pair.Ref,
+			)
 			continue
 		}
 		if prevHash == pair.Hash {
