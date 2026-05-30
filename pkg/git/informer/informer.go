@@ -847,7 +847,18 @@ func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerConten
 	if len(results) == 0 {
 		return "", "", errors.New("unable to determine remote HEAD")
 	}
-	return results[0].Hash, results[0].Ref, nil
+
+	preferred := results[0]
+	for _, r := range results[1:] {
+		if r.Ref == string(plumbing.HEAD) {
+			preferred = r
+			break
+		}
+		if preferred.Ref != string(plumbing.HEAD) && r.Ref < preferred.Ref {
+			preferred = r
+		}
+	}
+	return preferred.Hash, preferred.Ref, nil
 }
 
 // remoteAllMatchingRefsWithClientOptions returns ALL remote refs that match the
