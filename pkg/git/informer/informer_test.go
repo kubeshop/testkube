@@ -958,6 +958,12 @@ func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T)
 		BranchesIgnore: []string{"main"},
 		AuthType:       string(testkube.BASIC_ContentGitAuthType),
 	})
+	keyWithTagIgnore := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:        "https://github.com/kubeshop/testkube.git",
+		Tags:       []string{"v*"},
+		TagsIgnore: []string{"v1.*"},
+		AuthType:   string(testkube.BASIC_ContentGitAuthType),
+	})
 	keyOtherNamespace := gitConfigCacheKey("team-a", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
 		Branches: []string{"main"},
@@ -966,6 +972,11 @@ func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T)
 
 	assert.Equal(t, keyA, keyB)
 	assert.NotEqual(t, keyA, keyWithIgnore)
+	assert.NotEqual(t, gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
+		Uri:      "https://github.com/kubeshop/testkube.git",
+		Tags:     []string{"v*"},
+		AuthType: string(testkube.BASIC_ContentGitAuthType),
+	}), keyWithTagIgnore)
 	assert.NotEqual(t, keyA, keyOtherNamespace)
 }
 
