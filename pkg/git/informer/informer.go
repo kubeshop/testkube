@@ -1588,7 +1588,14 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 	meta := make(map[string]string)
 	meta[GitMetaKeyCommit] = headHash
 
-	// Determine branch/tag from the repo's references matching the config patterns
+	// Determine branch/tag from the repo's references matching the config patterns.
+	// Only include tag metadata when tags are explicitly watched; otherwise a branch
+	// push to a commit that is also tagged could be misclassified as git-tag-push.
+	hasBranchFilters := len(gitConfig.Branches) > 0
+	hasTagFilters := len(gitConfig.Tags) > 0
+	hasTagIgnore := len(gitConfig.TagsIgnore) > 0
+	watchTags := hasTagFilters || (!hasBranchFilters && !hasTagFilters && hasTagIgnore)
+
 	if repo != nil {
 		refIter, err := repo.References()
 		if err == nil {
@@ -1603,10 +1610,13 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 						meta[GitMetaKeyBranch] = branch
 					}
 				}
-				if tag := tagFromRef(refName); tag != "" {
-					if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
-						meta[GitMetaKeyRef] = refName
-						meta[GitMetaKeyTag] = tag
+				if watchTags {
+					if tag := tagFromRef(refName); tag != "" {
+						if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+							meta[GitMetaKeyRef] = refName
+							meta[GitMetaKeyTag] = tag
+							delete(meta, GitMetaKeyBranch)
+						}
 					}
 				}
 				return nil
