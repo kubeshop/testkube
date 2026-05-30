@@ -462,13 +462,18 @@ func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigg
 	revision := effectiveRefsKey(gitConfig)
 	previousRevision, hasPreviousRevision := i.revisions[key]
 	revisionChanged := hasPreviousRevision && previousRevision != revision
-	references := effectiveRefs(gitConfig)
-	if len(references) == 0 {
-		references = []string{""}
-	}
 	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	// Resolve matching ref (supports glob patterns and ignore filters)
+	_, resolvedRef, resolveErr := remoteHeadHashAndRefWithClientOptions(gitConfig, i.options, clientOptions)
+	var references []string
+	if resolveErr == nil && resolvedRef != "" {
+		references = []string{resolvedRef}
+	} else {
+		references = []string{""}
 	}
 
 	repo, err := git.PlainOpen(repoDir)
@@ -650,15 +655,29 @@ func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerConten
 		return "", "", err
 	}
 
-	if references := effectiveRefs(gitConfig); len(references) > 0 {
-		for _, reference := range references {
-			for _, r := range refs {
-				if r.Name() == plumbing.ReferenceName(reference) {
-					return r.Hash().String(), reference, nil
+	hasBranchFilters := len(gitConfig.Branches) > 0
+	hasTagFilters := len(gitConfig.Tags) > 0
+
+	if hasBranchFilters || hasTagFilters {
+		// Match remote refs against branch/tag patterns (including globs) and apply ignore filters
+		for _, r := range refs {
+			refName := string(r.Name())
+			if hasBranchFilters {
+				if branch := branchFromRef(refName); branch != "" {
+				if nameMatchesPatterns(branch, gitConfig.Branches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
+						return r.Hash().String(), refName, nil
+					}
+				}
+			}
+			if hasTagFilters {
+				if tag := tagFromRef(refName); tag != "" {
+				if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+						return r.Hash().String(), refName, nil
+					}
 				}
 			}
 		}
-		return "", "", fmt.Errorf("reference not found: %q", strings.Join(references, ", "))
+		return "", "", fmt.Errorf("no matching reference found for branches=%v tags=%v", gitConfig.Branches, gitConfig.Tags)
 	}
 
 	// No specific branches/tags: watch default HEAD
@@ -1125,7 +1144,7 @@ func pathMatches(paths []string, file string) bool {
 
 func pathMatchesNormalized(paths []string, file string) bool {
 	for _, p := range paths {
-		if file == p || strings.HasPrefix(file, p+"/") {
+		if matchGlob(p, file) {
 			return true
 		}
 	}
@@ -1277,6 +1296,12 @@ func nameMatchesPatterns(name string, patterns []string) bool {
 	if len(patterns) == 0 {
 		return true
 	}
+	return nameMatchesAny(name, patterns)
+}
+
+// nameMatchesAny checks if a name matches any of the given glob patterns.
+// Returns false if patterns is empty.
+func nameMatchesAny(name string, patterns []string) bool {
 	for _, p := range patterns {
 		p = strings.TrimSpace(p)
 		if p == "" {
@@ -1299,15 +1324,43 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 	meta := make(map[string]string)
 	meta[GitMetaKeyCommit] = headHash
 
-	// Determine branch/tag from effective refs
-	refs := effectiveRefs(gitConfig)
-	if len(refs) > 0 {
-		meta[GitMetaKeyRef] = refs[0]
-		if branch := branchFromRef(refs[0]); branch != "" {
-			meta[GitMetaKeyBranch] = branch
+	// Determine branch/tag from the repo's references matching the config patterns
+	if repo != nil {
+		refIter, err := repo.References()
+		if err == nil {
+			_ = refIter.ForEach(func(ref *plumbing.Reference) error {
+				if ref.Hash().String() != headHash {
+					return nil
+				}
+				refName := string(ref.Name())
+				if branch := branchFromRef(refName); branch != "" {
+					if nameMatchesPatterns(branch, gitConfig.Branches) && !nameMatchesAny(branch, gitConfig.BranchesIgnore) {
+						meta[GitMetaKeyRef] = refName
+						meta[GitMetaKeyBranch] = branch
+					}
+				}
+				if tag := tagFromRef(refName); tag != "" {
+					if nameMatchesPatterns(tag, gitConfig.Tags) && !nameMatchesAny(tag, gitConfig.TagsIgnore) {
+						meta[GitMetaKeyRef] = refName
+						meta[GitMetaKeyTag] = tag
+					}
+				}
+				return nil
+			})
 		}
-		if tag := tagFromRef(refs[0]); tag != "" {
-			meta[GitMetaKeyTag] = tag
+	}
+
+	// Fallback: if no ref found from repo references, try literal refs
+	if _, hasRef := meta[GitMetaKeyRef]; !hasRef {
+		refs := effectiveRefs(gitConfig)
+		if len(refs) > 0 {
+			meta[GitMetaKeyRef] = refs[0]
+			if branch := branchFromRef(refs[0]); branch != "" {
+				meta[GitMetaKeyBranch] = branch
+			}
+			if tag := tagFromRef(refs[0]); tag != "" {
+				meta[GitMetaKeyTag] = tag
+			}
 		}
 	}
 
