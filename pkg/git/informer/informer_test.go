@@ -712,10 +712,7 @@ func TestUpdateRepositories_RestoresBaselineWhenMatchFails(t *testing.T) {
 	// Baseline should remain unchanged since the remote call fails before matching.
 	informer.updateRepositories(context.Background())
 
-	// If remote fails, baseline stays untouched.
-	if !matcherCalled {
-		assert.Equal(t, "old-head", informer.commits[key])
-	}
+	assert.Equal(t, "old-head", informer.commits[key])
 }
 
 func TestUpdateRepositories_UsesWatcherNamespaces(t *testing.T) {
