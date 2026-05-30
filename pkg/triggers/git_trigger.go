@@ -57,15 +57,14 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	)
 
 	// Attach git metadata to the event for downstream use by the executor.
-	if len(gitMeta) > 0 {
 		event.GitMetadata = &GitMetadata{
-			Commit:          gitMeta["TESTKUBE_GIT_COMMIT"],
-			Ref:             gitMeta["TESTKUBE_GIT_REF"],
-			Branch:          gitMeta["TESTKUBE_GIT_BRANCH"],
-			Tag:             gitMeta["TESTKUBE_GIT_TAG"],
-			CommitMessage:   gitMeta["TESTKUBE_GIT_COMMIT_MESSAGE"],
-			Author:          gitMeta["TESTKUBE_GIT_AUTHOR"],
-			CommitTimestamp: gitMeta["TESTKUBE_GIT_COMMIT_TIMESTAMP"],
+			Commit:          gitMeta[gitinformer.GitMetaKeyCommit],
+			Ref:             gitMeta[gitinformer.GitMetaKeyRef],
+			Branch:          gitMeta[gitinformer.GitMetaKeyBranch],
+			Tag:             gitMeta[gitinformer.GitMetaKeyTag],
+			CommitMessage:   gitMeta[gitinformer.GitMetaKeyCommitMessage],
+			Author:          gitMeta[gitinformer.GitMetaKeyAuthor],
+			CommitTimestamp: gitMeta[gitinformer.GitMetaKeyCommitTimestamp],
 		}
 	}
 
