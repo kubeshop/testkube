@@ -406,9 +406,6 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 		delta.paths, delta.foundPrev, delta.err = collectChangedPathsSince(repo, pair.Hash, prevHash, i.options.MaxCommitsScan)
 
 		if delta.err != nil {
-			if shouldAdvanceBaselineOnScanError(delta.err) {
-				// baseline already advanced above (i.commits[refKey] = pair.Hash)
-			}
 			return matchResult{}, delta.err
 		}
 
