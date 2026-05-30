@@ -1276,3 +1276,17 @@ func TestTriggerKeyFromRefSubKey(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectHeadMetadata_UsesPreferredRefForGlobBranches(t *testing.T) {
+	informer := &Informer{}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Branches: []string{"release/*"},
+	}
+
+	meta := informer.collectHeadMetadata(nil, "abc123", gitConfig, "refs/heads/release/v1")
+
+	assert.Equal(t, "abc123", meta[GitMetaKeyCommit])
+	assert.Equal(t, "refs/heads/release/v1", meta[GitMetaKeyRef])
+	assert.Equal(t, "release/v1", meta[GitMetaKeyBranch])
+	assert.Empty(t, meta[GitMetaKeyTag])
+}

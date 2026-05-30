@@ -439,7 +439,7 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 		}
 
 		if matched {
-			meta := i.collectHeadMetadata(repo, pair.Hash, gitConfig)
+			meta := i.collectHeadMetadata(repo, pair.Hash, gitConfig, pair.Ref)
 			return matchResult{changed: true, metadata: meta}, nil
 		}
 
@@ -1584,7 +1584,7 @@ func nameMatchesAny(name string, patterns []string) bool {
 }
 
 // collectHeadMetadata extracts metadata from the HEAD commit of a repository.
-func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gitConfig *testkube.TestTriggerContentGit) map[string]string {
+func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gitConfig *testkube.TestTriggerContentGit, preferredRef string) map[string]string {
 	meta := make(map[string]string)
 	meta[GitMetaKeyCommit] = headHash
 
@@ -1595,6 +1595,20 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 	hasTagFilters := len(gitConfig.Tags) > 0
 	hasTagIgnore := len(gitConfig.TagsIgnore) > 0
 	watchTags := hasTagFilters || (!hasBranchFilters && !hasTagFilters && hasTagIgnore)
+
+	if preferredRef != "" {
+		meta[GitMetaKeyRef] = preferredRef
+		if branch := branchFromRef(preferredRef); branch != "" {
+			meta[GitMetaKeyBranch] = branch
+			delete(meta, GitMetaKeyTag)
+		}
+		if watchTags {
+			if tag := tagFromRef(preferredRef); tag != "" {
+				meta[GitMetaKeyTag] = tag
+				delete(meta, GitMetaKeyBranch)
+			}
+		}
+	}
 
 	if repo != nil {
 		refIter, err := repo.References()

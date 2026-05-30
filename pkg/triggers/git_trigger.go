@@ -81,6 +81,9 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 	if !isGitSyntheticTargetReady(trigger) {
 		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
+	if source == triggerSourceV2 && !isGitSyntheticWorkflowTarget(trigger, triggerName, namespace) {
+		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
+	}
 	if trigger.Execution != "" && trigger.Execution != ExecutionTestWorkflow {
 		return nil
 	}
@@ -145,4 +148,17 @@ func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
 	}
 	e := strings.ToLower(trigger.Event)
 	return e == "git-push" || e == "git-tag-push"
+}
+
+func isGitSyntheticWorkflowTarget(trigger *internalTrigger, triggerName, namespace string) bool {
+	if trigger == nil {
+		return false
+	}
+	if trigger.ResourceName == "" {
+		return false
+	}
+	if trigger.ResourceName != triggerName {
+		return false
+	}
+	return trigger.ResourceNamespace == "" || trigger.ResourceNamespace == namespace
 }
