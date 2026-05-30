@@ -1315,6 +1315,8 @@ func normalizeSecretOrConfigMapEnvVarName(name, key string) string {
 	return envVarNameSanitizer.ReplaceAllString(candidate, "_")
 }
 
+// refDirectorySuffix produces a filesystem-safe, collision-resistant token for a git ref.
+// Raw URL-safe base64 keeps path-safe characters and avoids padding while preserving uniqueness.
 func refDirectorySuffix(ref string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(ref))
 }

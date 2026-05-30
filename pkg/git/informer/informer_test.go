@@ -1110,6 +1110,11 @@ func TestRefDirectorySuffix_AvoidsSanitizerCollisions(t *testing.T) {
 	assert.Equal(t, envVarNameSanitizer.ReplaceAllString(refA, "_"), envVarNameSanitizer.ReplaceAllString(refB, "_"),
 		"sanitizer output should collide for this regression test setup")
 	assert.NotEqual(t, refDirectorySuffix(refA), refDirectorySuffix(refB))
+
+	key := triggerKey(testTriggerSource, "ns", "trigger")
+	repoA := triggerRepositoryPathFromKey(key) + "__" + refDirectorySuffix(refA)
+	repoB := triggerRepositoryPathFromKey(key) + "__" + refDirectorySuffix(refB)
+	assert.NotEqual(t, repoA, repoB)
 }
 
 func TestEffectiveRefs(t *testing.T) {
