@@ -84,7 +84,7 @@ func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
 	assert.Equal(t, before+1, after)
 }
 
-func TestMatchGitTrigger_ExecutesBoundV1SourceWithSameName(t *testing.T) {
+func TestMatchGitTrigger_ExecutesBoundV1Source(t *testing.T) {
 	trigger := &v1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
