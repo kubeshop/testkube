@@ -141,16 +141,3 @@ func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
 	e := strings.ToLower(trigger.Event)
 	return e == "git-push" || e == "git-tag-push"
 }
-
-func isGitSyntheticWorkflowTarget(trigger *internalTrigger, triggerName, namespace string) bool {
-	if trigger == nil {
-		return false
-	}
-	if trigger.ResourceName == "" {
-		return false
-	}
-	if trigger.ResourceName != triggerName {
-		return false
-	}
-	return trigger.ResourceNamespace == "" || trigger.ResourceNamespace == namespace
-}
