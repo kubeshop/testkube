@@ -113,6 +113,44 @@ func TestMatchGitTrigger_ExecutesBoundV1Source(t *testing.T) {
 	assert.Contains(t, executed, triggerSourceV1)
 }
 
+func TestMatchGitTrigger_DoesNotExecuteUnrelatedV2TriggerWithSameName(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "deploy", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    "git-push",
+		},
+	}
+
+	unrelatedV2 := &internalTrigger{
+		Name:              "deploy",
+		Namespace:         "default",
+		Source:            triggerSourceV2,
+		ResourceKind:      "content",
+		Event:             "git-push",
+		ResourceName:      "another-content",
+		ResourceNamespace: "default",
+	}
+
+	var executed []string
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+			newStatusKey(triggerSourceV2, trigger.Namespace, trigger.Name): {trigger: unrelatedV2},
+		},
+		triggerExecutor: func(_ context.Context, _ *watcherEvent, trigger *internalTrigger) error {
+			executed = append(executed, trigger.Source)
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, nil)
+	require.NoError(t, err)
+	assert.Equal(t, []string{triggerSourceV1}, executed)
+}
+
 func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
 	trigger := &v1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},

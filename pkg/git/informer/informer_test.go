@@ -1290,3 +1290,46 @@ func TestCollectHeadMetadata_UsesPreferredRefForGlobBranches(t *testing.T) {
 	assert.Equal(t, "release/v1", meta[GitMetaKeyBranch])
 	assert.Empty(t, meta[GitMetaKeyTag])
 }
+
+func TestCollectHeadMetadata_BranchesOnlyDoesNotSetTag(t *testing.T) {
+	tmpDir := t.TempDir()
+	repo, err := git.PlainInit(tmpDir, false)
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+
+	filePath := filepath.Join(tmpDir, "README.md")
+	require.NoError(t, os.WriteFile(filePath, []byte("test\n"), 0o644))
+
+	worktree, err := repo.Worktree()
+	require.NoError(t, err)
+	_, err = worktree.Add("README.md")
+	require.NoError(t, err)
+
+	hash, err := worktree.Commit("initial", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "test",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Storer.SetReference(
+		plumbing.NewHashReference(plumbing.NewTagReferenceName("v1.0.0"), hash),
+	))
+
+	informer := &Informer{}
+	gitConfig := &testkube.TestTriggerContentGit{
+		Branches: []string{"main"},
+	}
+
+	meta := informer.collectHeadMetadata(repo, hash.String(), gitConfig, "")
+
+	assert.Equal(t, hash.String(), meta[GitMetaKeyCommit])
+	assert.Equal(t, "refs/heads/main", meta[GitMetaKeyRef])
+	assert.Equal(t, "main", meta[GitMetaKeyBranch])
+	assert.Empty(t, meta[GitMetaKeyTag])
+}
