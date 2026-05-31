@@ -25,16 +25,11 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 	eventType := gitEventTypeFromMeta(gitMeta)
 
 	v1Err := s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, testtrigger.EventType(eventType), gitMeta)
-	v2Err := s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV2, testtrigger.EventType(eventType), gitMeta)
-
 	// Return the first substantive error (ignore "not ready" since the trigger may not exist in one source).
 	if v1Err != nil && !errors.Is(v1Err, errGitTriggerTargetNotReady) {
 		return v1Err
 	}
-	if v2Err != nil && !errors.Is(v2Err, errGitTriggerTargetNotReady) {
-		return v2Err
-	}
-	if v1Err != nil && v2Err != nil {
+	if v1Err != nil {
 		return v1Err
 	}
 	return nil
@@ -79,9 +74,6 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
 	if !isGitSyntheticTargetReady(trigger) {
-		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
-	}
-	if source == triggerSourceV2 && !isGitSyntheticWorkflowTarget(trigger, triggerName, namespace) {
 		return fmt.Errorf("%w: %s/%s", errGitTriggerTargetNotReady, namespace, triggerName)
 	}
 	if trigger.Execution != "" && trigger.Execution != ExecutionTestWorkflow {
