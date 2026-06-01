@@ -46,13 +46,10 @@ const refSeparator = "|ref|"
 
 // Git metadata keys passed to MatchGitTrigger.
 const (
-	GitMetaKeyCommit          = "TESTKUBE_GIT_COMMIT"
-	GitMetaKeyRef             = "TESTKUBE_GIT_REF"
-	GitMetaKeyBranch          = "TESTKUBE_GIT_BRANCH"
-	GitMetaKeyTag             = "TESTKUBE_GIT_TAG"
-	GitMetaKeyCommitMessage   = "TESTKUBE_GIT_COMMIT_MESSAGE"
-	GitMetaKeyAuthor          = "TESTKUBE_GIT_AUTHOR"
-	GitMetaKeyCommitTimestamp = "TESTKUBE_GIT_COMMIT_TIMESTAMP"
+	GitMetaKeyCommit = "TESTKUBE_GIT_COMMIT"
+	GitMetaKeyRef    = "TESTKUBE_GIT_REF"
+	GitMetaKeyBranch = "TESTKUBE_GIT_BRANCH"
+	GitMetaKeyTag    = "TESTKUBE_GIT_TAG"
 )
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
@@ -496,19 +493,6 @@ func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, tr
 			}
 		}
 
-		// Try to load full commit metadata (message, author, timestamp).
-		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref)
-		if repoErr == nil && repo != nil {
-			commitObj, commitErr := repo.CommitObject(plumbing.NewHash(pair.Hash))
-			if commitErr == nil {
-				meta[GitMetaKeyCommitMessage] = strings.TrimSpace(commitObj.Message)
-				meta[GitMetaKeyAuthor] = commitObj.Author.Name
-				if commitObj.Author.Email != "" {
-					meta[GitMetaKeyAuthor] = commitObj.Author.Name + " <" + commitObj.Author.Email + ">"
-				}
-				meta[GitMetaKeyCommitTimestamp] = commitObj.Author.When.UTC().Format(time.RFC3339)
-			}
-		}
 		return matchResult{changed: true, metadata: meta}, nil
 	}
 	return matchResult{}, nil
@@ -1413,24 +1397,6 @@ func (i *Informer) collectHeadMetadata(repo *git.Repository, headHash string, gi
 			}
 		}
 	}
-
-	if repo == nil {
-		return meta
-	}
-
-	// Get commit details
-	head := plumbing.NewHash(headHash)
-	commit, err := repo.CommitObject(head)
-	if err != nil {
-		return meta
-	}
-
-	meta[GitMetaKeyCommitMessage] = strings.TrimSpace(commit.Message)
-	meta[GitMetaKeyAuthor] = commit.Author.Name
-	if commit.Author.Email != "" {
-		meta[GitMetaKeyAuthor] = commit.Author.Name + " <" + commit.Author.Email + ">"
-	}
-	meta[GitMetaKeyCommitTimestamp] = commit.Author.When.UTC().Format(time.RFC3339)
 
 	return meta
 }
