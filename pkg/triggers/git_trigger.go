@@ -38,9 +38,9 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 // gitEventTypeFromMeta determines the git event type from the metadata.
 func gitEventTypeFromMeta(gitMeta map[string]string) string {
 	if gitMeta[gitinformer.GitMetaKeyTag] != "" {
-		return "git-tag-push"
+		return gitinformer.EventGitTagPush
 	}
-	return "git-push"
+	return gitinformer.EventGitPush
 }
 
 func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string, eventType testtrigger.EventType, gitMeta map[string]string) error {
@@ -139,5 +139,5 @@ func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
 		return false
 	}
 	e := strings.ToLower(trigger.Event)
-	return e == "git-push" || e == "git-tag-push"
+	return e == gitinformer.EventGitPush || e == gitinformer.EventGitTagPush
 }

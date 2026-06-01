@@ -87,16 +87,9 @@ type WorkflowTriggerSelector struct {
 type WorkflowTriggerWhen struct {
 	// Event is the K8s resource event type. Required when no other trigger source
 	// (schedule, webhook, etc.) is configured. Validated at application level.
-	// +kubebuilder:validation:Enum=created;modified;deleted;git-push;git-tag-push
+	// +kubebuilder:validation:Enum=created;modified;deleted
 	Event string `json:"event,omitempty"`
 }
-
-const (
-	// EventGitPush fires when new commits are pushed to a watched branch.
-	EventGitPush = "git-push"
-	// EventGitTagPush fires when a new tag matching the filter is pushed.
-	EventGitTagPush = "git-tag-push"
-)
 
 // WorkflowTriggerFieldCondition defines a field-level match condition.
 type WorkflowTriggerFieldCondition struct {

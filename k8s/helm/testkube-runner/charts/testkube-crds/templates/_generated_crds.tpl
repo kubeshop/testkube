@@ -32948,8 +32948,6 @@ spec:
                     - created
                     - modified
                     - deleted
-                    - git-push
-                    - git-tag-push
                     type: string
                 type: object
             required:

@@ -30,6 +30,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 )
 
+const (
+	// EventGitPush fires when new commits are pushed to a watched branch.
+	EventGitPush = "git-push"
+	// EventGitTagPush fires when a new tag matching the filter is pushed.
+	EventGitTagPush = "git-tag-push"
+)
+
 const defaultReconcileInterval = time.Minute
 const defaultGitUsername = "git"
 const testTriggerSource = "v1"
@@ -346,7 +353,7 @@ func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 
 func isGitContentEvent(event string) bool {
 	e := strings.ToLower(event)
-	return e == "git-push" || e == "git-tag-push"
+	return e == EventGitPush || e == EventGitTagPush
 }
 
 func isContentResource(trigger testkube.TestTrigger) bool {
