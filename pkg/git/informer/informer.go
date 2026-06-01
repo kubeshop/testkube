@@ -369,10 +369,6 @@ func isContentResource(trigger testkube.TestTrigger) bool {
 	return false
 }
 
-func (i *Informer) hasNewMatchingCommit(ctx context.Context, key string, trigger testkube.TestTrigger) (matchResult, error) {
-	return i.hasNewMatchingCommitWithCache(ctx, key, trigger, nil)
-}
-
 func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string, trigger testkube.TestTrigger, cache *reconcileCache) (matchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return matchResult{}, err
@@ -423,7 +419,7 @@ func (i *Informer) hasNewMatchingCommitWithCache(ctx context.Context, key string
 		}
 
 		// Ref changed – clone/open the repo for this ref and check path diffs.
-		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref, cache)
+		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref)
 		if repoErr != nil {
 			return matchResult{}, repoErr
 		}
@@ -510,7 +506,7 @@ func (i *Informer) hasNewHeadCommitWithCache(ctx context.Context, key string, tr
 		}
 
 		// Try to load full commit metadata (message, author, timestamp).
-		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref, cache)
+		repo, repoErr := i.openOrUpdateRepositoryForRef(ctx, key, trigger, pair.Ref)
 		if repoErr == nil && repo != nil {
 			commitObj, commitErr := repo.CommitObject(plumbing.NewHash(pair.Hash))
 			if commitErr == nil {
@@ -533,44 +529,6 @@ func refSubKey(triggerKey, ref string) string {
 		return triggerKey
 	}
 	return triggerKey + "|ref|" + ref
-}
-
-func logBaselineInitialization(namespace, triggerName string) {
-	log.DefaultLogger.Warnf(
-		"git informer: initializing baseline at current HEAD for trigger %s/%s; commits pushed while informer was not running are not replayed",
-		namespace,
-		triggerName,
-	)
-}
-
-func (i *Informer) remoteHeadHashWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) (string, error) {
-	if cache == nil {
-		return i.remoteHeadHash(ctx, namespace, gitConfig)
-	}
-
-	state := cache.stateFor(namespace, gitConfig)
-	if state.remoteHeadLoaded {
-		return state.remoteHeadHash, state.remoteHeadErr
-	}
-
-	state.remoteHeadHash, state.remoteHeadErr = i.remoteHeadHash(ctx, namespace, gitConfig)
-	state.remoteHeadLoaded = true
-	return state.remoteHeadHash, state.remoteHeadErr
-}
-
-func (i *Informer) remoteHeadHashAndRefWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) (string, string, error) {
-	if cache == nil {
-		return i.remoteHeadHashAndRef(ctx, namespace, gitConfig)
-	}
-
-	state := cache.stateFor(namespace, gitConfig)
-	if state.remoteHeadLoaded {
-		return state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr
-	}
-
-	state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr = i.remoteHeadHashAndRef(ctx, namespace, gitConfig)
-	state.remoteHeadLoaded = true
-	return state.remoteHeadHash, state.remoteHeadRef, state.remoteHeadErr
 }
 
 func (i *Informer) remoteAllMatchingRefsWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]refHashPair, error) {
@@ -596,163 +554,13 @@ func (i *Informer) remoteAllMatchingRefs(ctx context.Context, namespace string, 
 	return remoteAllMatchingRefsWithClientOptions(gitConfig, i.options, clientOptions)
 }
 
-func (i *Informer) openOrUpdateRepository(ctx context.Context, key string, trigger testkube.TestTrigger) (*git.Repository, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-
-	repoDir := triggerRepositoryPathFromKey(key)
-	gitConfig := trigger.ContentSelector.Git
-	revision := effectiveRefsKey(gitConfig)
-	previousRevision, hasPreviousRevision := i.revisions[key]
-	revisionChanged := hasPreviousRevision && previousRevision != revision
-	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// Resolve matching ref (supports glob patterns and ignore filters)
-	_, resolvedRef, resolveErr := remoteHeadHashAndRefWithClientOptions(gitConfig, i.options, clientOptions)
-	var references []string
-	if resolveErr == nil && resolvedRef != "" {
-		references = []string{resolvedRef}
-	} else {
-		references = []string{""}
-	}
-
-	repo, err := git.PlainOpen(repoDir)
-	if err == nil {
-		if revisionChanged {
-			log.DefaultLogger.Warnf(
-				"git informer: revision changed for %s/%s from %q to %q, recreating local clone",
-				trigger.Namespace,
-				trigger.Name,
-				previousRevision,
-				revision,
-			)
-		} else if !repositoryOriginMatches(repo, gitConfig.Uri) {
-			log.DefaultLogger.Warnf(
-				"git informer: origin URL changed for %s/%s, recreating local clone",
-				trigger.Namespace,
-				trigger.Name,
-			)
-		} else {
-			worktree, wtErr := repo.Worktree()
-			if wtErr == nil {
-				var pullErr error
-				for _, reference := range references {
-					if err := ctx.Err(); err != nil {
-						return nil, err
-					}
-
-					pullOpts, err := pullOptionsForRefWithClientOptions(gitConfig, i.options, reference, clientOptions)
-					if err != nil {
-						return nil, err
-					}
-					for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
-						if err := ctx.Err(); err != nil {
-							return nil, err
-						}
-
-						pullErr = worktree.Pull(pullOpts)
-						if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
-							i.revisions[key] = revision
-							return repo, nil
-						}
-						if attempt < i.options.PullRetries && i.options.PullRetryDelay > 0 {
-							if err := sleepWithContext(ctx, i.options.PullRetryDelay); err != nil {
-								return nil, err
-							}
-						}
-					}
-				}
-				if pullErr != nil {
-					log.DefaultLogger.Warnf("git informer: pull failed for %s/%s, recreating local clone: %v", trigger.Namespace, trigger.Name, pullErr)
-				}
-			}
-		}
-	}
-
-	_ = os.RemoveAll(repoDir)
-	parentDir := filepath.Dir(repoDir)
-	if err = os.MkdirAll(parentDir, 0o700); err != nil {
-		return nil, err
-	}
-	if err = os.Chmod(parentDir, 0o700); err != nil {
-		return nil, err
-	}
-
-	var cloneErr error
-	for _, reference := range references {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		_ = os.RemoveAll(repoDir)
-		cloneOpts, err := cloneOptionsForRefWithClientOptions(gitConfig, i.options, reference, clientOptions)
-		if err != nil {
-			return nil, err
-		}
-		repo, err := git.PlainClone(repoDir, cloneOpts)
-		if err == nil {
-			i.revisions[key] = revision
-			return repo, nil
-		}
-		cloneErr = err
-	}
-	return nil, cloneErr
-}
-
 func normalizeRevision(revision string) string {
 	return strings.TrimSpace(revision)
 }
 
-func (i *Informer) openOrUpdateRepositoryWithCache(
-	ctx context.Context,
-	key string,
-	trigger testkube.TestTrigger,
-	cache *reconcileCache,
-) (*git.Repository, string, *reconcileState, error) {
-	if cache == nil {
-		repo, err := i.openOrUpdateRepository(ctx, key, trigger)
-		if err != nil {
-			return nil, "", nil, err
-		}
-		head, err := repo.Head()
-		if err != nil {
-			return nil, "", nil, err
-		}
-		return repo, head.Hash().String(), nil, nil
-	}
-
-	state := cache.stateFor(trigger.Namespace, trigger.ContentSelector.Git)
-	if state.repoLoaded {
-		return state.repo, state.repoHead, state, state.repoErr
-	}
-
-	repo, err := i.openOrUpdateRepository(ctx, key, trigger)
-	if err != nil {
-		state.repoErr = err
-		state.repoLoaded = true
-		return nil, "", state, err
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		state.repoErr = err
-		state.repoLoaded = true
-		return nil, "", state, err
-	}
-
-	state.repo = repo
-	state.repoHead = head.Hash().String()
-	state.repoLoaded = true
-	return state.repo, state.repoHead, state, nil
-}
-
 // openOrUpdateRepositoryForRef clones or pulls the repository for a specific ref.
 // It uses a per-ref subdirectory to avoid conflicts when multiple refs are tracked.
-func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string, trigger testkube.TestTrigger, ref string, cache *reconcileCache) (*git.Repository, error) {
+func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string, trigger testkube.TestTrigger, ref string) (*git.Repository, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -776,7 +584,7 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 		} else {
 			worktree, wtErr := repo.Worktree()
 			if wtErr == nil {
-				pullOpts, poErr := pullOptionsForRefWithClientOptions(gitConfig, i.options, ref, clientOptions)
+				pullOpts, poErr := pullOptionsForRefWithClientOptions(i.options, ref, clientOptions)
 				if poErr != nil {
 					return nil, poErr
 				}
@@ -807,23 +615,6 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 	return repo, nil
 }
 
-func (i *Informer) remoteHeadHash(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) (string, error) {
-	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig)
-	if err != nil {
-		return "", err
-	}
-	hash, _, err := remoteHeadHashAndRefWithClientOptions(gitConfig, i.options, clientOptions)
-	return hash, err
-}
-
-func (i *Informer) remoteHeadHashAndRef(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit) (string, string, error) {
-	clientOptions, err := i.authClientOptions(ctx, namespace, gitConfig)
-	if err != nil {
-		return "", "", err
-	}
-	return remoteHeadHashAndRefWithClientOptions(gitConfig, i.options, clientOptions)
-}
-
 // effectiveRefs derives git references to watch from Branches and Tags fields.
 // If both are empty, returns nil (meaning watch default HEAD).
 func effectiveRefs(gitConfig *testkube.TestTriggerContentGit) []string {
@@ -847,28 +638,6 @@ func effectiveRefs(gitConfig *testkube.TestTriggerContentGit) []string {
 type refHashPair struct {
 	Hash string
 	Ref  string
-}
-
-func remoteHeadHashAndRefWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, string, error) {
-	results, err := remoteAllMatchingRefsWithClientOptions(gitConfig, options, clientOptions)
-	if err != nil {
-		return "", "", err
-	}
-	if len(results) == 0 {
-		return "", "", errors.New("unable to determine remote HEAD")
-	}
-
-	preferred := results[0]
-	for _, r := range results[1:] {
-		if r.Ref == string(plumbing.HEAD) {
-			preferred = r
-			break
-		}
-		if preferred.Ref != string(plumbing.HEAD) && r.Ref < preferred.Ref {
-			preferred = r
-		}
-	}
-	return preferred.Hash, preferred.Ref, nil
 }
 
 // remoteAllMatchingRefsWithClientOptions returns ALL remote refs that match the
@@ -939,12 +708,6 @@ func remoteAllMatchingRefsWithClientOptions(gitConfig *testkube.TestTriggerConte
 	return nil, errors.New("unable to determine remote HEAD")
 }
 
-// remoteHeadHashWithClientOptions is kept for backward compatibility with clone/pull logic.
-func remoteHeadHashWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, clientOptions []client.Option) (string, error) {
-	hash, _, err := remoteHeadHashAndRefWithClientOptions(gitConfig, options, clientOptions)
-	return hash, err
-}
-
 func cloneOptions(gitConfig *testkube.TestTriggerContentGit, options Options) (*git.CloneOptions, error) {
 	references := effectiveRefs(gitConfig)
 	if len(references) == 0 {
@@ -988,10 +751,10 @@ func pullOptionsForRef(gitConfig *testkube.TestTriggerContentGit, options Option
 	if err != nil {
 		return nil, err
 	}
-	return pullOptionsForRefWithClientOptions(gitConfig, options, reference, clientOptions)
+	return pullOptionsForRefWithClientOptions(options, reference, clientOptions)
 }
 
-func pullOptionsForRefWithClientOptions(gitConfig *testkube.TestTriggerContentGit, options Options, reference string, clientOptions []client.Option) (*git.PullOptions, error) {
+func pullOptionsForRefWithClientOptions(options Options, reference string, clientOptions []client.Option) (*git.PullOptions, error) {
 	pullOpts := &git.PullOptions{
 		RemoteName:    "origin",
 		SingleBranch:  true,

@@ -294,8 +294,6 @@ func TestCloneAndPullOptions_BranchRef(t *testing.T) {
 
 func TestEmptyBranchesProduceNoStaticEffectiveRefs(t *testing.T) {
 	trigger := testkube.TestTrigger{
-		Name:      "trigger-a",
-		Namespace: "default",
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
 				Uri:   "https://github.com/kubeshop/testkube.git",
