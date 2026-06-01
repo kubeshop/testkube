@@ -7065,6 +7065,8 @@ spec:
                 - created
                 - modified
                 - deleted
+                - git-push
+                - git-tag-push
                 - deployment-scale-update
                 - deployment-image-update
                 - deployment-env-update
