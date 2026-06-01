@@ -42,6 +42,7 @@ const defaultGitUsername = "git"
 const testTriggerSource = "v1"
 const allNamespacesMarker = "*"
 const refDelimter = "__"
+const refSeparator = "|ref|"
 
 // Git metadata keys passed to MatchGitTrigger.
 const (
@@ -311,7 +312,7 @@ func (i *Informer) restoreCommitBaseline(key, previousHash string, hadPreviousHa
 // snapshotRefCommits captures all per-ref commit entries for a trigger key.
 func (i *Informer) snapshotRefCommits(triggerKey string) map[string]string {
 	snapshot := make(map[string]string)
-	prefix := triggerKey + "|ref|"
+	prefix := triggerKey + refSeparator
 	for k, v := range i.commits {
 		if k == triggerKey || strings.HasPrefix(k, prefix) {
 			snapshot[k] = v
@@ -322,7 +323,7 @@ func (i *Informer) snapshotRefCommits(triggerKey string) map[string]string {
 
 // restoreRefCommits restores per-ref commit entries from a snapshot, removing any new keys.
 func (i *Informer) restoreRefCommits(triggerKey string, snapshot map[string]string) {
-	prefix := triggerKey + "|ref|"
+	prefix := triggerKey + refSeparator
 	// Remove all current keys for this trigger
 	for k := range i.commits {
 		if k == triggerKey || strings.HasPrefix(k, prefix) {
@@ -337,7 +338,7 @@ func (i *Informer) restoreRefCommits(triggerKey string, snapshot map[string]stri
 
 // triggerKeyFromRefSubKey extracts the base trigger key from a ref sub-key.
 func triggerKeyFromRefSubKey(k string) string {
-	if idx := strings.Index(k, "|ref|"); idx >= 0 {
+	if idx := strings.Index(k, refSeparator); idx >= 0 {
 		return k[:idx]
 	}
 	return k
@@ -528,7 +529,7 @@ func refSubKey(triggerKey, ref string) string {
 	if ref == "" {
 		return triggerKey
 	}
-	return triggerKey + "|ref|" + ref
+	return triggerKey + refSeparator + ref
 }
 
 func (i *Informer) remoteAllMatchingRefsWithCache(ctx context.Context, namespace string, gitConfig *testkube.TestTriggerContentGit, cache *reconcileCache) ([]refHashPair, error) {
