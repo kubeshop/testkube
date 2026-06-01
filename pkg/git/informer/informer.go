@@ -243,20 +243,20 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		// Snapshot per-ref commit state before checking so we can restore on error.
 		prevCommits := i.snapshotRefCommits(key)
 
-		changed, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
+		match, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			i.restoreRefCommits(key, prevCommits)
 			continue
 		}
-		if !changed.changed {
+		if !match.changed {
 			continue
 		}
 		if i.matcher == nil {
 			i.restoreRefCommits(key, prevCommits)
 			continue
 		}
-		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace, changed.metadata); err != nil {
+		if err := i.matcher.MatchGitTrigger(ctx, trigger.Name, trigger.Namespace, match.metadata); err != nil {
 			log.DefaultLogger.Errorf("git informer: error matching trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			i.restoreRefCommits(key, prevCommits)
 		}
