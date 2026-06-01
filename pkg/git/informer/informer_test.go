@@ -932,6 +932,113 @@ func TestUpdateRepositories_MatchesTestTriggerWithGitPaths(t *testing.T) {
 	assert.NotEqual(t, firstHash, informer.commits[key])
 }
 
+func TestUpdateRepositories_TracksMovedTagAcrossMultipleUpdates(t *testing.T) {
+	tmpDir := t.TempDir()
+	remoteDir := filepath.Join(tmpDir, "remote.git")
+	_, err := git.PlainInit(remoteDir, true)
+	require.NoError(t, err)
+
+	workDir := filepath.Join(tmpDir, "work")
+	workRepo, err := git.PlainInit(workDir, false)
+	require.NoError(t, err)
+	_, err = workRepo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remoteDir},
+	})
+	require.NoError(t, err)
+	require.NoError(t, workRepo.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
+	))
+	worktree, err := workRepo.Worktree()
+	require.NoError(t, err)
+
+	commitFile := func(path, content, message string) plumbing.Hash {
+		fullPath := filepath.Join(workDir, path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte(content), 0o644))
+		_, err = worktree.Add(path)
+		require.NoError(t, err)
+		hash, err := worktree.Commit(message, &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "test",
+				Email: "test@example.com",
+				When:  time.Now(),
+			},
+		})
+		require.NoError(t, err)
+		return hash
+	}
+
+	pushMainAndTag := func(tag string) {
+		err = workRepo.Push(&git.PushOptions{
+			RemoteName: "origin",
+			RefSpecs: []config.RefSpec{
+				config.RefSpec("refs/heads/main:refs/heads/main"),
+				config.RefSpec("+refs/tags/" + tag + ":refs/tags/" + tag),
+			},
+		})
+		require.NoError(t, err)
+	}
+
+	moveTag := func(tag string, hash plumbing.Hash) {
+		require.NoError(t, workRepo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewTagReferenceName(tag), hash)))
+	}
+
+	hash1 := commitFile("app.txt", "v1\n", "commit 1")
+	moveTag("v1.0.0", hash1)
+	pushMainAndTag("v1.0.0")
+
+	resource := testkube.CONTENT_TestTriggerResources
+	trigger := testkube.TestTrigger{
+		Name:      "trigger-tag",
+		Namespace: "testkube",
+		Event:     EventGitTagPush,
+		Resource:  &resource,
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:  remoteDir,
+				Tags: []string{"v1.0.0"},
+			},
+		},
+	}
+
+	var matched []string
+	informer := NewInformer(
+		stubTestTriggerClient{
+			listFn: func(_ context.Context, _ string, _ testtriggerclient.ListOptions, _ string) ([]testkube.TestTrigger, error) {
+				return []testkube.TestTrigger{trigger}, nil
+			},
+		},
+		stubMatcher{
+			matchTestTriggerFn: func(_ context.Context, triggerName, namespace string) error {
+				matched = append(matched, namespace+"/"+triggerName)
+				return nil
+			},
+		},
+		"testkube",
+		"",
+		Options{},
+	)
+
+	// First reconcile initializes baseline.
+	informer.updateRepositories(context.Background())
+	assert.Empty(t, matched)
+
+	hash2 := commitFile("app.txt", "v2\n", "commit 2")
+	moveTag("v1.0.0", hash2)
+	pushMainAndTag("v1.0.0")
+
+	informer.updateRepositories(context.Background())
+	assert.Equal(t, []string{"testkube/trigger-tag"}, matched)
+
+	hash3 := commitFile("app.txt", "v3\n", "commit 3")
+	moveTag("v1.0.0", hash3)
+	pushMainAndTag("v1.0.0")
+
+	informer.updateRepositories(context.Background())
+	assert.Equal(t, []string{"testkube/trigger-tag", "testkube/trigger-tag"}, matched)
+}
+
 func TestGitConfigCacheKey_GroupsByNormalizedGitConfigAndNamespace(t *testing.T) {
 	keyA := gitConfigCacheKey("testkube", &testkube.TestTriggerContentGit{
 		Uri:      "https://github.com/kubeshop/testkube.git",
