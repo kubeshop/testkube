@@ -116,19 +116,9 @@ type reconcileCache struct {
 }
 
 type reconcileState struct {
-	remoteHeadLoaded bool
-	remoteHeadHash   string
-	remoteHeadRef    string
-	remoteHeadErr    error
-
 	allRefsLoaded bool
 	allRefs       []refHashPair
 	allRefsErr    error
-
-	repoLoaded bool
-	repo       *git.Repository
-	repoHead   string
-	repoErr    error
 
 	deltas map[string]commitDelta
 }
