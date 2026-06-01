@@ -10,7 +10,7 @@ spec:
     git:
       uri: https://github.com/kubeshop/testkube
       branches:
-        - main
+      - main
   action: run
   execution: testworkflow
   testSelector:
