@@ -41,7 +41,7 @@ const defaultReconcileInterval = time.Minute
 const defaultGitUsername = "git"
 const testTriggerSource = "v1"
 const allNamespacesMarker = "*"
-const refDelimter = "__"
+const refDelimiter = "__"
 const refSeparator = "|ref|"
 
 // Git metadata keys passed to MatchGitTrigger.
@@ -279,7 +279,7 @@ func removeTriggerRepositories(basePath string) {
 	if err := os.RemoveAll(basePath); err != nil {
 		log.DefaultLogger.Warnf("git informer: failed removing repository path %s: %v", basePath, err)
 	}
-	matches, err := filepath.Glob(basePath + refDelimter + "*")
+	matches, err := filepath.Glob(basePath + refDelimiter + "*")
 	if err != nil {
 		log.DefaultLogger.Warnf("git informer: failed listing per-ref repository paths for %s: %v", basePath, err)
 		return
@@ -558,7 +558,7 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 
 	// Use an encoded ref suffix to avoid collisions like refs/heads/a-b vs refs/heads/a/b.
 	refSuffix := refDirectorySuffix(ref)
-	repoDir := triggerRepositoryPathFromKey(key) + refDelimter + refSuffix
+	repoDir := triggerRepositoryPathFromKey(key) + refDelimiter + refSuffix
 	gitConfig := trigger.ContentSelector.Git
 	clientOptions, err := i.authClientOptions(ctx, trigger.Namespace, gitConfig)
 	if err != nil {

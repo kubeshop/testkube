@@ -794,8 +794,8 @@ func TestUpdateRepositories_ContinuesWhenNamespaceListFails(t *testing.T) {
 
 	keepPath := triggerRepositoryPathFromKey(keepKey)
 	removePath := triggerRepositoryPathFromKey(removeKey)
-	keepRefPath := keepPath + refDelimter + "ref_main"
-	removeRefPath := removePath + refDelimter + "ref_main"
+	keepRefPath := keepPath + refDelimiter + "ref_main"
+	removeRefPath := removePath + refDelimiter + "ref_main"
 	require.NoError(t, os.MkdirAll(keepPath, 0o755))
 	require.NoError(t, os.MkdirAll(removePath, 0o755))
 	require.NoError(t, os.MkdirAll(keepRefPath, 0o755))
@@ -1176,8 +1176,8 @@ func TestRefDirectorySuffix_AvoidsSanitizerCollisions(t *testing.T) {
 	assert.NotEqual(t, refDirectorySuffix(refA), refDirectorySuffix(refB))
 
 	key := triggerKey(testTriggerSource, "ns", "trigger")
-	repoA := triggerRepositoryPathFromKey(key) + refDelimter + refDirectorySuffix(refA)
-	repoB := triggerRepositoryPathFromKey(key) + refDelimter + refDirectorySuffix(refB)
+	repoA := triggerRepositoryPathFromKey(key) + refDelimiter + refDirectorySuffix(refA)
+	repoB := triggerRepositoryPathFromKey(key) + refDelimiter + refDirectorySuffix(refB)
 	assert.NotEqual(t, repoA, repoB)
 }
 
