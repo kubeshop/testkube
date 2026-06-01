@@ -114,7 +114,7 @@ type TestTriggerResourceRef struct {
 }
 
 // TestTriggerEvent defines event for test triggers
-// +kubebuilder:validation:Enum=created;modified;deleted;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
+// +kubebuilder:validation:Enum=created;modified;deleted;git-push;git-tag-push;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
 type TestTriggerEvent string
 
 // List of TestTriggerEvents
@@ -122,6 +122,8 @@ const (
 	TestTriggerEventCreated                       TestTriggerEvent = "created"
 	TestTriggerEventModified                      TestTriggerEvent = "modified"
 	TestTriggerEventDeleted                       TestTriggerEvent = "deleted"
+	TestTriggerEventGitPush                       TestTriggerEvent = "git-push"
+	TestTriggerEventGitTagPush                    TestTriggerEvent = "git-tag-push"
 	TestTriggerCauseDeploymentScaleUpdate         TestTriggerEvent = "deployment-scale-update"
 	TestTriggerCauseDeploymentImageUpdate         TestTriggerEvent = "deployment-image-update"
 	TestTriggerCauseDeploymentEnvUpdate           TestTriggerEvent = "deployment-env-update"

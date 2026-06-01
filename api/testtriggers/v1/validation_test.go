@@ -30,7 +30,7 @@ func TestTestTriggerSpecValidate_ContentWithModifiedEvent(t *testing.T) {
 
 	spec := TestTriggerSpec{
 		Resource: TestTriggerResourceContent,
-		Event:    TestTriggerEventModified,
+		Event:    TestTriggerEventGitPush,
 		ContentSelector: &TestTriggerContentSelector{
 			Git: &TestTriggerContentGitSpec{
 				Uri: "https://github.com/kubeshop/testkube",
@@ -49,7 +49,7 @@ func TestTestTriggerSpecValidate_ContentRejectsConditionSpecConditions(t *testin
 
 	spec := TestTriggerSpec{
 		Resource: TestTriggerResourceContent,
-		Event:    TestTriggerEventModified,
+		Event:    TestTriggerEventGitPush,
 		ContentSelector: &TestTriggerContentSelector{
 			Git: &TestTriggerContentGitSpec{
 				Uri: "https://github.com/kubeshop/testkube",
@@ -92,7 +92,7 @@ func TestTestTriggerSpecValidate_ContentResourceRefRejectsConditionSpecCondition
 
 	spec := TestTriggerSpec{
 		ResourceRef: &TestTriggerResourceRef{Kind: "content"},
-		Event:       TestTriggerEventModified,
+		Event:       TestTriggerEventGitPush,
 		ContentSelector: &TestTriggerContentSelector{
 			Git: &TestTriggerContentGitSpec{
 				Uri: "https://github.com/kubeshop/testkube",
@@ -116,7 +116,7 @@ func TestTestTriggerSpecValidate_ContentRejectsMatch(t *testing.T) {
 
 	spec := TestTriggerSpec{
 		Resource: TestTriggerResourceContent,
-		Event:    TestTriggerEventModified,
+		Event:    TestTriggerEventGitPush,
 		ContentSelector: &TestTriggerContentSelector{
 			Git: &TestTriggerContentGitSpec{
 				Uri: "https://github.com/kubeshop/testkube",
