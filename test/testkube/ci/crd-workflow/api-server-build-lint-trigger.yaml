@@ -9,7 +9,8 @@ spec:
   contentSelector:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      branches:
+        - main
   action: run
   execution: testworkflow
   testSelector:
