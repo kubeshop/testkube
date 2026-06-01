@@ -24,7 +24,7 @@ spec:
       image: golang:1.26-bookworm
       shell: |
         set -euo pipefail
-        
+
         curl -L \
         https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-amd64.tar.gz \
         -o golangci.tar.gz
