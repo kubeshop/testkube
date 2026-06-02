@@ -259,7 +259,9 @@ func (i *Informer) resolvePRToken(ctx context.Context, namespace string, gitConf
 }
 
 func prCacheKey(triggerKey string, prNumber int) string {
-	return triggerKey + "|pr:" + strconv.Itoa(prNumber)
+	// Use refSeparator so PR baselines are treated like other per-trigger sub-keys
+	// by snapshot/restore and cleanup logic.
+	return triggerKey + refSeparator + "pr:" + strconv.Itoa(prNumber)
 }
 
 // prMatchesBaseBranch checks if a PR's base branch matches the trigger's branch filters.
