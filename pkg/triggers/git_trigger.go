@@ -20,7 +20,7 @@ var errGitTriggerProbesUnavailable = errors.New("git trigger probes unavailable 
 // MatchGitTrigger creates a synthetic watcherEvent for a git content trigger
 // and runs it through the matcher. Called by the git informer when new commits
 // are detected that match the trigger's content selector paths.
-// It fires git-push or git-tag-push events so that both TestTrigger and
+// It fires git-push, git-tag-push, or git-pull-request events so that both TestTrigger and
 // WorkflowTrigger resources can match.
 func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
 	eventType := gitEventTypeFromMeta(gitMeta)
