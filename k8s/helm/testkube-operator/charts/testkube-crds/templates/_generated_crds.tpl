@@ -6626,6 +6626,33 @@ spec:
                         items:
                           type: string
                         type: array
+                      pullRequest:
+                        description: |-
+                          PullRequest specifies pull request trigger configuration.
+                          When set, the informer uses the GitHub API to poll for PR events.
+                        properties:
+                          branches:
+                            description: |-
+                              Branches is a list of base branch name patterns to watch (glob supported).
+                              If empty, PRs targeting any base branch are watched.
+                            items:
+                              type: string
+                            type: array
+                          branchesIgnore:
+                            description: |-
+                              BranchesIgnore is a list of base branch name patterns to exclude (glob supported).
+                              Takes precedence over Branches when both match.
+                            items:
+                              type: string
+                            type: array
+                          types:
+                            description: |-
+                              Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
+                              If empty, all types are watched.
+                            items:
+                              type: string
+                            type: array
+                        type: object
                       sshKey:
                         description: |-
                           Plain text SSH private key to fetch with.
@@ -7067,6 +7094,7 @@ spec:
                 - deleted
                 - git-push
                 - git-tag-push
+                - git-pull-request
                 - deployment-scale-update
                 - deployment-image-update
                 - deployment-env-update

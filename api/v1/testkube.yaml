@@ -8339,6 +8339,28 @@ components:
           enum:
             - basic
             - header
+        pullRequest:
+          $ref: "#/components/schemas/TestTriggerContentGitPullRequest"
+
+    TestTriggerContentGitPullRequest:
+      type: object
+      description: Pull request trigger configuration for GitHub API polling.
+      properties:
+        types:
+          type: array
+          description: "PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched."
+          items:
+            type: string
+        branches:
+          type: array
+          description: "Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched."
+          items:
+            type: string
+        branchesIgnore:
+          type: array
+          description: "Base branch name patterns to exclude (glob supported). Takes precedence over branches."
+          items:
+            type: string
 
     TestTriggerResources:
       description: supported kubernetes resources for test triggers
