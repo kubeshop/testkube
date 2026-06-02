@@ -43,7 +43,7 @@ type githubPRFile struct {
 	Status   string `json:"status"`
 }
 
-var githubRepoPattern = regexp.MustCompile(`(?:github\.com)[/:]([^/]+)/([^/.]+?)(?:\.git)?$`)
+var githubRepoPattern = regexp.MustCompile(`(?:github\.com)[/:]([^/]+)/([^/]+?)(?:\.git)?$`)
 
 // githubHTTPClient is used for GitHub API requests with an appropriate timeout.
 var githubHTTPClient = &http.Client{Timeout: 30 * time.Second}
