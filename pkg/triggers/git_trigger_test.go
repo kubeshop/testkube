@@ -329,6 +329,8 @@ func TestGitEventTypeFromMeta(t *testing.T) {
 		{"branch meta returns git-push", map[string]string{"TESTKUBE_GIT_BRANCH": "main"}, string(v1.TestTriggerEventGitPush)},
 		{"tag meta returns git-tag-push", map[string]string{"TESTKUBE_GIT_TAG": "v1.0"}, string(v1.TestTriggerEventGitTagPush)},
 		{"both branch and tag prefers tag", map[string]string{"TESTKUBE_GIT_BRANCH": "main", "TESTKUBE_GIT_TAG": "v1.0"}, string(v1.TestTriggerEventGitTagPush)},
+		{"PR number returns git-pull-request", map[string]string{"TESTKUBE_GIT_PR_NUMBER": "42"}, string(v1.TestTriggerEventGitPullRequest)},
+		{"PR with tag prefers PR", map[string]string{"TESTKUBE_GIT_PR_NUMBER": "42", "TESTKUBE_GIT_TAG": "v1.0"}, string(v1.TestTriggerEventGitPullRequest)},
 	}
 
 	for _, tt := range tests {
@@ -352,6 +354,11 @@ func TestIsGitSyntheticTargetReady(t *testing.T) {
 		{
 			"git-tag-push event is ready",
 			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitTagPush)},
+			true,
+		},
+		{
+			"git-pull-request event is ready",
+			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitPullRequest)},
 			true,
 		},
 		{
@@ -454,4 +461,56 @@ func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
 	assert.Equal(t, "abc123", capturedMeta.Commit)
 	assert.Equal(t, "refs/heads/main", capturedMeta.Ref)
 	assert.Equal(t, "main", capturedMeta.Branch)
+}
+
+func TestMatchGitTrigger_GitPullRequestEvent(t *testing.T) {
+	trigger := &v1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Name: "pr-trigger", Namespace: "default"},
+		Spec: v1.TestTriggerSpec{
+			Resource: v1.TestTriggerResourceContent,
+			Event:    v1.TestTriggerEventGitPullRequest,
+		},
+	}
+
+	var capturedMeta *GitMetadata
+	var executedEvent string
+	s := &Service{
+		triggerStatus: map[statusKey]*triggerStatus{
+			newStatusKey(triggerSourceV1, trigger.Namespace, trigger.Name): {trigger: convertV1ToInternal(trigger)},
+		},
+		triggerExecutor: func(_ context.Context, event *watcherEvent, _ *internalTrigger) error {
+			capturedMeta = event.GitMetadata
+			executedEvent = string(event.eventType)
+			return nil
+		},
+		logger:  log.DefaultLogger,
+		metrics: metrics.NewMetrics(),
+	}
+
+	meta := map[string]string{
+		"TESTKUBE_GIT_COMMIT":      "deadbeef",
+		"TESTKUBE_GIT_REF":         "refs/pull/42/head",
+		"TESTKUBE_GIT_BRANCH":      "feature/x",
+		"TESTKUBE_GIT_PR_NUMBER":   "42",
+		"TESTKUBE_GIT_PR_ACTION":   "synchronize",
+		"TESTKUBE_GIT_PR_BASE_REF": "main",
+		"TESTKUBE_GIT_PR_HEAD_REF": "feature/x",
+		"TESTKUBE_GIT_PR_HEAD_SHA": "deadbeef",
+		"TESTKUBE_GIT_PR_URL":      "https://github.com/org/repo/pull/42",
+		"TESTKUBE_GIT_PR_TITLE":    "Add feature",
+		"TESTKUBE_GIT_PR_AUTHOR":   "developer",
+	}
+	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, meta)
+	require.NoError(t, err)
+	assert.Equal(t, string(v1.TestTriggerEventGitPullRequest), executedEvent)
+	require.NotNil(t, capturedMeta)
+	assert.Equal(t, "deadbeef", capturedMeta.Commit)
+	assert.Equal(t, "42", capturedMeta.PRNumber)
+	assert.Equal(t, "synchronize", capturedMeta.PRAction)
+	assert.Equal(t, "main", capturedMeta.PRBaseRef)
+	assert.Equal(t, "feature/x", capturedMeta.PRHeadRef)
+	assert.Equal(t, "deadbeef", capturedMeta.PRHeadSHA)
+	assert.Equal(t, "https://github.com/org/repo/pull/42", capturedMeta.PRURL)
+	assert.Equal(t, "Add feature", capturedMeta.PRTitle)
+	assert.Equal(t, "developer", capturedMeta.PRAuthor)
 }

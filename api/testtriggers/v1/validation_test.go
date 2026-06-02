@@ -132,3 +132,22 @@ func TestTestTriggerSpecValidate_ContentRejectsMatch(t *testing.T) {
 		t.Fatalf("expected validation error for content resource with match")
 	}
 }
+
+func TestTestTriggerSpecValidate_ContentWithGitPullRequestEvent(t *testing.T) {
+	t.Parallel()
+
+	spec := TestTriggerSpec{
+		Resource: TestTriggerResourceContent,
+		Event:    TestTriggerEventGitPullRequest,
+		ContentSelector: &TestTriggerContentSelector{
+			Git: &TestTriggerContentGitSpec{
+				Uri: "https://github.com/kubeshop/testkube",
+			},
+		},
+	}
+
+	errs := spec.Validate()
+	if len(errs) != 0 {
+		t.Fatalf("expected no validation errors for git-pull-request event, got %d: %v", len(errs), errs)
+	}
+}

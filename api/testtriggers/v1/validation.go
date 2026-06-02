@@ -14,7 +14,7 @@ func (s *TestTriggerSpec) Validate() []error {
 
 	isContentResource := s.Resource == TestTriggerResourceContent || (s.ResourceRef != nil && s.ResourceRef.Kind == string(TestTriggerResourceContent))
 
-	if isContentResource && s.Event != TestTriggerEventGitPush && s.Event != TestTriggerEventGitTagPush {
+	if isContentResource && s.Event != TestTriggerEventGitPush && s.Event != TestTriggerEventGitTagPush && s.Event != TestTriggerEventGitPullRequest {
 		errs = append(errs, fmt.Errorf("resource %q requires event to be %q", TestTriggerResourceContent, TestTriggerEventModified))
 	}
 	if isContentResource && s.ConditionSpec != nil && len(s.ConditionSpec.Conditions) > 0 {

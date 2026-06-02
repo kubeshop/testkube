@@ -38,6 +38,9 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 
 // gitEventTypeFromMeta determines the git event type from the metadata.
 func gitEventTypeFromMeta(gitMeta map[string]string) string {
+	if gitMeta[gitinformer.GitMetaKeyPRNumber] != "" {
+		return string(v1.TestTriggerEventGitPullRequest)
+	}
 	if gitMeta[gitinformer.GitMetaKeyTag] != "" {
 		return string(v1.TestTriggerEventGitTagPush)
 	}
@@ -54,10 +57,18 @@ func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, name
 
 	// Attach git metadata to the event for downstream use by the executor.
 	event.GitMetadata = &GitMetadata{
-		Commit: gitMeta[gitinformer.GitMetaKeyCommit],
-		Ref:    gitMeta[gitinformer.GitMetaKeyRef],
-		Branch: gitMeta[gitinformer.GitMetaKeyBranch],
-		Tag:    gitMeta[gitinformer.GitMetaKeyTag],
+		Commit:    gitMeta[gitinformer.GitMetaKeyCommit],
+		Ref:       gitMeta[gitinformer.GitMetaKeyRef],
+		Branch:    gitMeta[gitinformer.GitMetaKeyBranch],
+		Tag:       gitMeta[gitinformer.GitMetaKeyTag],
+		PRNumber:  gitMeta[gitinformer.GitMetaKeyPRNumber],
+		PRAction:  gitMeta[gitinformer.GitMetaKeyPRAction],
+		PRBaseRef: gitMeta[gitinformer.GitMetaKeyPRBaseRef],
+		PRHeadRef: gitMeta[gitinformer.GitMetaKeyPRHeadRef],
+		PRHeadSHA: gitMeta[gitinformer.GitMetaKeyPRHeadSHA],
+		PRURL:     gitMeta[gitinformer.GitMetaKeyPRURL],
+		PRTitle:   gitMeta[gitinformer.GitMetaKeyPRTitle],
+		PRAuthor:  gitMeta[gitinformer.GitMetaKeyPRAuthor],
 	}
 
 	key := newStatusKey(source, namespace, triggerName)
@@ -137,5 +148,5 @@ func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
 		return false
 	}
 	e := strings.ToLower(trigger.Event)
-	return e == string(v1.TestTriggerEventGitPush) || e == string(v1.TestTriggerEventGitTagPush)
+	return e == string(v1.TestTriggerEventGitPush) || e == string(v1.TestTriggerEventGitTagPush) || e == string(v1.TestTriggerEventGitPullRequest)
 }

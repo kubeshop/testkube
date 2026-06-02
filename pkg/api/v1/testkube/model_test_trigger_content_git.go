@@ -34,4 +34,19 @@ type TestTriggerContentGit struct {
 	SshKey     string        `json:"sshKey,omitempty"`
 	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
 	AuthType   string        `json:"authType,omitempty"`
+	// PullRequest specifies pull request trigger configuration using the GitHub API.
+	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
+}
+
+// TestTriggerContentGitPullRequest defines pull request trigger configuration.
+type TestTriggerContentGitPullRequest struct {
+	// Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
+	// If empty, all types are watched.
+	Types []string `json:"types,omitempty"`
+	// Branches is a list of base branch patterns to watch (glob supported).
+	// If empty, PRs targeting any base branch are watched.
+	Branches []string `json:"branches,omitempty"`
+	// BranchesIgnore is a list of base branch patterns to exclude (glob supported).
+	// Takes precedence over Branches when both match.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
 }

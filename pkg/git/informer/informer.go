@@ -44,6 +44,16 @@ const (
 	GitMetaKeyRef    = "TESTKUBE_GIT_REF"
 	GitMetaKeyBranch = "TESTKUBE_GIT_BRANCH"
 	GitMetaKeyTag    = "TESTKUBE_GIT_TAG"
+
+	// Pull request metadata keys.
+	GitMetaKeyPRNumber  = "TESTKUBE_GIT_PR_NUMBER"
+	GitMetaKeyPRAction  = "TESTKUBE_GIT_PR_ACTION"
+	GitMetaKeyPRBaseRef = "TESTKUBE_GIT_PR_BASE_REF"
+	GitMetaKeyPRHeadRef = "TESTKUBE_GIT_PR_HEAD_REF"
+	GitMetaKeyPRHeadSHA = "TESTKUBE_GIT_PR_HEAD_SHA"
+	GitMetaKeyPRURL     = "TESTKUBE_GIT_PR_URL"
+	GitMetaKeyPRTitle   = "TESTKUBE_GIT_PR_TITLE"
+	GitMetaKeyPRAuthor  = "TESTKUBE_GIT_PR_AUTHOR"
 )
 
 // envVarNameSanitizer normalizes Secret/ConfigMap name+key into env-var-safe tokens.
@@ -226,7 +236,13 @@ func (i *Informer) updateRepositories(ctx context.Context) {
 		// Snapshot per-ref commit state before checking so we can restore on error.
 		prevCommits := i.snapshotRefCommits(key)
 
-		match, err := i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
+		var match matchResult
+		var err error
+		if isPullRequestTrigger(trigger) {
+			match, err = i.checkPullRequests(ctx, key, trigger)
+		} else {
+			match, err = i.hasNewMatchingCommitWithCache(ctx, key, trigger, cache)
+		}
 		if err != nil {
 			log.DefaultLogger.Errorf("git informer: error checking trigger %s/%s: %v", trigger.Namespace, trigger.Name, err)
 			i.restoreRefCommits(key, prevCommits)
@@ -336,7 +352,9 @@ func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 
 func isGitContentEvent(event string) bool {
 	e := strings.ToLower(event)
-	return e == string(testtriggersv1.TestTriggerEventGitPush) || e == string(testtriggersv1.TestTriggerEventGitTagPush)
+	return e == string(testtriggersv1.TestTriggerEventGitPush) ||
+		e == string(testtriggersv1.TestTriggerEventGitTagPush) ||
+		e == string(testtriggersv1.TestTriggerEventGitPullRequest)
 }
 
 func isContentResource(trigger testkube.TestTrigger) bool {
