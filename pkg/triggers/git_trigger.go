@@ -24,12 +24,7 @@ var errGitTriggerProbesUnavailable = errors.New("git trigger probes unavailable 
 // WorkflowTrigger resources can match.
 func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
 	eventType := gitEventTypeFromMeta(gitMeta)
-
-	if err := s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, testtrigger.EventType(eventType), gitMeta); err != nil {
-		return err
-	}
-	return nil
-	return nil
+	return s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, testtrigger.EventType(eventType), gitMeta)
 }
 
 // gitEventTypeFromMeta determines the git event type from the metadata.
