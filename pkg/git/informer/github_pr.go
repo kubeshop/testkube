@@ -51,6 +51,9 @@ type prCacheEntry struct {
 
 var githubRepoPattern = regexp.MustCompile(`(?:github\.com)[/:]([^/]+)/([^/.]+?)(?:\.git)?$`)
 
+// githubHTTPClient is used for GitHub API requests with an appropriate timeout.
+var githubHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 // parseGitHubRepo extracts owner/repo from a GitHub URL (HTTPS or SSH).
 func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
 	matches := githubRepoPattern.FindStringSubmatch(uri)
@@ -73,6 +76,8 @@ func githubAPIBaseFromURI(uri string) string {
 }
 
 // fetchGitHubPRs fetches open pull requests from the GitHub REST API.
+// Note: fetches up to 30 most recently updated PRs per call (GitHub default page size).
+// PRs updated beyond this window may be missed if the reconciliation interval is too long.
 func fetchGitHubPRs(ctx context.Context, apiBase, owner, repo, token string, since time.Time) ([]githubPR, error) {
 	endpoint := fmt.Sprintf("%s/repos/%s/%s/pulls?state=all&sort=updated&direction=desc&per_page=30",
 		apiBase, owner, repo)
@@ -86,7 +91,7 @@ func fetchGitHubPRs(ctx context.Context, apiBase, owner, repo, token string, sin
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +122,8 @@ func fetchGitHubPRs(ctx context.Context, apiBase, owner, repo, token string, sin
 }
 
 // fetchGitHubPRFiles fetches the list of files changed in a pull request.
+// Note: fetches up to 100 files per call (GitHub maximum page size).
+// PRs with more than 100 changed files will have incomplete path matching.
 func fetchGitHubPRFiles(ctx context.Context, apiBase, owner, repo, token string, prNumber int) ([]string, error) {
 	endpoint := fmt.Sprintf("%s/repos/%s/%s/pulls/%d/files?per_page=100",
 		apiBase, owner, repo, prNumber)
@@ -130,7 +137,7 @@ func fetchGitHubPRFiles(ctx context.Context, apiBase, owner, repo, token string,
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

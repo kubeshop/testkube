@@ -135,74 +135,6 @@ func TestPRPathsMatch(t *testing.T) {
 }
 
 func TestCheckPullRequests_Integration(t *testing.T) {
-	// Set up a mock GitHub API server
-	prs := []githubPR{
-		{
-			Number:    1,
-			State:     "open",
-			Title:     "Test PR",
-			UpdatedAt: time.Now(),
-			HTMLURL:   "https://github.com/test/repo/pull/1",
-		},
-	}
-	prs[0].Head.Ref = "feature/test"
-	prs[0].Head.SHA = "abc123"
-	prs[0].Base.Ref = "main"
-	prs[0].User.Login = "testuser"
-
-	files := []githubPRFile{
-		{Filename: "src/main.go", Status: "modified"},
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/repos/test/repo/pulls":
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(prs)
-		case r.URL.Path == "/repos/test/repo/pulls/1/files":
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(files)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
-
-	i := &Informer{
-		commits: make(map[string]string),
-		options: normalizeOptions(Options{}),
-	}
-
-	trigger := testkube.TestTrigger{
-		Name:      "pr-trigger",
-		Namespace: "default",
-		Event:     "git-pull-request",
-		ContentSelector: &testkube.TestTriggerContentSelector{
-			Git: &testkube.TestTriggerContentGit{
-				Uri: "https://github.com/test/repo.git",
-				PullRequest: &testkube.TestTriggerContentGitPullRequest{
-					Types:    []string{"opened", "synchronize"},
-					Branches: []string{"main"},
-				},
-			},
-		},
-	}
-
-	key := "v1:default/pr-trigger"
-
-	// Override API base for test - use a helper approach
-	// We need to override fetchGitHubPRs and fetchGitHubPRFiles for this test.
-	// Instead, let's test the pure functions and skip the full integration.
-	// For a proper test, we'd need dependency injection on the HTTP client.
-
-	// Test that first run initializes baseline
-	_ = server // keep reference to avoid unused
-	_ = i
-	_ = trigger
-	_ = key
-
-	// Test the pure logic functions which are already tested above.
-	// Full integration test with HTTP mock requires injecting apiBase or HTTP client.
 	t.Run("first_run_initializes_baseline", func(t *testing.T) {
 		inf := &Informer{
 			commits: make(map[string]string),
@@ -243,6 +175,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 		pr.State = "open"
 		action := determinePRAction(prev, newState, pr)
 		assert.Equal(t, "synchronize", action)
+		_ = inf // verify compilation
 	})
 }
 
