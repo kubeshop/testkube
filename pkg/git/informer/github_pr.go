@@ -43,18 +43,7 @@ type githubPRFile struct {
 	Status   string `json:"status"`
 }
 
-var githubRepoPattern = regexp.MustCompile(`(?:github\.com)[/:]([^/]+)/([^/]+?)(?:\.git)?$`)
-
-// githubHTTPClient is used for GitHub API requests with an appropriate timeout.
-var githubHTTPClient = &http.Client{Timeout: 30 * time.Second}
-
-// parseGitHubRepo extracts owner/repo from a GitHub URL (HTTPS or SSH).
-func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
-	matches := githubRepoPattern.FindStringSubmatch(uri)
-	if len(matches) < 3 {
-		return "", "", false
-	}
-	return matches[1], matches[2], true
+var githubRepoPattern = regexp.MustCompile(`(?:github\.com|github\.[^/:]+)[/:]([^/]+)/([^/]+?)(?:\.git)?/?$`)
 }
 
 // githubAPIBaseFromURI returns the GitHub API base URL for the given repo URI.
