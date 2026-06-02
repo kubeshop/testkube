@@ -354,10 +354,8 @@ func determinePRAction(prevEncoded, currentEncoded string, pr githubPR) string {
 	if prevSHA != pr.Head.SHA {
 		return "synchronize"
 	}
-	// Draft changed to ready
-	if !pr.Draft && prevState == "open" && currState == "open" {
-		return "ready_for_review"
-	}
+	// Catch-all
+	return "synchronize"
 	// Catch-all
 	return "synchronize"
 }
