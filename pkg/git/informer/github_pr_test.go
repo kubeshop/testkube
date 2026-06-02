@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -140,7 +141,7 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 		}
 		triggerKey := "v1:default/test"
 
-		// Simulate what checkPullRequests does internally: first run sets baseline
+		// prCacheKey must use refSeparator so cleanup/snapshot logic works correctly.
 		prKey := prCacheKey(triggerKey, 42)
 		expectedKey := "v1:default/test" + refSeparator + "pr:42"
 		assert.Equal(t, expectedKey, prKey)
@@ -174,48 +175,177 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 		pr.State = "open"
 		action := determinePRAction(prev, newState, pr)
 		assert.Equal(t, "synchronize", action)
-		_ = inf // verify compilation
+	})
+}
+
+// buildPRTrigger creates a TestTrigger that points at the given GitHub URI and
+// configures the supplied pull-request filters.
+func buildPRTrigger(uri string, prConfig *testkube.TestTriggerContentGitPullRequest, paths ...string) testkube.TestTrigger {
+	return testkube.TestTrigger{
+		Name:      "test-trigger",
+		Namespace: "default",
+		Event:     "git-pull-request",
+		ContentSelector: &testkube.TestTriggerContentSelector{
+			Git: &testkube.TestTriggerContentGit{
+				Uri:         uri,
+				Paths:       paths,
+				PullRequest: prConfig,
+			},
+		},
+	}
+}
+
+// TestCheckPullRequests_E2E exercises the full checkPullRequests path using a
+// mock HTTP server to avoid real GitHub calls.
+func TestCheckPullRequests_E2E(t *testing.T) {
+	// Build a realistic PR that targets "main".
+	openPR := githubPR{
+		Number:    1,
+		State:     "open",
+		Title:     "My PR",
+		UpdatedAt: time.Now(),
+		HTMLURL:   "https://github.com/owner/repo/pull/1",
+	}
+	openPR.Head.Ref = "feature/x"
+	openPR.Head.SHA = "sha-initial"
+	openPR.Base.Ref = "main"
+	openPR.User.Login = "dev"
+
+	// currentPRs is swapped between test cases to simulate API state changes.
+	var currentPRs []githubPR
+	var currentFiles []githubPRFile
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/repos/owner/repo/pulls":
+			json.NewEncoder(w).Encode(currentPRs)
+		case strings.HasSuffix(r.URL.Path, "/files"):
+			json.NewEncoder(w).Encode(currentFiles)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	// uri points at github.com so parseGitHubRepo succeeds; the injected
+	// githubAPIBaseFunc redirects HTTP calls to the mock server.
+	const uri = "https://github.com/owner/repo.git"
+	apiBaseFunc := func(_ string) string { return server.URL }
+
+	t.Run("first_reconcile_stores_baseline_without_firing", func(t *testing.T) {
+		currentPRs = []githubPR{openPR}
+
+		inf := &Informer{
+			commits:           make(map[string]string),
+			githubAPIBaseFunc: apiBaseFunc,
+		}
+		trigger := buildPRTrigger(uri, nil)
+		key := "v1:default/test-trigger"
+
+		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		require.NoError(t, err)
+		assert.False(t, result.changed, "first reconcile must not fire")
+
+		// Baseline and init sentinel must be stored.
+		prKey := prCacheKey(key, 1)
+		assert.Equal(t, "sha-initial:open", inf.commits[prKey])
+		assert.Equal(t, "1", inf.commits[prInitKey(key)])
 	})
 
 	t.Run("new_pr_after_init_fires_opened", func(t *testing.T) {
-		triggerKey := "v1:default/test"
-		// Mark the trigger as already initialized.
+		newPR := openPR
+		newPR.Number = 2
+		newPR.Head.SHA = "sha-new-pr"
+		currentPRs = []githubPR{newPR}
+
+		key := "v1:default/test-trigger"
+		// Trigger is already initialized (sentinel set).
 		inf := &Informer{
 			commits: map[string]string{
-				prInitKey(triggerKey): "1",
+				prInitKey(key): "1",
 			},
+			githubAPIBaseFunc: apiBaseFunc,
 		}
+		trigger := buildPRTrigger(uri, nil)
 
-		prKey := prCacheKey(triggerKey, 99)
-		_, hasPrev := inf.commits[prKey]
-		assert.False(t, hasPrev, "no baseline for PR 99 yet")
+		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		require.NoError(t, err)
+		assert.True(t, result.changed, "new PR after initialization must fire")
+		assert.Equal(t, "opened", result.metadata[GitMetaKeyPRAction])
+		assert.Equal(t, "2", result.metadata[GitMetaKeyPRNumber])
 
-		// Since initialized, a new PR should produce action "opened".
-		action := "opened" // as determined by checkPullRequests logic when !hasPrev
-		assert.Equal(t, "opened", action)
-
-		// Writing the baseline after firing.
-		inf.commits[prKey] = "sha-new:open"
-		_, hasPrev = inf.commits[prKey]
-		assert.True(t, hasPrev)
+		// Baseline for PR 2 must be set.
+		assert.Equal(t, "sha-new-pr:open", inf.commits[prCacheKey(key, 2)])
 	})
 
 	t.Run("transient_file_fetch_error_does_not_advance_baseline", func(t *testing.T) {
-		triggerKey := "v1:default/test"
-		prKey := prCacheKey(triggerKey, 7)
-		initialState := "sha-old:open"
+		pr := openPR
+		pr.Head.SHA = "sha-v2"
+
+		// Use a dedicated server that returns a 500 for the files endpoint
+		// to simulate a transient API failure.
+		errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if r.URL.Path == "/repos/owner/repo/pulls" {
+				json.NewEncoder(w).Encode([]githubPR{pr})
+				return
+			}
+			// Simulate a transient 500 for the files endpoint.
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"message":"Internal Server Error"}`))
+		}))
+		defer errorServer.Close()
+
+		key := "v1:default/test-trigger"
+		prKey := prCacheKey(key, 1)
+		originalState := "sha-initial:open"
 
 		inf := &Informer{
 			commits: map[string]string{
-				prInitKey(triggerKey): "1",
-				prKey:                 initialState,
+				prInitKey(key): "1",
+				prKey:          originalState,
 			},
+			githubAPIBaseFunc: func(_ string) string { return errorServer.URL },
 		}
 
-		// Simulate: state changed but file fetch failed — baseline should NOT advance.
-		// Only advance baseline when event fires or filters definitively reject.
-		assert.Equal(t, initialState, inf.commits[prKey],
+		// Use a path filter to force the file-fetch code path; the mock server
+		// returns 500 for the files endpoint which is treated as a transient error.
+		trigger := buildPRTrigger(uri, nil, "src/**")
+
+		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		require.NoError(t, err)
+		assert.False(t, result.changed, "event must not fire on file-fetch error")
+		// Baseline must NOT advance so the event is retried next poll.
+		assert.Equal(t, originalState, inf.commits[prKey],
 			"baseline must not advance on transient fetch error")
+	})
+
+	t.Run("type_filter_rejection_advances_baseline", func(t *testing.T) {
+		closedPR := openPR
+		closedPR.State = "closed"
+		currentPRs = []githubPR{closedPR}
+
+		key := "v1:default/test-trigger"
+		prKey := prCacheKey(key, 1)
+
+		inf := &Informer{
+			commits: map[string]string{
+				prInitKey(key): "1",
+				prKey:          "sha-initial:open", // state was open
+			},
+			githubAPIBaseFunc: apiBaseFunc,
+		}
+		// Filter only accepts "opened"; "closed" must be rejected.
+		trigger := buildPRTrigger(uri, &testkube.TestTriggerContentGitPullRequest{
+			Types: []string{"opened"},
+		})
+
+		result, err := inf.checkPullRequests(context.Background(), key, trigger)
+		require.NoError(t, err)
+		assert.False(t, result.changed)
+		// Baseline must advance to avoid re-evaluating the same state.
+		assert.Equal(t, "sha-initial:closed", inf.commits[prKey])
 	})
 }
 

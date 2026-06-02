@@ -174,6 +174,9 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	// Resolve token for API authentication.
 	token := i.resolvePRToken(ctx, trigger.Namespace, gitConfig)
 	apiBase := githubAPIBaseFromURI(gitConfig.Uri)
+	if i.githubAPIBaseFunc != nil {
+		apiBase = i.githubAPIBaseFunc(gitConfig.Uri)
+	}
 
 	// Fetch PRs updated since last check (or all if first run).
 	prs, err := fetchGitHubPRs(ctx, apiBase, owner, repo, token, time.Time{})

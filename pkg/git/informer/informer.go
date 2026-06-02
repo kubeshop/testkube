@@ -110,6 +110,11 @@ type Informer struct {
 	environmentID     string
 	options           Options
 	kubeClient        kubernetes.Interface
+
+	// githubAPIBaseFunc resolves the GitHub REST API base URL from a repo URI.
+	// When nil, the production githubAPIBaseFromURI function is used.
+	// Tests can override this to point at a mock HTTP server.
+	githubAPIBaseFunc func(uri string) string
 }
 
 type reconcileCache struct {
