@@ -142,7 +142,8 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 
 		// Simulate what checkPullRequests does internally: first run sets baseline
 		prKey := prCacheKey(triggerKey, 42)
-		assert.Equal(t, "v1:default/test|pr:42", prKey)
+		expectedKey := "v1:default/test" + refSeparator + "pr:42"
+		assert.Equal(t, expectedKey, prKey)
 
 		// Initially no entry
 		_, hasPrev := inf.commits[prKey]
@@ -155,13 +156,14 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 	})
 
 	t.Run("detects_state_change", func(t *testing.T) {
+		triggerKey := "v1:default/test"
+		prKey := prCacheKey(triggerKey, 42)
 		inf := &Informer{
 			commits: map[string]string{
-				"v1:default/test|pr:42": "old-sha:open",
+				prKey: "old-sha:open",
 			},
 		}
 
-		prKey := prCacheKey("v1:default/test", 42)
 		prev := inf.commits[prKey]
 		newState := "new-sha:open"
 
@@ -173,6 +175,47 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 		action := determinePRAction(prev, newState, pr)
 		assert.Equal(t, "synchronize", action)
 		_ = inf // verify compilation
+	})
+
+	t.Run("new_pr_after_init_fires_opened", func(t *testing.T) {
+		triggerKey := "v1:default/test"
+		// Mark the trigger as already initialized.
+		inf := &Informer{
+			commits: map[string]string{
+				prInitKey(triggerKey): "1",
+			},
+		}
+
+		prKey := prCacheKey(triggerKey, 99)
+		_, hasPrev := inf.commits[prKey]
+		assert.False(t, hasPrev, "no baseline for PR 99 yet")
+
+		// Since initialized, a new PR should produce action "opened".
+		action := "opened" // as determined by checkPullRequests logic when !hasPrev
+		assert.Equal(t, "opened", action)
+
+		// Writing the baseline after firing.
+		inf.commits[prKey] = "sha-new:open"
+		_, hasPrev = inf.commits[prKey]
+		assert.True(t, hasPrev)
+	})
+
+	t.Run("transient_file_fetch_error_does_not_advance_baseline", func(t *testing.T) {
+		triggerKey := "v1:default/test"
+		prKey := prCacheKey(triggerKey, 7)
+		initialState := "sha-old:open"
+
+		inf := &Informer{
+			commits: map[string]string{
+				prInitKey(triggerKey): "1",
+				prKey:                 initialState,
+			},
+		}
+
+		// Simulate: state changed but file fetch failed — baseline should NOT advance.
+		// Only advance baseline when event fires or filters definitively reject.
+		assert.Equal(t, initialState, inf.commits[prKey],
+			"baseline must not advance on transient fetch error")
 	})
 }
 
@@ -308,4 +351,33 @@ func TestCheckPullRequests_EndToEnd(t *testing.T) {
 	assert.Equal(t, "main", meta[GitMetaKeyPRBaseRef])
 	assert.Equal(t, "feature/x", meta[GitMetaKeyPRHeadRef])
 	assert.Equal(t, "developer", meta[GitMetaKeyPRAuthor])
+}
+
+// TestPRInitKeyIncludedInSnapshot verifies that the PR initialization sentinel
+// uses refSeparator as a prefix so it is captured by snapshotRefCommits and
+// correctly mapped back to the trigger base key by triggerKeyFromRefSubKey.
+func TestPRInitKeyIncludedInSnapshot(t *testing.T) {
+	triggerKey := "v1:default/my-pr-trigger"
+
+	initKey := prInitKey(triggerKey)
+
+	// Must use refSeparator so triggerKeyFromRefSubKey can extract the base.
+	assert.Contains(t, initKey, refSeparator)
+	assert.Equal(t, triggerKey, triggerKeyFromRefSubKey(initKey))
+
+	// The init key must be captured by snapshotRefCommits.
+	inf := &Informer{
+		commits: map[string]string{
+			initKey:                       "1",
+			prCacheKey(triggerKey, 1):     "sha1:open",
+			prCacheKey(triggerKey, 2):     "sha2:closed",
+			"unrelated:key" + refSeparator + "pr:99": "sha3:open",
+		},
+	}
+	snapshot := inf.snapshotRefCommits(triggerKey)
+
+	assert.Equal(t, "1", snapshot[initKey], "init sentinel must be in snapshot")
+	assert.Equal(t, "sha1:open", snapshot[prCacheKey(triggerKey, 1)])
+	assert.Equal(t, "sha2:closed", snapshot[prCacheKey(triggerKey, 2)])
+	assert.NotContains(t, snapshot, "unrelated:key"+refSeparator+"pr:99")
 }

@@ -186,36 +186,47 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 	paths := normalizePaths(gitConfig.Paths)
 	pathsIgnore := normalizePaths(gitConfig.PathsIgnore)
 
+	// On the first reconcile pass for a trigger all currently-visible PRs are
+	// recorded as baselines without firing.  Once the sentinel is set, a PR
+	// that has never been seen before is treated as "opened".
+	initKey := prInitKey(key)
+	prInitialized := i.commits[initKey] != ""
+
 	for _, pr := range prs {
-		// Apply base branch filters.
+		// Apply base branch filters before state tracking.
 		if !prMatchesBaseBranch(pr.Base.Ref, prConfig) {
 			continue
 		}
 
-		// Determine the action (state change) for this PR.
 		prKey := prCacheKey(key, pr.Number)
 		prev, hasPrev := i.commits[prKey]
-
-		// Encode current state as "sha:state" for tracking.
 		currentState := pr.Head.SHA + ":" + pr.State
-		i.commits[prKey] = currentState
 
 		if !hasPrev {
-			// First time seeing this PR — treat as baseline without firing.
-			log.DefaultLogger.Infof("git informer: initializing PR baseline for trigger %s/%s PR #%d",
-				trigger.Namespace, trigger.Name, pr.Number)
-			continue
-		}
-
-		if prev == currentState {
+			if !prInitialized {
+				// Initial baseline pass: record the current state without firing.
+				i.commits[prKey] = currentState
+				log.DefaultLogger.Infof("git informer: initializing PR baseline for trigger %s/%s PR #%d",
+					trigger.Namespace, trigger.Name, pr.Number)
+				continue
+			}
+			// Trigger is initialized: a PR that has never been seen is "opened".
+		} else if prev == currentState {
 			continue // No change
 		}
 
-		// Determine action type.
-		action := determinePRAction(prev, currentState, pr)
+		// Determine action.
+		var action string
+		if !hasPrev {
+			action = "opened"
+		} else {
+			action = determinePRAction(prev, currentState, pr)
+		}
 
-		// Apply type filter.
+		// Apply type filter. Advance baseline so the same state is not re-evaluated
+		// on the next reconcile regardless of whether the action matches.
 		if !prMatchesTypes(action, prConfig) {
+			i.commits[prKey] = currentState
 			continue
 		}
 
@@ -223,15 +234,21 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 		if len(paths) > 0 || len(pathsIgnore) > 0 {
 			changedFiles, fileErr := fetchGitHubPRFiles(ctx, apiBase, owner, repo, token, pr.Number)
 			if fileErr != nil {
+				// Transient error: do NOT advance the baseline so the event can be
+				// retried on the next reconcile.
 				log.DefaultLogger.Warnf("git informer: failed to fetch PR #%d files: %v", pr.Number, fileErr)
 				continue
 			}
 			if !prPathsMatch(changedFiles, paths, pathsIgnore) {
+				// Paths do not match; advance baseline to skip this state on the next pass.
+				i.commits[prKey] = currentState
 				continue
 			}
 		}
 
-		// Build metadata and return.
+		// All filters passed: advance baseline and fire event.
+		i.commits[prKey] = currentState
+
 		meta := map[string]string{
 			GitMetaKeyCommit:    pr.Head.SHA,
 			GitMetaKeyRef:       "refs/pull/" + strconv.Itoa(pr.Number) + "/head",
@@ -248,6 +265,11 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 		return matchResult{changed: true, metadata: meta}, nil
 	}
 
+	// Mark the trigger as initialized after completing the first baseline pass.
+	if !prInitialized {
+		i.commits[initKey] = "1"
+	}
+
 	return matchResult{}, nil
 }
 
@@ -262,6 +284,13 @@ func prCacheKey(triggerKey string, prNumber int) string {
 	// Use refSeparator so PR baselines are treated like other per-trigger sub-keys
 	// by snapshot/restore and cleanup logic.
 	return triggerKey + refSeparator + "pr:" + strconv.Itoa(prNumber)
+}
+
+// prInitKey returns the commit-map key used as a sentinel to mark that the
+// trigger has completed its initial PR baseline pass. After the sentinel is
+// set, new PRs that have never been seen before are treated as "opened".
+func prInitKey(triggerKey string) string {
+	return triggerKey + refSeparator + "pr:__init__"
 }
 
 // prMatchesBaseBranch checks if a PR's base branch matches the trigger's branch filters.
