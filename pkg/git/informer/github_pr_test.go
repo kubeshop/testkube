@@ -498,9 +498,9 @@ func TestPRInitKeyIncludedInSnapshot(t *testing.T) {
 	// The init key must be captured by snapshotRefCommits.
 	inf := &Informer{
 		commits: map[string]string{
-			initKey:                       "1",
-			prCacheKey(triggerKey, 1):     "sha1:open",
-			prCacheKey(triggerKey, 2):     "sha2:closed",
+			initKey:                                  "1",
+			prCacheKey(triggerKey, 1):                "sha1:open",
+			prCacheKey(triggerKey, 2):                "sha2:closed",
 			"unrelated:key" + refSeparator + "pr:99": "sha3:open",
 		},
 	}
