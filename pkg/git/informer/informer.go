@@ -580,9 +580,23 @@ func (i *Informer) openOrUpdateRepositoryForRef(ctx context.Context, key string,
 				if poErr != nil {
 					return nil, poErr
 				}
-				pullErr := worktree.Pull(pullOpts)
-				if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
-					return repo, nil
+				var pullErr error
+				for attempt := 0; attempt <= i.options.PullRetries; attempt++ {
+					if attempt > 0 {
+						if i.options.PullRetryDelay > 0 {
+							select {
+							case <-ctx.Done():
+								return nil, ctx.Err()
+							case <-time.After(i.options.PullRetryDelay):
+							}
+						}
+						log.DefaultLogger.Warnf("git informer: pull retry %d/%d for %s/%s ref %s after error: %v",
+							attempt, i.options.PullRetries, trigger.Namespace, trigger.Name, ref, pullErr)
+					}
+					pullErr = worktree.Pull(pullOpts)
+					if pullErr == nil || errors.Is(pullErr, git.NoErrAlreadyUpToDate) {
+						return repo, nil
+					}
 				}
 				log.DefaultLogger.Warnf("git informer: pull failed for %s/%s ref %s, recreating local clone: %v",
 					trigger.Namespace, trigger.Name, ref, pullErr)

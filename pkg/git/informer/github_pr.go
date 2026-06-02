@@ -44,6 +44,17 @@ type githubPRFile struct {
 }
 
 var githubRepoPattern = regexp.MustCompile(`(?:github\.com|github\.[^/:]+)[/:]([^/]+)/([^/]+?)(?:\.git)?/?$`)
+
+// githubHTTPClient is used for GitHub API requests with an appropriate timeout.
+var githubHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
+// parseGitHubRepo extracts owner/repo from a GitHub URL (HTTPS or SSH).
+func parseGitHubRepo(uri string) (owner, repo string, ok bool) {
+	matches := githubRepoPattern.FindStringSubmatch(uri)
+	if len(matches) < 3 {
+		return "", "", false
+	}
+	return matches[1], matches[2], true
 }
 
 // githubAPIBaseFromURI returns the GitHub API base URL for the given repo URI.
@@ -169,6 +180,7 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 
 	// Fetch PRs (up to 30 most recently updated, per GitHub default page size).
 	prs, err := fetchGitHubPRs(ctx, apiBase, owner, repo, token, time.Time{})
+	if err != nil {
 		return matchResult{}, fmt.Errorf("failed to fetch PRs: %w", err)
 	}
 
