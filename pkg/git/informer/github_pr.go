@@ -356,8 +356,6 @@ func determinePRAction(prevEncoded, currentEncoded string, pr githubPR) string {
 	}
 	// Catch-all
 	return "synchronize"
-	// Catch-all
-	return "synchronize"
 }
 
 // prPathsMatch checks if any changed file in a PR matches the path filters.
