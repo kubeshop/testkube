@@ -61,3 +61,21 @@ func TestMapTestTriggerUpsertRequestToTestTriggerCRDWithExistingMeta_AllowsNilSe
 	assert.Equal(t, "", crd.Spec.ResourceSelector.Name)
 	assert.Equal(t, "", crd.Spec.TestSelector.Name)
 }
+
+func TestMapContentGitPullRequestToCRD_NilInput(t *testing.T) {
+	result := mapContentGitPullRequestToCRD(nil)
+	assert.Nil(t, result)
+}
+
+func TestMapContentGitPullRequestToCRD_CopiesAllFields(t *testing.T) {
+	pr := &testkube.TestTriggerContentGitPullRequest{
+		Types:          []string{"opened", "synchronize"},
+		Branches:       []string{"main", "release/*"},
+		BranchesIgnore: []string{"release/legacy-*"},
+	}
+	result := mapContentGitPullRequestToCRD(pr)
+	assert.NotNil(t, result)
+	assert.Equal(t, []string{"opened", "synchronize"}, result.Types)
+	assert.Equal(t, []string{"main", "release/*"}, result.Branches)
+	assert.Equal(t, []string{"release/legacy-*"}, result.BranchesIgnore)
+}
