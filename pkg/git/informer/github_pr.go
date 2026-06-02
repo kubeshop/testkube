@@ -178,9 +178,8 @@ func (i *Informer) checkPullRequests(ctx context.Context, key string, trigger te
 		apiBase = i.githubAPIBaseFunc(gitConfig.Uri)
 	}
 
-	// Fetch PRs updated since last check (or all if first run).
+	// Fetch PRs (up to 30 most recently updated, per GitHub default page size).
 	prs, err := fetchGitHubPRs(ctx, apiBase, owner, repo, token, time.Time{})
-	if err != nil {
 		return matchResult{}, fmt.Errorf("failed to fetch PRs: %w", err)
 	}
 
