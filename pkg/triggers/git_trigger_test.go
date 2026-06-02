@@ -418,7 +418,7 @@ func TestMatchGitTrigger_GitTagPushEvent(t *testing.T) {
 	meta := map[string]string{"TESTKUBE_GIT_TAG": "v1.0.0"}
 	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, meta)
 	require.NoError(t, err)
-	assert.Equal(t, v1.TestTriggerEventGitTagPush, executedEvent)
+	assert.Equal(t, string(v1.TestTriggerEventGitTagPush), executedEvent)
 }
 
 func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
