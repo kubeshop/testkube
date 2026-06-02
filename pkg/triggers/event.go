@@ -59,12 +59,6 @@ type GitMetadata struct {
 	Branch string `json:"branch,omitempty"`
 	// Tag is the short tag name (empty for branch events).
 	Tag string `json:"tag,omitempty"`
-	// CommitMessage is the message of the HEAD commit.
-	CommitMessage string `json:"commitMessage,omitempty"`
-	// Author is the author of the HEAD commit.
-	Author string `json:"author,omitempty"`
-	// CommitTimestamp is the timestamp of the HEAD commit in RFC3339 format.
-	CommitTimestamp string `json:"commitTimestamp,omitempty"`
 }
 
 // watcherAgent represents agent context exposed to templates and JSONPath

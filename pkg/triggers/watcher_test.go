@@ -18,7 +18,6 @@ import (
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
 	"github.com/kubeshop/testkube/pkg/newclients/workflowtriggerclient"
@@ -235,7 +234,7 @@ func TestService_startCloudTestTriggerWatch_PreservesContentSelector(t *testing.
 		Return([]testkube.TestTrigger{{
 			Name:      "git-trigger",
 			Namespace: namespace,
-			Event:     gitinformer.EventGitPush,
+			Event:     string(testtriggersv1.TestTriggerEventGitPush),
 			ContentSelector: &testkube.TestTriggerContentSelector{
 				Git: &testkube.TestTriggerContentGit{
 					Uri:      "https://github.com/kubeshop/testkube.git",

@@ -8,6 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/operator/validation/tests/v1/testtrigger"
 )
@@ -38,9 +39,9 @@ func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace st
 // gitEventTypeFromMeta determines the git event type from the metadata.
 func gitEventTypeFromMeta(gitMeta map[string]string) string {
 	if gitMeta[gitinformer.GitMetaKeyTag] != "" {
-		return gitinformer.EventGitTagPush
+		return string(v1.TestTriggerEventGitTagPush)
 	}
-	return gitinformer.EventGitPush
+	return string(v1.TestTriggerEventGitPush)
 }
 
 func (s *Service) matchGitTriggerBySource(ctx context.Context, triggerName, namespace, source string, eventType testtrigger.EventType, gitMeta map[string]string) error {
@@ -136,5 +137,5 @@ func isGitSyntheticTargetReady(trigger *internalTrigger) bool {
 		return false
 	}
 	e := strings.ToLower(trigger.Event)
-	return e == gitinformer.EventGitPush || e == gitinformer.EventGitTagPush
+	return e == string(v1.TestTriggerEventGitPush) || e == string(v1.TestTriggerEventGitTagPush)
 }

@@ -12,7 +12,6 @@ import (
 	v1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	gitinformer "github.com/kubeshop/testkube/pkg/git/informer"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -21,14 +20,14 @@ func TestMatchGitTrigger_ExecutesOnlyTargetTrigger(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 		},
 	}
 	triggerB := &v1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-b", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 		},
 	}
 
@@ -56,7 +55,7 @@ func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 		},
 	}
 	m := metrics.NewMetrics()
@@ -71,7 +70,7 @@ func TestMatchGitTrigger_IncrementsEventMetric(t *testing.T) {
 		metrics: m,
 	}
 
-	counter := m.TestTriggerEventCount.WithLabelValues(trigger.Name, "content", gitinformer.EventGitPush, "")
+	counter := m.TestTriggerEventCount.WithLabelValues(trigger.Name, "content", string(v1.TestTriggerEventGitPush), "")
 	metricBefore := &dto.Metric{}
 	require.NoError(t, counter.Write(metricBefore))
 	before := metricBefore.GetCounter().GetValue()
@@ -90,7 +89,7 @@ func TestMatchGitTrigger_ExecutesBoundV1Source(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 		},
 	}
 
@@ -119,7 +118,7 @@ func TestMatchGitTrigger_DoesNotExecuteUnrelatedV2TriggerWithSameName(t *testing
 		ObjectMeta: metav1.ObjectMeta{Name: "deploy", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 		},
 	}
 
@@ -128,7 +127,7 @@ func TestMatchGitTrigger_DoesNotExecuteUnrelatedV2TriggerWithSameName(t *testing
 		Namespace:         "default",
 		Source:            triggerSourceV2,
 		ResourceKind:      "content",
-		Event:             gitinformer.EventGitPush,
+		Event:             string(v1.TestTriggerEventGitPush),
 		ResourceName:      "another-content",
 		ResourceNamespace: "default",
 	}
@@ -157,7 +156,7 @@ func TestMatchGitTrigger_IgnoresFieldConditionsForContentEvents(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 			Match: []workflowtriggersv1.WorkflowTriggerFieldCondition{
 				{
 					Path:     ".metadata.name",
@@ -226,7 +225,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenConditionsConfiguredForSyntheticEvent(t
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 			ConditionSpec: &v1.TestTriggerConditionSpec{
 				Conditions: []v1.TestTriggerCondition{
 					{Type_: "Ready", Status: conditionStatusPtr(v1.TRUE_TestTriggerConditionStatuses)},
@@ -259,7 +258,7 @@ func TestMatchGitTrigger_ReturnsErrorWhenProbesConfiguredForSyntheticEvent(t *te
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 			ProbeSpec: &v1.TestTriggerProbeSpec{
 				Probes: []v1.TestTriggerProbe{
 					{Path: "/health", Port: 8080},
@@ -292,7 +291,7 @@ func TestMatchGitTrigger_SkipsNonTestWorkflowExecution(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource:  v1.TestTriggerResourceContent,
-			Event:     gitinformer.EventGitPush,
+			Event:     v1.TestTriggerEventGitPush,
 			Execution: v1.TestTriggerExecutionTest,
 		},
 	}
@@ -325,11 +324,11 @@ func TestGitEventTypeFromMeta(t *testing.T) {
 		meta     map[string]string
 		expected string
 	}{
-		{"nil meta returns git-push", nil, gitinformer.EventGitPush},
-		{"empty meta returns git-push", map[string]string{}, gitinformer.EventGitPush},
-		{"branch meta returns git-push", map[string]string{"TESTKUBE_GIT_BRANCH": "main"}, gitinformer.EventGitPush},
-		{"tag meta returns git-tag-push", map[string]string{"TESTKUBE_GIT_TAG": "v1.0"}, gitinformer.EventGitTagPush},
-		{"both branch and tag prefers tag", map[string]string{"TESTKUBE_GIT_BRANCH": "main", "TESTKUBE_GIT_TAG": "v1.0"}, gitinformer.EventGitTagPush},
+		{"nil meta returns git-push", nil, string(v1.TestTriggerEventGitPush)},
+		{"empty meta returns git-push", map[string]string{}, string(v1.TestTriggerEventGitPush)},
+		{"branch meta returns git-push", map[string]string{"TESTKUBE_GIT_BRANCH": "main"}, string(v1.TestTriggerEventGitPush)},
+		{"tag meta returns git-tag-push", map[string]string{"TESTKUBE_GIT_TAG": "v1.0"}, string(v1.TestTriggerEventGitTagPush)},
+		{"both branch and tag prefers tag", map[string]string{"TESTKUBE_GIT_BRANCH": "main", "TESTKUBE_GIT_TAG": "v1.0"}, string(v1.TestTriggerEventGitTagPush)},
 	}
 
 	for _, tt := range tests {
@@ -347,12 +346,12 @@ func TestIsGitSyntheticTargetReady(t *testing.T) {
 	}{
 		{
 			"git-push event is ready",
-			&internalTrigger{ResourceKind: "content", Event: gitinformer.EventGitPush},
+			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitPush)},
 			true,
 		},
 		{
 			"git-tag-push event is ready",
-			&internalTrigger{ResourceKind: "content", Event: gitinformer.EventGitTagPush},
+			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitTagPush)},
 			true,
 		},
 		{
@@ -367,17 +366,17 @@ func TestIsGitSyntheticTargetReady(t *testing.T) {
 		},
 		{
 			"disabled trigger is not ready",
-			&internalTrigger{ResourceKind: "content", Event: gitinformer.EventGitPush, Disabled: true},
+			&internalTrigger{ResourceKind: "content", Event: string(v1.TestTriggerEventGitPush), Disabled: true},
 			false,
 		},
 		{
 			"non-content resource is not ready",
-			&internalTrigger{ResourceKind: "deployment", Event: gitinformer.EventGitPush},
+			&internalTrigger{ResourceKind: "deployment", Event: string(v1.TestTriggerEventGitPush)},
 			false,
 		},
 		{
 			"case insensitive resource kind",
-			&internalTrigger{ResourceKind: "Content", Event: gitinformer.EventGitPush},
+			&internalTrigger{ResourceKind: "Content", Event: string(v1.TestTriggerEventGitPush)},
 			true,
 		},
 		{
@@ -399,7 +398,7 @@ func TestMatchGitTrigger_GitTagPushEvent(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitTagPush,
+			Event:    v1.TestTriggerEventGitTagPush,
 		},
 	}
 
@@ -419,7 +418,7 @@ func TestMatchGitTrigger_GitTagPushEvent(t *testing.T) {
 	meta := map[string]string{"TESTKUBE_GIT_TAG": "v1.0.0"}
 	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, meta)
 	require.NoError(t, err)
-	assert.Equal(t, gitinformer.EventGitTagPush, executedEvent)
+	assert.Equal(t, v1.TestTriggerEventGitTagPush, executedEvent)
 }
 
 func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
@@ -427,7 +426,7 @@ func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "trigger-a", Namespace: "default"},
 		Spec: v1.TestTriggerSpec{
 			Resource: v1.TestTriggerResourceContent,
-			Event:    gitinformer.EventGitPush,
+			Event:    v1.TestTriggerEventGitPush,
 		},
 	}
 
@@ -445,11 +444,9 @@ func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
 	}
 
 	meta := map[string]string{
-		"TESTKUBE_GIT_COMMIT":         "abc123",
-		"TESTKUBE_GIT_REF":            "refs/heads/main",
-		"TESTKUBE_GIT_BRANCH":         "main",
-		"TESTKUBE_GIT_COMMIT_MESSAGE": "fix: something",
-		"TESTKUBE_GIT_AUTHOR":         "dev <dev@example.com>",
+		"TESTKUBE_GIT_COMMIT": "abc123",
+		"TESTKUBE_GIT_REF":    "refs/heads/main",
+		"TESTKUBE_GIT_BRANCH": "main",
 	}
 	err := s.MatchGitTrigger(context.Background(), trigger.Name, trigger.Namespace, meta)
 	require.NoError(t, err)
@@ -457,6 +454,4 @@ func TestMatchGitTrigger_AttachesGitMetadata(t *testing.T) {
 	assert.Equal(t, "abc123", capturedMeta.Commit)
 	assert.Equal(t, "refs/heads/main", capturedMeta.Ref)
 	assert.Equal(t, "main", capturedMeta.Branch)
-	assert.Equal(t, "fix: something", capturedMeta.CommitMessage)
-	assert.Equal(t, "dev <dev@example.com>", capturedMeta.Author)
 }

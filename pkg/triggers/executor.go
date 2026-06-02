@@ -71,13 +71,10 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 	// Inject git metadata as execution variables when available.
 	if e.GitMetadata != nil {
 		gitVars := map[string]string{
-			"TESTKUBE_GIT_COMMIT":           e.GitMetadata.Commit,
-			"TESTKUBE_GIT_REF":              e.GitMetadata.Ref,
-			"TESTKUBE_GIT_BRANCH":           e.GitMetadata.Branch,
-			"TESTKUBE_GIT_TAG":              e.GitMetadata.Tag,
-			"TESTKUBE_GIT_COMMIT_MESSAGE":   e.GitMetadata.CommitMessage,
-			"TESTKUBE_GIT_AUTHOR":           e.GitMetadata.Author,
-			"TESTKUBE_GIT_COMMIT_TIMESTAMP": e.GitMetadata.CommitTimestamp,
+			"TESTKUBE_GIT_COMMIT": e.GitMetadata.Commit,
+			"TESTKUBE_GIT_REF":    e.GitMetadata.Ref,
+			"TESTKUBE_GIT_BRANCH": e.GitMetadata.Branch,
+			"TESTKUBE_GIT_TAG":    e.GitMetadata.Tag,
 		}
 		for k, v := range gitVars {
 			if v != "" {

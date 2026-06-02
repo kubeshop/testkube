@@ -25,16 +25,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testtriggerclient"
-)
-
-const (
-	// EventGitPush fires when new commits are pushed to a watched branch.
-	EventGitPush = "git-push"
-	// EventGitTagPush fires when a new tag matching the filter is pushed.
-	EventGitTagPush = "git-tag-push"
 )
 
 const defaultReconcileInterval = time.Minute
@@ -342,7 +336,7 @@ func isGitContentTrigger(trigger testkube.TestTrigger) bool {
 
 func isGitContentEvent(event string) bool {
 	e := strings.ToLower(event)
-	return e == EventGitPush || e == EventGitTagPush
+	return e == string(testtriggersv1.TestTriggerEventGitPush) || e == string(testtriggersv1.TestTriggerEventGitTagPush)
 }
 
 func isContentResource(trigger testkube.TestTrigger) bool {
