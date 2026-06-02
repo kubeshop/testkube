@@ -264,5 +264,17 @@ func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.Test
 		SshKey:         git.SshKey,
 		SshKeyFrom:     commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
 		AuthType:       string(git.AuthType),
+		PullRequest:    mapContentGitPullRequestFromCRD(git.PullRequest),
+	}
+}
+
+func mapContentGitPullRequestFromCRD(pr *testsv1.TestTriggerContentGitPullRequest) *testkube.TestTriggerContentGitPullRequest {
+	if pr == nil {
+		return nil
+	}
+	return &testkube.TestTriggerContentGitPullRequest{
+		Types:          pr.Types,
+		Branches:       pr.Branches,
+		BranchesIgnore: pr.BranchesIgnore,
 	}
 }
