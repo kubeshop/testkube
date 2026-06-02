@@ -3,7 +3,6 @@ package informer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -138,7 +137,6 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 	t.Run("first_run_initializes_baseline", func(t *testing.T) {
 		inf := &Informer{
 			commits: make(map[string]string),
-			options: normalizeOptions(Options{}),
 		}
 		triggerKey := "v1:default/test"
 
@@ -161,7 +159,6 @@ func TestCheckPullRequests_Integration(t *testing.T) {
 			commits: map[string]string{
 				"v1:default/test|pr:42": "old-sha:open",
 			},
-			options: normalizeOptions(Options{}),
 		}
 
 		prKey := prCacheKey("v1:default/test", 42)
@@ -250,16 +247,12 @@ func TestCheckPullRequests_EndToEnd(t *testing.T) {
 
 	inf := &Informer{
 		commits: make(map[string]string),
-		options: normalizeOptions(Options{}),
 	}
 
 	trigger := testkube.TestTrigger{
-		Name:      "my-pr-trigger",
-		Namespace: "default",
-		Event:     "git-pull-request",
 		ContentSelector: &testkube.TestTriggerContentSelector{
 			Git: &testkube.TestTriggerContentGit{
-				Uri: fmt.Sprintf("https://github.com/owner/repo.git"),
+				Uri: "https://github.com/owner/repo.git",
 				PullRequest: &testkube.TestTriggerContentGitPullRequest{
 					Branches: []string{"main"},
 				},

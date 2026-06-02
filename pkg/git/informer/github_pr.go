@@ -43,12 +43,6 @@ type githubPRFile struct {
 	Status   string `json:"status"`
 }
 
-// prCacheEntry tracks the last seen state for a PR in a trigger's context.
-type prCacheEntry struct {
-	HeadSHA string
-	State   string
-}
-
 var githubRepoPattern = regexp.MustCompile(`(?:github\.com)[/:]([^/]+)/([^/.]+?)(?:\.git)?$`)
 
 // githubHTTPClient is used for GitHub API requests with an appropriate timeout.
