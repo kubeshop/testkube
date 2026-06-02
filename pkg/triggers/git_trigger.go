@@ -25,14 +25,10 @@ var errGitTriggerProbesUnavailable = errors.New("git trigger probes unavailable 
 func (s *Service) MatchGitTrigger(ctx context.Context, triggerName, namespace string, gitMeta map[string]string) error {
 	eventType := gitEventTypeFromMeta(gitMeta)
 
-	v1Err := s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, testtrigger.EventType(eventType), gitMeta)
-	// Return the first substantive error (ignore "not ready" since the trigger may not exist in one source).
-	if v1Err != nil && !errors.Is(v1Err, errGitTriggerTargetNotReady) {
-		return v1Err
+	if err := s.matchGitTriggerBySource(ctx, triggerName, namespace, triggerSourceV1, testtrigger.EventType(eventType), gitMeta); err != nil {
+		return err
 	}
-	if v1Err != nil {
-		return v1Err
-	}
+	return nil
 	return nil
 }
 
