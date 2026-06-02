@@ -12,11 +12,11 @@ This can be a good alternative to GitHub Actions when you want both the trigger 
 
 ## How Git Event Triggers work
 
-For each trigger, Testkube polls the configured repository and revision on a configurable interval (1 minute by default). On each poll, it fetches the current state of the target repository, applies any configured `paths` filters, and compares the current HEAD commit with the last cached commit for that trigger. When Testkube detects a new matching change, it emits a content `modified` event and runs the selected workflow.
+For each trigger, Testkube polls the configured repository on a configurable interval (1 minute by default). On each poll, it resolves all matching refs from `branches` / `tags`, then removes refs matching `branchesIgnore` / `tagsIgnore` and applies `paths` / `pathsIgnore`. It compares the current ref commit(s) with the last cached commit(s) for that trigger, and when a new matching change is detected it emits a synthetic git content event and runs the selected workflow.
 
 This guide shows how to configure git-based content triggers using the `ContentGit` fields.
 
-## TestTrigger: watch any change in a branch
+## TestTrigger: watch any change in branches (`git-push`)
 
 ```yaml
 apiVersion: tests.testkube.io/v1
@@ -26,11 +26,38 @@ metadata:
   namespace: testkube
 spec:
   resource: content
-  event: modified
+  event: git-push
   contentSelector:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      branches:
+        - main
+        - release/*
+  action: run
+  execution: testworkflow
+  testSelector:
+    name: my-workflow
+    namespace: testkube
+```
+
+## TestTrigger: watch tag updates (`git-tag-push`)
+
+```yaml
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: trigger-release-tags
+  namespace: testkube
+spec:
+  resource: content
+  event: git-tag-push
+  contentSelector:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      tags:
+        - v*
+      tagsIgnore:
+        - v*-rc*
   action: run
   execution: testworkflow
   testSelector:
@@ -48,19 +75,24 @@ metadata:
   namespace: testkube
 spec:
   resource: content
-  event: modified
+  event: git-push
   contentSelector:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      branches:
+        - main
+      branchesIgnore:
+        - main-hotfix/*
       authType: basic
       tokenFrom:
         secretKeyRef:
           name: git-creds
           key: token
       paths:
-        - cmd/api-server
-        - pkg/triggers
+        - cmd/api-server/**
+        - pkg/triggers/**
+      pathsIgnore:
+        - "**/*_test.go"
   action: run
   execution: testworkflow
   testSelector:
@@ -70,11 +102,16 @@ spec:
 
 ## Notes
 
-- `paths` is a change filter. If omitted, all repository paths are watched.
-- `paths` supports exact paths or directory/file prefixes (`path` or `path/...` semantics), not glob patterns.
-- `revision` accepts a branch, tag, or commit SHA. For triggers that should observe future changes, use a moving ref such as a branch or tag. A commit SHA is a pinned, immutable revision and is valid only as a fixed baseline; it will not observe future changes.
+- Use `event: git-push` for branch refs and `event: git-tag-push` for tag refs.
+- `branches` (example: `["main", "release/*"]`) supports glob patterns. If empty, all branches are watched.
+- `branchesIgnore` (example: `["main-hotfix/*", "legacy/*"]`) takes precedence over `branches`.
+- `tags` (example: `["v*", "release-*"]`) supports glob patterns for tag refs.
+- `tagsIgnore` (example: `["v*-rc*", "v0.*"]`) takes precedence over `tags`.
+- `paths` (example: `["src/**", "charts/**"]`) is an include filter and supports glob patterns (`/**` matches all descendants).
+- `pathsIgnore` (example: `["**/*.md", "docs/**"]`) excludes matching paths and takes precedence over `paths`.
+- `revision` is deprecated for git content triggers in favor of branch/tag filters (`revision: main` → `branches: ["main"]`, `revision: v1.2.3` → `tags: ["v1.2.3"]`).
 - The polling interval is configurable; by default Testkube checks the repository every 1 minute.
-- Testkube caches the last-seen HEAD commit per trigger in memory to detect new changes between polling cycles.
-- After API server restart or leader failover, each trigger is re-baselined to the current HEAD and commits pushed while the informer was down are not replayed.
+- Testkube caches the last-seen commit per matching ref to detect new changes between polling cycles.
+- After API server restart or leader failover, each trigger is re-baselined to the current refs and commits pushed while the informer was down are not replayed.
 - Prefer `tokenFrom` / `sshKeyFrom` (and `usernameFrom`) over inline plain-text fields.
 - SSH auth requires host key verification via `known_hosts` (for example by mounting a known_hosts file and setting `SSH_KNOWN_HOSTS`).
