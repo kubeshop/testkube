@@ -6598,17 +6598,61 @@ spec:
                         - header
                         - github
                         type: string
+                      branches:
+                        description: |-
+                          Branches is a list of branch name patterns to watch (glob supported, e.g. "main", "release/*").
+                          If empty, all branches are watched.
+                        items:
+                          type: string
+                        type: array
+                      branchesIgnore:
+                        description: |-
+                          BranchesIgnore is a list of branch name patterns to exclude (glob supported).
+                          Takes precedence over Branches when both match.
+                        items:
+                          type: string
+                        type: array
                       paths:
                         description: |-
-                          Paths is a list of file/directory paths to watch for changes.
+                          Paths is a list of file/directory paths to watch for changes (glob supported).
                           If empty, all paths are watched.
                         items:
                           type: string
                         type: array
-                      revision:
-                        description: Revision (branch name, tag, or commit SHA) to
-                          watch
-                        type: string
+                      pathsIgnore:
+                        description: |-
+                          PathsIgnore is a list of file/directory path patterns to exclude (glob supported).
+                          Takes precedence over Paths when both match.
+                        items:
+                          type: string
+                        type: array
+                      pullRequest:
+                        description: |-
+                          PullRequest specifies pull request trigger configuration.
+                          When set, the informer uses the GitHub API to poll for PR events.
+                        properties:
+                          branches:
+                            description: |-
+                              Branches is a list of base branch name patterns to watch (glob supported).
+                              If empty, PRs targeting any base branch are watched.
+                            items:
+                              type: string
+                            type: array
+                          branchesIgnore:
+                            description: |-
+                              BranchesIgnore is a list of base branch name patterns to exclude (glob supported).
+                              Takes precedence over Branches when both match.
+                            items:
+                              type: string
+                            type: array
+                          types:
+                            description: |-
+                              Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
+                              If empty, all types are watched.
+                            items:
+                              type: string
+                            type: array
+                        type: object
                       sshKey:
                         description: |-
                           Plain text SSH private key to fetch with.
@@ -6745,6 +6789,20 @@ spec:
                             type: object
                             x-kubernetes-map-type: atomic
                         type: object
+                      tags:
+                        description: |-
+                          Tags is a list of tag name patterns to watch (glob supported, e.g. "v*", "v1.*").
+                          If empty, tag events are not watched unless Branches is also empty (watch all).
+                        items:
+                          type: string
+                        type: array
+                      tagsIgnore:
+                        description: |-
+                          TagsIgnore is a list of tag name patterns to exclude (glob supported).
+                          Takes precedence over Tags when both match.
+                        items:
+                          type: string
+                        type: array
                       token:
                         description: |-
                           Plain text token to fetch with.
@@ -7034,6 +7092,9 @@ spec:
                 - created
                 - modified
                 - deleted
+                - git-push
+                - git-tag-push
+                - git-pull-request
                 - deployment-scale-update
                 - deployment-image-update
                 - deployment-env-update

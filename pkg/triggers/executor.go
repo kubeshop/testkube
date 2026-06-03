@@ -68,6 +68,33 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *internalTrigg
 		},
 	}
 
+	// Inject git metadata as execution variables when available.
+	if e.GitMetadata != nil {
+		gitVars := map[string]string{
+			"TESTKUBE_GIT_COMMIT":      e.GitMetadata.Commit,
+			"TESTKUBE_GIT_REF":         e.GitMetadata.Ref,
+			"TESTKUBE_GIT_BRANCH":      e.GitMetadata.Branch,
+			"TESTKUBE_GIT_TAG":         e.GitMetadata.Tag,
+			"TESTKUBE_GIT_PR_NUMBER":   e.GitMetadata.PRNumber,
+			"TESTKUBE_GIT_PR_ACTION":   e.GitMetadata.PRAction,
+			"TESTKUBE_GIT_PR_BASE_REF": e.GitMetadata.PRBaseRef,
+			"TESTKUBE_GIT_PR_HEAD_REF": e.GitMetadata.PRHeadRef,
+			"TESTKUBE_GIT_PR_HEAD_SHA": e.GitMetadata.PRHeadSHA,
+			"TESTKUBE_GIT_PR_URL":      e.GitMetadata.PRURL,
+			"TESTKUBE_GIT_PR_TITLE":    e.GitMetadata.PRTitle,
+			"TESTKUBE_GIT_PR_AUTHOR":   e.GitMetadata.PRAuthor,
+		}
+		for k, v := range gitVars {
+			if v != "" {
+				variables[k] = testkube.Variable{
+					Name:  k,
+					Value: v,
+					Type_: testkube.VariableTypeBasic,
+				}
+			}
+		}
+	}
+
 	testWorkflows, err := s.getTestWorkflowsFromInternal(t)
 	if err != nil {
 		return err

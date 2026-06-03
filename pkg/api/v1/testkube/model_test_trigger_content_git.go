@@ -12,8 +12,18 @@ package testkube
 type TestTriggerContentGit struct {
 	// URI of the git repository to watch.
 	Uri string `json:"uri"`
-	// branch, tag or commit to watch.
-	Revision string `json:"revision,omitempty"`
+	// Branch name patterns to watch (glob supported, e.g. \"main\", \"release/*\"). If empty, all branches are watched.
+	Branches []string `json:"branches,omitempty"`
+	// Branch name patterns to exclude (glob supported). Takes precedence over branches.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
+	// paths to watch for changes (glob supported)
+	Paths []string `json:"paths,omitempty"`
+	// Path patterns to exclude (glob supported). Takes precedence over paths.
+	PathsIgnore []string `json:"pathsIgnore,omitempty"`
+	// Tag name patterns to watch (glob supported, e.g. \"v*\", \"v1.*\").
+	Tags []string `json:"tags,omitempty"`
+	// Tag name patterns to exclude (glob supported). Takes precedence over tags.
+	TagsIgnore []string `json:"tagsIgnore,omitempty"`
 	// plain text username to fetch with
 	Username     string        `json:"username,omitempty"`
 	UsernameFrom *EnvVarSource `json:"usernameFrom,omitempty"`
@@ -23,7 +33,20 @@ type TestTriggerContentGit struct {
 	// plain text SSH private key to fetch with. Warning: this credential is stored in plain text in the trigger spec; prefer sshKeyFrom instead.
 	SshKey     string        `json:"sshKey,omitempty"`
 	SshKeyFrom *EnvVarSource `json:"sshKeyFrom,omitempty"`
-	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
-	// paths to watch for changes
-	Paths []string `json:"paths,omitempty"`
+	AuthType   string        `json:"authType,omitempty"`
+	// PullRequest specifies pull request trigger configuration using the GitHub API.
+	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
+}
+
+// TestTriggerContentGitPullRequest defines pull request trigger configuration.
+type TestTriggerContentGitPullRequest struct {
+	// Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
+	// If empty, all types are watched.
+	Types []string `json:"types,omitempty"`
+	// Branches is a list of base branch patterns to watch (glob supported).
+	// If empty, PRs targeting any base branch are watched.
+	Branches []string `json:"branches,omitempty"`
+	// BranchesIgnore is a list of base branch patterns to exclude (glob supported).
+	// Takes precedence over Branches when both match.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
 }

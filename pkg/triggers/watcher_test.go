@@ -234,11 +234,11 @@ func TestService_startCloudTestTriggerWatch_PreservesContentSelector(t *testing.
 		Return([]testkube.TestTrigger{{
 			Name:      "git-trigger",
 			Namespace: namespace,
-			Event:     "modified",
+			Event:     string(testtriggersv1.TestTriggerEventGitPush),
 			ContentSelector: &testkube.TestTriggerContentSelector{
 				Git: &testkube.TestTriggerContentGit{
 					Uri:      "https://github.com/kubeshop/testkube.git",
-					Revision: "main",
+					Branches: []string{"main"},
 					Paths:    []string{"pkg/triggers"},
 				},
 			},
@@ -276,7 +276,7 @@ func TestService_startCloudTestTriggerWatch_PreservesContentSelector(t *testing.
 	require.NotNil(t, internal.ContentSelector)
 	require.NotNil(t, internal.ContentSelector.Git)
 	assert.Equal(t, "https://github.com/kubeshop/testkube.git", internal.ContentSelector.Git.Uri)
-	assert.Equal(t, "main", internal.ContentSelector.Git.Revision)
+	assert.Equal(t, []string{"main"}, internal.ContentSelector.Git.Branches)
 	assert.Equal(t, []string{"pkg/triggers"}, internal.ContentSelector.Git.Paths)
 }
 

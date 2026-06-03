@@ -45,6 +45,36 @@ type watcherEvent struct {
 	addressGetter    addressGetterFn
 	EventLabels      map[string]string `json:"eventLabels"`
 	Agent            watcherAgent      `json:"agent"`
+	GitMetadata      *GitMetadata      `json:"gitMetadata,omitempty"`
+}
+
+// GitMetadata holds commit and ref information for git-triggered events.
+// Exposed as execution variables when a git content trigger fires.
+type GitMetadata struct {
+	// Commit is the HEAD commit SHA that triggered the event.
+	Commit string `json:"commit,omitempty"`
+	// Ref is the full git reference (e.g. refs/heads/main, refs/tags/v1.0.0).
+	Ref string `json:"ref,omitempty"`
+	// Branch is the short branch name (empty for tag events).
+	Branch string `json:"branch,omitempty"`
+	// Tag is the short tag name (empty for branch events).
+	Tag string `json:"tag,omitempty"`
+	// PRNumber is the pull request number (empty for non-PR events).
+	PRNumber string `json:"prNumber,omitempty"`
+	// PRAction is the PR activity type (e.g. opened, synchronize, closed).
+	PRAction string `json:"prAction,omitempty"`
+	// PRBaseRef is the base branch the PR targets.
+	PRBaseRef string `json:"prBaseRef,omitempty"`
+	// PRHeadRef is the head branch of the PR.
+	PRHeadRef string `json:"prHeadRef,omitempty"`
+	// PRHeadSHA is the latest commit SHA on the PR head branch.
+	PRHeadSHA string `json:"prHeadSha,omitempty"`
+	// PRURL is the HTML URL of the pull request.
+	PRURL string `json:"prUrl,omitempty"`
+	// PRTitle is the title of the pull request.
+	PRTitle string `json:"prTitle,omitempty"`
+	// PRAuthor is the login of the pull request author.
+	PRAuthor string `json:"prAuthor,omitempty"`
 }
 
 // watcherAgent represents agent context exposed to templates and JSONPath

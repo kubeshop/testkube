@@ -114,7 +114,7 @@ type TestTriggerResourceRef struct {
 }
 
 // TestTriggerEvent defines event for test triggers
-// +kubebuilder:validation:Enum=created;modified;deleted;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
+// +kubebuilder:validation:Enum=created;modified;deleted;git-push;git-tag-push;git-pull-request;deployment-scale-update;deployment-image-update;deployment-env-update;deployment-containers-modified;deployment-generation-modified;deployment-resource-modified;event-start-test;event-end-test-success;event-end-test-failed;event-end-test-aborted;event-end-test-timeout;event-start-testsuite;event-end-testsuite-success;event-end-testsuite-failed;event-end-testsuite-aborted;event-end-testsuite-timeout;event-queue-testworkflow;event-start-testworkflow;event-end-testworkflow-success;event-end-testworkflow-failed;event-end-testworkflow-aborted;event-end-testworkflow-canceled;event-end-testworkflow-not-passed;event-created;event-updated;event-deleted
 type TestTriggerEvent string
 
 // List of TestTriggerEvents
@@ -122,6 +122,9 @@ const (
 	TestTriggerEventCreated                       TestTriggerEvent = "created"
 	TestTriggerEventModified                      TestTriggerEvent = "modified"
 	TestTriggerEventDeleted                       TestTriggerEvent = "deleted"
+	TestTriggerEventGitPush                       TestTriggerEvent = "git-push"
+	TestTriggerEventGitTagPush                    TestTriggerEvent = "git-tag-push"
+	TestTriggerEventGitPullRequest                TestTriggerEvent = "git-pull-request"
 	TestTriggerCauseDeploymentScaleUpdate         TestTriggerEvent = "deployment-scale-update"
 	TestTriggerCauseDeploymentImageUpdate         TestTriggerEvent = "deployment-image-update"
 	TestTriggerCauseDeploymentEnvUpdate           TestTriggerEvent = "deployment-env-update"
@@ -277,8 +280,24 @@ type TestTriggerContentSelector struct {
 type TestTriggerContentGitSpec struct {
 	// URI of the git repository
 	Uri string `json:"uri"`
-	// Revision (branch name, tag, or commit SHA) to watch
-	Revision string `json:"revision,omitempty"`
+	// Branches is a list of branch name patterns to watch (glob supported, e.g. "main", "release/*").
+	// If empty, all branches are watched.
+	Branches []string `json:"branches,omitempty"`
+	// BranchesIgnore is a list of branch name patterns to exclude (glob supported).
+	// Takes precedence over Branches when both match.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
+	// Paths is a list of file/directory paths to watch for changes (glob supported).
+	// If empty, all paths are watched.
+	Paths []string `json:"paths,omitempty"`
+	// PathsIgnore is a list of file/directory path patterns to exclude (glob supported).
+	// Takes precedence over Paths when both match.
+	PathsIgnore []string `json:"pathsIgnore,omitempty"`
+	// Tags is a list of tag name patterns to watch (glob supported, e.g. "v*", "v1.*").
+	// If empty, tag events are not watched unless Branches is also empty (watch all).
+	Tags []string `json:"tags,omitempty"`
+	// TagsIgnore is a list of tag name patterns to exclude (glob supported).
+	// Takes precedence over Tags when both match.
+	TagsIgnore []string `json:"tagsIgnore,omitempty"`
 	// Plain text username to fetch with
 	Username string `json:"username,omitempty"`
 	// External username to fetch with
@@ -297,9 +316,22 @@ type TestTriggerContentGitSpec struct {
 	SshKeyFrom *corev1.EnvVarSource `json:"sshKeyFrom,omitempty"`
 	// Authorization type for the credentials
 	AuthType testsv3.GitAuthType `json:"authType,omitempty"`
-	// Paths is a list of file/directory paths to watch for changes.
-	// If empty, all paths are watched.
-	Paths []string `json:"paths,omitempty"`
+	// PullRequest specifies pull request trigger configuration.
+	// When set, the informer uses the GitHub API to poll for PR events.
+	PullRequest *TestTriggerContentGitPullRequest `json:"pullRequest,omitempty"`
+}
+
+// TestTriggerContentGitPullRequest defines pull request trigger configuration.
+type TestTriggerContentGitPullRequest struct {
+	// Types is a list of PR activity types to watch (e.g. "opened", "synchronize", "reopened", "closed").
+	// If empty, all types are watched.
+	Types []string `json:"types,omitempty"`
+	// Branches is a list of base branch name patterns to watch (glob supported).
+	// If empty, PRs targeting any base branch are watched.
+	Branches []string `json:"branches,omitempty"`
+	// BranchesIgnore is a list of base branch name patterns to exclude (glob supported).
+	// Takes precedence over Branches when both match.
+	BranchesIgnore []string `json:"branchesIgnore,omitempty"`
 }
 
 //+kubebuilder:object:root=true

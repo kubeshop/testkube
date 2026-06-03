@@ -3,7 +3,6 @@ package testtriggers
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube/api/tests/v3"
 	testsv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	workflowtriggersv1 "github.com/kubeshop/testkube/api/workflowtriggers/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -251,22 +250,31 @@ func mapContentGitFromCRD(git *testsv1.TestTriggerContentGitSpec) *testkube.Test
 		return nil
 	}
 	return &testkube.TestTriggerContentGit{
-		Uri:          git.Uri,
-		Revision:     git.Revision,
-		Username:     git.Username,
-		UsernameFrom: commonmapper.MapEnvVarSourceKubeToAPI(git.UsernameFrom),
-		Token:        git.Token,
-		TokenFrom:    commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
-		SshKey:       git.SshKey,
-		SshKeyFrom:   commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
-		AuthType:     mapGitAuthTypeKubeToAPI(git.AuthType),
-		Paths:        git.Paths,
+		Uri:            git.Uri,
+		Branches:       git.Branches,
+		BranchesIgnore: git.BranchesIgnore,
+		Paths:          git.Paths,
+		PathsIgnore:    git.PathsIgnore,
+		Tags:           git.Tags,
+		TagsIgnore:     git.TagsIgnore,
+		Username:       git.Username,
+		UsernameFrom:   commonmapper.MapEnvVarSourceKubeToAPI(git.UsernameFrom),
+		Token:          git.Token,
+		TokenFrom:      commonmapper.MapEnvVarSourceKubeToAPI(git.TokenFrom),
+		SshKey:         git.SshKey,
+		SshKeyFrom:     commonmapper.MapEnvVarSourceKubeToAPI(git.SshKeyFrom),
+		AuthType:       string(git.AuthType),
+		PullRequest:    mapContentGitPullRequestFromCRD(git.PullRequest),
 	}
 }
 
-func mapGitAuthTypeKubeToAPI(v testsv3.GitAuthType) *testkube.ContentGitAuthType {
-	if v == "" {
+func mapContentGitPullRequestFromCRD(pr *testsv1.TestTriggerContentGitPullRequest) *testkube.TestTriggerContentGitPullRequest {
+	if pr == nil {
 		return nil
 	}
-	return common.Ptr(testkube.ContentGitAuthType(v))
+	return &testkube.TestTriggerContentGitPullRequest{
+		Types:          pr.Types,
+		Branches:       pr.Branches,
+		BranchesIgnore: pr.BranchesIgnore,
+	}
 }

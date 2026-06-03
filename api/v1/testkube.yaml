@@ -8289,9 +8289,36 @@ components:
         uri:
           type: string
           description: URI of the git repository to watch.
-        revision:
-          type: string
-          description: branch, tag or commit to watch.
+        branches:
+          type: array
+          description: "Branch name patterns to watch (glob supported, e.g. \"main\", \"release/*\"). If empty, all branches are watched."
+          items:
+            type: string
+        branchesIgnore:
+          type: array
+          description: "Branch name patterns to exclude (glob supported). Takes precedence over branches."
+          items:
+            type: string
+        paths:
+          type: array
+          description: paths to watch for changes (glob supported)
+          items:
+            type: string
+        pathsIgnore:
+          type: array
+          description: "Path patterns to exclude (glob supported). Takes precedence over paths."
+          items:
+            type: string
+        tags:
+          type: array
+          description: "Tag name patterns to watch (glob supported, e.g. \"v*\", \"v1.*\")."
+          items:
+            type: string
+        tagsIgnore:
+          type: array
+          description: "Tag name patterns to exclude (glob supported). Takes precedence over tags."
+          items:
+            type: string
         username:
           type: string
           description: plain text username to fetch with
@@ -8312,9 +8339,26 @@ components:
           enum:
             - basic
             - header
-        paths:
+        pullRequest:
+          $ref: "#/components/schemas/TestTriggerContentGitPullRequest"
+
+    TestTriggerContentGitPullRequest:
+      type: object
+      description: Pull request trigger configuration for GitHub API polling.
+      properties:
+        types:
           type: array
-          description: paths to watch for changes
+          description: "PR activity types to watch (e.g. \"opened\", \"synchronize\", \"reopened\", \"closed\"). If empty, all types are watched."
+          items:
+            type: string
+        branches:
+          type: array
+          description: "Base branch name patterns to watch (glob supported). If empty, PRs targeting any base branch are watched."
+          items:
+            type: string
+        branchesIgnore:
+          type: array
+          description: "Base branch name patterns to exclude (glob supported). Takes precedence over branches."
           items:
             type: string
 
