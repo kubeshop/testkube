@@ -462,6 +462,13 @@ message RegisterResponse {
 
 message UpdateAgentCapabilitiesOnStartupRequest {
   repeated AgentCapability capabilities = 1;
+  // Runner-supplied registration metadata refreshed on every startup. Honored only when
+  // `update_registration_metadata` is true so older runners (which leave the new fields
+  // unset) keep getting their previous capabilities-only behavior.
+  map<string, string> labels = 2;
+  string runner_group = 3;
+  bool is_global = 4;
+  bool update_registration_metadata = 5;
 }
 
 message UpdateAgentCapabilitiesOnStartupResponse {

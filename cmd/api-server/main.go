@@ -258,8 +258,7 @@ func main() {
 		log.DefaultLogger.Infow("runner capabilities", "capabilities", stringifyCapabilities(capabilities))
 
 		// Get all labels that matches with prefix
-		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
-		runnerLabels["registration"] = "self"
+		runnerLabels := collectRunnerRegistrationLabels(ctx, clientset, cfg)
 
 		// Debug labels found
 		log.DefaultLogger.Debugw("labels to be configured", "labels", runnerLabels)
@@ -359,7 +358,11 @@ func main() {
 			controlplaneclient.EnvironmentIdMetadataName:  proContext.EnvID,
 		}))
 		resp, err := grpcClient.UpdateAgentCapabilitiesOnStartup(updateCtx, &cloud.UpdateAgentCapabilitiesOnStartupRequest{
-			Capabilities: startupCapabilities,
+			Capabilities:               startupCapabilities,
+			Labels:                     collectRunnerRegistrationLabels(ctx, clientset, cfg),
+			RunnerGroup:                cfg.RunnerGroup,
+			IsGlobal:                   cfg.IsGlobal,
+			UpdateRegistrationMetadata: true,
 		})
 		cancel()
 		if err != nil {
@@ -1034,6 +1037,18 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 			}
 		}
 	}
+	return labels
+}
+
+// collectRunnerRegistrationLabels returns the runner-supplied label set used both at
+// initial Register and on every reconnect via UpdateAgentCapabilitiesOnStartup. Keeping a
+// single source of truth avoids drift between the two paths.
+func collectRunnerRegistrationLabels(ctx context.Context, clientset kubernetes.Interface, cfg *intconfig.Config) map[string]string {
+	labels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels["registration"] = "self"
 	return labels
 }
 
