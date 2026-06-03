@@ -22,6 +22,9 @@ const (
 	EnterpriseMinioName              string = "testkube-enterprise-minio"
 	EnterpriseMinioPort              int    = 9000
 	EnterpriseMinioPortFrwardingPort int    = 9000
+	EnterpriseSeaweedS3Name          string = "testkube-enterprise-seaweedfs-s3"
+	EnterpriseSeaweedFilerName       string = "testkube-enterprise-seaweedfs-filer"
+	EnterpriseSeaweedS3Port          int    = 8333
 
 	configDirName = ".testkube"
 	configFile    = "config.json"
