@@ -18,7 +18,7 @@ This guide shows how to configure git-based content triggers using the `ContentG
 
 ## TestTrigger: watch pull request activity (`git-pull-request`)
 
-`git-pull-request` uses the GitHub API (GitHub.com and GitHub Enterprise Server (GHES)) to poll pull requests for the configured repository. Testkube tracks PR state per trigger and emits an event when a matching PR type is detected.
+`git-pull-request` uses the GitHub API (GitHub.com and GitHub Enterprise Server (GHES)) to poll pull requests for the configured repository. Testkube tracks PR state per trigger and emits an event when a PR state change matches the configured filters (`pullRequest.types`, `pullRequest.branches`, `pullRequest.branchesIgnore`, `paths`, `pathsIgnore`).
 
 ```yaml
 apiVersion: tests.testkube.io/v1
@@ -149,7 +149,7 @@ spec:
 - `branchesIgnore` (example: `["main-hotfix/*", "legacy/*"]`) takes precedence over `branches`.
 - `tags` (example: `["v*", "release-*"]`) supports glob patterns for tag refs.
 - `tagsIgnore` (example: `["v*-rc*", "v0.*"]`) takes precedence over `tags`.
-- `pullRequest.types` (example: `["opened", "synchronize", "reopened"]`) filters PR activity types. If empty, all types are watched.
+- `pullRequest.types` (example: `["opened", "synchronize", "reopened"]`) filters PR activity types. If empty, all supported types are watched.
   - Supported values: `opened`, `synchronize`, `reopened`, `closed`.
 - `pullRequest.branches` (example: `["main", "release/*"]`) filters PR base branches and supports glob patterns.
 - `pullRequest.branchesIgnore` (example: `["release/legacy-*"]`) excludes base branches and takes precedence over `pullRequest.branches`.
