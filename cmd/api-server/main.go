@@ -257,9 +257,12 @@ func main() {
 		capabilities := buildStartupCapabilities(cfg)
 		log.DefaultLogger.Infow("runner capabilities", "capabilities", stringifyCapabilities(capabilities))
 
-		// Get all labels that matches with prefix
-		runnerLabels := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
-		runnerLabels["registration"] = "self"
+		// Get all labels that matches with prefix. On a failed Deployment lookup we proceed with
+		// just the self-registration marker; first-time Register has no prior label set to clobber.
+		runnerLabels, err := collectRunnerRegistrationLabels(ctx, clientset, cfg)
+		if err != nil {
+			runnerLabels = map[string]string{"registration": "self"}
+		}
 
 		// Debug labels found
 		log.DefaultLogger.Debugw("labels to be configured", "labels", runnerLabels)
@@ -358,8 +361,24 @@ func main() {
 			controlplaneclient.AgentIdMetadataName:        proContext.Agent.ID,
 			controlplaneclient.EnvironmentIdMetadataName:  proContext.EnvID,
 		}))
+		// Read labels under the same 5s budget as the RPC so a stalled K8s lookup cannot
+		// block startup. Label collection failure only suppresses the label refresh; the
+		// runner-policy fields (runner_group, is_global) come from cfg and propagate
+		// regardless so cluster-scope/routing changes still reach the control plane.
+		runnerLabels, labelsErr := collectRunnerRegistrationLabels(updateCtx, clientset, cfg)
+		updateLabels := labelsErr == nil
+		if labelsErr != nil {
+			log.DefaultLogger.Warnw("skipping label refresh; cannot read deployment labels",
+				"error", labelsErr.Error(),
+			)
+		}
 		resp, err := grpcClient.UpdateAgentCapabilitiesOnStartup(updateCtx, &cloud.UpdateAgentCapabilitiesOnStartupRequest{
-			Capabilities: startupCapabilities,
+			Capabilities:       startupCapabilities,
+			Labels:             runnerLabels,
+			RunnerGroup:        cfg.RunnerGroup,
+			IsGlobal:           cfg.IsGlobal,
+			UpdateLabels:       updateLabels,
+			UpdateRunnerPolicy: true,
 		})
 		cancel()
 		if err != nil {
@@ -1014,16 +1033,16 @@ func stringifyCapabilities(capabilities []cloud.AgentCapability) []string {
 	return names
 }
 
-func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) map[string]string {
+func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string, labelPrefix string) (map[string]string, error) {
 	labels := map[string]string{}
 	if deploymentName == "" {
-		return labels
+		return labels, nil
 	}
 
 	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		log.DefaultLogger.Warnw("cannot read deployment labels", "deployment", deploymentName, "error", err.Error())
-		return labels
+		return nil, err
 	}
 	log.DefaultLogger.Debugw("deployment found", "deployment_name", deploymentName, "deployment_labels", deploy.Labels)
 	for k, v := range deploy.Labels {
@@ -1034,7 +1053,26 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 			}
 		}
 	}
-	return labels
+	return labels, nil
+}
+
+// collectRunnerRegistrationLabels returns the runner-supplied label set used both at
+// initial Register and on every reconnect via UpdateAgentCapabilitiesOnStartup. Keeping a
+// single source of truth avoids drift between the two paths.
+//
+// The error return distinguishes a Kubernetes Deployment lookup failure (which would
+// otherwise produce a near-empty label set) from a Deployment with no matching labels.
+// Callers that send these labels as authoritative MUST skip the update on error.
+func collectRunnerRegistrationLabels(ctx context.Context, clientset kubernetes.Interface, cfg *intconfig.Config) (map[string]string, error) {
+	labels, err := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
+	if err != nil {
+		return nil, err
+	}
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels["registration"] = "self"
+	return labels, nil
 }
 
 // shouldUseCloudTestTriggers returns true when the agent has migrated off super-agent mode,
