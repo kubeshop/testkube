@@ -293,12 +293,26 @@ func normalizeToJSONMap(obj interface{}) (map[string]interface{}, error) {
 	if m, ok := obj.(map[string]interface{}); ok {
 		return m, nil
 	}
+	// Dereference pointers and check for map types that are aliases
+	// (e.g. *unstructuredTemplateObject is a pointer to a map alias).
 	v := reflect.ValueOf(obj)
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
+	if v.Kind() == reflect.Map {
+		// Convert map alias to map[string]interface{} via JSON round-trip.
+		data, err := json.Marshal(obj)
+		if err != nil {
+			return nil, err
+		}
+		var result map[string]interface{}
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
 	if v.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("not a struct: %T", obj)
+		return nil, fmt.Errorf("not a struct or map: %T", obj)
 	}
 	data, err := json.Marshal(obj)
 	if err != nil {
@@ -318,10 +332,18 @@ func normalizeEventToJSONMap(e *watcherEvent) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Normalize agent struct so JSON-style field names work (e.g. .agent.name)
+	normalizedAgent, agentErr := normalizeToJSONMap(e.Agent)
+	if agentErr != nil {
+		normalizedAgent = map[string]interface{}{
+			"name":   e.Agent.Name,
+			"labels": e.Agent.Labels,
+		}
+	}
 	result := map[string]interface{}{
 		"object":    normalizedObj,
 		"namespace": e.Namespace,
-		"agent":     e.Agent,
+		"agent":     normalizedAgent,
 	}
 	if e.OldObject != nil {
 		if old, err := normalizeToJSONMap(e.OldObject); err == nil {
@@ -332,7 +354,11 @@ func normalizeEventToJSONMap(e *watcherEvent) (map[string]interface{}, error) {
 		result["eventLabels"] = e.EventLabels
 	}
 	if e.GitMetadata != nil {
-		result["gitMetadata"] = e.GitMetadata
+		if normalizedGit, err := normalizeToJSONMap(e.GitMetadata); err == nil {
+			result["gitMetadata"] = normalizedGit
+		} else {
+			result["gitMetadata"] = e.GitMetadata
+		}
 	}
 	return result, nil
 }
