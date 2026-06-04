@@ -328,10 +328,6 @@ func normalizeToJSONMap(obj interface{}) (map[string]interface{}, error) {
 // normalizeEventToJSONMap converts a watcherEvent into a map[string]interface{}
 // with its Object and OldObject fields normalized to JSON-style maps.
 func normalizeEventToJSONMap(e *watcherEvent) (map[string]interface{}, error) {
-	normalizedObj, err := normalizeToJSONMap(e.Object)
-	if err != nil {
-		return nil, err
-	}
 	// Normalize agent struct so JSON-style field names work (e.g. .agent.name)
 	normalizedAgent, agentErr := normalizeToJSONMap(e.Agent)
 	if agentErr != nil {
@@ -341,9 +337,16 @@ func normalizeEventToJSONMap(e *watcherEvent) (map[string]interface{}, error) {
 		}
 	}
 	result := map[string]interface{}{
-		"object":    normalizedObj,
 		"namespace": e.Namespace,
 		"agent":     normalizedAgent,
+	}
+	// Object may be nil for git/content triggers — only normalize when present.
+	if e.Object != nil {
+		normalizedObj, err := normalizeToJSONMap(e.Object)
+		if err != nil {
+			return nil, err
+		}
+		result["object"] = normalizedObj
 	}
 	if e.OldObject != nil {
 		if old, err := normalizeToJSONMap(e.OldObject); err == nil {
