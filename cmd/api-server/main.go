@@ -362,21 +362,23 @@ func main() {
 			controlplaneclient.EnvironmentIdMetadataName:  proContext.EnvID,
 		}))
 		// Read labels under the same 5s budget as the RPC so a stalled K8s lookup cannot
-		// block startup. On a failed lookup, skip the metadata refresh entirely rather than
-		// overwriting the control plane's existing labels with a near-empty set.
+		// block startup. Label collection failure only suppresses the label refresh; the
+		// runner-policy fields (runner_group, is_global) come from cfg and propagate
+		// regardless so cluster-scope/routing changes still reach the control plane.
 		runnerLabels, labelsErr := collectRunnerRegistrationLabels(updateCtx, clientset, cfg)
-		updateRegistrationMetadata := labelsErr == nil
+		updateLabels := labelsErr == nil
 		if labelsErr != nil {
-			log.DefaultLogger.Warnw("skipping registration metadata refresh; cannot read deployment labels",
+			log.DefaultLogger.Warnw("skipping label refresh; cannot read deployment labels",
 				"error", labelsErr.Error(),
 			)
 		}
 		resp, err := grpcClient.UpdateAgentCapabilitiesOnStartup(updateCtx, &cloud.UpdateAgentCapabilitiesOnStartupRequest{
-			Capabilities:               startupCapabilities,
-			Labels:                     runnerLabels,
-			RunnerGroup:                cfg.RunnerGroup,
-			IsGlobal:                   cfg.IsGlobal,
-			UpdateRegistrationMetadata: updateRegistrationMetadata,
+			Capabilities:       startupCapabilities,
+			Labels:             runnerLabels,
+			RunnerGroup:        cfg.RunnerGroup,
+			IsGlobal:           cfg.IsGlobal,
+			UpdateLabels:       updateLabels,
+			UpdateRunnerPolicy: true,
 		})
 		cancel()
 		if err != nil {
