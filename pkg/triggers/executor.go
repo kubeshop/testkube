@@ -3,10 +3,11 @@ package triggers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
@@ -223,7 +224,6 @@ func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error)
 }
 
 func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error) {
-	var tmpl *template.Template
 	tmpl, err := utils.NewTemplate("field").Parse(value)
 	if err != nil {
 		return nil, err
@@ -231,7 +231,14 @@ func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error)
 
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "field", e.Object); err != nil {
-		return nil, err
+		normalized, normErr := normalizeToJSONMap(e.Object)
+		if normErr != nil {
+			return nil, err
+		}
+		buffer.Reset()
+		if retryErr := tmpl.ExecuteTemplate(&buffer, "field", normalized); retryErr != nil {
+			return nil, err
+		}
 	}
 
 	return buffer.Bytes(), nil
@@ -239,7 +246,6 @@ func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error)
 
 // getTemplateDataFromEvent evaluates a template against the full watcher event structure
 func (s *Service) getTemplateDataFromEvent(e *watcherEvent, value string) ([]byte, error) {
-	var tmpl *template.Template
 	tmpl, err := utils.NewTemplate("field").Parse(value)
 	if err != nil {
 		return nil, err
@@ -247,7 +253,14 @@ func (s *Service) getTemplateDataFromEvent(e *watcherEvent, value string) ([]byt
 
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "field", e); err != nil {
-		return nil, err
+		normalized, normErr := normalizeEventToJSONMap(e)
+		if normErr != nil {
+			return nil, err
+		}
+		buffer.Reset()
+		if retryErr := tmpl.ExecuteTemplate(&buffer, "field", normalized); retryErr != nil {
+			return nil, err
+		}
 	}
 
 	return buffer.Bytes(), nil
@@ -265,6 +278,63 @@ func (s *Service) getJsonPathDataFromEvent(e *watcherEvent, value string) (strin
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// normalizeToJSONMap converts a Go struct (or pointer to struct) to
+// map[string]interface{} via JSON marshal/unmarshal. This translates
+// exported Go field names to their json tag equivalents, e.g.
+// ObjectMeta to metadata, so Go templates can use JSON-style field paths.
+// Returns an error if the input is nil, not a struct, or cannot be converted.
+func normalizeToJSONMap(obj interface{}) (map[string]interface{}, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("nil object")
+	}
+	// Already a map — nothing to normalize.
+	if m, ok := obj.(map[string]interface{}); ok {
+		return m, nil
+	}
+	v := reflect.ValueOf(obj)
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("not a struct: %T", obj)
+	}
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// normalizeEventToJSONMap converts a watcherEvent into a map[string]interface{}
+// with its Object and OldObject fields normalized to JSON-style maps.
+func normalizeEventToJSONMap(e *watcherEvent) (map[string]interface{}, error) {
+	normalizedObj, err := normalizeToJSONMap(e.Object)
+	if err != nil {
+		return nil, err
+	}
+	result := map[string]interface{}{
+		"object":    normalizedObj,
+		"namespace": e.Namespace,
+		"agent":     e.Agent,
+	}
+	if e.OldObject != nil {
+		if old, err := normalizeToJSONMap(e.OldObject); err == nil {
+			result["oldObject"] = old
+		}
+	}
+	if e.EventLabels != nil {
+		result["eventLabels"] = e.EventLabels
+	}
+	if e.GitMetadata != nil {
+		result["gitMetadata"] = e.GitMetadata
+	}
+	return result, nil
 }
 
 // buildEventExpressionMachine creates a reusable expression machine for a watcher event.
