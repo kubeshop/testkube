@@ -258,7 +258,7 @@ func main() {
 
 		// Get all labels that matches with prefix. On a failed Deployment lookup we proceed with
 		// just the self-registration marker; first-time Register has no prior label set to clobber.
-		runnerLabels, err := collectRunnerRegistrationLabels(ctx, clientset, cfg)
+		runnerLabels, _, err := collectRunnerRegistrationLabels(ctx, clientset, cfg)
 		if err != nil {
 			runnerLabels = map[string]string{"registration": "self"}
 		}
@@ -364,11 +364,37 @@ func main() {
 		// block startup. Label collection failure only suppresses the label refresh; the
 		// runner-policy fields (runner_group, is_global) come from cfg and propagate
 		// regardless so cluster-scope/routing changes still reach the control plane.
-		runnerLabels, labelsErr := collectRunnerRegistrationLabels(updateCtx, clientset, cfg)
-		updateLabels := labelsErr == nil
+		//
+		// We also suppress the label refresh when the Deployment exposes no user-configured
+		// labels (only the synthetic "registration" marker would survive). Without this guard,
+		// upgrading a runner whose labels were managed via `testkube update agent -l ...` and
+		// never copied into Helm would silently overwrite those labels with an empty set on
+		// the first reconnect. To opt back in, set runner.register.labels in the Helm values
+		// (or annotate the Deployment with cfg.RunnerLabelsPrefix-prefixed keys).
+		//
+		// Likewise, we only refresh runner policy (runner_group / is_global) when the runner
+		// has an explicit policy configured. An all-zero policy snapshot is indistinguishable
+		// from "Independent" mode and from "unset", so without this guard we would silently
+		// downgrade a Global or Grouped agent whose policy was set via the CLI but not in
+		// Helm. Mode changes through Helm therefore require setting at least one of
+		// runner.register.global / runner.register.groupName; demoting to Independent must be
+		// done explicitly via `testkube update agent`.
+		runnerLabels, hasUserLabels, labelsErr := collectRunnerRegistrationLabels(updateCtx, clientset, cfg)
+		updateLabels := labelsErr == nil && hasUserLabels
 		if labelsErr != nil {
 			log.DefaultLogger.Warnw("skipping label refresh; cannot read deployment labels",
 				"error", labelsErr.Error(),
+			)
+		} else if !hasUserLabels {
+			log.DefaultLogger.Infow("skipping label refresh; runner deployment has no user-configured labels under prefix",
+				"labelPrefix", cfg.RunnerLabelsPrefix,
+			)
+		}
+		updateRunnerPolicy := cfg.RunnerGroup != "" || cfg.IsGlobal
+		if !updateRunnerPolicy {
+			log.DefaultLogger.Infow("skipping runner policy refresh; runner has no explicit policy configured",
+				"runnerGroup", cfg.RunnerGroup,
+				"isGlobal", cfg.IsGlobal,
 			)
 		}
 		resp, err := grpcClient.UpdateAgentCapabilitiesOnStartup(updateCtx, &cloud.UpdateAgentCapabilitiesOnStartupRequest{
@@ -377,7 +403,7 @@ func main() {
 			RunnerGroup:        cfg.RunnerGroup,
 			IsGlobal:           cfg.IsGlobal,
 			UpdateLabels:       updateLabels,
-			UpdateRunnerPolicy: true,
+			UpdateRunnerPolicy: updateRunnerPolicy,
 		})
 		cancel()
 		if err != nil {
@@ -1029,16 +1055,23 @@ func getDeploymentLabels(ctx context.Context, clientset kubernetes.Interface, na
 // The error return distinguishes a Kubernetes Deployment lookup failure (which would
 // otherwise produce a near-empty label set) from a Deployment with no matching labels.
 // Callers that send these labels as authoritative MUST skip the update on error.
-func collectRunnerRegistrationLabels(ctx context.Context, clientset kubernetes.Interface, cfg *intconfig.Config) (map[string]string, error) {
+//
+// The hasUserLabels return is true only when the Deployment exposed at least one
+// user-configured label matching cfg.RunnerLabelsPrefix (the synthetic "registration"
+// marker does not count). Reconnect-time refresh callers MUST gate UpdateLabels on this
+// so that a runner with no Helm-managed labels does not clobber labels previously set via
+// `testkube update agent -l ...` against the Control Plane.
+func collectRunnerRegistrationLabels(ctx context.Context, clientset kubernetes.Interface, cfg *intconfig.Config) (map[string]string, bool, error) {
 	labels, err := getDeploymentLabels(ctx, clientset, cfg.TestkubeNamespace, cfg.APIServerFullname, cfg.RunnerLabelsPrefix)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	hasUserLabels := len(labels) > 0
 	if labels == nil {
 		labels = map[string]string{}
 	}
 	labels["registration"] = "self"
-	return labels, nil
+	return labels, hasUserLabels, nil
 }
 
 // shouldUseCloudTestTriggers returns true when the agent has migrated off super-agent mode,
