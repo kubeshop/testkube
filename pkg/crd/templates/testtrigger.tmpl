@@ -52,7 +52,7 @@ spec:
     namespace: {{ .ResourceSelector.Namespace }}
     {{- end }}
     {{- if .ResourceSelector.NamespaceRegex }}
-    namespaceRegex: {{ .ResourceSelector.NamespaceRegex }}
+    namespaceRegex: {{ printf "%q" .ResourceSelector.NamespaceRegex }}
     {{- end }}
     {{- if and .ResourceSelector.LabelSelector (or .ResourceSelector.LabelSelector.MatchLabels .ResourceSelector.LabelSelector.MatchExpressions) }}
     labelSelector:
@@ -316,7 +316,7 @@ spec:
     namespace: {{ .TestSelector.Namespace }}
     {{- end }}
     {{- if .TestSelector.NamespaceRegex }}
-    namespaceRegex: {{ .TestSelector.NamespaceRegex }}
+    namespaceRegex: {{ printf "%q" .TestSelector.NamespaceRegex }}
     {{- end }}
     {{- if .TestSelector.LabelSelector }}
     labelSelector:
