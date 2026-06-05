@@ -236,7 +236,7 @@ spec:
         {{- if ne (len .ContentSelector.Git.PullRequest.Types) 0 }}
         types:
           {{- range .ContentSelector.Git.PullRequest.Types }}
-          - {{.}}
+          - {{ printf "%q" . }}
           {{- end }}
         {{- end }}
         {{- if ne (len .ContentSelector.Git.PullRequest.Branches) 0 }}
